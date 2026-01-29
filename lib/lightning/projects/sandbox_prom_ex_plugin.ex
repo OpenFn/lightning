@@ -17,30 +17,6 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
   @workflow_saved_event [:lightning, :workflow, :saved]
   @provisioner_import_event [:lightning, :provisioner, :import]
 
-  # NOTE: This is a temporary structure, we needed a way to programmatically get both
-  # the event names, descriptions and tag values all in one place so we can seed
-  # these counters with 0 on app start.
-  # There is likely some improvements to be made, either by just pulling the seed
-  # logic (the part that exposes the exact ETS keys) into this module itself.
-  @metric_definitions [
-    {@sandbox_created_event ++ [:count],
-     [description: "Count of sandbox projects created."]},
-    {@sandbox_merged_event ++ [:count],
-     [description: "Count of sandbox projects merged into targets."]},
-    {@sandbox_deleted_event ++ [:count],
-     [description: "Count of sandbox projects manually deleted."]},
-    {@workflow_saved_event ++ [:count],
-     [
-       tags: %{is_sandbox: [true, false]},
-       description: "Count of workflow saves, tagged by project type."
-     ]},
-    {@provisioner_import_event ++ [:count],
-     [
-       tags: %{is_sandbox: [true, false]},
-       description: "Count of provisioner imports, tagged by project type."
-     ]}
-  ]
-
   @doc """
   Seeds all sandbox counter metrics directly in PromEx ETS at value 0.
 
@@ -51,30 +27,45 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
   """
   def seed_event_metrics do
     if Lightning.Config.promex_enabled?() do
-      [
-        {@sandbox_created_event ++ [:count], %{}},
-        {@sandbox_merged_event ++ [:count], %{}},
-        {@sandbox_deleted_event ++ [:count], %{}},
-        {@workflow_saved_event ++ [:count], %{is_sandbox: true}},
-        {@workflow_saved_event ++ [:count], %{is_sandbox: false}},
-        {@provisioner_import_event ++ [:count], %{is_sandbox: true}},
-        {@provisioner_import_event ++ [:count], %{is_sandbox: false}}
-      ]
-      |> Enum.each(fn {name, tags} -> seed_counter(name, tags) end)
+      seed_counter(@sandbox_created_event ++ [:count], %{})
+      seed_counter(@sandbox_merged_event ++ [:count], %{})
+      seed_counter(@sandbox_deleted_event ++ [:count], %{})
+      seed_counter(@workflow_saved_event ++ [:count], %{is_sandbox: true})
+      seed_counter(@workflow_saved_event ++ [:count], %{is_sandbox: false})
+      seed_counter(@provisioner_import_event ++ [:count], %{is_sandbox: true})
+      seed_counter(@provisioner_import_event ++ [:count], %{is_sandbox: false})
     end
   end
 
-  defp seed_counter(name, tags) do
-    Lightning.PromEx.seed_counter(name, tags)
+  defp seed_counter(metric_name, labels) do
+    table = Lightning.PromEx.Metrics
+
+    unless :ets.whereis(table) == :undefined do
+      :ets.insert_new(table, {{metric_name, labels}, 0})
+    end
   end
 
   @impl true
   def event_metrics(_opts) do
-    metrics =
-      Enum.map(@metric_definitions, fn {name, opts} ->
-        opts = Keyword.update(opts, :tags, [], &Map.keys/1)
-        Metrics.counter(name, opts)
-      end)
+    metrics = [
+      Metrics.counter(@sandbox_created_event ++ [:count],
+        description: "Count of sandbox projects created."
+      ),
+      Metrics.counter(@sandbox_merged_event ++ [:count],
+        description: "Count of sandbox projects merged into targets."
+      ),
+      Metrics.counter(@sandbox_deleted_event ++ [:count],
+        description: "Count of sandbox projects manually deleted."
+      ),
+      Metrics.counter(@workflow_saved_event ++ [:count],
+        tags: [:is_sandbox],
+        description: "Count of workflow saves, tagged by project type."
+      ),
+      Metrics.counter(@provisioner_import_event ++ [:count],
+        tags: [:is_sandbox],
+        description: "Count of provisioner imports, tagged by project type."
+      )
+    ]
 
     [Event.build(:lightning_sandbox_event_metrics, metrics)]
   end

@@ -93,25 +93,6 @@ defmodule Lightning.PromEx do
     Lightning.Projects.SandboxPromExPlugin.seed_event_metrics()
   end
 
-  @doc """
-  Seeds a counter metric directly in the PromEx ETS table at value 0.
-
-  This avoids the GMP/Monarch "first data point lost" issue without the
-  drawback of telemetry-based seeding which adds phantom events on every
-  server restart.
-
-  By inserting 0 directly into ETS:
-  - First Prometheus scrape establishes 0 as the baseline
-  - First real event increments to 1, which shows correctly
-  - On restart, counter resets to 0 (Prometheus handles resets correctly)
-
-  Uses `insert_new` to avoid resetting existing counters during hot reloads.
-  """
-  def seed_counter(metric_name, labels \\ %{}) do
-    key = {metric_name, labels}
-    :ets.insert_new(__MODULE__.Metrics, {key, 0})
-  end
-
   @impl true
   def dashboard_assigns do
     [
