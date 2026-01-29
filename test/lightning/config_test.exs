@@ -43,6 +43,13 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "indicates if promex is enabled" do
+      disabled = extract_from_config(Lightning.PromEx, :disabled)
+      actual = API.promex_enabled?()
+
+      assert actual == not disabled
+    end
+
     test "indicates if the tracking of UI metrics is enabled" do
       expected =
         extract_from_config(:ui_metrics_tracking, :enabled)
