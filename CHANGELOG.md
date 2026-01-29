@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed truncation of long user names in the collapsible side menu
+  [#4361](https://github.com/OpenFn/lightning/issues/4361)
+
 ## [2.15.12] - 2026-01-29
 
 ### Fixed
