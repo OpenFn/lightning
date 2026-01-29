@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.12] - 2026-01-29
+
+### Fixed
+
 - Legacy editor modal was covered up by side menu, now it sits above like before
   [PR#4358](https://github.com/OpenFn/lightning/pull/4358)
 
