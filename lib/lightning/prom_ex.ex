@@ -90,33 +90,7 @@ defmodule Lightning.PromEx do
     Lightning.Config.external_metrics_module().seed_event_metrics()
     Lightning.PromExTestPlugin.seed_event_metrics()
     Lightning.Runs.PromExPlugin.seed_event_metrics()
-
-    # Seed sandbox metrics directly into ETS at value 0 (without firing telemetry).
-    # This establishes the Prometheus baseline so the first real event is captured,
-    # without adding phantom events on every server restart.
-    Lightning.Projects.SandboxPromExPlugin.metric_definitions()
-    |> Enum.flat_map(fn {name, opts} ->
-      case Keyword.get(opts, :tags) do
-        nil ->
-          [{name, %{}}]
-
-        tag_map ->
-          tag_map
-          |> Map.values()
-          |> combinations()
-          |> Enum.map(fn vals ->
-            {name, Enum.zip(Map.keys(tag_map), vals) |> Map.new()}
-          end)
-      end
-    end)
-    |> Enum.each(fn {name, labels} -> seed_counter(name, labels) end)
-  end
-
-  # Helper for cartesian product
-  defp combinations([]), do: [[]]
-
-  defp combinations([head | tail]) do
-    for h <- head, t <- combinations(tail), do: [h | t]
+    Lightning.Projects.SandboxPromExPlugin.seed_event_metrics()
   end
 
   @doc """

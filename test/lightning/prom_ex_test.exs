@@ -80,6 +80,8 @@ defmodule Lightning.PromExTest do
       Lightning.PromExTest.ExternalMetrics
     end)
 
+    Mox.stub(Lightning.MockConfig, :promex_enabled?, fn -> true end)
+
     lightning_prom_ex_test_event = [:lightning, :prom_ex_test]
     lost_runs_count_event = [:lightning, :run, :lost]
     test_event = [:promex, :external, :test, :event]

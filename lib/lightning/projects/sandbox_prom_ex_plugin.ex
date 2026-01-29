@@ -41,8 +41,32 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
      ]}
   ]
 
-  # Expose for external use
-  def metric_definitions, do: @metric_definitions
+  @doc """
+  Seeds all sandbox counter metrics directly in PromEx ETS at value 0.
+
+  This establishes the Prometheus baseline so the first real event is captured,
+  without adding phantom events on every server restart.
+
+  Only seeds when PromEx is enabled (via `Lightning.Config.promex_enabled?/0`).
+  """
+  def seed_event_metrics do
+    if Lightning.Config.promex_enabled?() do
+      [
+        {@sandbox_created_event ++ [:count], %{}},
+        {@sandbox_merged_event ++ [:count], %{}},
+        {@sandbox_deleted_event ++ [:count], %{}},
+        {@workflow_saved_event ++ [:count], %{is_sandbox: true}},
+        {@workflow_saved_event ++ [:count], %{is_sandbox: false}},
+        {@provisioner_import_event ++ [:count], %{is_sandbox: true}},
+        {@provisioner_import_event ++ [:count], %{is_sandbox: false}}
+      ]
+      |> Enum.each(fn {name, tags} -> seed_counter(name, tags) end)
+    end
+  end
+
+  defp seed_counter(name, tags) do
+    Lightning.PromEx.seed_counter(name, tags)
+  end
 
   @impl true
   def event_metrics(_opts) do
