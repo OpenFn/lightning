@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Copy parent project users when creating sandbox
+  [#3721](https://github.com/OpenFn/lightning/issues/3721)
+
 ### Fixed
 
 ## [2.15.12] - 2026-01-29
