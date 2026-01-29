@@ -157,7 +157,8 @@ export interface Step {
   error_type: string | null;
   started_at: string | null;
   finished_at: string | null;
-  input_dataclip_id: string;
+  input_dataclip_id: string | null;
+  output_dataclip_id: string | null;
 }
 
 /**
@@ -249,6 +250,9 @@ interface HistoryStoreInternals {
   _closeRunViewer: () => void;
   _switchingFromRun: () => void;
   _setActiveRunForTesting: (run: RunDetail) => void;
+  _setActiveRunIdForTesting: (runId: string) => void;
+  _populateCacheForTesting: (runId: string, runStepsData: RunStepsData) => void;
+  _triggerStepUpdateForTesting: (step: StepDetail) => void;
 }
 
 /**
