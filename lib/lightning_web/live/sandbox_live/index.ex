@@ -583,7 +583,7 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp perform_merge(source, target, actor) do
-    maybe_commit_to_github(target, "Before merge: #{source.name}")
+    maybe_commit_to_github(target, "pre-merge commit")
 
     result =
       source
@@ -596,7 +596,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
     case result do
       {:ok, _updated_target} = success ->
-        maybe_commit_to_github(target, "After merge: #{source.name}")
+        maybe_commit_to_github(target, "Merged sandbox #{source.name}")
         success
 
       error ->
