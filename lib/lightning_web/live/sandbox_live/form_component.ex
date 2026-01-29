@@ -82,14 +82,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    # Get parent project users and transform them to collaborators
     parent_users = Projects.get_project_users!(parent.id)
 
     collaborators =
       parent_users
       |> Enum.reject(fn pu -> pu.user_id == actor.id end)
       |> Enum.map(fn pu ->
-        # Convert owner role to admin since the current user is the sandbox owner
         role = if pu.role == :owner, do: :admin, else: pu.role
         %{user_id: pu.user_id, role: role}
       end)
