@@ -1,8 +1,6 @@
 // TODO: delete me
 
-import { getConnectedEdges } from '@xyflow/react';
-
-import { sortOrderForSvg, styleItem } from '../styles';
+import { styleItem } from '../styles';
 import type { Flow } from '../types';
 
 /**
@@ -35,7 +33,7 @@ export default (model: Flow.Model, newSelection: string | null) => {
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
     // Must put selected edge LAST to ensure it stays on top.
-    edges: model.edges.map(updateItem).sort(sortOrderForSvg) as Flow.Edge[],
+    edges: model.edges.map(updateItem) as Flow.Edge[],
   };
 
   // we have no way of knowing whether the selection is a node or id
