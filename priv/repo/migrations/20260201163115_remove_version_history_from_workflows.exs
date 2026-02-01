@@ -10,6 +10,9 @@ defmodule Lightning.Repo.Migrations.RemoveVersionHistoryFromWorkflows do
     alter table(:workflows) do
       remove :version_history
     end
+
+    # Clean slate: remove all workflow_versions rows since they were out of sync
+    execute "DELETE FROM workflow_versions"
   end
 
   def down do
