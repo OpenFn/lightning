@@ -2,24 +2,20 @@ defmodule Lightning.WorkflowVersions do
   @moduledoc """
   Provenance + comparison helpers for workflow heads.
 
-  - Persists append-only rows in `workflow_versions` and maintains a materialized
-    `workflows.version_history` array (12-char lowercase hex).
-  - `record_version/3` and `record_versions/3` are **idempotent** (`ON CONFLICT DO NOTHING`)
-    and **concurrency-safe** (row lock, append without dupes).
-  - `history_for/1` and `latest_hash/1` read the array first; when empty they fall back
-    to the table with deterministic ordering by `(inserted_at, id)`.
-  - `reconcile_history!/1` rebuilds the array from provenance rows.
+  - Persists append-only rows in `workflow_versions` with deterministic ordering
+    by `(inserted_at, id)`.
+  - `record_version/3` is **idempotent** and **concurrency-safe** (squashes
+    consecutive versions with the same source).
+  - `history_for/1` and `latest_hash/1` query the table with deterministic ordering.
   - `classify/2` and `classify_with_delta/2` compare two histories (same/ahead/diverged).
 
   Validation & invariants:
-  - `hash` must match `^[a-f0-9]{12}$`; `source` must be `"app"` or `"cli"`;
-    `(workflow_id, hash)` is unique.
+  - `hash` must match `^[a-f0-9]{12}$`; `source` must be `"app"` or `"cli"`.
 
-  Designed for fast diffs and consistent “latest head” lookups.
+  Designed for fast diffs and consistent "latest head" lookups.
   """
   import Ecto.Query
 
-  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Validators.Hex
@@ -31,13 +27,12 @@ defmodule Lightning.WorkflowVersions do
   @sources ~w(app cli)
 
   @doc """
-  Records a **single** workflow head `hash` with provenance and keeps
-  `workflows.version_history` in sync.
+  Records a **single** workflow head `hash` with provenance.
 
   This operation is **idempotent** and **concurrency-safe**:
-  it inserts into `workflow_versions` with `ON CONFLICT DO NOTHING`, then
-  locks the workflow row (`FOR UPDATE`) and appends `hash` to the array only
-  if it is not already present.
+  - If the latest version has the same source, it squashes (replaces) it
+  - If the hash+source already exists, it does nothing
+  - Otherwise, it inserts a new row
 
   ## Parameters
     * `workflow` — the workflow owning the history
@@ -45,14 +40,13 @@ defmodule Lightning.WorkflowVersions do
     * `source` — `"app"` or `"cli"` (defaults to `"app"`)
 
   ## Returns
-    * `{:ok, %Workflow{}}` — workflow (possibly unchanged) with an updated
-      `version_history` if a new `hash` was appended
+    * `{:ok, %Workflow{}}` — workflow (unchanged)
     * `{:error, reason}` — database error
 
   ## Examples
 
       iex> WorkflowVersions.record_version(wf, "deadbeefcafe", "app")
-      {:ok, %Workflow{version_history: [..., "deadbeefcafe"]}}
+      {:ok, %Workflow{}}
 
       iex> WorkflowVersions.record_version(wf, "NOT_HEX", "app")
       {:error, :invalid_input}
@@ -89,10 +83,9 @@ defmodule Lightning.WorkflowVersions do
         })
       )
       |> maybe_delete_current_latest()
-      |> update_workflow_history(workflow)
       |> Repo.transaction()
       |> case do
-        {:ok, %{update_workflow: updated}} -> {:ok, updated}
+        {:ok, _} -> {:ok, workflow}
         {:error, _op, reason, _} -> {:error, reason}
       end
     else
@@ -128,69 +121,17 @@ defmodule Lightning.WorkflowVersions do
     )
   end
 
-  defp update_workflow_history(multi, workflow) do
-    Multi.run(
-      multi,
-      :update_workflow,
-      fn repo, %{new_version: new_version, delete_latest: deleted_version} ->
-        workflow =
-          from(w in Workflow, where: w.id == ^workflow.id, lock: "FOR UPDATE")
-          |> repo.one!()
-
-        workflow
-        |> Changeset.change(
-          version_history:
-            build_version_history(
-              workflow.version_history || [],
-              new_version,
-              deleted_version
-            )
-        )
-        |> repo.update()
-      end
-    )
-  end
-
-  defp build_version_history(history, %{} = new_version, deleted_version) do
-    version_string = format_version(new_version)
-    hist = maybe_remove_squashed_version(history, deleted_version)
-    hist ++ [version_string]
-  end
-
-  defp build_version_history(history, nil, _deleted), do: history
-
-  defp maybe_remove_squashed_version(history, %{} = deleted_version) do
-    deleted_string = format_version(deleted_version)
-
-    case List.last(history) do
-      ^deleted_string -> List.delete_at(history, -1)
-      _ -> history
-    end
-  end
-
-  defp maybe_remove_squashed_version(history, nil), do: history
-
-  defp format_version(%{source: source, hash: hash}), do: "#{source}:#{hash}"
-
   @doc """
   Returns the **ordered** history of heads for a workflow.
 
-  If `workflow.version_history` is present and non-empty, that array is returned.
-  Otherwise, the function falls back to `workflow_versions` ordered by
-  `inserted_at ASC, id ASC` to provide deterministic ordering for equal timestamps.
+  Queries `workflow_versions` ordered by `inserted_at ASC, id ASC` to provide
+  deterministic ordering for equal timestamps.
 
   ## Examples
 
-      iex> WorkflowVersions.history_for(%Workflow{version_history: ["a", "b"]})
-      ["a", "b"]
-
-      iex> WorkflowVersions.history_for(wf) # when array is empty/nil
-      ["a", "b", "c"]
+      iex> WorkflowVersions.history_for(wf)
+      ["app:a", "cli:b", "app:c"]
   """
-  def history_for(%Workflow{version_history: arr})
-      when is_list(arr) and arr != [],
-      do: arr
-
   def history_for(%Workflow{id: id}) do
     from(v in WorkflowVersion,
       where: v.workflow_id == ^id,
@@ -203,33 +144,26 @@ defmodule Lightning.WorkflowVersions do
   @doc """
   Returns the **latest** head for a workflow (or `nil` if none).
 
-  Uses `workflow.version_history` when populated (taking the last element).
-  If empty/nil, reads from `workflow_versions` with
-  `ORDER BY inserted_at DESC, id DESC LIMIT 1` for deterministic results.
+  Queries `workflow_versions` with `ORDER BY inserted_at DESC, id DESC LIMIT 1`
+  for deterministic results.
 
   ## Examples
 
-      iex> WorkflowVersions.latest_hash(%Workflow{version_history: ["a", "b"]})
-      "b"
+      iex> WorkflowVersions.latest_hash(wf)
+      "app:b"
 
       iex> WorkflowVersions.latest_hash(wf_without_versions)
       nil
   """
   @spec latest_hash(Workflow.t()) :: hash | nil
   def latest_hash(%Workflow{} = wf) do
-    case wf.version_history do
-      list when is_list(list) and list != [] ->
-        List.last(list)
-
-      _ ->
-        from(v in WorkflowVersion,
-          where: v.workflow_id == ^wf.id,
-          order_by: [desc: v.inserted_at, desc: v.id],
-          limit: 1,
-          select: fragment("? || ':' || ?", v.source, v.hash)
-        )
-        |> Repo.one()
-    end
+    from(v in WorkflowVersion,
+      where: v.workflow_id == ^wf.id,
+      order_by: [desc: v.inserted_at, desc: v.id],
+      limit: 1,
+      select: fragment("? || ':' || ?", v.source, v.hash)
+    )
+    |> Repo.one()
   end
 
   defp latest_version(workflow_id) do
@@ -239,29 +173,6 @@ defmodule Lightning.WorkflowVersions do
       limit: 1
     )
     |> Repo.one()
-  end
-
-  @doc """
-  Rebuilds and **persists** `workflow.version_history` from provenance rows.
-
-  This is useful for maintenance/migrations when the array drifts from the
-  `workflow_versions` table. Ordering is `inserted_at ASC, id ASC`.
-
-  ## Returns
-    * `%Workflow{}` — updated workflow with a rebuilt `version_history`
-
-  ## Examples
-
-      iex> wf = WorkflowVersions.reconcile_history!(wf)
-      %Workflow{version_history: [...]}
-  """
-  @spec reconcile_history!(Workflow.t()) :: Workflow.t()
-  def reconcile_history!(%Workflow{id: id} = wf) do
-    arr = history_for(%Workflow{id: id, version_history: []})
-
-    wf
-    |> Changeset.change(version_history: arr)
-    |> Repo.update!()
   end
 
   @doc """
