@@ -271,11 +271,12 @@ defmodule Lightning.WorkflowVersions do
   - Create a list
   - Add the workflow name to the start of the list
   - For each node (trigger, job and edge) in a consistent order
-    - Get a sorted list of keys
-    - Filter out ignored keys
-    - Add each key and value to the list
+    - Take only the relevant fields (e.g., name, body, adaptor)
+    - Sort by field name (for consistency)
+    - Add only the field VALUES to the list (keys are excluded)
+    - Numeric values (e.g., positions) are rounded up to integers
   - Join the list into a string, no separator
-  - Hash the list with SHA 256
+  - Hash the string with SHA 256
   - Truncate the resulting string to 12 characters
 
   ## Parameters
@@ -323,9 +324,7 @@ defmodule Lightning.WorkflowVersions do
       workflow
       |> Map.take(workflow_keys)
       |> Enum.sort_by(fn {k, _v} -> k end)
-      |> Enum.flat_map(fn {k, v} ->
-        [to_string(k), serialize_value(v)]
-      end)
+      |> Enum.map(fn {_k, v} -> serialize_value(v) end)
 
     triggers_hash_list =
       workflow.triggers
@@ -335,22 +334,20 @@ defmodule Lightning.WorkflowVersions do
           trigger
           |> Map.take(trigger_keys)
           |> Enum.sort_by(fn {k, _v} -> k end)
-          |> Enum.flat_map(fn {k, v} ->
-            [to_string(k), serialize_value(v)]
-          end)
+          |> Enum.map(fn {_k, v} -> serialize_value(v) end)
 
         acc ++ hash_list
       end)
 
     jobs_hash_list =
       workflow.jobs
-      |> Enum.sort_by(& &1.name)
+      |> Enum.sort_by(fn job -> String.downcase(job.name || "") end)
       |> Enum.reduce([], fn job, acc ->
         hash_list =
           job
           |> Map.take(job_keys)
           |> Enum.sort_by(fn {k, _v} -> k end)
-          |> Enum.flat_map(fn {k, v} -> [to_string(k), serialize_value(v)] end)
+          |> Enum.map(fn {_k, v} -> serialize_value(v) end)
 
         acc ++ hash_list
       end)
@@ -368,7 +365,7 @@ defmodule Lightning.WorkflowVersions do
         hash_list =
           edge
           |> Enum.sort_by(fn {k, _v} -> k end)
-          |> Enum.flat_map(fn {k, v} -> [to_string(k), serialize_value(v)] end)
+          |> Enum.map(fn {_k, v} -> serialize_value(v) end)
 
         acc ++ hash_list
       end)
@@ -386,8 +383,21 @@ defmodule Lightning.WorkflowVersions do
     |> binary_part(0, 12)
   end
 
-  defp serialize_value(val) when is_map(val), do: Jason.encode!(val)
+  defp serialize_value(val) when is_map(val) do
+    val
+    |> round_numeric_values()
+    |> Jason.encode!()
+  end
+
+  defp serialize_value(val) when is_number(val), do: val |> ceil() |> to_string()
   defp serialize_value(val), do: to_string(val)
+
+  defp round_numeric_values(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {k, round_numeric_values(v)} end)
+  end
+
+  defp round_numeric_values(val) when is_number(val), do: ceil(val)
+  defp round_numeric_values(val), do: val
 
   defp edge_name(edge, workflow) do
     source_name =
