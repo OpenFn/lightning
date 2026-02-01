@@ -18,22 +18,31 @@ defmodule Lightning.WorkflowVersionsTest do
     |> Repo.aggregate(:count, :id)
   end
 
+  defp get_history(workflow_id) do
+    from(v in WorkflowVersion,
+      where: v.workflow_id == ^workflow_id,
+      order_by: [asc: v.inserted_at, asc: v.id],
+      select: fragment("? || ':' || ?", v.source, v.hash)
+    )
+    |> Repo.all()
+  end
+
   describe "record_version/3" do
-    test "inserts a row and appends to workflow.version_history (idempotent)" do
+    test "inserts a row (idempotent)" do
       wf = insert(:workflow)
 
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
-      assert wf1.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
 
       # same call again -> still one row; history unchanged
       assert {:ok, wf2} = WorkflowVersions.record_version(wf1, @a, "app")
-      assert wf2.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
 
       # different hash -> appended
       assert {:ok, wf3} = WorkflowVersions.record_version(wf2, @b, "cli")
-      assert wf3.version_history == ["app:#{@a}", "cli:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}"]
       assert count_rows(wf.id) == 2
     end
 
@@ -52,23 +61,23 @@ defmodule Lightning.WorkflowVersionsTest do
 
       # Insert first version
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
-      assert wf1.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
 
       # Insert different hash
       assert {:ok, wf2} = WorkflowVersions.record_version(wf1, @b, "cli")
-      assert wf2.version_history == ["app:#{@a}", "cli:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}"]
       assert count_rows(wf.id) == 2
 
       # Try to insert the same hash and source as latest (duplicate)
       assert {:ok, wf3} = WorkflowVersions.record_version(wf2, @b, "cli")
-      assert wf3.version_history == ["app:#{@a}", "cli:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}"]
       # Should still be 2, no new row inserted
       assert count_rows(wf.id) == 2
 
       # Try with different source but same hash - NOT a duplicate, will insert
       assert {:ok, wf4} = WorkflowVersions.record_version(wf3, @b, "app")
-      assert wf4.version_history == ["app:#{@a}", "cli:#{@b}", "app:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}", "app:#{@b}"]
       # Now we have 3 rows
       assert count_rows(wf.id) == 3
     end
@@ -78,18 +87,18 @@ defmodule Lightning.WorkflowVersionsTest do
 
       # Insert first version from app
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
-      assert wf1.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
 
       # Insert second version from cli
       assert {:ok, wf2} = WorkflowVersions.record_version(wf1, @b, "cli")
-      assert wf2.version_history == ["app:#{@a}", "cli:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}"]
       assert count_rows(wf.id) == 2
 
       # Insert third version from cli (same source as latest) - should squash in DB
       assert {:ok, wf3} = WorkflowVersions.record_version(wf2, @c, "cli")
-      # Version history keeps all entries (doesn't remove old ones)
-      assert wf3.version_history == ["app:#{@a}", "cli:#{@c}"]
+      # History shows squashing happened (old cli version replaced)
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@c}"]
       # Still 2 rows (deleted @b, added @c in database)
       assert count_rows(wf.id) == 2
 
@@ -104,16 +113,16 @@ defmodule Lightning.WorkflowVersionsTest do
       # Build up a history
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
       assert {:ok, wf2} = WorkflowVersions.record_version(wf1, @b, "cli")
-      assert wf2.version_history == ["app:#{@a}", "cli:#{@b}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@b}"]
 
       # Multiple squashes from cli
       assert {:ok, wf3} = WorkflowVersions.record_version(wf2, @c, "cli")
       # @b replaced by @c
-      assert wf3.version_history == ["app:#{@a}", "cli:#{@c}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@c}"]
 
       assert {:ok, wf4} = WorkflowVersions.record_version(wf3, @d, "cli")
       # @c replaced by @d
-      assert wf4.version_history == ["app:#{@a}", "cli:#{@d}"]
+      assert get_history(wf.id) == ["app:#{@a}", "cli:#{@d}"]
 
       # Only @a and @d should exist in database
       assert count_rows(wf.id) == 2
@@ -133,7 +142,7 @@ defmodule Lightning.WorkflowVersionsTest do
       assert {:ok, wf4} = WorkflowVersions.record_version(wf3, @d, "cli")
 
       # All versions should be preserved
-      assert wf4.version_history == [
+      assert get_history(wf.id) == [
                "app:#{@a}",
                "cli:#{@b}",
                "app:#{@c}",
@@ -154,19 +163,14 @@ defmodule Lightning.WorkflowVersionsTest do
 
       # First version should work normally
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
-      assert wf1.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
     end
   end
 
   describe "history_for/1" do
-    test "uses version_history array when present" do
-      wf = insert(:workflow, version_history: ["app:#{@a}", "cli:#{@b}"])
-      assert WorkflowVersions.history_for(wf) == ["app:#{@a}", "cli:#{@b}"]
-    end
-
-    test "falls back to table ordered by inserted_at, id when array empty" do
-      wf = insert(:workflow, version_history: [])
+    test "queries table ordered by inserted_at, id" do
+      wf = insert(:workflow)
 
       # Insert with deterministic inserted_at values
       t0 = DateTime.utc_now(:microsecond)
@@ -187,20 +191,16 @@ defmodule Lightning.WorkflowVersionsTest do
                "app:#{@c}"
              ]
     end
+
+    test "returns empty list when no versions exist" do
+      wf = insert(:workflow)
+      assert WorkflowVersions.history_for(wf) == []
+    end
   end
 
   describe "latest_hash/1" do
-    test "uses List.last(version_history) when present" do
-      wf =
-        insert(:workflow,
-          version_history: ["app:#{@a}", "cli:#{@b}", "app:#{@c}"]
-        )
-
-      assert WorkflowVersions.latest_hash(wf) == "app:#{@c}"
-    end
-
-    test "queries table when version_history empty; deterministic by inserted_at desc, id desc" do
-      wf = insert(:workflow, version_history: [])
+    test "queries table; deterministic by inserted_at desc, id desc" do
+      wf = insert(:workflow)
 
       t0 = DateTime.utc_now(:microsecond)
       t1 = DateTime.add(t0, 1, :microsecond)
@@ -216,30 +216,10 @@ defmodule Lightning.WorkflowVersionsTest do
 
       assert WorkflowVersions.latest_hash(wf) == "app:#{@c}"
     end
-  end
 
-  describe "reconcile_history!/1" do
-    test "rebuilds version_history from workflow_versions and persists it" do
-      wf = insert(:workflow, version_history: [])
-
-      t0 = DateTime.utc_now(:microsecond)
-      t1 = DateTime.add(t0, 1, :microsecond)
-      t2 = DateTime.add(t0, 2, :microsecond)
-
-      Repo.insert_all(WorkflowVersion, [
-        %{workflow_id: wf.id, hash: @a, source: "app", inserted_at: t0},
-        %{workflow_id: wf.id, hash: @b, source: "cli", inserted_at: t1},
-        %{workflow_id: wf.id, hash: @c, source: "app", inserted_at: t2}
-      ])
-
-      updated = WorkflowVersions.reconcile_history!(wf)
-      assert updated.version_history == ["app:#{@a}", "cli:#{@b}", "app:#{@c}"]
-
-      assert Repo.reload!(%Workflow{id: wf.id}).version_history == [
-               "app:#{@a}",
-               "cli:#{@b}",
-               "app:#{@c}"
-             ]
+    test "returns nil when no versions exist" do
+      wf = insert(:workflow)
+      assert WorkflowVersions.latest_hash(wf) == nil
     end
   end
 
@@ -655,8 +635,8 @@ defmodule Lightning.WorkflowVersionsTest do
   end
 
   describe "concurrency safety (no duplicate append under contention)" do
-    test "many concurrent record_version calls append only once and insert one row" do
-      wf = insert(:workflow, version_history: [])
+    test "many concurrent record_version calls insert only one row" do
+      wf = insert(:workflow)
 
       # spawn N tasks that block on a :go message, then all call record_version
       tasks =
@@ -683,11 +663,9 @@ defmodule Lightning.WorkflowVersionsTest do
                _ -> false
              end)
 
-      # Only one row in versions table; version_history has the hash once
+      # Only one row in versions table
       assert count_rows(wf.id) == 1
-
-      wf_reloaded = Repo.reload!(%Workflow{id: wf.id})
-      assert wf_reloaded.version_history == ["app:#{@a}"]
+      assert get_history(wf.id) == ["app:#{@a}"]
     end
   end
 end
