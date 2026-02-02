@@ -605,20 +605,9 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp maybe_commit_to_github(project, commit_message) do
-    case VersionControl.get_repo_connection_for_project(project.id) do
-      nil ->
-        :ok
-
-      repo_connection ->
-        case VersionControl.initiate_sync(repo_connection, commit_message) do
-          :ok ->
-            :ok
-
-          {:error, reason} ->
-            require Logger
-            Logger.warning("Failed to sync to GitHub: #{inspect(reason)}")
-            :ok
-        end
+    with %{} = repo_connection <-
+           VersionControl.get_repo_connection_for_project(project.id) do
+      VersionControl.initiate_sync(repo_connection, commit_message)
     end
   end
 
