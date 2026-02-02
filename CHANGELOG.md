@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fit screen when AI generates workflow & templates pick
+  [#4345](https://github.com/OpenFn/lightning/issues/4345)
+
 ## [2.15.12] - 2026-01-29
 
 ### Fixed
