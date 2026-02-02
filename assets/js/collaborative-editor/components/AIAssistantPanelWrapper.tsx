@@ -55,6 +55,7 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
+import flowEvents from './diagram/react-flow-events';
 import { MessageList } from './MessageList';
 
 /**
@@ -723,6 +724,7 @@ export function AIAssistantPanelWrapper() {
         // (otherwise other users weren't notified of the start)
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
+          flowEvents.dispatch('fit-view');
         }
       }
     },
