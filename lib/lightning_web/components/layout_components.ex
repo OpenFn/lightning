@@ -197,45 +197,13 @@ defmodule LightningWeb.LayoutComponents do
 
   attr :current_user, Lightning.Accounts.User, default: nil
   attr :socket, Phoenix.LiveView.Socket
-  attr :breadcrumbs, :list, default: []
-  attr :project, :map, default: nil
-  slot :title
+  slot :title, doc: "Page title (used when no breadcrumbs)"
+  slot :breadcrumbs, doc: "Breadcrumb navigation content"
   slot :period
   slot :description
   slot :inner_block
 
-  defp collect_breadcrumbs(assigns) do
-    # Add project name as first crumb if project is scoped
-    project_crumb =
-      if Map.get(assigns, :project) do
-        [{assigns.project.name, "/projects/#{assigns.project.id}/w"}]
-      else
-        []
-      end
-
-    # Add manual breadcrumbs after project
-    project_crumb ++ Map.get(assigns, :breadcrumbs, [])
-  end
-
   def header(assigns) do
-    # TODO - remove title_height once we confirm that :description is unused
-    title_height =
-      if assigns[:description] && assigns[:description] != [] do
-        "mt-4 h-10"
-      else
-        "h-20"
-      end
-
-    breadcrumbs = collect_breadcrumbs(assigns)
-
-    # description has the same title class except for height and font
-    assigns =
-      assign(assigns,
-        title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height,
-        breadcrumbs: breadcrumbs
-      )
-
     ~H"""
     <LightningWeb.Components.Common.banner
       :if={
@@ -258,34 +226,22 @@ defmodule LightningWeb.LayoutComponents do
       class="flex-none bg-white shadow-xs border-b border-gray-200"
       data-testid="top-bar"
     >
-      <div class={[@title_class, @title_height]}>
-        <%= if assigns[:current_user] do %>
-          <%= if assigns[:project] do %>
-            <nav class="flex" aria-label="Breadcrumb">
-              <ol role="list" class="flex items-center space-x-2">
-                <%!-- Show breadcrumbs --%>
-                <%= for {{label, _path}, index} <- Enum.with_index(@breadcrumbs) do %>
-                  <.breadcrumb_item label={label} index={index} />
-                <% end %>
-
-                <%!-- Page title --%>
-                <.breadcrumb show_separator={length(@breadcrumbs) > 1}>
-                  <:label>
-                    {if assigns[:title], do: render_slot(@title)}
-                  </:label>
-                </.breadcrumb>
-              </ol>
-            </nav>
-          <% else %>
-            <h1 class="text-xl font-semibold text-secondary-900 flex items-center">
-              {if assigns[:title], do: render_slot(@title)}
-            </h1>
-          <% end %>
+      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20">
+        <%= if @breadcrumbs != [] do %>
+          {render_slot(@breadcrumbs)}
         <% else %>
-          <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
+          <h1 class="text-xl font-semibold text-secondary-900 flex items-center">
             {if assigns[:title], do: render_slot(@title)}
           </h1>
         <% end %>
+
+        <h1
+          :if={!@current_user}
+          class="text-3xl font-bold text-secondary-900 flex items-center"
+        >
+          {if assigns[:title], do: render_slot(@title)}
+        </h1>
+
         <div class="grow"></div>
         {if assigns[:inner_block], do: render_slot(@inner_block)}
       </div>
@@ -324,25 +280,60 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
-  attr :label, :string, required: true
-  attr :index, :integer, required: true
+  @doc """
+  Renders breadcrumb navigation wrapper. Use inner_block to compose
+  project picker, breadcrumb items, and final title crumb.
 
-  defp breadcrumb_item(%{index: 0} = assigns) do
+  ## Example
+
+      <.breadcrumbs>
+        <.breadcrumb_project_picker label={@project.name} />
+        <.breadcrumb_items items={[{"History", ~p"/projects/\#{@project}/history"}]} />
+        <.breadcrumb>
+          <:label>{@page_title}</:label>
+        </.breadcrumb>
+      </.breadcrumbs>
+  """
+  slot :inner_block, required: true
+
+  def breadcrumbs(assigns) do
     ~H"""
-    <.breadcrumb_project_picker label={@label} />
+    <nav class="flex" aria-label="Breadcrumbs">
+      <ol
+        role="list"
+        class={[
+          "flex items-center space-x-2",
+          "[&>li.breadcrumb-item_.breadcrumb-separator]:hidden",
+          "[&>li.breadcrumb-item+li.breadcrumb-item_.breadcrumb-separator]:flex"
+        ]}
+      >
+        {render_slot(@inner_block)}
+      </ol>
+    </nav>
     """
   end
 
-  defp breadcrumb_item(assigns) do
+  @doc """
+  Renders breadcrumb items from a list of {label, path} tuples.
+
+  ## Example
+
+      <.breadcrumb_items items={[{"History", "/projects/123/history"}]} />
+  """
+  attr :items, :list, required: true
+
+  def breadcrumb_items(assigns) do
     ~H"""
-    <.breadcrumb show_separator={@index > 1}>
-      <:label>{@label}</:label>
+    <.breadcrumb :for={{label, path} <- @items} path={path}>
+      <:label>{label}</:label>
     </.breadcrumb>
     """
   end
 
+  @doc """
+  Renders a project picker button styled as a breadcrumb element.
+  """
   attr :label, :string, required: true
-  attr :show_separator, :boolean, default: true
 
   def breadcrumb_project_picker(assigns) do
     ~H"""
@@ -352,7 +343,12 @@ defmodule LightningWeb.LayoutComponents do
           id="breadcrumb-project-picker-trigger"
           type="button"
           phx-click={JS.dispatch("open-project-picker", to: "body")}
-          class="flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
+          class={[
+            "flex items-center gap-2 px-2.5 py-1.5",
+            "text-sm font-medium text-gray-700",
+            "bg-white border border-gray-300 rounded-md",
+            "hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
+          ]}
         >
           <.icon name="hero-folder" class="h-4 w-4 text-gray-500" />
           {@label}
@@ -363,34 +359,26 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   attr :path, :string, default: nil
-  attr :show_separator, :boolean, default: true
   slot :label
 
   def breadcrumb(assigns) do
     ~H"""
-    <li>
+    <li class="breadcrumb-item">
       <div class="flex items-center">
         <.icon
-          :if={@show_separator}
           name="hero-chevron-right"
-          class="h-5 w-5 shrink-0 text-gray-400"
+          class="breadcrumb-separator mr-1 h-5 w-5 shrink-0 text-gray-400"
         />
         <%= if @path do %>
           <.link
             patch={@path}
-            class={[
-              "flex text-sm font-medium text-gray-500 hover:text-gray-700",
-              @show_separator && "ml-2"
-            ]}
+            class="ml-1 flex text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
             {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
-          <span class={[
-            "flex items-center text-sm font-medium text-gray-500",
-            @show_separator && "ml-2"
-          ]}>
+          <span class="ml-1 flex items-center text-sm font-medium text-gray-500">
             {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>
@@ -470,7 +458,7 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-xs primary-light opacity-50">
+        <div class="text-[8px] primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>
@@ -479,7 +467,7 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-xs primary-light opacity-50">
+        <div class="text-[8px] primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>

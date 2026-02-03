@@ -3266,7 +3266,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "broadcasts use user's first_name if available", %{
-      socket: socket,
       project: project,
       workflow: workflow
     } do
@@ -3299,7 +3298,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "broadcasts use email as fallback when first_name is nil", %{
-      socket: socket,
       project: project,
       workflow: workflow
     } do

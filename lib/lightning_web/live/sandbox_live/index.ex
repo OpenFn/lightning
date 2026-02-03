@@ -324,8 +324,15 @@ defmodule LightningWeb.SandboxLive.Index do
         />
       </:banner>
       <:header>
-        <LayoutComponents.header current_user={@current_user} project={@project}>
-          <:title>Sandboxes</:title>
+        <LayoutComponents.header current_user={@current_user}>
+          <:breadcrumbs>
+            <LayoutComponents.breadcrumbs>
+              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb>
+                <:label>Sandboxes</:label>
+              </LayoutComponents.breadcrumb>
+            </LayoutComponents.breadcrumbs>
+          </:breadcrumbs>
         </LayoutComponents.header>
       </:header>
 
@@ -592,6 +599,8 @@ defmodule LightningWeb.SandboxLive.Index do
          _root_project,
          actor
        ) do
+    Lightning.Projects.SandboxPromExPlugin.fire_sandbox_merged_event()
+
     flash_message = build_merge_success_message(source, target, actor)
 
     socket

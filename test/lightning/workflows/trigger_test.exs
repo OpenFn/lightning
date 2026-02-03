@@ -156,5 +156,83 @@ defmodule Lightning.Workflows.TriggerTest do
 
       assert get_field(changeset, :kafka_configuration) == nil
     end
+
+    test "sets webhook_reply to nil when type is :cron" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          webhook_reply: :before_start
+        })
+
+      assert get_field(changeset, :webhook_reply) == nil
+
+      # Also when converting from webhook to cron
+      changeset =
+        Trigger.changeset(
+          %Trigger{type: :webhook, webhook_reply: :after_completion},
+          %{type: :cron}
+        )
+
+      assert get_field(changeset, :webhook_reply) == nil
+    end
+
+    test "sets webhook_reply to nil when type is :kafka" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :kafka,
+          webhook_reply: :custom,
+          kafka_configuration: %{
+            group_id: "group_id",
+            hosts: [["host1", "9092"]],
+            hosts_string: "host1:9092",
+            initial_offset_reset_policy: "earliest",
+            sasl: "plain",
+            ssl: true,
+            topics: ["foo"],
+            topics_string: "foo"
+          }
+        })
+
+      assert get_field(changeset, :webhook_reply) == nil
+
+      # Also when converting from webhook to kafka
+      changeset =
+        Trigger.changeset(
+          %Trigger{type: :webhook, webhook_reply: :before_start},
+          %{
+            type: :kafka,
+            kafka_configuration: %{
+              group_id: "group_id",
+              hosts: [["host1", "9092"]],
+              hosts_string: "host1:9092",
+              initial_offset_reset_policy: "earliest",
+              sasl: "plain",
+              ssl: true,
+              topics: ["foo"],
+              topics_string: "foo"
+            }
+          }
+        )
+
+      assert get_field(changeset, :webhook_reply) == nil
+    end
+
+    test "allows webhook_reply to be set for webhook triggers" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          webhook_reply: :after_completion
+        })
+
+      assert get_field(changeset, :webhook_reply) == :after_completion
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          webhook_reply: :custom
+        })
+
+      assert get_field(changeset, :webhook_reply) == :custom
+    end
   end
 end

@@ -21,7 +21,7 @@ defmodule LightningWeb.DataclipLive.Show do
     {:noreply,
      socket
      |> assign(:id, id)
-     |> assign(:page_title, "Dataclip #{String.slice(id, 0..7)}")
+     |> assign(:page_title, "Dataclip")
      |> assign(:dataclip, Invocation.get_dataclip!(id))}
   end
 
@@ -37,8 +37,20 @@ defmodule LightningWeb.DataclipLive.Show do
         />
       </:banner>
       <:header>
-        <LayoutComponents.header current_user={@current_user} project={@project}>
-          <:title>{@page_title}</:title>
+        <LayoutComponents.header current_user={@current_user}>
+          <:breadcrumbs>
+            <LayoutComponents.breadcrumbs>
+              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb>
+                <:label>
+                  {@page_title}
+                  <span class="pl-2 font-light">
+                    {display_short_uuid(@id)}
+                  </span>
+                </:label>
+              </LayoutComponents.breadcrumb>
+            </LayoutComponents.breadcrumbs>
+          </:breadcrumbs>
         </LayoutComponents.header>
       </:header>
 

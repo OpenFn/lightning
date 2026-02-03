@@ -17,10 +17,44 @@ and this project adheres to
 
 ### Added
 
+- Add PromEx plugin to track sandbox-related metrics for Prometheus including
+  sandbox lifecycle events and workflow saves by project type
+  [#4101](https://github.com/OpenFn/lightning/issues/4101)
+
+### Changed
+
+### Fixed
+
+- Step events aren't appearing realtime on canvas
+  [#4261](https://github.com/OpenFn/lightning/issues/4261)
+
+## [2.15.12] - 2026-01-29
+
+### Fixed
+
+- Legacy editor modal was covered up by side menu, now it sits above like before
+  [PR#4358](https://github.com/OpenFn/lightning/pull/4358)
+
+## [2.15.12-pre3] - 2026-01-28
+
+- Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
+  rendering [PR#4356](https://github.com/OpenFn/lightning/pull/4356)
+- Fix version dropdown showing dot for workflows with cron/kafka triggers
+  [#4352](https://github.com/OpenFn/lightning/issues/4352)
+
+## [2.15.12-pre2] - 2026-01-28
+
+### Added
+
+- Provisioner updates version history of workflows on post
+  [#4343](https://github.com/OpenFn/lightning/issues/4343)
+
 ### Changed
 
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
+- Modified version hashing algorithm for CLI compatibility
+  [#4346](https://github.com/OpenFn/lightning/issues/4346)
 
 ### Fixed
 
@@ -64,8 +98,6 @@ and this project adheres to
 - Credentials Scrubber uses too much memory. Introduce a limit on the number of
   sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
   [#4307](https://github.com/OpenFn/lightning/issues/4307)
-- Step events aren't appearing realtime on canvas
-  [#4261](https://github.com/OpenFn/lightning/issues/4261)
 
 ## [2.15.11] - 2026-01-15
 
