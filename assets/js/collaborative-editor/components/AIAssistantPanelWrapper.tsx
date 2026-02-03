@@ -615,6 +615,37 @@ export function AIAssistantPanelWrapper() {
     updateSearchParams,
   ]);
 
+  // Track previous job ID to detect changes and clear diff
+  const previousJobIdRef = useRef<string | null>(null);
+
+  // Auto-dismiss diff when job changes (prevents showing Job A's diff while viewing Job B)
+  useEffect(() => {
+    // Only track job changes when in job_code mode
+    if (!aiMode || aiMode.mode !== 'job_code') {
+      previousJobIdRef.current = null;
+      return;
+    }
+
+    const currentJobId = (aiMode.context as JobCodeContext).job_id;
+
+    // Detect actual job change (not initial mount)
+    if (
+      previousJobIdRef.current !== null &&
+      previousJobIdRef.current !== currentJobId
+    ) {
+      const monaco = monacoRef?.current;
+
+      // Clear any active diff preview when job changes
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
+        setPreviewingMessageId(null);
+      }
+    }
+
+    // Update tracked job ID
+    previousJobIdRef.current = currentJobId;
+  }, [aiMode, previewingMessageId, monacoRef]);
+
   const {
     importWorkflow,
     startApplyingWorkflow,
