@@ -23,7 +23,7 @@ and this project adheres to
 
 ### Changed
 
-- Child nodes switch position when an edge is selected
+- Child nodes no longer switch position when an edge is selected
   [#4328](https://github.com/OpenFn/lightning/issues/4328)
 
 ### Fixed
