@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Update links in history page to use collab editor query params
+  [#4371](https://github.com/OpenFn/lightning/issues/4371)
+
 ## [2.15.12] - 2026-01-29
 
 ### Fixed
