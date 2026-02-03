@@ -49,12 +49,14 @@ platform_install_dependencies() {
 platform_setup_environment() {
   # Set compilers if not already set
   if [[ -z "${CC:-}" ]] && command -v gcc &>/dev/null; then
-    export CC="$(command -v gcc)"
+    CC="$(command -v gcc)"
+    export CC
     echo "Set CC to $CC"
   fi
 
   if [[ -z "${CXX:-}" ]] && command -v g++ &>/dev/null; then
-    export CXX="$(command -v g++)"
+    CXX="$(command -v g++)"
+    export CXX
     echo "Set CXX to $CXX"
   fi
 }

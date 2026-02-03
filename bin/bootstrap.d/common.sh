@@ -6,7 +6,6 @@
 OS=""
 ARCH=""
 MISSING_SYSTEM_DEPS=()
-MISSING_PLATFORM_DEPS=()
 
 # Get the directory where bootstrap.d lives
 BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -162,8 +161,8 @@ run_bootstrap() {
   echo ""
 
   echo "Setting up Elixir environment..."
-  mix local.hex --if-missing
-  mix local.rebar --if-missing
+  mix local.hex --if-missing --force
+  mix local.rebar --if-missing --force
 
   echo "Installing Elixir dependencies..."
   mix deps.get

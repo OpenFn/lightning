@@ -127,12 +127,14 @@ platform_install_dependencies() {
 platform_setup_environment() {
   # Explicitly set C/C++ compilers to avoid CMake detection issues
   if command -v clang &>/dev/null; then
-    export CC="$(command -v clang)"
+    CC="$(command -v clang)"
+    export CC
     echo "Set CC to $CC"
   fi
 
   if command -v clang++ &>/dev/null; then
-    export CXX="$(command -v clang++)"
+    CXX="$(command -v clang++)"
+    export CXX
     echo "Set CXX to $CXX"
   fi
 
