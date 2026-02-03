@@ -2015,8 +2015,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
             apiSecretName: api_secret_name(parent),
             branch: repo_connection.branch,
             pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}",
-            snapshots: "#{snapshot.id}"
+            commitMessage: "Merged sandbox #{sandbox.name}"
           }
         }
       )
@@ -2037,8 +2036,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
          %{
            conn: conn,
            parent: parent,
-           sandbox: sandbox,
-           user: user
+           sandbox: sandbox
          } do
       # No repo_connection created = no GitHub sync
       # Without a repo_connection, get_repo_connection_for_project returns nil
