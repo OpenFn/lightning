@@ -1933,8 +1933,81 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
-  describe "Copying project users when creating sandbox" do
+  describe "Creating sandbox" do
     setup :register_and_log_in_user
+
+    test "copies allow_support_access field from parent project", %{
+      conn: conn,
+      user: user
+    } do
+      # Create parent with allow_support_access enabled
+      parent =
+        insert(:project,
+          name: "parent-with-support",
+          allow_support_access: true,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
+      })
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
+      })
+
+      # Get the created sandbox from database
+      sandbox =
+        Repo.get_by!(Project, parent_id: parent.id, name: "test-sandbox")
+
+      # Verify allow_support_access was copied from parent
+      assert sandbox.allow_support_access == true
+
+      # Also test with allow_support_access disabled
+      parent_no_support =
+        insert(:project,
+          name: "parent-no-support",
+          allow_support_access: false,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view2, _html} =
+        live(conn, ~p"/projects/#{parent_no_support.id}/sandboxes")
+
+      view2 |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view2, ~p"/projects/#{parent_no_support.id}/sandboxes/new")
+
+      view2
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
+      })
+
+      view2
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
+      })
+
+      # Get the second sandbox from database
+      sandbox2 =
+        Repo.get_by!(Project,
+          parent_id: parent_no_support.id,
+          name: "test-sandbox-2"
+        )
+
+      # Verify allow_support_access remains false
+      assert sandbox2.allow_support_access == false
+    end
 
     test "copies all parent users when current user is owner", %{
       conn: conn,
