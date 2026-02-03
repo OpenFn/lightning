@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- AI-generated code diff now clears automatically when switching jobs in IDE
+  [#4318](https://github.com/OpenFn/lightning/issues/4318)
+
 ## [2.15.12] - 2026-01-29
 
 ### Fixed
