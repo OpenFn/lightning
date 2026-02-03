@@ -1128,13 +1128,10 @@ defmodule Lightning.AiAssistant do
     message = body["history"] |> Enum.reverse() |> hd()
     message_attrs = Map.take(message, ["role", "content"])
 
-    code =
-      message["suggested_code"]
-
     opts = [
       usage: body["usage"] || %{},
       meta: body["meta"],
-      code: code
+      code: body["suggested_code"]
     ]
 
     {message_attrs, opts}
