@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.GithubHelpers
   import Ecto.Query
 
   alias Lightning.Repo
@@ -15,7 +16,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     Mimic.copy(Lightning.Projects.Sandboxes)
     Mimic.copy(Lightning.Projects.MergeProjects)
     Mimic.copy(Lightning.Projects.Provisioner)
-    Mimic.copy(Lightning.VersionControl)
 
     Mimic.stub_with(Lightning.Projects, Lightning.Projects)
     Mimic.stub_with(Lightning.Projects.Sandboxes, Lightning.Projects.Sandboxes)
@@ -29,8 +29,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Lightning.Projects.Provisioner,
       Lightning.Projects.Provisioner
     )
-
-    Mimic.stub_with(Lightning.VersionControl, Lightning.VersionControl)
 
     :ok
   end
@@ -1937,7 +1935,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
   end
 
   describe "GitHub sync integration during merge" do
-    import Lightning.GithubHelpers
+    setup do
+      Mox.verify_on_exit!()
+    end
 
     setup :register_and_log_in_user
 
@@ -1968,7 +1968,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
            conn: conn,
            parent: parent,
            sandbox: sandbox,
-           user: user,
            snapshot: snapshot
          } do
       # Set up GitHub sync for the parent project
@@ -2022,43 +2021,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       )
 
-      # Mock the merge operation
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn source, target ->
-          assert source.id == sandbox.id
-          assert target.id == parent.id
-          "merged_yaml"
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn target, actor, yaml, opts ->
-          assert target.id == parent.id
-          assert actor.id == user.id
-          assert yaml == "merged_yaml"
-          assert opts[:allow_stale] == true
-          {:ok, target}
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects,
-        :delete_sandbox,
-        fn source, actor ->
-          assert source.id == sandbox.id
-          assert actor.id == user.id
-          {:ok, source}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-
       # Open merge modal and submit
       view
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
@@ -2082,43 +2044,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       # Without a repo_connection, get_repo_connection_for_project returns nil
       # and initiate_sync is never called, so no GitHub API calls happen
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Mock the merge operation
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn source, target ->
-          assert source.id == sandbox.id
-          assert target.id == parent.id
-          "merged_yaml"
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn target, actor, yaml, opts ->
-          assert target.id == parent.id
-          assert actor.id == user.id
-          assert yaml == "merged_yaml"
-          assert opts[:allow_stale] == true
-          {:ok, target}
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects,
-        :delete_sandbox,
-        fn source, actor ->
-          assert source.id == sandbox.id
-          assert actor.id == user.id
-          {:ok, source}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
 
       # Open merge modal and submit
       view
