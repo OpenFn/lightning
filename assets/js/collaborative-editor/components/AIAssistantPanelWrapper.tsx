@@ -626,7 +626,13 @@ export function AIAssistantPanelWrapper() {
       return;
     }
 
-    const currentJobId = (aiMode.context as JobCodeContext).job_id;
+    const context = aiMode.context as JobCodeContext;
+    if (!context?.job_id) {
+      previousJobIdRef.current = null;
+      return;
+    }
+
+    const currentJobId = context.job_id;
 
     // Detect actual job change (not initial mount)
     if (
