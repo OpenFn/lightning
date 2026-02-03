@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Step events aren't appearing realtime on canvas
+  [#4261](https://github.com/OpenFn/lightning/issues/4261)
+
 ## [2.15.12] - 2026-01-29
 
 ### Fixed

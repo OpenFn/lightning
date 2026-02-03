@@ -12,6 +12,7 @@ import {
   useHistoryPanelCollapsed,
 } from '../../hooks/useEditorPreferences';
 import {
+  useFollowRun,
   useHistory,
   useHistoryChannelConnected,
   useHistoryCommands,
@@ -74,6 +75,10 @@ export function CollaborativeWorkflowDiagram({
     25, // Canvas priority (lower than IDE's 50)
     { enabled: !isNewWorkflow }
   );
+
+  // Follow the run to receive real-time step updates via run:${runId} channel
+  // This is essential for highlighting steps as they execute in real-time
+  useFollowRun(selectedRunId);
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
