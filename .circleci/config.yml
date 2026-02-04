@@ -100,6 +100,10 @@ jobs:
             - v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
       - run:
+          name: "Fix ownership after cache restore"
+          command: chown -R lightning /home/lightning/project
+
+      - run:
           name: "Install build dependencies"
           command: |
             apt-get update && apt-get install -y \
