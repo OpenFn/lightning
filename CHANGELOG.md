@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Changed
 
+- Copy parent project users when creating sandbox
+  [#3761](https://github.com/OpenFn/lightning/issues/3761)
 - Refactor bootstrap script for cross-platform support, splitting into modular
   files under `bin/bootstrap.d/` for macOS and Linux (Debian/Ubuntu)
   [#4377](https://github.com/OpenFn/lightning/pull/4377)
