@@ -66,6 +66,9 @@ commands:
       - run:
           name: "Restore ownership after workspace attach"
           command: chown -R lightning /home/lightning
+      - run:
+          name: "Install Hex and Rebar"
+          command: sudo -u lightning mix local.hex --force && sudo -u lightning mix local.rebar --force
 
 jobs:
   # ============================================================================
