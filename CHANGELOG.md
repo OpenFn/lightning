@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Update links in history page to use collab editor query params
+  [#4371](https://github.com/OpenFn/lightning/issues/4371)
 - Step events aren't appearing realtime on canvas
   [#4261](https://github.com/OpenFn/lightning/issues/4261)
 - Send `suggest_code` flag to apollo for more robust suggestion parsing
