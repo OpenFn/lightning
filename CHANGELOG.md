@@ -29,6 +29,8 @@ and this project adheres to
 
 - Step events aren't appearing realtime on canvas
   [#4261](https://github.com/OpenFn/lightning/issues/4261)
+- Send `suggest_code` flag to apollo for more robust suggestion parsing
+  [#4373](https://github.com/OpenFn/lightning/issues/4373)
 
 ## [2.15.12] - 2026-01-29
 

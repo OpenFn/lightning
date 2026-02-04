@@ -37,6 +37,7 @@ defmodule Lightning.ApolloClientTest do
                ]
 
         assert decoded_body["meta"] == %{"session_id" => "abc123"}
+        assert decoded_body["suggest_code"] == true
 
         {:ok,
          %Tesla.Env{
@@ -77,6 +78,7 @@ defmodule Lightning.ApolloClientTest do
         assert decoded_body["context"] == %{}
         assert decoded_body["history"] == []
         assert decoded_body["meta"] == %{}
+        assert decoded_body["suggest_code"] == true
 
         {:ok, %Tesla.Env{status: 200, body: %{"response" => "Debug help..."}}}
       end)
@@ -122,7 +124,8 @@ defmodule Lightning.ApolloClientTest do
                  "content" => "foo",
                  "context" => %{},
                  "history" => [],
-                 "meta" => %{}
+                 "meta" => %{},
+                 "suggest_code" => true
                }
 
         {:ok,
@@ -178,7 +181,8 @@ defmodule Lightning.ApolloClientTest do
                    %{"role" => "user", "content" => "Previous question"},
                    %{"role" => "assistant", "content" => "Previous answer"}
                  ],
-                 "meta" => %{"session_id" => "123", "user_id" => "456"}
+                 "meta" => %{"session_id" => "123", "user_id" => "456"},
+                 "suggest_code" => true
                }
 
         {:ok, %Tesla.Env{status: 200, body: %{"response" => "Handle errors..."}}}
@@ -207,7 +211,8 @@ defmodule Lightning.ApolloClientTest do
                  "content" => "Test content",
                  "context" => %{"expression" => "console.log('hello')"},
                  "history" => [],
-                 "meta" => %{}
+                 "meta" => %{},
+                 "suggest_code" => true
                }
 
         {:ok, %Tesla.Env{status: 200, body: %{}}}
@@ -608,6 +613,7 @@ defmodule Lightning.ApolloClientTest do
         assert decoded["context"] == %{"expression" => "test"}
         assert decoded["history"] == [%{"role" => "user", "content" => "test"}]
         assert decoded["meta"] == %{"session_id" => "123"}
+        assert decoded["suggest_code"] == true
         {:ok, %Tesla.Env{status: 200, body: %{"response" => "test"}}}
       end)
 
