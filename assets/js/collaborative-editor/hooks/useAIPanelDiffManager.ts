@@ -117,7 +117,14 @@ export function useAIPanelDiffManager({
       return;
     }
 
-    const currentJobId = (aiMode.context as { job_id: string }).job_id;
+    const context = aiMode.context as { job_id?: string };
+    const currentJobId = context.job_id;
+
+    // Safety check: if no job_id, reset tracking and return
+    if (!currentJobId) {
+      previousJobIdRef.current = null;
+      return;
+    }
 
     // Detect actual job change (not initial mount)
     if (
