@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.GithubHelpers
   import Ecto.Query
 
   alias Lightning.Repo
@@ -1930,6 +1931,140 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "main"
 
       assert has_element?(view, "#env-badge-#{root.id}")
+    end
+  end
+
+  describe "GitHub sync integration during merge" do
+    setup do
+      Mox.verify_on_exit!()
+    end
+
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      # Create workflows and snapshots for the parent project
+      workflow = insert(:simple_workflow, project: parent)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok,
+       parent: parent, sandbox: sandbox, workflow: workflow, snapshot: snapshot}
+    end
+
+    test "commits to GitHub before and after merge when project has GitHub sync",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox,
+           snapshot: snapshot
+         } do
+      # Set up GitHub sync for the parent project
+      repo_connection =
+        insert(:project_repo_connection,
+          project: parent,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Expect GitHub API calls for the pre-merge commit
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "pre-merge commit",
+            snapshots: "#{snapshot.id}"
+          }
+        }
+      )
+
+      # Expect GitHub API calls for the post-merge commit
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "Merged sandbox #{sandbox.name}"
+          }
+        }
+      )
+
+      # Open merge modal and submit
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
+    test "does not commit to GitHub when project has no GitHub sync configured",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      # No repo_connection created = no GitHub sync
+      # Without a repo_connection, get_repo_connection_for_project returns nil
+      # and initiate_sync is never called, so no GitHub API calls happen
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal and submit
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
+    defp api_secret_name(%{id: project_id}) do
+      project_id
+      |> String.replace("-", "_")
+      |> then(&"OPENFN_#{&1}_API_KEY")
+    end
+
+    defp path_to_config(repo_connection) do
+      repo_connection
+      |> Lightning.VersionControl.ProjectRepoConnection.config_path()
+      |> Path.relative_to(".")
     end
   end
 end

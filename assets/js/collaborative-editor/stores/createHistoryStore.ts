@@ -17,9 +17,12 @@
  * ## Channel Interactions
  *
  * **Listens to:**
- * - `history_updated` - Real-time work order and run updates from server
+ * - `history_updated` (workflow channel) - Updates history list with work orders and runs
  *   - Handles: work_order created/updated, run created/updated
- *   - Automatically invalidates and refetches affected run steps
+ *   - Updates history panel display ONLY, does not touch run steps cache
+ * - `run:updated`, `step:started`, `step:completed` (dedicated run channel) - Real-time run execution
+ *   - Updates activeRun and runStepsCache incrementally for followed runs
+ *   - Requires useFollowRun() to connect to the run channel
  *
  * **Makes requests:**
  * - `request_history` - Fetches top 20 work orders (optionally filtered to include specific run)
@@ -58,11 +61,12 @@
  * initial run data via data attributes. This is passed to createHistoryStore()
  * to pre-populate the cache, enabling instant rendering without loading flash.
  *
- * ### Selective Cache Invalidation
- * When history_updated event arrives with run changes:
- * - Check if run has active subscribers
- * - If yes: invalidate cache and trigger refetch
- * - If no: ignore (no components need fresh data)
+ * ### Separation of Concerns
+ * - **History list (draft.history)**: Updated by `history_updated` events for history panel
+ * - **Run steps cache (draft.runStepsCache)**: Updated by step events from run channel ONLY
+ *
+ * This separation prevents cache invalidation when runs complete, allowing
+ * incremental step highlighting via the dedicated run channel.
  *
  * ### Cache Persistence
  * Cache entries are NOT cleared when subscribers unsubscribe. This prevents
@@ -95,9 +99,11 @@ import {
   type RunDetail,
   type RunStepsData,
   type RunSummary,
+  type Step,
   type StepDetail,
   type WorkOrder,
   HistoryListSchema,
+  isFinalState,
   RunDetailSchema,
   StepDetailSchema,
 } from '../types/history';
@@ -106,6 +112,34 @@ import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('HistoryStore').seal();
+
+/**
+ * Maps step-like objects to the Step type used in cache
+ *
+ * Handles both StepDetail (from channel events) and step data from RunDetail.
+ *
+ * @param source - Step data from various sources (StepDetail, RunDetail.steps, etc.)
+ * @returns Step object suitable for caching
+ */
+const toStep = (source: {
+  id: string;
+  job_id: string;
+  started_at: string | null;
+  finished_at: string | null;
+  exit_reason: string | null;
+  error_type: string | null;
+  input_dataclip_id: string | null;
+  output_dataclip_id: string | null;
+}): Step => ({
+  id: source.id,
+  job_id: source.job_id,
+  started_at: source.started_at,
+  finished_at: source.finished_at,
+  exit_reason: source.exit_reason,
+  error_type: source.error_type,
+  input_dataclip_id: source.input_dataclip_id,
+  output_dataclip_id: source.output_dataclip_id,
+});
 
 /**
  * Options for creating a history store
@@ -298,25 +332,32 @@ export const createHistoryStore = (
         }
       }
 
-      // Invalidate cached run steps if someone is watching this run
-      if ((action === 'run_updated' || action === 'run_created') && run) {
-        const subscribersForThisRun = draft.runStepsSubscribers[run.id];
-        if (subscribersForThisRun && subscribersForThisRun.size > 0) {
-          // Invalidate cache - next read will trigger refetch
-          Reflect.deleteProperty(draft.runStepsCache, run.id);
-        }
-      }
-
       draft.lastUpdated = Date.now();
     });
     notify('handleHistoryUpdated');
 
-    // Trigger refetch for invalidated runs with subscribers
+    // Fallback cache invalidation: If a run has completed (reached final state)
+    // and there are active subscribers watching it, invalidate the cache to ensure
+    // they get the complete final data on next read.
+    //
+    // This provides a safety net for components that use useRunSteps() without
+    // useFollowRun() - they won't get real-time step updates, but will get
+    // refreshed data when the run completes.
+
     if ((action === 'run_updated' || action === 'run_created') && run) {
       const currentState = getSnapshot();
-      const subscribers = currentState.runStepsSubscribers[run.id];
-      if (subscribers && subscribers.size > 0) {
-        // Asynchronously refetch - don't await
+      const subscribersForThisRun = currentState.runStepsSubscribers[run.id];
+
+      if (
+        subscribersForThisRun &&
+        subscribersForThisRun.size > 0 &&
+        isFinalState(run.state)
+      ) {
+        state = produce(state, draft => {
+          Reflect.deleteProperty(draft.runStepsCache, run.id);
+        });
+        notify('cacheInvalidated');
+
         void requestRunSteps(run.id);
       }
     }
@@ -425,20 +466,59 @@ export const createHistoryStore = (
 
       // 2. Update cache if this run is cached (cache coordination)
       const runId = draft.activeRunId;
-      if (runId && draft.runStepsCache[runId]) {
-        const cachedSteps = draft.runStepsCache[runId].steps;
-        const cacheIndex = cachedSteps.findIndex(s => s.id === step.id);
-        if (cacheIndex !== -1 && cachedSteps[cacheIndex]) {
-          // Update shared fields (StepDetail and cached Step have
-          // significant overlap)
-          const cachedStep = cachedSteps[cacheIndex];
-          cachedStep.started_at = step.started_at;
-          cachedStep.finished_at = step.finished_at;
-          cachedStep.exit_reason = step.exit_reason;
-          cachedStep.error_type = step.error_type;
-          // Only update input_dataclip_id if it's not null
-          if (step.input_dataclip_id !== null) {
-            cachedStep.input_dataclip_id = step.input_dataclip_id;
+      if (runId) {
+        const cacheEntry = draft.runStepsCache[runId];
+        if (cacheEntry) {
+          const cachedSteps = cacheEntry.steps;
+          const cacheIndex = cachedSteps.findIndex(s => s.id === step.id);
+          if (cacheIndex !== -1 && cachedSteps[cacheIndex]) {
+            // Update shared fields (StepDetail and cached Step have
+            // significant overlap)
+            const cachedStep = cachedSteps[cacheIndex];
+            cachedStep.started_at = step.started_at;
+            cachedStep.finished_at = step.finished_at;
+            cachedStep.exit_reason = step.exit_reason;
+            cachedStep.error_type = step.error_type;
+            // Only update input_dataclip_id if it's not null
+            if (step.input_dataclip_id !== null) {
+              cachedStep.input_dataclip_id = step.input_dataclip_id;
+            }
+            // Only update output_dataclip_id if it's not null
+            if (step.output_dataclip_id !== null) {
+              cachedStep.output_dataclip_id = step.output_dataclip_id;
+            }
+          } else {
+            // Step not found in cache - add it (new step created during run)
+            // This is the key fix: when step events arrive for newly created steps,
+            // we add them to the cache so the canvas can display them in real-time
+            cachedSteps.push(toStep(step));
+            // Sort by started_at to maintain order
+            cachedSteps.sort((a, b) => {
+              if (!a.started_at) return 1;
+              if (!b.started_at) return -1;
+              return (
+                new Date(a.started_at).getTime() -
+                new Date(b.started_at).getTime()
+              );
+            });
+          }
+        } else {
+          // Cache doesn't exist yet - create it from activeRun data
+          // This handles the race condition where step events arrive before
+          // requestRunSteps completes. Note: This temporary cache will be
+          // overwritten when requestRunSteps completes with authoritative data.
+          if (draft.activeRun && draft.activeRun.id === runId) {
+            draft.runStepsCache[runId] = {
+              run_id: draft.activeRun.id,
+              steps: draft.activeRun.steps.map(toStep),
+              metadata: {
+                starting_job_id: draft.activeRun.steps[0]?.job_id ?? null,
+                starting_trigger_id: null, // Not available in RunDetail
+                inserted_at: draft.activeRun.inserted_at,
+                created_by_id: null, // Not available in RunDetail
+                created_by_email: draft.activeRun.created_by?.email ?? null,
+              },
+            };
           }
         }
       }
@@ -973,6 +1053,52 @@ export const createHistoryStore = (
     notify('_setActiveRunForTesting');
   };
 
+  /**
+   * Test helper: Set active run ID without setting full run data
+   *
+   * This is used in tests to simulate scenarios where activeRunId is set
+   * but activeRun might not match (race conditions)
+   *
+   * @param runId - The run ID to set as active
+   */
+  const _setActiveRunIdForTesting = (runId: string): void => {
+    state = produce(state, draft => {
+      draft.activeRunId = runId;
+    });
+    notify('_setActiveRunIdForTesting');
+  };
+
+  /**
+   * Test helper: Populate cache with run steps data
+   *
+   * This bypasses the normal requestRunSteps flow and directly populates
+   * the cache, useful for testing cache-related logic
+   *
+   * @param runId - The run ID
+   * @param runStepsData - The run steps data to cache
+   */
+  const _populateCacheForTesting = (
+    runId: string,
+    runStepsData: RunStepsData
+  ): void => {
+    state = produce(state, draft => {
+      draft.runStepsCache[runId] = runStepsData;
+    });
+    notify('_populateCacheForTesting');
+  };
+
+  /**
+   * Test helper: Trigger step update directly
+   *
+   * This bypasses the channel event flow and directly calls handleStepUpdate,
+   * useful for testing step update logic without Phoenix channels
+   *
+   * @param step - The step detail to update
+   */
+  const _triggerStepUpdateForTesting = (step: StepDetail): void => {
+    handleStepUpdate(step);
+  };
+
   // ===========================================================================
   // PUBLIC INTERFACE
   // ===========================================================================
@@ -1009,6 +1135,9 @@ export const createHistoryStore = (
     _closeRunViewer,
     _switchingFromRun,
     _setActiveRunForTesting,
+    _setActiveRunIdForTesting,
+    _populateCacheForTesting,
+    _triggerStepUpdateForTesting,
   };
 };
 

@@ -5,6 +5,7 @@ defmodule LightningWeb.SandboxLive.Index do
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.VersionControl
   alias LightningWeb.SandboxLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -582,13 +583,32 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp perform_merge(source, target, actor) do
-    source
-    |> MergeProjects.merge_project(target)
-    |> then(
-      &Lightning.Projects.Provisioner.import_document(target, actor, &1,
-        allow_stale: true
+    maybe_commit_to_github(target, "pre-merge commit")
+
+    result =
+      source
+      |> MergeProjects.merge_project(target)
+      |> then(
+        &Lightning.Projects.Provisioner.import_document(target, actor, &1,
+          allow_stale: true
+        )
       )
-    )
+
+    case result do
+      {:ok, _updated_target} = success ->
+        maybe_commit_to_github(target, "Merged sandbox #{source.name}")
+        success
+
+      error ->
+        error
+    end
+  end
+
+  defp maybe_commit_to_github(project, commit_message) do
+    with %{} = repo_connection <-
+           VersionControl.get_repo_connection_for_project(project.id) do
+      VersionControl.initiate_sync(repo_connection, commit_message)
+    end
   end
 
   defp handle_merge_result(
