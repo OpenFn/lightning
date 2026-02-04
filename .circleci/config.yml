@@ -3,6 +3,31 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.5
 
+# Shared configuration
+defaults:
+  elixir_version: &elixir_version "1.18.3-otp-27"
+  nodejs_version: &nodejs_version "22.12.0"
+  docker_elixir: &docker_elixir
+    - image: elixir:1.18.3-otp-27
+  docker_elixir_postgres: &docker_elixir_postgres
+    - image: elixir:1.18.3-otp-27
+    - image: cimg/postgres:17.3
+  environment: &environment
+    ERL_FLAGS: +S 4:4
+    ASSERT_RECEIVE_TIMEOUT: 1000
+    MIX_ENV: test
+
+executors:
+  elixir:
+    docker: *docker_elixir
+    environment: *environment
+    working_directory: /home/lightning/project
+
+  elixir_with_postgres:
+    docker: *docker_elixir_postgres
+    environment: *environment
+    working_directory: /home/lightning/project
+
 commands:
   install_node:
     description: "Install NodeJS from NodeSource"
@@ -17,121 +42,199 @@ commands:
             curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -
             apt-get install -y nodejs=<< parameters.version >>-1nodesource1
 
-jobs:
-  build:
-    parameters:
-      elixir_version:
-        description: Elixir version
-        type: string
-        default: "1.18.3-otp-27"
-      nodejs_version:
-        description: NodeJS version
-        type: string
-        default: "22.12.0"
-      execute:
-        description: What steps to execute after build
-        type: steps
-
-    parallelism: 1
-    docker:
-      - image: elixir:<< parameters.elixir_version >>
-      - image: cimg/postgres:17.3
-    environment:
-      ERL_FLAGS: +S 4:4
-      ASSERT_RECEIVE_TIMEOUT: 1000
-      MIX_ENV: test
-    working_directory: /home/lightning/project
-
+  setup_lightning_user:
+    description: "Create lightning user and configure sudo"
     steps:
-      - run: adduser --home /home/lightning --system lightning
+      - run:
+          name: "Create lightning user"
+          command: adduser --home /home/lightning --system lightning
+      - run:
+          name: "Install sudo and configure environment passthrough"
+          command: |
+            apt-get update && apt-get install -y sudo
+            echo 'Defaults env_keep += "ERL_FLAGS ASSERT_RECEIVE_TIMEOUT MIX_ENV"' | \
+              sudo EDITOR='tee -a' visudo
+      - run:
+          name: "Set ownership"
+          command: chown -R lightning /home/lightning
+
+  attach_built_workspace:
+    description: "Attach workspace and restore ownership"
+    steps:
+      - attach_workspace:
+          at: /home/lightning/project
+      - run:
+          name: "Restore ownership after workspace attach"
+          command: chown -R lightning /home/lightning
+
+jobs:
+  # ============================================================================
+  # COMPILE JOB - Builds everything once, persists to workspace
+  # ============================================================================
+  compile:
+    executor: elixir
+    steps:
+      - setup_lightning_user
       - checkout
       - install_node:
-          version: << parameters.nodejs_version >>
+          version: *nodejs_version
 
       - run:
-          name: "Save Elixir and Erlang version for PLT caching"
+          name: "Save Elixir and Erlang version for caching"
           command: echo "$ELIXIR_VERSION $OTP_VERSION" | tee .elixir_otp_version
 
       - run:
           name: "Introspect schedulers"
           command: elixir -v
 
+      # Restore dependency cache
       - restore_cache:
           keys:
-            - v5-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - v5-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+            - v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+
       - run:
-          name: "Install libsodium and sudo"
+          name: "Install build dependencies"
           command: |
             apt-get update && apt-get install -y \
               build-essential \
               cmake \
-              libsodium-dev \
-              sudo
-      - run: |
-          echo 'Defaults env_keep += "ERL_FLAGS ASSERT_RECEIVE_TIMEOUT MIX_ENV"' | \
-            sudo EDITOR='tee -a' visudo
+              libsodium-dev
 
-      - run: chown -R lightning /home/lightning
-      - run: sudo -u lightning mix local.hex --force && mix local.rebar --force
-      - run: cd assets; sudo -u lightning npm install --force
-      - run: sudo -u lightning mix do deps.get --only test, deps.compile, compile
-      - run: sudo -u lightning mix lightning.install_runtime
+      - run:
+          name: "Install Hex and Rebar"
+          command: sudo -u lightning mix local.hex --force && mix local.rebar --force
+
+      - run:
+          name: "Install Node dependencies"
+          command: cd assets && sudo -u lightning npm install --force
+
+      - run:
+          name: "Compile Elixir dependencies and application"
+          command: sudo -u lightning mix do deps.get --only test, deps.compile, compile
+
+      - run:
+          name: "Install runtime dependencies"
+          command: sudo -u lightning mix lightning.install_runtime
 
       - save_cache:
-          key: v5-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - _build
             - deps
             - ~/.mix
 
+      # Restore and build PLT for Dialyzer
       - restore_cache:
           name: "Restore PLT cache"
           keys:
-            - v5-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - v5-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+            - v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
-      - run: mkdir -p priv/plts && chown -R lightning priv/plts
-      - run: sudo -u lightning env MIX_ENV=test mix dialyzer --plt
+      - run:
+          name: "Ensure PLT directory exists"
+          command: mkdir -p priv/plts && chown -R lightning priv/plts
+
+      - run:
+          name: "Build Dialyzer PLT"
+          command: sudo -u lightning env MIX_ENV=test mix dialyzer --plt
+
       - save_cache:
-          key: v5-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - priv/plts
 
-      - steps: << parameters.execute >>
+      # Persist everything to workspace for downstream jobs
+      - persist_to_workspace:
+          root: /home/lightning/project
+          paths:
+            - .
+            - ~/.mix
+
+  # ============================================================================
+  # CHECK JOBS - Fast, parallel jobs that use the pre-built workspace
+  # ============================================================================
+  check_formatting:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - run:
+          name: "Check code formatting"
+          command: sudo -u lightning mix format --check-formatted
+
+  check_credo:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - run:
+          name: "Check code style with Credo"
+          command: sudo -u lightning mix credo --strict --all
+
+  check_dialyzer:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - run:
+          name: "Run Dialyzer type checking"
+          command: sudo -u lightning mix dialyzer
+
+  check_sobelow:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - run:
+          name: "Check for security vulnerabilities"
+          command: sudo -u lightning mix sobelow --threshold medium
+
+  test_elixir:
+    executor: elixir_with_postgres
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - run:
+          name: "Setup test database"
+          command: sudo -u lightning mix do ecto.create, ecto.migrate
+      - run:
+          name: "Run Elixir tests"
+          command: sudo -u lightning ./bin/ci_tests
+      - codecov/upload:
+          file: test/reports/coverage.json
+      - store_test_results:
+          path: test/reports/
+
+  test_javascript:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - install_node:
+          version: *nodejs_version
+      - run:
+          name: "Run JavaScript tests"
+          command: cd assets && sudo -u lightning npm run test-report
+      - store_test_results:
+          path: test/reports/
 
 workflows:
   pre-flight checks:
     jobs:
-      - build:
-          name: "Check code formatting"
-          execute:
-            - run: sudo -u lightning mix format --check-formatted
-      - build:
-          name: "Check code style"
-          execute:
-            - run: sudo -u lightning mix credo --strict --all
-      - build:
-          name: "Type check"
-          execute:
-            - run: sudo -u lightning mix dialyzer
-      - build:
-          name: "Check for security vulnerabilities"
-          execute:
-            - run: sudo -u lightning mix sobelow --threshold medium
-      - build:
-          name: "Check Elixir tests (codecov)"
-          execute:
-            - run: sudo -u lightning mix do ecto.create, ecto.migrate
-            - run:
-                command: sudo -u lightning ./bin/ci_tests
-            - codecov/upload:
-                file: test/reports/coverage.json
-            - store_test_results:
-                path: test/reports/
-      - build:
-          name: "Check Javascript tests"
-          execute:
-            - run: cd assets; sudo -u lightning npm install && npm run test-report
-            - store_test_results:
-                path: test/reports/
+      # First: compile everything once
+      - compile
+
+      # Then: run all checks in parallel using the compiled workspace
+      - check_formatting:
+          requires: [compile]
+      - check_credo:
+          requires: [compile]
+      - check_dialyzer:
+          requires: [compile]
+      - check_sobelow:
+          requires: [compile]
+      - test_elixir:
+          requires: [compile]
+      - test_javascript:
+          requires: [compile]
