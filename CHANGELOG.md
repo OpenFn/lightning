@@ -17,12 +17,39 @@ and this project adheres to
 
 ### Added
 
+- Sandbox compatibility with github sync(commit before & after merge)
+  [#3957](https://github.com/OpenFn/lightning/issues/3957)
+- Add PromEx plugin to track sandbox-related metrics for Prometheus including
+  sandbox lifecycle events and workflow saves by project type
+  [#4101](https://github.com/OpenFn/lightning/issues/4101)
+
 ### Changed
+
+- Child nodes no longer switch position when an edge is selected
+  [#4328](https://github.com/OpenFn/lightning/issues/4328)
+- Copy parent project users when creating sandbox
+  [#3761](https://github.com/OpenFn/lightning/issues/3761)
+- Refactor bootstrap script for cross-platform support, splitting into modular
+  files under `bin/bootstrap.d/` for macOS and Linux (Debian/Ubuntu)
+  [#4377](https://github.com/OpenFn/lightning/pull/4377)
+- Refactor AI Assistant Panel component by extracting focused hooks for diff
+  management, URL sync, and workflow application logic
+  [#4369](https://github.com/OpenFn/lightning/issues/4369)
 
 ### Fixed
 
 - Fixed truncation of long user names in the collapsible side menu
   [#4361](https://github.com/OpenFn/lightning/issues/4361)
+- Fit screen when AI generates workflow & templates pick
+  [#4345](https://github.com/OpenFn/lightning/issues/4345)
+- AI-generated code diff now clears automatically when switching jobs in IDE
+  [#4318](https://github.com/OpenFn/lightning/issues/4318)
+- Update links in history page to use collab editor query params
+  [#4371](https://github.com/OpenFn/lightning/issues/4371)
+- Step events aren't appearing realtime on canvas
+  [#4261](https://github.com/OpenFn/lightning/issues/4261)
+- Send `suggest_code` flag to apollo for more robust suggestion parsing
+  [#4373](https://github.com/OpenFn/lightning/issues/4373)
 
 ## [2.15.12] - 2026-01-29
 
@@ -49,6 +76,8 @@ and this project adheres to
 
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
+- Modified version hashing algorithm for CLI compatibility
+  [#4346](https://github.com/OpenFn/lightning/issues/4346)
 
 ### Fixed
 

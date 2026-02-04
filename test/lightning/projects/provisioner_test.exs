@@ -1415,6 +1415,54 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "import_document telemetry" do
+    setup do
+      Mox.verify_on_exit!()
+      :ok
+    end
+
+    test "emits provisioner import telemetry with is_sandbox: false for regular project" do
+      user = insert(:user)
+      project = ProjectsFixtures.project_fixture()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: _} -> :ok end
+      )
+
+      %{body: body} = valid_document(project.id)
+
+      event = [:lightning, :provisioner, :import]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
+    end
+
+    test "emits provisioner import telemetry with is_sandbox: true for sandbox project" do
+      user = insert(:user)
+      parent = ProjectsFixtures.project_fixture()
+      sandbox = insert(:project, parent: parent)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: _} -> :ok end
+      )
+
+      %{body: body} = valid_document(sandbox.id)
+
+      event = [:lightning, :provisioner, :import]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _project} = Provisioner.import_document(sandbox, user, body)
+
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
+    end
+  end
+
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
     project_id = project_id || Ecto.UUID.generate()
 

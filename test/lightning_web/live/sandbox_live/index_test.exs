@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.GithubHelpers
   import Ecto.Query
 
   alias Lightning.Repo
@@ -1930,6 +1931,357 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "main"
 
       assert has_element?(view, "#env-badge-#{root.id}")
+    end
+  end
+
+  describe "Creating sandbox" do
+    setup :register_and_log_in_user
+
+    test "copies allow_support_access field from parent project", %{
+      conn: conn,
+      user: user
+    } do
+      # Create parent with allow_support_access enabled
+      parent =
+        insert(:project,
+          name: "parent-with-support",
+          allow_support_access: true,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
+      })
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
+      })
+
+      # Get the created sandbox from database
+      sandbox =
+        Repo.get_by!(Project, parent_id: parent.id, name: "test-sandbox")
+
+      # Verify allow_support_access was copied from parent
+      assert sandbox.allow_support_access == true
+
+      # Also test with allow_support_access disabled
+      parent_no_support =
+        insert(:project,
+          name: "parent-no-support",
+          allow_support_access: false,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view2, _html} =
+        live(conn, ~p"/projects/#{parent_no_support.id}/sandboxes")
+
+      view2 |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view2, ~p"/projects/#{parent_no_support.id}/sandboxes/new")
+
+      view2
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
+      })
+
+      view2
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
+      })
+
+      # Get the second sandbox from database
+      sandbox2 =
+        Repo.get_by!(Project,
+          parent_id: parent_no_support.id,
+          name: "test-sandbox-2"
+        )
+
+      # Verify allow_support_access remains false
+      assert sandbox2.allow_support_access == false
+    end
+
+    test "copies all parent users when current user is owner", %{
+      conn: conn,
+      user: user
+    } do
+      # Create parent with multiple users
+      parent =
+        insert(:project,
+          name: "parent-proj",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      editor_user = insert(:user)
+      viewer_user = insert(:user)
+
+      insert(:project_user,
+        project: parent,
+        user: editor_user,
+        role: :editor
+      )
+
+      insert(:project_user,
+        project: parent,
+        user: viewer_user,
+        role: :viewer
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "my-test-sandbox", "color" => "#E33D63"}
+      })
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "my-test-sandbox", "color" => "#E33D63"}
+      })
+
+      # Get the created sandbox from database
+      sandbox =
+        Repo.get_by!(Project, parent_id: parent.id, name: "my-test-sandbox")
+        |> Repo.preload(:project_users)
+
+      # Verify all 3 users are present
+      assert length(sandbox.project_users) == 3
+
+      # Verify current user is owner
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == user.id and pu.role == :owner
+             end)
+
+      # Verify editor was copied
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == editor_user.id and pu.role == :editor
+             end)
+
+      # Verify viewer was copied
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == viewer_user.id and pu.role == :viewer
+             end)
+    end
+
+    test "converts parent owner to admin when current user is admin", %{
+      conn: conn,
+      user: current_user
+    } do
+      # Create parent with a different owner
+      owner_user = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent-proj-2",
+          project_users: [%{user: owner_user, role: :owner}]
+        )
+
+      # Add current user as admin
+      insert(:project_user,
+        project: parent,
+        user: current_user,
+        role: :admin
+      )
+
+      # Add an editor
+      editor_user = insert(:user)
+
+      insert(:project_user,
+        project: parent,
+        user: editor_user,
+        role: :editor
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Click create sandbox button
+      view |> element("#create-sandbox-button") |> render_click()
+      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      # Validate the form first (triggers phx-change)
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "admin-test-sandbox", "color" => "#5AA1F0"}
+      })
+
+      # Submit the form
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "admin-test-sandbox", "color" => "#5AA1F0"}
+      })
+
+      # Get the created sandbox from database
+      sandbox =
+        Repo.get_by!(Project, parent_id: parent.id, name: "admin-test-sandbox")
+        |> Repo.preload(:project_users)
+
+      # Verify all 3 users are present
+      assert length(sandbox.project_users) == 3
+
+      # Verify current user is owner
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == current_user.id and pu.role == :owner
+             end)
+
+      # Verify parent owner was converted to admin
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == owner_user.id and pu.role == :admin
+             end)
+
+      # Verify editor was copied
+      assert Enum.any?(sandbox.project_users, fn pu ->
+               pu.user_id == editor_user.id and pu.role == :editor
+             end)
+    end
+  end
+
+  describe "GitHub sync integration during merge" do
+    setup do
+      Mox.verify_on_exit!()
+    end
+
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      # Create workflows and snapshots for the parent project
+      workflow = insert(:simple_workflow, project: parent)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok,
+       parent: parent, sandbox: sandbox, workflow: workflow, snapshot: snapshot}
+    end
+
+    test "commits to GitHub before and after merge when project has GitHub sync",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox,
+           snapshot: snapshot
+         } do
+      # Set up GitHub sync for the parent project
+      repo_connection =
+        insert(:project_repo_connection,
+          project: parent,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Expect GitHub API calls for the pre-merge commit
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "pre-merge commit",
+            snapshots: "#{snapshot.id}"
+          }
+        }
+      )
+
+      # Expect GitHub API calls for the post-merge commit
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "Merged sandbox #{sandbox.name}"
+          }
+        }
+      )
+
+      # Open merge modal and submit
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
+    test "does not commit to GitHub when project has no GitHub sync configured",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      # No repo_connection created = no GitHub sync
+      # Without a repo_connection, get_repo_connection_for_project returns nil
+      # and initiate_sync is never called, so no GitHub API calls happen
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal and submit
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
+    defp api_secret_name(%{id: project_id}) do
+      project_id
+      |> String.replace("-", "_")
+      |> then(&"OPENFN_#{&1}_API_KEY")
+    end
+
+    defp path_to_config(repo_connection) do
+      repo_connection
+      |> Lightning.VersionControl.ProjectRepoConnection.config_path()
+      |> Path.relative_to(".")
     end
   end
 end

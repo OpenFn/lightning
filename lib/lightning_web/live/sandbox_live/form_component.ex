@@ -82,10 +82,21 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
+    parent_users = Projects.get_project_users!(parent.id)
+
+    collaborators =
+      parent_users
+      |> Enum.reject(fn pu -> pu.user_id == actor.id end)
+      |> Enum.map(fn pu ->
+        role = if pu.role == :owner, do: :admin, else: pu.role
+        %{user_id: pu.user_id, role: role}
+      end)
+
     attrs =
       params
       |> build_sandbox_attrs()
       |> Map.put(:env, "dev")
+      |> Map.put(:collaborators, collaborators)
 
     with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
          {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do

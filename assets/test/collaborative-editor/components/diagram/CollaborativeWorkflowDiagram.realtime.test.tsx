@@ -227,6 +227,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
             }
           }
         ),
+        _viewRun: vi.fn(),
       } as any,
       uiStore: {} as any,
     };
