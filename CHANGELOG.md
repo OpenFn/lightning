@@ -25,6 +25,11 @@ and this project adheres to
 
 ### Changed
 
+- Refactor AI Assistant Panel component by extracting focused hooks for diff
+  management, URL sync, and workflow application logic, reducing component from
+  1,070 to 635 lines with comprehensive test coverage
+  [#4369](https://github.com/OpenFn/lightning/issues/4369)
+
 ### Fixed
 
 - AI-generated code diff now clears automatically when switching jobs in IDE
