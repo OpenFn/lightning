@@ -200,6 +200,8 @@ jobs:
     steps:
       - setup_lightning_user
       - attach_built_workspace
+      - install_node:
+          version: *nodejs_version
       - run:
           name: "Setup test database"
           command: sudo -u lightning mix do ecto.create, ecto.migrate
