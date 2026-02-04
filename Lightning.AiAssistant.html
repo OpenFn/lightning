@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-3E6FC27D.js"></script>
+    <script defer src="dist/sidebar_items-4EE0C891.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -232,16 +232,6 @@ templates from natural language descriptions</li></ol>
       </div>
 
         <div class="summary-synopsis"><p>Enriches a chat session with job-specific context.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#extract_code_from_markdown/1" data-no-tooltip="" translate="no">extract_code_from_markdown(content)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Extracts the first JavaScript code block from markdown content.</p></div>
 
     </div>
 
@@ -498,8 +488,8 @@ and future modifications through the same conversation context.</p><h2 id="assoc
 
       </div>
 
-<p>Cleans up unsaved job data in AI sessions after workflow is saved.</p><p>When a workflow is saved and jobs get database IDs, this function:</p><ol><li>Finds all sessions with matching Y.Doc job IDs in meta[&quot;unsaved_job&quot;]</li><li>Updates those sessions to set job_id to the real database ID</li><li>Removes the meta[&quot;unsaved_job&quot;] data</li></ol><h2 id="cleanup_unsaved_job_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with jobs that have database IDs</li></ul><h2 id="cleanup_unsaved_job_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_job_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_job_sessions</span><span class="p" data-group-id="2698864928-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2698864928-1">)</span><span class="w">
-</span><span class="p" data-group-id="2698864928-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="2698864928-2">}</span><span class="w">  </span><span class="c1"># Updated 3 sessions</span></code></pre>
+<p>Cleans up unsaved job data in AI sessions after workflow is saved.</p><p>When a workflow is saved and jobs get database IDs, this function:</p><ol><li>Finds all sessions with matching Y.Doc job IDs in meta[&quot;unsaved_job&quot;]</li><li>Updates those sessions to set job_id to the real database ID</li><li>Removes the meta[&quot;unsaved_job&quot;] data</li></ol><h2 id="cleanup_unsaved_job_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with jobs that have database IDs</li></ul><h2 id="cleanup_unsaved_job_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_job_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_job_sessions</span><span class="p" data-group-id="1271715048-1">(</span><span class="n">workflow</span><span class="p" data-group-id="1271715048-1">)</span><span class="w">
+</span><span class="p" data-group-id="1271715048-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="1271715048-2">}</span><span class="w">  </span><span class="c1"># Updated 3 sessions</span></code></pre>
   </section>
 </section>
 <section class="detail" id="cleanup_unsaved_workflow_sessions/1">
@@ -528,8 +518,8 @@ and future modifications through the same conversation context.</p><h2 id="assoc
 
       </div>
 
-<p>Cleans up unsaved workflow data in AI sessions after workflow is saved.</p><p>When a workflow in create mode is saved for the first time, this function:</p><ol><li>Finds all sessions with matching temporary workflow IDs in meta[&quot;unsaved_workflow&quot;]</li><li>Updates those sessions to set workflow_id to the real database ID</li><li>Removes the meta[&quot;unsaved_workflow&quot;] data</li></ol><h2 id="cleanup_unsaved_workflow_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with a database ID</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_workflow_sessions</span><span class="p" data-group-id="7075177579-1">(</span><span class="n">workflow</span><span class="p" data-group-id="7075177579-1">)</span><span class="w">
-</span><span class="p" data-group-id="7075177579-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="7075177579-2">}</span><span class="w">  </span><span class="c1"># Updated 2 sessions</span></code></pre>
+<p>Cleans up unsaved workflow data in AI sessions after workflow is saved.</p><p>When a workflow in create mode is saved for the first time, this function:</p><ol><li>Finds all sessions with matching temporary workflow IDs in meta[&quot;unsaved_workflow&quot;]</li><li>Updates those sessions to set workflow_id to the real database ID</li><li>Removes the meta[&quot;unsaved_workflow&quot;] data</li></ol><h2 id="cleanup_unsaved_workflow_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with a database ID</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_workflow_sessions</span><span class="p" data-group-id="0418474322-1">(</span><span class="n">workflow</span><span class="p" data-group-id="0418474322-1">)</span><span class="w">
+</span><span class="p" data-group-id="0418474322-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="0418474322-2">}</span><span class="w">  </span><span class="c1"># Updated 2 sessions</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_session/4">
@@ -719,36 +709,6 @@ before attempting to make actual queries.</p><h2 id="endpoint_available?/0-retur
       </div>
 
 <p>Enriches a chat session with job-specific context.</p><p>Loads the associated job and enriches the session with:</p><ul><li>Job expression code and adaptor information</li><li>Run logs if following a specific run (via session.meta[&quot;follow_run_id&quot;])</li></ul><p>For unsaved jobs (job_id is nil), uses job data from session.meta.</p><h2 id="enrich_session_with_job_context/1-parameters" class="section-heading"><a href="#enrich_session_with_job_context/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session</code> - The chat session to enrich</li></ul><h2 id="enrich_session_with_job_context/1-returns" class="section-heading"><a href="#enrich_session_with_job_context/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The enriched session with job context loaded</p>
-  </section>
-</section>
-<section class="detail" id="extract_code_from_markdown/1">
-
-  <div class="detail-header">
-    <a href="#extract_code_from_markdown/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">extract_code_from_markdown(content)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L1163" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> extract_code_from_markdown(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
-
-      </div>
-
-<p>Extracts the first JavaScript code block from markdown content.</p><p>This function serves as a fallback when the Apollo service doesn't provide
-code in the dedicated <code class="inline">suggested_code</code> field. It parses markdown-formatted
-responses to extract JavaScript code blocks.</p><h2 id="extract_code_from_markdown/1-parameters" class="section-heading"><a href="#extract_code_from_markdown/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - Markdown string that may contain code blocks, or <code class="inline">nil</code></li></ul><h2 id="extract_code_from_markdown/1-returns" class="section-heading"><a href="#extract_code_from_markdown/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>The trimmed code content from the first JS/JavaScript code block</li><li><code class="inline">nil</code> if no code blocks are found or input is nil</li></ul>
   </section>
 </section>
 <section class="detail" id="find_pending_user_messages/1">
