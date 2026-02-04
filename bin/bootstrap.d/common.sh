@@ -15,38 +15,38 @@ detect_and_source_platform() {
   ARCH="$(uname -m)"
 
   case "$OS" in
-    Darwin)
-      source "$BOOTSTRAP_DIR/darwin.sh"
-      ;;
-    Linux)
-      local distro=""
-      if [[ -f /etc/os-release ]]; then
-        # shellcheck source=/dev/null
-        source /etc/os-release
-        distro="${ID:-unknown}"
-      fi
+  Darwin)
+    source "$BOOTSTRAP_DIR/darwin.sh"
+    ;;
+  Linux)
+    local distro=""
+    if [[ -f /etc/os-release ]]; then
+      # shellcheck source=/dev/null
+      source /etc/os-release
+      distro="${ID:-unknown}"
+    fi
 
-      case "$distro" in
-        ubuntu|debian)
-          source "$BOOTSTRAP_DIR/linux-debian.sh"
-          ;;
-        *)
-          # Fallback: detect package manager
-          if command -v apt-get &>/dev/null; then
-            source "$BOOTSTRAP_DIR/linux-debian.sh"
-          else
-            echo "Unsupported Linux distribution: $distro"
-            echo "Currently supported: Debian, Ubuntu (or any distro with apt-get)"
-            exit 1
-          fi
-          ;;
-      esac
+    case "$distro" in
+    ubuntu | debian)
+      source "$BOOTSTRAP_DIR/linux-debian.sh"
       ;;
     *)
-      echo "Unsupported operating system: $OS"
-      echo "Currently supported: macOS (Darwin), Linux (Debian/Ubuntu)"
-      exit 1
+      # Fallback: detect package manager
+      if command -v apt-get &>/dev/null; then
+        source "$BOOTSTRAP_DIR/linux-debian.sh"
+      else
+        echo "Unsupported Linux distribution: $distro"
+        echo "Currently supported: Debian, Ubuntu (or any distro with apt-get)"
+        exit 1
+      fi
       ;;
+    esac
+    ;;
+  *)
+    echo "Unsupported operating system: $OS"
+    echo "Currently supported: macOS (Darwin), Linux (Debian/Ubuntu)"
+    exit 1
+    ;;
   esac
 }
 
