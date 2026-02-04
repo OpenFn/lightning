@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Sandbox compatibility with github sync(commit before & after merge)
+  [#3957](https://github.com/OpenFn/lightning/issues/3957)
 - Add PromEx plugin to track sandbox-related metrics for Prometheus including
   sandbox lifecycle events and workflow saves by project type
   [#4101](https://github.com/OpenFn/lightning/issues/4101)
@@ -27,6 +29,12 @@ and this project adheres to
 
 - AI-generated code diff now clears automatically when switching jobs in IDE
   [#4318](https://github.com/OpenFn/lightning/issues/4318)
+- Update links in history page to use collab editor query params
+  [#4371](https://github.com/OpenFn/lightning/issues/4371)
+- Step events aren't appearing realtime on canvas
+  [#4261](https://github.com/OpenFn/lightning/issues/4261)
+- Send `suggest_code` flag to apollo for more robust suggestion parsing
+  [#4373](https://github.com/OpenFn/lightning/issues/4373)
 
 ## [2.15.12] - 2026-01-29
 
