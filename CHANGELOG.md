@@ -28,16 +28,21 @@ and this project adheres to
 - Refactor CircleCI to build-then-fan-out pattern, compiling once then running
   checks in parallel to eliminate cache race conditions and reduce flaky tests
   [#4378](https://github.com/OpenFn/lightning/pull/4378)
+- Child nodes no longer switch position when an edge is selected
+  [#4328](https://github.com/OpenFn/lightning/issues/4328)
+- Copy parent project users when creating sandbox
+  [#3761](https://github.com/OpenFn/lightning/issues/3761)
 - Refactor bootstrap script for cross-platform support, splitting into modular
   files under `bin/bootstrap.d/` for macOS and Linux (Debian/Ubuntu)
   [#4377](https://github.com/OpenFn/lightning/pull/4377)
 - Refactor AI Assistant Panel component by extracting focused hooks for diff
-  management, URL sync, and workflow application logic, reducing component from
-  1,070 to 635 lines with comprehensive test coverage
+  management, URL sync, and workflow application logic
   [#4369](https://github.com/OpenFn/lightning/issues/4369)
 
 ### Fixed
 
+- Fixed truncation of long user names in the collapsible side menu
+  [#4361](https://github.com/OpenFn/lightning/issues/4361)
 - Fit screen when AI generates workflow & templates pick
   [#4345](https://github.com/OpenFn/lightning/issues/4345)
 - AI-generated code diff now clears automatically when switching jobs in IDE
