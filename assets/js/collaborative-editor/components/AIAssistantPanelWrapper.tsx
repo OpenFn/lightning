@@ -23,6 +23,7 @@ import {
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
+import { useAIPanelDiffManager } from '../hooks/useAIPanelDiffManager';
 import { useAISession } from '../hooks/useAISession';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
@@ -534,117 +535,25 @@ export function AIAssistantPanelWrapper() {
     setPreviewingMessageId(null);
   });
 
-  // Close handler - clears diff preview and closes panel
-  const handleClosePanel = useCallback(() => {
-    const monaco = monacoRef?.current;
-    // Clear any active diff preview when closing the panel
-    if (previewingMessageId && monaco) {
-      monaco.clearDiff();
-      setPreviewingMessageId(null);
-    }
-    closeAIAssistantPanel();
-  }, [closeAIAssistantPanel, previewingMessageId, monacoRef]);
-
-  // Show sessions handler - clears diff preview and returns to session list
-  const handleShowSessions = useCallback(() => {
-    const monaco = monacoRef?.current;
-    // Clear any active diff preview when going back to session list
-    if (previewingMessageId && monaco) {
-      monaco.clearDiff();
-      setPreviewingMessageId(null);
-    }
-
-    aiStore.clearSession();
-    // Clear session list to force reload - ensures fresh data after tab sleep
-    aiStore._clearSessionList();
-
-    // Ensure context is initialized for session list loading
-    // This handles cases where context might have been lost (e.g., after tab sleep)
-    if (aiMode) {
-      aiStore._initializeContext(aiMode.mode, aiMode.context);
-    }
-
-    // Clear session ID from URL - shows session list
-    updateSearchParams({
-      'w-chat': null,
-      'j-chat': null,
-    });
-  }, [updateSearchParams, aiStore, aiMode, previewingMessageId, monacoRef]);
+  // Extract diff lifecycle management into hook
+  const { handleClosePanel, handleShowSessions } = useAIPanelDiffManager({
+    isOpen: isAIAssistantPanelOpen,
+    previewingMessageId,
+    setPreviewingMessageId,
+    monacoRef,
+    currentVersion,
+    aiMode,
+    closeAIAssistantPanel,
+    aiStore,
+    updateSearchParams,
+  });
 
   const hasLoadedSessionRef = useRef(false);
-  const previousVersionRef = useRef(currentVersion);
 
   // Reset hasLoadedSessionRef when session changes
   useEffect(() => {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
-
-  // Auto-dismiss diff AND close AI panel when version changes to pinned version
-  useEffect(() => {
-    // Only act if version actually changed (not on initial mount or state updates)
-    if (previousVersionRef.current !== currentVersion) {
-      const monaco = monacoRef?.current;
-      // 1. Clear diff if one is being previewed
-      if (previewingMessageId && monaco) {
-        monaco.clearDiff();
-        setPreviewingMessageId(null);
-      }
-
-      // 2. Close AI panel and clear session if switching TO a pinned version
-      if (isPinnedVersion && isAIAssistantPanelOpen) {
-        closeAIAssistantPanel();
-        // Clear the AI session to prevent confusion about version context
-        aiStore.clearSession();
-        // Clear URL session params
-        updateSearchParams({
-          'w-chat': null,
-          'j-chat': null,
-        });
-      }
-    }
-
-    previousVersionRef.current = currentVersion;
-  }, [
-    currentVersion,
-    previewingMessageId,
-    monacoRef,
-    isPinnedVersion,
-    isAIAssistantPanelOpen,
-    closeAIAssistantPanel,
-    aiStore,
-    updateSearchParams,
-  ]);
-
-  // Track previous job ID to detect changes and clear diff
-  const previousJobIdRef = useRef<string | null>(null);
-
-  // Auto-dismiss diff when job changes (prevents showing Job A's diff while viewing Job B)
-  useEffect(() => {
-    // Only track job changes when in job_code mode
-    if (!aiMode || aiMode.mode !== 'job_code') {
-      previousJobIdRef.current = null;
-      return;
-    }
-
-    const currentJobId = (aiMode.context as JobCodeContext).job_id;
-
-    // Detect actual job change (not initial mount)
-    if (
-      previousJobIdRef.current !== null &&
-      previousJobIdRef.current !== currentJobId
-    ) {
-      const monaco = monacoRef?.current;
-
-      // Clear any active diff preview when job changes
-      if (previewingMessageId && monaco) {
-        monaco.clearDiff();
-        setPreviewingMessageId(null);
-      }
-    }
-
-    // Update tracked job ID
-    previousJobIdRef.current = currentJobId;
-  }, [aiMode, previewingMessageId, monacoRef]);
 
   const {
     importWorkflow,
