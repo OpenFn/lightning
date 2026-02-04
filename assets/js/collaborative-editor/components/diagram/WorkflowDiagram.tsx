@@ -901,6 +901,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   return (
     <>
       <ReactFlow
+        zIndexMode="manual"
         ref={workflowDiagramRef}
         maxZoom={1}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}

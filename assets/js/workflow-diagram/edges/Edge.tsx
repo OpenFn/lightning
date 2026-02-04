@@ -22,6 +22,7 @@ const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               background: 'white',
               pointerEvents: 'all',
+              zIndex: data.zIndex,
               ...edgeLabelStyles(selected, data?.neighbour, stepEdgeProps.data),
             }}
             className="nodrag nopan cursor-pointer"
