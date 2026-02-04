@@ -207,6 +207,9 @@ jobs:
       - install_node:
           version: *nodejs_version
       - run:
+          name: "Install libsodium"
+          command: apt-get update && apt-get install -y libsodium-dev
+      - run:
           name: "Setup test database"
           command: sudo -u lightning mix do ecto.create, ecto.migrate
       - run:
