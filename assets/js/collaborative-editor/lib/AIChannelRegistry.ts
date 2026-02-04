@@ -742,7 +742,10 @@ export class AIChannelRegistry {
   private buildJoinParams(
     context: JobCodeContext | WorkflowTemplateContext
   ): Record<string, string | boolean | undefined> {
-    const params: Record<string, string | boolean | undefined> = {};
+    const params: Record<
+      string,
+      string | boolean | undefined | Record<string, unknown>
+    > = {};
 
     // Determine session type from context
     if ('job_id' in context) {
@@ -791,6 +794,9 @@ export class AIChannelRegistry {
       }
       if (context.content) {
         params['content'] = context.content;
+      }
+      if (context.jobCtx) {
+        params['job_ctx'] = context.jobCtx as any;
       }
     }
 

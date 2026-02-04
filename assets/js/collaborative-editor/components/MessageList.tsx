@@ -392,7 +392,6 @@ interface MessageListProps {
 export function MessageList({
   messages = [],
   isLoading = false,
-  sessionType,
   onApplyWorkflow,
   onApplyJobCode,
   onPreviewJobCode,
@@ -490,7 +489,7 @@ export function MessageList({
                             <span className="hero-chevron-right h-4 w-4 text-gray-500" />
                           </span>
                           <span className="text-xs text-left font-medium text-gray-700">
-                            {sessionType === 'job_code'
+                            {message.job_id
                               ? 'Generated Job Code'
                               : 'Generated Workflow'}
                           </span>
@@ -499,9 +498,9 @@ export function MessageList({
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
-                          showPreview={sessionType === 'job_code'}
+                          showPreview={!!message.job_id}
                           onApply={() => {
-                            if (sessionType === 'job_code') {
+                            if (message.job_id) {
                               onApplyJobCode?.(message.code!, message.id);
                             } else {
                               onApplyWorkflow?.(message.code!, message.id);

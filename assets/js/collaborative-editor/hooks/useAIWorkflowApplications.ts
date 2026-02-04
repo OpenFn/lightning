@@ -226,15 +226,10 @@ export function useAIWorkflowApplications({
    */
   const handlePreviewJobCode = useCallback(
     (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
-        console.error('[AI Assistant] Cannot preview - not in job mode', {
-          aiMode,
-        });
-        return;
-      }
+      if (!aiMode) return;
 
-      const context = aiMode.context as JobCodeContext;
-      const jobId = context.job_id;
+      const context = aiMode.context as WorkflowTemplateContext;
+      const jobId = context.jobCtx?.job_id;
 
       if (!jobId) {
         console.error('[AI Assistant] Cannot preview - no job ID', { context });
@@ -287,13 +282,9 @@ export function useAIWorkflowApplications({
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
-        console.error('[AI Assistant] Cannot apply job code - not in job mode');
-        return;
-      }
-
-      const context = aiMode.context as JobCodeContext;
-      const jobId = context.job_id;
+      if (!aiMode) return;
+      const context = aiMode.context as WorkflowTemplateContext;
+      const jobId = context.jobCtx?.job_id;
 
       if (!jobId) {
         notifications.alert({
@@ -397,7 +388,8 @@ export function useAIWorkflowApplications({
 
     if (
       latestMessage?.code &&
-      !appliedMessageIdsRef.current.has(latestMessage.id)
+      !appliedMessageIdsRef.current.has(latestMessage.id) &&
+      !latestMessage.job_id
     ) {
       // Find the user message that triggered this AI response
       // Look for the most recent user message before this assistant message

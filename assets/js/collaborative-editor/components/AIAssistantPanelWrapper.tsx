@@ -43,7 +43,10 @@ import {
   useWorkflowReadOnly,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import type { JobCodeContext } from '../types/ai-assistant';
+import type {
+  JobCodeContext,
+  WorkflowTemplateContext,
+} from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -394,25 +397,31 @@ export function AIAssistantPanelWrapper() {
             attach_io_data?: boolean;
             step_id?: string;
             code?: string;
+            job_id?: string;
           }
         | undefined = {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
+      const jobCtx = (aiMode?.context as WorkflowTemplateContext).jobCtx;
       if (currentState.sessionType === 'workflow_template') {
-        const workflowData = prepareWorkflowForSerialization(
-          workflow,
-          jobs,
-          triggers,
-          edges,
-          positions
-        );
-        const workflowYAML = workflowData
-          ? serializeWorkflowToYAML(workflowData)
-          : undefined;
+        if (!jobCtx) {
+          const workflowData = prepareWorkflowForSerialization(
+            workflow,
+            jobs,
+            triggers,
+            edges,
+            positions
+          );
+          const workflowYAML = workflowData
+            ? serializeWorkflowToYAML(workflowData)
+            : undefined;
 
-        if (workflowYAML) {
-          options = { ...options, code: workflowYAML };
+          if (workflowYAML) {
+            options = { ...options, code: workflowYAML };
+          }
+        } else {
+          options = { ...options, job_id: jobCtx.job_id };
         }
       }
 
@@ -596,15 +605,13 @@ export function AIAssistantPanelWrapper() {
                     : undefined
                 }
                 onApplyJobCode={
-                  sessionType === 'job_code' && !isApplyingJobCode
+                  !isApplyingJobCode
                     ? (code, messageId) => {
                         void handleApplyJobCode(code, messageId);
                       }
                     : undefined
                 }
-                onPreviewJobCode={
-                  sessionType === 'job_code' ? handlePreviewJobCode : undefined
-                }
+                onPreviewJobCode={handlePreviewJobCode}
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
                   // to show "APPLYING..." state. Prioritize stored message ID from store,

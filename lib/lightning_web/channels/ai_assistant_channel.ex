@@ -81,12 +81,18 @@ defmodule LightningWeb.AiAssistantChannel do
     user = socket.assigns.current_user
     project_id = get_project_id_from_session(session)
 
+    job =
+      if params["job_id"],
+        do: Jobs.get_job!(params["job_id"]),
+        else: nil
+
     if String.trim(content) != "" do
       limit_result = Limiter.validate_quota(project_id)
 
       handle_new_message_with_quota(
         session,
         user,
+        job,
         content,
         limit_result,
         params,
@@ -416,6 +422,11 @@ defmodule LightningWeb.AiAssistantChannel do
               do: Workflows.get_workflow(params["workflow_id"]),
               else: nil
 
+          job =
+            if is_map(params["job_ctx"]),
+              do: Jobs.get_job!(Map.get(params["job_ctx"], "job_id")),
+              else: nil
+
           is_new_workflow = params["workflow_id"] && is_nil(workflow)
 
           base_opts = extract_session_options("workflow_template", params)
@@ -438,6 +449,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
           AiAssistant.create_workflow_session(
             project,
+            job,
             workflow,
             user,
             content,
@@ -629,7 +641,8 @@ defmodule LightningWeb.AiAssistantChannel do
       status: to_string(message.status),
       inserted_at: message.inserted_at,
       user_id: message.user_id,
-      user: format_user(message.user)
+      user: format_user(message.user),
+      job_id: message.job_id
     }
   end
 
@@ -796,12 +809,13 @@ defmodule LightningWeb.AiAssistantChannel do
   defp handle_new_message_with_quota(
          session,
          user,
+         job,
          content,
          limit_result,
          params,
          socket
        ) do
-    message_attrs = build_message_attrs(user, content, limit_result)
+    message_attrs = build_message_attrs(user, job, content, limit_result)
     opts = extract_message_options(socket.assigns.session_type, params)
 
     case AiAssistant.save_message(session, message_attrs, opts) do
@@ -820,8 +834,11 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp build_message_attrs(user, content, limit_result) do
-    base_attrs = %{role: :user, content: content, user: user}
+  defp build_message_attrs(user, job, content, limit_result) do
+    base_attrs =
+      if job,
+        do: %{role: :user, content: content, user: user, job: job},
+        else: %{role: :user, content: content, user: user}
 
     case limit_result do
       :ok -> base_attrs

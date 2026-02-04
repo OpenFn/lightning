@@ -80,13 +80,15 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
+    is_job = !is_nil(message.job_id)
+    # IO.inspect(%{message: message.job_id}, label: "han:ai")
+    # instead of session_type we need to check whether the message has a job_id!
     result =
-      case session.session_type do
-        "job_code" ->
-          process_job_message(session, message)
-
-        "workflow_template" ->
-          process_workflow_message(session, message)
+      if is_job do
+        session = %{session | job_id: message.job_id}
+        process_job_message(session, message)
+      else
+        process_workflow_message(session, message)
       end
 
     case result do

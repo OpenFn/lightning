@@ -53,6 +53,7 @@ export interface Message {
   inserted_at: string;
   user_id?: string;
   user?: MessageUser | null;
+  job_id?: string;
 }
 
 /**
@@ -82,6 +83,7 @@ export interface WorkflowTemplateContext {
   code?: string;
   errors?: string;
   content?: string;
+  jobCtx?: JobCodeContext;
 }
 
 /**
