@@ -88,6 +88,10 @@ defmodule Lightning.Projects.Provisioner do
         |> get_assoc(:workflows)
         |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
+        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+          Lightning.Projects.Project.sandbox?(updated_project)
+        )
+
         {:ok, updated_project}
       end
     end)
