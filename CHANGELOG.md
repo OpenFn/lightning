@@ -26,10 +26,18 @@ and this project adheres to
 ### Changed
 
 - Copy parent project users when creating sandbox
-  [#3721](https://github.com/OpenFn/lightning/issues/3721)
+  [#3761](https://github.com/OpenFn/lightning/issues/3761)
+- Refactor AI Assistant Panel component by extracting focused hooks for diff
+  management, URL sync, and workflow application logic, reducing component from
+  1,070 to 635 lines with comprehensive test coverage
+  [#4369](https://github.com/OpenFn/lightning/issues/4369)
 
 ### Fixed
 
+- Fit screen when AI generates workflow & templates pick
+  [#4345](https://github.com/OpenFn/lightning/issues/4345)
+- AI-generated code diff now clears automatically when switching jobs in IDE
+  [#4318](https://github.com/OpenFn/lightning/issues/4318)
 - Update links in history page to use collab editor query params
   [#4371](https://github.com/OpenFn/lightning/issues/4371)
 - Step events aren't appearing realtime on canvas

@@ -28,6 +28,7 @@ import { useKeyboardShortcut } from '../keyboard';
 import { Z_INDEX } from '../utils/constants';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
+import flowEvents from './diagram/react-flow-events';
 import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
@@ -396,7 +397,9 @@ export function WorkflowEditor({
       workflowStore
         .validateWorkflowName(workflowState)
         .then(validatedState => {
-          workflowStore.importWorkflow(validatedState);
+          void workflowStore.importWorkflow(validatedState);
+          flowEvents.dispatch('fit-view');
+          return;
         })
         .catch((error: unknown) => {
           // If validation fails, import with original state
