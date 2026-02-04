@@ -38,6 +38,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed truncation of long user names in the collapsible side menu
+  [#4361](https://github.com/OpenFn/lightning/issues/4361)
 - Fit screen when AI generates workflow & templates pick
   [#4345](https://github.com/OpenFn/lightning/issues/4345)
 - AI-generated code diff now clears automatically when switching jobs in IDE
