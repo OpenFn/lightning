@@ -55,8 +55,8 @@ commands:
             echo 'Defaults env_keep += "ERL_FLAGS ASSERT_RECEIVE_TIMEOUT MIX_ENV"' | \
               sudo EDITOR='tee -a' visudo
       - run:
-          name: "Set ownership"
-          command: chown -R lightning /home/lightning
+          name: "Configure git safe directory"
+          command: git config --global --add safe.directory /home/lightning/project
 
   attach_built_workspace:
     description: "Attach workspace and restore ownership"
@@ -76,6 +76,9 @@ jobs:
     steps:
       - setup_lightning_user
       - checkout
+      - run:
+          name: "Set ownership"
+          command: chown -R lightning /home/lightning
       - install_node:
           version: *nodejs_version
 
