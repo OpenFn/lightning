@@ -406,9 +406,9 @@ describe('useAIPanelDiffManager', () => {
       // Switch to mode with undefined job_id
       rerender({ aiMode: createMockAIMode('job_code', {}) });
 
-      // Should handle gracefully, track as undefined
-      // No errors thrown
-      expect(mockClearDiff).toHaveBeenCalledOnce();
+      // Should handle gracefully by returning early (no diff clear)
+      // No errors thrown, tracking resets to null
+      expect(mockClearDiff).not.toHaveBeenCalled();
     });
 
     it('only runs in job_code mode', () => {
