@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Changed
 
+- Refactor bootstrap script for cross-platform support, splitting into modular
+  files under `bin/bootstrap.d/` for macOS and Linux (Debian/Ubuntu)
+  [#4377](https://github.com/OpenFn/lightning/pull/4377)
 - Refactor AI Assistant Panel component by extracting focused hooks for diff
   management, URL sync, and workflow application logic, reducing component from
   1,070 to 635 lines with comprehensive test coverage
