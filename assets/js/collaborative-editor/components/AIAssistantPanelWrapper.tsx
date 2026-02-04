@@ -51,6 +51,7 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
+import flowEvents from './diagram/react-flow-events';
 import { MessageList } from './MessageList';
 
 /**

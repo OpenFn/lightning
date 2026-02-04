@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fit screen when AI generates workflow & templates pick
+  [#4345](https://github.com/OpenFn/lightning/issues/4345)
 - AI-generated code diff now clears automatically when switching jobs in IDE
   [#4318](https://github.com/OpenFn/lightning/issues/4318)
 - Update links in history page to use collab editor query params

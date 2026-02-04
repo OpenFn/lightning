@@ -19,6 +19,8 @@ import type {
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 
+import flowEvents from '../components/diagram/react-flow-events';
+
 import type { AIModeResult } from './useAIMode';
 
 /**
@@ -203,6 +205,7 @@ export function useAIWorkflowApplications({
         // (otherwise other users weren't notified of the start)
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
+          flowEvents.dispatch('fit-view');
         }
       }
     },

@@ -46,6 +46,7 @@ import { createEmptyRunInfo } from '../../utils/runStepsTransformer';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 
 import { PointerTrackerViewer } from './PointerTrackerViewer';
+import { useFlowEvents } from './react-flow-events';
 import flowHandlers from './react-flow-handlers';
 
 type WorkflowDiagramProps = {
@@ -109,6 +110,7 @@ const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const flow = useReactFlow();
+  useFlowEvents(flow);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
