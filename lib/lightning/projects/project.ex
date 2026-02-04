@@ -182,7 +182,12 @@ defmodule Lightning.Projects.Project do
       :concurrency,
       :parent_id,
       :color,
-      :env
+      :env,
+      :allow_support_access,
+      :requires_mfa,
+      :retention_policy,
+      :history_retention_period,
+      :dataclip_retention_period
     ])
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
