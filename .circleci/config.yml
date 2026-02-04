@@ -96,8 +96,8 @@ jobs:
       # Restore dependency cache
       - restore_cache:
           keys:
-            - v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+            - v7-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v7-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
       - run:
           name: "Fix ownership after cache restore"
@@ -128,18 +128,18 @@ jobs:
           command: sudo -u lightning mix lightning.install_runtime
 
       - save_cache:
-          key: v6-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v7-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - _build
             - deps
-            - ~/.mix
+            - /home/lightning/.mix
 
       # Restore and build PLT for Dialyzer
       - restore_cache:
           name: "Restore PLT cache"
           keys:
-            - v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
-            - v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
+            - v7-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v7-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
       - run:
           name: "Ensure PLT directory exists"
@@ -150,7 +150,7 @@ jobs:
           command: sudo -u lightning env MIX_ENV=test mix dialyzer --plt
 
       - save_cache:
-          key: v6-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key: v7-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
           paths:
             - priv/plts
 
