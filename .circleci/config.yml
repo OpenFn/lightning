@@ -101,7 +101,7 @@ jobs:
 
       - run:
           name: "Fix ownership after cache restore"
-          command: chown -R lightning /home/lightning/project
+          command: chown -R lightning /home/lightning
 
       - run:
           name: "Install build dependencies"
