@@ -149,7 +149,6 @@ jobs:
           root: /home/lightning/project
           paths:
             - .
-            - ~/.mix
 
   # ============================================================================
   # CHECK JOBS - Fast, parallel jobs that use the pre-built workspace
