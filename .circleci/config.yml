@@ -113,7 +113,7 @@ jobs:
 
       - run:
           name: "Install Hex and Rebar"
-          command: sudo -u lightning mix local.hex --force && mix local.rebar --force
+          command: sudo -u lightning mix local.hex --force && sudo -u lightning mix local.rebar --force
 
       - run:
           name: "Install Node dependencies"
@@ -163,23 +163,33 @@ jobs:
   # ============================================================================
   # CHECK JOBS - Fast, parallel jobs that use the pre-built workspace
   # ============================================================================
-  check_formatting:
+  lint:
     executor: elixir
     steps:
       - setup_lightning_user
       - attach_built_workspace
       - run:
           name: "Check code formatting"
-          command: sudo -u lightning mix format --check-formatted
-
-  check_credo:
-    executor: elixir
-    steps:
-      - setup_lightning_user
-      - attach_built_workspace
+          command: |
+            sudo -u lightning mix format --check-formatted || touch /tmp/lint_failed
       - run:
           name: "Check code style with Credo"
-          command: sudo -u lightning mix credo --strict --all
+          when: always
+          command: |
+            sudo -u lightning mix credo --strict --all || touch /tmp/lint_failed
+      - run:
+          name: "Check for security vulnerabilities"
+          when: always
+          command: |
+            sudo -u lightning mix sobelow --threshold medium || touch /tmp/lint_failed
+      - run:
+          name: "Verify all checks passed"
+          when: always
+          command: |
+            if [ -f /tmp/lint_failed ]; then
+              echo "One or more lint checks failed"
+              exit 1
+            fi
 
   check_dialyzer:
     executor: elixir
@@ -189,15 +199,6 @@ jobs:
       - run:
           name: "Run Dialyzer type checking"
           command: sudo -u lightning mix dialyzer
-
-  check_sobelow:
-    executor: elixir
-    steps:
-      - setup_lightning_user
-      - attach_built_workspace
-      - run:
-          name: "Check for security vulnerabilities"
-          command: sudo -u lightning mix sobelow --threshold medium
 
   test_elixir:
     executor: elixir_with_postgres
@@ -240,13 +241,9 @@ workflows:
       - compile
 
       # Then: run all checks in parallel using the compiled workspace
-      - check_formatting:
-          requires: [compile]
-      - check_credo:
+      - lint:
           requires: [compile]
       - check_dialyzer:
-          requires: [compile]
-      - check_sobelow:
           requires: [compile]
       - test_elixir:
           requires: [compile]
