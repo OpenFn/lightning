@@ -26,7 +26,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   @type role() :: :user | :assistant
   @type status() :: :pending | :processing | :success | :error | :cancelled
-  # @type handler_type() :: :job_code | :workflow_template
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -35,7 +34,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
           role: role(),
           status: status(),
           job_id: Ecto.UUID.t() | nil,
-          # handler_type: handler_type(),
           is_deleted: boolean(),
           is_public: boolean(),
           processing_started_at: DateTime.t() | nil,
@@ -50,7 +48,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :content, :string
     field :code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
-    # field :handler_type, Ecto.Enum, values: [:job_code, :workflow_template]
 
     field :status, Ecto.Enum,
       values: [:pending, :processing, :success, :error, :cancelled]

@@ -83,7 +83,7 @@ export interface WorkflowTemplateContext {
   code?: string;
   errors?: string;
   content?: string;
-  jobCtx?: JobCodeContext;
+  job_ctx?: JobCodeContext;
 }
 
 /**

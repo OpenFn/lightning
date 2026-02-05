@@ -42,29 +42,29 @@ export function useAIMode(): AIModeResult | null {
     const isIDEOpen = params.panel === 'editor';
     const selectedJobId = params.job;
 
-    let jobCtx: JobCodeContext | undefined;
+    let job_ctx: JobCodeContext | undefined;
     if (isIDEOpen && selectedJobId) {
       const job = jobs.find(j => j.id === selectedJobId);
 
-      jobCtx = {
+      job_ctx = {
         job_id: selectedJobId,
         attach_code: false,
         attach_logs: false,
       };
 
       if (workflow?.id) {
-        jobCtx.workflow_id = workflow.id;
+        job_ctx.workflow_id = workflow.id;
       }
 
       if (job) {
-        jobCtx.job_name = job.name;
-        jobCtx.job_body = job.body;
-        jobCtx.job_adaptor = job.adaptor;
+        job_ctx.job_name = job.name;
+        job_ctx.job_body = job.body;
+        job_ctx.job_adaptor = job.adaptor;
       }
 
       const runId = params.run;
       if (runId) {
-        jobCtx.follow_run_id = runId;
+        job_ctx.follow_run_id = runId;
       }
     }
 
@@ -73,7 +73,7 @@ export function useAIMode(): AIModeResult | null {
       context: {
         project_id: project.id,
         ...(workflow?.id && { workflow_id: workflow.id }),
-        jobCtx,
+        job_ctx,
       },
       storageKey: workflow?.id
         ? `ai-workflow-${workflow.id}`

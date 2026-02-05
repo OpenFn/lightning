@@ -403,9 +403,9 @@ export function AIAssistantPanelWrapper() {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
-      const jobCtx = (aiMode?.context as WorkflowTemplateContext).jobCtx;
+      const job_ctx = (aiMode?.context as WorkflowTemplateContext).job_ctx;
       if (currentState.sessionType === 'workflow_template') {
-        if (!jobCtx) {
+        if (!job_ctx) {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -421,7 +421,7 @@ export function AIAssistantPanelWrapper() {
             options = { ...options, code: workflowYAML };
           }
         } else {
-          options = { ...options, job_id: jobCtx.job_id };
+          options = { ...options, job_id: job_ctx.job_id };
         }
       }
 

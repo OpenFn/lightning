@@ -229,7 +229,7 @@ export function useAIWorkflowApplications({
       if (!aiMode) return;
 
       const context = aiMode.context as WorkflowTemplateContext;
-      const jobId = context.jobCtx?.job_id;
+      const jobId = context.job_ctx?.job_id;
 
       if (!jobId) {
         console.error('[AI Assistant] Cannot preview - no job ID', { context });
@@ -284,7 +284,7 @@ export function useAIWorkflowApplications({
     async (code: string, messageId: string) => {
       if (!aiMode) return;
       const context = aiMode.context as WorkflowTemplateContext;
-      const jobId = context.jobCtx?.job_id;
+      const jobId = context.job_ctx?.job_id;
 
       if (!jobId) {
         notifications.alert({

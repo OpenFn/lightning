@@ -795,8 +795,8 @@ export class AIChannelRegistry {
       if (context.content) {
         params['content'] = context.content;
       }
-      if (context.jobCtx) {
-        params['job_ctx'] = context.jobCtx as any;
+      if (context.job_ctx) {
+        params['job_ctx'] = context.job_ctx as any;
       }
     }
 
