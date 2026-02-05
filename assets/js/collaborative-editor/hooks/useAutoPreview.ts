@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 
-import type { Session } from '../types/ai-assistant';
+import type { Session, WorkflowTemplateContext } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
 
@@ -82,12 +82,10 @@ export function useAutoPreview({
     // Only operate in job_code mode AND when session is job_code type
     // This prevents auto-previewing workflow YAML when user clicks into a job
     // while viewing a workflow_template session
-    if (!aiMode || aiMode.mode !== 'job_code') {
+    if (!aiMode || !(aiMode.context as WorkflowTemplateContext)?.job_ctx) {
       return;
     }
-    if (!session?.messages || session.session_type !== 'job_code') {
-      return;
-    }
+    if (!session?.messages) return;
 
     // Find latest assistant message with code
     // Sort by inserted_at descending to get most recent first
@@ -98,7 +96,7 @@ export function useAutoPreview({
           new Date(b.inserted_at).getTime() - new Date(a.inserted_at).getTime()
       )[0];
 
-    if (!latestCodeMessage) {
+    if (!latestCodeMessage || !latestCodeMessage.job_id) {
       return;
     }
 
