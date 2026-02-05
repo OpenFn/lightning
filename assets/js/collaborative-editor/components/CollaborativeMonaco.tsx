@@ -13,6 +13,8 @@ import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 
+import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
@@ -20,8 +22,148 @@ import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
 
+import dts_es5 from '../../editor/lib/es5.min.dts';
+import createCompletionProvider from '../../editor/magic-completion';
+
 import { Cursors } from './Cursors';
 import { Tooltip } from './Tooltip';
+
+const spinner = (
+  <svg
+    className="inline-block h-5 w-5 animate-spin"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
+
+const loadingIndicator = (
+  <div className="inline-block p-2">
+    <span className="mr-2">Loading types</span>
+    {spinner}
+  </div>
+);
+
+type Lib = {
+  content: string;
+  filePath?: string;
+};
+
+async function loadDTS(specifier: string): Promise<Lib[]> {
+  // Work out the module name from the specifier
+  // (this gets a bit tricky with @openfn/ module names)
+  const nameParts = specifier.split('@');
+  nameParts.pop(); // remove the version
+  const name = nameParts.join('@');
+
+  const results: Lib[] = [{ content: dts_es5 }];
+
+  // Load common into its own module
+  // TODO maybe we need other dependencies too? collections?
+  if (name !== '@openfn/language-common') {
+    const pkg = await fetchFile(`${specifier}/package.json`);
+    const commonVersion = (JSON.parse(pkg || '{}') as any).dependencies?.[
+      '@openfn/language-common'
+    ];
+
+    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+    if (!commonVersionMatch) {
+      console.warn(
+        `@openfn/language-common@${commonVersion} contains semver range syntax.`
+      );
+    }
+
+    const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
+      '^',
+      ''
+    )}`;
+    for await (const filePath of fetchDTSListing(commonSpecifier)) {
+      if (!filePath.startsWith('node_modules')) {
+        // Load every common typedef into the common module
+        let content = await fetchFile(`${commonSpecifier}${filePath}`);
+        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+        results.push({
+          content: `declare module '@openfn/language-common' { ${content} }`,
+        });
+      }
+    }
+  }
+
+  // This will store types.d.ts, if we can find it
+  let types = '';
+
+  // This stores string content for our adaptor
+  let adaptorDefs: string[] = [];
+
+  for await (const filePath of fetchDTSListing(specifier)) {
+    if (!filePath.startsWith('node_modules')) {
+      let content = await fetchFile(`${specifier}${filePath}`);
+      // Convert relative paths
+      content = content
+        .replace(/from '\.\//g, `from '${name}/`)
+        .replace(/import '\.\//g, `import '${name}/`);
+
+      // Remove js doc annotations
+      // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
+      // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+
+      const fileName = filePath.split('/').at(-1)!.replace('.d.ts', '');
+
+      // Import the index as the global namespace - but take care to convert all paths to absolute
+      if (fileName === 'index' || fileName === 'Adaptor') {
+        // It turns out that "export * as " seems to straight up not work in Monaco
+        // So this little hack will refactor import statements in a way that works
+        content = content.replace(
+          /export \* as (\w+) from '(.+)';/g,
+          `
+
+          import * as $1 from '$2';
+          export { $1 };`
+        );
+        adaptorDefs.push(`declare namespace {
+  {{$TYPES}}
+  ${content}
+`);
+      } else if (fileName === 'types') {
+        types = content;
+      } else {
+        // Declare every other module as file
+        adaptorDefs.push(`declare module '${name}/${fileName}' {
+  {{$TYPES}}
+  ${content}
+}`);
+      }
+    }
+  }
+
+  // This just ensures that the global type defs appear in every scope
+  // This is basically a hack to work around https://github.com/OpenFn/lightning/issues/2641
+  // If we find a types.d.ts, append it to every other file
+  adaptorDefs = adaptorDefs.map(def => def.replace('{{$TYPES}}', types));
+
+  results.push(
+    ...adaptorDefs.map(content => ({
+      content,
+    }))
+  );
+
+  return results;
+}
 
 export interface MonacoHandle {
   showDiff: (originalCode: string, modifiedCode: string) => void;
@@ -33,6 +175,7 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
+  metadata?: object;
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
@@ -46,6 +189,7 @@ export const CollaborativeMonaco = forwardRef<
     ytext,
     awareness,
     adaptor = 'common',
+    metadata,
     disabled = false,
     className,
     options = {},
@@ -57,6 +201,10 @@ export const CollaborativeMonaco = forwardRef<
   const bindingRef = useRef<MonacoBinding>();
   const [editorReady, setEditorReady] = useState(false);
 
+  // Type definitions state
+  const [lib, setLib] = useState<Lib[]>();
+  const [loading, setLoading] = useState(false);
+
   // Get callback from context to notify when diff is dismissed
   const handleDiffDismissed = useHandleDiffDismissed();
 
@@ -65,6 +213,9 @@ export const CollaborativeMonaco = forwardRef<
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const diffContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Overflow widgets container ref
+  const overflowNodeRef = useRef<HTMLDivElement>();
 
   // Base editor options shared between main and diff editors
   const baseEditorOptions: editor.IStandaloneEditorConstructionOptions =
@@ -82,6 +233,24 @@ export const CollaborativeMonaco = forwardRef<
         insertSpaces: true,
         automaticLayout: true,
         fixedOverflowWidgets: true,
+        dragAndDrop: false,
+        lineNumbersMinChars: 3,
+        overviewRulerLanes: 0,
+        overviewRulerBorder: false,
+        codeLens: false,
+        wordBasedSuggestions: 'off',
+        fontFamily: 'Fira Code VF',
+        fontLigatures: true,
+        showFoldingControls: 'always',
+        suggest: {
+          showModules: true,
+          showKeywords: false,
+          showFiles: false,
+          showClasses: false,
+          showInterfaces: false,
+          showConstructors: false,
+          showDeprecated: false,
+        },
       }),
       []
     );
@@ -98,6 +267,28 @@ export const CollaborativeMonaco = forwardRef<
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
       addKeyboardShortcutOverrides(editor, monaco);
+
+      // Create overflow widgets container for suggestions/tooltips
+      if (!overflowNodeRef.current) {
+        const overflowNode = document.createElement('div');
+        overflowNode.className = 'monaco-editor widgets-overflow-container';
+        overflowNode.style.zIndex = '9999';
+        document.body.appendChild(overflowNode);
+        overflowNodeRef.current = overflowNode;
+
+        // Update editor options with overflow container
+        // @ts-ignore - overflowWidgetsDomNode exists but isn't in updateOptions type
+        editor.updateOptions({
+          overflowWidgetsDomNode: overflowNode,
+          fixedOverflowWidgets: true,
+        });
+      }
+
+      // Configure TypeScript compiler options
+      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+        allowNonTsExtensions: true,
+        noLib: true,
+      });
 
       // Don't create binding here - let the useEffect handle it
       // This ensures binding is created/updated whenever ytext changes
@@ -207,6 +398,55 @@ export const CollaborativeMonaco = forwardRef<
 
     return () => {
       document.removeEventListener('insert-snippet', handleInsertSnippet);
+    };
+  }, []);
+
+  // Load type definitions when adaptor changes
+  useEffect(() => {
+    if (adaptor) {
+      setLoading(true);
+      setLib([]); // instantly clear intelligence
+      loadDTS(adaptor)
+        .then(l => {
+          setLib(l);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [adaptor]);
+
+  // Set extra libs on Monaco when lib changes
+  useEffect(() => {
+    if (monacoRef.current && lib) {
+      monacoRef.current.languages.typescript.javascriptDefaults.setExtraLibs(
+        lib
+      );
+    }
+  }, [lib]);
+
+  // Register metadata completion provider
+  useEffect(() => {
+    if (monacoRef.current && metadata) {
+      const provider =
+        monacoRef.current.languages.registerCompletionItemProvider(
+          'javascript',
+          createCompletionProvider(monacoRef.current, metadata)
+        );
+      return () => {
+        provider.dispose();
+      };
+    }
+  }, [metadata]);
+
+  // Cleanup overflow node on unmount
+  useEffect(() => {
+    return () => {
+      if (overflowNodeRef.current) {
+        overflowNodeRef.current.parentNode?.removeChild(
+          overflowNodeRef.current
+        );
+      }
     };
   }, []);
 
@@ -354,6 +594,10 @@ export const CollaborativeMonaco = forwardRef<
 
   return (
     <div className={cn('relative', className || 'h-full w-full')}>
+      {/* Loading indicator */}
+      <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
+        {loading && loadingIndicator}
+      </div>
       {/* Standard editor container */}
       <div ref={containerRef} className="h-full w-full">
         <Cursors />
