@@ -96,7 +96,6 @@ type Lib = {
 };
 
 async function loadDTS(specifier: string): Promise<Lib[]> {
-  console.log('> loadDTS', specifier);
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
@@ -227,7 +226,6 @@ export default function Editor({
 
   const handleEditorDidMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-      window.monaco = monaco;
       setMonaco(monaco);
 
       editor.addCommand(

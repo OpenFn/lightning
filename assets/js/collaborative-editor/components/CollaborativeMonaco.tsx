@@ -455,7 +455,6 @@ export const CollaborativeMonaco = forwardRef<
 
   return (
     <div className={cn('relative', className || 'h-full w-full')}>
-      {/* Loading indicator */}
       <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && <LoadingIndicator text="Loading types" />}
       </div>
