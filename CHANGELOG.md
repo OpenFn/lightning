@@ -17,6 +17,17 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+- Search on history page for body and log failing
+  [#4370](https://github.com/OpenFn/lightning/issues/4370)
+
+## [2.15.13-pre] - 2026-02-05
+
+### Added
+
 - Sandbox compatibility with github sync(commit before & after merge)
   [#3957](https://github.com/OpenFn/lightning/issues/3957)
 - Add PromEx plugin to track sandbox-related metrics for Prometheus including
@@ -53,6 +64,8 @@ and this project adheres to
   [#4261](https://github.com/OpenFn/lightning/issues/4261)
 - Send `suggest_code` flag to apollo for more robust suggestion parsing
   [#4373](https://github.com/OpenFn/lightning/issues/4373)
+- Modified version hashing algorithm for CLI compatibility
+  [#4346](https://github.com/OpenFn/lightning/issues/4346)
 
 ## [2.15.12] - 2026-01-29
 
@@ -79,8 +92,6 @@ and this project adheres to
 
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
-- Modified version hashing algorithm for CLI compatibility
-  [#4346](https://github.com/OpenFn/lightning/issues/4346)
 
 ### Fixed
 
