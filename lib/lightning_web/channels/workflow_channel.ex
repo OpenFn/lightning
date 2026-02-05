@@ -150,6 +150,32 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("request_metadata", %{"job_id" => job_id}, socket) do
+    async_task(socket, "request_metadata", fn ->
+      case Lightning.Jobs.get_job_with_credential(job_id) do
+        nil ->
+          %{
+            job_id: job_id,
+            metadata: %{error: "job_not_found"}
+          }
+
+        job ->
+          metadata =
+            Lightning.MetadataService.fetch(job.adaptor, job.credential)
+            |> case do
+              {:error, %{type: error_type}} ->
+                %{error: error_type}
+
+              {:ok, metadata} ->
+                metadata
+            end
+
+          %{job_id: job_id, metadata: metadata}
+      end
+    end)
+  end
+
+  @impl true
   def handle_in("request_current_user", _payload, socket) do
     user = socket.assigns[:current_user]
 
@@ -813,6 +839,7 @@ defmodule LightningWeb.WorkflowChannel do
               "request_adaptors",
               "request_project_adaptors",
               "request_credentials",
+              "request_metadata",
               "request_current_user",
               "get_context",
               "request_history",

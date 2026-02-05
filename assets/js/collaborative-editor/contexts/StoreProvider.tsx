@@ -67,6 +67,10 @@ import {
 } from '../stores/createHistoryStore';
 import type { RunStepsData } from '../types/history';
 import {
+  createMetadataStore,
+  type MetadataStoreInstance,
+} from '../stores/createMetadataStore';
+import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from '../stores/createSessionContextStore';
@@ -81,6 +85,7 @@ import { generateUserColor } from '../utils/userColor';
 export interface StoreContextValue {
   adaptorStore: AdaptorStoreInstance;
   credentialStore: CredentialStoreInstance;
+  metadataStore: MetadataStoreInstance;
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
@@ -126,6 +131,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     return {
       adaptorStore: createAdaptorStore(),
       credentialStore: createCredentialStore(),
+      metadataStore: createMetadataStore(),
       awarenessStore: createAwarenessStore(),
       workflowStore: createWorkflowStore(),
       sessionContextStore: createSessionContextStore(isNewWorkflow),
@@ -191,11 +197,12 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     if (session.provider && session.isConnected) {
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
-      const cleanup3 = stores.sessionContextStore._connectChannel(
+      const cleanup3 = stores.metadataStore._connectChannel(session.provider);
+      const cleanup4 = stores.sessionContextStore._connectChannel(
         session.provider
       );
-      const cleanup4 = stores.historyStore._connectChannel(session.provider);
-      const cleanup5 = stores.aiAssistantStore._connectChannel(
+      const cleanup5 = stores.historyStore._connectChannel(session.provider);
+      const cleanup6 = stores.aiAssistantStore._connectChannel(
         session.provider
       );
 
@@ -205,6 +212,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
         cleanup3();
         cleanup4();
         cleanup5();
+        cleanup6();
       };
     }
     return undefined;
