@@ -31,6 +31,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       ) do
     AiAssistant.create_workflow_session(
       project,
+      # this isn't job ai chat
+      nil,
       assigns[:workflow],
       user,
       content,
