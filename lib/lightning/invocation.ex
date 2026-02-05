@@ -555,7 +555,6 @@ defmodule Lightning.Invocation do
       search_params.search_fields,
       search_params.search_term
     )
-    |> order_by([wo], desc_nulls_first: wo.last_activity)
     |> apply_sorting(search_params.sort_by, search_params.sort_direction)
   end
 
@@ -1064,9 +1063,6 @@ defmodule Lightning.Invocation do
     sort_direction_atom = String.to_existing_atom(sort_direction)
     sort_field = String.to_existing_atom(sort_by)
 
-    # Remove existing order_by clauses first
-    query = exclude(query, :order_by)
-
     case sort_field do
       :inserted_at ->
         from([workorder: workorder] in query,
@@ -1087,8 +1083,8 @@ defmodule Lightning.Invocation do
   end
 
   defp apply_sorting(query, _sort_by, _sort_direction) do
-    # Default sorting: keep the original order_by from base_query
-    query
+    # Default sorting
+    order_by(query, [wo], desc_nulls_first: wo.last_activity)
   end
 
   @doc """
