@@ -504,6 +504,7 @@ defmodule Lightning.Invocation do
     project_id
     |> base_query()
     |> search_workorders_query(search_params)
+    |> workorder_preloads()
     |> Repo.paginate(params)
   end
 
@@ -512,7 +513,7 @@ defmodule Lightning.Invocation do
         search_params
       ) do
     project_id
-    |> base_query_without_preload()
+    |> base_query()
     |> search_workorders_query(search_params)
     |> exclude_wiped_dataclips()
     |> Repo.all()
@@ -520,13 +521,13 @@ defmodule Lightning.Invocation do
 
   def search_workorders_for_export_query(%Project{id: project_id}, search_params) do
     project_id
-    |> base_query_without_preload()
+    |> base_query()
     |> search_workorders_query(search_params)
   end
 
   def count_workorders(%Project{id: project_id}, search_params) do
     project_id
-    |> base_query_without_preload()
+    |> base_query()
     |> search_workorders_query(search_params)
     |> Repo.aggregate(:count)
   end
@@ -571,9 +572,17 @@ defmodule Lightning.Invocation do
       as: :workflow,
       where: workflow.project_id == ^project_id,
       select: workorder,
-      preload: [
+      distinct: true
+    )
+  end
+
+  defp workorder_preloads(query) do
+    preload(
+      query,
+      [wo],
+      [
         :dataclip,
-        workflow: workflow,
+        :workflow,
         runs: [
           steps: [
             :job,
@@ -582,22 +591,7 @@ defmodule Lightning.Invocation do
           ]
         ],
         snapshot: [triggers: :webhook_auth_methods]
-      ],
-      order_by: [desc_nulls_first: workorder.last_activity],
-      distinct: true
-    )
-  end
-
-  defp base_query_without_preload(project_id) do
-    from(
-      workorder in WorkOrder,
-      as: :workorder,
-      join: workflow in assoc(workorder, :workflow),
-      as: :workflow,
-      where: workflow.project_id == ^project_id,
-      select: workorder,
-      order_by: [desc_nulls_first: workorder.last_activity],
-      distinct: true
+      ]
     )
   end
 
@@ -655,9 +649,33 @@ defmodule Lightning.Invocation do
   defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query
 
   defp filter_by_body_or_log_or_id(query, search_fields, search_term) do
-    query = build_search_fields_query(query, search_fields)
+    # When searching both body and log, use UNION for better performance
+    if has_body_and_log_search?(search_fields) do
+      build_body_and_log_union_query(query, search_fields, search_term)
+    else
+      query = build_search_fields_query(query, search_fields)
+      from query, where: ^build_search_fields_where(search_fields, search_term)
+    end
+  end
 
-    from query, where: ^build_search_fields_where(search_fields, search_term)
+  defp has_body_and_log_search?(search_fields) do
+    :body in search_fields and :log in search_fields
+  end
+
+  defp build_body_and_log_union_query(query, search_fields, search_term) do
+    # Build body search query (excluding log)
+    body_query =
+      query
+      |> build_search_fields_query(search_fields -- [:log])
+      |> where(^build_search_fields_where(search_fields -- [:log], search_term))
+
+    # Build log search query (excluding body)
+    log_query =
+      query
+      |> build_search_fields_query(search_fields -- [:body])
+      |> where(^build_search_fields_where(search_fields -- [:body], search_term))
+
+    from(wo in subquery(union(body_query, ^log_query)), as: :workorder)
   end
 
   defp build_search_fields_where(search_fields, search_term) do
@@ -1045,9 +1063,6 @@ defmodule Lightning.Invocation do
     sort_direction_atom = String.to_existing_atom(sort_direction)
     sort_field = String.to_existing_atom(sort_by)
 
-    # Remove existing order_by clauses first
-    query = exclude(query, :order_by)
-
     case sort_field do
       :inserted_at ->
         from([workorder: workorder] in query,
@@ -1068,8 +1083,8 @@ defmodule Lightning.Invocation do
   end
 
   defp apply_sorting(query, _sort_by, _sort_direction) do
-    # Default sorting: keep the original order_by from base_query
-    query
+    # Default sorting
+    order_by(query, [wo], desc_nulls_first: wo.last_activity)
   end
 
   @doc """
