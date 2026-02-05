@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.13-pre] - 2026-02-05
+
+### Added
+
 - Sandbox compatibility with github sync(commit before & after merge)
   [#3957](https://github.com/OpenFn/lightning/issues/3957)
 - Add PromEx plugin to track sandbox-related metrics for Prometheus including
