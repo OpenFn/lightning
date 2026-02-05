@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Refactor CircleCI to build-then-fan-out pattern, compiling once then running
+  checks in parallel to eliminate cache race conditions and reduce flaky tests
+  [#4378](https://github.com/OpenFn/lightning/pull/4378)
+
 ### Fixed
 
 ## [2.15.13-pre1] - 2026-02-05
@@ -40,9 +44,6 @@ and this project adheres to
 
 ### Changed
 
-- Refactor CircleCI to build-then-fan-out pattern, compiling once then running
-  checks in parallel to eliminate cache race conditions and reduce flaky tests
-  [#4378](https://github.com/OpenFn/lightning/pull/4378)
 - Child nodes no longer switch position when an edge is selected
   [#4328](https://github.com/OpenFn/lightning/issues/4328)
 - Copy parent project users when creating sandbox
