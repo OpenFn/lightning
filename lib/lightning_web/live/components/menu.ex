@@ -20,15 +20,13 @@ defmodule LightningWeb.Components.Menu do
       <span class="menu-item-text truncate">Workflows</span>
     </.menu_item>
 
-    <%= if Lightning.Accounts.experimental_features_enabled?(@current_user) do %>
-      <.menu_item
-        to={~p"/projects/#{@project_id}/sandboxes"}
-        active={@active_menu_item == :sandboxes}
-      >
-        <Icon.sandboxes class="h-5 w-5 shrink-0" />
-        <span class="menu-item-text truncate">Sandboxes</span>
-      </.menu_item>
-    <% end %>
+    <.menu_item
+      to={~p"/projects/#{@project_id}/sandboxes"}
+      active={@active_menu_item == :sandboxes}
+    >
+      <Icon.sandboxes class="h-5 w-5 shrink-0" />
+      <span class="menu-item-text truncate">Sandboxes</span>
+    </.menu_item>
 
     <.menu_item
       to={~p"/projects/#{@project_id}/history"}
