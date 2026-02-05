@@ -504,6 +504,7 @@ defmodule Lightning.Invocation do
     project_id
     |> base_query()
     |> search_workorders_query(search_params)
+    |> workorder_preloads()
     |> Repo.paginate(params)
   end
 
@@ -554,21 +555,6 @@ defmodule Lightning.Invocation do
       search_params.search_fields,
       search_params.search_term
     )
-    |> preload(
-      [wo],
-      [
-        :dataclip,
-        :workflow,
-        runs: [
-          steps: [
-            :job,
-            :input_dataclip,
-            snapshot: [triggers: :webhook_auth_methods]
-          ]
-        ],
-        snapshot: [triggers: :webhook_auth_methods]
-      ]
-    )
     |> order_by([wo], desc_nulls_first: wo.last_activity)
     |> apply_sorting(search_params.sort_by, search_params.sort_direction)
   end
@@ -588,6 +574,25 @@ defmodule Lightning.Invocation do
       where: workflow.project_id == ^project_id,
       select: workorder,
       distinct: true
+    )
+  end
+
+  defp workorder_preloads(query) do
+    preload(
+      query,
+      [wo],
+      [
+        :dataclip,
+        :workflow,
+        runs: [
+          steps: [
+            :job,
+            :input_dataclip,
+            snapshot: [triggers: :webhook_auth_methods]
+          ]
+        ],
+        snapshot: [triggers: :webhook_auth_methods]
+      ]
     )
   end
 
