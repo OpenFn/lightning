@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.13-pre1] - 2026-02-05
+
+### Fixed
+
 - Search on history page for body and log failing
   [#4370](https://github.com/OpenFn/lightning/issues/4370)
 
