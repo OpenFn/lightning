@@ -37,7 +37,7 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
-  metadata?: object;
+  metadata?: object | null;
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;

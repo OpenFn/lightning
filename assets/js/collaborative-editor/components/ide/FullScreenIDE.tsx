@@ -1017,7 +1017,7 @@ export function FullScreenIDE({
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
-                            {...(metadata && { metadata })}
+                            metadata={metadata}
                             disabled={!canSave}
                             className="h-full w-full"
                             options={{
