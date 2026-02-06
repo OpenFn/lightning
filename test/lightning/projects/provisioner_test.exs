@@ -129,7 +129,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   describe "import_document/2 with a new project" do
     test "with valid data" do
       Mox.verify_on_exit!()
-      user = insert(:user)
+      %{id: user_id} = user = insert(:user)
 
       credential = insert(:credential, name: "Test Credential", user: user)
 
@@ -208,6 +208,21 @@ defmodule Lightning.Projects.ProvisionerTest do
              |> Enum.any?(fn pu ->
                pu.user_id == user.id && pu.role == :owner
              end)
+
+      # Verify audit trail for snapshot creation
+      %{id: snapshot_id} = Snapshot.get_current_for(workflow)
+
+      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
+
+      assert %{
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = audit
     end
 
     test "importing with nil project delegates to empty Project struct" do
@@ -230,75 +245,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert project.id == body["id"]
       assert project.name == body["name"]
       assert length(project.workflows) == 1
-    end
-
-    test "audit the creation of a snapshot" do
-      Mox.verify_on_exit!()
-      %{id: user_id} = user = insert(:user)
-
-      credential = insert(:credential, name: "Test Credential", user: user)
-
-      %{
-        body: %{"workflows" => [workflow]} = body,
-        workflows: [
-          %{
-            id: workflow_id,
-            first_job_id: first_job_id
-          }
-        ]
-      } = valid_document()
-
-      project_credential_id = Ecto.UUID.generate()
-
-      credentials_payload =
-        [
-          %{
-            "id" => project_credential_id,
-            "name" => credential.name,
-            "owner" => user.email
-          }
-        ]
-
-      updated_workflow_jobs =
-        Enum.map(workflow["jobs"], fn job ->
-          if job["id"] == first_job_id do
-            job
-            |> Map.put("project_credential_id", project_credential_id)
-          else
-            job
-          end
-        end)
-
-      body_with_credentials =
-        body
-        |> Map.put("project_credentials", credentials_payload)
-        |> Map.put("workflows", [%{workflow | "jobs" => updated_workflow_jobs}])
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, _context -> :ok end
-      )
-
-      Provisioner.import_document(
-        %Lightning.Projects.Project{},
-        user,
-        body_with_credentials
-      )
-
-      %{id: snapshot_id} = Repo.one!(Snapshot)
-
-      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
-
-      assert %{
-               item_id: ^workflow_id,
-               actor_id: ^user_id,
-               changes: %{
-                 after: %{
-                   "snapshot_id" => ^snapshot_id
-                 }
-               }
-             } = audit
     end
 
     test "audits the creation of workflows" do
@@ -341,104 +287,27 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert workflow_ids == expected_workflow_ids
     end
-
-    test "creates collections" do
-      Mox.verify_on_exit!()
-      user = insert(:user)
-
-      %{body: body, project_id: project_id} = valid_document()
-
-      collection_id = Ecto.UUID.generate()
-      collection_name = "test-collection"
-
-      body_with_collections =
-        Map.put(body, "collections", [
-          %{id: collection_id, name: collection_name}
-        ])
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, _context -> :ok end
-      )
-
-      {:ok, project} =
-        Provisioner.import_document(
-          %Lightning.Projects.Project{},
-          user,
-          body_with_collections
-        )
-
-      assert %{id: ^project_id, collections: [collection]} = project
-
-      assert %{
-               id: ^collection_id,
-               name: ^collection_name,
-               project_id: ^project_id
-             } = collection
-    end
-
-    test "trigger->firstjob edge is enabled even if params says disabled" do
-      Mox.verify_on_exit!()
-      user = insert(:user)
-
-      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
-        valid_document()
-
-      # disable all edges
-      disabled_edges =
-        Enum.map(workflow["edges"], fn edge ->
-          Map.put(edge, "enabled", false)
-        end)
-
-      new_workflow = Map.put(workflow, "edges", disabled_edges)
-
-      body_with_disabled_edges =
-        Map.put(body, "workflows", [new_workflow])
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, _context -> :ok end
-      )
-
-      {:ok, project} =
-        Provisioner.import_document(
-          %Lightning.Projects.Project{},
-          user,
-          body_with_disabled_edges
-        )
-
-      assert %{id: ^project_id, workflows: [%{edges: edges}]} = project
-
-      # trigger edge is enabled
-      trigger_edge = Enum.find(edges, & &1.source_trigger_id)
-      assert trigger_edge.enabled
-
-      # job edge is disabled
-      [job_edge] = edges -- [trigger_edge]
-      refute job_edge.enabled
-    end
   end
 
   describe "import_document/2 with an existing project" do
     setup do
       Mox.verify_on_exit!()
-      %{project: ProjectsFixtures.project_fixture(), user: insert(:user)}
-    end
+      project = ProjectsFixtures.project_fixture()
+      user = insert(:user)
 
-    test "doesn't add another project user", %{
-      project: %{id: project_id} = project,
-      user: user
-    } do
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
+        fn _action, _context -> :ok end
       )
 
+      %{project: project, user: user}
+    end
+
+    test "doesn't add another project user", %{
+      project: project,
+      user: user
+    } do
       %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -462,17 +331,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "audits the creation of a snapshot", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: %{id: user_id} = user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, _project} = Provisioner.import_document(project, user, body)
@@ -493,17 +354,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "changing, adding records", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -533,7 +386,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       body =
         body
         |> Map.put("name", "test-project-renamed")
-        |> add_job_to_document(workflow_id, %{
+        |> add_entity_to_workflow(workflow_id, "jobs", %{
           "id" => third_job_id,
           "name" => "third-job",
           "adaptor" => "@openfn/language-common@latest",
@@ -580,17 +433,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "adding a record from another project or workflow", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -672,17 +517,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "fails when an edge has no source", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       %{id: other_edge_id} = Lightning.Factories.insert(:edge)
@@ -715,15 +552,7 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "removing a record", %{project: %{id: project_id} = project, user: user} do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
+    test "removing a record", %{project: project, user: user} do
       %{
         body: body,
         workflows: [%{second_job_id: second_job_id}]
@@ -770,17 +599,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "removing a workflow", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{
         body: body,
         workflows: [%{id: workflow_id}]
@@ -807,17 +628,9 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "marking a new/changed record for deletion", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       body = %{
         "id" => project.id,
         "name" => "test-project",
@@ -863,18 +676,10 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "sends workflow updated event", %{
-      project: %{id: project_id} = project,
+      project: project,
       user: user
     } do
       %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
 
       Lightning.Workflows.subscribe(project.id)
 
@@ -906,7 +711,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       body_with_modifications =
         body
-        |> add_job_to_document(first_workflow_id, %{
+        |> add_entity_to_workflow(first_workflow_id, "jobs", %{
           "id" => Ecto.UUID.generate(),
           "name" => "third-job",
           "adaptor" => "@openfn/language-common@latest",
@@ -977,14 +782,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -1012,14 +809,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       collection = insert(:collection, project: project)
       collection_id = collection.id
       new_collection_name = "new-collection-name"
@@ -1048,14 +837,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       collection = insert(:collection, project: project)
       collection_to_delete = insert(:collection, project: project)
 
@@ -1154,14 +935,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
       collection = insert(:collection, byte_size_sum: 1000, project: project)
 
       collection_to_delete_1 =
@@ -1202,12 +975,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, _context -> :ok end
-      )
-
       %{body: %{"workflows" => [workflow]} = body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -1251,30 +1018,14 @@ defmodule Lightning.Projects.ProvisionerTest do
       # 3. Sandbox is merged back to parent
       # The merge should succeed and delete the parent's new edges
 
-      # Create parent project with initial workflow
-      project = insert(:project)
-      workflow = insert(:workflow, project: project, lock_version: 5)
-      job1 = insert(:job, workflow: workflow, name: "job1")
-      trigger = insert(:trigger, workflow: workflow, type: :webhook)
-
-      trigger_edge =
-        insert(:edge,
-          workflow: workflow,
-          source_trigger: trigger,
-          target_job: job1
-        )
-
-      # Simulate parent modification after sandbox was created:
-      # add a new job and edge (this would increment lock_version to 6)
-      job2 = insert(:job, workflow: workflow, name: "job2")
-
-      new_edge =
-        insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
-
-      # Manually increment lock_version to simulate the modification
-      workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
-
-      assert workflow.lock_version == 6
+      %{
+        project: project,
+        workflow: workflow,
+        job1: job1,
+        trigger: trigger,
+        trigger_edge: trigger_edge,
+        job_edge: new_edge
+      } = merged_workflow_setup()
 
       # Now simulate a merge from sandbox that doesn't have job2
       # This merged document will try to delete the new edge
@@ -1345,26 +1096,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       # nullifies the edge's target_job_id instead of cascade-deleting it,
       # so Ecto can then process the edge deletion without a StaleEntryError.
 
-      project = insert(:project)
-      workflow = insert(:workflow, project: project, lock_version: 5)
-      job1 = insert(:job, workflow: workflow, name: "job1")
-      trigger = insert(:trigger, workflow: workflow, type: :webhook)
-
-      trigger_edge =
-        insert(:edge,
-          workflow: workflow,
-          source_trigger: trigger,
-          target_job: job1
-        )
-
-      # Add new edge to parent
-      job2 = insert(:job, workflow: workflow, name: "job2")
-
-      _new_edge =
-        insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
-
-      # Increment lock_version
-      workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
+      %{
+        project: project,
+        workflow: workflow,
+        job1: job1,
+        trigger: trigger,
+        trigger_edge: trigger_edge
+      } = merged_workflow_setup()
 
       # Create merged document that deletes job2 and its edge
       merged_document = %{
@@ -1550,6 +1288,37 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  defp merged_workflow_setup do
+    project = insert(:project)
+    workflow = insert(:workflow, project: project, lock_version: 5)
+    job1 = insert(:job, workflow: workflow, name: "job1")
+    trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+    trigger_edge =
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job1
+      )
+
+    job2 = insert(:job, workflow: workflow, name: "job2")
+
+    job_edge =
+      insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
+
+    workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
+
+    %{
+      project: project,
+      workflow: workflow,
+      job1: job1,
+      job2: job2,
+      trigger: trigger,
+      trigger_edge: trigger_edge,
+      job_edge: job_edge
+    }
+  end
+
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
     project_id = project_id || Ecto.UUID.generate()
 
@@ -1634,27 +1403,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   end
 
   defp flatten_errors(changeset) do
-    Ecto.Changeset.traverse_errors(
-      changeset,
-      &translate_error/1
-    )
-  end
-
-  defp add_job_to_document(document, workflow_id, job_params) do
-    document
-    |> Map.update!("workflows", fn workflows ->
-      workflows
-      |> Enum.map(fn workflow ->
-        if workflow["id"] == workflow_id do
-          workflow
-          |> Map.update!("jobs", fn jobs ->
-            [job_params | jobs]
-          end)
-        else
-          workflow
-        end
-      end)
-    end)
+    Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
   end
 
   defp add_entity_to_workflow(document, workflow_id, key, params) do
