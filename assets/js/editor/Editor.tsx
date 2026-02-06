@@ -96,7 +96,6 @@ type Lib = {
 };
 
 async function loadDTS(specifier: string): Promise<Lib[]> {
-  console.log('> loadDTS', specifier);
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
