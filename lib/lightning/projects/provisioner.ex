@@ -65,8 +65,11 @@ defmodule Lightning.Projects.Provisioner do
       with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
+           edges_to_cleanup <-
+             edges_targeting_deleted_jobs(project_changeset),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
@@ -269,6 +272,46 @@ defmodule Lightning.Projects.Provisioner do
     else
       :ok
     end
+  end
+
+  # Before import, find edges whose target_job_id points to a job being deleted.
+  # Returns edge IDs so we can clean them up after the FK cascade sets NULL.
+  defp edges_targeting_deleted_jobs(project_changeset) do
+    deleted_job_ids =
+      project_changeset
+      |> get_assoc(:workflows)
+      |> Enum.flat_map(fn wf_cs ->
+        wf_cs
+        |> get_assoc(:jobs)
+        |> Enum.filter(fn job_cs -> job_cs.action == :delete end)
+        |> Enum.map(&get_field(&1, :id))
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    if deleted_job_ids == [] do
+      []
+    else
+      from(e in Edge,
+        where: e.target_job_id in ^deleted_job_ids,
+        select: e.id
+      )
+      |> Repo.all()
+    end
+  end
+
+  # After import, remove edges that were orphaned by job deletion.
+  # Only deletes edges whose IDs we captured before the FK cascade,
+  # and only if they still have NULL target_job_id (weren't retargeted).
+  defp cleanup_orphaned_edges([]), do: :ok
+
+  defp cleanup_orphaned_edges(edge_ids) do
+    from(e in Edge,
+      where: e.id in ^edge_ids,
+      where: is_nil(e.target_job_id)
+    )
+    |> Repo.delete_all()
+
+    :ok
   end
 
   defp handle_collection_deletion(project_changeset) do

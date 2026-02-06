@@ -155,7 +155,18 @@ defmodule Lightning.Workflows do
         {:error, :workflow_deleted}
       end
     end)
+    |> Multi.run(:orphan_deleted_jobs, fn repo, _changes ->
+      orphan_jobs_being_deleted(repo, changeset)
+    end)
     |> Multi.insert_or_update(:workflow, changeset)
+    |> Multi.run(:cleanup_orphaned_edges, fn repo,
+                                             %{
+                                               workflow: workflow,
+                                               orphan_deleted_jobs:
+                                                 orphaned_edge_ids
+                                             } ->
+      cleanup_orphaned_edges(repo, workflow.id, orphaned_edge_ids)
+    end)
     |> then(fn multi ->
       if changeset.changes == %{} do
         multi
@@ -217,6 +228,69 @@ defmodule Lightning.Workflows do
   def save_workflow(%{} = attrs, actor, opts) do
     Workflow.changeset(%Workflow{}, attrs)
     |> save_workflow(actor, opts)
+  end
+
+  # Nullifies edge FK references to jobs that are about to be deleted.
+  # This prevents PostgreSQL's cascade delete from removing edges that Ecto
+  # is trying to update (the retargeting race condition).
+  #
+  # Returns the IDs of edges whose target_job_id was nullified, so that
+  # cleanup_orphaned_edges can precisely remove only those edges (if they
+  # weren't retargeted by the changeset).
+  defp orphan_jobs_being_deleted(repo, changeset) do
+    deleted_job_ids =
+      changeset
+      |> Ecto.Changeset.get_change(:jobs, [])
+      |> Enum.filter(fn cs -> cs.action in [:replace, :delete] end)
+      |> Enum.map(fn cs -> cs.data.id end)
+
+    if deleted_job_ids == [] do
+      {:ok, []}
+    else
+      workflow_id = changeset.data.id
+
+      {_target_count, orphaned_edge_ids} =
+        from(e in Edge,
+          where: e.workflow_id == ^workflow_id,
+          where: e.target_job_id in ^deleted_job_ids,
+          select: e.id
+        )
+        |> repo.update_all(set: [target_job_id: nil])
+
+      {source_count, _} =
+        from(e in Edge,
+          where: e.workflow_id == ^workflow_id,
+          where: e.source_job_id in ^deleted_job_ids
+        )
+        |> repo.update_all(set: [source_job_id: nil])
+
+      Logger.debug(fn ->
+        "Orphaned #{length(orphaned_edge_ids)} target and #{source_count} source edge refs for deleted jobs: #{inspect(deleted_job_ids)}"
+      end)
+
+      {:ok, orphaned_edge_ids}
+    end
+  end
+
+  # Removes edges that were orphaned by job deletion and not retargeted.
+  # Only deletes edges whose IDs were returned by orphan_jobs_being_deleted
+  # AND that still have NULL target_job_id (weren't retargeted by the save).
+  defp cleanup_orphaned_edges(_repo, _workflow_id, []), do: {:ok, 0}
+
+  defp cleanup_orphaned_edges(repo, workflow_id, orphaned_edge_ids) do
+    {count, _} =
+      from(e in Edge,
+        where: e.workflow_id == ^workflow_id,
+        where: e.id in ^orphaned_edge_ids,
+        where: is_nil(e.target_job_id)
+      )
+      |> repo.delete_all()
+
+    Logger.debug(fn ->
+      "Cleaned up #{count} orphaned edges for workflow #{workflow_id}"
+    end)
+
+    {:ok, count}
   end
 
   @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok
