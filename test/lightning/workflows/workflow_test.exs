@@ -172,9 +172,4 @@ defmodule Lightning.Workflows.WorkflowTest do
       assert updated.deleted_at
     end
   end
-
-  test "version_history defaults to []" do
-    wf = insert(:workflow)
-    assert wf.version_history == []
-  end
 end

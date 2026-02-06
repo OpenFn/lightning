@@ -324,8 +324,7 @@ defmodule Lightning.CliDeployTest do
         :updated_at,
         :deleted_at,
         :lock_version,
-        :concurrency,
-        :version_history
+        :concurrency
       ])
 
     jobs =
