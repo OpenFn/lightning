@@ -22,6 +22,25 @@ vi.mock('monaco-editor', () => ({
       dispose: vi.fn(),
     })),
   },
+  languages: {
+    typescript: {
+      javascriptDefaults: {
+        setCompilerOptions: vi.fn(),
+        setDiagnosticsOptions: vi.fn(),
+        setEagerModelSync: vi.fn(),
+        addExtraLib: vi.fn(() => ({ dispose: vi.fn() })),
+        setExtraLibs: vi.fn(),
+      },
+      typescriptDefaults: {
+        setCompilerOptions: vi.fn(),
+        setDiagnosticsOptions: vi.fn(),
+        setEagerModelSync: vi.fn(),
+        addExtraLib: vi.fn(() => ({ dispose: vi.fn() })),
+        setExtraLibs: vi.fn(),
+      },
+    },
+    registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
+  },
 }));
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -77,6 +96,25 @@ vi.mock('../../../js/monaco', () => ({
           })),
         })),
         createModel: vi.fn(code => ({ code, dispose: vi.fn() })),
+      },
+      languages: {
+        typescript: {
+          javascriptDefaults: {
+            setCompilerOptions: vi.fn(),
+            setDiagnosticsOptions: vi.fn(),
+            setEagerModelSync: vi.fn(),
+            addExtraLib: vi.fn(() => ({ dispose: vi.fn() })),
+            setExtraLibs: vi.fn(),
+          },
+          typescriptDefaults: {
+            setCompilerOptions: vi.fn(),
+            setDiagnosticsOptions: vi.fn(),
+            setEagerModelSync: vi.fn(),
+            addExtraLib: vi.fn(() => ({ dispose: vi.fn() })),
+            setExtraLibs: vi.fn(),
+          },
+        },
+        registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
       },
       KeyMod: {
         CtrlCmd: 1,

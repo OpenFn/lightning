@@ -37,7 +37,7 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
-  metadata?: object;
+  metadata?: object | null;
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
@@ -456,6 +456,7 @@ export const CollaborativeMonaco = forwardRef<
       <div ref={containerRef} className="h-full w-full">
         <Cursors />
         <MonacoEditor
+          defaultPath="/job.js" // Required for magic completion
           onMount={handleOnMount}
           options={editorOptions}
           theme="default"

@@ -41,6 +41,7 @@ import {
   useJobMatchesRun,
 } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
+import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
@@ -130,6 +131,7 @@ export function FullScreenIDE({
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
+  const { metadata, isLoading: isMetadataLoading } = useMetadata();
   const awareness = useSession(selectAwareness);
   const { canSave } = useCanSave();
 
@@ -1015,6 +1017,7 @@ export function FullScreenIDE({
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
+                            metadata={metadata}
                             disabled={!canSave}
                             className="h-full w-full"
                             options={{
@@ -1114,7 +1117,7 @@ export function FullScreenIDE({
                           {selectedDocsTab === 'metadata' && (
                             <Metadata
                               adaptor={currJobAdaptor}
-                              metadata={null}
+                              metadata={isMetadataLoading ? true : metadata}
                             />
                           )}
                         </div>
