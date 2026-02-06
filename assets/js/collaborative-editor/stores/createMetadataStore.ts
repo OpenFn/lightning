@@ -239,23 +239,15 @@ export const createMetadataStore = (): MetadataStore => {
   const connectChannel = (provider: PhoenixChannelProvider) => {
     channelProvider = provider;
 
-    const metadataHandler = (message: unknown) => {
-      logger.debug('Received metadata message', message);
-      handleMetadataReceived(message);
-    };
-
-    // Set up channel listeners
-    if (provider.channel) {
-      provider.channel.on('request_metadata', metadataHandler);
-    }
+    // Note: We don't set up channel listeners here because metadata responses
+    // come back as direct replies to channelRequest, not as broadcast events.
+    // If we add real-time metadata updates in the future, we'd add a listener
+    // for something like 'metadata_updated' here.
 
     devtools.connect();
 
     return () => {
       devtools.disconnect();
-      if (provider.channel) {
-        provider.channel.off('request_metadata', metadataHandler);
-      }
       channelProvider = null;
     };
   };
@@ -308,10 +300,15 @@ export const createMetadataStore = (): MetadataStore => {
         adaptor,
         credentialId,
       });
-      await channelRequest(channelProvider.channel, 'request_metadata', {
+      const response = await channelRequest<{
+        job_id: string;
+        metadata: unknown;
+      }>(channelProvider.channel, 'request_metadata', {
         job_id: jobId,
       });
-      // Response will be handled by handleMetadataReceived
+
+      // Handle the response directly
+      handleMetadataReceived(response);
     } catch (error) {
       logger.error('Metadata request failed', error);
       setError(jobId, error instanceof Error ? error.message : 'Unknown error');
