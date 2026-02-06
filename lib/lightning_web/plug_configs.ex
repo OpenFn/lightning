@@ -15,6 +15,7 @@ defmodule LightningWeb.PlugConfigs do
         }
       ],
       pass: ["*/*"],
+      body_reader: {LightningWeb.Plugs.DecompressBody, :read_body, []},
       json_decoder: Phoenix.json_library()
     ]
   end
