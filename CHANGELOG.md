@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Version chip missing tooltips
+  [#4389](https://github.com/OpenFn/lightning/pull/4389)
+
 ## [2.15.13] - 2026-02-06
 
 ## [2.15.13-pre1] - 2026-02-05
