@@ -1336,12 +1336,14 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert hd(updated_workflow.jobs).id == job1.id
     end
 
-    test "importing merged workflow without allow_stale raises StaleEntryError",
+    test "importing merged workflow without allow_stale succeeds when deleting job and edge",
          %{
            user: user
          } do
-      # Same setup as above, but WITHOUT allow_stale: true
-      # This verifies that stale errors are properly raised by default
+      # This test verifies that deleting a job and its edge in the same
+      # import works correctly. With partial SET NULL FKs, the job deletion
+      # nullifies the edge's target_job_id instead of cascade-deleting it,
+      # so Ecto can then process the edge deletion without a StaleEntryError.
 
       project = insert(:project)
       workflow = insert(:workflow, project: project, lock_version: 5)
@@ -1358,13 +1360,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       # Add new edge to parent
       job2 = insert(:job, workflow: workflow, name: "job2")
 
-      new_edge =
+      _new_edge =
         insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
 
       # Increment lock_version
       workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
 
-      # Create merged document that tries to delete the new edge
+      # Create merged document that deletes job2 and its edge
       merged_document = %{
         "id" => project.id,
         "name" => project.name,
@@ -1393,25 +1395,23 @@ defmodule Lightning.Projects.ProvisionerTest do
                 "source_trigger_id" => trigger.id,
                 "target_job_id" => job1.id,
                 "condition_type" => "always"
-              },
-              %{
-                "id" => new_edge.id,
-                "delete" => true
               }
             ]
           }
         ]
       }
 
-      # Without allow_stale, this should raise StaleEntryError
-      assert_raise Ecto.StaleEntryError, fn ->
-        Provisioner.import_document(project, user, merged_document)
-      end
+      # With partial SET NULL FKs, this succeeds without StaleEntryError
+      assert {:ok, updated_project} =
+               Provisioner.import_document(project, user, merged_document)
 
-      # Verify nothing was changed (transaction rolled back)
-      reloaded_workflow = Repo.reload(workflow) |> Repo.preload([:edges, :jobs])
-      assert length(reloaded_workflow.edges) == 2
-      assert length(reloaded_workflow.jobs) == 2
+      # Verify job2 was deleted and only trigger edge remains
+      reloaded_workflow =
+        updated_project.workflows
+        |> Enum.find(&(&1.id == workflow.id))
+
+      assert length(reloaded_workflow.edges) == 1
+      assert length(reloaded_workflow.jobs) == 1
     end
   end
 
