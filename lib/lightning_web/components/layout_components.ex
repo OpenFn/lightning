@@ -458,18 +458,14 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-[8px] primary-light opacity-50">
-          v{Application.spec(:lightning, :vsn)}
-        </div>
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <%!-- Collapsed branding: centered --%>
       <div class="sidebar-branding-collapsed hidden h-14 text-center">
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-[8px] primary-light opacity-50">
-          v{Application.spec(:lightning, :vsn)}
-        </div>
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <div class="border-t border-white/10 mt-2">
         <button
