@@ -1413,6 +1413,93 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert length(reloaded_workflow.edges) == 1
       assert length(reloaded_workflow.jobs) == 1
     end
+
+    test "importing document that retargets an edge to a replacement job",
+         %{user: user} do
+      # When a job is deleted and a new job takes its place, the edge
+      # should survive with its original ID pointing to the new target.
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job1 = insert(:job, workflow: workflow, name: "job1")
+      job2 = insert(:job, workflow: workflow, name: "job2")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      trigger_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job1
+        )
+
+      job_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_job: job1,
+          target_job: job2
+        )
+
+      job3_id = Ecto.UUID.generate()
+
+      document = %{
+        "id" => project.id,
+        "name" => project.name,
+        "workflows" => [
+          %{
+            "id" => workflow.id,
+            "name" => workflow.name,
+            "jobs" => [
+              %{
+                "id" => job1.id,
+                "name" => "job1",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "fn(state)"
+              },
+              %{
+                "id" => job3_id,
+                "name" => "job3",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "fn(state)"
+              }
+            ],
+            "triggers" => [
+              %{"id" => trigger.id, "type" => "webhook"}
+            ],
+            "edges" => [
+              %{
+                "id" => trigger_edge.id,
+                "source_trigger_id" => trigger.id,
+                "target_job_id" => job1.id,
+                "condition_type" => "always"
+              },
+              %{
+                "id" => job_edge.id,
+                "source_job_id" => job1.id,
+                "target_job_id" => job3_id,
+                "condition_type" => "on_job_success"
+              }
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, updated_project} =
+               Provisioner.import_document(project, user, document)
+
+      reloaded_workflow =
+        updated_project.workflows
+        |> Enum.find(&(&1.id == workflow.id))
+
+      assert length(reloaded_workflow.jobs) == 2
+      refute Enum.any?(reloaded_workflow.jobs, &(&1.id == job2.id))
+      assert Enum.any?(reloaded_workflow.jobs, &(&1.id == job3_id))
+
+      # Edge preserved its ID but retargeted to new job
+      retargeted =
+        Enum.find(reloaded_workflow.edges, &(&1.id == job_edge.id))
+
+      assert retargeted.target_job_id == job3_id
+      assert retargeted.source_job_id == job1.id
+    end
   end
 
   describe "import_document telemetry" do
