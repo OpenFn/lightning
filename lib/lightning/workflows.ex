@@ -234,8 +234,8 @@ defmodule Lightning.Workflows do
   # This prevents PostgreSQL's cascade delete from removing edges that Ecto
   # is trying to update (the retargeting race condition).
   #
-  # Returns the IDs of edges whose target_job_id was nullified, so that
-  # cleanup_orphaned_edges can precisely remove only those edges (if they
+  # Returns the IDs of edges whose target_job_id or source_job_id was nullified,
+  # so that cleanup_orphaned_edges can precisely remove only those edges (if they
   # weren't retargeted by the changeset).
   defp orphan_jobs_being_deleted(repo, changeset) do
     deleted_job_ids =
@@ -249,7 +249,7 @@ defmodule Lightning.Workflows do
     else
       workflow_id = changeset.data.id
 
-      {_target_count, orphaned_edge_ids} =
+      {_target_count, target_orphaned_ids} =
         from(e in Edge,
           where: e.workflow_id == ^workflow_id,
           where: e.target_job_id in ^deleted_job_ids,
@@ -257,15 +257,19 @@ defmodule Lightning.Workflows do
         )
         |> repo.update_all(set: [target_job_id: nil])
 
-      {source_count, _} =
+      {_source_count, source_orphaned_ids} =
         from(e in Edge,
           where: e.workflow_id == ^workflow_id,
-          where: e.source_job_id in ^deleted_job_ids
+          where: e.source_job_id in ^deleted_job_ids,
+          select: e.id
         )
         |> repo.update_all(set: [source_job_id: nil])
 
+      orphaned_edge_ids =
+        Enum.uniq(target_orphaned_ids ++ source_orphaned_ids)
+
       Logger.debug(fn ->
-        "Orphaned #{length(orphaned_edge_ids)} target and #{source_count} source edge refs for deleted jobs: #{inspect(deleted_job_ids)}"
+        "Orphaned #{length(target_orphaned_ids)} target and #{length(source_orphaned_ids)} source edge refs for deleted jobs: #{inspect(deleted_job_ids)}"
       end)
 
       {:ok, orphaned_edge_ids}
@@ -274,7 +278,7 @@ defmodule Lightning.Workflows do
 
   # Removes edges that were orphaned by job deletion and not retargeted.
   # Only deletes edges whose IDs were returned by orphan_jobs_being_deleted
-  # AND that still have NULL target_job_id (weren't retargeted by the save).
+  # AND that still have a NULL FK (target_job_id or source without trigger).
   defp cleanup_orphaned_edges(_repo, _workflow_id, []), do: {:ok, 0}
 
   defp cleanup_orphaned_edges(repo, workflow_id, orphaned_edge_ids) do
@@ -282,7 +286,9 @@ defmodule Lightning.Workflows do
       from(e in Edge,
         where: e.workflow_id == ^workflow_id,
         where: e.id in ^orphaned_edge_ids,
-        where: is_nil(e.target_job_id)
+        where:
+          is_nil(e.target_job_id) or
+            (is_nil(e.source_job_id) and is_nil(e.source_trigger_id))
       )
       |> repo.delete_all()
 

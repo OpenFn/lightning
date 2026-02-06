@@ -287,6 +287,84 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert workflow_ids == expected_workflow_ids
     end
+
+    test "creates collections" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body, project_id: project_id} = valid_document()
+
+      collection_id = Ecto.UUID.generate()
+      collection_name = "test-collection"
+
+      body_with_collections =
+        Map.put(body, "collections", [
+          %{id: collection_id, name: collection_name}
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_collections
+        )
+
+      assert %{id: ^project_id, collections: [collection]} = project
+
+      assert %{
+               id: ^collection_id,
+               name: ^collection_name,
+               project_id: ^project_id
+             } = collection
+    end
+
+    test "trigger->firstjob edge is enabled even if params says disabled" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      # disable all edges
+      disabled_edges =
+        Enum.map(workflow["edges"], fn edge ->
+          Map.put(edge, "enabled", false)
+        end)
+
+      new_workflow = Map.put(workflow, "edges", disabled_edges)
+
+      body_with_disabled_edges =
+        Map.put(body, "workflows", [new_workflow])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_disabled_edges
+        )
+
+      assert %{id: ^project_id, workflows: [%{edges: edges}]} = project
+
+      # trigger edge is enabled
+      trigger_edge = Enum.find(edges, & &1.source_trigger_id)
+      assert trigger_edge.enabled
+
+      # job edge is disabled
+      [job_edge] = edges -- [trigger_edge]
+      refute job_edge.enabled
+    end
   end
 
   describe "import_document/2 with an existing project" do
@@ -1237,6 +1315,158 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert retargeted.target_job_id == job3_id
       assert retargeted.source_job_id == job1.id
+    end
+
+    test "deleting source job cleans up orphaned edge via provisioner",
+         %{user: user} do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job_a = insert(:job, workflow: workflow, name: "job-a")
+      job_b = insert(:job, workflow: workflow, name: "job-b")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      trigger_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job_a
+        )
+
+      job_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_job: job_a,
+          target_job: job_b
+        )
+
+      # Delete job_a, remove both edges, keep only job_b
+      document = %{
+        "id" => project.id,
+        "name" => project.name,
+        "workflows" => [
+          %{
+            "id" => workflow.id,
+            "name" => workflow.name,
+            "jobs" => [
+              %{
+                "id" => job_b.id,
+                "name" => "job-b",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "fn(state)"
+              }
+            ],
+            "triggers" => [
+              %{"id" => trigger.id, "type" => "webhook"}
+            ],
+            "edges" => []
+          }
+        ]
+      }
+
+      assert {:ok, updated_project} =
+               Provisioner.import_document(project, user, document)
+
+      reloaded_workflow =
+        updated_project.workflows
+        |> Enum.find(&(&1.id == workflow.id))
+
+      assert length(reloaded_workflow.jobs) == 1
+      assert hd(reloaded_workflow.jobs).id == job_b.id
+      assert reloaded_workflow.edges == []
+
+      refute Repo.get(Lightning.Workflows.Edge, trigger_edge.id)
+      refute Repo.get(Lightning.Workflows.Edge, job_edge.id)
+    end
+
+    test "replacing first job retargets edges via provisioner",
+         %{user: user} do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job_a = insert(:job, workflow: workflow, name: "job-a")
+      job_b = insert(:job, workflow: workflow, name: "job-b")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      trigger_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job_a
+        )
+
+      job_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_job: job_a,
+          target_job: job_b
+        )
+
+      job_c_id = Ecto.UUID.generate()
+
+      # Delete job_a, add job_c, retarget both edges
+      document = %{
+        "id" => project.id,
+        "name" => project.name,
+        "workflows" => [
+          %{
+            "id" => workflow.id,
+            "name" => workflow.name,
+            "jobs" => [
+              %{
+                "id" => job_c_id,
+                "name" => "job-c",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "fn(state)"
+              },
+              %{
+                "id" => job_b.id,
+                "name" => "job-b",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "fn(state)"
+              }
+            ],
+            "triggers" => [
+              %{"id" => trigger.id, "type" => "webhook"}
+            ],
+            "edges" => [
+              %{
+                "id" => trigger_edge.id,
+                "source_trigger_id" => trigger.id,
+                "target_job_id" => job_c_id,
+                "condition_type" => "always"
+              },
+              %{
+                "id" => job_edge.id,
+                "source_job_id" => job_c_id,
+                "target_job_id" => job_b.id,
+                "condition_type" => "on_job_success"
+              }
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, updated_project} =
+               Provisioner.import_document(project, user, document)
+
+      reloaded_workflow =
+        updated_project.workflows
+        |> Enum.find(&(&1.id == workflow.id))
+
+      assert length(reloaded_workflow.jobs) == 2
+      assert length(reloaded_workflow.edges) == 2
+
+      # Trigger edge preserved ID, retargeted to job_c
+      saved_trigger_edge =
+        Enum.find(reloaded_workflow.edges, &(&1.id == trigger_edge.id))
+
+      assert saved_trigger_edge.target_job_id == job_c_id
+
+      # Job edge preserved ID, source retargeted to job_c
+      saved_job_edge =
+        Enum.find(reloaded_workflow.edges, &(&1.id == job_edge.id))
+
+      assert saved_job_edge.source_job_id == job_c_id
+      assert saved_job_edge.target_job_id == job_b.id
     end
   end
 

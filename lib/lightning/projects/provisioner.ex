@@ -66,7 +66,7 @@ defmodule Lightning.Projects.Provisioner do
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-
-             edges_targeting_deleted_jobs(project_changeset),
+             edges_referencing_deleted_jobs(project_changeset),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
            :ok <- cleanup_orphaned_edges(edges_to_cleanup),
@@ -274,9 +274,9 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  # Before import, find edges whose target_job_id points to a job being deleted.
+  # Before import, find edges referencing a job being deleted (as target or source).
   # Returns edge IDs so we can clean them up after the FK cascade sets NULL.
-  defp edges_targeting_deleted_jobs(project_changeset) do
+  defp edges_referencing_deleted_jobs(project_changeset) do
     deleted_job_ids =
       project_changeset
       |> get_assoc(:workflows)
@@ -292,7 +292,9 @@ defmodule Lightning.Projects.Provisioner do
       []
     else
       from(e in Edge,
-        where: e.target_job_id in ^deleted_job_ids,
+        where:
+          e.target_job_id in ^deleted_job_ids or
+            e.source_job_id in ^deleted_job_ids,
         select: e.id
       )
       |> Repo.all()
@@ -301,13 +303,15 @@ defmodule Lightning.Projects.Provisioner do
 
   # After import, remove edges that were orphaned by job deletion.
   # Only deletes edges whose IDs we captured before the FK cascade,
-  # and only if they still have NULL target_job_id (weren't retargeted).
+  # and only if they still have a NULL FK (target or source without trigger).
   defp cleanup_orphaned_edges([]), do: :ok
 
   defp cleanup_orphaned_edges(edge_ids) do
     from(e in Edge,
       where: e.id in ^edge_ids,
-      where: is_nil(e.target_job_id)
+      where:
+        is_nil(e.target_job_id) or
+          (is_nil(e.source_job_id) and is_nil(e.source_trigger_id))
     )
     |> Repo.delete_all()
 
