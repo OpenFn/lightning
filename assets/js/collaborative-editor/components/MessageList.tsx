@@ -376,7 +376,6 @@ const formatUserName = (user: Message['user']): string | null => {
 interface MessageListProps {
   messages?: Message[];
   isLoading?: boolean;
-  sessionType?: 'job_code' | 'workflow_template';
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import {
@@ -10,7 +10,6 @@ import {
   useAIIsLoading,
   useAIMessages,
   useAISessionId,
-  useAISessionType,
   useAIStore,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
@@ -24,29 +23,25 @@ import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
-  useProject,
   useHasReadAIDisclaimer,
-  useMarkAIDisclaimerRead,
-  useSessionContextLoaded,
-  useLimits,
   useIsNewWorkflow,
+  useLimits,
+  useMarkAIDisclaimerRead,
+  useProject,
+  useSessionContextLoaded,
   useUser,
 } from '../hooks/useSessionContext';
 import {
+  useAIAssistantInitialMessage,
   useIsAIAssistantPanelOpen,
   useUICommands,
-  useAIAssistantInitialMessage,
 } from '../hooks/useUI';
 import {
-  useWorkflowState,
   useWorkflowActions,
   useWorkflowReadOnly,
+  useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import type {
-  JobCodeContext,
-  WorkflowTemplateContext,
-} from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -54,7 +49,6 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
-import flowEvents from './diagram/react-flow-events';
 import { MessageList } from './MessageList';
 
 /**
@@ -123,7 +117,6 @@ export function AIAssistantPanelWrapper() {
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
   const sessionId = useAISessionId();
-  const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
   const sessionContextLoaded = useSessionContextLoaded();
   const hasReadDisclaimer = useHasReadAIDisclaimer();
@@ -205,14 +198,14 @@ export function AIAssistantPanelWrapper() {
     if (
       !isAIAssistantPanelOpen ||
       !sessionId ||
-      sessionType !== 'job_code' ||
       !aiMode ||
-      aiMode.mode !== 'job_code'
+      aiMode.page !== 'job_code'
     ) {
       return;
     }
 
-    const context = aiMode.context as JobCodeContext;
+    const context = aiMode.context.job_ctx;
+    if (!context) return;
     if (context.job_body !== undefined || context.job_adaptor !== undefined) {
       updateContextViaChannel({
         job_body: context.job_body,
@@ -220,13 +213,7 @@ export function AIAssistantPanelWrapper() {
         job_name: context.job_name,
       });
     }
-  }, [
-    isAIAssistantPanelOpen,
-    sessionId,
-    sessionType,
-    aiMode,
-    updateContextViaChannel,
-  ]);
+  }, [isAIAssistantPanelOpen, sessionId, aiMode, updateContextViaChannel]);
 
   /**
    * appliedMessageIdsRef tracks which AI-generated workflows have been
@@ -315,13 +302,9 @@ export function AIAssistantPanelWrapper() {
 
       // For job_code with attach_code, get CURRENT code from Y.Doc
       let updatedAiMode = aiMode;
-      if (
-        messageOptions?.attach_code &&
-        aiMode?.mode === 'job_code' &&
-        currentState.sessionType === 'job_code'
-      ) {
-        const context = aiMode.context as JobCodeContext;
-        const jobId = context.job_id;
+      if (messageOptions?.attach_code && aiMode?.page === 'job_code') {
+        const context = aiMode.context.job_ctx;
+        const jobId = context?.job_id;
 
         if (jobId) {
           // Get fresh code from jobs array (backed by Y.Doc)
@@ -331,8 +314,12 @@ export function AIAssistantPanelWrapper() {
             updatedAiMode = {
               ...aiMode,
               context: {
-                ...context,
-                job_body: currentJob.body,
+                ...aiMode.context,
+                job_ctx: {
+                  ...aiMode.context.job_ctx,
+                  job_id: jobId,
+                  job_body: currentJob.body,
+                },
               },
             };
           }
@@ -403,26 +390,24 @@ export function AIAssistantPanelWrapper() {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
-      const job_ctx = (aiMode?.context as WorkflowTemplateContext).job_ctx;
-      if (currentState.sessionType === 'workflow_template') {
-        if (!job_ctx) {
-          const workflowData = prepareWorkflowForSerialization(
-            workflow,
-            jobs,
-            triggers,
-            edges,
-            positions
-          );
-          const workflowYAML = workflowData
-            ? serializeWorkflowToYAML(workflowData)
-            : undefined;
+      const job_ctx = aiMode?.context.job_ctx; // aiMode.page == 'job_code' when true
+      if (!job_ctx) {
+        const workflowData = prepareWorkflowForSerialization(
+          workflow,
+          jobs,
+          triggers,
+          edges,
+          positions
+        );
+        const workflowYAML = workflowData
+          ? serializeWorkflowToYAML(workflowData)
+          : undefined;
 
-          if (workflowYAML) {
-            options = { ...options, code: workflowYAML };
-          }
-        } else {
-          options = { ...options, job_id: job_ctx.job_id };
+        if (workflowYAML) {
+          options = { ...options, code: workflowYAML };
         }
+      } else {
+        options = { ...options, job_id: job_ctx.job_id };
       }
 
       // Update store state and send through registry
@@ -507,9 +492,9 @@ export function AIAssistantPanelWrapper() {
   const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
     useAIWorkflowApplications({
       sessionId,
-      sessionType,
+      page: aiMode?.page || 'workflow_template',
       currentSession:
-        sessionId && sessionType && messages.length > 0
+        sessionId && messages.length > 0
           ? {
               messages,
               workflowTemplateContext,
@@ -539,10 +524,9 @@ export function AIAssistantPanelWrapper() {
   // Only for the user who authored the triggering message
   useAutoPreview({
     aiMode,
-    session:
-      sessionId && sessionType
-        ? { id: sessionId, session_type: sessionType, messages }
-        : null,
+    session: sessionId
+      ? { id: sessionId, session_type: 'workflow_template', messages }
+      : null,
     currentUserId: user?.id,
     onPreview: handlePreviewJobCode,
   });
@@ -585,7 +569,7 @@ export function AIAssistantPanelWrapper() {
               messageCount={messages.length}
               isLoading={isLoading}
               isResizable={true}
-              sessionType={sessionType}
+              page={aiMode?.page}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
@@ -596,9 +580,8 @@ export function AIAssistantPanelWrapper() {
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
-                {...(sessionType && { sessionType })}
                 onApplyWorkflow={
-                  sessionType === 'workflow_template' && !isApplyingWorkflow
+                  !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }
@@ -622,14 +605,14 @@ export function AIAssistantPanelWrapper() {
                 }
                 previewingMessageId={previewingMessageId}
                 showAddButtons={
-                  sessionType === 'job_code'
+                  aiMode?.page === 'job_code'
                     ? // For job_code: hide ADD buttons when message has code field
                       !messages.some(m => m.role === 'assistant' && m.code)
                     : false
                 }
                 showApplyButton={
-                  sessionType === 'workflow_template' ||
-                  (sessionType === 'job_code' && messages.some(m => m.code))
+                  aiMode?.page === 'workflow_template' ||
+                  (aiMode?.page === 'job_code' && messages.some(m => m.code))
                 }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}

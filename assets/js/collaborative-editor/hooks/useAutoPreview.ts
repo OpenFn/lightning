@@ -82,7 +82,7 @@ export function useAutoPreview({
     // Only operate in job_code mode AND when session is job_code type
     // This prevents auto-previewing workflow YAML when user clicks into a job
     // while viewing a workflow_template session
-    if (!aiMode || !(aiMode.context as WorkflowTemplateContext)?.job_ctx) {
+    if (!aiMode || aiMode.page !== 'job_code') {
       return;
     }
     if (!session?.messages) return;

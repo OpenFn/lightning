@@ -9,17 +9,15 @@ import {
   extractJobCredentials,
 } from '../../yaml/util';
 import type { MonacoHandle } from '../components/CollaborativeMonaco';
+import flowEvents from '../components/diagram/react-flow-events';
 import { notifications } from '../lib/notifications';
 import type { Job } from '../types';
 import type {
-  JobCodeContext,
   ConnectionState,
   Message,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
-
-import flowEvents from '../components/diagram/react-flow-events';
 
 import type { AIModeResult } from './useAIMode';
 
@@ -101,7 +99,7 @@ function validateIds(spec: Record<string, unknown>): void {
  */
 export function useAIWorkflowApplications({
   sessionId,
-  sessionType,
+  page,
   currentSession,
   currentUserId,
   aiMode,
@@ -116,7 +114,7 @@ export function useAIWorkflowApplications({
   appliedMessageIdsRef,
 }: {
   sessionId: string | null;
-  sessionType: SessionType | null;
+  page: SessionType | null;
   currentSession: {
     messages: Message[];
     workflowTemplateContext?: WorkflowTemplateContext | null;
@@ -365,7 +363,7 @@ export function useAIWorkflowApplications({
     if (!currentSession) return;
     const messages = currentSession.messages;
 
-    if (sessionType !== 'workflow_template' || !messages.length) return;
+    if (page !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
     // Don't auto-apply when readonly (except for new workflow creation)
     if (!canApplyChanges) return;
@@ -417,7 +415,7 @@ export function useAIWorkflowApplications({
     }
   }, [
     currentSession,
-    sessionType,
+    page,
     sessionId,
     connectionState,
     handleApplyWorkflow,

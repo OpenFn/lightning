@@ -133,7 +133,7 @@ export const useAIJobCodeContext = () => {
   const store = useAIStore();
   return useSyncExternalStore(
     store.subscribe,
-    store.withSelector(state => state.jobCodeContext)
+    store.withSelector(state => state.workflowTemplateContext?.job_ctx)
   );
 };
 

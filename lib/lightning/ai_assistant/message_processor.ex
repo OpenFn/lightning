@@ -80,12 +80,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
-    is_job = !is_nil(message.job_id)
-    # IO.inspect(%{message: message.job_id}, label: "han:ai")
-    # instead of session_type we need to check whether the message has a job_id!
+    is_job_chat = !is_nil(message.job_id)
+
     result =
-      if is_job do
-        session = %{session | job_id: message.job_id}
+      if is_job_chat do
         process_job_message(session, message)
       else
         process_workflow_message(session, message)
@@ -110,6 +108,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_job_message(session, message) do
+    # enriching session with job_id
+    session = %{session | job_id: message.job_id}
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
     options =

@@ -11,8 +11,9 @@ import { useProject } from './useSessionContext';
 import { useWorkflowState } from './useWorkflow';
 
 export interface AIModeResult {
-  mode: SessionType;
-  context: JobCodeContext | WorkflowTemplateContext;
+  mode: 'workflow_template';
+  page: SessionType;
+  context: WorkflowTemplateContext;
   storageKey: string;
 }
 
@@ -75,9 +76,10 @@ export function useAIMode(): AIModeResult | null {
         ...(workflow?.id && { workflow_id: workflow.id }),
         job_ctx,
       },
+      page: job_ctx ? 'job_code' : 'workflow_template',
       storageKey: workflow?.id
         ? `ai-workflow-${workflow.id}`
         : `ai-project-${project.id}`,
-    };
+    } as AIModeResult;
   }, [params, project, workflow, jobs]);
 }

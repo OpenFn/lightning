@@ -37,7 +37,7 @@ interface AIAssistantPanelProps {
    * Current session type (job_code or workflow_template)
    * Used to show mode-specific UI
    */
-  sessionType?: 'job_code' | 'workflow_template' | null;
+  page?: 'job_code' | 'workflow_template' | null;
   /**
    * Load sessions via Phoenix Channel (preferred over HTTP)
    */
@@ -96,7 +96,7 @@ export function AIAssistantPanel({
   messageCount: _messageCount = 0,
   isLoading = false,
   isResizable = false,
-  sessionType = null,
+  page = null,
   loadSessions: _loadSessions,
   focusTrigger,
   showDisclaimer = false,
@@ -139,9 +139,9 @@ export function AIAssistantPanel({
   }, [sessionId, view]);
 
   const placeholderText =
-    sessionType === 'job_code'
+    page === 'job_code'
       ? 'Ask me anything about this job...'
-      : sessionType === 'workflow_template'
+      : page === 'workflow_template'
         ? 'Ask me anything about this workflow...'
         : 'Ask me anything...';
 
@@ -243,7 +243,7 @@ export function AIAssistantPanel({
   return (
     <aside
       data-testid="ai-assistant-panel"
-      data-session-type={sessionType || undefined}
+      data-session-type={page || undefined}
       className={cn(
         'h-full flex flex-col overflow-hidden bg-white relative',
         !isResizable && [
@@ -263,16 +263,16 @@ export function AIAssistantPanel({
                 <h2 className="text-base font-semibold text-gray-900">
                   Assistant
                 </h2>
-                {sessionType && (
+                {page && (
                   <span
                     className={cn(
                       'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                      sessionType === 'job_code'
+                      page === 'job_code'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-purple-100 text-purple-800'
                     )}
                   >
-                    {sessionType === 'job_code' ? 'Job' : 'Workflow'}
+                    {page === 'job_code' ? 'Job' : 'Workflow'}
                   </span>
                 )}
               </div>
@@ -432,7 +432,7 @@ export function AIAssistantPanel({
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
-        showJobControls={sessionType === 'job_code'}
+        showJobControls={page === 'job_code'}
         storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
