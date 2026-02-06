@@ -11,8 +11,9 @@ import { useProject } from './useSessionContext';
 import { useWorkflowState } from './useWorkflow';
 
 export interface AIModeResult {
-  mode: SessionType;
-  context: JobCodeContext | WorkflowTemplateContext;
+  mode: 'workflow_template';
+  page: SessionType;
+  context: WorkflowTemplateContext;
   storageKey: string;
 }
 
@@ -42,35 +43,30 @@ export function useAIMode(): AIModeResult | null {
     const isIDEOpen = params.panel === 'editor';
     const selectedJobId = params.job;
 
+    let job_ctx: JobCodeContext | undefined;
     if (isIDEOpen && selectedJobId) {
       const job = jobs.find(j => j.id === selectedJobId);
 
-      const context: JobCodeContext = {
+      job_ctx = {
         job_id: selectedJobId,
         attach_code: false,
         attach_logs: false,
       };
 
       if (workflow?.id) {
-        context.workflow_id = workflow.id;
+        job_ctx.workflow_id = workflow.id;
       }
 
       if (job) {
-        context.job_name = job.name;
-        context.job_body = job.body;
-        context.job_adaptor = job.adaptor;
+        job_ctx.job_name = job.name;
+        job_ctx.job_body = job.body;
+        job_ctx.job_adaptor = job.adaptor;
       }
 
       const runId = params.run;
       if (runId) {
-        context.follow_run_id = runId;
+        job_ctx.follow_run_id = runId;
       }
-
-      return {
-        mode: 'job_code',
-        context,
-        storageKey: `ai-job-${selectedJobId}`,
-      };
     }
 
     return {
@@ -78,10 +74,12 @@ export function useAIMode(): AIModeResult | null {
       context: {
         project_id: project.id,
         ...(workflow?.id && { workflow_id: workflow.id }),
+        job_ctx,
       },
+      page: job_ctx ? 'job_code' : 'workflow_template',
       storageKey: workflow?.id
         ? `ai-workflow-${workflow.id}`
         : `ai-project-${project.id}`,
-    };
+    } as AIModeResult;
   }, [params, project, workflow, jobs]);
 }

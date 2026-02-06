@@ -9,17 +9,15 @@ import {
   extractJobCredentials,
 } from '../../yaml/util';
 import type { MonacoHandle } from '../components/CollaborativeMonaco';
+import flowEvents from '../components/diagram/react-flow-events';
 import { notifications } from '../lib/notifications';
 import type { Job } from '../types';
 import type {
-  JobCodeContext,
   ConnectionState,
   Message,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
-
-import flowEvents from '../components/diagram/react-flow-events';
 
 import type { AIModeResult } from './useAIMode';
 
@@ -101,7 +99,7 @@ function validateIds(spec: Record<string, unknown>): void {
  */
 export function useAIWorkflowApplications({
   sessionId,
-  sessionType,
+  page,
   currentSession,
   currentUserId,
   aiMode,
@@ -116,7 +114,7 @@ export function useAIWorkflowApplications({
   appliedMessageIdsRef,
 }: {
   sessionId: string | null;
-  sessionType: SessionType | null;
+  page: SessionType | null;
   currentSession: {
     messages: Message[];
     workflowTemplateContext?: WorkflowTemplateContext | null;
@@ -226,15 +224,10 @@ export function useAIWorkflowApplications({
    */
   const handlePreviewJobCode = useCallback(
     (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
-        console.error('[AI Assistant] Cannot preview - not in job mode', {
-          aiMode,
-        });
-        return;
-      }
+      if (!aiMode) return;
 
-      const context = aiMode.context as JobCodeContext;
-      const jobId = context.job_id;
+      const context = aiMode.context as WorkflowTemplateContext;
+      const jobId = context.job_ctx?.job_id;
 
       if (!jobId) {
         console.error('[AI Assistant] Cannot preview - no job ID', { context });
@@ -287,13 +280,9 @@ export function useAIWorkflowApplications({
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
-        console.error('[AI Assistant] Cannot apply job code - not in job mode');
-        return;
-      }
-
-      const context = aiMode.context as JobCodeContext;
-      const jobId = context.job_id;
+      if (!aiMode) return;
+      const context = aiMode.context as WorkflowTemplateContext;
+      const jobId = context.job_ctx?.job_id;
 
       if (!jobId) {
         notifications.alert({
@@ -374,7 +363,7 @@ export function useAIWorkflowApplications({
     if (!currentSession) return;
     const messages = currentSession.messages;
 
-    if (sessionType !== 'workflow_template' || !messages.length) return;
+    if (page !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
     // Don't auto-apply when readonly (except for new workflow creation)
     if (!canApplyChanges) return;
@@ -397,7 +386,8 @@ export function useAIWorkflowApplications({
 
     if (
       latestMessage?.code &&
-      !appliedMessageIdsRef.current.has(latestMessage.id)
+      !appliedMessageIdsRef.current.has(latestMessage.id) &&
+      !latestMessage.job_id
     ) {
       // Find the user message that triggered this AI response
       // Look for the most recent user message before this assistant message
@@ -425,7 +415,7 @@ export function useAIWorkflowApplications({
     }
   }, [
     currentSession,
-    sessionType,
+    page,
     sessionId,
     connectionState,
     handleApplyWorkflow,

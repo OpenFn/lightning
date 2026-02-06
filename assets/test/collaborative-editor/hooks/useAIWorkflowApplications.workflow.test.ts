@@ -136,7 +136,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -168,7 +168,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -201,7 +201,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -239,7 +239,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -272,7 +272,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -300,7 +300,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
@@ -332,7 +332,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
-        sessionType: 'workflow_template',
+        page: 'workflow_template',
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
