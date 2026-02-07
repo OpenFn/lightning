@@ -42,6 +42,7 @@ export interface CollaborativeEditorDataProps {
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
   'data-is-new-workflow'?: string;
+  'data-ai-assistant-enabled'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -65,6 +66,7 @@ interface BreadcrumbContentProps {
   projectNameFallback?: string;
   projectEnvFallback?: string;
   isNewWorkflow?: boolean;
+  aiAssistantEnabled?: boolean;
 }
 
 function BreadcrumbContent({
@@ -74,6 +76,7 @@ function BreadcrumbContent({
   projectNameFallback,
   projectEnvFallback,
   isNewWorkflow = false,
+  aiAssistantEnabled = true,
 }: BreadcrumbContentProps) {
   const projectFromStore = useProject();
 
@@ -155,6 +158,7 @@ function BreadcrumbContent({
       workflowId={workflowId}
       isRunPanelOpen={isRunPanelOpen}
       isIDEOpen={isIDEOpen}
+      aiAssistantEnabled={aiAssistantEnabled}
     >
       {breadcrumbElements}
     </Header>
@@ -172,6 +176,7 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectId = props['data-root-project-id'] ?? null;
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
+  const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -208,6 +213,7 @@ export const CollaborativeEditor: WithActionProps<
                         workflowId={workflowId}
                         workflowName={workflowName}
                         isNewWorkflow={isNewWorkflow}
+                        aiAssistantEnabled={aiAssistantEnabled}
                         {...(projectId !== undefined && {
                           projectIdFallback: projectId,
                         })}
@@ -235,7 +241,9 @@ export const CollaborativeEditor: WithActionProps<
                         </LoadingBoundary>
                       </div>
                     </div>
-                    <AIAssistantPanelWrapper />
+                    <AIAssistantPanelWrapper
+                      aiAssistantEnabled={aiAssistantEnabled}
+                    />
                   </MonacoRefProvider>
                 </CredentialModalProvider>
               </LiveViewActionsProvider>

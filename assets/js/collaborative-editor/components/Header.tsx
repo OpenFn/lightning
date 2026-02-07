@@ -197,12 +197,14 @@ export function Header({
   workflowId,
   isRunPanelOpen = false,
   isIDEOpen = false,
+  aiAssistantEnabled = true,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
+  aiAssistantEnabled?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
@@ -443,8 +445,14 @@ export function Header({
 
           <AIButton
             className="ml-2"
-            disabled={isPinnedVersion}
-            disabledMessage="Switch to the latest version of this workflow to use the AI Assistant."
+            disabled={isPinnedVersion || !aiAssistantEnabled}
+            disabledMessage={
+              !aiAssistantEnabled
+                ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
+                : isPinnedVersion
+                  ? 'Switch to the latest version of this workflow to use the AI Assistant.'
+                  : undefined
+            }
           />
 
           <GitHubSyncModal />
