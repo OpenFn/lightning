@@ -21,10 +21,21 @@ import type { CreateSessionContextOptions } from '../__helpers__/sessionContextF
 import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // =============================================================================
 // TEST MOCKS
 // =============================================================================
+
+// Mock useURLState for pinned version tests
+const urlState = createMockURLState();
+
+vi.mock('../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // Mock useAdaptorIcons to prevent async fetch warnings
 vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
@@ -1366,6 +1377,10 @@ describe('Header - Keyboard Shortcuts', () => {
 // =============================================================================
 
 describe('Header - AI Assistant Button', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
   test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
 
@@ -1421,16 +1436,10 @@ describe('Header - AI Assistant Button', () => {
   });
 
   test('AI button is disabled when viewing a pinned version', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
+    // Set pinned version in URL before setup
+    urlState.setParam('v', '123');
 
-    // Render with ?v=123 to simulate pinned version
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        search: '?v=123',
-      },
-      writable: true,
-    });
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header
@@ -1457,16 +1466,10 @@ describe('Header - AI Assistant Button', () => {
   });
 
   test('AI button is disabled when both aiAssistantEnabled=false and viewing pinned version', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
+    // Set pinned version in URL before setup
+    urlState.setParam('v', '123');
 
-    // Render with ?v=123 to simulate pinned version
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        search: '?v=123',
-      },
-      writable: true,
-    });
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header
