@@ -156,3 +156,29 @@ export const useImportPanelState =
 
     return useSyncExternalStore(uiStore.subscribe, selectImportState);
   };
+
+/**
+ * Hook to check if IDE is in fullscreen mode
+ * Convenience helper that returns boolean
+ */
+export const useIDEFullscreen = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsFullscreen = uiStore.withSelector(state => state.ideFullscreen);
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsFullscreen);
+};
+
+/**
+ * Hook to get IDE fullscreen commands
+ * Returns stable function references for entering/exiting/toggling fullscreen
+ */
+export const useIDEFullscreenCommands = () => {
+  const uiStore = useUIStore();
+
+  return {
+    enterIDEFullscreen: uiStore.enterIDEFullscreen,
+    exitIDEFullscreen: uiStore.exitIDEFullscreen,
+    toggleIDEFullscreen: uiStore.toggleIDEFullscreen,
+  };
+};

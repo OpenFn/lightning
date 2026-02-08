@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
@@ -27,7 +28,7 @@ import {
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen } from './hooks/useUI';
+import { useIDEFullscreen, useIsRunPanelOpen } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
@@ -81,6 +82,7 @@ function BreadcrumbContent({
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   const isRunPanelOpen = useIsRunPanelOpen();
+  const isIDEFullscreen = useIDEFullscreen();
 
   const { params } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
@@ -148,16 +150,26 @@ function BreadcrumbContent({
     handleVersionSelect,
   ]);
 
+  // Animate header hide/show when IDE fullscreen mode changes
+  const isHeaderHidden = isIDEFullscreen && isIDEOpen;
+
   return (
-    <Header
-      key="canvas-header"
-      {...(projectId !== undefined && { projectId })}
-      workflowId={workflowId}
-      isRunPanelOpen={isRunPanelOpen}
-      isIDEOpen={isIDEOpen}
+    <div
+      className={cn(
+        'overflow-hidden transition-[max-height,opacity] duration-200',
+        isHeaderHidden ? 'max-h-0 opacity-0' : 'max-h-32 opacity-100'
+      )}
     >
-      {breadcrumbElements}
-    </Header>
+      <Header
+        key="canvas-header"
+        {...(projectId !== undefined && { projectId })}
+        workflowId={workflowId}
+        isRunPanelOpen={isRunPanelOpen}
+        isIDEOpen={isIDEOpen}
+      >
+        {breadcrumbElements}
+      </Header>
+    </div>
   );
 }
 

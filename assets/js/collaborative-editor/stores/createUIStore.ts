@@ -70,6 +70,54 @@ import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('UIStore').seal();
 
+// ===========================================================================
+// LOCAL STORAGE HELPERS
+// ===========================================================================
+
+const FULLSCREEN_STORAGE_KEY = 'lightning.ide.fullscreen';
+
+/**
+ * Load IDE fullscreen state from localStorage
+ */
+const loadIDEFullscreen = (): boolean => {
+  try {
+    const saved = localStorage.getItem(FULLSCREEN_STORAGE_KEY);
+    return saved === 'true';
+  } catch (error) {
+    logger.warn('Failed to load IDE fullscreen state from localStorage', error);
+    return false;
+  }
+};
+
+/**
+ * Save IDE fullscreen state to localStorage
+ */
+const saveIDEFullscreen = (isFullscreen: boolean): void => {
+  try {
+    localStorage.setItem(FULLSCREEN_STORAGE_KEY, String(isFullscreen));
+  } catch (error) {
+    logger.warn('Failed to save IDE fullscreen state to localStorage', error);
+  }
+};
+
+/**
+ * Programmatically collapse the sidebar by triggering the LiveView toggle
+ */
+const collapseSidebar = (): void => {
+  try {
+    const sidebarPanel = document.getElementById('sidebar-panel');
+    const isCollapsed = sidebarPanel?.dataset.collapsed === 'true';
+    if (!isCollapsed) {
+      const toggleButton = document.querySelector(
+        '[phx-click="toggle_sidebar"]'
+      ) as HTMLButtonElement;
+      toggleButton?.click();
+    }
+  } catch (error) {
+    logger.warn('Failed to collapse sidebar', error);
+  }
+};
+
 /**
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
@@ -129,6 +177,7 @@ export const createUIStore = (): UIStore => {
         yamlContent: '',
         importState: 'initial',
       },
+      ideFullscreen: loadIDEFullscreen(),
     } as UIState,
     draft => draft
   );
@@ -322,6 +371,35 @@ export const createUIStore = (): UIStore => {
     notify('clearImportPanel');
   };
 
+  // ===========================================================================
+  // IDE FULLSCREEN COMMANDS
+  // ===========================================================================
+
+  const enterIDEFullscreen = () => {
+    saveIDEFullscreen(true);
+    collapseSidebar();
+    state = produce(state, draft => {
+      draft.ideFullscreen = true;
+    });
+    notify('enterIDEFullscreen');
+  };
+
+  const exitIDEFullscreen = () => {
+    saveIDEFullscreen(false);
+    state = produce(state, draft => {
+      draft.ideFullscreen = false;
+    });
+    notify('exitIDEFullscreen');
+  };
+
+  const toggleIDEFullscreen = () => {
+    if (state.ideFullscreen) {
+      exitIDEFullscreen();
+    } else {
+      enterIDEFullscreen();
+    }
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -355,6 +433,9 @@ export const createUIStore = (): UIStore => {
     setImportYamlContent,
     setImportState,
     clearImportPanel,
+    enterIDEFullscreen,
+    exitIDEFullscreen,
+    toggleIDEFullscreen,
   };
 };
 

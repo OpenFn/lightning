@@ -345,6 +345,12 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
     searchQuery: '',
     selectedTemplate: null,
   }),
+  useIDEFullscreen: () => false,
+  useIDEFullscreenCommands: () => ({
+    enterIDEFullscreen: vi.fn(),
+    exitIDEFullscreen: vi.fn(),
+    toggleIDEFullscreen: vi.fn(),
+  }),
 }));
 
 // Mock GitHubSyncModal

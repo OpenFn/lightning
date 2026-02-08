@@ -1,4 +1,6 @@
 import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   ChevronRightIcon,
   ClockIcon,
   DocumentTextIcon,
@@ -46,6 +48,7 @@ import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useIDEFullscreen, useIDEFullscreenCommands } from '../../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -718,17 +721,52 @@ export function FullScreenIDE({
     });
   }, [onCredentialSaved, currentJob, updateJob, requestCredentials]);
 
+  // IDE Fullscreen mode
+  const isIDEFullscreen = useIDEFullscreen();
+  const { exitIDEFullscreen, toggleIDEFullscreen } = useIDEFullscreenCommands();
+
+  // Keyboard shortcut: ESC exits fullscreen first, then blurs monaco, then closes IDE
+  // Ctrl/Cmd+E always closes IDE
   useKeyboardShortcut(
     'Escape, Control+e, Meta+e',
-    () => {
+    (e: KeyboardEvent) => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
+      // For Ctrl/Cmd+E, always close IDE
+      if (e.key === 'e') {
+        onClose();
+        return;
+      }
+
+      // For ESC key:
+      // 1. If monaco is focused, blur it first
       if (isMonacoFocused) {
         (activeElement as HTMLElement).blur();
-      } else {
-        onClose();
+        return;
       }
+
+      // 2. If in fullscreen mode, exit fullscreen first
+      if (isIDEFullscreen) {
+        exitIDEFullscreen();
+        return;
+      }
+
+      // 3. Otherwise close the IDE
+      onClose();
+    },
+    50, // IDE priority
+    {
+      enabled:
+        !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
+    }
+  );
+
+  // Keyboard shortcut: Ctrl/Cmd+Shift+F to toggle fullscreen
+  useKeyboardShortcut(
+    'Control+Shift+f, Meta+Shift+f',
+    () => {
+      toggleIDEFullscreen();
     },
     50, // IDE priority
     {
@@ -960,6 +998,28 @@ export function FullScreenIDE({
                 }
               />
             )}
+
+            {/* Fullscreen toggle button */}
+            <Tooltip
+              content={
+                <span className="flex items-center gap-1">
+                  <ShortcutKeys keys={['mod', 'shift', 'f']} />
+                </span>
+              }
+              side="bottom"
+            >
+              <button
+                onClick={toggleIDEFullscreen}
+                className="p-1 hover:bg-gray-100 rounded transition-colors ml-1"
+                aria-label={isIDEFullscreen ? 'Exit fullscreen' : 'Hide menus'}
+              >
+                {isIDEFullscreen ? (
+                  <ArrowsPointingInIcon className="h-[18px] w-[18px] text-gray-500" />
+                ) : (
+                  <ArrowsPointingOutIcon className="h-[18px] w-[18px] text-gray-500" />
+                )}
+              </button>
+            </Tooltip>
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">

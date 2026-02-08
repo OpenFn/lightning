@@ -51,6 +51,9 @@ export interface UIState {
     /** Import state machine: initial -> parsing -> valid/invalid -> importing */
     importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
   };
+
+  /** IDE fullscreen mode - hides header and collapses sidebar */
+  ideFullscreen: boolean;
 }
 
 /**
@@ -119,6 +122,15 @@ export interface UICommands {
 
   /** Clear import panel state */
   clearImportPanel: () => void;
+
+  /** Enter IDE fullscreen mode (hides header, collapses sidebar) */
+  enterIDEFullscreen: () => void;
+
+  /** Exit IDE fullscreen mode */
+  exitIDEFullscreen: () => void;
+
+  /** Toggle IDE fullscreen mode */
+  toggleIDEFullscreen: () => void;
 }
 
 /**

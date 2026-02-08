@@ -223,6 +223,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
 }));
 
 // Mock UI commands
+const mockExitIDEFullscreen = vi.fn();
+const mockToggleIDEFullscreen = vi.fn();
+let mockIsIDEFullscreen = false;
+
 vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openGitHubSyncModal: vi.fn(),
@@ -235,6 +239,12 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
     error: null,
     searchQuery: '',
     selectedTemplate: null,
+  }),
+  useIDEFullscreen: () => mockIsIDEFullscreen,
+  useIDEFullscreenCommands: () => ({
+    enterIDEFullscreen: vi.fn(),
+    exitIDEFullscreen: mockExitIDEFullscreen,
+    toggleIDEFullscreen: mockToggleIDEFullscreen,
   }),
 }));
 
