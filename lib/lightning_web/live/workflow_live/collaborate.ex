@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   """
   use LightningWeb, {:live_view, container: {:div, []}}
 
+  alias Lightning.AiAssistant
   alias Lightning.Policies.Permissions
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
@@ -32,7 +33,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        credential_schema: nil,
        credential_to_edit: nil,
        show_webhook_auth_modal: false,
-       webhook_auth_method: nil
+       webhook_auth_method: nil,
+       ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
 
@@ -188,6 +190,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       }
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
+      data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),

@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- AI Assistant button now disabled when Apollo not configured, preventing silent
+  failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
+
 ## [2.15.13] - 2026-02-06
 
 ## [2.15.13-pre1] - 2026-02-05

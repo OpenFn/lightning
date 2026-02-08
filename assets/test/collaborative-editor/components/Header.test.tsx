@@ -352,7 +352,11 @@ describe('Header - Basic Rendering', () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
-      <Header projectId="project-1" workflowId="workflow-1">
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
         {[<span key="breadcrumb-1">Breadcrumb</span>]}
       </Header>,
       { wrapper }
@@ -1325,7 +1329,11 @@ describe('Header - Keyboard Shortcuts', () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
-      <Header projectId="project-1" workflowId="workflow-1">
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
         {[<span key="breadcrumb-1">Breadcrumb</span>]}
       </Header>,
       { wrapper }
@@ -1350,5 +1358,137 @@ describe('Header - Keyboard Shortcuts', () => {
       button.querySelector('.hero-chat-bubble-left-right')
     );
     expect(aiButton).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// AI ASSISTANT BUTTON TESTS
+// =============================================================================
+
+describe('Header - AI Assistant Button', () => {
+  test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).not.toBeDisabled();
+  });
+
+  test('AI button is disabled when aiAssistantEnabled prop is false', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
+  });
+
+  test('AI button is disabled when viewing a pinned version', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    // Render with ?v=123 to simulate pinned version
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        search: '?v=123',
+      },
+      writable: true,
+    });
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
+  });
+
+  test('AI button is disabled when both aiAssistantEnabled=false and viewing pinned version', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    // Render with ?v=123 to simulate pinned version
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        search: '?v=123',
+      },
+      writable: true,
+    });
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
   });
 });
