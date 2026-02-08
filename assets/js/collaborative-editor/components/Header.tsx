@@ -197,7 +197,7 @@ export function Header({
   workflowId,
   isRunPanelOpen = false,
   isIDEOpen = false,
-  aiAssistantEnabled = true,
+  aiAssistantEnabled = false,
 }: {
   children: React.ReactNode[];
   projectId?: string;
@@ -241,6 +241,13 @@ export function Header({
   // Check if viewing a pinned version via URL parameter
   // When ?v= is present, user is viewing a specific version (even if latest)
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+
+  // Determine AI button disabled message based on priority
+  const aiButtonDisabledMessage = !aiAssistantEnabled
+    ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
+    : isPinnedVersion
+      ? 'Switch to the latest version of this workflow to use the AI Assistant.'
+      : undefined;
 
   const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
 
@@ -446,13 +453,7 @@ export function Header({
           <AIButton
             className="ml-2"
             disabled={isPinnedVersion || !aiAssistantEnabled}
-            disabledMessage={
-              !aiAssistantEnabled
-                ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
-                : isPinnedVersion
-                  ? 'Switch to the latest version of this workflow to use the AI Assistant.'
-                  : undefined
-            }
+            disabledMessage={aiButtonDisabledMessage}
           />
 
           <GitHubSyncModal />

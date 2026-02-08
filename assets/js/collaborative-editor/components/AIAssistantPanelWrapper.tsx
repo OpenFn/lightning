@@ -67,7 +67,7 @@ import { MessageList } from './MessageList';
  * - Syncs open/closed state with URL query param (?chat=true)
  */
 export function AIAssistantPanelWrapper({
-  aiAssistantEnabled = true,
+  aiAssistantEnabled = false,
 }: {
   aiAssistantEnabled?: boolean;
 } = {}) {

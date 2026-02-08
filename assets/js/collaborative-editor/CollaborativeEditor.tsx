@@ -66,7 +66,7 @@ interface BreadcrumbContentProps {
   projectNameFallback?: string;
   projectEnvFallback?: string;
   isNewWorkflow?: boolean;
-  aiAssistantEnabled?: boolean;
+  aiAssistantEnabled: boolean;
 }
 
 function BreadcrumbContent({
@@ -76,7 +76,7 @@ function BreadcrumbContent({
   projectNameFallback,
   projectEnvFallback,
   isNewWorkflow = false,
-  aiAssistantEnabled = true,
+  aiAssistantEnabled,
 }: BreadcrumbContentProps) {
   const projectFromStore = useProject();
 
