@@ -27,6 +27,7 @@ lightning-*.tar
 
 # Ignore adaptor registry cache
 adaptor_registry_cache.json
+!test/fixtures/adaptor_registry_cache.json
 
 # Ignore assets that are produced by build tools.
 /priv/static/images/adaptors/
