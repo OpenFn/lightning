@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { useURLState } from '../../react/lib/use-url-state';
 import type {
   SessionType,
-  JobCodeContext,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 
@@ -12,7 +11,8 @@ import { useWorkflowState } from './useWorkflow';
 
 export interface AIModeResult {
   mode: SessionType;
-  context: JobCodeContext | WorkflowTemplateContext;
+  page: SessionType;
+  context: WorkflowTemplateContext;
   storageKey: string;
 }
 
@@ -42,10 +42,16 @@ export function useAIMode(): AIModeResult | null {
     const isIDEOpen = params.panel === 'editor';
     const selectedJobId = params.job;
 
+    let page: SessionType = 'workflow_template';
+    let context: WorkflowTemplateContext = {
+      project_id: project.id,
+      ...(workflow?.id && { workflow_id: workflow.id }),
+    };
     if (isIDEOpen && selectedJobId) {
       const job = jobs.find(j => j.id === selectedJobId);
 
-      const context: JobCodeContext = {
+      context = {
+        ...context,
         job_id: selectedJobId,
         attach_code: false,
         attach_logs: false,
@@ -66,22 +72,19 @@ export function useAIMode(): AIModeResult | null {
         context.follow_run_id = runId;
       }
 
-      return {
-        mode: 'job_code',
-        context,
-        storageKey: `ai-job-${selectedJobId}`,
-      };
+      page = 'job_code';
     }
 
+    const storageKey = workflow?.id
+      ? `ai-workflow-${workflow.id}`
+      : `ai-project-${project.id}`;
+
+    console.log('han:ai-mode', context, page);
     return {
       mode: 'workflow_template',
-      context: {
-        project_id: project.id,
-        ...(workflow?.id && { workflow_id: workflow.id }),
-      },
-      storageKey: workflow?.id
-        ? `ai-workflow-${workflow.id}`
-        : `ai-project-${project.id}`,
+      page,
+      context,
+      storageKey,
     };
   }, [params, project, workflow, jobs]);
 }

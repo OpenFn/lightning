@@ -126,16 +126,20 @@ defmodule LightningWeb.AiAssistantChannel do
   @impl true
   def handle_in("update_context", params, socket) do
     session = socket.assigns.session
-    session_type = socket.assigns.session_type
 
-    cond do
-      session_type == "job_code" ->
+    is_job_code =
+      Map.has_key?(params, "job_adaptor") && !is_nil(params["job_adaptor"])
+
+    IO.inspect(is_job_code, label: "han:all")
+
+    case is_job_code do
+      true ->
         update_job_code_context(session, params, socket)
 
-      session_type == "workflow_template" ->
+      false ->
         update_workflow_template_context(session, params, socket)
 
-      true ->
+      _ ->
         {:reply,
          {:error,
           %{reason: "Context updates not supported for this session type"}},
@@ -436,8 +440,11 @@ defmodule LightningWeb.AiAssistantChannel do
               base_opts
             end
 
+          job = params["job_id"] && Jobs.get_job!(params["job_id"])
+
           AiAssistant.create_workflow_session(
             project,
+            job,
             workflow,
             user,
             content,
@@ -595,16 +602,20 @@ defmodule LightningWeb.AiAssistantChannel do
     opts
   end
 
-  defp extract_message_options("job_code", params) do
+  defp extract_message_options(%{"job_id" => _job_id} = params) do
     [meta: %{"message_options" => build_message_options(params)}]
   end
 
-  defp extract_message_options("workflow_template", params) do
-    if code = params["code"] do
+  defp extract_message_options(%{"code" => code} = _params) do
+    if code do
       [code: code]
     else
       []
     end
+  end
+
+  defp extract_message_options(_params) do
+    []
   end
 
   defp build_message_options(params) do
@@ -629,7 +640,8 @@ defmodule LightningWeb.AiAssistantChannel do
       status: to_string(message.status),
       inserted_at: message.inserted_at,
       user_id: message.user_id,
-      user: format_user(message.user)
+      user: format_user(message.user),
+      job_id: message.job_id
     }
   end
 
@@ -801,8 +813,10 @@ defmodule LightningWeb.AiAssistantChannel do
          params,
          socket
        ) do
-    message_attrs = build_message_attrs(user, content, limit_result)
-    opts = extract_message_options(socket.assigns.session_type, params)
+    job = params["job_id"] && Jobs.get_job!(params["job_id"])
+
+    message_attrs = build_message_attrs(user, job, content, limit_result)
+    opts = extract_message_options(params)
 
     case AiAssistant.save_message(session, message_attrs, opts) do
       {:ok, updated_session} ->
@@ -820,8 +834,8 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp build_message_attrs(user, content, limit_result) do
-    base_attrs = %{role: :user, content: content, user: user}
+  defp build_message_attrs(user, job, content, limit_result) do
+    base_attrs = %{role: :user, content: content, user: user, job: job}
 
     case limit_result do
       :ok -> base_attrs

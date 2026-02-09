@@ -80,13 +80,14 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
-    result =
-      case session.session_type do
-        "job_code" ->
-          process_job_message(session, message)
+    is_job_chat = !is_nil(message.job_id)
 
-        "workflow_template" ->
-          process_workflow_message(session, message)
+    result =
+      if is_job_chat do
+        session = %{session | job_id: message.job_id}
+        process_job_message(session, message)
+      else
+        process_workflow_message(session, message)
       end
 
     case result do

@@ -1,25 +1,24 @@
-import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import {
-  parseWorkflowYAML,
-  convertWorkflowSpecToState,
   applyJobCredsToWorkflowState,
+  convertWorkflowSpecToState,
   extractJobCredentials,
+  parseWorkflowYAML,
 } from '../../yaml/util';
 import type { MonacoHandle } from '../components/CollaborativeMonaco';
+import flowEvents from '../components/diagram/react-flow-events';
 import { notifications } from '../lib/notifications';
 import type { Job } from '../types';
 import type {
-  JobCodeContext,
   ConnectionState,
+  JobCodeContext,
   Message,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
-
-import flowEvents from '../components/diagram/react-flow-events';
 
 import type { AIModeResult } from './useAIMode';
 
@@ -101,7 +100,7 @@ function validateIds(spec: Record<string, unknown>): void {
  */
 export function useAIWorkflowApplications({
   sessionId,
-  sessionType,
+  page,
   currentSession,
   currentUserId,
   aiMode,
@@ -116,7 +115,7 @@ export function useAIWorkflowApplications({
   appliedMessageIdsRef,
 }: {
   sessionId: string | null;
-  sessionType: SessionType | null;
+  page: SessionType | null;
   currentSession: {
     messages: Message[];
     workflowTemplateContext?: WorkflowTemplateContext | null;
@@ -171,6 +170,15 @@ export function useAIWorkflowApplications({
    */
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
+      if (!aiMode || aiMode.page !== 'workflow_template') {
+        console.error(
+          '[AI Assistant] Cannot apply workflow - not in workflow mode',
+          {
+            aiMode,
+          }
+        );
+        return;
+      }
       setApplyingMessageId(messageId);
 
       // Signal to all collaborators that we're starting to apply
@@ -226,7 +234,7 @@ export function useAIWorkflowApplications({
    */
   const handlePreviewJobCode = useCallback(
     (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
+      if (!aiMode || aiMode.page !== 'job_code') {
         console.error('[AI Assistant] Cannot preview - not in job mode', {
           aiMode,
         });
@@ -287,7 +295,7 @@ export function useAIWorkflowApplications({
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
-      if (!aiMode || aiMode.mode !== 'job_code') {
+      if (!aiMode || aiMode.page !== 'job_code') {
         console.error('[AI Assistant] Cannot apply job code - not in job mode');
         return;
       }
@@ -374,7 +382,7 @@ export function useAIWorkflowApplications({
     if (!currentSession) return;
     const messages = currentSession.messages;
 
-    if (sessionType !== 'workflow_template' || !messages.length) return;
+    if (page !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
     // Don't auto-apply when readonly (except for new workflow creation)
     if (!canApplyChanges) return;
@@ -425,7 +433,7 @@ export function useAIWorkflowApplications({
     }
   }, [
     currentSession,
-    sessionType,
+    page,
     sessionId,
     connectionState,
     handleApplyWorkflow,
