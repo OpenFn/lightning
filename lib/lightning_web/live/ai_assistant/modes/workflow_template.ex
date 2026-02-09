@@ -31,6 +31,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       ) do
     AiAssistant.create_workflow_session(
       project,
+      nil,
       assigns[:workflow],
       user,
       content,
