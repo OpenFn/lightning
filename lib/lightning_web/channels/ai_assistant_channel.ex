@@ -127,19 +127,14 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("update_context", params, socket) do
     session = socket.assigns.session
 
-    is_job_code =
-      Map.has_key?(params, "job_adaptor") && !is_nil(params["job_adaptor"])
-
-    IO.inspect(is_job_code, label: "han:all")
-
-    case is_job_code do
-      true ->
+    cond do
+      params["job_adaptor"] != nil ->
         update_job_code_context(session, params, socket)
 
-      false ->
+      params["code"] != nil ->
         update_workflow_template_context(session, params, socket)
 
-      _ ->
+      true ->
         {:reply,
          {:error,
           %{reason: "Context updates not supported for this session type"}},
