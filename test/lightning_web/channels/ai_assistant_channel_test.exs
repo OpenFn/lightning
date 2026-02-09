@@ -1176,10 +1176,19 @@ defmodule LightningWeb.AiAssistantChannelTest do
     test "sets follow_run_id when joining existing session", %{
       socket: socket,
       job: job,
-      user: user
+      user: user,
+      project: project,
+      workflow: workflow
     } do
       {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
+        AiAssistant.create_workflow_session(
+          project,
+          job,
+          workflow,
+          user,
+          "Initial message",
+          []
+        )
 
       run_id = Ecto.UUID.generate()
 
@@ -1187,8 +1196,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{"follow_run_id" => run_id}
+          "ai_assistant:workflow_template:#{session.id}",
+          %{"follow_run_id" => run_id, "job_id" => job.id}
         )
 
       updated_session = AiAssistant.get_session!(session.id)
