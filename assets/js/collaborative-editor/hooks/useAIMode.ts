@@ -79,7 +79,6 @@ export function useAIMode(): AIModeResult | null {
       ? `ai-workflow-${workflow.id}`
       : `ai-project-${project.id}`;
 
-    console.log('han:ai-mode', context, page);
     return {
       mode: 'workflow_template',
       page,
