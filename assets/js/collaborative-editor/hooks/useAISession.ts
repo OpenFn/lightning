@@ -63,6 +63,7 @@ interface WorkflowData {
 
 interface AIMode {
   mode: SessionType;
+  page: SessionType;
   context: JobCodeContext | WorkflowTemplateContext;
 }
 
@@ -126,6 +127,7 @@ export const useAISession = ({
 
     // Update tracking refs (after potential early return for mode changes)
     prevJobIdRef.current = currentJobId;
+    prevPageRef.current = aiMode.page;
 
     // Build the topic we want to subscribe to
     const desiredTopic = sessionIdFromURL
@@ -229,6 +231,7 @@ export const useAISession = ({
     }
   }, [
     isOpen,
+    aiMode,
     sessionIdFromURL,
     workflowData?.workflow?.id,
     aiStore,
