@@ -127,7 +127,8 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
 
     cond do
-      params["job_adaptor"] != nil ->
+      params["job_adaptor"] != nil or params["job_body"] != nil or
+          params["job_name"] != nil ->
         update_job_code_context(session, params, socket)
 
       params["workflow_id"] != nil ->

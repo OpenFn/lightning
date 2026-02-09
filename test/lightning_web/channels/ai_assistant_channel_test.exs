@@ -98,20 +98,19 @@ defmodule LightningWeb.AiAssistantChannelTest do
                subscribe_and_join(
                  socket,
                  AiAssistantChannel,
-                 "ai_assistant:job_code:new",
+                 "ai_assistant:workflow_template:new",
                  params
                )
 
       assert %{
                session_id: session_id,
-               session_type: "job_code"
+               session_type: "workflow_template"
              } = response
 
       assert is_binary(session_id)
 
       session = AiAssistant.get_session!(session_id)
-      assert session.job_id == job.id
-      assert session.session_type == "job_code"
+      assert session.session_type == "workflow_template"
     end
 
     test "requires job_id parameter", %{socket: socket} do
@@ -691,38 +690,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert updated_session.workflow_id == workflow.id
       assert is_nil(updated_session.meta["unsaved_workflow"])
     end
-
-    test "handles update_context for workflow_template session with no workflow_id",
-         %{
-           socket: socket,
-           project: project,
-           user: user
-         } do
-      {:ok, session} =
-        AiAssistant.create_workflow_session(
-          project,
-          nil,
-          nil,
-          user,
-          "Create workflow"
-        )
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:workflow_template:#{session.id}",
-          %{}
-        )
-
-      ref = push(socket, "update_context", %{})
-
-      assert_reply ref, :ok, %{success: true}
-
-      # Verify the session was not modified
-      updated_session = Repo.reload(session)
-      assert is_nil(updated_session.workflow_id)
-    end
   end
 
   describe "authorization" do
@@ -1247,7 +1214,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1730,6 +1697,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         ref =
           push(socket, "new_message", %{
             "content" => "Help me analyze this run",
+            "job_id" => job.id,
             "attach_io_data" => true,
             "step_id" => step.id
           })
@@ -1766,7 +1734,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
         ref =
           push(socket, "new_message", %{
-            "content" => "Help me"
+            "content" => "Help me",
+            "job_id" => job.id
           })
 
         assert_reply ref, :ok, %{message: _message}
@@ -1846,7 +1815,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
   describe "extract_session_options edge cases" do
     @tag :capture_log
-    test "creates job_code session without follow_run_id", %{
+    test "creates workflow_template session without follow_run_id", %{
       socket: socket,
       job: job,
       project: project
@@ -1861,7 +1830,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1922,7 +1891,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1952,7 +1921,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1979,7 +1948,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -2009,7 +1978,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
