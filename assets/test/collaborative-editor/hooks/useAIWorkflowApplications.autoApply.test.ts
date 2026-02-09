@@ -99,7 +99,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
     mode: 'workflow_template' | 'job_code',
     context: Record<string, unknown> = {}
   ): AIModeResult => ({
-    mode,
+    mode: 'workflow_template',
+    page: mode,
     context,
     storageKey: `ai-${mode}`,
   });
