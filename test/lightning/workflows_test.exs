@@ -435,6 +435,413 @@ defmodule Lightning.WorkflowsTest do
       refute Repo.get(Workflows.Edge, edge.id)
     end
 
+    test "edge retargeting: delete job and retarget edge to replacement job" do
+      project = insert(:project)
+      user = insert(:user)
+
+      trigger_id = Ecto.UUID.generate()
+      job_a_id = Ecto.UUID.generate()
+      job_b_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "retarget-test",
+            project_id: project.id,
+            jobs: [
+              %{id: job_a_id, name: "job-a", body: "fn(state)"},
+              %{id: job_b_id, name: "job-b", body: "fn(state)"}
+            ],
+            triggers: [%{id: trigger_id, type: :webhook}],
+            edges: [
+              %{
+                source_trigger_id: trigger_id,
+                target_job_id: job_a_id,
+                condition_type: :always
+              },
+              %{
+                source_job_id: job_a_id,
+                target_job_id: job_b_id,
+                condition_type: :on_job_success
+              }
+            ]
+          },
+          user
+        )
+
+      edge_a_to_b =
+        Enum.find(workflow.edges, &(&1.target_job_id == job_b_id))
+
+      # Payload: delete job_b, add job_c, retarget the same edge to job_c
+      job_c_id = Ecto.UUID.generate()
+
+      assert {:ok, saved} =
+               Workflows.change_workflow(workflow, %{
+                 jobs: [
+                   %{id: job_a_id, name: "job-a", body: "fn(state)"},
+                   %{id: job_c_id, name: "job-c", body: "fn(state)"}
+                 ],
+                 triggers: [%{id: trigger_id, type: :webhook}],
+                 edges: [
+                   %{
+                     id:
+                       Enum.find(
+                         workflow.edges,
+                         &(&1.source_trigger_id == trigger_id)
+                       ).id,
+                     source_trigger_id: trigger_id,
+                     target_job_id: job_a_id,
+                     condition_type: :always
+                   },
+                   %{
+                     id: edge_a_to_b.id,
+                     source_job_id: job_a_id,
+                     target_job_id: job_c_id,
+                     condition_type: :on_job_success
+                   }
+                 ]
+               })
+               |> Workflows.save_workflow(user)
+
+      saved = Repo.preload(saved, [:jobs, :edges], force: true)
+
+      assert length(saved.jobs) == 2
+      refute Enum.any?(saved.jobs, &(&1.id == job_b_id))
+      assert Enum.any?(saved.jobs, &(&1.id == job_c_id))
+
+      # Edge preserved its ID but points to the new job
+      retargeted = Enum.find(saved.edges, &(&1.id == edge_a_to_b.id))
+      assert retargeted.target_job_id == job_c_id
+      assert retargeted.source_job_id == job_a_id
+    end
+
+    test "edge retargeting: replace first job retargets trigger edge target and downstream edge source" do
+      project = insert(:project)
+      user = insert(:user)
+
+      trigger_id = Ecto.UUID.generate()
+      job_a_id = Ecto.UUID.generate()
+      job_b_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "replace-first-job",
+            project_id: project.id,
+            jobs: [
+              %{id: job_a_id, name: "job-a", body: "fn(state)"},
+              %{id: job_b_id, name: "job-b", body: "fn(state)"}
+            ],
+            triggers: [%{id: trigger_id, type: :webhook}],
+            edges: [
+              %{
+                source_trigger_id: trigger_id,
+                target_job_id: job_a_id,
+                condition_type: :always
+              },
+              %{
+                source_job_id: job_a_id,
+                target_job_id: job_b_id,
+                condition_type: :on_job_success
+              }
+            ]
+          },
+          user
+        )
+
+      trigger_edge =
+        Enum.find(workflow.edges, &(&1.source_trigger_id == trigger_id))
+
+      job_edge =
+        Enum.find(workflow.edges, &(&1.source_job_id == job_a_id))
+
+      # Delete job_a, add job_c, retarget both edges
+      job_c_id = Ecto.UUID.generate()
+
+      assert {:ok, saved} =
+               Workflows.change_workflow(workflow, %{
+                 jobs: [
+                   %{id: job_c_id, name: "job-c", body: "fn(state)"},
+                   %{id: job_b_id, name: "job-b", body: "fn(state)"}
+                 ],
+                 triggers: [%{id: trigger_id, type: :webhook}],
+                 edges: [
+                   %{
+                     id: trigger_edge.id,
+                     source_trigger_id: trigger_id,
+                     target_job_id: job_c_id,
+                     condition_type: :always
+                   },
+                   %{
+                     id: job_edge.id,
+                     source_job_id: job_c_id,
+                     target_job_id: job_b_id,
+                     condition_type: :on_job_success
+                   }
+                 ]
+               })
+               |> Workflows.save_workflow(user)
+
+      saved = Repo.preload(saved, [:jobs, :edges], force: true)
+
+      assert length(saved.jobs) == 2
+      assert length(saved.edges) == 2
+
+      # Trigger edge preserved ID and retargeted to job_c
+      saved_trigger_edge =
+        Enum.find(saved.edges, &(&1.id == trigger_edge.id))
+
+      assert saved_trigger_edge.target_job_id == job_c_id
+
+      # Job edge preserved ID and source retargeted to job_c
+      saved_job_edge = Enum.find(saved.edges, &(&1.id == job_edge.id))
+      assert saved_job_edge.source_job_id == job_c_id
+      assert saved_job_edge.target_job_id == job_b_id
+    end
+
+    test "edge retargeting: delete first job cleans up trigger edge and downstream edge" do
+      project = insert(:project)
+      user = insert(:user)
+
+      trigger_id = Ecto.UUID.generate()
+      job_a_id = Ecto.UUID.generate()
+      job_b_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "delete-first-job",
+            project_id: project.id,
+            jobs: [
+              %{id: job_a_id, name: "job-a", body: "fn(state)"},
+              %{id: job_b_id, name: "job-b", body: "fn(state)"}
+            ],
+            triggers: [%{id: trigger_id, type: :webhook}],
+            edges: [
+              %{
+                source_trigger_id: trigger_id,
+                target_job_id: job_a_id,
+                condition_type: :always
+              },
+              %{
+                source_job_id: job_a_id,
+                target_job_id: job_b_id,
+                condition_type: :on_job_success
+              }
+            ]
+          },
+          user
+        )
+
+      trigger_edge =
+        Enum.find(workflow.edges, &(&1.source_trigger_id == trigger_id))
+
+      job_edge =
+        Enum.find(workflow.edges, &(&1.source_job_id == job_a_id))
+
+      # Delete job_a, remove both edges, keep only job_b
+      assert {:ok, saved} =
+               Workflows.change_workflow(workflow, %{
+                 jobs: [
+                   %{id: job_b_id, name: "job-b", body: "fn(state)"}
+                 ],
+                 triggers: [%{id: trigger_id, type: :webhook}],
+                 edges: []
+               })
+               |> Workflows.save_workflow(user)
+
+      saved = Repo.preload(saved, [:jobs, :edges], force: true)
+
+      assert length(saved.jobs) == 1
+      assert hd(saved.jobs).id == job_b_id
+      assert saved.edges == []
+
+      # Both edges cleaned up
+      refute Repo.get(Workflows.Edge, trigger_edge.id)
+      refute Repo.get(Workflows.Edge, job_edge.id)
+    end
+
+    test "edge retargeting: delete middle job in chain cleans up both edges" do
+      project = insert(:project)
+      user = insert(:user)
+
+      trigger_id = Ecto.UUID.generate()
+      job_a_id = Ecto.UUID.generate()
+      job_b_id = Ecto.UUID.generate()
+      job_c_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "delete-middle-job",
+            project_id: project.id,
+            jobs: [
+              %{id: job_a_id, name: "job-a", body: "fn(state)"},
+              %{id: job_b_id, name: "job-b", body: "fn(state)"},
+              %{id: job_c_id, name: "job-c", body: "fn(state)"}
+            ],
+            triggers: [%{id: trigger_id, type: :webhook}],
+            edges: [
+              %{
+                source_trigger_id: trigger_id,
+                target_job_id: job_a_id,
+                condition_type: :always
+              },
+              %{
+                source_job_id: job_a_id,
+                target_job_id: job_b_id,
+                condition_type: :on_job_success
+              },
+              %{
+                source_job_id: job_b_id,
+                target_job_id: job_c_id,
+                condition_type: :on_job_success
+              }
+            ]
+          },
+          user
+        )
+
+      trigger_edge =
+        Enum.find(workflow.edges, &(&1.source_trigger_id == trigger_id))
+
+      a_to_b_edge =
+        Enum.find(workflow.edges, &(&1.target_job_id == job_b_id))
+
+      b_to_c_edge =
+        Enum.find(workflow.edges, &(&1.source_job_id == job_b_id))
+
+      # Delete job_b, keep trigger -> job_a edge only
+      assert {:ok, saved} =
+               Workflows.change_workflow(workflow, %{
+                 jobs: [
+                   %{id: job_a_id, name: "job-a", body: "fn(state)"},
+                   %{id: job_c_id, name: "job-c", body: "fn(state)"}
+                 ],
+                 triggers: [%{id: trigger_id, type: :webhook}],
+                 edges: [
+                   %{
+                     id: trigger_edge.id,
+                     source_trigger_id: trigger_id,
+                     target_job_id: job_a_id,
+                     condition_type: :always
+                   }
+                 ]
+               })
+               |> Workflows.save_workflow(user)
+
+      saved = Repo.preload(saved, [:jobs, :edges], force: true)
+
+      assert length(saved.jobs) == 2
+      assert length(saved.edges) == 1
+      assert hd(saved.edges).id == trigger_edge.id
+
+      # a->b edge deleted (lost target)
+      refute Repo.get(Workflows.Edge, a_to_b_edge.id)
+      # b->c edge deleted (lost source)
+      refute Repo.get(Workflows.Edge, b_to_c_edge.id)
+    end
+
+    test "edge retargeting: replace middle job retargets both edges" do
+      project = insert(:project)
+      user = insert(:user)
+
+      trigger_id = Ecto.UUID.generate()
+      job_a_id = Ecto.UUID.generate()
+      job_b_id = Ecto.UUID.generate()
+      job_c_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "replace-middle-job",
+            project_id: project.id,
+            jobs: [
+              %{id: job_a_id, name: "job-a", body: "fn(state)"},
+              %{id: job_b_id, name: "job-b", body: "fn(state)"},
+              %{id: job_c_id, name: "job-c", body: "fn(state)"}
+            ],
+            triggers: [%{id: trigger_id, type: :webhook}],
+            edges: [
+              %{
+                source_trigger_id: trigger_id,
+                target_job_id: job_a_id,
+                condition_type: :always
+              },
+              %{
+                source_job_id: job_a_id,
+                target_job_id: job_b_id,
+                condition_type: :on_job_success
+              },
+              %{
+                source_job_id: job_b_id,
+                target_job_id: job_c_id,
+                condition_type: :on_job_success
+              }
+            ]
+          },
+          user
+        )
+
+      trigger_edge =
+        Enum.find(workflow.edges, &(&1.source_trigger_id == trigger_id))
+
+      a_to_b_edge =
+        Enum.find(workflow.edges, &(&1.target_job_id == job_b_id))
+
+      b_to_c_edge =
+        Enum.find(workflow.edges, &(&1.source_job_id == job_b_id))
+
+      # Delete job_b, add job_d, retarget both edges
+      job_d_id = Ecto.UUID.generate()
+
+      assert {:ok, saved} =
+               Workflows.change_workflow(workflow, %{
+                 jobs: [
+                   %{id: job_a_id, name: "job-a", body: "fn(state)"},
+                   %{id: job_d_id, name: "job-d", body: "fn(state)"},
+                   %{id: job_c_id, name: "job-c", body: "fn(state)"}
+                 ],
+                 triggers: [%{id: trigger_id, type: :webhook}],
+                 edges: [
+                   %{
+                     id: trigger_edge.id,
+                     source_trigger_id: trigger_id,
+                     target_job_id: job_a_id,
+                     condition_type: :always
+                   },
+                   %{
+                     id: a_to_b_edge.id,
+                     source_job_id: job_a_id,
+                     target_job_id: job_d_id,
+                     condition_type: :on_job_success
+                   },
+                   %{
+                     id: b_to_c_edge.id,
+                     source_job_id: job_d_id,
+                     target_job_id: job_c_id,
+                     condition_type: :on_job_success
+                   }
+                 ]
+               })
+               |> Workflows.save_workflow(user)
+
+      saved = Repo.preload(saved, [:jobs, :edges], force: true)
+
+      assert length(saved.jobs) == 3
+      assert length(saved.edges) == 3
+
+      # a->b edge retargeted to a->d
+      retargeted_a = Enum.find(saved.edges, &(&1.id == a_to_b_edge.id))
+      assert retargeted_a.source_job_id == job_a_id
+      assert retargeted_a.target_job_id == job_d_id
+
+      # b->c edge retargeted to d->c
+      retargeted_b = Enum.find(saved.edges, &(&1.id == b_to_c_edge.id))
+      assert retargeted_b.source_job_id == job_d_id
+      assert retargeted_b.target_job_id == job_c_id
+    end
+
     test "saving with locks" do
       user = insert(:user)
       valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
