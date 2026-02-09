@@ -56,6 +56,11 @@ vi.mock('../../../js/collaborative-editor/components/Cursors', () => ({
   Cursors: () => null,
 }));
 
+// Mock loadDTS to avoid network calls and unhandled rejection errors
+vi.mock('../../../js/collaborative-editor/utils/loadDTS', () => ({
+  loadDTS: vi.fn(() => Promise.resolve([])),
+}));
+
 // Mock monaco module
 vi.mock('../../../js/monaco', () => ({
   MonacoEditor: ({ onMount }: any) => {
