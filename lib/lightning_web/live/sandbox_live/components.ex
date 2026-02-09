@@ -304,7 +304,7 @@ defmodule LightningWeb.SandboxLive.Components do
             </Common.alert>
           <% end %>
 
-          <%= if dbg(@diverged_workflows) != [] do %>
+          <%= if @diverged_workflows != [] do %>
             <Common.alert
               id="merge-divergence-alert"
               type="danger"

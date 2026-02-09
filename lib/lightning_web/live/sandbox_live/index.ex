@@ -192,16 +192,11 @@ defmodule LightningWeb.SandboxLive.Index do
             })
 
           diverged_workflows =
-            with %{value: target_id} <- default_target,
-                 target_project when not is_nil(target_project) <-
-                   Enum.find(
-                     socket.assigns.workspace_projects,
-                     &(&1.id == target_id)
-                   ) do
-              MergeProjects.diverged_workflows(sandbox, target_project)
-            else
-              _ -> []
-            end
+            get_diverged_workflows(
+              sandbox,
+              default_target && default_target.value,
+              socket.assigns.workspace_projects
+            )
 
           {:noreply,
            socket
@@ -233,17 +228,11 @@ defmodule LightningWeb.SandboxLive.Index do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
     diverged_workflows =
-      with true <- !is_nil(target_id),
-           source <- socket.assigns.merge_source_sandbox,
-           target_project when not is_nil(target_project) <-
-             Enum.find(
-               socket.assigns.workspace_projects,
-               &(&1.id == target_id)
-             ) do
-        MergeProjects.diverged_workflows(source, target_project)
-      else
-        _ -> []
-      end
+      get_diverged_workflows(
+        socket.assigns.merge_source_sandbox,
+        target_id,
+        socket.assigns.workspace_projects
+      )
 
     {:noreply,
      socket
@@ -572,6 +561,16 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp find_target_project(workspace_projects, target_id) do
     Enum.find(workspace_projects, &(&1.id == target_id))
+  end
+
+  defp get_diverged_workflows(source, target_id, workspace_projects) do
+    with true <- !is_nil(target_id),
+         target_project when not is_nil(target_project) <-
+           Enum.find(workspace_projects, &(&1.id == target_id)) do
+      MergeProjects.diverged_workflows(source, target_project)
+    else
+      _ -> []
+    end
   end
 
   defp perform_merge(source, target, actor) do
