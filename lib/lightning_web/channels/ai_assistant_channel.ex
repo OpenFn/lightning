@@ -354,70 +354,8 @@ defmodule LightningWeb.AiAssistantChannel do
   defp load_or_create_session(session_id, %{"job_id" => job_id} = params, user)
        when not is_nil(job_id) do
     case session_id do
-      "new" ->
-        with {:job_id, job_id} when not is_nil(job_id) <-
-               {:job_id, params["job_id"]},
-             {:project_id, project_id} when not is_nil(project_id) <-
-               {:project_id, params["project_id"]},
-             {:project, project} when not is_nil(project) <-
-               {:project, Projects.get_project(project_id)},
-             {:content, content} when not is_nil(content) <-
-               {:content, params["content"]} do
-          workflow =
-            if params["workflow_id"],
-              do: Workflows.get_workflow(params["workflow_id"]),
-              else: nil
-
-          case Jobs.get_job(job_id) do
-            {:ok, job} ->
-              opts = extract_session_options("job_code", params)
-
-              AiAssistant.create_workflow_session(
-                project,
-                job,
-                workflow,
-                user,
-                content,
-                opts
-              )
-
-            {:error, :not_found} ->
-              create_session_with_unsaved_job(params, user, content)
-          end
-        else
-          {:job_id, nil} -> {:error, "job_id required"}
-          {:project_id, nil} -> {:error, "project_id required"}
-          {:project, nil} -> {:error, "project not found"}
-          {:content, nil} -> {:error, "initial content required"}
-        end
-
-      _existing_id ->
-        case AiAssistant.get_session(session_id) do
-          {:ok, session} ->
-            session =
-              if params["follow_run_id"] do
-                updated_meta =
-                  Map.put(
-                    session.meta || %{},
-                    "follow_run_id",
-                    params["follow_run_id"]
-                  )
-
-                session
-                |> Ecto.Changeset.change(%{meta: updated_meta})
-                |> Lightning.Repo.update!()
-              else
-                session
-              end
-
-            enriched_session =
-              AiAssistant.enrich_session_with_job_context(session)
-
-            {:ok, enriched_session}
-
-          {:error, :not_found} ->
-            {:error, "session not found"}
-        end
+      "new" -> create_new_job_session(params, user)
+      _existing_id -> load_existing_job_session(session_id, params)
     end
   end
 
@@ -476,6 +414,68 @@ defmodule LightningWeb.AiAssistantChannel do
         end
     end
   end
+
+  defp create_new_job_session(params, user) do
+    with {:job_id, job_id} when not is_nil(job_id) <-
+           {:job_id, params["job_id"]},
+         {:project_id, project_id} when not is_nil(project_id) <-
+           {:project_id, params["project_id"]},
+         {:project, project} when not is_nil(project) <-
+           {:project, Projects.get_project(project_id)},
+         {:content, content} when not is_nil(content) <-
+           {:content, params["content"]} do
+      workflow =
+        if params["workflow_id"],
+          do: Workflows.get_workflow(params["workflow_id"]),
+          else: nil
+
+      case Jobs.get_job(job_id) do
+        {:ok, job} ->
+          opts = extract_session_options("job_code", params)
+
+          AiAssistant.create_workflow_session(
+            project,
+            job,
+            workflow,
+            user,
+            content,
+            opts
+          )
+
+        {:error, :not_found} ->
+          create_session_with_unsaved_job(params, user, content)
+      end
+    else
+      {:job_id, nil} -> {:error, "job_id required"}
+      {:project_id, nil} -> {:error, "project_id required"}
+      {:project, nil} -> {:error, "project not found"}
+      {:content, nil} -> {:error, "initial content required"}
+    end
+  end
+
+  defp load_existing_job_session(session_id, params) do
+    case AiAssistant.get_session(session_id) do
+      {:ok, session} ->
+        session = maybe_update_follow_run_id(session, params)
+        enriched_session = AiAssistant.enrich_session_with_job_context(session)
+        {:ok, enriched_session}
+
+      {:error, :not_found} ->
+        {:error, "session not found"}
+    end
+  end
+
+  defp maybe_update_follow_run_id(session, %{"follow_run_id" => follow_run_id})
+       when not is_nil(follow_run_id) do
+    updated_meta =
+      Map.put(session.meta || %{}, "follow_run_id", follow_run_id)
+
+    session
+    |> Ecto.Changeset.change(%{meta: updated_meta})
+    |> Lightning.Repo.update!()
+  end
+
+  defp maybe_update_follow_run_id(session, _params), do: session
 
   defp create_session_with_unsaved_job(params, user, content) do
     job_id = params["job_id"]
