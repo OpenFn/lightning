@@ -130,7 +130,7 @@ defmodule LightningWeb.AiAssistantChannel do
       params["job_adaptor"] != nil ->
         update_job_code_context(session, params, socket)
 
-      params["code"] != nil ->
+      params["workflow_id"] != nil ->
         update_workflow_template_context(session, params, socket)
 
       true ->
