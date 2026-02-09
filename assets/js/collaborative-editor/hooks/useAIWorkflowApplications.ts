@@ -218,6 +218,7 @@ export function useAIWorkflowApplications({
       }
     },
     [
+      aiMode?.page,
       importWorkflow,
       startApplyingWorkflow,
       doneApplyingWorkflow,

@@ -33,8 +33,7 @@ defmodule LightningWeb.AiAssistantChannel do
          {:parse_topic, {:ok, session_type, session_id}} <-
            {:parse_topic, parse_topic(rest)},
          {:session, {:ok, session}} <-
-           {:session,
-            load_or_create_session(session_type, session_id, params, user)},
+           {:session, load_or_create_session(session_id, params, user)},
          :ok <- validate_session_type(session, session_type),
          :ok <- authorize_session_access(session, user) do
       Lightning.subscribe("ai_session:#{session.id}")
@@ -351,23 +350,43 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp load_or_create_session("job_code", session_id, params, user) do
+  defp load_or_create_session(session_id, %{"job_id" => job_id} = params, user)
+       when not is_nil(job_id) do
     case session_id do
       "new" ->
         with {:job_id, job_id} when not is_nil(job_id) <-
                {:job_id, params["job_id"]},
+             {:project_id, project_id} when not is_nil(project_id) <-
+               {:project_id, params["project_id"]},
+             {:project, project} when not is_nil(project) <-
+               {:project, Projects.get_project(project_id)},
              {:content, content} when not is_nil(content) <-
                {:content, params["content"]} do
+          workflow =
+            if params["workflow_id"],
+              do: Workflows.get_workflow(params["workflow_id"]),
+              else: nil
+
           case Jobs.get_job(job_id) do
             {:ok, job} ->
               opts = extract_session_options("job_code", params)
-              AiAssistant.create_session(job, user, content, opts)
+
+              AiAssistant.create_workflow_session(
+                project,
+                job,
+                workflow,
+                user,
+                content,
+                opts
+              )
 
             {:error, :not_found} ->
               create_session_with_unsaved_job(params, user, content)
           end
         else
           {:job_id, nil} -> {:error, "job_id required"}
+          {:project_id, nil} -> {:error, "project_id required"}
+          {:project, nil} -> {:error, "project not found"}
           {:content, nil} -> {:error, "initial content required"}
         end
 
@@ -401,7 +420,7 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp load_or_create_session("workflow_template", session_id, params, user) do
+  defp load_or_create_session(session_id, params, user) do
     case session_id do
       "new" ->
         with {:project_id, project_id} when not is_nil(project_id) <-
@@ -435,11 +454,9 @@ defmodule LightningWeb.AiAssistantChannel do
               base_opts
             end
 
-          job = params["job_id"] && Jobs.get_job!(params["job_id"])
-
           AiAssistant.create_workflow_session(
             project,
-            job,
+            nil,
             workflow,
             user,
             content,
