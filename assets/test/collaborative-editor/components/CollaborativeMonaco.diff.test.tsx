@@ -78,6 +78,15 @@ vi.mock('../../../js/monaco', () => ({
         })),
         createModel: vi.fn(code => ({ code, dispose: vi.fn() })),
       },
+      languages: {
+        typescript: {
+          javascriptDefaults: {
+            setCompilerOptions: vi.fn(),
+            setExtraLibs: vi.fn(),
+          },
+        },
+        registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
+      },
       KeyMod: {
         CtrlCmd: 1,
         Shift: 2,
