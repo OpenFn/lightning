@@ -70,7 +70,7 @@ export function AIAssistantPanelWrapper({
   aiAssistantEnabled = false,
 }: {
   aiAssistantEnabled?: boolean;
-} = {}) {
+}) {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const initialMessage = useAIAssistantInitialMessage();
   const {
