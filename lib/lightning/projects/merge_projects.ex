@@ -839,6 +839,57 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
+  @doc """
+  Returns the list of workflow names that have diverged between source and target projects.
+
+  Compares version hashes for workflows with matching names. A workflow is considered
+  diverged if it exists in both projects but has different version hashes.
+
+  ## Parameters
+    * `source_project` - The sandbox project
+    * `target_project` - The target project to compare against
+
+  ## Returns
+    * List of workflow names (strings) that have diverged
+    * Empty list if no workflows have diverged
+
+  ## Examples
+
+      iex> MergeProjects.diverged_workflows(sandbox, parent)
+      ["Payment Processing", "Data Sync"]
+
+      iex> MergeProjects.diverged_workflows(sandbox, parent)
+      []
+  """
+  @spec diverged_workflows(Project.t(), Project.t()) :: [String.t()]
+  def diverged_workflows(
+        %Project{} = source_project,
+        %Project{} = target_project
+      ) do
+    source_project = Repo.preload(source_project, :workflows)
+    target_project = Repo.preload(target_project, :workflows)
+
+    sandbox_workflow_versions =
+      get_workflow_version_hashes_by_name(source_project.workflows)
+
+    target_workflow_versions =
+      get_workflow_version_hashes_by_name(target_project.workflows)
+
+    Enum.reduce(target_workflow_versions, [], fn {workflow_name, target_hash},
+                                                 acc ->
+      case Map.get(sandbox_workflow_versions, workflow_name) do
+        nil ->
+          acc
+
+        sandbox_hash when target_hash != sandbox_hash ->
+          [workflow_name | acc]
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
   defp get_workflow_version_hashes_by_name(workflows) do
     workflow_ids = Enum.map(workflows, & &1.id)
     workflow_name_map = Map.new(workflows, fn w -> {w.id, w.name} end)

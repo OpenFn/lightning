@@ -200,7 +200,7 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :target_options, :list, required: true
   attr :changeset, :any, required: true
   attr :descendants, :list, default: []
-  attr :has_diverged, :boolean, default: false
+  attr :diverged_workflows, :list, default: []
 
   def merge_modal(assigns) do
     assigns =
@@ -304,17 +304,31 @@ defmodule LightningWeb.SandboxLive.Components do
             </Common.alert>
           <% end %>
 
-          <%= if @has_diverged do %>
+          <%= if dbg(@diverged_workflows) != [] do %>
             <Common.alert
               id="merge-divergence-alert"
               type="danger"
               header="Target project has diverged"
             >
               <:message>
-                {get_selected_target_label(
-                  @target_options,
-                  @merge_form[:target_id].value
-                )} has been modified since this sandbox was created. Merging may result in lost changes. Are you sure you wish to proceed?
+                <p class="mb-2">
+                  The following workflow(s) have been modified in
+                  <strong>
+                    {get_selected_target_label(
+                      @target_options,
+                      @merge_form[:target_id].value
+                    )}
+                  </strong>
+                  since this sandbox was created. Merging may result in lost changes:
+                </p>
+                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
+                  <li :for={workflow_name <- @diverged_workflows}>
+                    {workflow_name}
+                  </li>
+                </ul>
+                <p>
+                  Are you sure you wish to proceed?
+                </p>
               </:message>
             </Common.alert>
           <% end %>

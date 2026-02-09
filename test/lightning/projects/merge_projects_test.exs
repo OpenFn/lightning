@@ -2311,4 +2311,202 @@ defmodule Lightning.Projects.MergeProjectsTest do
         with_edge(wf, {source_job, target_job}, edge_opts)
     end)
   end
+
+  describe "diverged_workflows/2" do
+    setup do
+      source_project = insert(:project, name: "Source Project")
+      target_project = insert(:project, name: "Target Project")
+
+      {:ok, source_project: source_project, target_project: target_project}
+    end
+
+    test "returns empty list when no workflows exist", %{
+      source_project: source,
+      target_project: target
+    } do
+      assert [] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "returns empty list when workflows are identical", %{
+      source_project: source,
+      target_project: target
+    } do
+      # Create identical workflows in both projects
+      workflow = insert(:workflow, project: target, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          workflow,
+          "abc123def456",
+          "app"
+        )
+
+      sandbox_workflow =
+        insert(:workflow, project: source, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc123def456",
+          "app"
+        )
+
+      assert [] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "returns workflow name when single workflow has diverged", %{
+      source_project: source,
+      target_project: target
+    } do
+      # Create diverged workflow
+      target_workflow =
+        insert(:workflow, project: target, name: "Diverged Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_workflow,
+          "abc123def456",
+          "app"
+        )
+
+      sandbox_workflow =
+        insert(:workflow, project: source, name: "Diverged Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "def456abc123",
+          "app"
+        )
+
+      assert ["Diverged Workflow"] =
+               MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "returns list of names when multiple workflows have diverged", %{
+      source_project: source,
+      target_project: target
+    } do
+      # Create two diverged workflows
+      target_wf1 = insert(:workflow, project: target, name: "Workflow A")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf1,
+          "aaa111111111",
+          "app"
+        )
+
+      target_wf2 = insert(:workflow, project: target, name: "Workflow B")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf2,
+          "bbb222222222",
+          "app"
+        )
+
+      sandbox_wf1 = insert(:workflow, project: source, name: "Workflow A")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf1,
+          "aaa999999999",
+          "app"
+        )
+
+      sandbox_wf2 = insert(:workflow, project: source, name: "Workflow B")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf2,
+          "bbb888888888",
+          "app"
+        )
+
+      diverged = MergeProjects.diverged_workflows(source, target)
+      assert length(diverged) == 2
+      assert "Workflow A" in diverged
+      assert "Workflow B" in diverged
+    end
+
+    test "returns only diverged workflow when one diverged and others match", %{
+      source_project: source,
+      target_project: target
+    } do
+      # One matching workflow
+      matching_target = insert(:workflow, project: target, name: "Matching")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          matching_target,
+          "aabbccddee00",
+          "app"
+        )
+
+      matching_source = insert(:workflow, project: source, name: "Matching")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          matching_source,
+          "aabbccddee00",
+          "app"
+        )
+
+      # One diverged workflow
+      diverged_target = insert(:workflow, project: target, name: "Diverged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          diverged_target,
+          "abc123456789",
+          "app"
+        )
+
+      diverged_source = insert(:workflow, project: source, name: "Diverged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          diverged_source,
+          "def987654321",
+          "app"
+        )
+
+      assert ["Diverged"] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "ignores workflows only in target (not in source)", %{
+      source_project: source,
+      target_project: target
+    } do
+      # Workflow only in target
+      target_only = insert(:workflow, project: target, name: "Target Only")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_only,
+          "aabbccddeeff",
+          "app"
+        )
+
+      assert [] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "ignores workflows only in source (not in target)", %{
+      source_project: source,
+      target_project: target
+    } do
+      # Workflow only in source
+      source_only = insert(:workflow, project: source, name: "Source Only")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          source_only,
+          "ffeeddccbbaa",
+          "app"
+        )
+
+      assert [] = MergeProjects.diverged_workflows(source, target)
+    end
+  end
 end
