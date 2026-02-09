@@ -19,10 +19,17 @@ and this project adheres to
 
 ### Changed
 
+- Refactor CircleCI to build-then-fan-out pattern, compiling once then running
+  checks in parallel to eliminate cache race conditions and reduce flaky tests
+  [#4378](https://github.com/OpenFn/lightning/pull/4378)
+
 ### Fixed
 
 - Version chip missing tooltips
   [#4389](https://github.com/OpenFn/lightning/pull/4389)
+- Fixed StaleEntryError when saving workflows where a job is replaced and its
+  edge retargeted to a new job (e.g. via AI assistant)
+  [#4383](https://github.com/OpenFn/lightning/issues/4383)
 
 ## [2.15.13] - 2026-02-06
 
