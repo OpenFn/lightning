@@ -769,7 +769,7 @@ defmodule Lightning.AiAssistant do
   end
 
   defp maybe_put_job_id_from_session(attrs, session) do
-    is_assistant = Map.get(attrs, "role") == "assistant"
+    is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
 
     if is_assistant && session.job_id do
       job = Lightning.Repo.get(Lightning.Workflows.Job, session.job_id)
