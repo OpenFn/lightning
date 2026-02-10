@@ -48,12 +48,16 @@ defmodule Lightning.Channels do
   @doc """
   Deletes a channel.
 
-  Returns `{:error, :has_history}` if the channel has snapshots
-  referenced by requests (due to `:restrict` FK constraint).
+  Returns `{:error, changeset}` if the channel has snapshots
+  (due to `:restrict` FK on `channel_snapshots`).
   """
   def delete_channel(%Channel{} = channel) do
-    Repo.delete(channel)
-  rescue
-    Ecto.ConstraintError -> {:error, :has_history}
+    channel
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:channel_snapshots,
+      name: "channel_snapshots_channel_id_fkey",
+      message: "has history that must be retained"
+    )
+    |> Repo.delete()
   end
 end

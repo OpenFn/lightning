@@ -26,7 +26,7 @@ defmodule Lightning.Repo.Migrations.CreateChannelsTables do
           )
 
       add :enabled, :boolean, null: false, default: true
-      add :lock_version, :integer, null: false, default: 1
+      add :lock_version, :integer, null: false, default: 0
 
       timestamps()
     end

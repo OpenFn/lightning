@@ -114,7 +114,8 @@ defmodule Lightning.ChannelsTest do
       snapshot = insert(:channel_snapshot, channel: channel)
       insert(:channel_request, channel: channel, channel_snapshot: snapshot)
 
-      assert {:error, :has_history} = Channels.delete_channel(channel)
+      assert {:error, changeset} = Channels.delete_channel(channel)
+      assert %{channel_snapshots: _} = errors_on(changeset)
     end
   end
 end
