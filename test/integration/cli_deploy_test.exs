@@ -357,7 +357,12 @@ defmodule Lightning.CliDeployTest do
         {key, expected_edge_state(edge)}
       end)
 
-    Map.merge(state, %{jobs: jobs, triggers: triggers, edges: edges})
+    Map.merge(state, %{
+      jobs: jobs,
+      triggers: triggers,
+      edges: edges,
+      version_history: Lightning.WorkflowVersions.history_for(workflow)
+    })
   end
 
   defp expected_trigger_state(trigger) do
