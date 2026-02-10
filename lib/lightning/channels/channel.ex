@@ -21,7 +21,7 @@ defmodule Lightning.Channels.Channel do
     field :name, :string
     field :sink_url, :string
     field :enabled, :boolean, default: true
-    field :lock_version, :integer, default: 1
+    field :lock_version, :integer, default: 0
 
     belongs_to :project, Project
     belongs_to :source_project_credential, ProjectCredential

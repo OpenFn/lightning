@@ -42,7 +42,7 @@ defmodule Lightning.Channels do
   def update_channel(%Channel{} = channel, attrs) do
     channel
     |> Channel.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update(stale_error_field: :lock_version)
   end
 
   @doc """
