@@ -267,6 +267,7 @@ describe('ConfigureAdaptorModal', () => {
     onCredentialChange: mockOnCredentialChange,
     onOpenAdaptorPicker: mockOnOpenAdaptorPicker,
     onOpenCredentialModal: mockOnOpenCredentialModal,
+    pendingAdaptorSelection: null,
     currentAdaptor: '@openfn/language-salesforce',
     currentVersion: '2.1.0',
     currentCredentialId: null,
@@ -1696,6 +1697,190 @@ describe('ConfigureAdaptorModal', () => {
       // This test ensures the onEdit handler is properly wired up even if not visible
 
       expect(screen.getByText('Keychain with Owner')).toBeInTheDocument();
+    });
+  });
+
+  describe('Adaptor Change Confirmation', () => {
+    it('shows confirmation modal when changing adaptor with credentials set', async () => {
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce"
+          currentCredentialId="proj-cred-1" // HAS credentials
+          pendingAdaptorSelection="@openfn/language-http@latest" // Different adaptor
+        />
+      );
+
+      // Confirmation modal should appear
+      await waitFor(() => {
+        expect(screen.getByText('Change Adaptor?')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText(
+          /warning: changing adaptors will reset the credential/i
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('does NOT show confirmation when changing adaptor without credentials', async () => {
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce"
+          currentCredentialId={null} // NO credentials
+          pendingAdaptorSelection="@openfn/language-http@latest"
+        />
+      );
+
+      // Confirmation modal should NOT appear
+      await waitFor(() => {
+        expect(screen.queryByText('Change Adaptor?')).not.toBeInTheDocument();
+      });
+
+      // onAdaptorChange should be called immediately
+      expect(mockOnAdaptorChange).toHaveBeenCalledWith('@openfn/language-http');
+    });
+
+    it('does NOT show confirmation when changing version of same adaptor', async () => {
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce@2.1.0"
+          currentCredentialId="proj-cred-1"
+          pendingAdaptorSelection="@openfn/language-salesforce@2.0.0" // Same package, different version
+        />
+      );
+
+      // Confirmation modal should NOT appear
+      await waitFor(() => {
+        expect(screen.queryByText('Change Adaptor?')).not.toBeInTheDocument();
+      });
+
+      // onAdaptorChange should be called immediately
+      expect(mockOnAdaptorChange).toHaveBeenCalledWith(
+        '@openfn/language-salesforce'
+      );
+    });
+
+    it('clears credentials when user confirms adaptor change', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce"
+          currentCredentialId="proj-cred-1"
+          pendingAdaptorSelection="@openfn/language-http@latest"
+        />
+      );
+
+      // Wait for confirmation modal
+      await waitFor(() => {
+        expect(screen.getByText('Change Adaptor?')).toBeInTheDocument();
+      });
+
+      // Click "Continue" button
+      const continueButton = screen.getByRole('button', { name: /continue/i });
+      await user.click(continueButton);
+
+      // Should clear credentials FIRST
+      expect(mockOnCredentialChange).toHaveBeenCalledWith(null);
+
+      // Then change adaptor
+      expect(mockOnAdaptorChange).toHaveBeenCalledWith('@openfn/language-http');
+
+      // Confirmation modal should close
+      await waitFor(() => {
+        expect(screen.queryByText('Change Adaptor?')).not.toBeInTheDocument();
+      });
+    });
+
+    it('keeps everything unchanged when user cancels adaptor change', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce"
+          currentCredentialId="proj-cred-1"
+          pendingAdaptorSelection="@openfn/language-http@latest"
+        />
+      );
+
+      // Wait for confirmation modal
+      await waitFor(() => {
+        expect(screen.getByText('Change Adaptor?')).toBeInTheDocument();
+      });
+
+      // Click "Cancel" button
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await user.click(cancelButton);
+
+      // Should NOT clear credentials
+      expect(mockOnCredentialChange).not.toHaveBeenCalled();
+
+      // Should NOT change adaptor
+      expect(mockOnAdaptorChange).not.toHaveBeenCalled();
+
+      // Confirmation modal should close
+      await waitFor(() => {
+        expect(screen.queryByText('Change Adaptor?')).not.toBeInTheDocument();
+      });
+
+      // Main modal should still be open
+      expect(screen.getByText('Configure connection')).toBeInTheDocument();
+    });
+
+    it('shows primary variant (blue button) for confirmation', async () => {
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce"
+          currentCredentialId="proj-cred-1"
+          pendingAdaptorSelection="@openfn/language-http@latest"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Change Adaptor?')).toBeInTheDocument();
+      });
+
+      // Check that Continue button has primary styling (blue background)
+      const continueButton = screen.getByRole('button', { name: /continue/i });
+      // Check class contains bg-primary-600 (AlertDialog primary variant)
+      expect(continueButton.className).toContain('bg-primary-600');
+    });
+
+    // NOTE: Escape key behavior now correctly handled - ConfigureAdaptorModal's Escape handler
+    // checks isConfirmationModalOpen and allows AlertDialog to handle Escape when confirmation is open.
+    // Manual testing confirms Escape closes AlertDialog (not parent modal). The Cancel button test
+    // provides adequate automated coverage of the cancel functionality.
+
+    it('auto-selects latest version when changing to new adaptor', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-salesforce@2.1.0"
+          currentCredentialId="proj-cred-1"
+          pendingAdaptorSelection="@openfn/language-http@1.5.0"
+          allAdaptors={mockProjectAdaptors}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Change Adaptor?')).toBeInTheDocument();
+      });
+
+      // Confirm change
+      const continueButton = screen.getByRole('button', { name: /continue/i });
+      await user.click(continueButton);
+
+      // Should change to HTTP with latest version
+      expect(mockOnAdaptorChange).toHaveBeenCalledWith('@openfn/language-http');
+      expect(mockOnVersionChange).toHaveBeenCalledWith('1.5.0'); // latest from mockProjectAdaptors
     });
   });
 

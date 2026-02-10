@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Confirmation modal when changing adaptors in collaborative editor to warn
+  users that credentials will be reset
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
+
 ### Changed
 
 - Refactor CircleCI to build-then-fan-out pattern, compiling once then running

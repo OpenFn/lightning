@@ -4,7 +4,7 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useCredentialQueries,
@@ -22,6 +22,7 @@ import {
 import { cn } from '#/utils/cn';
 
 import { AdaptorIcon } from './AdaptorIcon';
+import { AlertDialog } from './AlertDialog';
 import { Tooltip } from './Tooltip';
 import { VersionPicker } from './VersionPicker';
 
@@ -185,11 +186,12 @@ function SectionDivider({ label }: SectionDividerProps) {
 interface ConfigureAdaptorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdaptorChange: (adaptorPackage: string) => void; // Immediately sync adaptor to Y.Doc
-  onVersionChange: (version: string) => void; // Immediately sync version to Y.Doc
+  onAdaptorChange: (adaptorPackage: string) => void; // Update adaptor package in form state (onVersionChange will sync to Y.Doc)
+  onVersionChange: (version: string) => void; // Immediately sync complete package@version to Y.Doc
   onCredentialChange: (credentialId: string | null) => void; // Immediately sync credential to Y.Doc
   onOpenAdaptorPicker: () => void; // Notify parent to manage modal switching to adaptor picker
   onOpenCredentialModal: (adaptorName: string, credentialId?: string) => void; // Notify parent to manage modal switching to credential modal (for create or edit)
+  pendingAdaptorSelection: string | null; // Adaptor selected from picker, awaiting confirmation
   currentAdaptor: string;
   currentVersion: string;
   currentCredentialId: string | null;
@@ -206,12 +208,12 @@ interface ConfigureAdaptorModalProps {
 export function ConfigureAdaptorModal({
   isOpen,
   onClose,
-  // Note: onAdaptorChange is in the interface for parent compatibility,
-  // but adaptor changes go through onOpenAdaptorPicker flow instead
+  onAdaptorChange,
   onVersionChange,
   onCredentialChange,
   onOpenAdaptorPicker,
   onOpenCredentialModal,
+  pendingAdaptorSelection,
   currentAdaptor,
   currentVersion,
   currentCredentialId,
@@ -220,6 +222,10 @@ export function ConfigureAdaptorModal({
   // UI state (not synced to Y.Doc)
   const [showOtherCredentials, setShowOtherCredentials] = useState(false);
 
+  // Confirmation modal state
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [pendingAdaptor, setPendingAdaptor] = useState<string | null>(null);
+
   // Get current user and credentials from store
   const currentUser = useUser();
   const { projectCredentials, keychainCredentials } = useCredentials();
@@ -227,9 +233,14 @@ export function ConfigureAdaptorModal({
 
   // High-priority Escape handler to prevent closing parent IDE/inspector
   // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50)
+  // Don't close if confirmation modal is open (let AlertDialog handle it)
   useKeyboardShortcut(
     'Escape',
-    () => {
+    e => {
+      if (isConfirmationModalOpen) {
+        e.stopPropagation();
+        return;
+      }
       onClose();
     },
     100,
@@ -442,6 +453,102 @@ export function ConfigureAdaptorModal({
     onClose(); // Close ConfigureAdaptorModal
     onOpenAdaptorPicker(); // Let parent open AdaptorSelectionModal
   };
+
+  /**
+   * Actually performs the adaptor change after confirmation (or if no
+   * confirmation needed).
+   */
+  const handleAdaptorChangeConfirmed = useCallback(
+    (adaptorName: string) => {
+      // Extract package name and update adaptor
+      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
+      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
+
+      if (newPackage) {
+        onAdaptorChange(newPackage);
+
+        // Auto-select latest version for new adaptor, fallback to "latest" if not found
+        const adaptor = allAdaptors.find(a => a.name === newPackage);
+        let versionToUse = 'latest'; // Fallback
+
+        if (adaptor && adaptor.versions.length > 0) {
+          const sortedVersions = sortVersionsDescending(
+            adaptor.versions.map(v => v.version)
+          );
+          versionToUse = sortedVersions[0] || 'latest';
+        }
+
+        onVersionChange(versionToUse); // Always called now
+      }
+
+      // Reopen ConfigureAdaptorModal (it was closed by handleChangeClick)
+      // The parent will handle reopening based on the adaptor change event
+    },
+    [allAdaptors, onAdaptorChange, onVersionChange]
+  );
+
+  /**
+   * Handles adaptor selection from AdaptorSelectionModal.
+   * Shows confirmation if adaptor package is changing and credentials are
+   * set.
+   */
+  const handleAdaptorSelectFromPicker = useCallback(
+    (newAdaptorName: string) => {
+      const currentPackage = extractPackageName(currentAdaptor);
+      const newPackage = extractPackageName(newAdaptorName);
+
+      // Only show confirmation if:
+      // 1. Adaptor package is changing (not just version)
+      // 2. Credentials are currently set
+      const isAdaptorChanging = currentPackage !== newPackage;
+      const hasCredentials = currentCredentialId !== null;
+
+      if (isAdaptorChanging && hasCredentials) {
+        // Show confirmation modal
+        setPendingAdaptor(newAdaptorName);
+        setIsConfirmationModalOpen(true);
+      } else {
+        // No confirmation needed - proceed immediately
+        handleAdaptorChangeConfirmed(newAdaptorName);
+      }
+    },
+    [currentAdaptor, currentCredentialId, handleAdaptorChangeConfirmed]
+  );
+
+  /**
+   * Confirms adaptor change - clears credentials then changes adaptor.
+   */
+  const handleAdaptorChangeConfirm = useCallback(() => {
+    if (pendingAdaptor) {
+      // Step 1: Clear credentials first (both project and keychain)
+      onCredentialChange(null);
+
+      // Step 2: Apply the adaptor change
+      handleAdaptorChangeConfirmed(pendingAdaptor);
+
+      // Step 3: Close confirmation modal and reset state
+      setPendingAdaptor(null);
+      setIsConfirmationModalOpen(false);
+    }
+  }, [pendingAdaptor, onCredentialChange, handleAdaptorChangeConfirmed]);
+
+  /**
+   * Cancels adaptor change - keeps current adaptor and credentials.
+   */
+  const handleAdaptorChangeCancel = useCallback(() => {
+    // Simply discard the pending change
+    setPendingAdaptor(null);
+    setIsConfirmationModalOpen(false);
+    // ConfigureAdaptorModal remains open - user can try again or close
+  }, []);
+
+  // Handle pending adaptor selection from AdaptorSelectionModal
+  useEffect(() => {
+    if (!isOpen || !pendingAdaptorSelection) return;
+
+    // User selected a new adaptor from picker - check if confirmation needed
+    handleAdaptorSelectFromPicker(pendingAdaptorSelection);
+  }, [isOpen, pendingAdaptorSelection, handleAdaptorSelectFromPicker]);
 
   // Open LiveView credential modal with adaptor schema (notifies parent)
   const handleCreateCredential = () => {
@@ -758,6 +865,18 @@ export function ConfigureAdaptorModal({
           </div>
         </div>
       </Dialog>
+
+      {/* Confirmation modal for adaptor changes */}
+      <AlertDialog
+        isOpen={isConfirmationModalOpen}
+        onClose={handleAdaptorChangeCancel}
+        onConfirm={handleAdaptorChangeConfirm}
+        title="Change Adaptor?"
+        description="Warning: Changing adaptors will reset the credential for this step. Are you sure you want to continue?"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        variant="primary"
+      />
     </>
   );
 }
