@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
+
 ## [2.15.13-pre1] - 2026-02-05
 
 ### Fixed

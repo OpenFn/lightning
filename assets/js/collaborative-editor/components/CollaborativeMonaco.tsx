@@ -124,21 +124,6 @@ export const CollaborativeMonaco = forwardRef<
 
       addKeyboardShortcutOverrides(editor, monaco);
 
-      // Create overflow widgets container for suggestions/tooltips
-      if (!overflowNodeRef.current) {
-        const overflowNode = document.createElement('div');
-        overflowNode.className = 'monaco-editor widgets-overflow-container';
-        document.body.appendChild(overflowNode);
-        overflowNodeRef.current = overflowNode;
-
-        // Update editor options with overflow container
-        // @ts-ignore - overflowWidgetsDomNode exists but isn't in updateOptions type
-        editor.updateOptions({
-          overflowWidgetsDomNode: overflowNode,
-          fixedOverflowWidgets: true,
-        });
-      }
-
       // Configure TypeScript compiler options
       monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
         allowNonTsExtensions: true,
