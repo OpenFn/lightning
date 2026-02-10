@@ -826,26 +826,45 @@ defmodule LightningWeb.AiAssistantChannel do
          params,
          socket
        ) do
-    job = params["job_id"] && Jobs.get_job!(params["job_id"])
+    case may_get_job(params["job_id"]) do
+      {:ok, job} ->
+        message_attrs = build_message_attrs(user, job, content, limit_result)
+        opts = extract_message_options(params)
 
-    message_attrs = build_message_attrs(user, job, content, limit_result)
-    opts = extract_message_options(params)
+        case AiAssistant.save_message(session, message_attrs, opts) do
+          {:ok, updated_session} ->
+            message = find_user_message(updated_session.messages, content)
 
-    case AiAssistant.save_message(session, message_attrs, opts) do
-      {:ok, updated_session} ->
-        message = find_user_message(updated_session.messages, content)
+            # Broadcast the user message to all subscribers so other users see it
+            broadcast(socket, "user_message", %{message: format_message(message)})
 
-        # Broadcast the user message to all subscribers so other users see it
-        broadcast(socket, "user_message", %{message: format_message(message)})
+            response = build_message_response(message, limit_result)
+            {:reply, {:ok, response}, socket}
 
-        response = build_message_response(message, limit_result)
-        {:reply, {:ok, response}, socket}
+          {:error, changeset} ->
+            errors = format_changeset_errors(changeset)
 
-      {:error, changeset} ->
-        errors = format_changeset_errors(changeset)
-        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+            {:reply, {:error, %{type: "validation_error", errors: errors}},
+             socket}
+        end
+
+      {:error, msg} ->
+        {:reply, {:error, %{type: "validation_error", errors: %{base: [msg]}}},
+         socket}
     end
   end
+
+  defp may_get_job(job_id) when not is_nil(job_id) do
+    case Jobs.get_job(job_id) do
+      {:ok, job} ->
+        {:ok, job}
+
+      {:error, :not_found} ->
+        {:error, "Job not saved. Please save before AI can work on it."}
+    end
+  end
+
+  defp may_get_job(_jobid), do: {:ok, nil}
 
   defp build_message_attrs(user, job, content, limit_result) do
     base_attrs = %{role: :user, content: content, user: user, job: job}
