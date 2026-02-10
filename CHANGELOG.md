@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- Ensure workflows have version history before sandbox creation, merging, and
+  importing to prevent squashing of the first workflow version
+  [#3958](https://github.com/OpenFn/lightning/issues/3958)
 - Version chip missing tooltips
   [#4389](https://github.com/OpenFn/lightning/pull/4389)
 - Fixed StaleEntryError when saving workflows where a job is replaced and its
