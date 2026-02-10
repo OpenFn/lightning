@@ -822,28 +822,18 @@ defmodule Lightning.Projects.MergeProjects do
   """
   @spec has_diverged?(Project.t(), Project.t()) :: boolean()
   def has_diverged?(%Project{} = source_project, %Project{} = target_project) do
-    source_project = Repo.preload(source_project, :workflows)
-    target_project = Repo.preload(target_project, :workflows)
-
-    sandbox_workflow_versions =
-      get_workflow_version_hashes_by_name(source_project.workflows)
-
-    target_workflow_versions =
-      get_workflow_version_hashes_by_name(target_project.workflows)
-
-    Enum.any?(target_workflow_versions, fn {workflow_name, target_hash} ->
-      case Map.get(sandbox_workflow_versions, workflow_name) do
-        nil -> false
-        sandbox_hash -> target_hash != sandbox_hash
-      end
-    end)
+    diverged_workflows(
+      source_project,
+      target_project
+    ) != []
   end
 
   @doc """
   Returns the list of workflow names that have diverged between source and target projects.
 
-  Compares version hashes for workflows with matching names. A workflow is considered
-  diverged if it exists in both projects but has different version hashes.
+  A workflow is considered diverged when the target project (parent) has changed since the
+  sandbox was forked. Specifically, a workflow has diverged if the target's current HEAD
+  version is not present in the sandbox's version history.
 
   ## Parameters
     * `source_project` - The sandbox project
@@ -875,19 +865,25 @@ defmodule Lightning.Projects.MergeProjects do
     target_workflow_versions =
       get_workflow_version_hashes_by_name(target_project.workflows)
 
-    Enum.reduce(target_workflow_versions, [], fn {workflow_name, target_hash},
-                                                 acc ->
-      case Map.get(sandbox_workflow_versions, workflow_name) do
-        nil ->
-          acc
+    Enum.reduce(
+      target_workflow_versions,
+      [],
+      fn {workflow_name, target_hashes}, acc ->
+        case Map.get(sandbox_workflow_versions, workflow_name) do
+          sandbox_hashes when is_list(sandbox_hashes) ->
+            target_head = hd(target_hashes)
 
-        sandbox_hash when target_hash != sandbox_hash ->
-          [workflow_name | acc]
+            if target_head in sandbox_hashes do
+              acc
+            else
+              [workflow_name | acc]
+            end
 
-        _ ->
-          acc
+          _ ->
+            acc
+        end
       end
-    end)
+    )
   end
 
   defp get_workflow_version_hashes_by_name(workflows) do
@@ -896,7 +892,6 @@ defmodule Lightning.Projects.MergeProjects do
 
     from(version in WorkflowVersion,
       where: version.workflow_id in ^workflow_ids,
-      distinct: version.workflow_id,
       order_by: [
         asc: version.workflow_id,
         desc: version.inserted_at,
@@ -905,8 +900,9 @@ defmodule Lightning.Projects.MergeProjects do
       select: {version.workflow_id, version.hash}
     )
     |> Repo.all()
-    |> Map.new(fn {workflow_id, hash} ->
-      {Map.get(workflow_name_map, workflow_id), hash}
-    end)
+    |> Enum.group_by(
+      fn {workflow_id, _hash} -> Map.get(workflow_name_map, workflow_id) end,
+      fn {_workflow_id, hash} -> hash end
+    )
   end
 end

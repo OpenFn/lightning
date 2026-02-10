@@ -2508,5 +2508,143 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       assert [] = MergeProjects.diverged_workflows(source, target)
     end
+
+    test "detects divergence when parent's head version is not in sandbox's history",
+         %{
+           source_project: source,
+           target_project: target
+         } do
+      # Create workflow in parent with initial version (fork point)
+      parent_workflow = insert(:workflow, project: target, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Create same workflow in sandbox with the same initial version (fork point)
+      sandbox_workflow =
+        insert(:workflow, project: source, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Parent project moves forward with new version (after fork)
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "def222222222",
+          "app"
+        )
+
+      # Sandbox should detect divergence because parent's head version is not in its history
+      assert ["Test Workflow"] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "does not detect divergence when parent's head version is in sandbox's history",
+         %{
+           source_project: source,
+           target_project: target
+         } do
+      # Create workflow in parent with initial version (fork point)
+      parent_workflow = insert(:workflow, project: target, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Create same workflow in sandbox with the same initial version (fork point)
+      sandbox_workflow =
+        insert(:workflow, project: source, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Parent project moves forward with new version (after fork)
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "def222222222",
+          "app"
+        )
+
+      # Sandbox also has parent's head version in its history (pulled updates)
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "def222222222",
+          "app"
+        )
+
+      # sandbox moves one more step
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc333333333",
+          "cli"
+        )
+
+      # Should NOT detect divergence because parent's head version is in sandbox's history
+      assert [] = MergeProjects.diverged_workflows(source, target)
+    end
+
+    test "detects divergence when both parent and sandbox move forward independently",
+         %{
+           source_project: source,
+           target_project: target
+         } do
+      # Create workflow in parent with initial version (fork point)
+      parent_workflow = insert(:workflow, project: target, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Create same workflow in sandbox with the same initial version (fork point)
+      sandbox_workflow =
+        insert(:workflow, project: source, name: "Test Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc111111111",
+          "app"
+        )
+
+      # Parent project moves forward with new version (after fork)
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_workflow,
+          "def222222222",
+          "app"
+        )
+
+      # Sandbox also moves forward with DIFFERENT version (after fork)
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_workflow,
+          "abc333333333",
+          "cli"
+        )
+
+      # Should detect divergence because parent's head version is not in sandbox's history
+      assert ["Test Workflow"] = MergeProjects.diverged_workflows(source, target)
+    end
   end
 end
