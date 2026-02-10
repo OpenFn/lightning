@@ -233,18 +233,16 @@ export function ConfigureAdaptorModal({
 
   // High-priority Escape handler to prevent closing parent IDE/inspector
   // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50)
-  // Don't close if confirmation modal is open (let AlertDialog handle it)
+  // When confirmation is open, disable this handler so AlertDialog's native Escape can close it
+  // After AlertDialog closes, Inspector's priority 10 handler fires and closes everything
+  // Result: Escape = "abort mission completely" (closes confirmation + modal + inspector)
   useKeyboardShortcut(
     'Escape',
-    e => {
-      if (isConfirmationModalOpen) {
-        e.stopPropagation();
-        return;
-      }
+    () => {
       onClose();
     },
     100,
-    { enabled: isOpen }
+    { enabled: isOpen && !isConfirmationModalOpen }
   );
 
   // When adaptor changes externally (from Y.Doc or adaptor picker),
@@ -475,7 +473,7 @@ export function ConfigureAdaptorModal({
           const sortedVersions = sortVersionsDescending(
             adaptor.versions.map(v => v.version)
           );
-          versionToUse = sortedVersions[0] || 'latest';
+          versionToUse = sortedVersions[0];
         }
 
         onVersionChange(versionToUse); // Always called now

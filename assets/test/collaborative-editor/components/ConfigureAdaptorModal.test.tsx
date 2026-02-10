@@ -1852,10 +1852,12 @@ describe('ConfigureAdaptorModal', () => {
       expect(continueButton.className).toContain('bg-primary-600');
     });
 
-    // NOTE: Escape key behavior now correctly handled - ConfigureAdaptorModal's Escape handler
-    // checks isConfirmationModalOpen and allows AlertDialog to handle Escape when confirmation is open.
-    // Manual testing confirms Escape closes AlertDialog (not parent modal). The Cancel button test
-    // provides adequate automated coverage of the cancel functionality.
+    // NOTE: Escape key behavior when confirmation is open:
+    // - ConfigureAdaptorModal's Escape handler (priority 100) is disabled
+    // - AlertDialog's native Escape closes the confirmation
+    // - Inspector's Escape handler (priority 10) then fires, closing everything
+    // Result: Escape = "abort mission completely" (closes confirmation + modal + inspector)
+    // The Cancel button test provides adequate coverage of the cancellation flow.
 
     it('auto-selects latest version when changing to new adaptor', async () => {
       const user = userEvent.setup();
