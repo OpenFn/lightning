@@ -50,6 +50,7 @@ defmodule Lightning.Projects.Project do
     has_many :credentials, through: [:project_credentials, :credential]
 
     has_many :collections, Lightning.Collections.Collection
+    has_many :channels, Lightning.Channels.Channel
 
     timestamps()
   end
