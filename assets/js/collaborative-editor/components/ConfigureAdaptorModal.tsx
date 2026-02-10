@@ -476,7 +476,7 @@ export function ConfigureAdaptorModal({
           versionToUse = sortedVersions[0];
         }
 
-        onVersionChange(versionToUse); // Always called now
+        onVersionChange(versionToUse);
       }
 
       // Reopen ConfigureAdaptorModal (it was closed by handleChangeClick)
