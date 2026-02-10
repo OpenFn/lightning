@@ -1,4 +1,8 @@
 defmodule Lightning.Channels.ChannelRequest do
+  @moduledoc """
+  Schema for a ChannelRequest — tracks the lifecycle of a single proxied
+  HTTP request through a channel.
+  """
   use Lightning.Schema
 
   alias Lightning.Channels.Channel

@@ -1,4 +1,8 @@
 defmodule Lightning.Channels.ChannelEvent do
+  @moduledoc """
+  Schema for a ChannelEvent — a detailed log entry recording HTTP
+  request/response data for a channel request.
+  """
   use Lightning.Schema
 
   alias Lightning.Channels.ChannelRequest

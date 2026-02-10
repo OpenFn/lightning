@@ -1,4 +1,8 @@
 defmodule Lightning.Channels.ChannelSnapshot do
+  @moduledoc """
+  Schema for a ChannelSnapshot — an immutable point-in-time copy of a
+  channel's configuration, created when a request is proxied.
+  """
   use Lightning.Schema
 
   alias Lightning.Channels.Channel

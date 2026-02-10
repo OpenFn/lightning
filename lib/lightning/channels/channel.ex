@@ -1,4 +1,8 @@
 defmodule Lightning.Channels.Channel do
+  @moduledoc """
+  Schema for a Channel — an HTTP proxy configuration that forwards
+  requests from a source endpoint to a sink URL.
+  """
   use Lightning.Schema
 
   alias Lightning.Projects.Project
