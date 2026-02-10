@@ -860,7 +860,8 @@ defmodule LightningWeb.AiAssistantChannel do
         {:ok, job}
 
       {:error, :not_found} ->
-        {:error, "Job not saved. Please save before AI can work on it."}
+        {:error,
+         "Job not saved or deleted. Please save if unsaved for AI to work."}
     end
   end
 
