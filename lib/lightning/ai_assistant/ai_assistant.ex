@@ -261,13 +261,14 @@ defmodule Lightning.AiAssistant do
   """
   @spec create_workflow_session(
           Project.t(),
+          Job.t() | nil,
           Workflow.t() | nil,
           User.t(),
           String.t(),
           opts()
         ) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def create_workflow_session(project, workflow, user, content, opts \\ []) do
+  def create_workflow_session(project, job, workflow, user, content, opts \\ []) do
     meta = Keyword.get(opts, :meta, %{})
 
     session_attrs = %{
@@ -285,9 +286,23 @@ defmodule Lightning.AiAssistant do
       ChatSession.changeset(%ChatSession{}, session_attrs)
     )
     |> Multi.run(:session_with_message, fn repo, %{session: session} ->
-      session
-      |> repo.preload(:messages)
-      |> save_message(%{role: :user, content: content, user: user}, opts)
+      session = repo.preload(session, :messages)
+
+      session =
+        if job do
+          put_expression_and_adaptor(session, job.body, job.adaptor)
+        else
+          session
+        end
+
+      message_attrs =
+        if job do
+          %{role: :user, content: content, user: user, job: job}
+        else
+          %{role: :user, content: content, user: user}
+        end
+
+      save_message(session, message_attrs, opts)
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -736,7 +751,7 @@ defmodule Lightning.AiAssistant do
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
 
-    message_attrs = prepare_message_attrs(message_attrs, session.id, code)
+    message_attrs = prepare_message_attrs(message_attrs, session, code)
 
     Multi.new()
     |> Multi.put(:usage, usage)
@@ -753,11 +768,23 @@ defmodule Lightning.AiAssistant do
     |> handle_save_message_result()
   end
 
-  defp prepare_message_attrs(message_attrs, session_id, code) do
+  defp maybe_put_job_id_from_session(attrs, session) do
+    is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
+
+    if is_assistant && session.job_id do
+      job = Lightning.Repo.get(Lightning.Workflows.Job, session.job_id)
+      Map.put(attrs, "job", job)
+    else
+      attrs
+    end
+  end
+
+  defp prepare_message_attrs(message_attrs, session, code) do
     message_attrs
     |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("chat_session_id", session_id)
+    |> Map.put("chat_session_id", session.id)
     |> Map.put("code", code)
+    |> maybe_put_job_id_from_session(session)
   end
 
   defp update_session_meta(session, nil),

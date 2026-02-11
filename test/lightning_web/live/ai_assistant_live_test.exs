@@ -1464,6 +1464,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
         end
       )
 
+      skip_disclaimer(user)
+
       session =
         insert(:job_chat_session,
           user: user,
@@ -1480,7 +1482,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
           on_error: :raise
         )
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
+      render_async(view)
 
       view |> element("#session-#{session.id}") |> render_click()
 
