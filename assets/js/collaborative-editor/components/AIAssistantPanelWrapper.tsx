@@ -414,7 +414,7 @@ export function AIAssistantPanelWrapper({
         }
       } else {
         // important: determines what ai to be used
-        options = { ...options, job_id: aiMode?.context.job_id };
+        options = { ...aiMode?.context, ...options };
       }
 
       // Update store state and send through registry

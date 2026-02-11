@@ -645,6 +645,16 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp format_message(message) do
+    job_id =
+      case message.meta do
+        %{"from_unsaved_job" => unsaved_job_id}
+        when not is_nil(unsaved_job_id) ->
+          unsaved_job_id
+
+        _ ->
+          message.job_id
+      end
+
     %{
       id: message.id,
       content: message.content,
@@ -654,7 +664,7 @@ defmodule LightningWeb.AiAssistantChannel do
       inserted_at: message.inserted_at,
       user_id: message.user_id,
       user: format_user(message.user),
-      job_id: message.job_id
+      job_id: job_id
     }
   end
 
@@ -848,9 +858,65 @@ defmodule LightningWeb.AiAssistantChannel do
              socket}
         end
 
+      {:error, :job_not_found} ->
+        # Job not found in DB - save message with unsaved job data in meta
+        handle_unsaved_job_message(
+          session,
+          user,
+          content,
+          limit_result,
+          params,
+          socket
+        )
+
       {:error, msg} ->
         {:reply, {:error, %{type: "validation_error", errors: %{base: [msg]}}},
          socket}
+    end
+  end
+
+  defp handle_unsaved_job_message(
+         session,
+         user,
+         content,
+         limit_result,
+         params,
+         socket
+       ) do
+    job_id = params["job_id"]
+    job_name = params["job_name"]
+    job_body = params["job_body"]
+    job_adaptor = params["job_adaptor"]
+    workflow_id = params["workflow_id"]
+
+    unsaved_job_data = %{
+      "id" => job_id,
+      "name" => job_name,
+      "body" => job_body,
+      "adaptor" => job_adaptor || "@openfn/language-common@latest",
+      "workflow_id" => workflow_id
+    }
+
+    message_attrs =
+      build_message_attrs(user, nil, content, limit_result)
+      |> Map.put(:meta, %{"unsaved_job" => unsaved_job_data})
+
+    opts = extract_message_options(params)
+
+    case AiAssistant.save_message(session, message_attrs, opts) do
+      {:ok, updated_session} ->
+        message = find_user_message(updated_session.messages, content)
+
+        # Broadcast the user message to all subscribers so other users see it
+        broadcast(socket, "user_message", %{message: format_message(message)})
+
+        response = build_message_response(message, limit_result)
+        {:reply, {:ok, response}, socket}
+
+      {:error, changeset} ->
+        errors = format_changeset_errors(changeset)
+
+        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
     end
   end
 
@@ -860,8 +926,7 @@ defmodule LightningWeb.AiAssistantChannel do
         {:ok, job}
 
       {:error, :not_found} ->
-        {:error,
-         "Job not saved or deleted. Please save if unsaved for AI to work."}
+        {:error, :job_not_found}
     end
   end
 
