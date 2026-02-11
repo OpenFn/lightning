@@ -64,6 +64,10 @@ export function JobForm({ job }: JobFormProps) {
   // Track if adaptor picker was opened from configure modal (to return there on close)
   const [adaptorPickerFromConfigure, setAdaptorPickerFromConfigure] =
     useState(false);
+  // Track adaptor selected from picker before confirmation
+  const [pendingAdaptorSelection, setPendingAdaptorSelection] = useState<
+    string | null
+  >(null);
 
   // Credential modal is managed by the context
   const { openCredentialModal, onModalClose, onCredentialSaved } =
@@ -194,43 +198,29 @@ export function JobForm({ job }: JobFormProps) {
   );
 
   // Handle adaptor selection from picker
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      // Update the adaptor package in form
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      form.setFieldValue('adaptor_package', newPackage || null);
+  const handleAdaptorSelect = useCallback((adaptorName: string) => {
+    // Close adaptor picker
+    setIsAdaptorPickerOpen(false);
 
-      // Set version to "latest" by default when picking an adaptor
-      const fullAdaptor = `${newPackage}@latest`;
-      form.setFieldValue('adaptor', fullAdaptor);
+    // Store selection as pending (don't apply yet)
+    setPendingAdaptorSelection(adaptorName);
 
-      // Close adaptor picker and always open configure modal
-      setIsAdaptorPickerOpen(false);
-      setAdaptorPickerFromConfigure(false);
-      setIsConfigureModalOpen(true);
+    // Reopen ConfigureAdaptorModal which will handle confirmation
+    setIsConfigureModalOpen(true);
+  }, []);
+
+  // Handle confirmed adaptor change (after confirmation or no confirmation needed)
+  const handleAdaptorChangeConfirmed = useCallback(
+    (adaptorPackage: string) => {
+      // Update form state with new adaptor package
+      // Note: ConfigureAdaptorModal will call onVersionChange next, which will
+      // sync the complete package@version to Y.Doc in a single operation
+      form.setFieldValue('adaptor_package', adaptorPackage);
+
+      // Clear pending selection
+      setPendingAdaptorSelection(null);
     },
     [form]
-  );
-
-  // Handler for adaptor changes - immediately syncs to Y.Doc
-  const handleAdaptorChange = useCallback(
-    (adaptorPackage: string) => {
-      // Get current version from form
-      const currentAdaptorValue = form.getFieldValue('adaptor') as string;
-      const { version: currentVersion } = resolveAdaptor(currentAdaptorValue);
-
-      // Build new adaptor string with current version
-      const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
-
-      // Update form state
-      form.setFieldValue('adaptor_package', adaptorPackage);
-      form.setFieldValue('adaptor', newAdaptor);
-
-      // Persist to Y.Doc
-      updateJob(job.id, { adaptor: newAdaptor });
-    },
-    [form, job.id, updateJob]
   );
 
   // Handler for version changes - immediately syncs to Y.Doc
@@ -370,12 +360,16 @@ export function JobForm({ job }: JobFormProps) {
       {/* Configure Adaptor Modal */}
       <ConfigureAdaptorModal
         isOpen={isConfigureModalOpen}
-        onClose={() => setIsConfigureModalOpen(false)}
-        onAdaptorChange={handleAdaptorChange}
+        onClose={() => {
+          setIsConfigureModalOpen(false);
+          setPendingAdaptorSelection(null); // Clear pending on close
+        }}
+        onAdaptorChange={handleAdaptorChangeConfirmed}
         onVersionChange={handleVersionChange}
         onCredentialChange={handleCredentialChange}
         onOpenAdaptorPicker={handleOpenAdaptorPickerFromConfigure}
         onOpenCredentialModal={handleOpenCredentialModal}
+        pendingAdaptorSelection={pendingAdaptorSelection}
         currentAdaptor={
           resolveAdaptor(currentAdaptor).package || '@openfn/language-common'
         }
