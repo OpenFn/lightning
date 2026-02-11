@@ -1869,9 +1869,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         "merge" => %{"target_id" => ""}
       })
 
-      # Should not crash - the has_diverged will be false for nil target
+      # Should not crash - the diverged_workflows will be empty for nil target
       assigns = :sys.get_state(view.pid).socket.assigns
-      refute assigns.merge_has_diverged
+      assert assigns.merge_diverged_workflows == []
     end
 
     test "displays MAIN when selected target not found in options", %{conn: conn} do
@@ -2148,6 +2148,202 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert Enum.any?(sandbox.project_users, fn pu ->
                pu.user_id == editor_user.id and pu.role == :editor
              end)
+    end
+  end
+
+  describe "merge modal with divergence" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, parent: parent, sandbox: sandbox}
+    end
+
+    test "displays list of diverged workflow names when has_diverged is true", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent
+    } do
+      # Setup: Create diverged workflows
+      target_wf1 =
+        insert(:workflow, project: parent, name: "Payment Processing")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf1,
+          "aaa111111111",
+          "app"
+        )
+
+      target_wf2 = insert(:workflow, project: parent, name: "Data Sync")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf2,
+          "bbb222222222",
+          "app"
+        )
+
+      sandbox_wf1 =
+        insert(:workflow, project: sandbox, name: "Payment Processing")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf1,
+          "aaa999999999",
+          "app"
+        )
+
+      sandbox_wf2 = insert(:workflow, project: sandbox, name: "Data Sync")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf2,
+          "bbb888888888",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      # Assert divergence alert is present
+      assert html =~ "Target project has diverged"
+
+      # Assert workflow names are listed
+      assert html =~ "Payment Processing"
+      assert html =~ "Data Sync"
+
+      assert html =~ "workflow(s) have been modified"
+    end
+
+    test "does not show divergence alert when workflows match", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent
+    } do
+      # Setup: Create matching workflows
+      target_wf = insert(:workflow, project: parent, name: "Matching Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf,
+          "aabbccddee00",
+          "app"
+        )
+
+      sandbox_wf =
+        insert(:workflow, project: sandbox, name: "Matching Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf,
+          "aabbccddee00",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      refute html =~ "Target project has diverged"
+      refute html =~ "Matching Workflow"
+    end
+
+    test "updates diverged workflow list when changing merge target", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent,
+      user: user
+    } do
+      # Create another sandbox (sibling) as alternative merge target
+      sibling_sandbox =
+        insert(:project,
+          name: "sibling-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      # Setup: Different diverged workflows for each target
+      parent_wf = insert(:workflow, project: parent, name: "Parent Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_wf,
+          "aabbcc123456",
+          "app"
+        )
+
+      sibling_wf =
+        insert(:workflow, project: sibling_sandbox, name: "Sibling Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sibling_wf,
+          "ddeeff654321",
+          "app"
+        )
+
+      sandbox_parent_wf =
+        insert(:workflow, project: sandbox, name: "Parent Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_parent_wf,
+          "112233445566",
+          "app"
+        )
+
+      sandbox_sibling_wf =
+        insert(:workflow, project: sandbox, name: "Sibling Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_sibling_wf,
+          "665544332211",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      # Open merge modal (defaults to parent target)
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "Parent Workflow"
+      refute html =~ "Sibling Workflow"
+
+      # Change target to sibling_sandbox
+      html =
+        view
+        |> form("#merge-sandbox-modal form")
+        |> render_change(%{merge: %{target_id: sibling_sandbox.id}})
+
+      refute html =~ "Parent Workflow"
+      assert html =~ "Sibling Workflow"
     end
   end
 

@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Show specific workflow names in sandbox merge dialog when target project has
+  diverged, instead of generic warning message
+  [#4001](https://github.com/OpenFn/lightning/issues/4001)
 - Refactor CircleCI to build-then-fan-out pattern, compiling once then running
   checks in parallel to eliminate cache race conditions and reduce flaky tests
   [#4378](https://github.com/OpenFn/lightning/pull/4378)
