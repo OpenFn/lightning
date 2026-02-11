@@ -57,7 +57,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
       workflow_or_snapshot
       |> Ecto.embedded_dump(:json)
       |> Map.take(
-        ~w(id name inserted_at updated_at deleted_at lock_version concurrency version_history)a
+        ~w(id name inserted_at updated_at deleted_at lock_version concurrency)a
       )
       |> Map.put(:id, workflow_id)
       |> Map.put(

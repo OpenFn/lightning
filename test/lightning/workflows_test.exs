@@ -134,18 +134,16 @@ defmodule Lightning.WorkflowsTest do
       valid_attrs = %{name: "versioned-workflow", project_id: project.id}
       {:ok, workflow} = Workflows.save_workflow(valid_attrs, user)
 
-      # Reload to get updated version_history
-      workflow = Repo.reload!(workflow)
-
       # Check that a version was recorded
-      assert length(workflow.version_history) == 1
+      history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(history) == 1
 
       # Verify the version exists in the database
       version =
         Lightning.Workflows.WorkflowVersion
         |> Repo.get_by!(workflow_id: workflow.id)
 
-      assert "#{version.source}:#{version.hash}" == hd(workflow.version_history)
+      assert "#{version.source}:#{version.hash}" == hd(history)
       assert version.source == "app"
     end
 
