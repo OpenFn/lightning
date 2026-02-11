@@ -868,10 +868,6 @@ defmodule LightningWeb.AiAssistantChannel do
           params,
           socket
         )
-
-      {:error, msg} ->
-        {:reply, {:error, %{type: "validation_error", errors: %{base: [msg]}}},
-         socket}
     end
   end
 
