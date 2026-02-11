@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.13">
+    <meta name="project" content="Lightning v2.15.14-pre">
 
 
-    <title>Lightning.Workflows.WebhookAuthMethod — Lightning v2.15.13</title>
+    <title>Lightning.Workflows.WebhookAuthMethod — Lightning v2.15.14-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-088D29CA.js"></script>
+    <script defer src="dist/sidebar_items-B7B23255.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.13
+          v2.15.14-pre
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.WebhookAuthMethod</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.13)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.14-pre)</small>
 
     </h1>
 
@@ -282,11 +282,11 @@ It is also associated with multiple <code class="inline">triggers</code> through
       </div>
 
 <p>Retrieves basic auth strings from a WebhookAuthMethod for use in log scrubbing.</p><p>Returns a list of base64-encoded &quot;username:password&quot; strings that might appear
-in Authorization headers.</p><h2 id="basic_auth_for/1-examples" class="section-heading"><a href="#basic_auth_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">basic_auth_for</span><span class="p" data-group-id="0845243034-1">(</span><span class="p" data-group-id="0845243034-2">%</span><span class="nc" data-group-id="0845243034-2">WebhookAuthMethod</span><span class="p" data-group-id="0845243034-2">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:basic</span><span class="p">,</span><span class="w"> </span><span class="ss">username</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="0845243034-2">}</span><span class="p" data-group-id="0845243034-1">)</span><span class="w">
-</span><span class="p" data-group-id="0845243034-3">[</span><span class="s">&quot;dXNlcjpwYXNz&quot;</span><span class="p" data-group-id="0845243034-3">]</span><span class="w">
+in Authorization headers.</p><h2 id="basic_auth_for/1-examples" class="section-heading"><a href="#basic_auth_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">basic_auth_for</span><span class="p" data-group-id="3580269717-1">(</span><span class="p" data-group-id="3580269717-2">%</span><span class="nc" data-group-id="3580269717-2">WebhookAuthMethod</span><span class="p" data-group-id="3580269717-2">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:basic</span><span class="p">,</span><span class="w"> </span><span class="ss">username</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="3580269717-2">}</span><span class="p" data-group-id="3580269717-1">)</span><span class="w">
+</span><span class="p" data-group-id="3580269717-3">[</span><span class="s">&quot;dXNlcjpwYXNz&quot;</span><span class="p" data-group-id="3580269717-3">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">basic_auth_for</span><span class="p" data-group-id="0845243034-4">(</span><span class="p" data-group-id="0845243034-5">%</span><span class="nc" data-group-id="0845243034-5">WebhookAuthMethod</span><span class="p" data-group-id="0845243034-5">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:api</span><span class="p">,</span><span class="w"> </span><span class="ss">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret&quot;</span><span class="p" data-group-id="0845243034-5">}</span><span class="p" data-group-id="0845243034-4">)</span><span class="w">
-</span><span class="p" data-group-id="0845243034-6">[</span><span class="p" data-group-id="0845243034-6">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">basic_auth_for</span><span class="p" data-group-id="3580269717-4">(</span><span class="p" data-group-id="3580269717-5">%</span><span class="nc" data-group-id="3580269717-5">WebhookAuthMethod</span><span class="p" data-group-id="3580269717-5">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:api</span><span class="p">,</span><span class="w"> </span><span class="ss">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret&quot;</span><span class="p" data-group-id="3580269717-5">}</span><span class="p" data-group-id="3580269717-4">)</span><span class="w">
+</span><span class="p" data-group-id="3580269717-6">[</span><span class="p" data-group-id="3580269717-6">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="changeset/2">
@@ -363,14 +363,14 @@ in Authorization headers.</p><h2 id="basic_auth_for/1-examples" class="section-h
       </div>
 
 <p>Retrieves sensitive values from a WebhookAuthMethod for use in log scrubbing.</p><p>For <code class="inline">:basic</code> auth, returns the username and password.
-For <code class="inline">:api</code> auth, returns the api_key.</p><h2 id="sensitive_values_for/1-examples" class="section-heading"><a href="#sensitive_values_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="7708691060-1">(</span><span class="p" data-group-id="7708691060-2">%</span><span class="nc" data-group-id="7708691060-2">WebhookAuthMethod</span><span class="p" data-group-id="7708691060-2">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:basic</span><span class="p">,</span><span class="w"> </span><span class="ss">username</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="7708691060-2">}</span><span class="p" data-group-id="7708691060-1">)</span><span class="w">
-</span><span class="p" data-group-id="7708691060-3">[</span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="7708691060-3">]</span><span class="w">
+For <code class="inline">:api</code> auth, returns the api_key.</p><h2 id="sensitive_values_for/1-examples" class="section-heading"><a href="#sensitive_values_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="6038846379-1">(</span><span class="p" data-group-id="6038846379-2">%</span><span class="nc" data-group-id="6038846379-2">WebhookAuthMethod</span><span class="p" data-group-id="6038846379-2">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:basic</span><span class="p">,</span><span class="w"> </span><span class="ss">username</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="6038846379-2">}</span><span class="p" data-group-id="6038846379-1">)</span><span class="w">
+</span><span class="p" data-group-id="6038846379-3">[</span><span class="s">&quot;pass&quot;</span><span class="p" data-group-id="6038846379-3">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="7708691060-4">(</span><span class="p" data-group-id="7708691060-5">%</span><span class="nc" data-group-id="7708691060-5">WebhookAuthMethod</span><span class="p" data-group-id="7708691060-5">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:api</span><span class="p">,</span><span class="w"> </span><span class="ss">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret123&quot;</span><span class="p" data-group-id="7708691060-5">}</span><span class="p" data-group-id="7708691060-4">)</span><span class="w">
-</span><span class="p" data-group-id="7708691060-6">[</span><span class="s">&quot;secret123&quot;</span><span class="p" data-group-id="7708691060-6">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="6038846379-4">(</span><span class="p" data-group-id="6038846379-5">%</span><span class="nc" data-group-id="6038846379-5">WebhookAuthMethod</span><span class="p" data-group-id="6038846379-5">{</span><span class="ss">auth_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:api</span><span class="p">,</span><span class="w"> </span><span class="ss">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret123&quot;</span><span class="p" data-group-id="6038846379-5">}</span><span class="p" data-group-id="6038846379-4">)</span><span class="w">
+</span><span class="p" data-group-id="6038846379-6">[</span><span class="s">&quot;secret123&quot;</span><span class="p" data-group-id="6038846379-6">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="7708691060-7">(</span><span class="no">nil</span><span class="p" data-group-id="7708691060-7">)</span><span class="w">
-</span><span class="p" data-group-id="7708691060-8">[</span><span class="p" data-group-id="7708691060-8">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">sensitive_values_for</span><span class="p" data-group-id="6038846379-7">(</span><span class="no">nil</span><span class="p" data-group-id="6038846379-7">)</span><span class="w">
+</span><span class="p" data-group-id="6038846379-8">[</span><span class="p" data-group-id="6038846379-8">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_changeset/2">
