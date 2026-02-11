@@ -57,5 +57,11 @@ Application.put_env(:lightning, Lightning.Extensions,
   external_metrics: Lightning.Extensions.ExternalMetrics
 )
 
-ExUnit.start()
+Bureaucrat.start(
+  writer: Bureaucrat.PostmanWriter,
+  prefix: "Elixir.LightningWeb",
+  default_path: "priv/static/postman.json"
+)
+
+ExUnit.start(formatters: [ExUnit.CLIFormatter, Bureaucrat.Formatter])
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)

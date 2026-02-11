@@ -14,7 +14,7 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
-        plt_add_apps: [:mix],
+        plt_add_apps: [:mix, :docout],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
       ],
@@ -153,7 +153,10 @@ defmodule Lightning.MixProject do
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
       {:y_ex, "~> 0.8.0"},
-      {:chameleon, "~> 2.5"}
+      {:chameleon, "~> 2.5"},
+      {:bureaucrat, "~> 0.2.10"},
+      {:poison, "~> 3.0"},
+      {:docout, github: "tfwright/docout", branch: "main", runtime: false}
     ]
   end
 
