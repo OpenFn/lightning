@@ -20,8 +20,12 @@ import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
 
+import createCompletionProvider from '../../editor/magic-completion';
+
+import { LoadingIndicator } from './common/LoadingIndicator';
 import { Cursors } from './Cursors';
 import { Tooltip } from './Tooltip';
+import { loadDTS, type Lib } from '../utils/loadDTS';
 
 export interface MonacoHandle {
   showDiff: (originalCode: string, modifiedCode: string) => void;
@@ -33,6 +37,7 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
+  metadata?: object;
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
@@ -46,6 +51,7 @@ export const CollaborativeMonaco = forwardRef<
     ytext,
     awareness,
     adaptor = 'common',
+    metadata,
     disabled = false,
     className,
     options = {},
@@ -57,6 +63,10 @@ export const CollaborativeMonaco = forwardRef<
   const bindingRef = useRef<MonacoBinding>();
   const [editorReady, setEditorReady] = useState(false);
 
+  // Type definitions state
+  const [lib, setLib] = useState<Lib[]>();
+  const [loading, setLoading] = useState(false);
+
   // Get callback from context to notify when diff is dismissed
   const handleDiffDismissed = useHandleDiffDismissed();
 
@@ -65,6 +75,9 @@ export const CollaborativeMonaco = forwardRef<
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const diffContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Overflow widgets container ref
+  const overflowNodeRef = useRef<HTMLDivElement>();
 
   // Base editor options shared between main and diff editors
   const baseEditorOptions: editor.IStandaloneEditorConstructionOptions =
@@ -82,6 +95,18 @@ export const CollaborativeMonaco = forwardRef<
         insertSpaces: true,
         automaticLayout: true,
         fixedOverflowWidgets: true,
+        codeLens: false,
+        wordBasedSuggestions: 'off',
+        showFoldingControls: 'always',
+        suggest: {
+          showModules: true,
+          showKeywords: false,
+          showFiles: false,
+          showClasses: false,
+          showInterfaces: false,
+          showConstructors: false,
+          showDeprecated: false,
+        },
       }),
       []
     );
@@ -98,6 +123,12 @@ export const CollaborativeMonaco = forwardRef<
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
       addKeyboardShortcutOverrides(editor, monaco);
+
+      // Configure TypeScript compiler options
+      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+        allowNonTsExtensions: true,
+        noLib: true,
+      });
 
       // Don't create binding here - let the useEffect handle it
       // This ensures binding is created/updated whenever ytext changes
@@ -207,6 +238,55 @@ export const CollaborativeMonaco = forwardRef<
 
     return () => {
       document.removeEventListener('insert-snippet', handleInsertSnippet);
+    };
+  }, []);
+
+  // Load type definitions when adaptor changes
+  useEffect(() => {
+    if (adaptor) {
+      setLoading(true);
+      setLib([]); // instantly clear intelligence
+      loadDTS(adaptor)
+        .then(l => {
+          setLib(l);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [adaptor]);
+
+  // Set extra libs on Monaco when lib changes
+  useEffect(() => {
+    if (monacoRef.current && lib) {
+      monacoRef.current.languages.typescript.javascriptDefaults.setExtraLibs(
+        lib
+      );
+    }
+  }, [lib]);
+
+  // Register metadata completion provider
+  useEffect(() => {
+    if (monacoRef.current && metadata) {
+      const provider =
+        monacoRef.current.languages.registerCompletionItemProvider(
+          'javascript',
+          createCompletionProvider(monacoRef.current, metadata)
+        );
+      return () => {
+        provider.dispose();
+      };
+    }
+  }, [metadata]);
+
+  // Cleanup overflow node on unmount
+  useEffect(() => {
+    return () => {
+      if (overflowNodeRef.current) {
+        overflowNodeRef.current.parentNode?.removeChild(
+          overflowNodeRef.current
+        );
+      }
     };
   }, []);
 
@@ -354,6 +434,9 @@ export const CollaborativeMonaco = forwardRef<
 
   return (
     <div className={cn('relative', className || 'h-full w-full')}>
+      <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
+        {loading && <LoadingIndicator text="Loading types" />}
+      </div>
       {/* Standard editor container */}
       <div ref={containerRef} className="h-full w-full">
         <Cursors />

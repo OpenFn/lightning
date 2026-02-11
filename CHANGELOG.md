@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
 - Version chip missing tooltips
   [#4389](https://github.com/OpenFn/lightning/pull/4389)
 - Fixed StaleEntryError when saving workflows where a job is replaced and its
