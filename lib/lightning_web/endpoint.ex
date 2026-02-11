@@ -68,6 +68,9 @@ defmodule LightningWeb.Endpoint do
 
   plug Plug.RequestId
 
+  # Channel proxy — must be before Plug.Parsers to preserve raw body
+  plug LightningWeb.ChannelProxyPlug
+
   plug Plugs.PromexWrapper
 
   @pre_parsers_plugs Application.compile_env(
