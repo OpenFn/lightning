@@ -80,42 +80,69 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
+    session = update_session_with_job_context(session, message)
+    result = dispatch_message_processing(session, message)
+    handle_processing_result(message, result)
+  end
+
+  @doc false
+  @spec update_session_with_job_context(
+          AiAssistant.ChatSession.t(),
+          ChatMessage.t()
+        ) :: AiAssistant.ChatSession.t()
+  defp update_session_with_job_context(session, message) do
+    message_meta = message.meta || %{}
+
+    cond do
+      message.job_id ->
+        %{session | job_id: message.job_id}
+
+      Map.has_key?(message_meta, "unsaved_job") ->
+        updated_meta =
+          Map.put(
+            session.meta || %{},
+            "unsaved_job",
+            message_meta["unsaved_job"]
+          )
+
+        %{session | meta: updated_meta}
+
+      true ->
+        session
+    end
+  end
+
+  @doc false
+  @spec dispatch_message_processing(
+          AiAssistant.ChatSession.t(),
+          ChatMessage.t()
+        ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp dispatch_message_processing(session, message) do
+    if is_job_chat?(session, message) do
+      process_job_message(session, message)
+    else
+      process_workflow_message(session, message)
+    end
+  end
+
+  @doc false
+  @spec is_job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
+  defp is_job_chat?(session, message) do
+    message_meta = message.meta || %{}
+
     # session.job_id for old job session. message.job_id for newer ones
     # Also check for unsaved job data in message.meta
-    message_meta = message.meta || %{}
-    has_unsaved_job_in_message = Map.has_key?(message_meta, "unsaved_job")
+    !is_nil(session.job_id) ||
+      !is_nil(message.job_id) ||
+      Map.has_key?(message_meta, "unsaved_job")
+  end
 
-    is_job_chat =
-      !is_nil(session.job_id) ||
-        !is_nil(message.job_id) ||
-        has_unsaved_job_in_message
-
-    result =
-      if is_job_chat do
-        session =
-          cond do
-            message.job_id ->
-              %{session | job_id: message.job_id}
-
-            has_unsaved_job_in_message ->
-              updated_meta =
-                Map.put(
-                  session.meta || %{},
-                  "unsaved_job",
-                  message_meta["unsaved_job"]
-                )
-
-              %{session | meta: updated_meta}
-
-            true ->
-              session
-          end
-
-        process_job_message(session, message)
-      else
-        process_workflow_message(session, message)
-      end
-
+  @doc false
+  @spec handle_processing_result(
+          ChatMessage.t(),
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+        ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp handle_processing_result(message, result) do
     case result do
       {:ok, _} ->
         {:ok, updated_session, _updated_message} =
