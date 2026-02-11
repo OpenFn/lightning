@@ -152,6 +152,7 @@ defmodule Lightning.MixProject do
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      {:weir, path: "../weir"},
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
     ]

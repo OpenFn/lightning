@@ -179,6 +179,8 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 
 config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 
+config :weir, finch_name: Lightning.Finch
+
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
 config :lightning, :claim_work_mem, nil
