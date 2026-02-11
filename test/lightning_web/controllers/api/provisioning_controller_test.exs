@@ -1052,14 +1052,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       workflow = Lightning.Repo.get!(Workflow, workflow_id)
       updated_history = Lightning.WorkflowVersions.history_for(workflow)
 
-      # Due to squashing behavior, consecutive versions from same source replace each other
-      # So we still have 1 version, but the hash should be different
-      assert length(updated_history) == 1
-      assert [updated_version] = updated_history
-      assert String.starts_with?(updated_version, "cli:")
+      # we nolonger squash the first version
+      assert length(updated_history) == 2
+      assert [^initial_version, latest_version] = updated_history
+      assert String.starts_with?(latest_version, "cli:")
 
       # Verify the hash changed after the update
-      refute initial_version == updated_version
+      refute initial_version == latest_version
     end
 
     test "does not create duplicate version when provisioning same workflow content",

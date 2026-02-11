@@ -103,18 +103,9 @@ defmodule Lightning.Projects.Provisioner do
   defp build_import_changeset(project, user_or_repo_connection, data) do
     project
     |> preload_dependencies()
-    |> ensure_workflows_have_versions()
     |> parse_document(data)
     |> maybe_add_project_user(user_or_repo_connection)
     |> maybe_add_project_credentials(user_or_repo_connection)
-  end
-
-  defp ensure_workflows_have_versions(%Project{workflows: workflows} = project) do
-    Enum.each(workflows, fn workflow ->
-      {:ok, _} = WorkflowVersions.ensure_version_recorded(workflow)
-    end)
-
-    project
   end
 
   defp audit_workflows(project_changeset, user_or_repo_connection) do
