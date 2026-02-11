@@ -19,8 +19,7 @@ defmodule LightningWeb.ChannelProxyPlug do
         |> put_proxy_headers()
         |> Weir.proxy(
           upstream: channel.sink_url,
-          path: forward_path,
-          request_id: get_request_id(conn)
+          path: forward_path
         )
         |> halt()
 
@@ -45,7 +44,6 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp build_forward_path(segments), do: "/" <> Enum.join(segments, "/")
 
   defp put_proxy_headers(conn) do
-    request_id = get_request_id(conn)
     original_host = get_req_header(conn, "host") |> List.first("")
     remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
 
@@ -55,16 +53,8 @@ defmodule LightningWeb.ChannelProxyPlug do
       if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
 
     conn
-    |> put_req_header("x-request-id", request_id)
     |> put_req_header("x-forwarded-for", xff_value)
     |> put_req_header("x-forwarded-host", original_host)
     |> put_req_header("x-forwarded-proto", to_string(conn.scheme))
-  end
-
-  defp get_request_id(conn) do
-    case get_resp_header(conn, "x-request-id") do
-      [id | _] -> id
-      [] -> Ecto.UUID.generate()
-    end
   end
 end

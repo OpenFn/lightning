@@ -140,6 +140,35 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.status == 200
     end
 
+    test "path traversal in channel_id position fails UUID validation", %{
+      conn: conn
+    } do
+      # A path like /channels/../../secret would have ".." as channel_id,
+      # which fails Ecto.UUID.cast and returns 404.
+      resp = get(conn, "/channels/../../secret")
+
+      assert resp.status == 404
+    end
+
+    test "path traversal segments in subpath are forwarded as-is", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      # In production, HTTP clients (browsers) normalize "../" segments
+      # before sending the request, so they never reach the server.
+      # If they do arrive (e.g. from a programmatic client), they are
+      # forwarded to the upstream as-is — the upstream is responsible
+      # for its own path handling.
+      Bypass.expect_once(bypass, "GET", "/foo/../safe", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/foo/../safe")
+
+      assert resp.status == 200
+    end
+
     test "root path (no trailing path) proxies to /", %{
       conn: conn,
       bypass: bypass,

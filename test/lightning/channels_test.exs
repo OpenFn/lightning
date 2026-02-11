@@ -57,6 +57,51 @@ defmodule Lightning.ChannelsTest do
       assert %{name: _, sink_url: _, project_id: _} = errors_on(changeset)
     end
 
+    test "returns error for non-URL sink_url" do
+      project = insert(:project)
+
+      assert {:error, changeset} =
+               Channels.create_channel(%{
+                 name: "bad-sink",
+                 sink_url: "not a url",
+                 project_id: project.id
+               })
+
+      assert %{sink_url: ["must be a valid URL"]} = errors_on(changeset)
+    end
+
+    test "returns error for non-http scheme sink_url" do
+      project = insert(:project)
+
+      assert {:error, changeset} =
+               Channels.create_channel(%{
+                 name: "ftp-sink",
+                 sink_url: "ftp://example.com",
+                 project_id: project.id
+               })
+
+      assert %{sink_url: ["must be either a http or https URL"]} =
+               errors_on(changeset)
+    end
+
+    test "accepts valid http and https sink_urls" do
+      project = insert(:project)
+
+      assert {:ok, _} =
+               Channels.create_channel(%{
+                 name: "http-sink",
+                 sink_url: "http://example.com/path",
+                 project_id: project.id
+               })
+
+      assert {:ok, _} =
+               Channels.create_channel(%{
+                 name: "https-sink",
+                 sink_url: "https://example.com/path",
+                 project_id: project.id
+               })
+    end
+
     test "returns error on duplicate name within project" do
       channel = insert(:channel)
 
