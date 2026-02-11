@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8C404740.js"></script>
+    <script defer src="dist/sidebar_items-088D29CA.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -197,7 +197,7 @@ templates from natural language descriptions</li></ol>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_workflow_session/5" data-no-tooltip="" translate="no">create_workflow_session(project, workflow, user, content, opts \\ [])</a>
+        <a href="#create_workflow_session/6" data-no-tooltip="" translate="no">create_workflow_session(project, job, workflow, user, content, opts \\ [])</a>
 
       </div>
 
@@ -439,7 +439,7 @@ Handles both the database update and Oban job creation atomically.</p></div>
       <h1 class="signature" translate="no">associate_workflow(session, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L706" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L721" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -472,7 +472,7 @@ and future modifications through the same conversation context.</p><h2 id="assoc
       <h1 class="signature" translate="no">cleanup_unsaved_job_sessions(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L320" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L335" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -488,8 +488,8 @@ and future modifications through the same conversation context.</p><h2 id="assoc
 
       </div>
 
-<p>Cleans up unsaved job data in AI sessions after workflow is saved.</p><p>When a workflow is saved and jobs get database IDs, this function:</p><ol><li>Finds all sessions with matching Y.Doc job IDs in meta[&quot;unsaved_job&quot;]</li><li>Updates those sessions to set job_id to the real database ID</li><li>Removes the meta[&quot;unsaved_job&quot;] data</li></ol><h2 id="cleanup_unsaved_job_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with jobs that have database IDs</li></ul><h2 id="cleanup_unsaved_job_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_job_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_job_sessions</span><span class="p" data-group-id="4435723778-1">(</span><span class="n">workflow</span><span class="p" data-group-id="4435723778-1">)</span><span class="w">
-</span><span class="p" data-group-id="4435723778-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="4435723778-2">}</span><span class="w">  </span><span class="c1"># Updated 3 sessions</span></code></pre>
+<p>Cleans up unsaved job data in AI sessions after workflow is saved.</p><p>When a workflow is saved and jobs get database IDs, this function:</p><ol><li>Finds all sessions with matching Y.Doc job IDs in meta[&quot;unsaved_job&quot;]</li><li>Updates those sessions to set job_id to the real database ID</li><li>Removes the meta[&quot;unsaved_job&quot;] data</li></ol><h2 id="cleanup_unsaved_job_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with jobs that have database IDs</li></ul><h2 id="cleanup_unsaved_job_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_job_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_job_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_job_sessions</span><span class="p" data-group-id="1282229779-1">(</span><span class="n">workflow</span><span class="p" data-group-id="1282229779-1">)</span><span class="w">
+</span><span class="p" data-group-id="1282229779-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="1282229779-2">}</span><span class="w">  </span><span class="c1"># Updated 3 sessions</span></code></pre>
   </section>
 </section>
 <section class="detail" id="cleanup_unsaved_workflow_sessions/1">
@@ -502,7 +502,7 @@ and future modifications through the same conversation context.</p><h2 id="assoc
       <h1 class="signature" translate="no">cleanup_unsaved_workflow_sessions(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L402" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L417" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -518,8 +518,8 @@ and future modifications through the same conversation context.</p><h2 id="assoc
 
       </div>
 
-<p>Cleans up unsaved workflow data in AI sessions after workflow is saved.</p><p>When a workflow in create mode is saved for the first time, this function:</p><ol><li>Finds all sessions with matching temporary workflow IDs in meta[&quot;unsaved_workflow&quot;]</li><li>Updates those sessions to set workflow_id to the real database ID</li><li>Removes the meta[&quot;unsaved_workflow&quot;] data</li></ol><h2 id="cleanup_unsaved_workflow_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with a database ID</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_workflow_sessions</span><span class="p" data-group-id="1656276565-1">(</span><span class="n">workflow</span><span class="p" data-group-id="1656276565-1">)</span><span class="w">
-</span><span class="p" data-group-id="1656276565-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="1656276565-2">}</span><span class="w">  </span><span class="c1"># Updated 2 sessions</span></code></pre>
+<p>Cleans up unsaved workflow data in AI sessions after workflow is saved.</p><p>When a workflow in create mode is saved for the first time, this function:</p><ol><li>Finds all sessions with matching temporary workflow IDs in meta[&quot;unsaved_workflow&quot;]</li><li>Updates those sessions to set workflow_id to the real database ID</li><li>Removes the meta[&quot;unsaved_workflow&quot;] data</li></ol><h2 id="cleanup_unsaved_workflow_sessions/1-parameters" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> - The saved <code class="inline">%Workflow{}</code> with a database ID</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-returns" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_count}</code> - Number of sessions updated</li><li><code class="inline">{:error, reason}</code> - If update fails</li></ul><h2 id="cleanup_unsaved_workflow_sessions/1-example" class="section-heading"><a href="#cleanup_unsaved_workflow_sessions/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">cleanup_unsaved_workflow_sessions</span><span class="p" data-group-id="8782657580-1">(</span><span class="n">workflow</span><span class="p" data-group-id="8782657580-1">)</span><span class="w">
+</span><span class="p" data-group-id="8782657580-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="8782657580-2">}</span><span class="w">  </span><span class="c1"># Updated 2 sessions</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_session/4">
@@ -588,19 +588,19 @@ and future modifications through the same conversation context.</p><h2 id="assoc
 for jobs they've created but haven't saved to the database yet.</p><h2 id="create_session_for_unsaved_job/3-parameters" class="section-heading"><a href="#create_session_for_unsaved_job/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code> - The <code class="inline">%User{}</code> creating the session</li><li><code class="inline">content</code> - Initial message content that will become the session title</li><li><code class="inline">meta</code> - Metadata including unsaved job data with keys:<ul><li><code class="inline">&quot;unsaved_job&quot;</code> - Map with job data:<ul><li><code class="inline">&quot;id&quot;</code> - The Y.Doc job ID (for future linking when saved)</li><li><code class="inline">&quot;name&quot;</code> - Job name</li><li><code class="inline">&quot;body&quot;</code> - Job expression code</li><li><code class="inline">&quot;adaptor&quot;</code> - Job adaptor</li><li><code class="inline">&quot;workflow_id&quot;</code> - Workflow the job belongs to</li></ul></li></ul></li></ul><h2 id="create_session_for_unsaved_job/3-returns" class="section-heading"><a href="#create_session_for_unsaved_job/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - Successfully created session with initial message</li><li><code class="inline">{:error, changeset}</code> - Validation errors during creation</li></ul>
   </section>
 </section>
-<section class="detail" id="create_workflow_session/5">
+<section class="detail" id="create_workflow_session/6">
 
-    <span id="create_workflow_session/4"></span>
+    <span id="create_workflow_session/5"></span>
 
   <div class="detail-header">
-    <a href="#create_workflow_session/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#create_workflow_session/6" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">create_workflow_session(project, workflow, user, content, opts \\ [])</h1>
+      <h1 class="signature" translate="no">create_workflow_session(project, job, workflow, user, content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L270" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L271" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -613,6 +613,7 @@ for jobs they've created but haven't saved to the database yet.</p><h2 id="creat
 
           <pre translate="no"><span class="attribute">@spec</span> create_workflow_session(
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | nil,
   <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | nil,
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
@@ -621,7 +622,7 @@ for jobs they've created but haven't saved to the database yet.</p><h2 id="creat
 
       </div>
 
-<p>Creates a new chat session for workflow template generation.</p><p>Initializes a session specifically for creating workflow templates:</p><ul><li>Associates with a project and optionally an existing workflow</li><li>Sets session type to &quot;workflow_template&quot;</li><li>Includes the initial user message describing the desired workflow</li></ul><h2 id="create_workflow_session/5-parameters" class="section-heading"><a href="#create_workflow_session/5-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">project</code> - The <code class="inline">%Project{}</code> struct where the workflow will be created</li><li><code class="inline">workflow</code> - The <code class="inline">%Workflow{}</code> struct to associate with the session, or <code class="inline">nil</code> for new workflows</li><li><code class="inline">user</code> - The <code class="inline">%User{}</code> requesting the workflow template</li><li><code class="inline">content</code> - Description of the desired workflow functionality</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:meta</code> - Optional metadata for the session</li><li><code class="inline">:code</code> - Optional workflow code for the initial message</li></ul></li></ul><h2 id="create_workflow_session/5-returns" class="section-heading"><a href="#create_workflow_session/5-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - Successfully created workflow session with initial message</li><li><code class="inline">{:error, changeset}</code> - Validation errors during creation</li></ul>
+<p>Creates a new chat session for workflow template generation.</p><p>Initializes a session specifically for creating workflow templates:</p><ul><li>Associates with a project and optionally an existing workflow</li><li>Sets session type to &quot;workflow_template&quot;</li><li>Includes the initial user message describing the desired workflow</li></ul><h2 id="create_workflow_session/6-parameters" class="section-heading"><a href="#create_workflow_session/6-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">project</code> - The <code class="inline">%Project{}</code> struct where the workflow will be created</li><li><code class="inline">workflow</code> - The <code class="inline">%Workflow{}</code> struct to associate with the session, or <code class="inline">nil</code> for new workflows</li><li><code class="inline">user</code> - The <code class="inline">%User{}</code> requesting the workflow template</li><li><code class="inline">content</code> - Description of the desired workflow functionality</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:meta</code> - Optional metadata for the session</li><li><code class="inline">:code</code> - Optional workflow code for the initial message</li></ul></li></ul><h2 id="create_workflow_session/6-returns" class="section-heading"><a href="#create_workflow_session/6-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - Successfully created workflow session with initial message</li><li><code class="inline">{:error, changeset}</code> - Validation errors during creation</li></ul>
   </section>
 </section>
 <section class="detail" id="enabled?/0">
@@ -692,7 +693,7 @@ before attempting to make actual queries.</p><h2 id="endpoint_available?/0-retur
       <h1 class="signature" translate="no">enrich_session_with_job_context(session)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L622" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L637" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -721,7 +722,7 @@ before attempting to make actual queries.</p><h2 id="endpoint_available?/0-retur
       <h1 class="signature" translate="no">find_pending_user_messages(session)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L842" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L869" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -752,7 +753,7 @@ for processing or AI responses. Useful for identifying stuck or failed requests.
       <h1 class="signature" translate="no">get_session(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L477" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L492" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -774,7 +775,7 @@ for processing or AI responses. Useful for identifying stuck or failed requests.
       <h1 class="signature" translate="no">get_session!(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L464" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L479" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -797,7 +798,7 @@ For workflow template sessions, the <code class="inline">:project</code> associa
       <h1 class="signature" translate="no">has_more_sessions?(resource, current_count)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L572" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L587" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -834,7 +835,7 @@ to load without fetching the actual data. Useful for &quot;Load More&quot; UI pa
       <h1 class="signature" translate="no">list_sessions(resource, sort_direction \\ :desc, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L521" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L536" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -902,7 +903,7 @@ acknowledged the AI assistant terms and conditions.</p><h2 id="mark_disclaimer_r
       <h1 class="signature" translate="no">put_expression_and_adaptor(session, expression, adaptor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L598" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L613" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -939,7 +940,7 @@ The adaptor is resolved through <a href="Lightning.AdaptorRegistry.html"><code c
       <h1 class="signature" translate="no">query(session, content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L866" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L893" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -973,7 +974,7 @@ and adaptor-specific guidance.</p><h2 id="query/3-parameters" class="section-hea
       <h1 class="signature" translate="no">query_workflow(session, content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L935" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L962" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1004,7 +1005,7 @@ Can include validation errors from previous attempts to help the AI provide corr
       <h1 class="signature" translate="no">retry_message(message)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L956" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L983" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1029,7 +1030,7 @@ Handles both the database update and Oban job creation atomically.</p>
       <h1 class="signature" translate="no">save_message(session, message_attrs, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L734" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L749" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1087,7 +1088,7 @@ For assistant messages, this also triggers AI usage tracking and limit enforceme
       <h1 class="signature" translate="no">update_message_status(session, message, status)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L813" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L840" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
