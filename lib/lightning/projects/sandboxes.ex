@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.WorkflowVersions
 
   @typedoc """
   Attributes for creating a new sandbox via `provision/3`.
@@ -386,6 +387,8 @@ defmodule Lightning.Projects.Sandboxes do
 
   defp create_sandbox_workflows(parent, sandbox) do
     Enum.reduce(parent.workflows, %{}, fn parent_workflow, mapping ->
+      {:ok, _} = WorkflowVersions.ensure_version_recorded(parent_workflow)
+
       {:ok, sandbox_workflow} =
         %Workflow{}
         |> Workflow.changeset(%{

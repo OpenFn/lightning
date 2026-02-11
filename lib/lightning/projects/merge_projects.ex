@@ -10,6 +10,7 @@ defmodule Lightning.Projects.MergeProjects do
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.WorkflowVersions
 
   @doc """
   Merges a source project onto a target project using workflow name matching.
@@ -90,6 +91,9 @@ defmodule Lightning.Projects.MergeProjects do
       ) do
     source_workflow = Repo.preload(source_workflow, [:jobs, :triggers, :edges])
     target_workflow = Repo.preload(target_workflow, [:jobs, :triggers, :edges])
+
+    # Ensure target workflow has a version before merging
+    {:ok, _} = WorkflowVersions.ensure_version_recorded(target_workflow)
 
     merge_workflow(
       Map.from_struct(source_workflow),

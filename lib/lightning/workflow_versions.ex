@@ -67,6 +67,9 @@ defmodule Lightning.WorkflowVersions do
       |> Multi.run(:latest_version, fn _repo, _changes ->
         {:ok, latest_version(workflow.id)}
       end)
+      |> Multi.run(:first_version, fn _repo, _changes ->
+        {:ok, first_version(workflow.id)}
+      end)
       |> Multi.run(:is_duplicate, fn _repo, %{latest_version: latest_version} ->
         {:ok,
          is_map(latest_version) and latest_version.hash == hash and
@@ -75,10 +78,14 @@ defmodule Lightning.WorkflowVersions do
       |> Multi.run(
         :should_squash,
         fn _repo,
-           %{is_duplicate: is_duplicate, latest_version: latest_version} ->
+           %{
+             is_duplicate: is_duplicate,
+             latest_version: latest_version,
+             first_version: first_version
+           } ->
           {:ok,
            !is_duplicate && is_map(latest_version) &&
-             latest_version.source == source}
+             latest_version.source == source && first_version !== latest_version}
         end
       )
       |> maybe_insert_new_version(
@@ -97,6 +104,31 @@ defmodule Lightning.WorkflowVersions do
       end
     else
       false -> {:error, :invalid_input}
+    end
+  end
+
+  @doc """
+  Ensures a workflow has at least one version recorded.
+
+  If the workflow has no version history (empty or nil), this function will
+  generate a hash from the current workflow state and record it.
+
+  ## Examples
+
+      iex> WorkflowVersions.ensure_version_recorded(workflow_without_versions)
+      {:ok, %Workflow{version_history: ["app:abc123def456"]}}
+
+      iex> WorkflowVersions.ensure_version_recorded(workflow_with_versions)
+      {:ok, %Workflow{version_history: ["app:existing123"]}}
+  """
+  @spec ensure_version_recorded(Workflow.t()) ::
+          {:ok, Workflow.t()} | {:error, term()}
+  def ensure_version_recorded(%Workflow{} = workflow) do
+    if latest_hash(workflow) do
+      {:ok, workflow}
+    else
+      hash = generate_hash(workflow)
+      record_version(workflow, hash)
     end
   end
 
@@ -236,6 +268,15 @@ defmodule Lightning.WorkflowVersions do
     from(v in WorkflowVersion,
       where: v.workflow_id == ^workflow_id,
       order_by: [desc: v.inserted_at, desc: v.id],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  defp first_version(workflow_id) do
+    from(v in WorkflowVersion,
+      where: v.workflow_id == ^workflow_id,
+      order_by: [asc: v.inserted_at, asc: v.id],
       limit: 1
     )
     |> Repo.one()
