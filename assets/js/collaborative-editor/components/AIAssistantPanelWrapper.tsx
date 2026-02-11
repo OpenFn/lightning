@@ -66,7 +66,11 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
-export function AIAssistantPanelWrapper() {
+export function AIAssistantPanelWrapper({
+  aiAssistantEnabled = false,
+}: {
+  aiAssistantEnabled?: boolean;
+}) {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const initialMessage = useAIAssistantInitialMessage();
   const {
@@ -96,7 +100,7 @@ export function AIAssistantPanelWrapper() {
   }, [isIDEOpen]);
 
   // Cmd+K toggles AI Assistant with mutual exclusivity
-  // Disabled when viewing a pinned version (not latest)
+  // Disabled when viewing a pinned version (not latest) or when Apollo not configured
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -107,7 +111,7 @@ export function AIAssistantPanelWrapper() {
       toggleAIAssistantPanel();
     },
     0,
-    { enabled: !isPinnedVersion }
+    { enabled: !isPinnedVersion && aiAssistantEnabled }
   );
 
   const aiStore = useAIStore();

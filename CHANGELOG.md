@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- AI Assistant button now disabled when Apollo not configured, preventing silent
+  failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
 - Version chip missing tooltips
   [#4389](https://github.com/OpenFn/lightning/pull/4389)
 - Fixed StaleEntryError when saving workflows where a job is replaced and its
