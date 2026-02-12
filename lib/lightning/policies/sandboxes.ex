@@ -5,6 +5,8 @@ defmodule Lightning.Policies.Sandboxes do
   Sandboxes have different authorization rules than regular projects:
   - Sandbox owners/admins can manage their own sandboxes
   - Root project owners/admins can manage any sandbox in their workspace
+  - Editors (and above) on the root project can merge sandboxes
+  - Editors (and above) on the parent project can provision sandboxes
   - Superusers can manage any sandbox anywhere
   """
   @behaviour Bodyguard.Policy
@@ -17,6 +19,7 @@ defmodule Lightning.Policies.Sandboxes do
           :delete_sandbox
           | :update_sandbox
           | :provision_sandbox
+          | :merge_sandbox
 
   @doc """
   Authorize sandbox operations based on user role and project hierarchy.
@@ -31,18 +34,31 @@ defmodule Lightning.Policies.Sandboxes do
 
   ### `:provision_sandbox`
   User can create sandboxes if they are:
-  - Owner/admin of the parent project they're creating the sandbox under
+  - Editor/admin/owner of the parent project they're creating the sandbox under
+
+  ### `:merge_sandbox`
+  User can merge a sandbox into a target project if they are:
+  - Editor/admin/owner on the target project
+  - Superuser
 
   ## Parameters
   - `action` - The action being attempted
   - `user` - The user attempting the action
-  - `project` - The sandbox project (for delete/update) or parent project (for provision)
+  - `project` - The sandbox project (for delete/update), parent project (for provision),
+    or target project (for merge)
   """
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
 
   def authorize(:provision_sandbox, %User{} = user, %Project{} = parent_project) do
     case Projects.get_project_user_role(user, parent_project) do
-      role when role in [:owner, :admin] -> true
+      role when role in [:owner, :admin, :editor] -> true
+      _ -> user.role == :superuser
+    end
+  end
+
+  def authorize(:merge_sandbox, %User{} = user, %Project{} = target_project) do
+    case Projects.get_project_user_role(user, target_project) do
+      role when role in [:owner, :admin, :editor] -> true
       _ -> user.role == :superuser
     end
   end
@@ -79,14 +95,23 @@ defmodule Lightning.Policies.Sandboxes do
             binary() => %{update: boolean(), delete: boolean(), merge: boolean()}
           }
   def check_manage_permissions(sandboxes, %User{} = user, root_project) do
-    has_root_privileges =
-      user.role == :superuser or
-        Enum.any?(
-          root_project.project_users,
-          &(&1.user_id == user.id and &1.role in [:owner, :admin])
-        )
+    is_superuser = user.role == :superuser
 
-    if has_root_privileges do
+    is_root_owner_or_admin =
+      Enum.any?(
+        root_project.project_users,
+        &(&1.user_id == user.id and &1.role in [:owner, :admin])
+      )
+
+    is_root_editor_plus =
+      Enum.any?(
+        root_project.project_users,
+        &(&1.user_id == user.id and &1.role in [:owner, :admin, :editor])
+      )
+
+    has_full_privileges = is_superuser or is_root_owner_or_admin
+
+    if has_full_privileges do
       Map.new(sandboxes, &{&1.id, %{update: true, delete: true, merge: true}})
     else
       Map.new(sandboxes, fn sandbox ->
@@ -96,14 +121,11 @@ defmodule Lightning.Policies.Sandboxes do
             &(&1.user_id == user.id and &1.role in [:owner, :admin])
           )
 
-        # Merge follows the same rule as update
-        # Today update/delete/merge share the same rule.
-        # If they ever diverge, split here (e.g., compute separate booleans).
         {sandbox.id,
          %{
            update: is_owner_or_admin_here?,
            delete: is_owner_or_admin_here?,
-           merge: is_owner_or_admin_here?
+           merge: is_superuser or is_root_editor_plus
          }}
       end)
     end
