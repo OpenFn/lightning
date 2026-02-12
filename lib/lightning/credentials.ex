@@ -447,15 +447,25 @@ defmodule Lightning.Credentials do
   defp validate_external_id(changeset) do
     external_id = Ecto.Changeset.get_field(changeset, :external_id)
 
-    if is_nil(external_id) or external_id == "" do
+    if is_nil(external_id) do
       :ok
     else
-      project_ids = active_project_ids(changeset)
+      direct_ids = active_project_ids(changeset)
 
-      if Enum.empty?(project_ids) do
+      if Enum.empty?(direct_ids) do
         :ok
       else
-        check_external_id_conflict(changeset, external_id, project_ids)
+        with :ok <-
+               check_external_id_conflict(changeset, external_id, direct_ids) do
+          descendant_ids = descendant_project_ids(direct_ids)
+
+          check_external_id_conflict(
+            changeset,
+            external_id,
+            descendant_ids,
+            "another credential with the same external ID already exists in a sandbox of this project"
+          )
+        end
       end
     end
   end
@@ -466,39 +476,60 @@ defmodule Lightning.Credentials do
     |> Enum.reject(&is_nil/1)
   end
 
-  defp check_external_id_conflict(changeset, external_id, project_ids) do
-    credential_id = Ecto.Changeset.get_field(changeset, :id)
+  defp descendant_project_ids(project_ids) do
+    Enum.flat_map(project_ids, fn project_id ->
+      Lightning.Projects.list_workspace_projects(project_id)
+      |> Map.get(:descendants, [])
+      |> Enum.map(& &1.id)
+    end)
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 in project_ids))
+  end
 
-    base_query =
-      from(c in Credential,
-        join: pc in assoc(c, :project_credentials),
-        where: c.external_id == ^external_id,
-        where: pc.project_id in ^project_ids,
-        limit: 1
-      )
-
-    query =
-      if credential_id do
-        from(c in base_query, where: c.id != ^credential_id)
-      else
-        base_query
-      end
-
-    if Repo.exists?(query) do
-      action =
-        if changeset.data.__meta__.state == :built, do: :insert, else: :update
-
-      changeset =
-        changeset
-        |> Ecto.Changeset.add_error(
-          :external_id,
-          "another credential with the same external ID already exists in this project"
-        )
-        |> Map.put(:action, action)
-
-      {:error, changeset}
-    else
+  # NOTE: This is an app-level check only (not DB-enforced). It has a TOCTOU
+  # race window — two concurrent inserts can both pass Repo.exists? before
+  # either commits. Acceptable for now given low collision likelihood;
+  # DB-level enforcement (e.g. denormalized column + unique index on
+  # project_credentials) can be added later if needed.
+  defp check_external_id_conflict(
+         changeset,
+         external_id,
+         project_ids,
+         message \\ "another credential with the same external ID already exists in this project"
+       ) do
+    if Enum.empty?(project_ids) do
       :ok
+    else
+      credential_id = Ecto.Changeset.get_field(changeset, :id)
+
+      base_query =
+        from(c in Credential,
+          join: pc in assoc(c, :project_credentials),
+          where: c.external_id == ^external_id,
+          where: pc.project_id in ^project_ids,
+          limit: 1
+        )
+
+      query =
+        if credential_id do
+          from(c in base_query, where: c.id != ^credential_id)
+        else
+          base_query
+        end
+
+      if Repo.exists?(query) do
+        action =
+          if changeset.data.__meta__.state == :built, do: :insert, else: :update
+
+        changeset =
+          changeset
+          |> Ecto.Changeset.add_error(:external_id, message)
+          |> Map.put(:action, action)
+
+        {:error, changeset}
+      else
+        :ok
+      end
     end
   end
 
