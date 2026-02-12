@@ -50,6 +50,9 @@ defmodule Lightning.Credentials.Credential do
     |> unique_constraint([:name, :user_id],
       message: "you have another credential with the same name"
     )
+    |> unique_constraint([:external_id, :user_id],
+      message: "you already have a credential with the same external ID"
+    )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,

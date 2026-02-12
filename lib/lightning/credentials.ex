@@ -203,7 +203,8 @@ defmodule Lightning.Credentials do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
-         changeset <- change_credential(%Credential{}, attrs) do
+         changeset <- change_credential(%Credential{}, attrs),
+         :ok <- validate_external_id(changeset) do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -266,7 +267,8 @@ defmodule Lightning.Credentials do
              attrs,
              credential.schema
            ),
-         changeset <- change_credential(credential, attrs) do
+         changeset <- change_credential(credential, attrs),
+         :ok <- validate_external_id(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -438,6 +440,66 @@ defmodule Lightning.Credentials do
       list when is_list(list) -> list
       binary when is_binary(binary) -> String.split(binary, " ", trim: true)
       _ -> []
+    end
+  end
+
+  defp validate_external_id(changeset) do
+    external_id = Ecto.Changeset.get_field(changeset, :external_id)
+    credential_id = Ecto.Changeset.get_field(changeset, :id)
+
+    if is_nil(external_id) or external_id == "" do
+      :ok
+    else
+      project_ids =
+        Ecto.Changeset.get_field(changeset, :project_credentials, [])
+        |> Enum.reject(fn
+          %{delete: true} -> true
+          %Ecto.Changeset{action: :delete} -> true
+          _ -> false
+        end)
+        |> Enum.map(fn
+          %{project_id: pid} -> pid
+          %Ecto.Changeset{} = cs -> Ecto.Changeset.get_field(cs, :project_id)
+        end)
+        |> Enum.reject(&is_nil/1)
+
+      if Enum.empty?(project_ids) do
+        :ok
+      else
+        base_query =
+          from(c in Credential,
+            join: pc in assoc(c, :project_credentials),
+            where: c.external_id == ^external_id,
+            where: pc.project_id in ^project_ids,
+            limit: 1
+          )
+
+        query =
+          if credential_id do
+            from(c in base_query, where: c.id != ^credential_id)
+          else
+            base_query
+          end
+
+        if Repo.exists?(query) do
+          action =
+            if changeset.data.__meta__.state == :built,
+              do: :insert,
+              else: :update
+
+          changeset =
+            changeset
+            |> Ecto.Changeset.add_error(
+              :external_id,
+              "another credential with the same external ID already exists in this project"
+            )
+            |> Map.put(:action, action)
+
+          {:error, changeset}
+        else
+          :ok
+        end
+      end
     end
   end
 
