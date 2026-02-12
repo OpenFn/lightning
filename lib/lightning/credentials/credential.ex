@@ -45,6 +45,7 @@ defmodule Lightning.Credentials.Credential do
       :scheduled_deletion,
       :transfer_status
     ])
+    |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
     |> unique_constraint([:name, :user_id],
@@ -58,5 +59,12 @@ defmodule Lightning.Credentials.Credential do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
+  end
+
+  defp normalize_external_id(changeset) do
+    case get_change(changeset, :external_id) do
+      "" -> put_change(changeset, :external_id, nil)
+      _ -> changeset
+    end
   end
 end
