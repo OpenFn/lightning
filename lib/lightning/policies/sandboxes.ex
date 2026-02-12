@@ -104,10 +104,11 @@ defmodule Lightning.Policies.Sandboxes do
       )
 
     is_root_editor_plus =
-      Enum.any?(
-        root_project.project_users,
-        &(&1.user_id == user.id and &1.role in [:owner, :admin, :editor])
-      )
+      is_root_owner_or_admin or
+        Enum.any?(
+          root_project.project_users,
+          &(&1.user_id == user.id and &1.role == :editor)
+        )
 
     has_full_privileges = is_superuser or is_root_owner_or_admin
 
@@ -125,7 +126,7 @@ defmodule Lightning.Policies.Sandboxes do
          %{
            update: is_owner_or_admin_here?,
            delete: is_owner_or_admin_here?,
-           merge: is_superuser or is_root_editor_plus
+           merge: is_root_editor_plus
          }}
       end)
     end
