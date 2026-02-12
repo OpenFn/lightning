@@ -2047,6 +2047,21 @@ defmodule Lightning.CredentialsTest do
       end
     end
 
+    test "empty string external_id is normalized to nil" do
+      user = insert(:user)
+
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "blank ext",
+          user_id: user.id,
+          schema: "raw",
+          external_id: "",
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      assert credential.external_id == nil
+    end
+
     test "same external_id in different projects is allowed" do
       user1 = insert(:user)
       user2 = insert(:user)
@@ -2108,12 +2123,56 @@ defmodule Lightning.CredentialsTest do
              ).external_id
     end
 
-    test "removing a project association ignores the removed project for validation" do
+    test "removing a project association resolves the conflict in that project" do
       user = insert(:user)
       project1 = insert(:project)
       project2 = insert(:project)
 
-      # Another credential with same external_id in project1
+      # Create our credential in both projects (no conflict yet)
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "my cred",
+          user_id: user.id,
+          schema: "raw",
+          external_id: "remove-test",
+          project_credentials: [
+            %{project_id: project1.id},
+            %{project_id: project2.id}
+          ],
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      credential = Repo.preload(credential, :project_credentials)
+
+      pc_project1 =
+        Enum.find(
+          credential.project_credentials,
+          &(&1.project_id == project1.id)
+        )
+
+      pc_project2 =
+        Enum.find(
+          credential.project_credentials,
+          &(&1.project_id == project2.id)
+        )
+
+      # Remove from project1 via delete flag, keep project2
+      assert {:ok, updated} =
+               Credentials.update_credential(credential, %{
+                 "project_credentials" => [
+                   %{
+                     "id" => pc_project1.id,
+                     "project_id" => project1.id,
+                     "delete" => "true"
+                   },
+                   Map.from_struct(pc_project2)
+                 ]
+               })
+
+      assert length(updated.project_credentials) == 1
+      assert hd(updated.project_credentials).project_id == project2.id
+
+      # Now another user can use the same external_id in project1
       {:ok, _other} =
         Credentials.create_credential(%{
           name: "other cred",
@@ -2123,54 +2182,50 @@ defmodule Lightning.CredentialsTest do
           project_credentials: [%{project_id: project1.id}],
           credential_bodies: [%{name: "main", body: %{}}]
         })
+    end
 
-      # Our credential only in project2 (no conflict)
-      {:ok, credential} =
+    test "duplicate external_id in a sandbox is rejected when adding to parent" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: user1.id, role: :owner}]
+        )
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user1, %{
+          name: "sandbox",
+          env: "staging"
+        })
+
+      # User A adds credential with external_id directly to sandbox
+      {:ok, _sandbox_cred} =
         Credentials.create_credential(%{
-          name: "my cred",
-          user_id: user.id,
+          name: "sandbox cred",
+          user_id: user2.id,
           schema: "raw",
-          external_id: "remove-test",
-          project_credentials: [%{project_id: project2.id}],
+          external_id: "sandbox-conflict",
+          project_credentials: [%{project_id: sandbox.id}],
           credential_bodies: [%{name: "main", body: %{}}]
         })
 
-      credential = Repo.preload(credential, :project_credentials)
-
-      pc_to_keep =
-        Enum.find(
-          credential.project_credentials,
-          &(&1.project_id == project2.id)
-        )
-
-      # Add to project1 — should fail because of conflict
-      assert {:error, changeset} =
-               Credentials.update_credential(credential, %{
-                 "project_credentials" => [
-                   Map.from_struct(pc_to_keep),
-                   %{"project_id" => project1.id}
-                 ]
+      # User B tries to add credential with same external_id to parent
+      # — should fail because it would propagate to the sandbox
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(%{
+                 name: "parent cred",
+                 user_id: user1.id,
+                 schema: "raw",
+                 external_id: "sandbox-conflict",
+                 project_credentials: [%{project_id: parent.id}],
+                 credential_bodies: [%{name: "main", body: %{}}]
                })
 
-      assert "another credential with the same external ID already exists in this project" in errors_on(
+      assert "another credential with the same external ID already exists in a sandbox of this project" in errors_on(
                changeset
              ).external_id
-
-      # Now remove from project1 via delete flag — should succeed
-      credential = Repo.preload(credential, :project_credentials, force: true)
-
-      pc_to_keep =
-        Enum.find(
-          credential.project_credentials,
-          &(&1.project_id == project2.id)
-        )
-
-      assert {:ok, _updated} =
-               Credentials.update_credential(credential, %{
-                 "project_credentials" => [
-                   Map.from_struct(pc_to_keep)
-                 ]
-               })
     end
 
     test "updating a credential keeps its own external_id without error" do
