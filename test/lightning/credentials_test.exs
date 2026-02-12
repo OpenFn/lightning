@@ -1978,6 +1978,231 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "external_id uniqueness" do
+    test "same user cannot have two credentials with the same external_id" do
+      user = insert(:user)
+
+      valid_attrs = %{
+        name: "cred one",
+        user_id: user.id,
+        schema: "raw",
+        external_id: "my-ext-id",
+        credential_bodies: [%{name: "main", body: %{"key" => "val"}}]
+      }
+
+      assert {:ok, %Credential{}} = Credentials.create_credential(valid_attrs)
+
+      duplicate_attrs = %{
+        name: "cred two",
+        user_id: user.id,
+        schema: "raw",
+        external_id: "my-ext-id",
+        credential_bodies: [%{name: "main", body: %{"key" => "val2"}}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(duplicate_attrs)
+
+      assert "you already have a credential with the same external ID" in errors_on(
+               changeset
+             ).external_id
+    end
+
+    test "different users can have the same external_id" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      attrs1 = %{
+        name: "cred one",
+        user_id: user1.id,
+        schema: "raw",
+        external_id: "shared-ext-id",
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      attrs2 = %{
+        name: "cred two",
+        user_id: user2.id,
+        schema: "raw",
+        external_id: "shared-ext-id",
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      assert {:ok, _} = Credentials.create_credential(attrs1)
+      assert {:ok, _} = Credentials.create_credential(attrs2)
+    end
+
+    test "nil external_id is always allowed (no uniqueness enforced)" do
+      user = insert(:user)
+
+      for name <- ["cred a", "cred b", "cred c"] do
+        attrs = %{
+          name: name,
+          user_id: user.id,
+          schema: "raw",
+          credential_bodies: [%{name: "main", body: %{}}]
+        }
+
+        assert {:ok, _} = Credentials.create_credential(attrs)
+      end
+    end
+
+    test "same external_id in different projects is allowed" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      project1 = insert(:project)
+      project2 = insert(:project)
+
+      attrs1 = %{
+        name: "cred one",
+        user_id: user1.id,
+        schema: "raw",
+        external_id: "same-ext-id",
+        project_credentials: [%{project_id: project1.id}],
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      attrs2 = %{
+        name: "cred two",
+        user_id: user2.id,
+        schema: "raw",
+        external_id: "same-ext-id",
+        project_credentials: [%{project_id: project2.id}],
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      assert {:ok, _} = Credentials.create_credential(attrs1)
+      assert {:ok, _} = Credentials.create_credential(attrs2)
+    end
+
+    test "cross-user duplicate external_id in the same project is rejected" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      project = insert(:project)
+
+      attrs1 = %{
+        name: "cred one",
+        user_id: user1.id,
+        schema: "raw",
+        external_id: "dup-ext-id",
+        project_credentials: [%{project_id: project.id}],
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      assert {:ok, _} = Credentials.create_credential(attrs1)
+
+      attrs2 = %{
+        name: "cred two",
+        user_id: user2.id,
+        schema: "raw",
+        external_id: "dup-ext-id",
+        project_credentials: [%{project_id: project.id}],
+        credential_bodies: [%{name: "main", body: %{}}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(attrs2)
+
+      assert "another credential with the same external ID already exists in this project" in errors_on(
+               changeset
+             ).external_id
+    end
+
+    test "removing a project association ignores the removed project for validation" do
+      user = insert(:user)
+      project1 = insert(:project)
+      project2 = insert(:project)
+
+      # Another credential with same external_id in project1
+      {:ok, _other} =
+        Credentials.create_credential(%{
+          name: "other cred",
+          user_id: insert(:user).id,
+          schema: "raw",
+          external_id: "remove-test",
+          project_credentials: [%{project_id: project1.id}],
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      # Our credential only in project2 (no conflict)
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "my cred",
+          user_id: user.id,
+          schema: "raw",
+          external_id: "remove-test",
+          project_credentials: [%{project_id: project2.id}],
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      credential = Repo.preload(credential, :project_credentials)
+
+      pc_to_keep =
+        Enum.find(
+          credential.project_credentials,
+          &(&1.project_id == project2.id)
+        )
+
+      # Add to project1 — should fail because of conflict
+      assert {:error, changeset} =
+               Credentials.update_credential(credential, %{
+                 "project_credentials" => [
+                   Map.from_struct(pc_to_keep),
+                   %{"project_id" => project1.id}
+                 ]
+               })
+
+      assert "another credential with the same external ID already exists in this project" in errors_on(
+               changeset
+             ).external_id
+
+      # Now remove from project1 via delete flag — should succeed
+      credential = Repo.preload(credential, :project_credentials, force: true)
+
+      pc_to_keep =
+        Enum.find(
+          credential.project_credentials,
+          &(&1.project_id == project2.id)
+        )
+
+      assert {:ok, _updated} =
+               Credentials.update_credential(credential, %{
+                 "project_credentials" => [
+                   Map.from_struct(pc_to_keep)
+                 ]
+               })
+    end
+
+    test "updating a credential keeps its own external_id without error" do
+      user = insert(:user)
+      project = insert(:project)
+
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "my cred",
+          user_id: user.id,
+          schema: "raw",
+          external_id: "keep-me",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "main", body: %{"a" => "1"}}]
+        })
+
+      credential = Repo.preload(credential, :project_credentials)
+
+      original_pc =
+        Enum.map(credential.project_credentials, &Map.from_struct/1)
+
+      assert {:ok, updated} =
+               Credentials.update_credential(credential, %{
+                 name: "my cred renamed",
+                 project_credentials: original_pc
+               })
+
+      assert updated.name == "my cred renamed"
+      assert updated.external_id == "keep-me"
+    end
+  end
+
   describe "credential propagation to sandbox descendants" do
     test "automatically propagates credential to all descendant sandboxes when added to parent project" do
       user = insert(:user)
