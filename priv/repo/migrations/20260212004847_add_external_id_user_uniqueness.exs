@@ -4,9 +4,8 @@ defmodule Lightning.Repo.Migrations.AddExternalIdUserUniqueness do
   def up do
     duplicates =
       repo().query!("""
-      SELECT c.id, c.external_id, c.name, u.email
+      SELECT c.id, c.external_id, c.name, c.user_id
       FROM credentials c
-      JOIN users u ON u.id = c.user_id
       WHERE c.id IN (
         SELECT id FROM (
           SELECT id,
@@ -23,7 +22,7 @@ defmodule Lightning.Repo.Migrations.AddExternalIdUserUniqueness do
       """)
 
     if duplicates.num_rows > 0 do
-      for [id, external_id, name, email] <- duplicates.rows do
+      for [id, external_id, name, user_id] <- duplicates.rows do
         repo().query!(
           "UPDATE credentials SET external_id = NULL WHERE id = $1",
           [id]
@@ -31,7 +30,7 @@ defmodule Lightning.Repo.Migrations.AddExternalIdUserUniqueness do
 
         IO.puts(
           "[migration] Cleared duplicate external_id #{inspect(external_id)} " <>
-            "from credential #{inspect(name)} (#{id}) owned by #{email}"
+            "from credential #{inspect(name)} (#{id}) owned by user #{user_id}"
         )
       end
     end
