@@ -34,7 +34,7 @@ Mix.install([:finch, :jason])
 defmodule LoadTest.Config do
   @moduledoc false
 
-  @scenarios ~w(happy_path ramp_up large_payload large_response mixed_methods slow_sink)
+  @scenarios ~w(happy_path ramp_up large_payload large_response mixed_methods slow_sink direct_sink)
 
   @defaults %{
     target: "http://localhost:4000",
@@ -46,6 +46,8 @@ defmodule LoadTest.Config do
     concurrency: 10,
     duration: 30,
     payload_size: 1024,
+    response_size: nil,
+    delay: nil,
     csv: nil
   }
 
@@ -62,9 +64,11 @@ defmodule LoadTest.Config do
     --scenario SCENARIO  Test scenario (default: happy_path)
     --concurrency N      Concurrent virtual users (default: 10)
     --duration SECS      Test duration in seconds (default: 30)
-    --payload-size BYTES Request body size (default: 1024)
-    --csv PATH           Optional CSV output file for results
-    --help               Show this help
+    --payload-size BYTES  Request body size (default: 1024)
+    --response-size BYTES Response body size override via query param (default: none)
+    --delay MS            Sink response delay via query param (default: none; slow_sink: 2000)
+    --csv PATH            Optional CSV output file for results
+    --help                Show this help
 
   Scenarios:
     happy_path      Sustained POST requests at --concurrency VUs for --duration seconds
@@ -72,9 +76,11 @@ defmodule LoadTest.Config do
     large_payload   POST with --payload-size bodies (default 1MB), check memory stays flat
     large_response  GET requests; mock sink returns large bodies. Reports memory
     mixed_methods   Rotate through GET, POST, PUT, PATCH, DELETE
-    slow_sink       Mock sink with delay; measures TTFB and overall latency
+    slow_sink       Sink with --delay ms (default 2000); measures TTFB and latency
+    direct_sink     Hit mock sink directly (no Lightning), baseline measurement
 
-  Note: The script must be run as a named node to connect to Lightning.
+  Note: Most scenarios require a named node (--sname) to connect to Lightning.
+  The direct_sink scenario does not require --sname or a running Lightning instance.
   The --cookie flag on the elixir command sets the Erlang cookie. The
   script also accepts --cookie in its own args as a convenience.
   """
@@ -145,6 +151,20 @@ defmodule LoadTest.Config do
     end
   end
 
+  defp parse_args(["--response-size", value | rest], acc) do
+    case Integer.parse(value) do
+      {n, ""} when n > 0 -> parse_args(rest, %{acc | response_size: n})
+      _ -> {:error, "invalid response-size: #{value}"}
+    end
+  end
+
+  defp parse_args(["--delay", value | rest], acc) do
+    case Integer.parse(value) do
+      {n, ""} when n >= 0 -> parse_args(rest, %{acc | delay: n})
+      _ -> {:error, "invalid delay: #{value}"}
+    end
+  end
+
   defp parse_args(["--csv", value | rest], acc),
     do: parse_args(rest, %{acc | csv: value})
 
@@ -164,12 +184,22 @@ defmodule LoadTest.Config do
     %{config | payload_size: 1_048_576}
   end
 
+  defp apply_defaults_for_scenario(
+         %{scenario: "large_response", response_size: nil} = config
+       ) do
+    %{config | response_size: 1_048_576}
+  end
+
+  defp apply_defaults_for_scenario(%{scenario: "slow_sink", delay: nil} = config) do
+    %{config | delay: 2_000}
+  end
+
   defp apply_defaults_for_scenario(config), do: config
 
   defp validate!(config) do
     config = apply_defaults_for_scenario(config)
 
-    if Node.alive?() do
+    if config.scenario == "direct_sink" or Node.alive?() do
       config
     else
       IO.puts(:stderr, """
@@ -413,9 +443,13 @@ defmodule LoadTest.Setup do
          ]) do
       nil ->
         IO.write("  Creating 'load-test' project... ")
+        user = ensure_user!(node)
 
         case rpc!(node, Lightning.Projects, :create_project, [
-               %{name: "load-test"},
+               %{
+                 name: "load-test",
+                 project_users: [%{user_id: user.id, role: :owner}]
+               },
                false
              ]) do
           {:ok, project} ->
@@ -434,6 +468,34 @@ defmodule LoadTest.Setup do
         )
 
         project
+    end
+  end
+
+  defp ensure_user!(node) do
+    email = "load-test@openfn.org"
+
+    case rpc!(node, Lightning.Repo, :get_by, [
+           Lightning.Accounts.User,
+           [email: email]
+         ]) do
+      nil ->
+        IO.write("  Creating load-test user... ")
+
+        {:ok, user} =
+          rpc!(node, Lightning.Accounts, :register_user, [
+            %{
+              first_name: "Load",
+              last_name: "Test",
+              email: email,
+              password: "load-test-password-12345"
+            }
+          ])
+
+        IO.puts("ok")
+        user
+
+      user ->
+        user
     end
   end
 
@@ -513,6 +575,12 @@ defmodule LoadTest.Runner do
     end
 
     Task.await(memory_task, :infinity)
+  end
+
+  def run_direct(scenario, channel_url, opts) do
+    duration_ms = opts[:duration] * 1_000
+    # No memory sampling — there is no Lightning BEAM to sample
+    run_steady(scenario, channel_url, opts, duration_ms)
   end
 
   # -- Steady-state scenarios (constant concurrency) --
@@ -610,6 +678,7 @@ defmodule LoadTest.Runner do
   defp pick_method("large_payload"), do: :post
   defp pick_method("large_response"), do: :get
   defp pick_method("slow_sink"), do: :post
+  defp pick_method("direct_sink"), do: :post
 
   defp pick_method("mixed_methods") do
     Enum.random(@methods)
@@ -702,15 +771,23 @@ end
 defmodule LoadTest.Report do
   @moduledoc false
 
-  def print(summary, opts) do
+  def print(summary, opts, command \\ nil) do
+    direct? = opts[:scenario] == "direct_sink"
+
+    scenario_label =
+      if direct?, do: "#{opts[:scenario]} (baseline)", else: opts[:scenario]
+
+    memory_section = format_memory_section(summary, direct?)
+
     IO.puts("""
 
     \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
      Channel Load Test Results
     \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-     Scenario:    #{opts[:scenario]}
+     Scenario:    #{scenario_label}
      Concurrency: #{opts[:concurrency]} VUs
      Duration:    #{summary.duration_s}s
+     Command:     #{command}
     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
      Requests:    #{summary.total_requests}
      Throughput:  #{summary.rps} req/s
@@ -725,11 +802,7 @@ defmodule LoadTest.Report do
        min:  #{format_us(summary.min)}
        max:  #{format_us(summary.max)}
     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-     Memory (Lightning BEAM):
-       start: #{format_bytes(summary.memory_start)}
-       end:   #{format_bytes(summary.memory_end)}
-       max:   #{format_bytes(summary.memory_max)}
-       delta: #{format_bytes_delta(summary.memory_delta)}
+    #{memory_section}\
     \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
     """)
   end
@@ -783,6 +856,20 @@ defmodule LoadTest.Report do
   end
 
   # -- Formatting helpers --
+
+  defp format_memory_section(_summary, true = _direct?) do
+    " Memory:     n/a (direct sink baseline)"
+  end
+
+  defp format_memory_section(summary, _direct?) do
+    """
+     Memory (Lightning BEAM):
+       start: #{format_bytes(summary.memory_start)}
+       end:   #{format_bytes(summary.memory_end)}
+       max:   #{format_bytes(summary.memory_max)}
+       delta: #{format_bytes_delta(summary.memory_delta)}\
+    """
+  end
 
   defp format_us(0), do: "n/a"
 
@@ -848,6 +935,9 @@ defmodule LoadTest do
   @moduledoc false
 
   def main(args) do
+    # Capture the raw argv before parsing so we can reproduce the invocation
+    command = reconstruct_command(args)
+
     opts = LoadTest.Config.parse(args)
 
     # Start the Finch HTTP client pool
@@ -865,15 +955,25 @@ defmodule LoadTest do
     # Pre-flight: verify mock sink is reachable
     LoadTest.Setup.preflight_sink!(opts)
 
-    # Connect to the Lightning BEAM
-    node = LoadTest.Setup.connect!(opts)
-    _ = node
+    direct? = opts[:scenario] == "direct_sink"
 
-    # Ensure test channel exists
-    channel = LoadTest.Setup.ensure_channel!(String.to_atom(opts[:node]), opts)
+    # Build the target URL
+    channel_url =
+      if direct? do
+        "#{opts[:sink]}/test"
+      else
+        # Connect to the Lightning BEAM
+        LoadTest.Setup.connect!(opts)
 
-    # Build the proxy URL
-    channel_url = "#{opts[:target]}/channels/#{channel.id}/test"
+        # Ensure test channel exists
+        channel =
+          LoadTest.Setup.ensure_channel!(String.to_atom(opts[:node]), opts)
+
+        "#{opts[:target]}/channels/#{channel.id}/test"
+      end
+
+    # Append query params (?response_size=N&delay=N) when configured
+    channel_url = append_query_params(channel_url, opts)
 
     # Print test banner
     IO.puts("""
@@ -883,17 +983,62 @@ defmodule LoadTest do
       Scenario:    #{opts[:scenario]}
       Concurrency: #{opts[:concurrency]} VUs
       Duration:    #{opts[:duration]}s
-      Payload:     #{opts[:payload_size]} bytes
+      Payload:     #{opts[:payload_size]} bytes#{format_response_size(opts[:response_size])}#{format_delay(opts[:delay])}
+      Command:     #{command}
     """)
 
     # Run the scenario
-    LoadTest.Runner.run(opts[:scenario], channel_url, opts)
+    if direct? do
+      LoadTest.Runner.run_direct(opts[:scenario], channel_url, opts)
+    else
+      LoadTest.Runner.run(opts[:scenario], channel_url, opts)
+    end
 
     # Collect and print results
     summary = LoadTest.Metrics.summary()
-    LoadTest.Report.print(summary, opts)
+    LoadTest.Report.print(summary, opts, command)
     LoadTest.Report.write_csv(summary, opts)
   end
+
+  defp reconstruct_command(args) do
+    script = "benchmarking/channels/load_test.exs"
+    argv = Enum.join(args, " ")
+
+    node_part =
+      case Node.self() do
+        :nonode@nohost -> ""
+        node -> " --sname #{node}"
+      end
+
+    cookie_part =
+      case Node.get_cookie() do
+        :nocookie -> ""
+        cookie -> " --cookie #{cookie}"
+      end
+
+    "elixir#{node_part}#{cookie_part} #{script} #{argv}"
+    |> String.trim()
+  end
+
+  defp append_query_params(url, opts) do
+    params =
+      [
+        if(opts[:response_size], do: "response_size=#{opts[:response_size]}"),
+        if(opts[:delay], do: "delay=#{opts[:delay]}")
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    case params do
+      [] -> url
+      parts -> "#{url}?#{Enum.join(parts, "&")}"
+    end
+  end
+
+  defp format_response_size(nil), do: ""
+  defp format_response_size(n), do: "\n      Response:    #{n} bytes"
+
+  defp format_delay(nil), do: ""
+  defp format_delay(n), do: "\n      Delay:       #{n}ms"
 end
 
 LoadTest.main(System.argv())

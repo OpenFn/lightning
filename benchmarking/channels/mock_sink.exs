@@ -10,7 +10,7 @@
 #
 # Examples:
 #   elixir benchmarking/channels/mock_sink.exs
-#   elixir benchmarking/channels/mock_sink.exs --port 9000 --mode delay --delay 2000
+#   elixir benchmarking/channels/mock_sink.exs --port 9000 --status 201
 #   elixir benchmarking/channels/mock_sink.exs --mode auth
 #   elixir benchmarking/channels/mock_sink.exs --mode mixed
 
@@ -25,7 +25,6 @@ defmodule MockSink.Config do
     port: 4001,
     mode: "fixed",
     status: 200,
-    delay: nil,
     body_size: 256
   }
 
@@ -37,15 +36,18 @@ defmodule MockSink.Config do
   Options:
     --port PORT          Listen port (default: 4001)
     --mode MODE          Response mode (default: fixed)
-                         Modes: fixed, delay, timeout, auth, mixed
+                         Modes: fixed, timeout, auth, mixed
     --status CODE        Response status code for fixed mode (default: 200)
-    --delay MS           Response delay in ms for delay mode (default: 1000)
     --body-size BYTES    Response body size in bytes (default: 256)
     --help               Show this help
 
+  Query parameters (per-request overrides):
+    ?response_size=N   Override --body-size for this request (bytes)
+    ?delay=N           Add a response delay for this request (ms)
+    ?status=N          Override --status for this request (100-599)
+
   Modes:
-    fixed      Returns --status with optional --delay and --body-size.
-    delay      Returns 200 after --delay ms (default 1000ms).
+    fixed      Returns --status with --body-size body.
     timeout    Accepts the connection but never responds.
     auth       Checks Authorization header. 401 if missing, 403 if invalid,
                200 if valid. Expected: "Bearer test-api-key".
@@ -64,9 +66,7 @@ defmodule MockSink.Config do
         System.halt(1)
 
       config ->
-        config
-        |> apply_mode_defaults()
-        |> validate!()
+        validate!(config)
     end
   end
 
@@ -82,11 +82,10 @@ defmodule MockSink.Config do
   end
 
   defp parse_args(["--mode", value | rest], acc) do
-    if value in ~w(fixed delay timeout auth mixed) do
+    if value in ~w(fixed timeout auth mixed) do
       parse_args(rest, %{acc | mode: value})
     else
-      {:error,
-       "unknown mode: #{value}. Expected: fixed, delay, timeout, auth, mixed"}
+      {:error, "unknown mode: #{value}. Expected: fixed, timeout, auth, mixed"}
     end
   end
 
@@ -100,13 +99,6 @@ defmodule MockSink.Config do
     end
   end
 
-  defp parse_args(["--delay", value | rest], acc) do
-    case Integer.parse(value) do
-      {ms, ""} when ms >= 0 -> parse_args(rest, %{acc | delay: ms})
-      _ -> {:error, "invalid delay: #{value}"}
-    end
-  end
-
   defp parse_args(["--body-size", value | rest], acc) do
     case Integer.parse(value) do
       {bytes, ""} when bytes >= 0 -> parse_args(rest, %{acc | body_size: bytes})
@@ -117,21 +109,6 @@ defmodule MockSink.Config do
   defp parse_args([unknown | _rest], _acc) do
     {:error, "unknown option: #{unknown}"}
   end
-
-  # Apply sensible defaults based on mode when explicit values were not given.
-  defp apply_mode_defaults(%{mode: "delay", delay: nil} = config) do
-    %{config | delay: 1000}
-  end
-
-  defp apply_mode_defaults(%{mode: "fixed", delay: nil} = config) do
-    %{config | delay: 0}
-  end
-
-  defp apply_mode_defaults(%{delay: nil} = config) do
-    %{config | delay: 0}
-  end
-
-  defp apply_mode_defaults(config), do: config
 
   defp validate!(config) when is_map(config), do: config
 end
@@ -224,6 +201,7 @@ defmodule MockSink.Router do
   # ------------------------------------------------------------------
   match _ do
     config = conn.private[:mock_config]
+    config = apply_query_overrides(conn, config)
     start = System.monotonic_time(:millisecond)
 
     {status, body, content_type} = handle_mode(conn, config)
@@ -243,18 +221,38 @@ defmodule MockSink.Router do
   end
 
   # ------------------------------------------------------------------
+  # Query param overrides
+  # ------------------------------------------------------------------
+  defp apply_query_overrides(conn, config) do
+    conn = Plug.Conn.fetch_query_params(conn)
+
+    config
+    |> override_param(conn, "response_size", :body_size)
+    |> override_param(conn, "delay", :delay)
+    |> override_param(conn, "status", :status)
+  end
+
+  defp override_param(config, conn, param, key) do
+    case conn.query_params[param] do
+      nil ->
+        config
+
+      value ->
+        case Integer.parse(value) do
+          {n, ""} when n >= 0 -> Map.put(config, key, n)
+          _ -> config
+        end
+    end
+  end
+
+  # ------------------------------------------------------------------
   # Mode handlers
   # ------------------------------------------------------------------
   defp handle_mode(_conn, %{mode: "fixed"} = config) do
-    if config.delay > 0, do: Process.sleep(config.delay)
+    delay = Map.get(config, :delay, 0)
+    if delay > 0, do: Process.sleep(delay)
     body = MockSink.Body.generate(config.body_size)
     {config.status, body, content_type(config.body_size)}
-  end
-
-  defp handle_mode(_conn, %{mode: "delay"} = config) do
-    Process.sleep(config.delay)
-    body = MockSink.Body.generate(config.body_size)
-    {200, body, content_type(config.body_size)}
   end
 
   defp handle_mode(_conn, %{mode: "timeout"}) do
@@ -325,7 +323,6 @@ defmodule MockSink do
       MockSink starting on port #{config.port}
       Mode:      #{config.mode}
       Status:    #{config.status}
-      Delay:     #{config.delay}ms
       Body size: #{config.body_size} bytes
     ===================================================
     """)
