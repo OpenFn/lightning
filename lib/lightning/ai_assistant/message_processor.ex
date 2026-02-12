@@ -85,7 +85,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     handle_processing_result(message, result)
   end
 
-  @doc false
   @spec update_session_with_job_context(
           AiAssistant.ChatSession.t(),
           ChatMessage.t()
@@ -112,22 +111,20 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     end
   end
 
-  @doc false
   @spec dispatch_message_processing(
           AiAssistant.ChatSession.t(),
           ChatMessage.t()
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp dispatch_message_processing(session, message) do
-    if is_job_chat?(session, message) do
+    if job_chat?(session, message) do
       process_job_message(session, message)
     else
       process_workflow_message(session, message)
     end
   end
 
-  @doc false
-  @spec is_job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
-  defp is_job_chat?(session, message) do
+  @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
+  defp job_chat?(session, message) do
     message_meta = message.meta || %{}
 
     # session.job_id for old job session. message.job_id for newer ones
@@ -137,7 +134,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       Map.has_key?(message_meta, "unsaved_job")
   end
 
-  @doc false
   @spec handle_processing_result(
           ChatMessage.t(),
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
