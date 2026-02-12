@@ -1914,6 +1914,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           ]
         )
 
+      # Create a sandbox where the editor has no membership at all
+      no_membership_sandbox =
+        insert(:project,
+          name: "no-membership-sandbox",
+          parent: parent,
+          project_users: []
+        )
+
       conn = log_in_user(conn, editor_user)
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
@@ -1930,6 +1938,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       # Viewer-only sandbox should NOT be in targets
       refute viewer_sandbox.id in target_ids
+
+      # No-membership sandbox should NOT be in targets
+      refute no_membership_sandbox.id in target_ids
     end
 
     test "checks for divergence when opening merge modal with default target",
