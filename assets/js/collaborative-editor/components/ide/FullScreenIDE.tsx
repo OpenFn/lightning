@@ -124,8 +124,7 @@ export function FullScreenIDE({
 }: FullScreenIDEProps) {
   const { params, updateSearchParams } = useURLState();
   const jobIdFromURL = params.job ?? null;
-  // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
-  const runIdFromURL = params.run ?? params.a ?? null;
+  const runIdFromURL = params.run ?? null;
   const stepIdFromURL = params.step ?? null;
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
