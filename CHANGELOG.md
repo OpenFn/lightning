@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Editors can now provision and merge sandboxes; merge checks editor+ role on
+  the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
+
 ### Fixed
 
 ## [2.15.14-pre] - 2026-02-11
