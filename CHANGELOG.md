@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- unable to clear runs from history & url params rewrite
+  [#4397](https://github.com/OpenFn/lightning/issues/4397)
+
 ## [2.15.14-pre] - 2026-02-11
 
 ### Added
