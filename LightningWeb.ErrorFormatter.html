@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.14-pre">
+    <meta name="project" content="Lightning v2.15.14">
 
 
-    <title>LightningWeb.ErrorFormatter — Lightning v2.15.14-pre</title>
+    <title>LightningWeb.ErrorFormatter — Lightning v2.15.14</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B7B23255.js"></script>
+    <script defer src="dist/sidebar_items-DA4F9615.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.14-pre
+          v2.15.14
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.ErrorFormatter</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.14-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.14)</small>
 
     </h1>
 
@@ -111,7 +111,7 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Formats structured domain errors into user-friendly, localized messages.</p><p>Transforms error tuples from domain operations into displayable strings using Gettext.</p><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ErrorFormatter</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="9081694551-1">(</span><span class="p" data-group-id="9081694551-2">{</span><span class="ss">:reauthorization_required</span><span class="p">,</span><span class="w"> </span><span class="n">credential</span><span class="p" data-group-id="9081694551-2">}</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p" data-group-id="9081694551-1">)</span></code></pre><h2 id="module-extension" class="section-heading"><a href="#module-extension" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Extension</span></h2><p>Add new error types by defining additional <code class="inline">format/1</code> clauses and Gettext entries.
+<p>Formats structured domain errors into user-friendly, localized messages.</p><p>Transforms error tuples from domain operations into displayable strings using Gettext.</p><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ErrorFormatter</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="2487543411-1">(</span><span class="p" data-group-id="2487543411-2">{</span><span class="ss">:reauthorization_required</span><span class="p">,</span><span class="w"> </span><span class="n">credential</span><span class="p" data-group-id="2487543411-2">}</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p" data-group-id="2487543411-1">)</span></code></pre><h2 id="module-extension" class="section-heading"><a href="#module-extension" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Extension</span></h2><p>Add new error types by defining additional <code class="inline">format/1</code> clauses and Gettext entries.
 See <a href="https://hexdocs.pm/gettext/Gettext.html">https://hexdocs.pm/gettext/Gettext.html</a> for Gettext documentation.</p>
     </section>
 

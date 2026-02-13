@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.14-pre">
+    <meta name="project" content="Lightning v2.15.14">
 
 
-    <title>LightningWeb.Components.Viewers — Lightning v2.15.14-pre</title>
+    <title>LightningWeb.Components.Viewers — Lightning v2.15.14</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B7B23255.js"></script>
+    <script defer src="dist/sidebar_items-DA4F9615.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.14-pre
+          v2.15.14
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Components.Viewers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.14-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.14)</small>
 
     </h1>
 
@@ -259,8 +259,8 @@ class will help with scrolling.</p></section>
 <p>Renders out a log line stream</p><p>Internally it uses the <code class="inline">LogLineHighlight</code> hook to highlight the log line
 with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading"><a href="#log_viewer/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="7243784558-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="7243784558-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="7243784558-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="7243784558-2">}</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="0791516536-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="0791516536-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="0791516536-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="0791516536-2">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading"><a href="#log_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">logs_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">selected_step_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) - for checking log filter preference. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
