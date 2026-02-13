@@ -337,7 +337,7 @@ export function FullScreenIDE({
       return;
     }
 
-    const runId = params.run ?? params.a ?? null;
+    const runId = params.run ?? null;
     if (!runId) {
       return;
     }
