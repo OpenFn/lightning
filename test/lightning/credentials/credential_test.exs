@@ -180,6 +180,36 @@ defmodule Lightning.Credentials.CredentialTest do
       assert get_change(changeset, :transfer_status) == :pending
     end
 
+    test "normalizes empty string external_id to nil" do
+      user = insert(:user)
+
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          user_id: user.id,
+          schema: "raw",
+          external_id: ""
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :external_id) == nil
+    end
+
+    test "preserves non-empty external_id" do
+      user = insert(:user)
+
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          user_id: user.id,
+          schema: "raw",
+          external_id: "my-ext-id"
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :external_id) == "my-ext-id"
+    end
+
     test "casts project_credentials association" do
       user = insert(:user)
       project = insert(:project)
