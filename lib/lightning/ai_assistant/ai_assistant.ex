@@ -785,6 +785,23 @@ defmodule Lightning.AiAssistant do
     |> Map.put("chat_session_id", session.id)
     |> Map.put("code", code)
     |> maybe_put_job_id_from_session(session)
+    |> maybe_put_unsaved_job_meta(session)
+  end
+
+  defp maybe_put_unsaved_job_meta(attrs, session) do
+    is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
+    unsaved_job = get_in(session.meta || %{}, ["unsaved_job"])
+
+    if is_assistant && unsaved_job && unsaved_job["id"] do
+      existing_meta = Map.get(attrs, "meta", %{})
+
+      updated_meta =
+        Map.put(existing_meta, "from_unsaved_job", unsaved_job["id"])
+
+      Map.put(attrs, "meta", updated_meta)
+    else
+      attrs
+    end
   end
 
   defp update_session_meta(session, nil),
