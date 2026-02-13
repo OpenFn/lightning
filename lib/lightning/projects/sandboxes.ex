@@ -23,7 +23,8 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Authorization
 
-  * **Provisioning**: Requires `:owner` or `:admin` role on the parent project or superuser
+  * **Provisioning**: Requires `:editor`, `:admin`, or `:owner` role on the parent project, or superuser
+  * **Merge**: Requires `:editor`, `:admin`, or `:owner` role on the target project, or superuser
   * **Updates/Deletion**: Requires `:owner` or `:admin` role on the sandbox itself,
                           or `:owner` or `:admin` on the root project, or superuser
 
@@ -87,7 +88,7 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `parent` - Project to clone from
-  * `actor` - User creating the sandbox (needs `:owner` or `:admin` role on parent)
+  * `actor` - User creating the sandbox (needs `:editor`, `:admin`, or `:owner` role on parent)
   * `attrs` - Creation attributes (see `t:provision_attrs/0`)
 
   ## Returns

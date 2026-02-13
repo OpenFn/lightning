@@ -179,11 +179,18 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "authorization" do
-    test "rejects non-admin/editor" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:editor)
+    test "rejects viewer" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:viewer)
 
       assert {:error, :unauthorized} =
-               Sandboxes.provision(parent, actor, %{name: "SB"})
+               Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+    end
+
+    test "allows editor" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:editor)
+
+      assert {:ok, %Project{}} =
+               Sandboxes.provision(parent, actor, %{name: "sb-editor"})
     end
 
     test "allows admin/owner" do
