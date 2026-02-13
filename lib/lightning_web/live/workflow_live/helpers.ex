@@ -326,12 +326,15 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   @param_mappings %{
     direct: %{
-      "a" => "run"
+      "a" => "run",
+      "run" => "a"
     },
     mode_to_panel: %{
       "expand" => "editor",
       "workflow_input" => "run",
-      "settings" => "settings"
+      "settings" => "settings",
+      "editor" => "expand",
+      "run" => "workflow_input"
     },
     preserved: ["v", "method", "w-chat", "j-chat", "code"],
     collaborative_only: ["panel"]
@@ -340,9 +343,14 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   def legacy_editor_url(params, live_action) do
     base_url = legacy_base_url(params, live_action)
 
-    query_params = Map.drop(params, ["id", "project_id"])
+    final_params =
+      params
+      |> Map.drop(["id", "project_id"])
+      |> Enum.reduce(%{}, fn {key, value}, acc ->
+        convert_param(key, value, acc, params)
+      end)
 
-    build_url_with_params(base_url, query_params)
+    build_url_with_params(base_url, final_params)
   end
 
   defp legacy_base_url(%{"project_id" => project_id}, :new) do
@@ -428,15 +436,38 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     Map.put(acc, @param_mappings.direct["a"], value)
   end
 
+  defp convert_param("run", value, acc, _assigns) do
+    Map.put(acc, @param_mappings.direct["run"], value)
+  end
+
   defp convert_param("s", value, acc, assigns) do
     selection_type = determine_selection_type(value, assigns)
     Map.put(acc, selection_type, value)
+  end
+
+  defp convert_param("job", value, acc, _assigns) do
+    Map.put(acc, "s", value)
+  end
+
+  defp convert_param("trigger", value, acc, _assigns) do
+    Map.put(acc, "s", value)
+  end
+
+  defp convert_param("edge", value, acc, _assigns) do
+    Map.put(acc, "s", value)
   end
 
   defp convert_param("m", value, acc, _assigns) do
     case Map.get(@param_mappings.mode_to_panel, value) do
       nil -> acc
       panel -> Map.put(acc, "panel", panel)
+    end
+  end
+
+  defp convert_param("panel", value, acc, _assigns) do
+    case Map.get(@param_mappings.mode_to_panel, value) do
+      nil -> acc
+      panel -> Map.put(acc, "m", panel)
     end
   end
 
