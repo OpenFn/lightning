@@ -921,7 +921,7 @@ defmodule LightningWeb.AiAssistantChannel do
       {:ok, job} ->
         {:ok, job}
 
-      {:error, :not_found} ->
+      {:error, _} ->
         {:error, :job_not_found}
     end
   end
