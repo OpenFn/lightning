@@ -14,6 +14,9 @@
 #   --duration SECS    Per-scenario duration (default: 30)
 #   --concurrency N    Virtual users (default: 20)
 #
+# Environment:
+#   RESULTS_DIR        Output directory (default: /tmp/channel-bench-results)
+#
 # Examples:
 #   benchmarking/channels/run_all.sh
 #   benchmarking/channels/run_all.sh --duration 60 --concurrency 50
@@ -47,8 +50,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ── Log setup ─────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RESULTS_DIR="$SCRIPT_DIR/results"
+RESULTS_DIR="${RESULTS_DIR:-/tmp/channel-bench-results}"
 mkdir -p "$RESULTS_DIR"
 
 TIMESTAMP="$(date +%Y.%m.%d-%H.%M)"

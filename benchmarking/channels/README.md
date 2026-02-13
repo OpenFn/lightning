@@ -34,6 +34,30 @@ The load test will automatically create a "load-test" project and channel
 pointing at the mock sink, then drive traffic through the proxy and report
 results.
 
+## File Structure
+
+```
+benchmarking/channels/
+├── load_test.exs              # Entry point (~20 lines): Mix.install, loads modules, calls main()
+├── mock_sink.exs              # Standalone mock HTTP sink server
+├── run_all.sh                 # Runs all 7 scenarios in sequence
+├── lib/
+│   ├── load_test/
+│   │   ├── config.exs         # LoadTest.Config — CLI parsing and validation
+│   │   ├── metrics.exs        # LoadTest.Metrics — Agent-based latency/error collector
+│   │   ├── setup.exs          # LoadTest.Setup — BEAM connection, channel creation, telemetry deploy
+│   │   ├── runner.exs         # LoadTest.Runner — Scenario execution (steady, ramp-up, direct)
+│   │   ├── report.exs         # LoadTest.Report — Results formatting and CSV output
+│   │   └── main.exs           # LoadTest — Orchestrator (ties everything together)
+│   └── telemetry_collector.exs # Bench.TelemetryCollector — Deployed to Lightning for server-side timing
+└── results/
+    └── .gitignore
+```
+
+The entry point (`load_test.exs`) installs deps via `Mix.install`, loads all
+modules via `Code.require_file` in dependency order, then calls
+`LoadTest.main(System.argv())`.
+
 ## Mock Sink (`mock_sink.exs`)
 
 A standalone Bandit HTTP server that accepts all requests and responds according
@@ -110,7 +134,8 @@ curl "http://localhost:4001/test?delay=2000"
 ## Load Test (`load_test.exs`)
 
 Drives HTTP traffic through the channel proxy, collects metrics, and reports
-latency percentiles, throughput, error rates, and BEAM memory usage.
+latency percentiles, throughput, error rates, BEAM memory usage, and server-side
+telemetry timing breakdown.
 
 ```bash
 elixir --sname loadtest --cookie COOKIE \
@@ -118,7 +143,7 @@ elixir --sname loadtest --cookie COOKIE \
 ```
 
 **Important:** Must be run as a named Erlang node (`--sname`) so it can connect
-to the Lightning BEAM for channel setup and memory sampling.
+to the Lightning BEAM for channel setup, memory sampling, and telemetry.
 
 ### Options
 
@@ -226,7 +251,7 @@ benchmarking/channels/run_all.sh
 benchmarking/channels/run_all.sh --sname mynode --cookie mysecret
 ```
 
-Results are written to `benchmarking/channels/results/`:
+Results are written to `/tmp/channel-bench-results/`:
 
 - `YYYY.MM.DD-HH.MM.log` — full console output
 - `YYYY.MM.DD-HH.MM.csv` — one row per scenario for analysis
@@ -259,6 +284,37 @@ The load test prints a summary like:
    delta:  +2.7 MB
 ═══════════════════════════════════════
 ```
+
+### Telemetry Timing Breakdown
+
+When running through Lightning (not `direct_sink`), the load test automatically
+deploys a telemetry collector onto the Lightning BEAM node. After the test, it
+prints a server-side timing breakdown:
+
+```
+───────────────────────────────────────
+ Channel Proxy Timing (server-side):
+     Total request      p50=12.3ms, p95=45.7ms, p99=89.2ms, n=15432
+       DB lookup        p50=0.2ms,  p95=0.5ms,  p99=1.1ms,  n=15432
+       Upstream proxy   p50=11.8ms, p95=44.9ms, p99=87.5ms, n=15432
+```
+
+This tells you exactly where time is spent inside the channel proxy:
+
+| Metric             | What it measures                                                     |
+| ------------------ | -------------------------------------------------------------------- |
+| **Total request**  | Entire `ChannelProxyPlug.call/2` — DB lookup + proxy + plug overhead |
+| **DB lookup**      | `Ecto.UUID.cast` + `Repo.get` to find the channel                    |
+| **Upstream proxy** | `Weir.proxy` call — HTTP to the sink + response streaming back       |
+| **Plug overhead**  | `Total request` - `DB lookup` - `Upstream proxy` = plug/header work  |
+
+If `Total request` is much larger than `Upstream proxy`, the overhead is in the
+Plug pipeline or DB lookup. If `Upstream proxy` dominates, the time is in the
+network hop to the sink.
+
+The telemetry collector uses ETS with `:public` access and `write_concurrency`
+for minimal overhead — handlers run in the connection processes, not through a
+GenServer bottleneck.
 
 ### What "good" looks like
 
@@ -301,4 +357,5 @@ elixir --sname lt --cookie bench \
 ```
 
 The difference tells you exactly what the proxy pipeline (plugs, DB lookup,
-Weir, second HTTP hop) costs per request.
+Weir, second HTTP hop) costs per request. The telemetry breakdown further
+decomposes that cost into DB lookup vs upstream proxy vs plug overhead.

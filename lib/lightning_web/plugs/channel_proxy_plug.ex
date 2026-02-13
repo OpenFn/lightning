@@ -11,16 +11,28 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @impl true
   def call(%Plug.Conn{path_info: ["channels", channel_id | rest]} = conn, _opts) do
-    case fetch_channel(channel_id) do
+    metadata = %{channel_id: channel_id}
+
+    :telemetry.span(
+      [:lightning, :channel_proxy, :request],
+      metadata,
+      fn ->
+        result = do_proxy(conn, channel_id, rest)
+        {result, metadata}
+      end
+    )
+  end
+
+  def call(conn, _opts), do: conn
+
+  defp do_proxy(conn, channel_id, rest) do
+    case fetch_channel_with_telemetry(channel_id) do
       {:ok, channel} ->
         forward_path = build_forward_path(rest)
 
         conn
         |> put_proxy_headers()
-        |> Weir.proxy(
-          upstream: channel.sink_url,
-          path: forward_path
-        )
+        |> proxy_upstream(channel, forward_path)
         |> halt()
 
       :not_found ->
@@ -28,7 +40,40 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  def call(conn, _opts), do: conn
+  defp fetch_channel_with_telemetry(channel_id) do
+    metadata = %{channel_id: channel_id}
+
+    :telemetry.span(
+      [:lightning, :channel_proxy, :fetch_channel],
+      metadata,
+      fn ->
+        result = fetch_channel(channel_id)
+        {result, metadata}
+      end
+    )
+  end
+
+  defp proxy_upstream(conn, channel, forward_path) do
+    metadata = %{
+      channel_id: channel.id,
+      sink_url: channel.sink_url,
+      path: forward_path
+    }
+
+    :telemetry.span(
+      [:lightning, :channel_proxy, :upstream],
+      metadata,
+      fn ->
+        result =
+          Weir.proxy(conn,
+            upstream: channel.sink_url,
+            path: forward_path
+          )
+
+        {result, metadata}
+      end
+    )
+  end
 
   defp fetch_channel(id) do
     with {:ok, uuid} <- Ecto.UUID.cast(id),
