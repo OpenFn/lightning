@@ -62,7 +62,7 @@ defmodule Lightning.Projects.Provisioner do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
     Repo.transact(fn ->
-      with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
+      with :ok <- VersionControlUsageLimiter.limit_api_provisioning(project.id),
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-

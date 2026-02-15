@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Use distinct `api_provisioning` action type in provisioner to return a
+  context-appropriate error message for CLI deploy vs GitHub sync
+  [#4426](https://github.com/OpenFn/lightning/issues/4426)
+
 ### Fixed
 
 ## [2.15.14] - 2026-02-13

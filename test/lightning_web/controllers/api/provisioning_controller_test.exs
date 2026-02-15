@@ -749,7 +749,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       error_text = "some error message"
 
       Lightning.Extensions.MockUsageLimiter
-      |> Mox.expect(:limit_action, fn %{type: :github_sync},
+      |> Mox.expect(:limit_action, fn %{type: :api_provisioning},
                                       %{project_id: ^project_id} ->
         {:error, :disabled, %Lightning.Extensions.Message{text: error_text}}
       end)
