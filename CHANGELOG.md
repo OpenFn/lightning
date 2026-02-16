@@ -62,6 +62,7 @@ and this project adheres to
 
 ### Fixed
 
+<<<<<<< HEAD
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
@@ -501,6 +502,12 @@ and this project adheres to
   [#4437](https://github.com/OpenFn/lightning/issues/4437)
 - Remove Keychain from the credential type picker grid
   [#4453](https://github.com/OpenFn/lightning/issues/4453)
+=======
+- Fixed issue with `Sandboxes` menu item not visible for users without
+  experimental features enabled
+  [#4367](https://github.com/OpenFn/lightning/issues/4367)
+
+>>>>>>> 89968aaece (remove condition to check for expereimental feature enable (#4391))
 
 ## [2.15.14] - 2026-02-13
 
@@ -530,8 +537,6 @@ and this project adheres to
   [#4383](https://github.com/OpenFn/lightning/issues/4383)
 
 ## [2.15.13] - 2026-02-06
-
-## [2.15.13-pre1] - 2026-02-05
 
 ### Fixed
 
