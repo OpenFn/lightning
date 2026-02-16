@@ -470,8 +470,10 @@ export const useWorkflowActions = () => {
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
-              title: 'Unable to save workflow',
-              description: error.message,
+              title: "Validation issues. can't save workflow",
+              description: (
+                <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
+              ),
             });
           } else {
             notifications.alert({
