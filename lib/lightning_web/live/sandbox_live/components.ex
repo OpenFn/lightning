@@ -319,7 +319,7 @@ defmodule LightningWeb.SandboxLive.Components do
                       @merge_form[:target_id].value
                     )}
                   </strong>
-                  since this sandbox was created. Merging may result in lost changes:
+                  since this sandbox was created. Merging may result in lost changes to:
                 </p>
                 <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
                   <li :for={workflow_name <- @diverged_workflows}>
