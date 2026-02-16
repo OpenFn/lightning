@@ -33,8 +33,7 @@ defmodule LightningWeb.AiAssistantChannel do
          {:parse_topic, {:ok, session_type, session_id}} <-
            {:parse_topic, parse_topic(rest)},
          {:session, {:ok, session}} <-
-           {:session,
-            load_or_create_session(session_type, session_id, params, user)},
+           {:session, load_or_create_session(session_id, params, user)},
          :ok <- validate_session_type(session, session_type),
          :ok <- authorize_session_access(session, user) do
       Lightning.subscribe("ai_session:#{session.id}")
@@ -126,13 +125,13 @@ defmodule LightningWeb.AiAssistantChannel do
   @impl true
   def handle_in("update_context", params, socket) do
     session = socket.assigns.session
-    session_type = socket.assigns.session_type
 
     cond do
-      session_type == "job_code" ->
+      params["job_adaptor"] != nil or params["job_body"] != nil or
+          params["job_name"] != nil ->
         update_job_code_context(session, params, socket)
 
-      session_type == "workflow_template" ->
+      params["workflow_id"] != nil ->
         update_workflow_template_context(session, params, socket)
 
       true ->
@@ -352,57 +351,15 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp load_or_create_session("job_code", session_id, params, user) do
+  defp load_or_create_session(session_id, %{"job_id" => job_id} = params, user)
+       when not is_nil(job_id) do
     case session_id do
-      "new" ->
-        with {:job_id, job_id} when not is_nil(job_id) <-
-               {:job_id, params["job_id"]},
-             {:content, content} when not is_nil(content) <-
-               {:content, params["content"]} do
-          case Jobs.get_job(job_id) do
-            {:ok, job} ->
-              opts = extract_session_options("job_code", params)
-              AiAssistant.create_session(job, user, content, opts)
-
-            {:error, :not_found} ->
-              create_session_with_unsaved_job(params, user, content)
-          end
-        else
-          {:job_id, nil} -> {:error, "job_id required"}
-          {:content, nil} -> {:error, "initial content required"}
-        end
-
-      _existing_id ->
-        case AiAssistant.get_session(session_id) do
-          {:ok, session} ->
-            session =
-              if params["follow_run_id"] do
-                updated_meta =
-                  Map.put(
-                    session.meta || %{},
-                    "follow_run_id",
-                    params["follow_run_id"]
-                  )
-
-                session
-                |> Ecto.Changeset.change(%{meta: updated_meta})
-                |> Lightning.Repo.update!()
-              else
-                session
-              end
-
-            enriched_session =
-              AiAssistant.enrich_session_with_job_context(session)
-
-            {:ok, enriched_session}
-
-          {:error, :not_found} ->
-            {:error, "session not found"}
-        end
+      "new" -> create_new_job_session(params, user)
+      _existing_id -> load_existing_job_session(session_id, params)
     end
   end
 
-  defp load_or_create_session("workflow_template", session_id, params, user) do
+  defp load_or_create_session(session_id, params, user) do
     case session_id do
       "new" ->
         with {:project_id, project_id} when not is_nil(project_id) <-
@@ -438,6 +395,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
           AiAssistant.create_workflow_session(
             project,
+            nil,
             workflow,
             user,
             content,
@@ -456,6 +414,68 @@ defmodule LightningWeb.AiAssistantChannel do
         end
     end
   end
+
+  defp create_new_job_session(params, user) do
+    with {:job_id, job_id} when not is_nil(job_id) <-
+           {:job_id, params["job_id"]},
+         {:project_id, project_id} when not is_nil(project_id) <-
+           {:project_id, params["project_id"]},
+         {:project, project} when not is_nil(project) <-
+           {:project, Projects.get_project(project_id)},
+         {:content, content} when not is_nil(content) <-
+           {:content, params["content"]} do
+      workflow =
+        if params["workflow_id"],
+          do: Workflows.get_workflow(params["workflow_id"]),
+          else: nil
+
+      case Jobs.get_job(job_id) do
+        {:ok, job} ->
+          opts = extract_session_options("job_code", params)
+
+          AiAssistant.create_workflow_session(
+            project,
+            job,
+            workflow,
+            user,
+            content,
+            opts
+          )
+
+        {:error, :not_found} ->
+          create_session_with_unsaved_job(params, user, content)
+      end
+    else
+      {:job_id, nil} -> {:error, "job_id required"}
+      {:project_id, nil} -> {:error, "project_id required"}
+      {:project, nil} -> {:error, "project not found"}
+      {:content, nil} -> {:error, "initial content required"}
+    end
+  end
+
+  defp load_existing_job_session(session_id, params) do
+    case AiAssistant.get_session(session_id) do
+      {:ok, session} ->
+        session = maybe_update_follow_run_id(session, params)
+        enriched_session = AiAssistant.enrich_session_with_job_context(session)
+        {:ok, enriched_session}
+
+      {:error, :not_found} ->
+        {:error, "session not found"}
+    end
+  end
+
+  defp maybe_update_follow_run_id(session, %{"follow_run_id" => follow_run_id})
+       when not is_nil(follow_run_id) do
+    updated_meta =
+      Map.put(session.meta || %{}, "follow_run_id", follow_run_id)
+
+    session
+    |> Ecto.Changeset.change(%{meta: updated_meta})
+    |> Lightning.Repo.update!()
+  end
+
+  defp maybe_update_follow_run_id(session, _params), do: session
 
   defp create_session_with_unsaved_job(params, user, content) do
     job_id = params["job_id"]
@@ -595,16 +615,20 @@ defmodule LightningWeb.AiAssistantChannel do
     opts
   end
 
-  defp extract_message_options("job_code", params) do
+  defp extract_message_options(%{"job_id" => _job_id} = params) do
     [meta: %{"message_options" => build_message_options(params)}]
   end
 
-  defp extract_message_options("workflow_template", params) do
-    if code = params["code"] do
+  defp extract_message_options(%{"code" => code} = _params) do
+    if code do
       [code: code]
     else
       []
     end
+  end
+
+  defp extract_message_options(_params) do
+    []
   end
 
   defp build_message_options(params) do
@@ -629,7 +653,8 @@ defmodule LightningWeb.AiAssistantChannel do
       status: to_string(message.status),
       inserted_at: message.inserted_at,
       user_id: message.user_id,
-      user: format_user(message.user)
+      user: format_user(message.user),
+      job_id: message.job_id
     }
   end
 
@@ -801,27 +826,49 @@ defmodule LightningWeb.AiAssistantChannel do
          params,
          socket
        ) do
-    message_attrs = build_message_attrs(user, content, limit_result)
-    opts = extract_message_options(socket.assigns.session_type, params)
+    case may_get_job(params["job_id"]) do
+      {:ok, job} ->
+        message_attrs = build_message_attrs(user, job, content, limit_result)
+        opts = extract_message_options(params)
 
-    case AiAssistant.save_message(session, message_attrs, opts) do
-      {:ok, updated_session} ->
-        message = find_user_message(updated_session.messages, content)
+        case AiAssistant.save_message(session, message_attrs, opts) do
+          {:ok, updated_session} ->
+            message = find_user_message(updated_session.messages, content)
 
-        # Broadcast the user message to all subscribers so other users see it
-        broadcast(socket, "user_message", %{message: format_message(message)})
+            # Broadcast the user message to all subscribers so other users see it
+            broadcast(socket, "user_message", %{message: format_message(message)})
 
-        response = build_message_response(message, limit_result)
-        {:reply, {:ok, response}, socket}
+            response = build_message_response(message, limit_result)
+            {:reply, {:ok, response}, socket}
 
-      {:error, changeset} ->
-        errors = format_changeset_errors(changeset)
-        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+          {:error, changeset} ->
+            errors = format_changeset_errors(changeset)
+
+            {:reply, {:error, %{type: "validation_error", errors: errors}},
+             socket}
+        end
+
+      {:error, msg} ->
+        {:reply, {:error, %{type: "validation_error", errors: %{base: [msg]}}},
+         socket}
     end
   end
 
-  defp build_message_attrs(user, content, limit_result) do
-    base_attrs = %{role: :user, content: content, user: user}
+  defp may_get_job(job_id) when not is_nil(job_id) do
+    case Jobs.get_job(job_id) do
+      {:ok, job} ->
+        {:ok, job}
+
+      {:error, :not_found} ->
+        {:error,
+         "Job not saved or deleted. Please save if unsaved for AI to work."}
+    end
+  end
+
+  defp may_get_job(_jobid), do: {:ok, nil}
+
+  defp build_message_attrs(user, job, content, limit_result) do
+    base_attrs = %{role: :user, content: content, user: user, job: job}
 
     case limit_result do
       :ok -> base_attrs

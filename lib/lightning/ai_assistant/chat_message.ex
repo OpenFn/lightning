@@ -22,6 +22,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Ecto.Changeset
   import Lightning.Validators, only: [validate_required_assoc: 2]
 
+  alias Lightning.Workflows.Job
+
   @type role() :: :user | :assistant
   @type status() :: :pending | :processing | :success | :error | :cancelled
 
@@ -31,6 +33,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           code: String.t() | nil,
           role: role(),
           status: status(),
+          job_id: Ecto.UUID.t() | nil,
           is_deleted: boolean(),
           is_public: boolean(),
           processing_started_at: DateTime.t() | nil,
@@ -55,6 +58,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :processing_completed_at, :utc_datetime_usec
 
     belongs_to :chat_session, Lightning.AiAssistant.ChatSession
+    belongs_to :job, Job
     belongs_to :user, Lightning.Accounts.User
 
     timestamps()
@@ -92,6 +96,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
+    |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
     |> set_default_status_by_role()
   end
@@ -126,6 +131,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
   end
 
   defp maybe_put_user_assoc(changeset, _), do: changeset
+
+  defp maybe_put_job_assoc(changeset, job) when not is_nil(job) do
+    put_assoc(changeset, :job, job)
+  end
+
+  defp maybe_put_job_assoc(changeset, _), do: changeset
 
   defp maybe_require_user(changeset) do
     if get_field(changeset, :role) == :user do
