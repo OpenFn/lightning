@@ -66,7 +66,11 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
-export function AIAssistantPanelWrapper() {
+export function AIAssistantPanelWrapper({
+  aiAssistantEnabled = false,
+}: {
+  aiAssistantEnabled?: boolean;
+}) {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const initialMessage = useAIAssistantInitialMessage();
   const {
@@ -96,7 +100,7 @@ export function AIAssistantPanelWrapper() {
   }, [isIDEOpen]);
 
   // Cmd+K toggles AI Assistant with mutual exclusivity
-  // Disabled when viewing a pinned version (not latest)
+  // Disabled when viewing a pinned version (not latest) or when Apollo not configured
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -107,7 +111,7 @@ export function AIAssistantPanelWrapper() {
       toggleAIAssistantPanel();
     },
     0,
-    { enabled: !isPinnedVersion }
+    { enabled: !isPinnedVersion && aiAssistantEnabled }
   );
 
   const aiStore = useAIStore();
@@ -202,9 +206,8 @@ export function AIAssistantPanelWrapper() {
     if (
       !isAIAssistantPanelOpen ||
       !sessionId ||
-      sessionType !== 'job_code' ||
       !aiMode ||
-      aiMode.mode !== 'job_code'
+      aiMode?.page !== 'job_code'
     ) {
       return;
     }
@@ -217,13 +220,7 @@ export function AIAssistantPanelWrapper() {
         job_name: context.job_name,
       });
     }
-  }, [
-    isAIAssistantPanelOpen,
-    sessionId,
-    sessionType,
-    aiMode,
-    updateContextViaChannel,
-  ]);
+  }, [isAIAssistantPanelOpen, sessionId, aiMode, updateContextViaChannel]);
 
   /**
    * appliedMessageIdsRef tracks which AI-generated workflows have been
@@ -312,11 +309,7 @@ export function AIAssistantPanelWrapper() {
 
       // For job_code with attach_code, get CURRENT code from Y.Doc
       let updatedAiMode = aiMode;
-      if (
-        messageOptions?.attach_code &&
-        aiMode?.mode === 'job_code' &&
-        currentState.sessionType === 'job_code'
-      ) {
+      if (messageOptions?.attach_code && aiMode?.mode === 'job_code') {
         const context = aiMode.context as JobCodeContext;
         const jobId = context.job_id;
 
@@ -325,10 +318,15 @@ export function AIAssistantPanelWrapper() {
           const currentJob = jobs.find(j => j.id === jobId);
           if (currentJob) {
             // Update aiMode with new context (don't mutate)
+            const projectId =
+              'project_id' in context
+                ? (context.project_id as string)
+                : project!.id;
             updatedAiMode = {
               ...aiMode,
               context: {
                 ...context,
+                project_id: projectId,
                 job_body: currentJob.body,
               },
             };
@@ -340,7 +338,7 @@ export function AIAssistantPanelWrapper() {
 
       // If no session exists, we need to include content in context for first message
       if (!currentState.sessionId && updatedAiMode) {
-        const { mode, context } = updatedAiMode;
+        const { mode, context, page } = updatedAiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
@@ -354,7 +352,7 @@ export function AIAssistantPanelWrapper() {
         };
 
         // Add workflow YAML if in workflow mode
-        if (mode === 'workflow_template') {
+        if (page === 'workflow_template') {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -399,7 +397,7 @@ export function AIAssistantPanelWrapper() {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
-      if (currentState.sessionType === 'workflow_template') {
+      if (aiMode?.page === 'workflow_template') {
         const workflowData = prepareWorkflowForSerialization(
           workflow,
           jobs,
@@ -414,6 +412,9 @@ export function AIAssistantPanelWrapper() {
         if (workflowYAML) {
           options = { ...options, code: workflowYAML };
         }
+      } else {
+        // important: determines what ai to be used
+        options = { ...options, job_id: aiMode?.context.job_id };
       }
 
       // Update store state and send through registry
@@ -430,6 +431,7 @@ export function AIAssistantPanelWrapper() {
       aiStore,
       aiMode,
       updateSearchParams,
+      project,
     ]
   );
 
@@ -498,9 +500,9 @@ export function AIAssistantPanelWrapper() {
   const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
     useAIWorkflowApplications({
       sessionId,
-      sessionType,
+      page: aiMode?.page || 'workflow_template',
       currentSession:
-        sessionId && sessionType && messages.length > 0
+        sessionId && messages.length > 0
           ? {
               messages,
               workflowTemplateContext,
@@ -530,10 +532,9 @@ export function AIAssistantPanelWrapper() {
   // Only for the user who authored the triggering message
   useAutoPreview({
     aiMode,
-    session:
-      sessionId && sessionType
-        ? { id: sessionId, session_type: sessionType, messages }
-        : null,
+    session: sessionId
+      ? { id: sessionId, session_type: 'workflow_template', messages }
+      : null,
     currentUserId: user?.id,
     onPreview: handlePreviewJobCode,
   });
@@ -576,7 +577,7 @@ export function AIAssistantPanelWrapper() {
               messageCount={messages.length}
               isLoading={isLoading}
               isResizable={true}
-              sessionType={sessionType}
+              page={aiMode?.page}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
@@ -587,23 +588,22 @@ export function AIAssistantPanelWrapper() {
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
-                {...(sessionType && { sessionType })}
                 onApplyWorkflow={
-                  sessionType === 'workflow_template' && !isApplyingWorkflow
+                  aiMode?.page === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }
                     : undefined
                 }
                 onApplyJobCode={
-                  sessionType === 'job_code' && !isApplyingJobCode
+                  aiMode?.page === 'job_code' && !isApplyingJobCode
                     ? (code, messageId) => {
                         void handleApplyJobCode(code, messageId);
                       }
                     : undefined
                 }
                 onPreviewJobCode={
-                  sessionType === 'job_code' ? handlePreviewJobCode : undefined
+                  aiMode?.page === 'job_code' ? handlePreviewJobCode : undefined
                 }
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
@@ -615,14 +615,14 @@ export function AIAssistantPanelWrapper() {
                 }
                 previewingMessageId={previewingMessageId}
                 showAddButtons={
-                  sessionType === 'job_code'
+                  aiMode?.page === 'job_code'
                     ? // For job_code: hide ADD buttons when message has code field
                       !messages.some(m => m.role === 'assistant' && m.code)
                     : false
                 }
                 showApplyButton={
-                  sessionType === 'workflow_template' ||
-                  (sessionType === 'job_code' && messages.some(m => m.code))
+                  aiMode?.page === 'workflow_template' ||
+                  (aiMode?.page === 'job_code' && messages.some(m => m.code))
                 }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}

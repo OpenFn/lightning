@@ -63,6 +63,7 @@ interface WorkflowData {
 
 interface AIMode {
   mode: SessionType;
+  page: SessionType;
   context: JobCodeContext | WorkflowTemplateContext;
 }
 
@@ -88,16 +89,9 @@ export const useAISession = ({
   const aiStore = useAIStore();
   const subscriberId = useId();
 
-  // Extract stable values from aiMode for dependency array
-  const mode = aiMode?.mode ?? null;
-  const jobId =
-    aiMode?.mode === 'job_code'
-      ? (aiMode.context as JobCodeContext).job_id
-      : null;
-
   // Track what we're currently subscribed to and previous mode/job for change detection
   const currentSubscriptionRef = useRef<string | null>(null);
-  const prevModeRef = useRef<SessionType | null>(null);
+  const prevPageRef = useRef<SessionType | null>(null);
   const prevJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -111,51 +105,29 @@ export const useAISession = ({
         currentSubscriptionRef.current = null;
       }
       // Reset refs
-      prevModeRef.current = null;
+      prevPageRef.current = null;
       prevJobIdRef.current = null;
       return;
     }
-
+    // only needs update when what?
     const { mode, context } = aiMode;
     const state = aiStore.getSnapshot();
     const currentJobId =
-      mode === 'job_code' ? (context as JobCodeContext).job_id : null;
+      aiMode.page === 'job_code' ? (context as JobCodeContext).job_id : null;
 
-    // Detect if mode or job changed
-    const modeChanged =
-      prevModeRef.current !== null && prevModeRef.current !== mode;
+    // Detect if job changed
+    const pageChanged = prevPageRef.current !== aiMode.page;
     const jobChanged =
       prevJobIdRef.current !== null && prevJobIdRef.current !== currentJobId;
 
-    // Clear session/list when mode or job changes
-    if (modeChanged || jobChanged) {
-      aiStore._clearSession();
-      aiStore._clearSessionList();
-      aiStore._setConnectionState('disconnected');
-      onSessionIdChange?.(null);
-
-      // Unsubscribe from old channel immediately when mode changes
-      if (currentSubscriptionRef.current && registry) {
-        registry.unsubscribeImmediate(
-          currentSubscriptionRef.current,
-          subscriberId
-        );
-        currentSubscriptionRef.current = null;
-      }
-
-      // For mode changes, do early return to let URL update propagate
-      // For job changes within same mode, continue to re-initialize context
-      if (modeChanged) {
-        // Update tracking refs before early return
-        prevModeRef.current = mode;
-        prevJobIdRef.current = currentJobId;
-        return;
-      }
+    // Update context when job changes or aiMode page changes.
+    if (jobChanged || pageChanged) {
+      aiStore._initializeContext(mode, context);
     }
 
     // Update tracking refs (after potential early return for mode changes)
-    prevModeRef.current = mode;
     prevJobIdRef.current = currentJobId;
+    prevPageRef.current = aiMode.page;
 
     // Build the topic we want to subscribe to
     const desiredTopic = sessionIdFromURL
@@ -187,15 +159,10 @@ export const useAISession = ({
       // The jobChanged check ensures context is updated when switching between jobs
       // Also check if stored job_id doesn't match current job - this catches the case
       // where refs were already updated but context still needs initialization
-      const storedJobId = state.jobCodeContext?.job_id;
+      const storedJobId = state.workflowTemplateContext?.job_id;
       const contextMismatch =
-        mode === 'job_code' && storedJobId !== currentJobId;
-      const needsContextUpdate =
-        state.sessionType !== mode ||
-        modeChanged ||
-        jobChanged ||
-        contextMismatch;
-
+        aiMode.page === 'job_code' && storedJobId !== currentJobId;
+      const needsContextUpdate = jobChanged || contextMismatch;
       if (needsContextUpdate) {
         aiStore._initializeContext(mode, context);
       }
@@ -205,8 +172,7 @@ export const useAISession = ({
     // Handle "new" session - only subscribe if we have content
     if (sessionIdFromURL === 'new') {
       const topic = buildChannelTopic(mode, null);
-      const storeContext =
-        state.jobCodeContext || state.workflowTemplateContext;
+      const storeContext = state.workflowTemplateContext;
 
       if (storeContext && 'content' in storeContext && storeContext.content) {
         registry.subscribe(topic, subscriberId, storeContext);
@@ -226,7 +192,7 @@ export const useAISession = ({
 
     // Build context with workflow YAML if needed
     if (
-      mode === 'workflow_template' &&
+      aiMode.page === 'workflow_template' &&
       workflowData?.workflow &&
       workflowData.jobs.length > 0
     ) {
@@ -265,8 +231,7 @@ export const useAISession = ({
     }
   }, [
     isOpen,
-    mode, // Stable primitive
-    jobId, // Stable primitive
+    aiMode,
     sessionIdFromURL,
     workflowData?.workflow?.id,
     aiStore,
