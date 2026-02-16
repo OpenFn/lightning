@@ -131,6 +131,7 @@ defmodule Lightning.Application do
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
+        {Task.Supervisor, name: Lightning.Channels.TaskSupervisor},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
