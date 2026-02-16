@@ -21,4 +21,20 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiter do
   end
 
   def limit_github_sync(nil), do: :ok
+
+  @spec limit_api_provisioning(project_id :: Ecto.UUID.t() | nil) ::
+          :ok | {:error, UsageLimiting.message()}
+  def limit_api_provisioning(project_id) when is_binary(project_id) do
+    case UsageLimiter.limit_action(%Action{type: :api_provisioning}, %Context{
+           project_id: project_id
+         }) do
+      :ok ->
+        :ok
+
+      {:error, _reason, error} ->
+        {:error, error}
+    end
+  end
+
+  def limit_api_provisioning(nil), do: :ok
 end
