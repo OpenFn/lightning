@@ -2,11 +2,40 @@ defmodule Lightning.Channels.Handler do
   @moduledoc """
   Weir handler that persists every proxied Channel request.
 
-  Lifecycle:
-  - handle_request_started: creates ChannelRequest (sync, aborts on failure)
-  - handle_response_started: captures TTFB and response headers
-  - handle_response_finished: spawns async task to create ChannelEvent and
-    update ChannelRequest state
+  ## Lifecycle
+
+  Weir invokes three callbacks during the proxy lifecycle:
+
+  1. `handle_request_started` — creates a `ChannelRequest` record
+     synchronously. If the insert fails, the request is rejected with 503.
+
+  2. `handle_response_started` — captures TTFB and response headers into
+     handler state. **May not be called** — see below.
+
+  3. `handle_response_finished` — spawns an async task to create a
+     `ChannelEvent` and update the `ChannelRequest` state.
+
+  ## Skipped `handle_response_started`
+
+  `handle_response_started` fires when the first response bytes arrive from
+  the upstream (TTFB). If the upstream never sends a response, the callback
+  is skipped entirely and `handle_response_finished` receives handler state
+  from `handle_request_started` only — without `ttfb_us`, `response_status`,
+  or `response_headers`.
+
+  This happens when:
+
+  - DNS resolution fails (`:nxdomain`)
+  - The upstream refuses the connection (`:econnrefused`)
+  - The host or network is unreachable (`:ehostunreach`, `:enetunreach`)
+  - The connection times out before any response (`:connect_timeout`)
+  - The response times out before headers arrive (`:timeout`)
+  - TLS handshake fails
+
+  All fields derived from `handle_response_started` are accessed via
+  `Map.get/2` with `nil` fallbacks, so this is safe. The `classify_error/1`
+  function translates known Weir error shapes into stable string identifiers
+  for persistence.
   """
 
   use Weir.Handler
@@ -17,6 +46,11 @@ defmodule Lightning.Channels.Handler do
   require Logger
 
   @redacted_headers ~w(authorization x-api-key)
+
+  @known_transport_errors ~w(
+    nxdomain econnrefused ehostunreach enetunreach
+    closed econnreset econnaborted epipe
+  )a
 
   @impl true
   def handle_request_started(metadata, state) do
@@ -85,7 +119,7 @@ defmodule Lightning.Channels.Handler do
       response_body_hash: get_in(result, [:response_observation, :hash]),
       latency_ms: div(result.duration_us, 1000),
       ttfb_ms: state |> Map.get(:ttfb_us) |> maybe_div(1000),
-      error_message: if(result.error, do: inspect(result.error))
+      error_message: if(result.error, do: classify_error(result.error))
     }
 
     request_update = %{
@@ -151,11 +185,23 @@ defmodule Lightning.Channels.Handler do
 
   defp encode_headers(nil), do: nil
 
+  # Encodes as array-of-pairs rather than a map because HTTP allows
+  # duplicate header keys (e.g. multiple Set-Cookie headers).
   defp encode_headers(headers) do
     headers
     |> Enum.map(fn {k, v} -> [k, v] end)
     |> Jason.encode!()
   end
+
+  defp classify_error({:timeout, :connect_timeout}), do: "connect_timeout"
+  defp classify_error({:timeout, :timeout}), do: "response_timeout"
+  defp classify_error({:timeout, {:closed, :timeout}}), do: "timeout"
+
+  defp classify_error(%{reason: reason})
+       when reason in @known_transport_errors,
+       do: Atom.to_string(reason)
+
+  defp classify_error(error), do: inspect(error)
 
   defp maybe_div(nil, _), do: nil
   defp maybe_div(us, divisor), do: div(us, divisor)
