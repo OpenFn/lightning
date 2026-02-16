@@ -25,6 +25,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue with `Sandboxes` menu item not visible for users without
+  experimental features enabled
+  [#4367](https://github.com/OpenFn/lightning/issues/4367)
+
+
 ## [2.15.14] - 2026-02-13
 
 ## [2.15.14-pre] - 2026-02-11
@@ -53,8 +58,6 @@ and this project adheres to
   [#4383](https://github.com/OpenFn/lightning/issues/4383)
 
 ## [2.15.13] - 2026-02-06
-
-## [2.15.13-pre1] - 2026-02-05
 
 ### Fixed
 
