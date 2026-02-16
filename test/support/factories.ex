@@ -870,7 +870,6 @@ defmodule Lightning.Factories do
 
   def channel_snapshot_factory do
     %Lightning.Channels.ChannelSnapshot{
-      channel: build(:channel),
       lock_version: 1,
       name: sequence(:channel_snapshot_name, &"channel-#{&1}"),
       sink_url: "https://example.com/sink",
@@ -880,8 +879,6 @@ defmodule Lightning.Factories do
 
   def channel_request_factory do
     %Lightning.Channels.ChannelRequest{
-      channel: build(:channel),
-      channel_snapshot: build(:channel_snapshot),
       request_id: sequence(:channel_request_id, &"req-#{&1}"),
       state: :pending,
       started_at: DateTime.utc_now()
@@ -890,7 +887,6 @@ defmodule Lightning.Factories do
 
   def channel_event_factory do
     %Lightning.Channels.ChannelEvent{
-      channel_request: build(:channel_request),
       type: :source_received
     }
   end

@@ -301,7 +301,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert event.response_status == 200
       assert event.latency_ms != nil
       assert event.request_method == "GET"
-      assert event.request_path =~ "/channels/#{channel.id}/persisted"
+      assert event.request_path == "/persisted"
     end
 
     test "creates error-state request on connection failure", %{

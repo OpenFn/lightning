@@ -151,6 +151,9 @@ defmodule Lightning.Channels.Handler do
         |> Repo.update()
     end
 
+    # TODO: This broadcasts even if event insert and fallback update both
+    # failed, so subscribers may see a request still in :pending state.
+    # Revisit when #4408 uses this for real-time UI updates.
     Lightning.broadcast(
       "channels:#{state.channel.id}",
       {:channel_request_completed, state.channel_request.id}

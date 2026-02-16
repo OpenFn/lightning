@@ -64,7 +64,7 @@ defmodule LightningWeb.ChannelProxyPlug do
       channel: channel,
       snapshot: snapshot,
       started_at: DateTime.utc_now(),
-      request_path: "/" <> Enum.join(conn.path_info, "/"),
+      request_path: forward_path,
       client_identity: get_client_identity(conn)
     }
 

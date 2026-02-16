@@ -155,10 +155,9 @@ defmodule Lightning.ChannelsTest do
       end
     end
 
-    test "returns error when channel has snapshots referenced by requests" do
+    test "returns error when channel has snapshots" do
       channel = insert(:channel)
-      snapshot = insert(:channel_snapshot, channel: channel)
-      insert(:channel_request, channel: channel, channel_snapshot: snapshot)
+      insert(:channel_snapshot, channel: channel)
 
       assert {:error, changeset} = Channels.delete_channel(channel)
       assert %{channel_snapshots: _} = errors_on(changeset)
