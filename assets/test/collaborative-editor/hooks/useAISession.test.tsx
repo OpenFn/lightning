@@ -72,8 +72,8 @@ describe('useAISession', () => {
     );
   });
 
-  describe('Job Switching within job_code mode', () => {
-    it('should clear session and list when job changes', () => {
+  describe('Job Switching within job_code page', () => {
+    it('should update context when job changes', () => {
       const initialContext: JobCodeContext = {
         job_id: 'job-1',
         attach_code: false,
@@ -85,7 +85,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: { ...initialContext, job_id: props.jobId },
             },
             sessionIdFromURL: null,
@@ -103,16 +104,17 @@ describe('useAISession', () => {
       // Switch to a different job
       rerender({ jobId: 'job-2' });
 
-      // Should clear session and session list
-      expect(mockStore._clearSession).toHaveBeenCalled();
-      expect(mockStore._clearSessionList).toHaveBeenCalled();
-      expect(mockStore._setConnectionState).toHaveBeenCalledWith(
-        'disconnected'
+      // Should update context with new job (no clearing)
+      expect(mockStore._initializeContext).toHaveBeenCalledWith(
+        'workflow_template',
+        {
+          ...initialContext,
+          job_id: 'job-2',
+        }
       );
-      expect(onSessionIdChange).toHaveBeenCalledWith(null);
     });
 
-    it('should unsubscribe immediately when job changes', () => {
+    it('should maintain subscription when job changes', () => {
       // Set up initial subscription by first render with a session
       const initialContext: JobCodeContext = {
         job_id: 'job-1',
@@ -125,7 +127,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: { ...initialContext, job_id: props.jobId },
             },
             sessionIdFromURL: props.sessionId,
@@ -143,8 +146,8 @@ describe('useAISession', () => {
       // Switch to a different job
       rerender({ jobId: 'job-2', sessionId: 'session-123' });
 
-      // Should unsubscribe immediately (not with delay)
-      expect(mockUnsubscribeImmediate).toHaveBeenCalled();
+      // Should NOT unsubscribe when job changes (maintains session)
+      expect(mockUnsubscribeImmediate).not.toHaveBeenCalled();
     });
 
     it('should re-initialize context when job changes', () => {
@@ -159,7 +162,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: { ...initialContext, job_id: props.jobId },
             },
             sessionIdFromURL: null,
@@ -178,15 +182,18 @@ describe('useAISession', () => {
       rerender({ jobId: 'job-2' });
 
       // Should re-initialize context with new job
-      expect(mockStore._initializeContext).toHaveBeenCalledWith('job_code', {
-        ...initialContext,
-        job_id: 'job-2',
-      });
+      expect(mockStore._initializeContext).toHaveBeenCalledWith(
+        'workflow_template',
+        {
+          ...initialContext,
+          job_id: 'job-2',
+        }
+      );
     });
 
     it('should detect context mismatch when stored job_id differs', () => {
       // Start with job-1 in context
-      mockStore._initializeContext('job_code', {
+      mockStore._initializeContext('workflow_template', {
         job_id: 'job-old',
         attach_code: false,
         attach_logs: false,
@@ -197,7 +204,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: {
                 job_id: props.jobId,
                 attach_code: false,
@@ -214,24 +222,28 @@ describe('useAISession', () => {
       );
 
       // Should initialize context because stored job_id doesn't match
-      expect(mockStore._initializeContext).toHaveBeenCalledWith('job_code', {
-        job_id: 'job-new',
-        attach_code: false,
-        attach_logs: false,
-      });
+      expect(mockStore._initializeContext).toHaveBeenCalledWith(
+        'workflow_template',
+        {
+          job_id: 'job-new',
+          attach_code: false,
+          attach_logs: false,
+        }
+      );
     });
   });
 
-  describe('Mode Switching', () => {
-    it('should clear session when switching from job_code to workflow_template', () => {
+  describe('Page Switching', () => {
+    it('should update context when switching from job_code to workflow_template page', () => {
       const { rerender } = renderHook(
-        (props: { mode: 'job_code' | 'workflow_template' }) =>
+        (props: { page: 'job_code' | 'workflow_template' }) =>
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: props.mode,
+              mode: 'workflow_template',
+              page: props.page,
               context:
-                props.mode === 'job_code'
+                props.page === 'job_code'
                   ? { job_id: 'job-1', attach_code: false, attach_logs: false }
                   : { project_id: 'proj-1', workflow_id: 'wf-1' },
             },
@@ -240,55 +252,21 @@ describe('useAISession', () => {
           }),
         {
           wrapper,
-          initialProps: { mode: 'job_code' as const },
+          initialProps: { page: 'job_code' as const },
         }
       );
 
       // Clear mocks after initial render
       vi.clearAllMocks();
 
-      // Switch mode
-      rerender({ mode: 'workflow_template' });
+      // Switch page
+      rerender({ page: 'workflow_template' });
 
-      // Should clear session
-      expect(mockStore._clearSession).toHaveBeenCalled();
-      expect(mockStore._clearSessionList).toHaveBeenCalled();
-      expect(mockStore._setConnectionState).toHaveBeenCalledWith(
-        'disconnected'
+      // Should update context (no clearing)
+      expect(mockStore._initializeContext).toHaveBeenCalledWith(
+        'workflow_template',
+        { project_id: 'proj-1', workflow_id: 'wf-1' }
       );
-      expect(onSessionIdChange).toHaveBeenCalledWith(null);
-    });
-
-    it('should do early return on mode change to let URL update propagate', () => {
-      const { rerender } = renderHook(
-        (props: { mode: 'job_code' | 'workflow_template' }) =>
-          useAISession({
-            isOpen: true,
-            aiMode: {
-              mode: props.mode,
-              context:
-                props.mode === 'job_code'
-                  ? { job_id: 'job-1', attach_code: false, attach_logs: false }
-                  : { project_id: 'proj-1', workflow_id: 'wf-1' },
-            },
-            sessionIdFromURL: null,
-            onSessionIdChange,
-          }),
-        {
-          wrapper,
-          initialProps: { mode: 'job_code' as const },
-        }
-      );
-
-      // Clear mocks after initial render
-      vi.clearAllMocks();
-
-      // Switch mode
-      rerender({ mode: 'workflow_template' });
-
-      // Should NOT call _initializeContext on mode change (early return)
-      // The next render (after URL update) will initialize context
-      expect(mockStore._initializeContext).not.toHaveBeenCalled();
     });
   });
 
@@ -299,7 +277,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: props.isOpen,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: {
                 job_id: 'job-1',
                 attach_code: false,
@@ -331,7 +310,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: false,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: {
                 job_id: 'job-1',
                 attach_code: false,
@@ -355,7 +335,8 @@ describe('useAISession', () => {
           useAISession({
             isOpen: true,
             aiMode: {
-              mode: 'job_code',
+              mode: 'workflow_template',
+              page: 'job_code',
               context: {
                 job_id: 'job-1',
                 attach_code: false,

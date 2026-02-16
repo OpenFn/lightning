@@ -21,7 +21,8 @@ describe('useAutoPreview', () => {
   const mockCurrentUserId = 'user-123';
 
   const createMockJobCodeMode = (): AIModeResult => ({
-    mode: 'job_code',
+    mode: 'workflow_template',
+    page: 'job_code',
     context: {
       job_id: 'job-1',
       job_body: '',
@@ -40,12 +41,13 @@ describe('useAutoPreview', () => {
     status: 'success',
     inserted_at: new Date().toISOString(),
     user_id: mockCurrentUserId,
+    job_id: 'job-1', // Messages now include job_id
     ...overrides,
   });
 
   const createMockSession = (messages: Message[]): Session => ({
     id: 'session-1',
-    session_type: 'job_code',
+    session_type: 'workflow_template', // Always workflow_template now
     messages,
   });
 
@@ -54,9 +56,10 @@ describe('useAutoPreview', () => {
   });
 
   describe('Mode filtering', () => {
-    it('should not preview in workflow_template mode', () => {
+    it('should not preview on workflow_template page', () => {
       const workflowMode: AIModeResult = {
         mode: 'workflow_template',
+        page: 'workflow_template',
         context: { project_id: 'proj-1', workflow_id: 'wf-1' },
         storageKey: 'ai-workflow-wf-1',
       };
@@ -89,11 +92,11 @@ describe('useAutoPreview', () => {
       expect(mockOnPreview).not.toHaveBeenCalled();
     });
 
-    it('should not preview when aiMode is job_code but session is workflow_template', () => {
+    it('should not preview when message has no job_id', () => {
       // This scenario happens when:
       // 1. User has a workflow_template session open with YAML code
-      // 2. User clicks into a step (job) which changes aiMode to job_code
-      // 3. The session is still workflow_template with YAML in message.code
+      // 2. User clicks into a step (job) which changes page to job_code
+      // 3. The message has YAML code but no job_id
       // We should NOT preview the YAML as if it were job JS code
       const userMessage: Message = {
         id: 'user-msg',
@@ -107,16 +110,16 @@ describe('useAutoPreview', () => {
         id: 'yaml-msg',
         code: 'name: My Workflow\njobs:\n  job-1:\n    name: Step 1',
         inserted_at: new Date().toISOString(),
+        job_id: undefined, // No job_id for workflow YAML
       });
 
-      // Session type is workflow_template (contains YAML)
       const workflowSession: Session = {
         id: 'session-1',
         session_type: 'workflow_template',
         messages: [userMessage, workflowYamlMessage],
       };
 
-      // But aiMode is job_code (user clicked into a job)
+      // aiMode page is job_code (user clicked into a job)
       const jobCodeMode = createMockJobCodeMode();
 
       const { rerender } = renderHook(
@@ -130,7 +133,7 @@ describe('useAutoPreview', () => {
         { initialProps: { session: workflowSession } }
       );
 
-      // Should NOT preview - session type doesn't match aiMode
+      // Should NOT preview - message has no job_id
       expect(mockOnPreview).not.toHaveBeenCalled();
 
       // Even after rerender, should still not preview

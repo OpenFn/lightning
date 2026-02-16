@@ -59,7 +59,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
     mode: 'workflow_template' | 'job_code',
     context: Record<string, unknown> = {}
   ): AIModeResult => ({
-    mode,
+    mode: 'workflow_template',
+    page: mode,
     context,
     storageKey: `ai-${mode}`,
   });
@@ -84,7 +85,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -112,7 +113,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'workflow_template',
+          page: 'workflow_template',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('workflow_template'),
@@ -140,7 +141,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -169,7 +170,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -195,7 +196,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -225,7 +226,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', {}), // No job_id
@@ -255,7 +256,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -288,7 +289,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'workflow_template',
+          page: 'workflow_template',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('workflow_template'),
@@ -315,7 +316,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -343,7 +344,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
@@ -371,7 +372,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', {}),
@@ -403,7 +404,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
       const { result } = renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'job_code',
+          page: 'job_code',
           currentSession: null,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),

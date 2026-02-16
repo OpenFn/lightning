@@ -57,6 +57,7 @@ describe('useAIMode', () => {
 
       expect(result.current).toEqual({
         mode: 'workflow_template',
+        page: 'workflow_template',
         context: {
           project_id: 'project-123',
           workflow_id: 'workflow-123',
@@ -75,6 +76,7 @@ describe('useAIMode', () => {
 
       expect(result.current).toEqual({
         mode: 'workflow_template',
+        page: 'workflow_template',
         context: {
           project_id: 'project-123',
         },
@@ -96,18 +98,20 @@ describe('useAIMode', () => {
       urlState.setParams({ panel: 'editor', job: 'job-456' });
     });
 
-    it('should return job_code mode when IDE is open', () => {
+    it('should return job_code page when IDE is open', () => {
       const { result } = renderHook(() => useAIMode());
 
       expect(result.current).toEqual({
-        mode: 'job_code',
+        mode: 'workflow_template',
+        page: 'job_code',
         context: {
+          project_id: 'project-123',
+          workflow_id: 'workflow-123',
           job_id: 'job-456',
           attach_code: false,
           attach_logs: false,
-          workflow_id: 'workflow-123',
         },
-        storageKey: 'ai-job-job-456',
+        storageKey: 'ai-workflow-workflow-123',
       });
     });
 
@@ -130,10 +134,11 @@ describe('useAIMode', () => {
       const { result } = renderHook(() => useAIMode());
 
       expect(result.current?.context).toEqual({
+        project_id: 'project-123',
+        workflow_id: 'workflow-123',
         job_id: 'job-456',
         attach_code: false,
         attach_logs: false,
-        workflow_id: 'workflow-123',
         job_name: 'Test Job',
         job_body: 'fn(state => state);',
         job_adaptor: '@openfn/language-common@latest',
@@ -152,10 +157,11 @@ describe('useAIMode', () => {
       const { result } = renderHook(() => useAIMode());
 
       expect(result.current?.context).toEqual({
+        project_id: 'project-123',
+        workflow_id: 'workflow-123',
         job_id: 'job-456',
         attach_code: false,
         attach_logs: false,
-        workflow_id: 'workflow-123',
         // No job_name, job_body, job_adaptor for unsaved job
       });
     });
@@ -182,6 +188,7 @@ describe('useAIMode', () => {
 
       const { result } = renderHook(() => useAIMode());
 
+      expect(result.current?.context).toHaveProperty('project_id');
       expect(result.current?.context).not.toHaveProperty('workflow_id');
     });
 
@@ -206,31 +213,35 @@ describe('useAIMode', () => {
     });
   });
 
-  describe('Mode Changes', () => {
-    it('should change mode when URL params change', () => {
+  describe('Page Changes', () => {
+    it('should change page when URL params change', () => {
       const { result, rerender } = renderHook(() => useAIMode());
 
       const firstResult = result.current;
       expect(firstResult?.mode).toBe('workflow_template');
+      expect(firstResult?.page).toBe('workflow_template');
 
-      // Change URL params to trigger job code mode
+      // Change URL params to trigger job code page
       urlState.setParams({ panel: 'editor', job: 'job-456' });
 
       rerender();
       const secondResult = result.current;
 
-      expect(secondResult?.mode).toBe('job_code');
+      expect(secondResult?.mode).toBe('workflow_template');
+      expect(secondResult?.page).toBe('job_code');
       expect(firstResult).not.toEqual(secondResult);
     });
   });
 
   describe('Storage Keys', () => {
-    it('should generate correct storage key for job mode', () => {
+    it('should use workflow storage key even when on job page', () => {
       urlState.setParams({ panel: 'editor', job: 'job-unique-id' });
 
       const { result } = renderHook(() => useAIMode());
 
-      expect(result.current?.storageKey).toBe('ai-job-job-unique-id');
+      // Storage key is based on workflow/project, not job
+      expect(result.current?.storageKey).toBe('ai-workflow-workflow-123');
+      expect(result.current?.page).toBe('job_code');
     });
 
     it('should generate correct storage key for workflow mode with workflow', () => {
