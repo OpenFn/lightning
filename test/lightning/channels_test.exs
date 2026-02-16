@@ -3,6 +3,7 @@ defmodule Lightning.ChannelsTest do
 
   alias Lightning.Channels
   alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelSnapshot
 
   describe "list_channels_for_project/1" do
     test "returns channels for a project ordered by name" do
@@ -161,6 +162,42 @@ defmodule Lightning.ChannelsTest do
 
       assert {:error, changeset} = Channels.delete_channel(channel)
       assert %{channel_snapshots: _} = errors_on(changeset)
+    end
+  end
+
+  describe "get_or_create_current_snapshot/1" do
+    test "creates snapshot on first call" do
+      channel = insert(:channel)
+
+      assert {:ok, %ChannelSnapshot{} = snapshot} =
+               Channels.get_or_create_current_snapshot(channel)
+
+      assert snapshot.channel_id == channel.id
+      assert snapshot.lock_version == channel.lock_version
+      assert snapshot.name == channel.name
+      assert snapshot.sink_url == channel.sink_url
+      assert snapshot.enabled == channel.enabled
+    end
+
+    test "returns existing snapshot on same lock_version" do
+      channel = insert(:channel)
+
+      {:ok, snapshot1} = Channels.get_or_create_current_snapshot(channel)
+      {:ok, snapshot2} = Channels.get_or_create_current_snapshot(channel)
+
+      assert snapshot1.id == snapshot2.id
+    end
+
+    test "creates new snapshot on different lock_version" do
+      channel = insert(:channel)
+      {:ok, snapshot1} = Channels.get_or_create_current_snapshot(channel)
+
+      {:ok, updated} = Channels.update_channel(channel, %{name: "updated-name"})
+      {:ok, snapshot2} = Channels.get_or_create_current_snapshot(updated)
+
+      assert snapshot1.id != snapshot2.id
+      assert snapshot2.lock_version == updated.lock_version
+      assert snapshot2.name == "updated-name"
     end
   end
 end

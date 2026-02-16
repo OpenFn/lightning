@@ -145,7 +145,12 @@ defmodule Lightning.Channels.Handler do
   defp redact_headers(nil), do: nil
 
   defp encode_headers(nil), do: nil
-  defp encode_headers(headers), do: Jason.encode!(headers)
+
+  defp encode_headers(headers) do
+    headers
+    |> Enum.map(fn {k, v} -> [k, v] end)
+    |> Jason.encode!()
+  end
 
   defp maybe_div(nil, _), do: nil
   defp maybe_div(us, divisor), do: div(us, divisor)
