@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Support a batch of logs submitted via `run:batch_logs` in run channel
+  [#4123](https://github.com/OpenFn/lightning/issues/4123)
+
 ### Fixed
 
 ## [2.15.14] - 2026-02-13

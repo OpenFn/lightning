@@ -1140,6 +1140,190 @@ defmodule LightningWeb.RunChannelTest do
       persisted_log_line = Lightning.Repo.one(Lightning.Invocation.LogLine)
       assert persisted_log_line.timestamp == ~U[2023-11-08 11:57:33.874083Z]
     end
+
+    test "run:batch_logs inserts multiple log lines in a single operation", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "level" => "info",
+              "message" => ["First log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "level" => "debug",
+              "message" => ["Second log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874084"
+            },
+            %{
+              "level" => "error",
+              "message" => ["Third log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874085"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      log_lines =
+        Lightning.Invocation.LogLine
+        |> where(run_id: ^run.id)
+        |> order_by(:timestamp)
+        |> Repo.all()
+
+      assert length(log_lines) == 3
+      assert Enum.at(log_lines, 0).message == "First log line"
+      assert Enum.at(log_lines, 1).message == "Second log line"
+      assert Enum.at(log_lines, 2).message == "Third log line"
+    end
+
+    test "run:batch_logs validates all messages", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "level" => "info",
+              "message" => ["Valid log"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "level" => "info",
+              "timestamp" => "1699444653874084"
+              # missing message
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{message: ["This field can't be blank."]}
+    end
+
+    test "run:batch_logs validates step_id association", %{
+      socket: socket,
+      run: run,
+      workflow: workflow
+    } do
+      [job] = workflow.jobs
+      step_id_1 = Ecto.UUID.generate()
+      step_id_2 = Ecto.UUID.generate()
+      invalid_step_id = Ecto.UUID.generate()
+
+      # Start two steps
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id_1,
+          "job_id" => job.id,
+          "input_dataclip_id" => run.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id_2,
+          "job_id" => job.id,
+          "input_dataclip_id" => run.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      # Send batch with valid step_ids
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log for step 1"],
+              "timestamp" => "1699444653874083",
+              "step_id" => step_id_1
+            },
+            %{
+              "message" => ["Log for step 2"],
+              "timestamp" => "1699444653874084",
+              "step_id" => step_id_2
+            },
+            %{
+              "message" => ["Log without step"],
+              "timestamp" => "1699444653874085"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      log_lines =
+        Lightning.Invocation.LogLine
+        |> where(run_id: ^run.id)
+        |> order_by(:timestamp)
+        |> Repo.all()
+
+      assert length(log_lines) == 3
+      assert Enum.at(log_lines, 0).step_id == step_id_1
+      assert Enum.at(log_lines, 1).step_id == step_id_2
+      assert Enum.at(log_lines, 2).step_id == nil
+
+      # Send batch with invalid step_id
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log with invalid step"],
+              "timestamp" => "1699444653874086",
+              "step_id" => invalid_step_id
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:batch_logs handles empty logs array", %{
+      socket: socket
+    } do
+      ref = push(socket, "run:batch_logs", %{"logs" => []})
+
+      assert_reply ref, :ok, _
+    end
+
+    test "run:batch_logs broadcasts events for each inserted log line", %{
+      socket: socket,
+      run: run
+    } do
+      # Subscribe to run events
+      Lightning.Runs.Events.subscribe(run)
+
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log 1"],
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "message" => ["Log 2"],
+              "timestamp" => "1699444653874084"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      # Should receive 2 log_appended events
+      assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_1}
+      assert log_line_1.message == "Log 1"
+
+      assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_2}
+      assert log_line_2.message == "Log 2"
+    end
   end
 
   describe "run:start" do

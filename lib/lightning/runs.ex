@@ -288,6 +288,83 @@ defmodule Lightning.Runs do
   end
 
   @doc """
+  Appends multiple log lines to a run in a batch operation.
+
+  Returns `{:ok, [%LogLine{}, ...]}` if all logs are inserted successfully, or `{:error, changeset}`
+  for the first validation error encountered.
+  """
+  def append_run_logs_batch(run, log_entries, scrubber \\ nil)
+      when is_list(log_entries) do
+    valid_step_ids = fetch_valid_step_ids(run, log_entries)
+
+    changesets =
+      Enum.map(log_entries, fn log_entry ->
+        LogLine.new(run, log_entry, scrubber)
+        |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
+          validate_step_id(step_id, valid_step_ids)
+        end)
+      end)
+
+    with {:ok, log_lines} <- insert_all_logs(changesets) do
+      Enum.each(log_lines, &Events.log_appended/1)
+
+      {:ok, log_lines}
+    end
+  end
+
+  defp fetch_valid_step_ids(run, log_entries) do
+    step_ids =
+      log_entries
+      |> Enum.map(&(Map.get(&1, "step_id") || Map.get(&1, :step_id)))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    if Enum.empty?(step_ids) do
+      []
+    else
+      from(s in Lightning.RunStep,
+        where: s.step_id in ^step_ids and s.run_id == ^run.id,
+        select: s.step_id
+      )
+      |> Repo.all()
+    end
+  end
+
+  defp validate_step_id(nil, _valid_step_ids), do: []
+
+  defp validate_step_id(step_id, valid_step_ids) do
+    if step_id in valid_step_ids do
+      []
+    else
+      [{:step_id, "must be associated with the run"}]
+    end
+  end
+
+  defp insert_all_logs(changesets) do
+    case Enum.find(changesets, fn cs -> not cs.valid? end) do
+      nil ->
+        entries =
+          Enum.map(changesets, fn changeset ->
+            changeset
+            |> Ecto.Changeset.apply_changes()
+            |> Map.take(LogLine.__schema__(:fields))
+          end)
+
+        {_count, log_lines} =
+          Repo.insert_all(
+            Lightning.Invocation.LogLine,
+            entries,
+            returning: true
+          )
+
+        {:ok, log_lines}
+
+      invalid_changeset ->
+        {:error, invalid_changeset}
+    end
+  end
+
+  @doc """
   Creates a Step for a given run and job.
 
   The Step is created and marked as started at the current time.
