@@ -116,6 +116,11 @@ defmodule Lightning.Channels.Handler do
         })
         |> Repo.update()
     end
+
+    Lightning.broadcast(
+      "channels:#{state.channel.id}",
+      {:channel_request_completed, state.channel_request.id}
+    )
   end
 
   defp derive_request_state(result) do

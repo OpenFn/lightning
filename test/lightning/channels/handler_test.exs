@@ -23,6 +23,8 @@ defmodule Lightning.Channels.HandlerTest do
       client_identity: "127.0.0.1"
     }
 
+    Lightning.subscribe("channels:#{channel.id}")
+
     %{channel: channel, snapshot: snapshot, state: initial_state}
   end
 
@@ -126,8 +128,7 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
-      # Wait for async task
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       event = Repo.one!(ChannelEvent)
       assert event.channel_request_id == state.channel_request.id
@@ -143,7 +144,7 @@ defmodule Lightning.Channels.HandlerTest do
     test "updates ChannelRequest state to success for 2xx", %{state: state} do
       result = finished_result(status: 200)
       Handler.handle_response_finished(result, state)
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :success
@@ -154,7 +155,7 @@ defmodule Lightning.Channels.HandlerTest do
       state = %{state | response_status: 404}
       result = finished_result(status: 404)
       Handler.handle_response_finished(result, state)
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :failed
@@ -165,7 +166,7 @@ defmodule Lightning.Channels.HandlerTest do
     } do
       result = finished_result(status: nil, error: {:timeout, :recv_response})
       Handler.handle_response_finished(result, state)
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :timeout
@@ -181,7 +182,7 @@ defmodule Lightning.Channels.HandlerTest do
         )
 
       Handler.handle_response_finished(result, state)
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :error
@@ -190,7 +191,7 @@ defmodule Lightning.Channels.HandlerTest do
     test "creates error event type when error present", %{state: state} do
       result = finished_result(status: nil, error: :some_error)
       Handler.handle_response_finished(result, state)
-      wait_for_task()
+      assert_receive {:channel_request_completed, _}, 1000
 
       event = Repo.one!(ChannelEvent)
       assert event.type == :error
@@ -240,10 +241,5 @@ defmodule Lightning.Channels.HandlerTest do
       status: Keyword.get(overrides, :status, 200),
       duration_us: Keyword.get(overrides, :duration_us, 10_000)
     }
-  end
-
-  defp wait_for_task do
-    # Give the async task time to complete
-    Process.sleep(200)
   end
 end

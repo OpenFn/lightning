@@ -277,6 +277,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       bypass: bypass,
       channel: channel
     } do
+      Lightning.subscribe("channels:#{channel.id}")
+
       Bypass.expect_once(bypass, "GET", "/persisted", fn conn ->
         Plug.Conn.send_resp(conn, 200, "persisted response")
       end)
@@ -284,14 +286,9 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/persisted")
       assert resp.status == 200
 
-      # Wait for async task to complete
-      Process.sleep(300)
+      assert_receive {:channel_request_completed, request_id}, 1000
 
-      request =
-        Lightning.Repo.one!(
-          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
-        )
-
+      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state == :success
       assert request.completed_at != nil
 
@@ -311,6 +308,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       conn: conn,
       channel: channel
     } do
+      Lightning.subscribe("channels:#{channel.id}")
+
       port = Enum.random(59_000..59_999)
 
       channel
@@ -320,14 +319,9 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/fail")
       assert resp.status in [502, 504]
 
-      # Wait for async task
-      Process.sleep(300)
+      assert_receive {:channel_request_completed, request_id}, 1000
 
-      request =
-        Lightning.Repo.one!(
-          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
-        )
-
+      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state in [:error, :timeout]
       assert request.completed_at != nil
     end
