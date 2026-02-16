@@ -323,6 +323,8 @@ export default function Editor({
     // This needs to be at the top level so that tooltips clip over Lightning UIs
     const overflowNode = document.createElement('div');
     overflowNode.className = 'monaco-editor widgets-overflow-container';
+    // Total hackage - acceptable given that the editor will be retired soon
+    overflowNode.style.zIndex = '9999';
     document.body.appendChild(overflowNode);
 
     setOptions({

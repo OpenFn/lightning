@@ -38,6 +38,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
 - AI Assistant button now disabled when Apollo not configured, preventing silent
   failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
 - Version chip missing tooltips
