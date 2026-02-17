@@ -11,6 +11,14 @@ defmodule LoadTest do
 
     opts = LoadTest.Config.parse(args)
 
+    opts =
+      if opts[:charts] do
+        prefix = LoadTest.Report.generate_output_prefix(opts)
+        Map.put(opts, :output_prefix, prefix)
+      else
+        opts
+      end
+
     # Start the Finch HTTP client pool
     {:ok, _} =
       Finch.start_link(
@@ -55,13 +63,18 @@ defmodule LoadTest do
       end
 
     # Print test banner
+    duration_label =
+      if opts[:scenario] == "saturation",
+        do: "#{opts[:duration]}s (per step)",
+        else: "#{opts[:duration]}s"
+
     IO.puts("""
 
     Starting load test...
       URL:         #{channel_url}
       Scenario:    #{opts[:scenario]}
       Concurrency: #{opts[:concurrency]} VUs
-      Duration:    #{opts[:duration]}s
+      Duration:    #{duration_label}
       Payload:     #{opts[:payload_size]} bytes#{format_response_size(opts[:response_size])}#{format_delay(opts[:delay])}
       Telemetry:   #{if telemetry_ok?, do: "enabled", else: "disabled"}
       Command:     #{command}
@@ -70,15 +83,39 @@ defmodule LoadTest do
     # Run the scenario
     if direct? do
       LoadTest.Runner.run_direct(opts[:scenario], channel_url, opts)
+      print_standard_results(opts, command, node, telemetry_ok?)
     else
-      LoadTest.Runner.run(opts[:scenario], channel_url, opts)
-    end
+      result = LoadTest.Runner.run(opts[:scenario], channel_url, opts)
 
-    # Collect and print results
+      if opts[:scenario] == "saturation" do
+        LoadTest.Report.print_saturation(result, opts, command)
+
+        # Charts need a CSV to read from; auto-create one if --charts without --csv
+        opts_with_csv =
+          if opts[:charts] and is_nil(opts[:csv]),
+            do: Map.put(opts, :csv, opts[:output_prefix] <> ".csv"),
+            else: opts
+
+        LoadTest.Report.write_saturation_csv(result, opts_with_csv)
+
+        if opts[:charts] do
+          csv_path = opts_with_csv[:csv]
+          LoadTest.Report.write_saturation_charts(csv_path)
+        end
+
+        if telemetry_ok? do
+          LoadTest.Setup.teardown_telemetry_collector!(node)
+        end
+      else
+        print_standard_results(opts, command, node, telemetry_ok?)
+      end
+    end
+  end
+
+  defp print_standard_results(opts, command, node, telemetry_ok?) do
     summary = LoadTest.Metrics.summary()
     LoadTest.Report.print(summary, opts, command)
 
-    # Print telemetry breakdown if available
     if telemetry_ok? do
       telemetry = LoadTest.Setup.get_telemetry_summary(node)
       LoadTest.Report.print_telemetry(telemetry)
@@ -86,6 +123,11 @@ defmodule LoadTest do
     end
 
     LoadTest.Report.write_csv(summary, opts)
+
+    if opts[:charts] do
+      timeseries = LoadTest.Metrics.latency_timeseries()
+      LoadTest.Report.write_standard_charts(timeseries, opts)
+    end
   end
 
   defp reconstruct_command(args) do

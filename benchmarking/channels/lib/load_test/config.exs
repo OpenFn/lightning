@@ -5,7 +5,7 @@
 defmodule LoadTest.Config do
   @moduledoc false
 
-  @scenarios ~w(happy_path ramp_up large_payload large_response mixed_methods slow_sink direct_sink)
+  @scenarios ~w(happy_path ramp_up saturation large_payload large_response mixed_methods slow_sink direct_sink)
 
   @defaults %{
     target: "http://localhost:4000",
@@ -19,7 +19,8 @@ defmodule LoadTest.Config do
     payload_size: 1024,
     response_size: nil,
     delay: nil,
-    csv: nil
+    csv: nil,
+    charts: false
   }
 
   @help """
@@ -39,11 +40,13 @@ defmodule LoadTest.Config do
     --response-size BYTES Response body size override via query param (default: none)
     --delay MS            Sink response delay via query param (default: none; slow_sink: 2000)
     --csv PATH            Optional CSV output file for results
+    --charts              Generate gnuplot charts (PNG files in /tmp or next to --csv)
     --help                Show this help
 
   Scenarios:
     happy_path      Sustained POST requests at --concurrency VUs for --duration seconds
     ramp_up         Ramp from 1 to --concurrency VUs over --duration seconds
+    saturation      Ramp through concurrency levels, report per-step (find throughput ceiling)
     large_payload   POST with --payload-size bodies (default 1MB), check memory stays flat
     large_response  GET requests; mock sink returns large bodies. Reports memory
     mixed_methods   Rotate through GET, POST, PUT, PATCH, DELETE
@@ -138,6 +141,9 @@ defmodule LoadTest.Config do
 
   defp parse_args(["--csv", value | rest], acc),
     do: parse_args(rest, %{acc | csv: value})
+
+  defp parse_args(["--charts" | rest], acc),
+    do: parse_args(rest, %{acc | charts: true})
 
   defp parse_args([unknown | _], _acc),
     do: {:error, "unknown option: #{unknown}"}
