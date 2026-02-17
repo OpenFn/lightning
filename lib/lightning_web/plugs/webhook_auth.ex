@@ -7,7 +7,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   alias Lightning.Retry
   alias Lightning.Workflows
-  alias Lightning.Workflows.WebhookAuthMethod
+  alias LightningWeb.Auth
 
   require Logger
 
@@ -92,20 +92,16 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   defp check_auth(conn, auth_methods, trigger) do
     cond do
-      valid_key?(conn, auth_methods) or valid_user?(conn, auth_methods) ->
+      Auth.valid_key?(conn, auth_methods) or
+          Auth.valid_user?(conn, auth_methods) ->
         successful_response(conn, trigger)
 
-      authenticated_request(conn) ->
+      Auth.has_credentials?(conn) ->
         not_found_response(conn)
 
       true ->
         unauthorized_response(conn)
     end
-  end
-
-  defp authenticated_request(conn) do
-    conn |> get_req_header("x-api-key") != [] or
-      conn |> get_req_header("authorization") != []
   end
 
   defp unauthorized_response(conn) do
@@ -121,46 +117,4 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     |> json(%{"error" => "Webhook not found"})
     |> halt()
   end
-
-  defp valid_key?(conn, methods) do
-    Enum.any?(methods, &key_matches?(conn, &1))
-  end
-
-  defp key_matches?(
-         conn,
-         %WebhookAuthMethod{auth_type: :api, api_key: key}
-       ) do
-    get_req_header(conn, "x-api-key")
-    |> Enum.any?(fn header_value ->
-      Plug.Crypto.secure_compare(header_value, key)
-    end)
-  end
-
-  defp key_matches?(_, _), do: false
-
-  defp valid_user?(conn, methods) do
-    Enum.any?(methods, &user_matches?(conn, &1))
-  end
-
-  defp user_matches?(conn, %WebhookAuthMethod{
-         auth_type: :basic,
-         username: expected_user,
-         password: expected_pass
-       }) do
-    get_req_header(conn, "authorization")
-    |> Enum.find_value(false, fn auth ->
-      with [scheme, b64] <- String.split(auth, " ", parts: 2),
-           true <- String.downcase(scheme) == "basic",
-           {:ok, decoded} <- Base.decode64(b64),
-           [user, pass] <- String.split(decoded, ":", parts: 2),
-           true <- Plug.Crypto.secure_compare(user, expected_user),
-           true <- Plug.Crypto.secure_compare(pass, expected_pass) do
-        true
-      else
-        _ -> false
-      end
-    end)
-  end
-
-  defp user_matches?(_, _), do: false
 end
