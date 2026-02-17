@@ -14,7 +14,6 @@ defmodule Lightning.Channels.Channel do
           project_id: Ecto.UUID.t(),
           name: String.t(),
           sink_url: String.t(),
-          source_project_credential_id: Ecto.UUID.t() | nil,
           sink_project_credential_id: Ecto.UUID.t() | nil,
           enabled: boolean(),
           lock_version: integer(),
@@ -29,8 +28,15 @@ defmodule Lightning.Channels.Channel do
     field :lock_version, :integer, default: 0
 
     belongs_to :project, Project
-    belongs_to :source_project_credential, ProjectCredential
     belongs_to :sink_project_credential, ProjectCredential
+
+    has_many :channel_auth_methods, Lightning.Channels.ChannelAuthMethod
+
+    has_many :source_auth_methods, Lightning.Channels.ChannelAuthMethod,
+      where: [role: :source]
+
+    has_many :sink_auth_methods, Lightning.Channels.ChannelAuthMethod,
+      where: [role: :sink]
 
     has_many :channel_snapshots, Lightning.Channels.ChannelSnapshot
     has_many :channel_requests, Lightning.Channels.ChannelRequest
@@ -44,7 +50,6 @@ defmodule Lightning.Channels.Channel do
       :name,
       :sink_url,
       :project_id,
-      :source_project_credential_id,
       :sink_project_credential_id,
       :enabled
     ])

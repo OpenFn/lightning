@@ -93,7 +93,6 @@ defmodule Lightning.Channels do
           name: channel.name,
           sink_url: channel.sink_url,
           enabled: channel.enabled,
-          source_project_credential_id: channel.source_project_credential_id,
           sink_project_credential_id: channel.sink_project_credential_id
         }
 
