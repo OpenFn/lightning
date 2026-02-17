@@ -457,7 +457,7 @@ defmodule Lightning.Credentials do
       else
         with :ok <-
                check_external_id_conflict(changeset, external_id, direct_ids) do
-          descendant_ids = descendant_project_ids(direct_ids)
+          descendant_ids = Lightning.Projects.descendant_ids(direct_ids)
 
           check_external_id_conflict(
             changeset,
@@ -474,16 +474,6 @@ defmodule Lightning.Credentials do
     Ecto.Changeset.get_field(changeset, :project_credentials, [])
     |> Enum.map(& &1.project_id)
     |> Enum.reject(&is_nil/1)
-  end
-
-  defp descendant_project_ids(project_ids) do
-    Enum.flat_map(project_ids, fn project_id ->
-      Lightning.Projects.list_workspace_projects(project_id)
-      |> Map.get(:descendants, [])
-      |> Enum.map(& &1.id)
-    end)
-    |> Enum.uniq()
-    |> Enum.reject(&(&1 in project_ids))
   end
 
   # NOTE: This is an app-level check only (not DB-enforced). It has a TOCTOU
@@ -747,11 +737,10 @@ defmodule Lightning.Credentials do
     current_time = DateTime.utc_now() |> DateTime.truncate(:second)
 
     credential_rows =
-      Lightning.Projects.list_workspace_projects(project_id)
-      |> Map.get(:descendants, [])
-      |> Enum.map(fn descendant ->
+      Lightning.Projects.descendant_ids([project_id])
+      |> Enum.map(fn descendant_id ->
         %{
-          project_id: descendant.id,
+          project_id: descendant_id,
           credential_id: credential_id,
           inserted_at: current_time,
           updated_at: current_time
