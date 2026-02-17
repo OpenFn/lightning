@@ -28,6 +28,10 @@ and this project adheres to
 
 ### Fixed
 
+- Ensure workflows have version history before sandbox creation, merging, and
+  importing to prevent squashing of the first workflow version
+  [#3958](https://github.com/OpenFn/lightning/issues/3958)
+
 ## [2.15.14] - 2026-02-13
 
 ## [2.15.14-pre] - 2026-02-11

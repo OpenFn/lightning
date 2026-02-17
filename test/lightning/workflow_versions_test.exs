@@ -98,6 +98,36 @@ defmodule Lightning.WorkflowVersionsTest do
       assert Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @c)
     end
 
+    test "does not squash the first version even when source is the same" do
+      wf = insert(:workflow)
+
+      # Insert first version from app
+      assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
+      assert wf1.version_history == ["app:#{@a}"]
+      assert count_rows(wf.id) == 1
+
+      # Try to insert second version with same source - should NOT squash (first version protected)
+      assert {:ok, wf2} = WorkflowVersions.record_version(wf1, @b, "app")
+      assert wf2.version_history == ["app:#{@a}", "app:#{@b}"]
+      # Should have 2 rows, not squashed
+      assert count_rows(wf.id) == 2
+
+      # Both versions should exist in the database
+      assert Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @a)
+      assert Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @b)
+
+      # Now third version with same source should squash the second (not the first)
+      assert {:ok, wf3} = WorkflowVersions.record_version(wf2, @c, "app")
+      assert wf3.version_history == ["app:#{@a}", "app:#{@c}"]
+      # Still 2 rows (first protected, second replaced by third)
+      assert count_rows(wf.id) == 2
+
+      # First and third should exist, second should be gone
+      assert Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @a)
+      refute Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @b)
+      assert Repo.get_by(WorkflowVersion, workflow_id: wf.id, hash: @c)
+    end
+
     test "squashing multiple times in sequence" do
       wf = insert(:workflow)
 
@@ -156,6 +186,61 @@ defmodule Lightning.WorkflowVersionsTest do
       assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
       assert wf1.version_history == ["app:#{@a}"]
       assert count_rows(wf.id) == 1
+    end
+  end
+
+  describe "ensure_version_recorded/1" do
+    test "records a version when workflow has no version_history" do
+      wf = insert(:workflow)
+      _job = insert(:job, workflow: wf, name: "TestJob", body: "test code")
+
+      # Workflow starts with no versions
+      assert count_rows(wf.id) == 0
+      assert wf.version_history == []
+
+      # Ensure version recorded
+      assert {:ok, updated_wf} = WorkflowVersions.ensure_version_recorded(wf)
+
+      # Should now have one version
+      assert count_rows(wf.id) == 1
+      assert length(updated_wf.version_history) == 1
+
+      # Version should be valid
+      [version_entry] = updated_wf.version_history
+      assert String.match?(version_entry, ~r/^app:[a-f0-9]{12}$/)
+    end
+
+    test "does nothing when workflow already has version_history" do
+      wf = insert(:workflow)
+
+      # Record an initial version
+      assert {:ok, wf1} = WorkflowVersions.record_version(wf, @a, "app")
+      assert wf1.version_history == ["app:#{@a}"]
+      assert count_rows(wf.id) == 1
+
+      # Call ensure_version_recorded
+      assert {:ok, wf2} = WorkflowVersions.ensure_version_recorded(wf1)
+
+      # Should be unchanged (idempotent)
+      assert wf2.version_history == ["app:#{@a}"]
+      assert count_rows(wf.id) == 1
+    end
+
+    test "is idempotent when called multiple times" do
+      wf = insert(:workflow)
+      insert(:job, workflow: wf, name: "TestJob")
+
+      # First call
+      assert {:ok, wf1} = WorkflowVersions.ensure_version_recorded(wf)
+      first_count = count_rows(wf.id)
+      first_history = wf1.version_history
+
+      # Second call
+      assert {:ok, wf2} = WorkflowVersions.ensure_version_recorded(wf1)
+
+      # Should be unchanged
+      assert count_rows(wf.id) == first_count
+      assert wf2.version_history == first_history
     end
   end
 

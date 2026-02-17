@@ -65,6 +65,17 @@ defmodule Lightning.CliDeployTest do
 
       project = Lightning.ProjectsFixtures.canonical_project_fixture()
 
+      # Ensure workflows have version history (as the API now does automatically)
+      Enum.each(project.workflows, fn workflow ->
+        Lightning.WorkflowVersions.ensure_version_recorded(workflow)
+      end)
+
+      # Reload project with workflows to get the updated version_history
+      project =
+        Lightning.Repo.preload(project, [workflows: [:jobs, :edges, :triggers]],
+          force: true
+        )
+
       # Try to pull for a non project user
       {logs, _exit_code} =
         System.cmd(
