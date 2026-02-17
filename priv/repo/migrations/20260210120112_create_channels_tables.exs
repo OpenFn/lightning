@@ -112,6 +112,7 @@ defmodule Lightning.Repo.Migrations.CreateChannelsTables do
       add :response_body_hash, :string, size: 64
 
       add :latency_ms, :integer
+      add :ttfb_ms, :integer
       add :error_message, :text
 
       add :inserted_at, :utc_datetime_usec, null: false

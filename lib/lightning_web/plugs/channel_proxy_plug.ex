@@ -28,12 +28,18 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp do_proxy(conn, channel_id, rest) do
     case fetch_channel_with_telemetry(channel_id) do
       {:ok, channel} ->
-        forward_path = build_forward_path(rest)
+        case Channels.get_or_create_current_snapshot(channel) do
+          {:ok, snapshot} ->
+            forward_path = build_forward_path(rest)
 
-        conn
-        |> put_proxy_headers()
-        |> proxy_upstream(channel, forward_path)
-        |> halt()
+            conn
+            |> put_proxy_headers()
+            |> proxy_upstream(channel, snapshot, forward_path)
+            |> halt()
+
+          {:error, _} ->
+            conn |> send_resp(500, "Internal Server Error") |> halt()
+        end
 
       :not_found ->
         conn |> send_resp(404, "Not Found") |> halt()
@@ -53,7 +59,15 @@ defmodule LightningWeb.ChannelProxyPlug do
     )
   end
 
-  defp proxy_upstream(conn, channel, forward_path) do
+  defp proxy_upstream(conn, channel, snapshot, forward_path) do
+    handler_state = %{
+      channel: channel,
+      snapshot: snapshot,
+      started_at: DateTime.utc_now(),
+      request_path: forward_path,
+      client_identity: get_client_identity(conn)
+    }
+
     metadata = %{
       channel_id: channel.id,
       sink_url: channel.sink_url,
@@ -67,7 +81,8 @@ defmodule LightningWeb.ChannelProxyPlug do
         result =
           Weir.proxy(conn,
             upstream: channel.sink_url,
-            path: forward_path
+            path: forward_path,
+            handler: {Lightning.Channels.Handler, handler_state}
           )
 
         {result, metadata}
@@ -87,6 +102,13 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   defp build_forward_path([]), do: "/"
   defp build_forward_path(segments), do: "/" <> Enum.join(segments, "/")
+
+  defp get_client_identity(conn) do
+    case get_req_header(conn, "x-forwarded-for") do
+      [xff | _] -> xff |> String.split(",") |> List.first() |> String.trim()
+      [] -> conn.remote_ip |> :inet.ntoa() |> to_string()
+    end
+  end
 
   defp put_proxy_headers(conn) do
     original_host = get_req_header(conn, "host") |> List.first("")

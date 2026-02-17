@@ -21,6 +21,7 @@ defmodule Lightning.Channels.ChannelEvent do
           response_body_preview: String.t() | nil,
           response_body_hash: String.t() | nil,
           latency_ms: integer() | nil,
+          ttfb_ms: integer() | nil,
           error_message: String.t() | nil,
           inserted_at: DateTime.t()
         }
@@ -41,6 +42,7 @@ defmodule Lightning.Channels.ChannelEvent do
     field :response_body_hash, :string
 
     field :latency_ms, :integer
+    field :ttfb_ms, :integer
     field :error_message, :string
 
     belongs_to :channel_request, ChannelRequest
@@ -63,6 +65,7 @@ defmodule Lightning.Channels.ChannelEvent do
       :response_body_preview,
       :response_body_hash,
       :latency_ms,
+      :ttfb_ms,
       :error_message
     ])
     |> validate_required([:channel_request_id, :type])

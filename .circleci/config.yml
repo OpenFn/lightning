@@ -171,23 +171,24 @@ jobs:
       - run:
           name: "Check code formatting"
           command: |
-            sudo -u lightning mix format --check-formatted || touch /tmp/lint_failed
+            sudo -u lightning mix format --check-formatted || echo "format" >> /tmp/lint_failed
       - run:
           name: "Check code style with Credo"
           when: always
           command: |
-            sudo -u lightning mix credo --strict --all || touch /tmp/lint_failed
+            sudo -u lightning mix credo --strict --all || echo "credo" >> /tmp/lint_failed
       - run:
           name: "Check for security vulnerabilities"
           when: always
           command: |
-            sudo -u lightning mix sobelow --threshold medium || touch /tmp/lint_failed
+            sudo -u lightning mix sobelow --threshold medium || echo "sobelow" >> /tmp/lint_failed
       - run:
           name: "Verify all checks passed"
           when: always
           command: |
             if [ -f /tmp/lint_failed ]; then
-              echo "One or more lint checks failed"
+              echo "The following checks failed:"
+              cat /tmp/lint_failed
               exit 1
             fi
 
