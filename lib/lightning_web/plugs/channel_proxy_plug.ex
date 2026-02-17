@@ -5,6 +5,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   import Plug.Conn
 
   alias Lightning.Channels
+  alias LightningWeb.Auth
 
   @impl true
   def init(opts), do: opts
@@ -28,21 +29,56 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp do_proxy(conn, channel_id, rest) do
     case fetch_channel_with_telemetry(channel_id) do
       {:ok, channel} ->
-        case Channels.get_or_create_current_snapshot(channel) do
-          {:ok, snapshot} ->
-            forward_path = build_forward_path(rest)
+        case authenticate_source(conn, channel) do
+          :ok ->
+            case Channels.get_or_create_current_snapshot(channel) do
+              {:ok, snapshot} ->
+                forward_path = build_forward_path(rest)
 
-            conn
-            |> put_proxy_headers()
-            |> proxy_upstream(channel, snapshot, forward_path)
-            |> halt()
+                conn
+                |> put_proxy_headers()
+                |> proxy_upstream(channel, snapshot, forward_path)
+                |> halt()
 
-          {:error, _} ->
-            conn |> send_resp(500, "Internal Server Error") |> halt()
+              {:error, _} ->
+                conn |> send_resp(500, "Internal Server Error") |> halt()
+            end
+
+          :unauthorized ->
+            conn |> send_resp(401, "Unauthorized") |> halt()
+
+          :not_found ->
+            conn |> send_resp(404, "Not Found") |> halt()
         end
 
       :not_found ->
         conn |> send_resp(404, "Not Found") |> halt()
+    end
+  end
+
+  defp authenticate_source(conn, channel) do
+    methods =
+      channel.source_auth_methods
+      |> Enum.map(& &1.webhook_auth_method)
+      |> Enum.reject(&is_nil/1)
+
+    case methods do
+      [] -> :ok
+      _ -> check_source_auth(conn, methods)
+    end
+  end
+
+  defp check_source_auth(conn, auth_methods) do
+    cond do
+      Auth.valid_key?(conn, auth_methods) or
+          Auth.valid_user?(conn, auth_methods) ->
+        :ok
+
+      Auth.has_credentials?(conn) ->
+        :not_found
+
+      true ->
+        :unauthorized
     end
   end
 
