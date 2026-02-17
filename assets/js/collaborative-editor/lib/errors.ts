@@ -71,7 +71,8 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
   // show max 3 errros
   const validationErrs = Object.values(channelError.errors)
     .flat()
-    .map((v, i) => `- ${v}`);
+    .map(v => `- ${v}`)
+    .splice(0, 3);
 
   if (validationErrs.length) {
     return validationErrs.join('\n');
