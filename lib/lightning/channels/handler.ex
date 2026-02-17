@@ -40,7 +40,8 @@ defmodule Lightning.Channels.Handler do
 
   use Weir.Handler
 
-  alias Lightning.Channels.{ChannelRequest, ChannelEvent}
+  alias Lightning.Channels.ChannelEvent
+  alias Lightning.Channels.ChannelRequest
   alias Lightning.Repo
 
   require Logger
