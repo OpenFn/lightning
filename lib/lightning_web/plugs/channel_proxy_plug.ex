@@ -93,7 +93,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp fetch_channel(id) do
     with {:ok, uuid} <- Ecto.UUID.cast(id),
          %Channels.Channel{enabled: true} = channel <-
-           Channels.get_channel(uuid) do
+           Channels.get_channel_with_source_auth(uuid) do
       {:ok, channel}
     else
       _ -> :not_found

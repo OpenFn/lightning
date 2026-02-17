@@ -29,6 +29,21 @@ defmodule Lightning.Channels do
   end
 
   @doc """
+  Gets a channel by ID with source auth methods preloaded.
+
+  Returns nil if not found. Used by ChannelProxyPlug for auth validation.
+  """
+  def get_channel_with_source_auth(id) do
+    from(c in Channel,
+      where: c.id == ^id,
+      left_join: cam in assoc(c, :source_auth_methods),
+      left_join: wam in assoc(cam, :webhook_auth_method),
+      preload: [source_auth_methods: {cam, webhook_auth_method: wam}]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Gets a single channel. Raises if not found.
   """
   def get_channel!(id) do
