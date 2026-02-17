@@ -19,7 +19,13 @@ and this project adheres to
 
 ### Changed
 
+- Use distinct `api_provisioning` action type in provisioner to return a
+  context-appropriate error message for CLI deploy vs GitHub sync
+  [#4426](https://github.com/OpenFn/lightning/issues/4426)
+
 ### Fixed
+
+## [2.15.14] - 2026-02-13
 
 ## [2.15.14-pre] - 2026-02-11
 
@@ -36,6 +42,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
 - AI Assistant button now disabled when Apollo not configured, preventing silent
   failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
 - Version chip missing tooltips
