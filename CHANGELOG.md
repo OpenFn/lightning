@@ -25,6 +25,10 @@ and this project adheres to
 
 ### Fixed
 
+- Enforce `external_id` uniqueness on credentials per user and per project to
+  prevent ambiguous keychain resolution
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+
 ## [2.15.14] - 2026-02-13
 
 ## [2.15.14-pre] - 2026-02-11
