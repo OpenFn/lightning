@@ -5,7 +5,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
   import Ecto.Query
   import Lightning.Factories
-  import Plug.Test, only: [conn: 3]
+  import Plug.Test, only: [conn: 2, conn: 3]
 
   setup do
     bypass = Bypass.open()
@@ -324,6 +324,307 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state in [:error, :timeout]
       assert request.completed_at != nil
+    end
+  end
+
+  describe "source authentication" do
+    test "no auth methods configured — request passes through", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      # Channel has no channel_auth_methods, so it's publicly accessible
+      Bypass.expect_once(bypass, "GET", "/open", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "public")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/open")
+
+      assert resp.status == 200
+      assert resp.resp_body == "public"
+    end
+
+    test "API key auth — correct key allows request", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "valid-api-key"
+                )
+            )
+          ]
+        )
+
+      Bypass.expect_once(bypass, "GET", "/protected", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "authenticated")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("x-api-key", "valid-api-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "authenticated"
+    end
+
+    test "API key auth — wrong key returns 404", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "correct-key"
+                )
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("x-api-key", "wrong-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 404
+    end
+
+    test "API key auth — no key sent returns 401", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "some-key"
+                )
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> send_to_endpoint()
+
+      assert resp.status == 401
+    end
+
+    test "Basic auth — correct credentials allows request", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :basic,
+                  username: "admin",
+                  password: "secret"
+                )
+            )
+          ]
+        )
+
+      Bypass.expect_once(bypass, "GET", "/basic", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "basic-ok")
+      end)
+
+      encoded = Base.encode64("admin:secret")
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/basic")
+        |> put_req_header("authorization", "Basic #{encoded}")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "basic-ok"
+    end
+
+    test "Basic auth — wrong credentials returns 404", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :basic,
+                  username: "admin",
+                  password: "secret"
+                )
+            )
+          ]
+        )
+
+      encoded = Base.encode64("admin:wrong")
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/basic")
+        |> put_req_header("authorization", "Basic #{encoded}")
+        |> send_to_endpoint()
+
+      assert resp.status == 404
+    end
+
+    test "Basic auth — no auth header returns 401", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :basic,
+                  username: "admin",
+                  password: "secret"
+                )
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/basic")
+        |> send_to_endpoint()
+
+      assert resp.status == 401
+    end
+
+    test "multiple auth methods — either matches allows request", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "key-one"
+                )
+            ),
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "key-two"
+                )
+            )
+          ]
+        )
+
+      Bypass.expect_once(bypass, "GET", "/multi", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "multi-ok")
+      end)
+
+      # Use the second key — should still match
+      resp =
+        conn(:get, "/channels/#{channel.id}/multi")
+        |> put_req_header("x-api-key", "key-two")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "multi-ok"
+    end
+
+    test "mixed types (API + Basic) — API key matches allows request", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "mixed-key"
+                )
+            ),
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :basic,
+                  username: "user",
+                  password: "pass"
+                )
+            )
+          ]
+        )
+
+      Bypass.expect_once(bypass, "GET", "/mixed", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "mixed-ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/mixed")
+        |> put_req_header("x-api-key", "mixed-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "mixed-ok"
     end
   end
 

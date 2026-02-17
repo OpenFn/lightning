@@ -164,6 +164,51 @@ defmodule Lightning.ChannelsTest do
     end
   end
 
+  describe "get_channel_with_source_auth/1" do
+    test "returns channel with preloaded source auth methods" do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "test-key"
+                )
+            )
+          ]
+        )
+
+      result = Channels.get_channel_with_source_auth(channel.id)
+
+      assert result.id == channel.id
+      assert length(result.source_auth_methods) == 1
+
+      [cam] = result.source_auth_methods
+      assert cam.role == :source
+      assert cam.webhook_auth_method.auth_type == :api
+      assert cam.webhook_auth_method.api_key == "test-key"
+    end
+
+    test "returns channel with empty source_auth_methods when none configured" do
+      channel = insert(:channel)
+
+      result = Channels.get_channel_with_source_auth(channel.id)
+
+      assert result.id == channel.id
+      assert result.source_auth_methods == []
+    end
+
+    test "returns nil for non-existent channel" do
+      assert Channels.get_channel_with_source_auth(Ecto.UUID.generate()) == nil
+    end
+  end
+
   describe "get_or_create_current_snapshot/1" do
     test "creates snapshot on first call" do
       channel = insert(:channel)

@@ -46,6 +46,12 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     |> assoc_constraint(:channel)
     |> foreign_key_constraint(:webhook_auth_method_id)
     |> foreign_key_constraint(:project_credential_id)
+    |> unique_constraint(:webhook_auth_method_id,
+      name: :channel_auth_methods_wam_unique
+    )
+    |> unique_constraint(:project_credential_id,
+      name: :channel_auth_methods_pc_unique
+    )
   end
 
   defp validate_role_target_consistency(changeset) do
