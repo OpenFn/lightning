@@ -2433,6 +2433,66 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "descendants_query/1 and descendant_ids/1" do
+    test "descendant_ids/1 returns empty list for empty input" do
+      assert Projects.descendant_ids([]) == []
+    end
+
+    test "descendant_ids/1 returns empty list for project with no children" do
+      project = insert(:project)
+      assert Projects.descendant_ids([project.id]) == []
+    end
+
+    test "descendant_ids/1 returns direct children IDs" do
+      parent = insert(:project)
+      child1 = insert(:project, parent: parent)
+      child2 = insert(:project, parent: parent)
+
+      result = Projects.descendant_ids([parent.id])
+      assert Enum.sort(result) == Enum.sort([child1.id, child2.id])
+    end
+
+    test "descendant_ids/1 returns all descendants in a deep hierarchy" do
+      root = insert(:project)
+      child = insert(:project, parent: root)
+      grandchild = insert(:project, parent: child)
+      great_grandchild = insert(:project, parent: grandchild)
+
+      result = Projects.descendant_ids([root.id])
+
+      assert Enum.sort(result) ==
+               Enum.sort([child.id, grandchild.id, great_grandchild.id])
+    end
+
+    test "descendant_ids/1 does NOT include the input project IDs" do
+      parent = insert(:project)
+      _child = insert(:project, parent: parent)
+
+      result = Projects.descendant_ids([parent.id])
+      refute parent.id in result
+    end
+
+    test "descendant_ids/1 accepts multiple project IDs and returns combined descendants without duplicates" do
+      parent1 = insert(:project)
+      child1 = insert(:project, parent: parent1)
+
+      parent2 = insert(:project)
+      child2 = insert(:project, parent: parent2)
+
+      result = Projects.descendant_ids([parent1.id, parent2.id])
+      assert Enum.sort(result) == Enum.sort([child1.id, child2.id])
+    end
+
+    test "descendants_query/1 returns a composable Ecto.Query" do
+      parent = insert(:project)
+      _child = insert(:project, parent: parent)
+
+      query = Projects.descendants_query([parent.id])
+      assert %Ecto.Query{} = query
+      assert Repo.exists?(query)
+    end
+  end
+
   describe "sandbox facade delegates" do
     test "provision_sandbox/3 creates a child project and sets parent_id" do
       owner = insert(:user)
