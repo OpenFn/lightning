@@ -240,18 +240,19 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{disabled_channel.id}/test")
 
       assert resp.status == 404
+      assert %{"error" => "Not Found"} = json_response(resp, 404)
     end
 
     test "non-existent channel returns 404", %{conn: conn} do
       resp = get(conn, "/channels/#{Ecto.UUID.generate()}/test")
 
-      assert resp.status == 404
+      assert %{"error" => "Not Found"} = json_response(resp, 404)
     end
 
     test "invalid UUID returns 404", %{conn: conn} do
       resp = get(conn, "/channels/not-a-uuid/test")
 
-      assert resp.status == 404
+      assert %{"error" => "Not Found"} = json_response(resp, 404)
     end
 
     test "sink timeout returns 502", %{
@@ -407,6 +408,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 404
+      assert %{"error" => "Not Found"} = json_response(resp, 404)
     end
 
     test "API key auth — no key sent returns 401", %{bypass: bypass} do
@@ -435,6 +437,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
     end
 
     test "Basic auth — correct credentials allows request", %{bypass: bypass} do
@@ -504,6 +507,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 404
+      assert %{"error" => "Not Found"} = json_response(resp, 404)
     end
 
     test "Basic auth — no auth header returns 401", %{bypass: bypass} do
@@ -533,6 +537,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
     end
 
     test "multiple auth methods — either matches allows request", %{

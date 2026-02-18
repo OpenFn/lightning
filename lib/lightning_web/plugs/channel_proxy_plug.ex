@@ -3,6 +3,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   @behaviour Plug
 
   import Plug.Conn
+  import Phoenix.Controller, only: [json: 2]
 
   alias Lightning.Channels
   alias LightningWeb.Auth
@@ -41,18 +42,30 @@ defmodule LightningWeb.ChannelProxyPlug do
                 |> halt()
 
               {:error, _} ->
-                conn |> send_resp(500, "Internal Server Error") |> halt()
+                conn
+                |> put_status(500)
+                |> json(%{"error" => "Internal Server Error"})
+                |> halt()
             end
 
           :unauthorized ->
-            conn |> send_resp(401, "Unauthorized") |> halt()
+            conn
+            |> put_status(:unauthorized)
+            |> json(%{"error" => "Unauthorized"})
+            |> halt()
 
           :not_found ->
-            conn |> send_resp(404, "Not Found") |> halt()
+            conn
+            |> put_status(:not_found)
+            |> json(%{"error" => "Not Found"})
+            |> halt()
         end
 
       :not_found ->
-        conn |> send_resp(404, "Not Found") |> halt()
+        conn
+        |> put_status(:not_found)
+        |> json(%{"error" => "Not Found"})
+        |> halt()
     end
   end
 
