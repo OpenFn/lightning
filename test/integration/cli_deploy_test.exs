@@ -65,17 +65,6 @@ defmodule Lightning.CliDeployTest do
 
       project = Lightning.ProjectsFixtures.canonical_project_fixture()
 
-      # Ensure workflows have version history (as the API now does automatically)
-      Enum.each(project.workflows, fn workflow ->
-        Lightning.WorkflowVersions.ensure_version_recorded(workflow)
-      end)
-
-      # Reload project with workflows to get the updated version_history
-      project =
-        Lightning.Repo.preload(project, [workflows: [:jobs, :edges, :triggers]],
-          force: true
-        )
-
       # Try to pull for a non project user
       {logs, _exit_code} =
         System.cmd(
@@ -335,8 +324,7 @@ defmodule Lightning.CliDeployTest do
         :updated_at,
         :deleted_at,
         :lock_version,
-        :concurrency,
-        :version_history
+        :concurrency
       ])
 
     jobs =
@@ -369,7 +357,14 @@ defmodule Lightning.CliDeployTest do
         {key, expected_edge_state(edge)}
       end)
 
-    Map.merge(state, %{jobs: jobs, triggers: triggers, edges: edges})
+    version_history = Lightning.WorkflowVersions.history_for(workflow)
+
+    Map.merge(state, %{
+      jobs: jobs,
+      triggers: triggers,
+      edges: edges,
+      version_history: version_history
+    })
   end
 
   defp expected_trigger_state(trigger) do

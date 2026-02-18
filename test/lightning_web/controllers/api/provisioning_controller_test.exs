@@ -371,14 +371,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         insert(:simple_workflow, project: project, name: "Test Workflow")
 
       # Record some version history
-      {:ok, workflow} =
+      {:ok, _v1} =
         Lightning.WorkflowVersions.record_version(
           workflow,
           "aabbccddeeff",
           "app"
         )
 
-      {:ok, _workflow} =
+      {:ok, _v2} =
         Lightning.WorkflowVersions.record_version(
           workflow,
           "112233445566",
