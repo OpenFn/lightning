@@ -53,6 +53,7 @@ export interface Message {
   inserted_at: string;
   user_id?: string;
   user?: MessageUser | null;
+  job_id?: string;
 }
 
 /**
@@ -76,13 +77,31 @@ export interface JobCodeContext {
 /**
  * Session context for workflow_template mode
  */
-export interface WorkflowTemplateContext {
-  project_id: string;
-  workflow_id?: string;
-  code?: string;
-  errors?: string;
-  content?: string;
-}
+export type WorkflowTemplateContext =
+  | {
+      project_id: string;
+      workflow_id?: string;
+
+      code?: string;
+      errors?: string;
+      content?: string;
+    }
+  | {
+      job_id: string;
+      attach_code?: boolean;
+      attach_logs?: boolean;
+      attach_io_data?: boolean;
+      step_id?: string;
+      follow_run_id?: string;
+      content?: string;
+
+      job_name?: string;
+      job_body?: string;
+      job_adaptor?: string;
+
+      workflow_id?: string;
+      project_id: string;
+    };
 
 /**
  * Session metadata returned from the backend

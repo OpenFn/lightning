@@ -129,11 +129,7 @@ describe('AIAssistantPanel', () => {
 
     it('should show Job mode badge when sessionType is job_code', () => {
       renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          sessionType="job_code"
-        />
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} page="job_code" />
       );
 
       const badge = screen.getByText('Job');
@@ -146,7 +142,7 @@ describe('AIAssistantPanel', () => {
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          sessionType="workflow_template"
+          page="workflow_template"
         />
       );
 
@@ -157,11 +153,7 @@ describe('AIAssistantPanel', () => {
 
     it('should not show mode badge when sessionType is null', () => {
       renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          sessionType={null}
-        />
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} page={null} />
       );
 
       expect(screen.queryByText('Job')).not.toBeInTheDocument();
@@ -611,7 +603,7 @@ describe('AIAssistantPanel', () => {
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          sessionType="job_code"
+          page="job_code"
           sessionId="session-1"
         />
       );
@@ -624,7 +616,7 @@ describe('AIAssistantPanel', () => {
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          sessionType="workflow_template"
+          page="workflow_template"
         />
       );
 
@@ -644,11 +636,7 @@ describe('AIAssistantPanel', () => {
       // Replace state via the store's internal mechanism
       // In real usage, this happens via connectJobCodeMode
       renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          sessionType="job_code"
-        />
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} page="job_code" />
       );
 
       // ChatInput receives storageKey via useSyncExternalStore
@@ -661,7 +649,7 @@ describe('AIAssistantPanel', () => {
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          sessionType="workflow_template"
+          page="workflow_template"
         />
       );
 

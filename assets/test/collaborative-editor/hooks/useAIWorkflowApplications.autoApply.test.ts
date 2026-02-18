@@ -99,7 +99,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
     mode: 'workflow_template' | 'job_code',
     context: Record<string, unknown> = {}
   ): AIModeResult => ({
-    mode,
+    mode: 'workflow_template',
+    page: mode,
     context,
     storageKey: `ai-${mode}`,
   });
@@ -155,7 +156,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
         ({ currentSession }) =>
           useAIWorkflowApplications({
             sessionId: 'session-1',
-            sessionType: 'workflow_template',
+            page: 'workflow_template',
             currentSession,
             currentUserId: 'user-123',
             aiMode: createMockAIMode('workflow_template'),
@@ -225,7 +226,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
       renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'workflow_template',
+          page: 'workflow_template',
           currentSession: session,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('workflow_template'),
@@ -273,7 +274,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
         ({ currentSession }) =>
           useAIWorkflowApplications({
             sessionId: 'session-1',
-            sessionType: 'workflow_template',
+            page: 'workflow_template',
             currentSession,
             currentUserId: 'user-123', // Current user is different
             aiMode: createMockAIMode('workflow_template'),
@@ -317,7 +318,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
       renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'workflow_template',
+          page: 'workflow_template',
           currentSession: session,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('workflow_template'),
@@ -355,7 +356,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
       renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
-          sessionType: 'workflow_template',
+          page: 'workflow_template',
           currentSession: session,
           currentUserId: 'user-123',
           aiMode: createMockAIMode('workflow_template'),
@@ -410,7 +411,7 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
         ({ currentSession }) =>
           useAIWorkflowApplications({
             sessionId: 'session-1',
-            sessionType: 'workflow_template',
+            page: 'workflow_template',
             currentSession,
             currentUserId: 'user-123',
             aiMode: createMockAIMode('workflow_template'),

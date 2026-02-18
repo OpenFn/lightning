@@ -23,12 +23,41 @@ and this project adheres to
 
 ### Changed
 
+- Use distinct `api_provisioning` action type in provisioner to return a
+  context-appropriate error message for CLI deploy vs GitHub sync
+  [#4426](https://github.com/OpenFn/lightning/issues/4426)
+
+### Fixed
+
+- Enforce `external_id` uniqueness on credentials per user and per project to
+  prevent ambiguous keychain resolution
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+- unable to clear runs from history & url params rewrite
+  [#4397](https://github.com/OpenFn/lightning/issues/4397)
+
+## [2.15.14] - 2026-02-13
+
+## [2.15.14-pre] - 2026-02-11
+
+### Added
+
+- Single AI chat for workflows and jobs
+  [#4109](https://github.com/OpenFn/lightning/issues/4109)
+
+### Changed
+
 - Refactor CircleCI to build-then-fan-out pattern, compiling once then running
   checks in parallel to eliminate cache race conditions and reduce flaky tests
   [#4378](https://github.com/OpenFn/lightning/pull/4378)
 
 ### Fixed
 
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
+- AI Assistant button now disabled when Apollo not configured, preventing silent
+  failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
+- Version chip missing tooltips
+  [#4389](https://github.com/OpenFn/lightning/pull/4389)
 - Fixed StaleEntryError when saving workflows where a job is replaced and its
   edge retargeted to a new job (e.g. via AI assistant)
   [#4383](https://github.com/OpenFn/lightning/issues/4383)

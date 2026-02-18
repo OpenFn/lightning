@@ -6,7 +6,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
 
   import Oban.Testing, only: [with_testing_mode: 2]
 
-  describe "create_workflow_session/5 with create mode workflow" do
+  describe "create_workflow_session/6 with create mode workflow" do
     @tag :skip_oban
     test "creates session with unsaved workflow data in meta" do
       user = insert(:user)
@@ -30,6 +30,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    nil,
                    user,
                    content,
@@ -64,6 +65,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    content
@@ -94,6 +96,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
           AiAssistant.create_workflow_session(
             project,
             nil,
+            nil,
             user,
             "Create a data import workflow",
             meta: %{
@@ -107,6 +110,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         {:ok, session2} =
           AiAssistant.create_workflow_session(
             project,
+            nil,
             nil,
             user,
             "Make it handle errors",
@@ -164,6 +168,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
           AiAssistant.create_workflow_session(
             project,
             nil,
+            nil,
             user,
             "First workflow",
             meta: %{
@@ -177,6 +182,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         {:ok, session2} =
           AiAssistant.create_workflow_session(
             project,
+            nil,
             nil,
             user,
             "Second workflow",
@@ -221,6 +227,7 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         {:ok, session} =
           AiAssistant.create_workflow_session(
             project,
+            nil,
             workflow,
             user,
             "Help with existing workflow"
