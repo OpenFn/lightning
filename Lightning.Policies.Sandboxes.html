@@ -111,7 +111,7 @@ Lightning
 
 
     <section id="moduledoc">
-<p>The Bodyguard Policy module for sandbox project operations.</p><p>Sandboxes have different authorization rules than regular projects:</p><ul><li>Sandbox owners/admins can manage their own sandboxes</li><li>Root project owners/admins can manage any sandbox in their workspace</li><li>Superusers can manage any sandbox anywhere</li></ul>
+<p>The Bodyguard Policy module for sandbox project operations.</p><p>Sandboxes have different authorization rules than regular projects:</p><ul><li>Sandbox owners/admins can manage their own sandboxes</li><li>Root project owners/admins can manage any sandbox in their workspace</li><li>Editors (and above) on the root project can merge sandboxes</li><li>Editors (and above) on the parent project can provision sandboxes</li><li>Superusers can manage any sandbox anywhere</li></ul>
     </section>
 
 </div>
@@ -186,7 +186,7 @@ Lightning
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L16" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L18" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -197,7 +197,8 @@ Lightning
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :delete_sandbox | :update_sandbox | :provision_sandbox</pre>
+          <pre translate="no"><span class="attribute">@type</span> actions() ::
+  :delete_sandbox | :update_sandbox | :provision_sandbox | :merge_sandbox</pre>
 
       </div>
 
@@ -227,7 +228,7 @@ Lightning
       <h1 class="signature" translate="no">authorize(action, user, parent_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L43" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L52" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -246,7 +247,8 @@ Lightning
 
       </div>
 
-<p>Authorize sandbox operations based on user role and project hierarchy.</p><h2 id="authorize/3-authorization-rules" class="section-heading"><a href="#authorize/3-authorization-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization Rules</span></h2><h3 id="authorize/3-delete_sandbox-and-update_sandbox" class="section-heading"><a href="#authorize/3-delete_sandbox-and-update_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:delete_sandbox</code> and <code class="inline">:update_sandbox</code></span></h3><p>User can perform these actions if they are:</p><ul><li>Superuser (can manage any sandbox)</li><li>Owner/admin of the sandbox itself</li><li>Owner/admin of the root project (workspace)</li></ul><h3 id="authorize/3-provision_sandbox" class="section-heading"><a href="#authorize/3-provision_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:provision_sandbox</code></span></h3><p>User can create sandboxes if they are:</p><ul><li>Owner/admin of the parent project they're creating the sandbox under</li></ul><h2 id="authorize/3-parameters" class="section-heading"><a href="#authorize/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">action</code> - The action being attempted</li><li><code class="inline">user</code> - The user attempting the action</li><li><code class="inline">project</code> - The sandbox project (for delete/update) or parent project (for provision)</li></ul>
+<p>Authorize sandbox operations based on user role and project hierarchy.</p><h2 id="authorize/3-authorization-rules" class="section-heading"><a href="#authorize/3-authorization-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization Rules</span></h2><h3 id="authorize/3-delete_sandbox-and-update_sandbox" class="section-heading"><a href="#authorize/3-delete_sandbox-and-update_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:delete_sandbox</code> and <code class="inline">:update_sandbox</code></span></h3><p>User can perform these actions if they are:</p><ul><li>Superuser (can manage any sandbox)</li><li>Owner/admin of the sandbox itself</li><li>Owner/admin of the root project (workspace)</li></ul><h3 id="authorize/3-provision_sandbox" class="section-heading"><a href="#authorize/3-provision_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:provision_sandbox</code></span></h3><p>User can create sandboxes if they are:</p><ul><li>Editor/admin/owner of the parent project they're creating the sandbox under</li></ul><h3 id="authorize/3-merge_sandbox" class="section-heading"><a href="#authorize/3-merge_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:merge_sandbox</code></span></h3><p>User can merge a sandbox into a target project if they are:</p><ul><li>Editor/admin/owner on the target project</li><li>Superuser</li></ul><h2 id="authorize/3-parameters" class="section-heading"><a href="#authorize/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">action</code> - The action being attempted</li><li><code class="inline">user</code> - The user attempting the action</li><li><code class="inline">project</code> - The sandbox project (for delete/update), parent project (for provision),
+or target project (for merge)</li></ul>
   </section>
 </section>
 <section class="detail" id="check_manage_permissions/3">
@@ -259,7 +261,7 @@ Lightning
       <h1 class="signature" translate="no">check_manage_permissions(sandboxes, user, root_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L97" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
