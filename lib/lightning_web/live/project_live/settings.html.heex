@@ -90,10 +90,19 @@
                 <div class="md:col-span-2">
                   <.input
                     type="text"
-                    field={f[:name]}
+                    field={f[:raw_name]}
+                    value={@name}
                     disabled={!@can_edit_project}
                     label="Project name"
                   />
+                  <.input type="hidden" field={f[:name]} />
+                  <small class="mt-2 block text-xs text-gray-600">
+                    <%= if to_string(f[:name].value) != "" do %>
+                      Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+                        <%= @name %>
+                      </span>.
+                    <% end %>
+                  </small>
                 </div>
               </div>
               <div class="grid grid-cols gap-6">
