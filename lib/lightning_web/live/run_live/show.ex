@@ -107,9 +107,9 @@ defmodule LightningWeb.RunLive.Show do
                       navigate={
                         # Only include version param if snapshot differs from current workflow version
                         if run.snapshot.lock_version == @workflow.lock_version do
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?a=#{run.id}"
+                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}"
                         else
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?a=#{run.id}&v=#{run.snapshot.lock_version}"
+                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}&v=#{run.snapshot.lock_version}"
                         end
                       }
                       class="link text-ellipsis"
