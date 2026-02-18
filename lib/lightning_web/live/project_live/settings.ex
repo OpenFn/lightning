@@ -8,13 +8,13 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Collections
   alias Lightning.Credentials
+  alias Lightning.Helpers
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
-  alias Lightning.Helpers
   alias LightningWeb.Components.GithubComponents
 
   require Logger
