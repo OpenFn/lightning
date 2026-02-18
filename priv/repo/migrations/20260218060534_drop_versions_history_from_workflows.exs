@@ -8,7 +8,7 @@ defmodule Lightning.Repo.Migrations.DropVersionsHistoryFromWorkflows do
     """
 
     alter table(:workflows) do
-      remove :version_history
+      remove_if_exists :version_history
     end
   end
 
