@@ -1807,6 +1807,142 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert remaining_job.body == "job1_modified()"
     end
 
+    test "editor on root can see and use merge button", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
+      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
+
+      assert test_sandbox.can_merge == true
+      assert test_sandbox.can_edit == false
+      assert test_sandbox.can_delete == false
+    end
+
+    test "editor on root can create sandboxes", %{
+      conn: conn,
+      parent: parent
+    } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      can_create = :sys.get_state(view.pid).socket.assigns.can_create_sandbox
+      assert can_create == true
+    end
+
+    test "server-side merge auth rejects unauthorized user", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      # A user who is editor on root but viewer on a specific target
+      # should be blocked at server-side enforcement
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      # Create a target project where this user is only a viewer
+      target =
+        insert(:project,
+          name: "restricted-target",
+          parent: parent,
+          project_users: [
+            %{user: editor_user, role: :viewer}
+          ]
+        )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Try to merge into the restricted target via direct event
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => target.id}
+        })
+
+      assert html =~ "You are not authorized to merge into this project"
+    end
+
+    test "merge target options filter out projects where user lacks editor+ role",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      # Create another sandbox where user is only a viewer
+      viewer_sandbox =
+        insert(:project,
+          name: "viewer-only-sandbox",
+          parent: parent,
+          project_users: [
+            %{user: editor_user, role: :viewer}
+          ]
+        )
+
+      # Create a sandbox where the editor has no membership at all
+      no_membership_sandbox =
+        insert(:project,
+          name: "no-membership-sandbox",
+          parent: parent,
+          project_users: []
+        )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      target_ids = Enum.map(assigns.merge_target_options, & &1.value)
+
+      # Parent should be in targets (user is editor)
+      assert parent.id in target_ids
+
+      # Viewer-only sandbox should NOT be in targets
+      refute viewer_sandbox.id in target_ids
+
+      # No-membership sandbox should NOT be in targets
+      refute no_membership_sandbox.id in target_ids
+    end
+
     test "checks for divergence when opening merge modal with default target",
          %{
            conn: conn,

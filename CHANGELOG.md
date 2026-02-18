@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Editors can now provision and merge sandboxes; merge checks editor+ role on
+  the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
 - Show specific workflow names in sandbox merge dialog when target project has
   diverged, instead of generic warning message
   [#4001](https://github.com/OpenFn/lightning/issues/4001)

@@ -2,6 +2,7 @@ defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
   alias Ecto.Changeset
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
@@ -276,9 +277,24 @@ defmodule LightningWeb.SandboxLive.Index do
             |> noreply()
 
           target ->
-            source
-            |> perform_merge(target, actor)
-            |> handle_merge_result(socket, source, target, root_project, actor)
+            if Permissions.can?(
+                 :sandboxes,
+                 :merge_sandbox,
+                 actor,
+                 target
+               ) do
+              source
+              |> perform_merge(target, actor)
+              |> handle_merge_result(socket, source, target, root_project, actor)
+            else
+              socket
+              |> put_flash(
+                :error,
+                "You are not authorized to merge into this project"
+              )
+              |> reset_merge_modal_state()
+              |> noreply()
+            end
         end
     end
   end
@@ -390,7 +406,7 @@ defmodule LightningWeb.SandboxLive.Index do
     current_user = socket.assigns.current_user
 
     can_create_sandbox =
-      Lightning.Policies.Permissions.can?(
+      Permissions.can?(
         :sandboxes,
         :provision_sandbox,
         current_user,
@@ -518,6 +534,7 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp get_merge_target_options(socket, source_sandbox) do
+    current_user = socket.assigns.current_user
     root_project = socket.assigns.root_project
 
     socket.assigns.workspace_projects
@@ -525,12 +542,23 @@ defmodule LightningWeb.SandboxLive.Index do
       potential_target.id == source_sandbox.id or
         Projects.descendant_of?(potential_target, source_sandbox, root_project)
     end)
+    |> Enum.filter(fn project ->
+      user_role_on_project(project, current_user) in [:owner, :admin, :editor] or
+        current_user.role == :superuser
+    end)
     |> Enum.map(fn project ->
       %{
         value: project.id,
         label: project.name
       }
     end)
+  end
+
+  defp user_role_on_project(project, user) do
+    case Enum.find(project.project_users, &(&1.user_id == user.id)) do
+      nil -> nil
+      pu -> pu.role
+    end
   end
 
   defp get_all_descendants(sandbox, workspace_projects) do
