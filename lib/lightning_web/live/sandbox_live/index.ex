@@ -192,22 +192,12 @@ defmodule LightningWeb.SandboxLive.Index do
               target_id: default_target && default_target.value
             })
 
-          has_diverged =
-            if default_target do
-              target_project =
-                Enum.find(
-                  socket.assigns.workspace_projects,
-                  &(&1.id == default_target.value)
-                )
-
-              target_project &&
-                MergeProjects.has_diverged?(
-                  sandbox,
-                  target_project
-                )
-            else
-              false
-            end
+          diverged_workflows =
+            get_diverged_workflows(
+              sandbox,
+              default_target && default_target.value,
+              socket.assigns.workspace_projects
+            )
 
           {:noreply,
            socket
@@ -216,7 +206,7 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(:merge_target_options, target_options)
            |> assign(:merge_changeset, merge_changeset)
            |> assign(:merge_descendants, descendants)
-           |> assign(:merge_has_diverged, has_diverged)}
+           |> assign(:merge_diverged_workflows, diverged_workflows)}
         else
           {:noreply,
            socket
@@ -238,26 +228,17 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
-    has_diverged =
-      if target_id do
-        source = socket.assigns.merge_source_sandbox
-
-        target_project =
-          Enum.find(
-            socket.assigns.workspace_projects,
-            &(&1.id == target_id)
-          )
-
-        target_project &&
-          MergeProjects.has_diverged?(source, target_project)
-      else
-        false
-      end
+    diverged_workflows =
+      get_diverged_workflows(
+        socket.assigns.merge_source_sandbox,
+        target_id,
+        socket.assigns.workspace_projects
+      )
 
     {:noreply,
      socket
      |> assign(:merge_changeset, merge_changeset)
-     |> assign(:merge_has_diverged, has_diverged)}
+     |> assign(:merge_diverged_workflows, diverged_workflows)}
   end
 
   @impl true
@@ -390,7 +371,7 @@ defmodule LightningWeb.SandboxLive.Index do
           target_options={@merge_target_options}
           changeset={@merge_changeset}
           descendants={@merge_descendants}
-          has_diverged={@merge_has_diverged}
+          diverged_workflows={@merge_diverged_workflows}
         />
 
         <.live_component
@@ -477,7 +458,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_changeset, merge_changeset())
     |> assign(:merge_target_options, [])
     |> assign(:merge_descendants, [])
-    |> assign(:merge_has_diverged, false)
+    |> assign(:merge_diverged_workflows, [])
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -608,6 +589,16 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp find_target_project(workspace_projects, target_id) do
     Enum.find(workspace_projects, &(&1.id == target_id))
+  end
+
+  defp get_diverged_workflows(source, target_id, workspace_projects) do
+    with true <- !is_nil(target_id),
+         target_project when not is_nil(target_project) <-
+           Enum.find(workspace_projects, &(&1.id == target_id)) do
+      MergeProjects.diverged_workflows(source, target_project)
+    else
+      _ -> []
+    end
   end
 
   defp perform_merge(source, target, actor) do

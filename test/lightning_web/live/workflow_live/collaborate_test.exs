@@ -2260,7 +2260,9 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
                "/projects/#{project.id}/w/new/legacy?method=template"
     end
 
-    test "redirects to legacy editor with query params preserved", %{conn: conn} do
+    test "redirects to legacy editor with query params transformed", %{
+      conn: conn
+    } do
       user = insert(:user)
 
       project =
@@ -2272,7 +2274,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       workflow = workflow_fixture(project_id: project.id)
       job = insert(:job, workflow: workflow)
 
-      # Set user preference to prefer legacy editor
       user_with_prefs =
         user
         |> Ecto.Changeset.change(%{
@@ -2290,14 +2291,14 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?job=#{job.id}&panel=editor"
         )
 
-      # Should redirect to legacy editor with query params preserved
+      # Should redirect to legacy editor with query params transformed
       assert String.starts_with?(
                redirect_path,
                "/projects/#{project.id}/w/#{workflow.id}/legacy"
              )
 
-      assert redirect_path =~ "job=#{job.id}"
-      assert redirect_path =~ "panel=editor"
+      assert redirect_path =~ "s=#{job.id}"
+      assert redirect_path =~ "m=expand"
     end
 
     test "does not redirect when user does not prefer legacy editor", %{

@@ -480,6 +480,71 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert cnt >= 1
     end
+
+    test "ensures parent workflows have a version before provisioning sandbox" do
+      # Create a parent project with a workflow that has NO version_history
+      actor = insert(:user)
+      parent = insert(:project, name: "parent-no-versions")
+      ensure_member!(parent, actor, :owner)
+
+      # Create a workflow with jobs/triggers/edges but NO versions
+      workflow = insert(:workflow, project: parent, name: "NoVersions")
+      trigger = insert(:trigger, workflow: workflow, enabled: true)
+
+      job =
+        insert(:job,
+          workflow: workflow,
+          name: "TestJob",
+          body: "console.log('test');",
+          adaptor: "@openfn/language-common@latest"
+        )
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always,
+        enabled: true
+      )
+
+      # Verify workflow has no versions
+      version_count_before =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.aggregate(:count, :id)
+
+      assert version_count_before == 0
+
+      # Provision the sandbox
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "test-sandbox"})
+
+      # After provisioning, parent workflow should have a version
+      version_count_after =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.aggregate(:count, :id)
+
+      assert version_count_after == 1
+
+      # Verify the version has a valid hash
+      parent_version =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.one!()
+
+      assert String.match?(parent_version.hash, ~r/^[a-f0-9]{12}$/)
+
+      # Verify sandbox workflow also has the same version (copied by copy_workflow_version_history)
+      sandbox_workflow =
+        from(w in Workflow,
+          where: w.project_id == ^sandbox.id and w.name == "NoVersions"
+        )
+        |> Repo.one!()
+
+      sandbox_version =
+        from(v in WorkflowVersion, where: v.workflow_id == ^sandbox_workflow.id)
+        |> Repo.one!()
+
+      assert sandbox_version.hash == parent_version.hash
+    end
   end
 
   describe "keychains" do
