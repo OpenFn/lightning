@@ -19,12 +19,18 @@ and this project adheres to
 
 ### Changed
 
+- Show specific workflow names in sandbox merge dialog when target project has
+  diverged, instead of generic warning message
+  [#4001](https://github.com/OpenFn/lightning/issues/4001)
 - Use distinct `api_provisioning` action type in provisioner to return a
   context-appropriate error message for CLI deploy vs GitHub sync
   [#4426](https://github.com/OpenFn/lightning/issues/4426)
 
 ### Fixed
 
+- Ensure workflows have version history before sandbox creation, merging, and
+  importing to prevent squashing of the first workflow version
+  [#3958](https://github.com/OpenFn/lightning/issues/3958)
 - Enforce `external_id` uniqueness on credentials per user and per project to
   prevent ambiguous keychain resolution
   [#4170](https://github.com/OpenFn/lightning/issues/4170)

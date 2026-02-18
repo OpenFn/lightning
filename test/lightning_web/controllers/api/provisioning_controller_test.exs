@@ -180,6 +180,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 200)
 
+      expected_hash =
+        workflow
+        |> Repo.preload([:jobs, :edges, :triggers], force: true)
+        |> Lightning.WorkflowVersions.generate_hash()
+
+      workflow_json = %{
+        workflow_json
+        | "version_history" => ["app:#{expected_hash}"]
+      }
+
       assert %{
                "id" => ^project_id,
                "name" => ^project_name,
@@ -294,6 +304,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 200)
 
+      expected_hash =
+        workflow
+        |> Repo.preload([:jobs, :edges, :triggers], force: true)
+        |> Lightning.WorkflowVersions.generate_hash()
+
+      workflow_json = %{
+        workflow_json
+        | "version_history" => ["app:#{expected_hash}"]
+      }
+
       assert %{
                "id" => ^project_id,
                "name" => ^project_name,
@@ -351,14 +371,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         insert(:simple_workflow, project: project, name: "Test Workflow")
 
       # Record some version history
-      {:ok, workflow} =
+      {:ok, _v1} =
         Lightning.WorkflowVersions.record_version(
           workflow,
           "aabbccddeeff",
           "app"
         )
 
-      {:ok, _workflow} =
+      {:ok, _v2} =
         Lightning.WorkflowVersions.record_version(
           workflow,
           "112233445566",
@@ -376,6 +396,44 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "app:aabbccddeeff",
                "cli:112233445566"
              ]
+    end
+
+    test "automatically ensures version history for workflows without versions",
+         %{
+           conn: conn,
+           user: user
+         } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      workflow =
+        insert(:simple_workflow,
+          project: project,
+          name: "Workflow Without Version"
+        )
+
+      # Verify workflow has no version history initially
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert initial_history == []
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"workflows" => [workflow_json]} = response["data"]
+      assert workflow_json["id"] == workflow.id
+
+      # Verify version was automatically created
+      workflow = Lightning.Repo.get!(Workflow, workflow.id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(version_history) == 1
+      assert [version] = version_history
+      assert String.starts_with?(version, "app:")
+
+      # Verify version_history is included in response
+      assert workflow_json["version_history"] == version_history
     end
 
     test "returns a project only with the specified snapshots", %{
@@ -1052,14 +1110,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       workflow = Lightning.Repo.get!(Workflow, workflow_id)
       updated_history = Lightning.WorkflowVersions.history_for(workflow)
 
-      # Due to squashing behavior, consecutive versions from same source replace each other
-      # So we still have 1 version, but the hash should be different
-      assert length(updated_history) == 1
-      assert [updated_version] = updated_history
-      assert String.starts_with?(updated_version, "cli:")
+      # we nolonger squash the first version
+      assert length(updated_history) == 2
+      assert [^initial_version, latest_version] = updated_history
+      assert String.starts_with?(latest_version, "cli:")
 
       # Verify the hash changed after the update
-      refute initial_version == updated_version
+      refute initial_version == latest_version
     end
 
     test "does not create duplicate version when provisioning same workflow content",
