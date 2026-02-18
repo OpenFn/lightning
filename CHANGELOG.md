@@ -25,6 +25,8 @@ and this project adheres to
 - Use distinct `api_provisioning` action type in provisioner to return a
   context-appropriate error message for CLI deploy vs GitHub sync
   [#4426](https://github.com/OpenFn/lightning/issues/4426)
+- show better error message for validation errors
+  [#4429](https://github.com/OpenFn/lightning/issues/4429)
 
 ### Fixed
 
