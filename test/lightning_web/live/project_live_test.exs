@@ -1649,10 +1649,6 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Project settings"
 
-      invalid_project_name = %{
-        name: "some name"
-      }
-
       invalid_project_description = %{
         description:
           Enum.map(1..250, fn _ ->
@@ -1660,10 +1656,6 @@ defmodule LightningWeb.ProjectLiveTest do
           end)
           |> to_string()
       }
-
-      assert view
-             |> form("#project-settings-form", project: invalid_project_name)
-             |> render_change() =~ "has invalid format"
 
       assert view
              |> form("#project-settings-form",
@@ -1691,7 +1683,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       valid_project_attrs = %{
-        name: "somename",
+        raw_name: "somename",
         description: "some description"
       }
 
@@ -1703,6 +1695,29 @@ defmodule LightningWeb.ProjectLiveTest do
                name: "somename",
                description: "some description"
              } = Repo.get!(Project, project.id)
+    end
+
+    test "project settings form converts uppercase name to url-safe format",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      assert view
+             |> form("#project-settings-form",
+               project: %{raw_name: "DEP-burundi-datafi"}
+             )
+             |> render_submit() =~ "Project updated successfully"
+
+      assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
     end
 
     test "project admin can edit project concurrency with valid data",
