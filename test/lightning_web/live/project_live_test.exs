@@ -1760,7 +1760,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?("input[disabled='disabled'][name='project[name]']")
+             |> has_element?(
+               "input[disabled='disabled'][name='project[raw_name]']"
+             )
 
       assert view
              |> has_element?(
@@ -1792,7 +1794,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?("input[disabled='disabled'][name='project[name]']")
+             |> has_element?(
+               "input[disabled='disabled'][name='project[raw_name]']"
+             )
 
       assert view
              |> has_element?(
