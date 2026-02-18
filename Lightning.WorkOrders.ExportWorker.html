@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-827BEF20.js"></script>
+    <script defer src="dist/sidebar_items-A1C55AC0.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,7 +112,7 @@ Lightning
 
     <section id="moduledoc">
 <p>  This module handles the export of work orders for a given project. The export process is performed asynchronously using the Oban background job system.</p><p>  ## Responsibilities</p><ul><li><strong>Enqueueing Export Jobs</strong>: The <code class="inline">enqueue_export/2</code> function creates and enqueues an Oban job for exporting work orders based on the given project and search parameters.</li><li><strong>Processing Exports</strong>: The <code class="inline">perform/1</code> function is the main entry point for executing the export job. It retrieves the project, processes work orders, and handles the export process.</li><li><strong>Export Logic</strong>: The export logic involves querying work orders, extracting relevant entities, processing logs and dataclips asynchronously, and writing the final export data to files.</li><li><strong>Error Handling</strong>: The module includes comprehensive error handling and logging to ensure that issues during the export process are recorded and can be diagnosed.</li><li><strong>Zip File Creation</strong>: After processing, the exported files are compressed into a zip file for easy download or further use.</li></ul><p>  ## Usage</p><ul><li>To enqueue an export job, call <code class="inline">enqueue_export/2</code> with the project and search parameters.</li><li>The export process is triggered by Oban and runs in the <code class="inline">history_exports</code> queue, limited to a single attempt per job.</li></ul><p>  ## Example</p><pre><code class="makeup elixir" translate="no"><span class="w">  </span><span class="c1"># Enqueue an export job</span><span class="w">
-  </span><span class="nc">Lightning.WorkOrders.ExportWorker</span><span class="o">.</span><span class="n">enqueue_export</span><span class="p" data-group-id="2368356742-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="n">search_params</span><span class="p" data-group-id="2368356742-1">)</span><span class="w">
+  </span><span class="nc">Lightning.WorkOrders.ExportWorker</span><span class="o">.</span><span class="n">enqueue_export</span><span class="p" data-group-id="3812367701-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="n">search_params</span><span class="p" data-group-id="3812367701-1">)</span><span class="w">
 
   </span><span class="c1"># The job will run in the background and log the status of the export process.</span></code></pre><p>  This module is designed to handle potentially large datasets efficiently by using streaming, async processing, and error recovery mechanisms.</p>
     </section>
