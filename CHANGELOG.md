@@ -676,6 +676,8 @@ and this project adheres to
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
+- Accept gzip-compressed payloads on
+  webhooks[#3937](https://github.com/OpenFn/lightning/issues/3937)
 
 ## [2.14.14] - 2025-11-05
 
