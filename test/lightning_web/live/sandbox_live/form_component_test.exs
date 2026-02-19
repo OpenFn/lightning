@@ -115,7 +115,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      render_submit(
+      render_change(
         element(view, "#sandbox-form-new"),
         %{"project" => %{"raw_name" => ""}}
       )
@@ -157,7 +157,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert flash["error"] == error_message
     end
 
-    test "creating sandbox preserves form state on backend changeset error",
+    test "creating sandbox shows flash error on backend changeset error",
          %{conn: conn, parent: parent} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
@@ -184,21 +184,12 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       view
       |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
-      })
-
-      view
-      |> element("#sandbox-form-new")
       |> render_submit(%{
         "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
       })
 
-      # The form should still be visible with the name preserved
-      # (before this fix, the name field would be emptied and no error shown)
-      html = render(view)
-      assert html =~ "test-sandbox"
-      assert html =~ "Create a new sandbox"
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert flash["error"] =~ "Something went wrong"
     end
   end
 

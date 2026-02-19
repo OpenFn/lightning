@@ -106,21 +106,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> noreply()
     else
       {:error, %Ecto.Changeset{}} ->
-        parent_id = get_parent_id(socket.assigns)
-
-        form_cs =
-          socket.assigns
-          |> base_struct()
-          |> form_changeset(params, parent_id)
-          |> Map.put(:action, :validate)
-
         socket
         |> put_flash(
           :error,
           "Something went wrong while creating the sandbox. Please check the parent project's settings and try again."
         )
-        |> assign(:changeset, form_cs)
-        |> assign(:name, Changeset.get_field(form_cs, :name))
+        |> push_navigate(to: return_to || ~p"/projects/#{parent.id}/sandboxes")
         |> noreply()
 
       {:error, _reason, %{text: text}} ->
