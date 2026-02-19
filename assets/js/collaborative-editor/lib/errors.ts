@@ -55,16 +55,28 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
     | Record<string, unknown>
     | undefined;
 
-  if (!fError) return 'An error occurred';
+  if (fError) {
+    const msg = Object.entries(fError)
+      .map(([key, val]) => {
+        // Handle both string arrays and single strings safely
+        const messages = Array.isArray(val) ? val : [String(val)];
+        // toTitleCase splits on underscores and capitalizes each word
+        return `${toTitleCase(key)}: ${messages.join(', ')}`;
+      })
+      .join('\n');
 
-  const msg = Object.entries(fError)
-    .map(([key, val]) => {
-      // Handle both string arrays and single strings safely
-      const messages = Array.isArray(val) ? val : [String(val)];
-      // toTitleCase splits on underscores and capitalizes each word
-      return `${toTitleCase(key)}: ${messages.join(', ')}`;
-    })
-    .join('\n');
+    return msg || 'An error occurred';
+  }
 
-  return msg || 'An error occurred';
+  // show max 3 errros
+  const validationErrs = Object.values(channelError.errors)
+    .flat()
+    .map(v => `- ${v}`)
+    .splice(0, 3);
+
+  if (validationErrs.length) {
+    return validationErrs.join('\n');
+  }
+
+  return 'An error occurred';
 }

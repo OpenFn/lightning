@@ -17,6 +17,7 @@ import type { AIModeResult } from './useAIMode';
  */
 export function useAIPanelURLSync({
   isOpen,
+  isNewWorkflow,
   sessionId,
   aiMode,
   aiStore,
@@ -24,6 +25,7 @@ export function useAIPanelURLSync({
   params,
 }: {
   isOpen: boolean;
+  isNewWorkflow: boolean;
   sessionId: string | null;
   aiMode: AIModeResult | null;
   aiStore: AIAssistantStoreInstance;
@@ -58,6 +60,13 @@ export function useAIPanelURLSync({
       // When closing, clear chat param and session params
       updateSearchParams({
         chat: null,
+        ...(isNewWorkflow
+          ? {
+              job: null,
+              trigger: null,
+              edge: null,
+            }
+          : {}),
         'w-chat': null,
         'j-chat': null,
       });

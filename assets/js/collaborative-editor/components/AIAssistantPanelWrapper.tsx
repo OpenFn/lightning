@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import {
@@ -24,23 +24,23 @@ import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
-  useProject,
   useHasReadAIDisclaimer,
-  useMarkAIDisclaimerRead,
-  useSessionContextLoaded,
-  useLimits,
   useIsNewWorkflow,
+  useLimits,
+  useMarkAIDisclaimerRead,
+  useProject,
+  useSessionContextLoaded,
   useUser,
 } from '../hooks/useSessionContext';
 import {
+  useAIAssistantInitialMessage,
   useIsAIAssistantPanelOpen,
   useUICommands,
-  useAIAssistantInitialMessage,
 } from '../hooks/useUI';
 import {
-  useWorkflowState,
   useWorkflowActions,
   useWorkflowReadOnly,
+  useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { JobCodeContext } from '../types/ai-assistant';
@@ -51,7 +51,6 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
-import flowEvents from './diagram/react-flow-events';
 import { MessageList } from './MessageList';
 
 /**
@@ -162,6 +161,7 @@ export function AIAssistantPanelWrapper({
   // URL synchronization hook - manages ?chat=true and session ID params
   const { sessionIdFromURL } = useAIPanelURLSync({
     isOpen: isAIAssistantPanelOpen,
+    isNewWorkflow,
     sessionId,
     aiMode,
     aiStore,
@@ -414,7 +414,7 @@ export function AIAssistantPanelWrapper({
         }
       } else {
         // important: determines what ai to be used
-        options = { ...options, job_id: aiMode?.context.job_id };
+        options = { ...aiMode?.context, ...options };
       }
 
       // Update store state and send through registry

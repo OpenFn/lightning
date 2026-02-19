@@ -43,7 +43,6 @@ defmodule Lightning.Workflows.Workflow do
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
-    field :version_history, {:array, :string}, default: []
 
     has_many :edges, Edge, on_replace: :delete_if_exists
     has_many :jobs, Job, on_replace: :delete
