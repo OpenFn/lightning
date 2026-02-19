@@ -156,6 +156,50 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       assert flash["error"] == error_message
     end
+
+    test "creating sandbox preserves form state on backend changeset error",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      # Override the default stub to simulate a backend validation error
+      # (e.g. parent has inconsistent retention periods)
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        changeset =
+          Lightning.Projects.Project.changeset(
+            %Lightning.Projects.Project{},
+            %{
+              name: "test-sandbox",
+              history_retention_period: 7,
+              dataclip_retention_period: 30
+            }
+          )
+          |> Map.put(:action, :insert)
+
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+      })
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+      })
+
+      # The form should still be visible with the name preserved
+      # (before this fix, the name field would be emptied and no error shown)
+      html = render(view)
+      assert html =~ "test-sandbox"
+      assert html =~ "Create a new sandbox"
+    end
   end
 
   describe "new modal (cancel)" do

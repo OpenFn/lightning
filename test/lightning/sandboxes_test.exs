@@ -814,6 +814,28 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "provision with inconsistent parent retention" do
+    test "returns changeset error when parent has dataclip > history retention" do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "bad-retention",
+          history_retention_period: 7,
+          dataclip_retention_period: 30
+        )
+
+      ensure_member!(parent, actor, :owner)
+
+      assert {:error, changeset} =
+               Sandboxes.provision(parent, actor, %{name: "child-sandbox"})
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               changeset
+             ).dataclip_retention_period
+    end
+  end
+
   describe "update errors" do
     setup do
       parent = insert(:project, name: "parent")
