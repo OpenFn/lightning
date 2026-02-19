@@ -14,6 +14,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
   * `is_public` - Whether the message is publicly visible (defaults to true)
+  * `meta` - Additional metadata (e.g., `"unsaved_job"` for job data not yet saved)
   * `chat_session_id` - Reference to the parent chat session
   * `user_id` - Reference to the user who sent the message (required for user messages)
   """
@@ -36,6 +37,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           job_id: Ecto.UUID.t() | nil,
           is_deleted: boolean(),
           is_public: boolean(),
+          meta: map() | nil,
           processing_started_at: DateTime.t() | nil,
           processing_completed_at: DateTime.t() | nil,
           chat_session_id: Ecto.UUID.t(),
@@ -54,6 +56,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
+    field :meta, :map, default: %{}
     field :processing_started_at, :utc_datetime_usec
     field :processing_completed_at, :utc_datetime_usec
 
@@ -89,6 +92,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :status,
       :is_deleted,
       :is_public,
+      :meta,
       :chat_session_id,
       :processing_started_at,
       :processing_completed_at
