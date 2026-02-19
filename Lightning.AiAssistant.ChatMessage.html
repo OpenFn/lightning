@@ -113,7 +113,7 @@ Lightning
     <section id="moduledoc">
 <p>Represents a message within an AI chat session.</p><p>Messages can be from users (role: :user) or from the AI assistant (role: :assistant).
 User messages start with :pending status and are updated based on processing results.
-Assistant messages typically have :success status when created.</p><h2 id="module-schema-fields" class="section-heading"><a href="#module-schema-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Schema Fields</span></h2><ul><li><code class="inline">content</code> - The text content of the message (required, 1-10,000 characters)</li><li><code class="inline">code</code> - Optional code associated with the message (e.g., generated workflows)</li><li><code class="inline">role</code> - Who sent the message: <code class="inline">:user</code> or <code class="inline">:assistant</code></li><li><code class="inline">status</code> - Processing status: <code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code></li><li><code class="inline">is_deleted</code> - Soft deletion flag (defaults to false)</li><li><code class="inline">is_public</code> - Whether the message is publicly visible (defaults to true)</li><li><code class="inline">chat_session_id</code> - Reference to the parent chat session</li><li><code class="inline">user_id</code> - Reference to the user who sent the message (required for user messages)</li></ul>
+Assistant messages typically have :success status when created.</p><h2 id="module-schema-fields" class="section-heading"><a href="#module-schema-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Schema Fields</span></h2><ul><li><code class="inline">content</code> - The text content of the message (required, 1-10,000 characters)</li><li><code class="inline">code</code> - Optional code associated with the message (e.g., generated workflows)</li><li><code class="inline">role</code> - Who sent the message: <code class="inline">:user</code> or <code class="inline">:assistant</code></li><li><code class="inline">status</code> - Processing status: <code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code></li><li><code class="inline">is_deleted</code> - Soft deletion flag (defaults to false)</li><li><code class="inline">is_public</code> - Whether the message is publicly visible (defaults to true)</li><li><code class="inline">meta</code> - Additional metadata (e.g., <code class="inline">&quot;unsaved_job&quot;</code> for job data not yet saved)</li><li><code class="inline">chat_session_id</code> - Reference to the parent chat session</li><li><code class="inline">user_id</code> - Reference to the user who sent the message (required for user messages)</li></ul>
     </section>
 
 </div>
@@ -204,7 +204,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">role()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L28" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -232,7 +232,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">status()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L29" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -260,7 +260,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L31" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -283,6 +283,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
   is_public: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   job: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   job_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  meta: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
   processing_completed_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
   processing_started_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
   role: <a href="#t:role/0">role</a>(),
@@ -320,7 +321,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">changeset(chat_message, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L83" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L86" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -342,7 +343,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">status_changeset(chat_message, status)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L127" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -353,10 +354,10 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
 
 <p>Creates a changeset for updating message status.</p><p>This is a focused changeset that only updates the status field,
 useful for updating message state during processing.</p><h2 id="status_changeset/2-parameters" class="section-heading"><a href="#status_changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The existing ChatMessage struct</li><li><code class="inline">status</code> - New status (<code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code>)</li></ul><h2 id="status_changeset/2-examples" class="section-heading"><a href="#status_changeset/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Mark message as successful</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="6325745933-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="6325745933-1">)</span><span class="w">
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="7558177370-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="7558177370-1">)</span><span class="w">
 
 </span><span class="c1"># Mark message as failed</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="6325745933-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="6325745933-2">)</span></code></pre>
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="7558177370-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="7558177370-2">)</span></code></pre>
   </section>
 </section>
 
