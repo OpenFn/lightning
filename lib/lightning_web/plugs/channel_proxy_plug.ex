@@ -109,9 +109,15 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp proxy_upstream(conn, channel, snapshot, forward_path) do
+    request_id =
+      conn
+      |> Plug.Conn.get_resp_header("x-request-id")
+      |> List.first()
+
     handler_state = %{
       channel: channel,
       snapshot: snapshot,
+      request_id: request_id,
       started_at: DateTime.utc_now(),
       request_path: forward_path,
       client_identity: get_client_identity(conn)
@@ -142,7 +148,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp fetch_channel(id) do
     with {:ok, uuid} <- Ecto.UUID.cast(id),
          %Channels.Channel{enabled: true} = channel <-
-           Channels.get_channel_with_source_auth(uuid) do
+           Channels.get_channel_with_auth(uuid) do
       {:ok, channel}
     else
       _ -> :not_found

@@ -193,12 +193,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       channel: channel
     } do
       Bypass.expect_once(bypass, "GET", "/test", fn conn ->
-        request_id = Plug.Conn.get_req_header(conn, "x-request-id")
         xff = Plug.Conn.get_req_header(conn, "x-forwarded-for")
         xfh = Plug.Conn.get_req_header(conn, "x-forwarded-host")
         xfp = Plug.Conn.get_req_header(conn, "x-forwarded-proto")
 
-        assert request_id != []
         assert xff != []
         assert xfh != []
         assert xfp != []
@@ -273,6 +271,22 @@ defmodule LightningWeb.ChannelProxyPlugTest do
   end
 
   describe "handler persistence" do
+    setup do
+      on_exit(fn ->
+        Lightning.Channels.TaskSupervisor
+        |> Task.Supervisor.children()
+        |> Enum.each(fn pid ->
+          ref = Process.monitor(pid)
+
+          receive do
+            {:DOWN, ^ref, _, _, _} -> :ok
+          after
+            5_000 -> :ok
+          end
+        end)
+      end)
+    end
+
     test "creates ChannelRequest and ChannelEvent on successful proxy", %{
       conn: conn,
       bypass: bypass,

@@ -58,7 +58,7 @@ defmodule Lightning.Channels.Handler do
     attrs = %{
       channel_id: state.channel.id,
       channel_snapshot_id: state.snapshot.id,
-      request_id: metadata.request_id,
+      request_id: state.request_id,
       client_identity: state.client_identity,
       state: :pending,
       started_at: state.started_at
@@ -74,9 +74,7 @@ defmodule Lightning.Channels.Handler do
          })}
 
       {:error, _changeset} ->
-        Logger.warning(
-          "Failed to create ChannelRequest for #{metadata.request_id}"
-        )
+        Logger.warning("Failed to create ChannelRequest for #{state.request_id}")
 
         {:reject, 503, "Service Unavailable", state}
     end
@@ -94,8 +92,11 @@ defmodule Lightning.Channels.Handler do
 
   @impl true
   def handle_response_finished(result, state) do
+    supervisor =
+      Map.get(state, :task_supervisor, Lightning.Channels.TaskSupervisor)
+
     Task.Supervisor.start_child(
-      Lightning.Channels.TaskSupervisor,
+      supervisor,
       fn -> persist_completion(result, state) end
     )
 

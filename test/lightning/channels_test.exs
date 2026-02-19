@@ -164,7 +164,7 @@ defmodule Lightning.ChannelsTest do
     end
   end
 
-  describe "get_channel_with_source_auth/1" do
+  describe "get_channel_with_auth/1" do
     test "returns channel with preloaded source auth methods" do
       project = insert(:project)
 
@@ -184,7 +184,7 @@ defmodule Lightning.ChannelsTest do
           ]
         )
 
-      result = Channels.get_channel_with_source_auth(channel.id)
+      result = Channels.get_channel_with_auth(channel.id)
 
       assert result.id == channel.id
       assert length(result.source_auth_methods) == 1
@@ -198,14 +198,14 @@ defmodule Lightning.ChannelsTest do
     test "returns channel with empty source_auth_methods when none configured" do
       channel = insert(:channel)
 
-      result = Channels.get_channel_with_source_auth(channel.id)
+      result = Channels.get_channel_with_auth(channel.id)
 
       assert result.id == channel.id
       assert result.source_auth_methods == []
     end
 
     test "returns nil for non-existent channel" do
-      assert Channels.get_channel_with_source_auth(Ecto.UUID.generate()) == nil
+      assert Channels.get_channel_with_auth(Ecto.UUID.generate()) == nil
     end
   end
 

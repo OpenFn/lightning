@@ -7,6 +7,25 @@ defmodule Lightning.Channels.HandlerTest do
   import Lightning.Factories
 
   setup do
+    {:ok, task_sup} = Task.Supervisor.start_link()
+    Process.unlink(task_sup)
+
+    on_exit(fn ->
+      task_sup
+      |> Task.Supervisor.children()
+      |> Enum.each(fn pid ->
+        ref = Process.monitor(pid)
+
+        receive do
+          {:DOWN, ^ref, _, _, _} -> :ok
+        after
+          5_000 -> :ok
+        end
+      end)
+
+      if Process.alive?(task_sup), do: Supervisor.stop(task_sup)
+    end)
+
     channel = insert(:channel)
 
     snapshot =
@@ -18,9 +37,11 @@ defmodule Lightning.Channels.HandlerTest do
     initial_state = %{
       channel: channel,
       snapshot: snapshot,
+      request_id: Ecto.UUID.generate(),
       started_at: DateTime.utc_now(),
       request_path: "/test/path",
-      client_identity: "127.0.0.1"
+      client_identity: "127.0.0.1",
+      task_supervisor: task_sup
     }
 
     Lightning.subscribe("channels:#{channel.id}")
@@ -36,7 +57,7 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert %ChannelRequest{} = new_state.channel_request
       assert new_state.channel_request.state == :pending
-      assert new_state.channel_request.request_id == metadata.request_id
+      assert new_state.channel_request.request_id == state.request_id
       assert new_state.channel_request.channel_id == state.channel.id
       assert new_state.channel_request.channel_snapshot_id == state.snapshot.id
       assert new_state.channel_request.client_identity == "127.0.0.1"
@@ -83,7 +104,6 @@ defmodule Lightning.Channels.HandlerTest do
   describe "handle_response_started/2" do
     test "captures TTFB and response headers", %{state: state} do
       metadata = %{
-        request_id: Ecto.UUID.generate(),
         status: 200,
         headers: [
           {"content-type", "application/json"},
@@ -203,7 +223,6 @@ defmodule Lightning.Channels.HandlerTest do
 
   defp request_metadata(overrides \\ []) do
     %{
-      request_id: Keyword.get(overrides, :request_id, Ecto.UUID.generate()),
       upstream_url:
         Keyword.get(overrides, :upstream_url, "http://localhost:4999"),
       method: Keyword.get(overrides, :method, "GET"),
@@ -229,7 +248,6 @@ defmodule Lightning.Channels.HandlerTest do
     }
 
     %{
-      request_id: Keyword.get(overrides, :request_id, Ecto.UUID.generate()),
       request_observation:
         Keyword.get(overrides, :request_observation, observation),
       response_observation:
