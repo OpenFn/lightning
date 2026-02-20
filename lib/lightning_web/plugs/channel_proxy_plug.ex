@@ -281,9 +281,9 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp classify_credential_error({:unsupported_schema, schema}),
     do: "unsupported_credential_schema:#{schema}"
 
-  defp classify_credential_error({:oauth_refresh_failed, _}),
+  defp classify_credential_error(:temporary_failure),
     do: "oauth_refresh_failed"
 
-  defp classify_credential_error(other),
-    do: "credential_error:#{inspect(other)}"
+  defp classify_credential_error(:reauthorization_required),
+    do: "oauth_reauthorization_required"
 end
