@@ -12,8 +12,8 @@ defmodule Lightning.Channels.Handler do
   2. `handle_response_started` — captures TTFB and response headers into
      handler state. **May not be called** — see below.
 
-  3. `handle_response_finished` — spawns an async task to create a
-     `ChannelEvent` and update the `ChannelRequest` state.
+  3. `handle_response_finished` — creates a `ChannelEvent` and updates
+     the `ChannelRequest` state.
 
   ## Skipped `handle_response_started`
 
@@ -92,14 +92,7 @@ defmodule Lightning.Channels.Handler do
 
   @impl true
   def handle_response_finished(result, state) do
-    supervisor =
-      Map.get(state, :task_supervisor, Lightning.Channels.TaskSupervisor)
-
-    Task.Supervisor.start_child(
-      supervisor,
-      fn -> persist_completion(result, state) end
-    )
-
+    persist_completion(result, state)
     {:ok, state}
   end
 
@@ -152,14 +145,6 @@ defmodule Lightning.Channels.Handler do
         })
         |> Repo.update()
     end
-
-    # TODO: This broadcasts even if event insert and fallback update both
-    # failed, so subscribers may see a request still in :pending state.
-    # Revisit when #4408 uses this for real-time UI updates.
-    Lightning.broadcast(
-      "channels:#{state.channel.id}",
-      {:channel_request_completed, state.channel_request.id}
-    )
   end
 
   defp derive_request_state(result) do

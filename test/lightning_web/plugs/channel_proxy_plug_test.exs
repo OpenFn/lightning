@@ -271,29 +271,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
   end
 
   describe "handler persistence" do
-    setup do
-      on_exit(fn ->
-        Lightning.Channels.TaskSupervisor
-        |> Task.Supervisor.children()
-        |> Enum.each(fn pid ->
-          ref = Process.monitor(pid)
-
-          receive do
-            {:DOWN, ^ref, _, _, _} -> :ok
-          after
-            5_000 -> :ok
-          end
-        end)
-      end)
-    end
-
     test "creates ChannelRequest and ChannelEvent on successful proxy", %{
       conn: conn,
       bypass: bypass,
       channel: channel
     } do
-      Lightning.subscribe("channels:#{channel.id}")
-
       Bypass.expect_once(bypass, "GET", "/persisted", fn conn ->
         Plug.Conn.send_resp(conn, 200, "persisted response")
       end)
@@ -301,9 +283,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/persisted")
       assert resp.status == 200
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state == :success
       assert request.completed_at != nil
 
@@ -323,8 +307,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       conn: conn,
       channel: channel
     } do
-      Lightning.subscribe("channels:#{channel.id}")
-
       port = Enum.random(59_000..59_999)
 
       channel
@@ -334,9 +316,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/fail")
       assert resp.status in [502, 504]
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state in [:error, :timeout]
       assert request.completed_at != nil
     end
@@ -648,22 +632,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
   end
 
   describe "sink authentication" do
-    setup do
-      on_exit(fn ->
-        Lightning.Channels.TaskSupervisor
-        |> Task.Supervisor.children()
-        |> Enum.each(fn pid ->
-          ref = Process.monitor(pid)
-
-          receive do
-            {:DOWN, ^ref, _, _, _} -> :ok
-          after
-            5_000 -> :ok
-          end
-        end)
-      end)
-    end
-
     defp create_sink_auth_channel(bypass, schema, body) do
       project = insert(:project)
       user = insert(:user)
@@ -777,8 +745,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
           "access_token" => "secret-token"
         })
 
-      Lightning.subscribe("channels:#{channel.id}")
-
       Bypass.expect_once(bypass, "GET", "/redact-test", fn conn ->
         Plug.Conn.send_resp(conn, 200, "ok")
       end)
@@ -789,15 +755,16 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 200
 
-      assert_receive {:channel_request_completed, request_id}, 1000
-
       event =
         Lightning.Repo.one!(
-          from(e in ChannelEvent, where: e.channel_request_id == ^request_id)
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
         )
 
       # The handler redacts authorization headers before persisting
-      # request_headers is stored as a JSON string
       headers = Jason.decode!(event.request_headers)
 
       auth_header =
@@ -837,8 +804,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
           ]
         )
 
-      Lightning.subscribe("channels:#{channel.id}")
-
       resp =
         conn(:get, "/channels/#{channel.id}/test")
         |> send_to_endpoint()
@@ -846,14 +811,16 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.status == 502
       assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state == :error
 
       event =
         Lightning.Repo.one!(
-          from(e in ChannelEvent, where: e.channel_request_id == ^request_id)
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
         )
 
       assert event.error_message == "credential_environment_not_found"
@@ -866,8 +833,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
           "baseUrl" => "https://example.com"
         })
 
-      Lightning.subscribe("channels:#{channel.id}")
-
       resp =
         conn(:get, "/channels/#{channel.id}/test")
         |> send_to_endpoint()
@@ -875,14 +840,16 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.status == 502
       assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state == :error
 
       event =
         Lightning.Repo.one!(
-          from(e in ChannelEvent, where: e.channel_request_id == ^request_id)
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
         )
 
       assert event.error_message == "credential_missing_auth_fields"

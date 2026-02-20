@@ -7,25 +7,6 @@ defmodule Lightning.Channels.HandlerTest do
   import Lightning.Factories
 
   setup do
-    {:ok, task_sup} = Task.Supervisor.start_link()
-    Process.unlink(task_sup)
-
-    on_exit(fn ->
-      task_sup
-      |> Task.Supervisor.children()
-      |> Enum.each(fn pid ->
-        ref = Process.monitor(pid)
-
-        receive do
-          {:DOWN, ^ref, _, _, _} -> :ok
-        after
-          5_000 -> :ok
-        end
-      end)
-
-      if Process.alive?(task_sup), do: Supervisor.stop(task_sup)
-    end)
-
     channel = insert(:channel)
 
     snapshot =
@@ -40,11 +21,8 @@ defmodule Lightning.Channels.HandlerTest do
       request_id: Ecto.UUID.generate(),
       started_at: DateTime.utc_now(),
       request_path: "/test/path",
-      client_identity: "127.0.0.1",
-      task_supervisor: task_sup
+      client_identity: "127.0.0.1"
     }
-
-    Lightning.subscribe("channels:#{channel.id}")
 
     %{channel: channel, snapshot: snapshot, state: initial_state}
   end
@@ -148,8 +126,6 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
-      assert_receive {:channel_request_completed, _}, 1000
-
       event = Repo.one!(ChannelEvent)
       assert event.channel_request_id == state.channel_request.id
       assert event.type == :sink_response
@@ -164,7 +140,6 @@ defmodule Lightning.Channels.HandlerTest do
     test "updates ChannelRequest state to success for 2xx", %{state: state} do
       result = finished_result(status: 200)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :success
@@ -175,7 +150,6 @@ defmodule Lightning.Channels.HandlerTest do
       state = %{state | response_status: 404}
       result = finished_result(status: 404)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :failed
@@ -186,7 +160,6 @@ defmodule Lightning.Channels.HandlerTest do
     } do
       result = finished_result(status: nil, error: {:timeout, :recv_response})
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :timeout
@@ -202,7 +175,6 @@ defmodule Lightning.Channels.HandlerTest do
         )
 
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :error
@@ -211,7 +183,6 @@ defmodule Lightning.Channels.HandlerTest do
     test "creates error event type when error present", %{state: state} do
       result = finished_result(status: nil, error: :some_error)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       event = Repo.one!(ChannelEvent)
       assert event.type == :error

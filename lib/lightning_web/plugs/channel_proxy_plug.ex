@@ -277,10 +277,7 @@ defmodule LightningWeb.ChannelProxyPlug do
              error_message: error_message
            })
            |> Repo.insert() do
-      Lightning.broadcast(
-        "channels:#{channel.id}",
-        {:channel_request_completed, channel_request.id}
-      )
+      :ok
     else
       {:error, changeset} ->
         Logger.warning(
