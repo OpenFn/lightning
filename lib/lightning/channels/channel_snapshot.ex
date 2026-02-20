@@ -13,8 +13,6 @@ defmodule Lightning.Channels.ChannelSnapshot do
           lock_version: integer(),
           name: String.t(),
           sink_url: String.t(),
-          sink_project_credential_id: Ecto.UUID.t() | nil,
-          sink_credential_name: String.t() | nil,
           enabled: boolean(),
           inserted_at: DateTime.t()
         }
@@ -23,8 +21,6 @@ defmodule Lightning.Channels.ChannelSnapshot do
     field :lock_version, :integer
     field :name, :string
     field :sink_url, :string
-    field :sink_project_credential_id, Ecto.UUID
-    field :sink_credential_name, :string
     field :enabled, :boolean
 
     belongs_to :channel, Channel
@@ -41,8 +37,6 @@ defmodule Lightning.Channels.ChannelSnapshot do
       :lock_version,
       :name,
       :sink_url,
-      :sink_project_credential_id,
-      :sink_credential_name,
       :enabled
     ])
     |> validate_required([
