@@ -6,6 +6,9 @@ defmodule LightningWeb.ChannelProxyPlug do
   import Phoenix.Controller, only: [json: 2]
 
   alias Lightning.Channels
+  alias Lightning.Channels.ChannelEvent
+  alias Lightning.Channels.ChannelRequest
+  alias Lightning.Repo
   alias LightningWeb.Auth
 
   require Logger
@@ -30,54 +33,29 @@ defmodule LightningWeb.ChannelProxyPlug do
   def call(conn, _opts), do: conn
 
   defp do_proxy(conn, channel_id, rest) do
-    case fetch_channel_with_telemetry(channel_id) do
-      {:ok, channel} ->
-        case authenticate_source(conn, channel) do
-          :ok ->
-            case resolve_sink_auth(channel) do
-              {:ok, auth_header} ->
-                case Channels.get_or_create_current_snapshot(channel) do
-                  {:ok, snapshot} ->
-                    forward_path = build_forward_path(rest)
+    with {:ok, channel} <- fetch_channel_with_telemetry(channel_id),
+         :ok <- authenticate_source(conn, channel) do
+      proxy_with_auth(conn, channel, rest)
+    else
+      :not_found -> error_response(conn, :not_found, "Not Found")
+      :unauthorized -> error_response(conn, :unauthorized, "Unauthorized")
+    end
+  end
 
-                    conn
-                    |> proxy_upstream(
-                      channel,
-                      snapshot,
-                      forward_path,
-                      auth_header
-                    )
-                    |> halt()
+  defp proxy_with_auth(conn, channel, rest) do
+    with {:ok, auth_header} <- resolve_sink_auth(channel),
+         {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
+      forward_path = build_forward_path(rest)
 
-                  {:error, _} ->
-                    conn
-                    |> put_status(500)
-                    |> json(%{"error" => "Internal Server Error"})
-                    |> halt()
-                end
+      conn
+      |> proxy_upstream(channel, snapshot, forward_path, auth_header)
+      |> halt()
+    else
+      {:credential_error, reason} ->
+        handle_credential_error(conn, channel, reason)
 
-              {:error, reason} ->
-                handle_credential_error(conn, channel, reason)
-            end
-
-          :unauthorized ->
-            conn
-            |> put_status(:unauthorized)
-            |> json(%{"error" => "Unauthorized"})
-            |> halt()
-
-          :not_found ->
-            conn
-            |> put_status(:not_found)
-            |> json(%{"error" => "Not Found"})
-            |> halt()
-        end
-
-      :not_found ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{"error" => "Not Found"})
-        |> halt()
+      {:error, _} ->
+        error_response(conn, :internal_server_error, "Internal Server Error")
     end
   end
 
@@ -218,12 +196,16 @@ defmodule LightningWeb.ChannelProxyPlug do
         {:ok, nil}
 
       [%{project_credential: %{credential: credential}}] ->
-        case Lightning.Credentials.resolve_credential_body(credential, "main") do
-          {:ok, body} ->
-            Channels.SinkAuth.build_auth_header(credential.schema, body)
-
-          {:error, reason} ->
-            {:error, reason}
+        with {:ok, body} <-
+               Lightning.Credentials.resolve_credential_body(
+                 credential,
+                 "main"
+               ),
+             {:ok, header} <-
+               Channels.SinkAuth.build_auth_header(credential.schema, body) do
+          {:ok, header}
+        else
+          {:error, reason} -> {:credential_error, reason}
         end
     end
   end
@@ -240,14 +222,11 @@ defmodule LightningWeb.ChannelProxyPlug do
           "Failed to create snapshot for credential error on channel #{channel.id}"
         )
 
-        conn |> put_status(502) |> json(%{"error" => "Bad Gateway"}) |> halt()
+        error_response(conn, :bad_gateway, "Bad Gateway")
     end
   end
 
   defp record_credential_error(conn, channel, snapshot, error_message) do
-    alias Lightning.Channels.{ChannelRequest, ChannelEvent}
-    alias Lightning.Repo
-
     now = DateTime.utc_now()
 
     request_id =
@@ -286,7 +265,11 @@ defmodule LightningWeb.ChannelProxyPlug do
         )
     end
 
-    conn |> put_status(502) |> json(%{"error" => "Bad Gateway"}) |> halt()
+    error_response(conn, :bad_gateway, "Bad Gateway")
+  end
+
+  defp error_response(conn, status, message) do
+    conn |> put_status(status) |> json(%{"error" => message}) |> halt()
   end
 
   defp classify_credential_error(:environment_not_found),
