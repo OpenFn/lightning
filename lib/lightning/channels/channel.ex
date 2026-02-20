@@ -58,5 +58,6 @@ defmodule Lightning.Channels.Channel do
     |> assoc_constraint(:project)
     |> unique_constraint([:project_id, :name])
     |> optimistic_lock(:lock_version)
+    |> cast_assoc(:channel_auth_methods)
   end
 end

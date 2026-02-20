@@ -244,6 +244,10 @@ defmodule LightningWeb.Router do
         live "/w/:id/legacy", WorkflowLive.Edit, :edit
         live "/w/:id", WorkflowLive.Collaborate, :edit
 
+        live "/channels", ChannelLive.Index, :index
+        live "/channels/new", ChannelLive.Index, :new
+        live "/channels/:id/edit", ChannelLive.Index, :edit
+
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new
         live "/sandboxes/:id/edit", SandboxLive.Index, :edit
