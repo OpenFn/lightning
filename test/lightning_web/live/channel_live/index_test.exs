@@ -235,6 +235,39 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     end
 
     @tag role: :editor
+    test "submitting with a source auth method saves the association", %{
+      conn: conn,
+      project: project
+    } do
+      wam = insert(:webhook_auth_method, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "channel-with-auth",
+          sink_url: "https://example.com/sink",
+          source_auth_methods: %{wam.id => "true"}
+        }
+      )
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+
+      channel =
+        Channels.list_channels_for_project(project.id)
+        |> Enum.find(&(&1.name == "channel-with-auth"))
+
+      assert channel
+
+      assert [cam] = Channels.list_channel_auth_methods(channel)
+      assert cam.role == :source
+      assert cam.webhook_auth_method_id == wam.id
+    end
+
+    @tag role: :editor
     test "submitting with missing name shows inline validation error", %{
       conn: conn,
       project: project

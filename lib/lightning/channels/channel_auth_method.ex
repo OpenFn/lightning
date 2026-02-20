@@ -30,12 +30,11 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     struct
     |> cast(attrs, [
       :role,
-      :channel_id,
       :webhook_auth_method_id,
       :project_credential_id,
       :delete
     ])
-    |> validate_required([:role, :channel_id])
+    |> validate_required([:role])
     |> Validators.validate_exclusive(
       [:webhook_auth_method_id, :project_credential_id],
       "webhook_auth_method_id and project_credential_id are mutually exclusive"
