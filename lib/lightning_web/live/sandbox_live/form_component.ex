@@ -1,8 +1,6 @@
 defmodule LightningWeb.SandboxLive.FormComponent do
   use LightningWeb, :live_component
 
-  require Logger
-
   alias Ecto.Changeset
   alias Lightning.Helpers
   alias Lightning.Projects
@@ -10,6 +8,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
+
+  require Logger
 
   @type mode :: :new | :edit
 
