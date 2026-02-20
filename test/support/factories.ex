@@ -858,4 +858,43 @@ defmodule Lightning.Factories do
   def sandbox_for(parent, attrs \\ %{}) do
     build(:project, Map.merge(%{parent: parent}, attrs))
   end
+
+  def channel_factory do
+    %Lightning.Channels.Channel{
+      project: build(:project),
+      name: sequence(:channel_name, &"channel-#{&1}"),
+      sink_url: sequence(:channel_sink_url, &"https://example.com/sink/#{&1}"),
+      enabled: true
+    }
+  end
+
+  def channel_auth_method_factory do
+    %Lightning.Channels.ChannelAuthMethod{
+      role: :source,
+      webhook_auth_method: build(:webhook_auth_method)
+    }
+  end
+
+  def channel_snapshot_factory do
+    %Lightning.Channels.ChannelSnapshot{
+      lock_version: 1,
+      name: sequence(:channel_snapshot_name, &"channel-#{&1}"),
+      sink_url: "https://example.com/sink",
+      enabled: true
+    }
+  end
+
+  def channel_request_factory do
+    %Lightning.Channels.ChannelRequest{
+      request_id: sequence(:channel_request_id, &"req-#{&1}"),
+      state: :pending,
+      started_at: DateTime.utc_now()
+    }
+  end
+
+  def channel_event_factory do
+    %Lightning.Channels.ChannelEvent{
+      type: :source_received
+    }
+  end
 end

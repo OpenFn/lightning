@@ -152,9 +152,18 @@ defmodule Lightning.MixProject do
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      weir_dep(),
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
     ]
+  end
+
+  defp weir_dep do
+    if path = System.get_env("WEIR_PATH") do
+      {:weir, path: path}
+    else
+      {:weir, github: "OpenFn/weir"}
+    end
   end
 
   # Aliases are shortcuts or tasks specific to the current project.
