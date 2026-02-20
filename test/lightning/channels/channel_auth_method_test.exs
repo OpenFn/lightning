@@ -102,11 +102,11 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       assert msg =~ "sink auth must use a project credential"
     end
 
-    test "requires role and channel_id" do
+    test "requires role" do
       changeset = ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{})
 
       refute changeset.valid?
-      assert %{role: _, channel_id: _} = errors_on(changeset)
+      assert %{role: _} = errors_on(changeset)
     end
 
     test "unique constraint on channel + role + webhook_auth_method_id" do
@@ -120,10 +120,9 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       )
 
       assert {:error, changeset} =
-               %ChannelAuthMethod{}
+               %ChannelAuthMethod{channel_id: channel.id}
                |> ChannelAuthMethod.changeset(%{
                  role: :source,
-                 channel_id: channel.id,
                  webhook_auth_method_id: wam.id
                })
                |> Lightning.Repo.insert()

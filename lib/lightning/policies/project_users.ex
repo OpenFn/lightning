@@ -28,6 +28,8 @@ defmodule Lightning.Policies.ProjectUsers do
           | :initiate_github_sync
           | :create_collection
           | :publish_template
+          | :create_channel
+          | :delete_channel
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -110,7 +112,9 @@ defmodule Lightning.Policies.ProjectUsers do
     :delete_workflow,
     :run_workflow,
     :create_project_credential,
-    :initiate_github_sync
+    :initiate_github_sync,
+    :create_channel,
+    :delete_channel
   ]
 
   def authorize(

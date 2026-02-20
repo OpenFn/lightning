@@ -6,7 +6,12 @@ defmodule Lightning.Channels do
 
   import Ecto.Query
 
+  alias Ecto.Multi
+  alias Lightning.Accounts.User
+  alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Repo
 
@@ -19,6 +24,53 @@ defmodule Lightning.Channels do
       order_by: [asc: :name]
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Returns channels for a project with aggregate stats from channel_requests.
+
+  Each entry is a map with keys:
+    - all Channel fields (via struct)
+    - `:request_count` — total number of requests
+    - `:last_activity` — datetime of most recent request, or nil
+  """
+  def list_channels_for_project_with_stats(project_id) do
+    from(c in Channel,
+      where: c.project_id == ^project_id,
+      left_join: cr in ChannelRequest,
+      on: cr.channel_id == c.id,
+      group_by: c.id,
+      order_by: [asc: c.name],
+      select: %{
+        channel: c,
+        request_count: count(cr.id),
+        last_activity: max(cr.started_at)
+      }
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns aggregate stats for all channels in a project.
+
+  Returns a map with:
+    - `:total_channels` — number of channels in the project
+    - `:total_requests` — total channel requests across all channels
+
+  Uses a single query with a LEFT JOIN so both counts are fetched in one
+  database round-trip.
+  """
+  def get_channel_stats_for_project(project_id) do
+    from(c in Channel,
+      where: c.project_id == ^project_id,
+      left_join: cr in ChannelRequest,
+      on: cr.channel_id == c.id,
+      select: %{
+        total_channels: count(c.id, :distinct),
+        total_requests: count(cr.id)
+      }
+    )
+    |> Repo.one()
   end
 
   @doc """
@@ -55,26 +107,49 @@ defmodule Lightning.Channels do
   @doc """
   Gets a single channel. Raises if not found.
   """
-  def get_channel!(id) do
-    Repo.get!(Channel, id)
+  def get_channel!(id, opts \\ []) do
+    preloads = Keyword.get(opts, :include, [])
+    Repo.get!(Channel, id) |> Repo.preload(preloads)
   end
 
   @doc """
   Creates a channel.
   """
-  def create_channel(attrs) do
-    %Channel{}
-    |> Channel.changeset(attrs)
-    |> Repo.insert()
+  @spec create_channel(map(), actor: User.t()) ::
+          {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
+  def create_channel(attrs, actor: %User{} = actor) do
+    changeset = Channel.changeset(%Channel{}, attrs)
+
+    Multi.new()
+    |> Multi.insert(:channel, changeset)
+    |> Multi.insert(:audit, fn %{channel: channel} ->
+      Audit.event("created", channel.id, actor, changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{channel: channel}} -> {:ok, channel}
+      {:error, :channel, changeset, _} -> {:error, changeset}
+    end
   end
 
   @doc """
   Updates a channel's config fields, bumping lock_version.
   """
-  def update_channel(%Channel{} = channel, attrs) do
-    channel
-    |> Channel.changeset(attrs)
-    |> Repo.update(stale_error_field: :lock_version)
+  @spec update_channel(Channel.t(), map(), actor: User.t()) ::
+          {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
+  def update_channel(%Channel{} = channel, attrs, actor: %User{} = actor) do
+    changeset = Channel.changeset(channel, attrs)
+
+    Multi.new()
+    |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
+    |> Multi.insert(:audit, fn %{channel: updated} ->
+      Audit.event("updated", updated.id, actor, changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{channel: channel}} -> {:ok, channel}
+      {:error, :channel, changeset, _} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -83,14 +158,37 @@ defmodule Lightning.Channels do
   Returns `{:error, changeset}` if the channel has snapshots
   (due to `:restrict` FK on `channel_snapshots`).
   """
-  def delete_channel(%Channel{} = channel) do
-    channel
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.foreign_key_constraint(:channel_snapshots,
-      name: "channel_snapshots_channel_id_fkey",
-      message: "has history that must be retained"
+  @spec delete_channel(Channel.t(), actor: User.t()) ::
+          {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
+  def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
+    changeset =
+      channel
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.foreign_key_constraint(:channel_snapshots,
+        name: "channel_snapshots_channel_id_fkey",
+        message: "has history that must be retained"
+      )
+
+    Multi.new()
+    |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
+    |> Multi.delete(:channel, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{channel: channel}} -> {:ok, channel}
+      {:error, :channel, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Returns all ChannelAuthMethod records for a channel, preloading
+  their associated webhook_auth_method and project_credential (with credential).
+  """
+  def list_channel_auth_methods(%Channel{} = channel) do
+    from(cam in ChannelAuthMethod,
+      where: cam.channel_id == ^channel.id,
+      preload: [:webhook_auth_method, project_credential: :credential]
     )
-    |> Repo.delete()
+    |> Repo.all()
   end
 
   @doc """
