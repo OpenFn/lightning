@@ -738,7 +738,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(
         :limit_action,
-        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
       )
       |> Mox.expect(
         :limit_action,
@@ -943,7 +943,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(
         :limit_action,
-        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
       )
       |> Mox.expect(
         :limit_action,
@@ -981,7 +981,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(
         :limit_action,
-        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
       )
       |> Mox.expect(
         :limit_action,

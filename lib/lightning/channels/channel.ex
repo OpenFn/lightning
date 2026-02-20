@@ -6,7 +6,6 @@ defmodule Lightning.Channels.Channel do
   use Lightning.Schema
 
   alias Lightning.Projects.Project
-  alias Lightning.Projects.ProjectCredential
   alias Lightning.Validators
 
   @type t :: %__MODULE__{
@@ -14,7 +13,6 @@ defmodule Lightning.Channels.Channel do
           project_id: Ecto.UUID.t(),
           name: String.t(),
           sink_url: String.t(),
-          sink_project_credential_id: Ecto.UUID.t() | nil,
           enabled: boolean(),
           lock_version: integer(),
           inserted_at: DateTime.t(),
@@ -28,7 +26,6 @@ defmodule Lightning.Channels.Channel do
     field :lock_version, :integer, default: 0
 
     belongs_to :project, Project
-    belongs_to :sink_project_credential, ProjectCredential
 
     has_many :channel_auth_methods, Lightning.Channels.ChannelAuthMethod
 
@@ -50,7 +47,6 @@ defmodule Lightning.Channels.Channel do
       :name,
       :sink_url,
       :project_id,
-      :sink_project_credential_id,
       :enabled
     ])
     |> validate_required([:name, :sink_url, :project_id])

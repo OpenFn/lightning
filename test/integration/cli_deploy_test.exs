@@ -324,8 +324,7 @@ defmodule Lightning.CliDeployTest do
         :updated_at,
         :deleted_at,
         :lock_version,
-        :concurrency,
-        :version_history
+        :concurrency
       ])
 
     jobs =
@@ -358,7 +357,14 @@ defmodule Lightning.CliDeployTest do
         {key, expected_edge_state(edge)}
       end)
 
-    Map.merge(state, %{jobs: jobs, triggers: triggers, edges: edges})
+    version_history = Lightning.WorkflowVersions.history_for(workflow)
+
+    Map.merge(state, %{
+      jobs: jobs,
+      triggers: triggers,
+      edges: edges,
+      version_history: version_history
+    })
   end
 
   defp expected_trigger_state(trigger) do

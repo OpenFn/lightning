@@ -203,7 +203,8 @@ defmodule Lightning.Credentials do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
-         changeset <- change_credential(%Credential{}, attrs) do
+         changeset <- change_credential(%Credential{}, attrs),
+         :ok <- validate_external_id(changeset) do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -247,6 +248,7 @@ defmodule Lightning.Credentials do
   @spec update_credential(Credential.t(), map()) ::
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs) do
+    credential = Repo.preload(credential, :project_credentials)
     attrs = normalize_keys(attrs)
 
     credential_bodies =
@@ -266,7 +268,8 @@ defmodule Lightning.Credentials do
              attrs,
              credential.schema
            ),
-         changeset <- change_credential(credential, attrs) do
+         changeset <- change_credential(credential, attrs),
+         :ok <- validate_external_id(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -438,6 +441,85 @@ defmodule Lightning.Credentials do
       list when is_list(list) -> list
       binary when is_binary(binary) -> String.split(binary, " ", trim: true)
       _ -> []
+    end
+  end
+
+  defp validate_external_id(changeset) do
+    external_id = Ecto.Changeset.get_field(changeset, :external_id)
+
+    if is_nil(external_id) do
+      :ok
+    else
+      direct_ids = active_project_ids(changeset)
+
+      if Enum.empty?(direct_ids) do
+        :ok
+      else
+        with :ok <-
+               check_external_id_conflict(changeset, external_id, direct_ids) do
+          descendant_ids = Lightning.Projects.descendant_ids(direct_ids)
+
+          check_external_id_conflict(
+            changeset,
+            external_id,
+            descendant_ids,
+            "another credential with the same external ID already exists in a sandbox of this project"
+          )
+        end
+      end
+    end
+  end
+
+  defp active_project_ids(changeset) do
+    Ecto.Changeset.get_field(changeset, :project_credentials, [])
+    |> Enum.map(& &1.project_id)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  # NOTE: This is an app-level check only (not DB-enforced). It has a TOCTOU
+  # race window — two concurrent inserts can both pass Repo.exists? before
+  # either commits. Acceptable for now given low collision likelihood;
+  # DB-level enforcement (e.g. denormalized column + unique index on
+  # project_credentials) can be added later if needed.
+  defp check_external_id_conflict(
+         changeset,
+         external_id,
+         project_ids,
+         message \\ "another credential with the same external ID already exists in this project"
+       ) do
+    if Enum.empty?(project_ids) do
+      :ok
+    else
+      credential_id = Ecto.Changeset.get_field(changeset, :id)
+
+      base_query =
+        from(c in Credential,
+          join: pc in assoc(c, :project_credentials),
+          where: c.external_id == ^external_id,
+          where: pc.project_id in ^project_ids,
+          limit: 1
+        )
+
+      query =
+        if credential_id do
+          from(c in base_query, where: c.id != ^credential_id)
+        else
+          base_query
+        end
+
+      if Repo.exists?(query) do
+        action =
+          if changeset.data.__meta__.state == :built, do: :insert, else: :update
+
+        changeset =
+          changeset
+          |> Ecto.Changeset.add_error(:external_id, message)
+          |> Map.put(:action, action)
+
+        {:error, changeset}
+      else
+        :ok
+      end
     end
   end
 
@@ -655,11 +737,10 @@ defmodule Lightning.Credentials do
     current_time = DateTime.utc_now() |> DateTime.truncate(:second)
 
     credential_rows =
-      Lightning.Projects.list_workspace_projects(project_id)
-      |> Map.get(:descendants, [])
-      |> Enum.map(fn descendant ->
+      Lightning.Projects.descendant_ids([project_id])
+      |> Enum.map(fn descendant_id ->
         %{
-          project_id: descendant.id,
+          project_id: descendant_id,
           credential_id: credential_id,
           inserted_at: current_time,
           updated_at: current_time

@@ -183,9 +183,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 # Only include version param if snapshot differs from current workflow version
                 if @work_order.workflow.lock_version ==
                      @work_order.snapshot.lock_version do
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?a=#{@last_run.id}"
+                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}"
                 else
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?a=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
+                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
                 end
               }
               class="inline-block"

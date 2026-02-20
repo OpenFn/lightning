@@ -174,7 +174,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1"
+      assert result == "/projects/proj-1/w/wf-1?m=workflow_input"
     end
 
     test "preserves unknown parameters for future compatibility" do

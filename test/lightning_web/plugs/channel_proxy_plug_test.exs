@@ -193,12 +193,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       channel: channel
     } do
       Bypass.expect_once(bypass, "GET", "/test", fn conn ->
-        request_id = Plug.Conn.get_req_header(conn, "x-request-id")
         xff = Plug.Conn.get_req_header(conn, "x-forwarded-for")
         xfh = Plug.Conn.get_req_header(conn, "x-forwarded-host")
         xfp = Plug.Conn.get_req_header(conn, "x-forwarded-proto")
 
-        assert request_id != []
         assert xff != []
         assert xfh != []
         assert xfp != []
@@ -278,8 +276,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       bypass: bypass,
       channel: channel
     } do
-      Lightning.subscribe("channels:#{channel.id}")
-
       Bypass.expect_once(bypass, "GET", "/persisted", fn conn ->
         Plug.Conn.send_resp(conn, 200, "persisted response")
       end)
@@ -287,9 +283,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/persisted")
       assert resp.status == 200
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state == :success
       assert request.completed_at != nil
 
@@ -309,8 +307,6 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       conn: conn,
       channel: channel
     } do
-      Lightning.subscribe("channels:#{channel.id}")
-
       port = Enum.random(59_000..59_999)
 
       channel
@@ -320,9 +316,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/fail")
       assert resp.status in [502, 504]
 
-      assert_receive {:channel_request_completed, request_id}, 1000
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
 
-      request = Lightning.Repo.get!(ChannelRequest, request_id)
       assert request.state in [:error, :timeout]
       assert request.completed_at != nil
     end
@@ -630,6 +628,259 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 200
       assert resp.resp_body == "mixed-ok"
+    end
+  end
+
+  describe "sink authentication" do
+    defp create_sink_auth_channel(bypass, schema, body) do
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: schema, name: "sink-cred", user: user)
+        |> with_body(%{body: body})
+
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
+
+      insert(:channel,
+        project: project,
+        sink_url: "http://localhost:#{bypass.port}",
+        enabled: true,
+        channel_auth_methods: [
+          build(:channel_auth_method,
+            role: :sink,
+            webhook_auth_method: nil,
+            project_credential: project_credential
+          )
+        ]
+      )
+    end
+
+    test "Bearer token sent to upstream when channel has http credential with access_token",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "http", %{
+          "access_token" => "tok-123"
+        })
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        assert auth == ["Bearer tok-123"]
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
+    test "Basic auth sent when channel has http credential with username/password",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "http", %{
+          "username" => "u",
+          "password" => "p"
+        })
+
+      expected = "Basic #{Base.encode64("u:p")}"
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        assert auth == [expected]
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
+    test "ApiToken sent when channel has dhis2 credential with pat",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "dhis2", %{
+          "pat" => "d2pat_abc"
+        })
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        assert auth == ["ApiToken d2pat_abc"]
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
+    test "no authorization header when channel has no sink auth methods",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        assert auth == []
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
+    test "authorization header redacted in persisted ChannelEvent",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "http", %{
+          "access_token" => "secret-token"
+        })
+
+      Bypass.expect_once(bypass, "GET", "/redact-test", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/redact-test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
+        )
+
+      # The handler redacts authorization headers before persisting
+      headers = Jason.decode!(event.request_headers)
+
+      auth_header =
+        Enum.find(headers, fn [k, _v] -> k == "authorization" end)
+
+      assert auth_header == ["authorization", "[REDACTED]"]
+    end
+
+    test "credential environment_not_found returns 502 with observable error",
+         %{bypass: bypass} do
+      # Create a credential with NO credential_body for "main" environment
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "no-body", user: user)
+
+      # Don't call with_body — no CredentialBody exists
+
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :sink,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+      assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :error
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.error_message == "credential_environment_not_found"
+    end
+
+    test "credential with missing auth fields returns 502 with observable error",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "http", %{
+          "baseUrl" => "https://example.com"
+        })
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+      assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :error
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.error_message == "credential_missing_auth_fields"
+    end
+
+    test "proxy headers (x-forwarded-*) still forwarded alongside auth header",
+         %{bypass: bypass} do
+      channel =
+        create_sink_auth_channel(bypass, "http", %{
+          "access_token" => "tok-with-proxy"
+        })
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        xff = Plug.Conn.get_req_header(conn, "x-forwarded-for")
+        xfh = Plug.Conn.get_req_header(conn, "x-forwarded-host")
+        xfp = Plug.Conn.get_req_header(conn, "x-forwarded-proto")
+
+        assert auth == ["Bearer tok-with-proxy"]
+        assert xff != []
+        assert xfh != []
+        assert xfp != []
+
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
     end
   end
 

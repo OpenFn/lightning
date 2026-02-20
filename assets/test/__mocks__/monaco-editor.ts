@@ -21,6 +21,16 @@ export const editor = {
   setModelLanguage: () => {},
 };
 
+export const languages = {
+  typescript: {
+    javascriptDefaults: {
+      setCompilerOptions: () => {},
+      setExtraLibs: () => {},
+    },
+  },
+  registerCompletionItemProvider: () => ({ dispose: () => {} }),
+};
+
 export const KeyMod = {
   CtrlCmd: 1,
   Shift: 2,
@@ -38,6 +48,7 @@ export const KeyCode = {
 // Export as default and named exports to match monaco-editor package
 export default {
   editor,
+  languages,
   KeyMod,
   KeyCode,
 };

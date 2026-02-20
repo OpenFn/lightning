@@ -590,6 +590,56 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message.status == "error"
       assert error == limit_error_message
     end
+
+    @tag :capture_log
+    test "delegates to handle_unsaved_job_message when job_id is provided but not found in DB",
+         %{
+           socket: socket,
+           user: user,
+           workflow: workflow,
+           project: project
+         } do
+      unknown_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        ref =
+          push(socket, "new_message", %{
+            "content" => "what does this do?",
+            "job_id" => unknown_job_id,
+            "job_name" => "Draft Job",
+            "job_body" => "fn(state => state)",
+            "job_adaptor" => "@openfn/language-common@latest",
+            "workflow_id" => workflow.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+
+        reloaded = AiAssistant.get_session!(session.id)
+        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+
+        assert is_nil(user_msg.job_id)
+        assert user_msg.meta["unsaved_job"]["id"] == unknown_job_id
+      end)
+    end
   end
 
   describe "handle_in mark_disclaimer_read" do
@@ -2760,6 +2810,106 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert second_user_msg != nil
       assert second_user_msg.content == "Second user message"
       assert second_user_msg.user.first_name == other_user.first_name
+    end
+  end
+
+  describe "handle_unsaved_job_message/6" do
+    @tag :capture_log
+    test "saves message with all unsaved job fields captured in meta", %{
+      socket: socket,
+      user: user,
+      workflow: workflow,
+      project: project
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        ref =
+          push(socket, "new_message", %{
+            "content" => "help me debug",
+            "job_id" => unsaved_job_id,
+            "job_name" => "My Unsaved Job",
+            "job_body" => "fn(state => state)",
+            "job_adaptor" => "@openfn/language-common@1.5.0",
+            "workflow_id" => workflow.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+        assert message.content == "help me debug"
+        assert message.status in ["pending", "success"]
+
+        # All fields are persisted in the user message's meta["unsaved_job"]
+        reloaded = AiAssistant.get_session!(session.id)
+        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+        unsaved_job = user_msg.meta["unsaved_job"]
+
+        assert unsaved_job["id"] == unsaved_job_id
+        assert unsaved_job["name"] == "My Unsaved Job"
+        assert unsaved_job["body"] == "fn(state => state)"
+        assert unsaved_job["adaptor"] == "@openfn/language-common@1.5.0"
+        assert unsaved_job["workflow_id"] == workflow.id
+      end)
+    end
+
+    @tag :capture_log
+    test "broadcasts user_message so other collaborators see the new message", %{
+      socket: socket,
+      user: user,
+      workflow: workflow,
+      project: project
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        push(socket, "new_message", %{
+          "content" => "explain the code",
+          "job_id" => unsaved_job_id,
+          "job_name" => "Collab Job",
+          "job_body" => "fn(s) => s",
+          "workflow_id" => workflow.id
+        })
+
+        assert_broadcast "user_message", %{message: broadcast_msg}
+        assert broadcast_msg.content == "explain the code"
+        assert broadcast_msg.role == "user"
+      end)
     end
   end
 end

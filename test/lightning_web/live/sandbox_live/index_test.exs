@@ -1807,6 +1807,142 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert remaining_job.body == "job1_modified()"
     end
 
+    test "editor on root can see and use merge button", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
+      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
+
+      assert test_sandbox.can_merge == true
+      assert test_sandbox.can_edit == false
+      assert test_sandbox.can_delete == false
+    end
+
+    test "editor on root can create sandboxes", %{
+      conn: conn,
+      parent: parent
+    } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      can_create = :sys.get_state(view.pid).socket.assigns.can_create_sandbox
+      assert can_create == true
+    end
+
+    test "server-side merge auth rejects unauthorized user", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      # A user who is editor on root but viewer on a specific target
+      # should be blocked at server-side enforcement
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      # Create a target project where this user is only a viewer
+      target =
+        insert(:project,
+          name: "restricted-target",
+          parent: parent,
+          project_users: [
+            %{user: editor_user, role: :viewer}
+          ]
+        )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Try to merge into the restricted target via direct event
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => target.id}
+        })
+
+      assert html =~ "You are not authorized to merge into this project"
+    end
+
+    test "merge target options filter out projects where user lacks editor+ role",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      editor_user = insert(:user)
+      insert(:project_user, user: editor_user, project: parent, role: :editor)
+
+      insert(:project_user,
+        user: editor_user,
+        project: sandbox,
+        role: :editor
+      )
+
+      # Create another sandbox where user is only a viewer
+      viewer_sandbox =
+        insert(:project,
+          name: "viewer-only-sandbox",
+          parent: parent,
+          project_users: [
+            %{user: editor_user, role: :viewer}
+          ]
+        )
+
+      # Create a sandbox where the editor has no membership at all
+      no_membership_sandbox =
+        insert(:project,
+          name: "no-membership-sandbox",
+          parent: parent,
+          project_users: []
+        )
+
+      conn = log_in_user(conn, editor_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      target_ids = Enum.map(assigns.merge_target_options, & &1.value)
+
+      # Parent should be in targets (user is editor)
+      assert parent.id in target_ids
+
+      # Viewer-only sandbox should NOT be in targets
+      refute viewer_sandbox.id in target_ids
+
+      # No-membership sandbox should NOT be in targets
+      refute no_membership_sandbox.id in target_ids
+    end
+
     test "checks for divergence when opening merge modal with default target",
          %{
            conn: conn,
@@ -1869,9 +2005,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         "merge" => %{"target_id" => ""}
       })
 
-      # Should not crash - the has_diverged will be false for nil target
+      # Should not crash - the diverged_workflows will be empty for nil target
       assigns = :sys.get_state(view.pid).socket.assigns
-      refute assigns.merge_has_diverged
+      assert assigns.merge_diverged_workflows == []
     end
 
     test "displays MAIN when selected target not found in options", %{conn: conn} do
@@ -2148,6 +2284,202 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert Enum.any?(sandbox.project_users, fn pu ->
                pu.user_id == editor_user.id and pu.role == :editor
              end)
+    end
+  end
+
+  describe "merge modal with divergence" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, parent: parent, sandbox: sandbox}
+    end
+
+    test "displays list of diverged workflow names when has_diverged is true", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent
+    } do
+      # Setup: Create diverged workflows
+      target_wf1 =
+        insert(:workflow, project: parent, name: "Payment Processing")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf1,
+          "aaa111111111",
+          "app"
+        )
+
+      target_wf2 = insert(:workflow, project: parent, name: "Data Sync")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf2,
+          "bbb222222222",
+          "app"
+        )
+
+      sandbox_wf1 =
+        insert(:workflow, project: sandbox, name: "Payment Processing")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf1,
+          "aaa999999999",
+          "app"
+        )
+
+      sandbox_wf2 = insert(:workflow, project: sandbox, name: "Data Sync")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf2,
+          "bbb888888888",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      # Assert divergence alert is present
+      assert html =~ "Target project has diverged"
+
+      # Assert workflow names are listed
+      assert html =~ "Payment Processing"
+      assert html =~ "Data Sync"
+
+      assert html =~ "workflow(s) have been modified"
+    end
+
+    test "does not show divergence alert when workflows match", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent
+    } do
+      # Setup: Create matching workflows
+      target_wf = insert(:workflow, project: parent, name: "Matching Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          target_wf,
+          "aabbccddee00",
+          "app"
+        )
+
+      sandbox_wf =
+        insert(:workflow, project: sandbox, name: "Matching Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf,
+          "aabbccddee00",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      refute html =~ "Target project has diverged"
+      refute html =~ "Matching Workflow"
+    end
+
+    test "updates diverged workflow list when changing merge target", %{
+      conn: conn,
+      sandbox: sandbox,
+      parent: parent,
+      user: user
+    } do
+      # Create another sandbox (sibling) as alternative merge target
+      sibling_sandbox =
+        insert(:project,
+          name: "sibling-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      # Setup: Different diverged workflows for each target
+      parent_wf = insert(:workflow, project: parent, name: "Parent Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_wf,
+          "aabbcc123456",
+          "app"
+        )
+
+      sibling_wf =
+        insert(:workflow, project: sibling_sandbox, name: "Sibling Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sibling_wf,
+          "ddeeff654321",
+          "app"
+        )
+
+      sandbox_parent_wf =
+        insert(:workflow, project: sandbox, name: "Parent Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_parent_wf,
+          "112233445566",
+          "app"
+        )
+
+      sandbox_sibling_wf =
+        insert(:workflow, project: sandbox, name: "Sibling Workflow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_sibling_wf,
+          "665544332211",
+          "app"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
+
+      # Open merge modal (defaults to parent target)
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "Parent Workflow"
+      refute html =~ "Sibling Workflow"
+
+      # Change target to sibling_sandbox
+      html =
+        view
+        |> form("#merge-sandbox-modal form")
+        |> render_change(%{merge: %{target_id: sibling_sandbox.id}})
+
+      refute html =~ "Parent Workflow"
+      assert html =~ "Sibling Workflow"
     end
   end
 

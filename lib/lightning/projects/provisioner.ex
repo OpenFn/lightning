@@ -62,7 +62,7 @@ defmodule Lightning.Projects.Provisioner do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
     Repo.transact(fn ->
-      with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
+      with :ok <- VersionControlUsageLimiter.limit_api_provisioning(project.id),
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-
@@ -416,7 +416,7 @@ defmodule Lightning.Projects.Provisioner do
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_mark_for_deletion()
-    |> validate_extraneous_params()
+    |> validate_extraneous_params(ignore: ["version_history"])
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
@@ -546,8 +546,14 @@ defmodule Lightning.Projects.Provisioner do
   For all params in the changeset, ensure that the param is in the list of
   known fields in the schema.
   """
-  def validate_extraneous_params(changeset) do
-    param_keys = changeset.params |> Map.keys() |> MapSet.new(&to_string/1)
+  def validate_extraneous_params(changeset, opts \\ []) do
+    ignore_keys = opts |> Keyword.get(:ignore, []) |> Enum.map(&to_string/1)
+
+    param_keys =
+      changeset.params
+      |> Map.keys()
+      |> Enum.reject(fn key -> to_string(key) in ignore_keys end)
+      |> MapSet.new(&to_string/1)
 
     field_keys = changeset.types |> Map.keys() |> MapSet.new(&to_string/1)
 
