@@ -23,7 +23,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Services.CollectionHook
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
-  alias Lightning.VersionControl.VersionControlUsageLimiter
+
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -62,8 +62,7 @@ defmodule Lightning.Projects.Provisioner do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
     Repo.transact(fn ->
-      with :ok <- VersionControlUsageLimiter.limit_api_provisioning(project.id),
-           project_changeset <-
+      with project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-
              edges_referencing_deleted_jobs(project_changeset),

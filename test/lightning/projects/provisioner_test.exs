@@ -738,10 +738,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(
         :limit_action,
-        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
-      )
-      |> Mox.expect(
-        :limit_action,
         fn %{type: :activate_workflow}, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_msg}}
         end
@@ -943,10 +939,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(
         :limit_action,
-        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
-      )
-      |> Mox.expect(
-        :limit_action,
         fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
       )
       |> Mox.expect(
@@ -979,10 +971,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       error_msg = "Oopsie Doopsie"
 
       Lightning.Extensions.MockUsageLimiter
-      |> Mox.expect(
-        :limit_action,
-        fn %{type: :api_provisioning}, %{project_id: ^project_id} -> :ok end
-      )
       |> Mox.expect(
         :limit_action,
         fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
