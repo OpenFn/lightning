@@ -469,7 +469,11 @@ defmodule Lightning.Projects.Sandboxes do
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
           cron_expression: parent_trigger.cron_expression,
-          kafka_configuration: parent_trigger.kafka_configuration
+          kafka_configuration:
+            case parent_trigger.kafka_configuration do
+              %_{} = config -> Map.from_struct(config)
+              other -> other
+            end
         }
 
         {:ok, sandbox_trigger} =

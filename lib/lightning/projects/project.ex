@@ -142,7 +142,7 @@ defmodule Lightning.Projects.Project do
         changeset
       end
 
-    dataclip_retention_period = get_change(changeset, :dataclip_retention_period)
+    dataclip_retention_period = get_field(changeset, :dataclip_retention_period)
 
     changeset =
       if dataclip_retention_period do

@@ -814,6 +814,74 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "provision with inconsistent parent retention" do
+    test "returns changeset error when parent has dataclip > history retention" do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "bad-retention",
+          history_retention_period: 7,
+          dataclip_retention_period: 30
+        )
+
+      ensure_member!(parent, actor, :owner)
+
+      assert {:error, changeset} =
+               Sandboxes.provision(parent, actor, %{name: "child-sandbox"})
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               changeset
+             ).dataclip_retention_period
+    end
+  end
+
+  describe "provision with Kafka triggers" do
+    test "clones Kafka trigger configuration without crashing" do
+      actor = insert(:user)
+      parent = insert(:project, name: "kafka-parent")
+      ensure_member!(parent, actor, :owner)
+
+      w = insert(:workflow, project: parent, name: "KafkaFlow")
+      kafka_config = build(:triggers_kafka_configuration)
+
+      t =
+        insert(:trigger,
+          workflow: w,
+          type: :kafka,
+          enabled: true,
+          kafka_configuration: kafka_config
+        )
+
+      j = insert(:job, workflow: w, name: "K1", body: "fn(s => s);")
+
+      insert(:edge,
+        workflow: w,
+        source_trigger_id: t.id,
+        target_job_id: j.id,
+        condition_type: :always,
+        enabled: true
+      )
+
+      add_version!(w, "kafkahash1234")
+
+      assert {:ok, sandbox} =
+               Sandboxes.provision(parent, actor, %{name: "kafka-child"})
+
+      sandbox_trigger =
+        sandbox
+        |> Repo.preload(workflows: :triggers)
+        |> then(& &1.workflows)
+        |> List.first()
+        |> then(& &1.triggers)
+        |> List.first()
+
+      assert sandbox_trigger.type == :kafka
+      assert sandbox_trigger.enabled == false
+      assert sandbox_trigger.kafka_configuration != nil
+    end
+  end
+
   describe "update errors" do
     setup do
       parent = insert(:project, name: "parent")
