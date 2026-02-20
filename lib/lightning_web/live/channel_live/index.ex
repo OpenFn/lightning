@@ -35,6 +35,7 @@ defmodule LightningWeb.ChannelLive.Index do
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
+        <.channel_metrics channel_stats={@channel_stats} />
         <div class="w-full">
           <div class="mt-14 flex justify-between mb-3">
             <h3 class="text-3xl font-bold">
@@ -99,7 +100,8 @@ defmodule LightningWeb.ChannelLive.Index do
        active_menu_item: :channels,
        can_create_channel: can_create_channel,
        can_delete_channel: can_delete_channel,
-       channels_stats: []
+       channels_stats: [],
+       channel_stats: %{total_channels: 0, total_requests: 0}
      )}
   end
 
@@ -109,13 +111,13 @@ defmodule LightningWeb.ChannelLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    channels_stats =
-      Channels.list_channels_for_project_with_stats(socket.assigns.project.id)
+    project_id = socket.assigns.project.id
 
     socket
     |> assign(
       page_title: "Channels",
-      channels_stats: channels_stats,
+      channels_stats: Channels.list_channels_for_project_with_stats(project_id),
+      channel_stats: Channels.get_channel_stats_for_project(project_id),
       selected_channel: nil
     )
   end
@@ -201,6 +203,27 @@ defmodule LightningWeb.ChannelLive.Index do
 
   # --- Private components ---
 
+  attr :channel_stats, :map, required: true
+
+  defp channel_metrics(assigns) do
+    ~H"""
+    <div class="grid gap-6 grid-cols-2 mb-8">
+      <div class="bg-white shadow rounded-lg py-2 px-6">
+        <h2 class="text-sm text-gray-500">Total Channels</h2>
+        <div class="text-3xl font-bold text-gray-800">
+          {@channel_stats.total_channels}
+        </div>
+      </div>
+      <div class="bg-white shadow rounded-lg py-2 px-6">
+        <h2 class="text-sm text-gray-500">Total Requests</h2>
+        <div class="text-3xl font-bold text-gray-800">
+          {@channel_stats.total_requests}
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :id, :string, required: true
   attr :channels_stats, :list, required: true
   attr :project, :map, required: true
@@ -280,7 +303,7 @@ defmodule LightningWeb.ChannelLive.Index do
                   size="sm"
                   phx-click="delete_channel"
                   phx-value-id={channel.id}
-                  phx-confirm={"Delete \"#{channel.name}\"? This cannot be undone."}
+                  data-confirm={"Delete \"#{channel.name}\"? This cannot be undone."}
                 >
                   Delete
                 </.button>

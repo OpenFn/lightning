@@ -51,6 +51,29 @@ defmodule Lightning.Channels do
   end
 
   @doc """
+  Returns aggregate stats for all channels in a project.
+
+  Returns a map with:
+    - `:total_channels` — number of channels in the project
+    - `:total_requests` — total channel requests across all channels
+
+  Uses a single query with a LEFT JOIN so both counts are fetched in one
+  database round-trip.
+  """
+  def get_channel_stats_for_project(project_id) do
+    from(c in Channel,
+      where: c.project_id == ^project_id,
+      left_join: cr in ChannelRequest,
+      on: cr.channel_id == c.id,
+      select: %{
+        total_channels: count(c.id, :distinct),
+        total_requests: count(cr.id)
+      }
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Gets a single channel by ID. Returns nil if not found.
   """
   def get_channel(id) do

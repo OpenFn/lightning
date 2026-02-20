@@ -125,59 +125,57 @@ defmodule LightningWeb.ChannelLive.FormComponent do
             <.input field={f[:enabled]} label="Enabled" type="toggle" />
 
             <div>
-              <p class="text-sm/6 font-medium text-slate-800 mb-2">
-                Source Authentication Methods
-              </p>
-              <%= if @webhook_auth_methods == [] do %>
-                <p class="text-sm text-gray-500">
-                  No webhook authentication methods found.
-                  <.link
-                    navigate={~p"/projects/#{@project}/settings#webhook_security"}
-                    class="link"
-                  >
-                    Create one in project settings.
-                  </.link>
+              <div class="flex items-baseline gap-2 mb-2">
+                <p class="text-sm/6 font-medium text-slate-800">
+                  Source Authentication Methods
                 </p>
-              <% else %>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                  <.input
-                    :for={wam <- @webhook_auth_methods}
-                    id={"source_auth_#{wam.id}"}
-                    name={"#{f.name}[source_auth_methods][#{wam.id}]"}
-                    type="checkbox"
-                    value={Map.get(@source_selections, wam.id, false)}
-                    label={wam.name}
-                  />
-                </div>
-              <% end %>
+                <.link
+                  navigate={~p"/projects/#{@project}/settings#webhook_security"}
+                  class="text-xs link"
+                >
+                  Create a new one in project settings.
+                </.link>
+              </div>
+              <div
+                :if={@webhook_auth_methods != []}
+                class="grid grid-cols-2 gap-x-4 gap-y-2"
+              >
+                <.input
+                  :for={wam <- @webhook_auth_methods}
+                  id={"source_auth_#{wam.id}"}
+                  name={"#{f.name}[source_auth_methods][#{wam.id}]"}
+                  type="checkbox"
+                  value={Map.get(@source_selections, wam.id, false)}
+                  label={wam.name}
+                />
+              </div>
             </div>
 
             <div>
-              <p class="text-sm/6 font-medium text-slate-800 mb-2">
-                Sink Credentials
-              </p>
-              <%= if @project_credentials == [] do %>
-                <p class="text-sm text-gray-500">
-                  No credentials found.
-                  <.link
-                    navigate={~p"/projects/#{@project}/settings#credentials"}
-                    class="link"
-                  >
-                    Create one in project settings.
-                  </.link>
+              <div class="flex items-baseline gap-2 mb-2">
+                <p class="text-sm/6 font-medium text-slate-800">
+                  Sink Credentials
                 </p>
-              <% else %>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                  <.input
-                    :for={pc <- @project_credentials}
-                    id={"sink_auth_#{pc.id}"}
-                    name={"#{f.name}[sink_auth_methods][#{pc.id}]"}
-                    type="checkbox"
-                    value={Map.get(@sink_selections, pc.id, false)}
-                    label={pc.credential.name}
-                  />
-                </div>
-              <% end %>
+                <.link
+                  navigate={~p"/projects/#{@project}/settings#credentials"}
+                  class="text-xs link"
+                >
+                  Create a new one in project settings.
+                </.link>
+              </div>
+              <div
+                :if={@project_credentials != []}
+                class="grid grid-cols-2 gap-x-4 gap-y-2"
+              >
+                <.input
+                  :for={pc <- @project_credentials}
+                  id={"sink_auth_#{pc.id}"}
+                  name={"#{f.name}[sink_auth_methods][#{pc.id}]"}
+                  type="checkbox"
+                  value={Map.get(@sink_selections, pc.id, false)}
+                  label={pc.credential.name}
+                />
+              </div>
             </div>
           </div>
 

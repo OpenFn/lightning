@@ -56,6 +56,18 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     end
   end
 
+  describe "channel metrics" do
+    test "shows Total Channels and Total Requests stat cards", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert html =~ "Total Channels"
+      assert html =~ "Total Requests"
+    end
+  end
+
   describe "channel list rendering" do
     test "shows empty state when project has no channels", %{
       conn: conn,
@@ -351,9 +363,139 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       updated = Channels.get_channel!(channel.id)
       assert updated.name == "updated-name"
     end
+
+    @tag role: :editor
+    test "shows settings links even when auth methods and credentials exist",
+         %{conn: conn, project: project, user: user} do
+      wam = insert(:webhook_auth_method, project: project)
+      credential = insert(:credential, project: project, user: user)
+      _pc = insert(:project_credential, project: project, credential: credential)
+      channel = insert(:channel, project: project)
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      # Checkboxes for existing items are rendered
+      assert html =~ wam.name
+      assert html =~ credential.name
+      # Settings links are still present alongside the checkboxes
+      assert html =~ "/settings#webhook_security"
+      assert html =~ "/settings#credentials"
+    end
+  end
+
+  describe "edit channel with existing auth methods" do
+    @tag role: :editor
+    test "pre-selects existing source and sink auth methods", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      wam = insert(:webhook_auth_method, project: project)
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :source,
+        webhook_auth_method: wam
+      )
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :sink,
+        webhook_auth_method: nil,
+        project_credential: pc
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      assert has_element?(view, "label", wam.name)
+      assert has_element?(view, "label", credential.name)
+      assert has_element?(view, "#source_auth_#{wam.id}[value='true']")
+      assert has_element?(view, "#sink_auth_#{pc.id}[value='true']")
+    end
+
+    @tag role: :editor
+    test "saving can remove, keep, and add auth methods in a single save", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      wam1 = insert(:webhook_auth_method, project: project)
+      wam2 = insert(:webhook_auth_method, project: project)
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :source,
+        webhook_auth_method: wam1
+      )
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :sink,
+        webhook_auth_method: nil,
+        project_credential: pc
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      # Remove wam1, keep pc (sink), add wam2 as a new source
+      view
+      |> form("#channel-form-#{channel.id}",
+        channel: %{
+          name: channel.name,
+          source_auth_methods: %{wam1.id => "false", wam2.id => "true"},
+          sink_auth_methods: %{pc.id => "true"}
+        }
+      )
+      |> render_submit()
+
+      updated =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      source_cams =
+        Enum.filter(updated.channel_auth_methods, &(&1.role == :source))
+
+      sink_cams = Enum.filter(updated.channel_auth_methods, &(&1.role == :sink))
+
+      assert length(source_cams) == 1
+      assert hd(source_cams).webhook_auth_method_id == wam2.id
+
+      assert length(sink_cams) == 1
+      assert hd(sink_cams).project_credential_id == pc.id
+    end
   end
 
   describe "delete channel" do
+    @tag role: :editor
+    test "delete button uses data-confirm attribute (not phx-confirm)", %{
+      conn: conn,
+      project: project
+    } do
+      _channel = insert(:channel, project: project, name: "confirm-me")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert has_element?(
+               view,
+               "[phx-click='delete_channel'][data-confirm]"
+             )
+
+      refute has_element?(
+               view,
+               "[phx-click='delete_channel'][phx-confirm]"
+             )
+    end
+
     @tag role: :viewer
     test "Edit and Delete buttons are absent for viewer role", %{
       conn: conn,
