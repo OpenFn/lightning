@@ -457,6 +457,10 @@ defmodule LightningWeb.ChannelLive.IndexTest do
           sink_auth_methods: %{pc.id => "true"}
         }
       )
+      |> render_change()
+
+      view
+      |> form("#channel-form-#{channel.id}")
       |> render_submit()
 
       updated =
