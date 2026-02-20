@@ -24,9 +24,6 @@ and this project adheres to
 - Show specific workflow names in sandbox merge dialog when target project has
   diverged, instead of generic warning message
   [#4001](https://github.com/OpenFn/lightning/issues/4001)
-- Use distinct `api_provisioning` action type in provisioner to return a
-  context-appropriate error message for CLI deploy vs GitHub sync
-  [#4426](https://github.com/OpenFn/lightning/issues/4426)
 - show better error message for validation errors
   [#4429](https://github.com/OpenFn/lightning/issues/4429)
 
