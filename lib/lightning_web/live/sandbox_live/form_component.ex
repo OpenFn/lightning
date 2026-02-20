@@ -1,6 +1,8 @@
 defmodule LightningWeb.SandboxLive.FormComponent do
   use LightningWeb, :live_component
 
+  require Logger
+
   alias Ecto.Changeset
   alias Lightning.Helpers
   alias Lightning.Projects
@@ -105,7 +107,11 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")
       |> noreply()
     else
-      {:error, %Ecto.Changeset{}} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.error(
+          "Sandbox creation failed for project #{parent.id}: #{inspect(changeset.errors)}"
+        )
+
         socket
         |> put_flash(
           :error,
