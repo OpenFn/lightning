@@ -73,6 +73,36 @@ defmodule LightningWeb.Components.Pills do
   end
 
   @doc """
+  Renders a preview of a derived URL-safe name inside a yellow badge.
+
+  Shows the badge only when the derived name is non-empty.
+
+  ## Example
+
+  ```heex
+  <.name_badge name={@name} field={f[:name]}>
+    Your project will be named
+  </.name_badge>
+  ```
+  """
+  attr :name, :string, required: true, doc: "The derived URL-safe name"
+
+  attr :field, Phoenix.HTML.FormField,
+    required: true,
+    doc: "The hidden :name field"
+
+  slot :inner_block
+
+  def name_badge(assigns) do
+    ~H"""
+    <%= if to_string(@field.value) != "" do %>
+      {render_slot(@inner_block)}
+      <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono text-xs"><%= @name %></span>.
+    <% end %>
+    """
+  end
+
+  @doc """
   Renders a filter badge with a close button.
 
   ## Example
