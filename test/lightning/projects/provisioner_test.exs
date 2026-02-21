@@ -1458,6 +1458,67 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "import_document/2 github sync usage limiting" do
+    setup do
+      Mox.verify_on_exit!()
+      %{project: ProjectsFixtures.project_fixture()}
+    end
+
+    test "allows import when actor is a user", %{project: project} do
+      user = insert(:user)
+      %{body: body} = valid_document(project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body)
+    end
+
+    test "blocks import when actor is a repo_connection and plan disallows github sync",
+         %{project: project} do
+      repo_connection = insert(:project_repo_connection, project: project)
+      %{body: body} = valid_document(project.id)
+
+      error_message = %Lightning.Extensions.Message{
+        text: "Upgrade to use Github Sync"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, _context ->
+            {:error, :upgrade_required, error_message}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      assert {:error, ^error_message} =
+               Provisioner.import_document(project, repo_connection, body)
+    end
+
+    test "allows import when actor is a repo_connection and plan allows github sync",
+         %{project: project} do
+      repo_connection = insert(:project_repo_connection, project: project)
+      %{body: body} = valid_document(project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, repo_connection, body)
+    end
+  end
+
   describe "import_document telemetry" do
     setup do
       Mox.verify_on_exit!()

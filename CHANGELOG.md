@@ -37,6 +37,8 @@ and this project adheres to
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 - unable to clear runs from history & url params rewrite
   [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Usage limits incorrectly applied to CLI provisioning
+  [#4442](https://github.com/OpenFn/lightning/pull/4442)
 
 ## [2.15.14] - 2026-02-13
 
