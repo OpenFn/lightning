@@ -24,9 +24,6 @@ and this project adheres to
 - Show specific workflow names in sandbox merge dialog when target project has
   diverged, instead of generic warning message
   [#4001](https://github.com/OpenFn/lightning/issues/4001)
-- Use distinct `api_provisioning` action type in provisioner to return a
-  context-appropriate error message for CLI deploy vs GitHub sync
-  [#4426](https://github.com/OpenFn/lightning/issues/4426)
 - show better error message for validation errors
   [#4429](https://github.com/OpenFn/lightning/issues/4429)
 
@@ -40,6 +37,8 @@ and this project adheres to
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 - unable to clear runs from history & url params rewrite
   [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Usage limits incorrectly applied to CLI provisioning
+  [#4442](https://github.com/OpenFn/lightning/pull/4442)
 
 ## [2.15.14] - 2026-02-13
 
