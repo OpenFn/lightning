@@ -49,7 +49,7 @@ export function AlertDialog({
       : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
 
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+    <Dialog open={isOpen} onClose={onClose} className="relative z-60">
       <DialogBackdrop
         transition
         className="modal-backdrop data-closed:opacity-0 data-enter:duration-300
