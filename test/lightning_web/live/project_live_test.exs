@@ -394,6 +394,27 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "editing a project with a name that resolves to blank shows error", %{
+      conn: conn
+    } do
+      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      view
+      |> form("#project-form",
+        project: %{raw_name: "!!!"}
+      )
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "can&#39;t be blank"
+    end
+
     test "sorting projects by name works correctly", %{conn: conn} do
       _project_a = insert(:project, name: "alpha-project")
       _project_b = insert(:project, name: "beta-project")
@@ -1720,6 +1741,33 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
     end
 
+    test "saving project settings with name that resolves to blank shows error",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      html =
+        view
+        |> form("#project-settings-form",
+          project: %{raw_name: "!!!"}
+        )
+        |> render_submit()
+
+      assert html =~ "can&#39;t be blank"
+
+      # Project name is unchanged
+      assert %{name: "project-1"} = Repo.get!(Project, project.id)
+    end
+
     test "project admin can edit project concurrency with valid data",
          %{
            conn: conn,
@@ -2781,6 +2829,42 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.find("p")
                |> Floki.text()
                |> String.trim()
+    end
+
+    @tag role: :admin
+    test "cancel button resets retention form to saved values", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#data-storage")
+
+      # Change retention policy
+      view
+      |> form("#retention-settings-form",
+        project: %{retention_policy: "erase_all"}
+      )
+      |> render_change()
+
+      assert ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # Click cancel
+      view
+      |> element("button[phx-click='cancel-retention-change']")
+      |> render_click()
+
+      # Verify it resets back to retain_all (the default)
+      assert ["checked"] ==
+               view
+               |> element("#retain_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
     end
 
     @tag role: :editor
