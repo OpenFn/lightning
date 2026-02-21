@@ -107,7 +107,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox name already exists"
     end
 
-    test "creating sandbox with blank name disables submit and keeps placeholder",
+    test "creating sandbox with blank name disables submit and shows error",
          %{
            conn: conn,
            parent: parent
@@ -122,7 +122,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
-      assert html =~ "my-sandbox"
+      assert html =~ "can&#39;t be blank"
     end
 
     test "creating sandbox fails when limiter returns error", %{

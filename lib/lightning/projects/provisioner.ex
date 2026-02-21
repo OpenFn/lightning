@@ -396,7 +396,7 @@ defmodule Lightning.Projects.Provisioner do
   defp project_changeset(project, attrs) do
     project
     |> cast(attrs, [:id, :name, :description])
-    |> validate_required([:id])
+    |> validate_required([:id, :name])
     |> validate_extraneous_params()
     |> Project.validate()
   end

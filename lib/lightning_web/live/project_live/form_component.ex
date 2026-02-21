@@ -74,9 +74,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       end)
 
     changeset =
-      Project.project_with_users_changeset(
+      Project.form_with_users_changeset(
         project,
-        %{project_users: project_users}
+        %{project_users: project_users, raw_name: project.name}
       )
 
     {:ok,
@@ -86,20 +86,15 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      |> assign(:sort_key, "name")
      |> assign(:sort_direction, "asc")
      |> assign(:filter, "")
-     |> assign(
-       :name,
-       Helpers.url_safe_name(fetch_field!(changeset, :name))
-     )}
+     |> assign(:name, fetch_field!(changeset, :name))}
   end
 
   @impl true
   def handle_event("validate", %{"project" => project_params}, socket) do
     changeset =
       socket.assigns.project
-      |> Project.project_with_users_changeset(
-        project_params
-        |> coerce_raw_name_to_safe_name()
-      )
+      |> Project.form_with_users_changeset(project_params)
+      |> Helpers.copy_error(:name, :raw_name)
       |> Map.put(:action, :validate)
 
     {:noreply,
@@ -160,7 +155,11 @@ defmodule LightningWeb.ProjectLive.FormComponent do
         "users_sort" => Map.keys(users_params)
       })
 
-    save_project(socket, socket.assigns.action, params)
+    save_project(
+      socket,
+      socket.assigns.action,
+      Helpers.derive_name_param(params)
+    )
   end
 
   defp save_project(socket, :edit, project_params) do
@@ -175,6 +174,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
          |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end
@@ -188,18 +188,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
          |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
         {:noreply, assign(socket, changeset: changeset)}
     end
-  end
-
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Helpers.url_safe_name(raw_name)
-
-    params |> Map.put("name", new_name)
-  end
-
-  defp coerce_raw_name_to_safe_name(%{} = params) do
-    params
   end
 
   defp full_user_name(user) do
