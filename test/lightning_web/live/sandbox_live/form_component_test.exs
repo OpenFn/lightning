@@ -107,7 +107,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox name already exists"
     end
 
-    test "creating sandbox with blank name disables submit and keeps placeholder",
+    test "creating sandbox with blank name disables submit and shows error",
          %{
            conn: conn,
            parent: parent
@@ -122,7 +122,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
-      assert html =~ "my-sandbox"
+      assert html =~ "can&#39;t be blank"
     end
 
     test "creating sandbox fails when limiter returns error", %{
@@ -204,8 +204,8 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
           if name in [nil, ""] do
             {:error,
-             %Ecto.Changeset{}
-             |> Ecto.Changeset.change(current_sb)
+             current_sb
+             |> Ecto.Changeset.change()
              |> Map.put(:action, :update)
              |> Ecto.Changeset.add_error(:name, "can't be blank")}
           else
@@ -247,6 +247,24 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         )
 
       assert html =~ "Sandbox updated"
+    end
+
+    test "updating sandbox with blank name shows error", %{
+      conn: conn,
+      parent: parent,
+      sb: sb
+    } do
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_submit(%{"project" => %{"raw_name" => ""}})
+
+      html = render(view)
+      assert html =~ "can&#39;t be blank"
     end
 
     test "color input displays existing sandbox color", %{

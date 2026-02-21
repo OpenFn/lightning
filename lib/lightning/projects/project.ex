@@ -35,6 +35,8 @@ defmodule Lightning.Projects.Project do
     field :color, :string
     field :env, :string
 
+    field :raw_name, :string, virtual: true
+
     belongs_to :parent, __MODULE__, type: :binary_id
 
     has_many :project_users, ProjectUser
@@ -78,6 +80,7 @@ defmodule Lightning.Projects.Project do
       :color,
       :env
     ])
+    |> validate_required([:name])
     |> set_default_env_for_root_projects()
     |> validate()
   end
@@ -96,7 +99,6 @@ defmodule Lightning.Projects.Project do
   def validate(changeset) do
     changeset
     |> validate_length(:description, max: 240)
-    |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
     |> validate_dataclip_retention_period()
     |> validate_inclusion(:history_retention_period, data_retention_options())
@@ -121,6 +123,66 @@ defmodule Lightning.Projects.Project do
     if get_field(changeset, :parent_id) == changeset.data.id,
       do: add_error(changeset, :parent_id, "cannot be self"),
       else: changeset
+  end
+
+  @doc """
+  Changeset for forms that accept a human-friendly `:raw_name` and derive
+  the URL-safe `:name` automatically.
+  """
+  def form_changeset(project, attrs) do
+    project
+    |> cast(attrs, [
+      :id,
+      :raw_name,
+      :concurrency,
+      :description,
+      :scheduled_deletion,
+      :requires_mfa,
+      :retention_policy,
+      :history_retention_period,
+      :dataclip_retention_period,
+      :allow_support_access,
+      :parent_id,
+      :color,
+      :env
+    ])
+    |> validate_required([:raw_name])
+    |> derive_name_from_raw_name()
+    |> set_default_env_for_root_projects()
+    |> validate()
+  end
+
+  @doc """
+  Like `form_changeset/2` but also casts the `:project_users` association.
+  """
+  def form_with_users_changeset(project, attrs) do
+    project
+    |> cast(attrs, [
+      :id,
+      :raw_name,
+      :description,
+      :concurrency,
+      :parent_id,
+      :color,
+      :env,
+      :allow_support_access,
+      :requires_mfa,
+      :retention_policy,
+      :history_retention_period,
+      :dataclip_retention_period
+    ])
+    |> validate_required([:raw_name])
+    |> derive_name_from_raw_name()
+    |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
+    |> validate()
+    |> validate_project_owner()
+  end
+
+  defp derive_name_from_raw_name(changeset) do
+    case get_change(changeset, :raw_name) do
+      nil -> changeset
+      raw -> put_change(changeset, :name, Lightning.Helpers.url_safe_name(raw))
+    end
   end
 
   @doc """
@@ -189,6 +251,7 @@ defmodule Lightning.Projects.Project do
       :history_retention_period,
       :dataclip_retention_period
     ])
+    |> validate_required([:name])
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()

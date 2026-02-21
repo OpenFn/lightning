@@ -147,6 +147,77 @@ defmodule Lightning.Projects.ProjectTest do
     end
   end
 
+  describe "form_changeset/2" do
+    test "casts raw_name and derives name via url_safe_name" do
+      cs = Project.form_changeset(%Project{}, %{raw_name: "My Cool Project!"})
+      assert cs.valid?
+      assert Ecto.Changeset.get_change(cs, :raw_name) == "My Cool Project!"
+      assert Ecto.Changeset.get_field(cs, :name) == "my-cool-project"
+    end
+
+    test "requires raw_name" do
+      cs = Project.form_changeset(%Project{}, %{})
+      refute cs.valid?
+      assert "can't be blank" in errors_on(cs).raw_name
+    end
+
+    test "does not cast name directly" do
+      cs =
+        Project.form_changeset(%Project{}, %{
+          raw_name: "good",
+          name: "should-be-ignored"
+        })
+
+      assert Ecto.Changeset.get_field(cs, :name) == "good"
+    end
+
+    test "casts other fields like description and color" do
+      cs =
+        Project.form_changeset(%Project{}, %{
+          raw_name: "test",
+          description: "A test project",
+          color: "#ff0000"
+        })
+
+      assert cs.valid?
+      assert Ecto.Changeset.get_field(cs, :description) == "A test project"
+      assert Ecto.Changeset.get_field(cs, :color) == "#ff0000"
+    end
+
+    test "sets default env for root projects" do
+      cs = Project.form_changeset(%Project{}, %{raw_name: "root-proj"})
+      assert Ecto.Changeset.get_field(cs, :env) == "main"
+    end
+  end
+
+  describe "form_with_users_changeset/2" do
+    test "casts raw_name, derives name, and validates project_users" do
+      user = insert(:user)
+
+      cs =
+        Project.form_with_users_changeset(%Project{}, %{
+          raw_name: "Team Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        })
+
+      assert cs.valid?
+      assert Ecto.Changeset.get_field(cs, :name) == "team-project"
+    end
+
+    test "requires at least one owner" do
+      user = insert(:user)
+
+      cs =
+        Project.form_with_users_changeset(%Project{}, %{
+          raw_name: "no-owner",
+          project_users: [%{user_id: user.id, role: :editor}]
+        })
+
+      refute cs.valid?
+      assert errors_on(cs).owner
+    end
+  end
+
   describe "sandbox?/1" do
     test "false for root, true for child" do
       root = insert(:project)

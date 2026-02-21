@@ -16,14 +16,11 @@
         value={f[:name].value}
       />
       <.old_error field={f[:name]} />
-      <%= if to_string(f[:name].value) != "" do %>
-        <div class="mt-2 text-sm text-gray-600">
+      <div class="mt-2 text-sm text-gray-600">
+        <.name_badge name={@name} field={f[:name]}>
           Note that this project will be named:
-          <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
-            {@name}
-          </span>
-        </div>
-      <% end %>
+        </.name_badge>
+      </div>
     </div>
     <div class="sm:flex sm:items-center mt-8 mb-2">
       <div class="sm:flex-auto">

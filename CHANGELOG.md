@@ -40,6 +40,9 @@ and this project adheres to
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 - unable to clear runs from history & url params rewrite
   [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Project settings form now auto-converts project names to url-safe format,
+  matching the creation form behavior
+  [#4437](https://github.com/OpenFn/lightning/issues/4437)
 
 ## [2.15.14] - 2026-02-13
 

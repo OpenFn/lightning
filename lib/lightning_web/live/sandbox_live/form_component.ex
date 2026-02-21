@@ -106,6 +106,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> noreply()
     else
       {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+
         socket
         |> assign(:changeset, changeset)
         |> assign(:name, Changeset.get_field(changeset, :name))
@@ -142,6 +144,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
          |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+
         {:noreply,
          socket
          |> assign(:changeset, changeset)
@@ -232,10 +236,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                     :edit -> "The sandbox will be named"
                   end}
                   <%= if to_string(f[:name].value) != "" do %>
-                    <span class={[
-                      "ml-1 rounded-md border border-slate-300",
-                      "bg-yellow-100 p-1 font-mono text-xs"
-                    ]}><%= @name %></span>.
+                    <.name_badge name={@name} field={f[:name]} />
                   <% else %>
                     <span class={[
                       "ml-1 rounded-md border border-slate-200",
@@ -280,7 +281,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   defp initial_params(%{sandbox: %Project{} = sandbox}) do
     %{
-      "name" => sandbox.name,
       "raw_name" => sandbox.name,
       "color" => sandbox.color
     }
@@ -291,10 +291,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   end
 
   defp form_changeset(%Project{} = base, params, parent_id) do
-    params
-    |> coerce_raw_name_to_safe_name()
-    |> then(&Project.changeset(base, &1))
+    base
+    |> Project.form_changeset(params)
     |> validate_unique_sandbox_name(parent_id)
+    |> Helpers.copy_error(:name, :raw_name)
   end
 
   defp validate_unique_sandbox_name(changeset, parent_id) do
@@ -305,7 +305,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       if Projects.sandbox_name_exists?(parent_id, name, id) do
         Changeset.add_error(
           changeset,
-          :raw_name,
+          :name,
           "Sandbox name already exists"
         )
       else
@@ -316,13 +316,9 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     end
   end
 
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do
-    Map.put(params, "name", Helpers.url_safe_name(raw))
-  end
-
-  defp coerce_raw_name_to_safe_name(params), do: params
-
   defp build_sandbox_attrs(params) do
+    params = Helpers.derive_name_param(params)
+
     %{
       name: params["name"],
       color: params["color"]

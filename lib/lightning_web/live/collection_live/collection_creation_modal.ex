@@ -9,7 +9,14 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
 
   @impl true
   def update(assigns, socket) do
-    changeset = Collection.changeset(assigns.collection, %{})
+    collection = assigns.collection
+
+    changeset =
+      if collection.name do
+        Collection.form_changeset(collection, %{raw_name: collection.name})
+      else
+        Collection.form_changeset(collection, %{})
+      end
 
     {:ok,
      socket
@@ -36,23 +43,19 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
   def handle_event("validate", %{"collection" => collection_params}, socket) do
     changeset =
       socket.assigns.collection
-      |> Collection.changeset(
-        collection_params
-        |> coerce_raw_name_to_safe_name
-      )
+      |> Collection.form_changeset(collection_params)
+      |> Helpers.copy_error(:name, :raw_name)
       |> Map.put(:action, :validate)
 
     {:noreply,
      socket
-     |> assign(
-       :changeset,
-       Lightning.Helpers.copy_error(changeset, :name, :raw_name)
-     )
+     |> assign(:changeset, changeset)
      |> assign(:name, Ecto.Changeset.fetch_field!(changeset, :name))}
   end
 
   def handle_event("save", %{"collection" => collection_params}, socket) do
     %{mode: mode, return_to: return_to} = socket.assigns
+    collection_params = Helpers.derive_name_param(collection_params)
 
     result =
       case mode do
@@ -84,19 +87,9 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
          assign(
            socket,
            :changeset,
-           Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+           Helpers.copy_error(changeset, :name, :raw_name)
          )}
     end
-  end
-
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Helpers.url_safe_name(raw_name)
-
-    params |> Map.put("name", new_name)
-  end
-
-  defp coerce_raw_name_to_safe_name(%{} = params) do
-    params
   end
 
   @impl true
@@ -144,10 +137,9 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
               />
               <.input type="hidden" field={f[:name]} />
               <small class="mt-2 block text-xs text-gray-600">
-                <%= if to_string(f[:name].value) != "" do %>
-                  This collection will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
-      <%= @name %></span>.
-                <% end %>
+                <.name_badge name={@name} field={f[:name]}>
+                  This collection will be named
+                </.name_badge>
               </small>
             </div>
             <div class="space-y-4">
