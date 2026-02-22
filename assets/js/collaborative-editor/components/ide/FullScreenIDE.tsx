@@ -26,6 +26,7 @@ import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
 import { useMonacoRef } from '../../contexts/MonacoRefContext';
+import { useAdaptorChangeConfirmation } from '../../hooks/useAdaptorChangeConfirmation';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -58,6 +59,7 @@ import { isFinalState } from '../../types/history';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { AlertDialog } from '../AlertDialog';
 import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
@@ -596,22 +598,27 @@ export function FullScreenIDE({
     [openCredentialModal]
   );
 
+  // Use confirmation hook for adaptor changes
+  const {
+    isAdaptorChangeConfirmationOpen,
+    handleAdaptorSelect: handleAdaptorSelectWithConfirmation,
+    handleConfirmAdaptorChange,
+    handleCloseConfirmation,
+  } = useAdaptorChangeConfirmation({
+    job: currentJob,
+    updateJob,
+    setIsAdaptorPickerOpen,
+    setIsConfigureModalOpen,
+  });
+
+  // Wrapper to clear adaptor picker state after selection
   const handleAdaptorSelect = useCallback(
     (adaptorName: string) => {
       if (!currentJob) return;
-
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      const fullAdaptor = `${newPackage}@latest`;
-
-      updateJob(currentJob.id, { adaptor: fullAdaptor });
-
-      setIsAdaptorPickerOpen(false);
       setAdaptorPickerFromConfigure(false);
-      // Always open configure modal after selecting an adaptor
-      setIsConfigureModalOpen(true);
+      handleAdaptorSelectWithConfirmation(adaptorName);
     },
-    [currentJob, updateJob]
+    [currentJob, handleAdaptorSelectWithConfirmation]
   );
 
   // Handler for adaptor changes - immediately syncs to Y.Doc
@@ -1370,6 +1377,18 @@ export function FullScreenIDE({
             }}
             onSelect={handleAdaptorSelect}
             projectAdaptors={projectAdaptors}
+          />
+
+          {/* Adaptor Change Confirmation Dialog */}
+          <AlertDialog
+            isOpen={isAdaptorChangeConfirmationOpen}
+            onClose={handleCloseConfirmation}
+            onConfirm={handleConfirmAdaptorChange}
+            title="Change Adaptor?"
+            description="Warning: Changing adaptors will reset the credential for this step. Are you sure you want to continue?"
+            confirmLabel="Continue"
+            cancelLabel="Cancel"
+            variant="primary"
           />
         </>
       )}
