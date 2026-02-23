@@ -98,7 +98,7 @@ defmodule Lightning.Projects.Project do
     |> validate_length(:description, max: 240)
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
-    |> validate_dataclip_retention_period()
+    |> maybe_validate_dataclip_retention_period()
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
     |> validate_format(
@@ -130,6 +130,15 @@ defmodule Lightning.Projects.Project do
   @spec sandbox?(t()) :: boolean()
   def sandbox?(%__MODULE__{parent_id: pid}) when is_binary(pid), do: true
   def sandbox?(_), do: false
+
+  defp maybe_validate_dataclip_retention_period(changeset) do
+    if get_change(changeset, :history_retention_period) ||
+         get_change(changeset, :dataclip_retention_period) do
+      validate_dataclip_retention_period(changeset)
+    else
+      changeset
+    end
+  end
 
   defp validate_dataclip_retention_period(changeset) do
     history_retention_period = get_field(changeset, :history_retention_period)
