@@ -40,6 +40,13 @@ and this project adheres to
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 - unable to clear runs from history & url params rewrite
   [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Fix retention period cross-field validation being skipped when only history
+  retention is changed, which blocked sandbox creation for affected projects
+  [#4385](https://github.com/OpenFn/lightning/issues/4385)
+- Fix sandbox creation crash when cloning Kafka triggers
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Fix sandbox creation failing silently on backend validation errors
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
 
 ## [2.15.14] - 2026-02-13
 

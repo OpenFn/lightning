@@ -1815,6 +1815,21 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
+    test "update_project/3 rejects lowering history below existing dataclip retention" do
+      project =
+        insert(:project,
+          history_retention_period: 30,
+          dataclip_retention_period: 30
+        )
+
+      assert {:error, changeset} =
+               Projects.update_project(project, %{history_retention_period: 7})
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               changeset
+             ).dataclip_retention_period
+    end
+
     test "update_project/3 with invalid data returns error changeset" do
       project = project_fixture() |> unload_relation(:project_users)
 

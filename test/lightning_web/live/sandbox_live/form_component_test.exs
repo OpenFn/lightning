@@ -115,7 +115,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      render_submit(
+      render_change(
         element(view, "#sandbox-form-new"),
         %{"project" => %{"raw_name" => ""}}
       )
@@ -155,6 +155,41 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
 
       assert flash["error"] == error_message
+    end
+
+    test "creating sandbox shows flash error on backend changeset error",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      # Override the default stub to simulate a backend validation error
+      # (e.g. parent has inconsistent retention periods)
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        changeset =
+          Lightning.Projects.Project.changeset(
+            %Lightning.Projects.Project{},
+            %{
+              name: "test-sandbox",
+              history_retention_period: 7,
+              dataclip_retention_period: 30
+            }
+          )
+          |> Map.put(:action, :insert)
+
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+      })
+
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert flash["error"] =~ "Something went wrong"
     end
   end
 

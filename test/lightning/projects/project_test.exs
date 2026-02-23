@@ -75,6 +75,25 @@ defmodule Lightning.Projects.ProjectTest do
       assert Ecto.Changeset.get_change(cs2, :dataclip_retention_period) == nil
     end
 
+    test "validates dataclip_retention_period on existing project when only history changes" do
+      # Simulate an existing project with dataclip > history (the bug scenario)
+      project =
+        insert(:project,
+          history_retention_period: 30,
+          dataclip_retention_period: 14
+        )
+
+      # When only history_retention_period is lowered below the existing
+      # dataclip_retention_period, the validation should still catch it
+      cs = Project.changeset(project, %{history_retention_period: 7})
+
+      refute cs.valid?
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               cs
+             ).dataclip_retention_period
+    end
+
     test "disallows parent_id == id (self parent)" do
       proj = insert(:project)
       cs = Project.changeset(proj, %{parent_id: proj.id})
