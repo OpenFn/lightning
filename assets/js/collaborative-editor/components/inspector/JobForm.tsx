@@ -15,10 +15,8 @@ import {
 import { JobSchema } from '#/collaborative-editor/types/job';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 
-import { useAdaptorChangeConfirmation } from '../../hooks/useAdaptorChangeConfirmation';
 import { AdaptorDisplay } from '../AdaptorDisplay';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { AlertDialog } from '../AlertDialog';
+import { AdaptorSelector } from '../AdaptorSelector';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { createZodValidator } from '../form/createZodValidator';
 import { Tooltip } from '../Tooltip';
@@ -212,29 +210,6 @@ export function JobForm({ job }: JobFormProps) {
     form.setFieldValue('keychain_credential_id', null);
   }, [form]);
 
-  // Use confirmation hook for adaptor changes
-  const {
-    isAdaptorChangeConfirmationOpen,
-    handleAdaptorSelect: handleAdaptorSelectWithConfirmation,
-    handleConfirmAdaptorChange,
-    handleCloseConfirmation,
-  } = useAdaptorChangeConfirmation({
-    job,
-    updateJob,
-    setIsAdaptorPickerOpen,
-    setIsConfigureModalOpen,
-    onAdaptorChangeStart: syncAdaptorToForm, // Sync to form before Y.Doc update
-  });
-
-  // Wrapper to clear adaptor picker state after selection
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      setAdaptorPickerFromConfigure(false);
-      handleAdaptorSelectWithConfirmation(adaptorName);
-    },
-    [handleAdaptorSelectWithConfirmation]
-  );
-
   // Handler for adaptor changes - immediately syncs to Y.Doc
   const handleAdaptorChange = useCallback(
     (adaptorPackage: string) => {
@@ -407,30 +382,21 @@ export function JobForm({ job }: JobFormProps) {
       />
 
       {/* Adaptor Selection Modal (opened from ConfigureAdaptorModal) */}
-      <AdaptorSelectionModal
+      <AdaptorSelector
         isOpen={isAdaptorPickerOpen}
+        setIsOpen={setIsAdaptorPickerOpen}
         onClose={() => {
-          setIsAdaptorPickerOpen(false);
           // Only return to configure modal if opened from there
           if (adaptorPickerFromConfigure) {
             setIsConfigureModalOpen(true);
           }
           setAdaptorPickerFromConfigure(false);
         }}
-        onSelect={handleAdaptorSelect}
+        job={job}
+        updateJob={updateJob}
+        setIsConfigureModalOpen={setIsConfigureModalOpen}
         projectAdaptors={projectAdaptors}
-      />
-
-      {/* Adaptor Change Confirmation Dialog */}
-      <AlertDialog
-        isOpen={isAdaptorChangeConfirmationOpen}
-        onClose={handleCloseConfirmation}
-        onConfirm={handleConfirmAdaptorChange}
-        title="Change Adaptor?"
-        description="Warning: Changing adaptors will reset the credential for this step. Are you sure you want to continue?"
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        variant="primary"
+        onAdaptorChangeStart={syncAdaptorToForm}
       />
     </div>
   );
