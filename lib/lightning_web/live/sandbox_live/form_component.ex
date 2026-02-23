@@ -9,6 +9,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
+  require Logger
+
   @type mode :: :new | :edit
 
   @impl true
@@ -106,9 +108,16 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> noreply()
     else
       {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.error(
+          "Sandbox creation failed for project #{parent.id}: #{inspect(changeset.errors)}"
+        )
+
         socket
-        |> assign(:changeset, changeset)
-        |> assign(:name, Changeset.get_field(changeset, :name))
+        |> put_flash(
+          :error,
+          "Something went wrong while creating the sandbox. Please check the parent project's settings and try again."
+        )
+        |> push_navigate(to: return_to || ~p"/projects/#{parent.id}/sandboxes")
         |> noreply()
 
       {:error, _reason, %{text: text}} ->
