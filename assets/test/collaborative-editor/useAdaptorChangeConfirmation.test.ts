@@ -32,7 +32,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('confirmation display logic', () => {
-    test('shows confirmation when job has project_credential_id and different adaptor selected', () => {
+    test('should show confirmation when job has project_credential_id and different adaptor selected', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -52,7 +52,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).not.toHaveBeenCalled(); // Should wait for confirmation
     });
 
-    test('shows confirmation when job has keychain_credential_id and different adaptor selected', () => {
+    test('should show confirmation when job has keychain_credential_id and different adaptor selected', () => {
       const job = createJob({ keychain_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -71,7 +71,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).not.toHaveBeenCalled();
     });
 
-    test('skips confirmation when job has no credentials', () => {
+    test('should skip confirmation when job has no credentials', () => {
       const job = createJob();
       const mocks = createMocks();
 
@@ -94,7 +94,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.setIsConfigureModalOpen).toHaveBeenCalledWith(true);
     });
 
-    test('skips confirmation when selecting same adaptor package (different version)', () => {
+    test('should skip confirmation when selecting same adaptor package (different version)', () => {
       const job = createJob({
         adaptor: '@openfn/language-http@1.0.0',
         project_credential_id: 'cred-1',
@@ -118,7 +118,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).not.toHaveBeenCalled(); // Same adaptor, no change needed
     });
 
-    test('handles null job without crashing', () => {
+    test('should handle null job without crashing', () => {
       const mocks = createMocks();
 
       const { result } = renderHook(() =>
@@ -138,7 +138,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('adaptor package parsing', () => {
-    test('correctly parses @openfn/language-chatgpt@1.0.0', () => {
+    test('should correctly parse @openfn/language-chatgpt@1.0.0', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -166,7 +166,7 @@ describe('useAdaptorChangeConfirmation', () => {
       );
     });
 
-    test('correctly parses @openfn/language-chatgpt (no version)', () => {
+    test('should correctly parse @openfn/language-chatgpt (no version)', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -193,7 +193,7 @@ describe('useAdaptorChangeConfirmation', () => {
       );
     });
 
-    test('treats @openfn/language-http@1.0.0 and @openfn/language-http@2.0.0 as same package', () => {
+    test('should treat @openfn/language-http@1.0.0 and @openfn/language-http@2.0.0 as same package', () => {
       const job = createJob({
         adaptor: '@openfn/language-http@1.0.0',
         project_credential_id: 'cred-1',
@@ -218,7 +218,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('credential reset on confirm', () => {
-    test('resets both credential fields when user confirms', () => {
+    test('should reset both credential fields when user confirms', () => {
       const job = createJob({
         project_credential_id: 'cred-1',
         keychain_credential_id: null,
@@ -247,7 +247,7 @@ describe('useAdaptorChangeConfirmation', () => {
       });
     });
 
-    test('opens configure modal after confirmation', () => {
+    test('should open configure modal after confirmation', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -270,7 +270,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(result.current.isAdaptorChangeConfirmationOpen).toBe(false);
     });
 
-    test('handles confirmation with null pending selection gracefully', () => {
+    test('should handle confirmation with null pending selection gracefully', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -289,7 +289,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).not.toHaveBeenCalled();
     });
 
-    test('handles confirmation with null job gracefully', () => {
+    test('should handle confirmation with null job gracefully', () => {
       const mocks = createMocks();
 
       const { result } = renderHook(() =>
@@ -308,7 +308,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('modal navigation', () => {
-    test('opens confirmation modal -> configure modal on confirm', () => {
+    test('should open confirmation modal -> configure modal on confirm', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -336,7 +336,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.setIsConfigureModalOpen).toHaveBeenCalledWith(true);
     });
 
-    test('opens confirmation modal -> adaptor picker on cancel', () => {
+    test('should open confirmation modal -> adaptor picker on cancel', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -364,7 +364,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).not.toHaveBeenCalled();
     });
 
-    test('opens confirmation modal -> adaptor picker on ESC (close)', () => {
+    test('should open confirmation modal -> adaptor picker on ESC (close)', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -389,7 +389,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.setIsAdaptorPickerOpen).toHaveBeenCalledWith(true);
     });
 
-    test('skips to configure modal directly when no confirmation needed', () => {
+    test('should skip to configure modal directly when no confirmation needed', () => {
       const job = createJob(); // No credentials
       const mocks = createMocks();
 
@@ -411,7 +411,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('optional callback', () => {
-    test('calls onAdaptorChangeStart before Y.Doc update when provided', () => {
+    test('should call onAdaptorChangeStart before Y.Doc update when provided', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -434,7 +434,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).toHaveBeenCalled();
     });
 
-    test('works without onAdaptorChangeStart callback', () => {
+    test('should work without onAdaptorChangeStart callback', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -459,7 +459,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.updateJob).toHaveBeenCalled();
     });
 
-    test('calls onAdaptorChangeStart for immediate change (no credentials)', () => {
+    test('should call onAdaptorChangeStart for immediate change (no credentials)', () => {
       const job = createJob(); // No credentials
       const mocks = createMocks();
 
@@ -480,7 +480,7 @@ describe('useAdaptorChangeConfirmation', () => {
   });
 
   describe('AlertDialog dual-call handling', () => {
-    test('handleCloseConfirmation does not navigate after confirm', () => {
+    test('should not navigate after confirm when handleCloseConfirmation is called', () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
@@ -510,7 +510,7 @@ describe('useAdaptorChangeConfirmation', () => {
       expect(mocks.setIsAdaptorPickerOpen).not.toHaveBeenCalled();
     });
 
-    test('ref resets after microtask to allow future interactions', async () => {
+    test('should reset ref after microtask to allow future interactions', async () => {
       const job = createJob({ project_credential_id: 'cred-1' });
       const mocks = createMocks();
 
