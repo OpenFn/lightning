@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)
