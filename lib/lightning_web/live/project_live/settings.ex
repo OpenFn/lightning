@@ -8,8 +8,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Collections
   alias Lightning.Credentials
+  alias Lightning.Helpers
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
   alias Lightning.VersionControl
@@ -123,7 +125,9 @@ defmodule LightningWeb.ProjectLive.Settings do
        collections: collections,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
-       project_changeset: Projects.change_project(socket.assigns.project),
+       name: project.name,
+       project_changeset:
+         Project.form_changeset(project, %{raw_name: project.name}),
        project_files: project_files,
        project_repo_connection: repo_connection,
        project_user: project_user,
@@ -186,19 +190,29 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_event("validate", %{"project" => params}, socket) do
+    # The retention and concurrency forms don't include raw_name,
+    # so default to the project's current name for form_changeset.
     params =
-      if params["retention_policy"] == "erase_all" do
-        Map.merge(params, %{"dataclip_retention_period" => nil})
-      else
-        params
-      end
+      params
+      |> Map.put_new("raw_name", socket.assigns.project.name)
+      |> then(fn p ->
+        if p["retention_policy"] == "erase_all" do
+          Map.put(p, "dataclip_retention_period", nil)
+        else
+          p
+        end
+      end)
 
     changeset =
       socket.assigns.project
-      |> Projects.change_project(params)
+      |> Project.form_changeset(params)
+      |> Helpers.copy_error(:name, :raw_name)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :project_changeset, changeset)}
+    {:noreply,
+     socket
+     |> assign(:project_changeset, changeset)
+     |> assign(:name, Ecto.Changeset.get_field(changeset, :name))}
   end
 
   # validate without input can be ignored
@@ -207,17 +221,19 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("cancel-retention-change", _params, socket) do
+    project = socket.assigns.project
+
     {:noreply,
      socket
      |> assign(
        :project_changeset,
-       Projects.change_project(socket.assigns.project)
+       Project.form_changeset(project, %{raw_name: project.name})
      )}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
     if socket.assigns.can_edit_project do
-      save_project(socket, project_params)
+      save_project(socket, Helpers.derive_name_param(project_params))
     else
       {:noreply,
        socket
@@ -541,6 +557,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          |> put_flash(:info, "Project updated successfully")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
         {:noreply, assign(socket, :project_changeset, changeset)}
 
       {:error, :not_related_to_project} ->

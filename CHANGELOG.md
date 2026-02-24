@@ -46,6 +46,9 @@ and this project adheres to
   [#4440](https://github.com/OpenFn/lightning/issues/4440)
 - Fix sandbox creation failing silently on backend validation errors
   [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Project settings form now auto-converts project names to url-safe format,
+  matching the creation form behavior
+  [#4437](https://github.com/OpenFn/lightning/issues/4437)
 
 ## [2.15.14] - 2026-02-13
 
