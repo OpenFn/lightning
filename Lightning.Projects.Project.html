@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-A1C55AC0.js"></script>
+    <script defer src="dist/sidebar_items-E66BAAC1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -171,6 +171,27 @@ projects name to confirm.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#form_changeset/2" data-no-tooltip="" translate="no">form_changeset(project, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Changeset for forms that accept a human-friendly <code class="inline">:raw_name</code> and derive
+the URL-safe <code class="inline">:name</code> automatically.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#form_with_users_changeset/2" data-no-tooltip="" translate="no">form_with_users_changeset(project, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Like <a href="#form_changeset/2"><code class="inline">form_changeset/2</code></a> but also casts the <code class="inline">:project_users</code> association.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#project_with_users_changeset/2" data-no-tooltip="" translate="no">project_with_users_changeset(project, attrs)</a>
 
       </div>
@@ -281,6 +302,7 @@ projects name to confirm.</p></div>
   project_oauth_clients: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_users:
     [<a href="Lightning.Projects.ProjectUser.html#t:t/0">Lightning.Projects.ProjectUser.t</a>()] | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  raw_name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   requires_mfa: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   retention_policy: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   sandboxes: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -318,7 +340,7 @@ projects name to confirm.</p></div>
       <h1 class="signature" translate="no">data_retention_options()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L58" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L60" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -346,7 +368,7 @@ projects name to confirm.</p></div>
       <h1 class="signature" translate="no">deletion_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L179" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L243" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -359,6 +381,51 @@ projects name to confirm.</p></div>
 projects name to confirm.</p>
   </section>
 </section>
+<section class="detail" id="form_changeset/2">
+
+  <div class="detail-header">
+    <a href="#form_changeset/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">form_changeset(project, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L132" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Changeset for forms that accept a human-friendly <code class="inline">:raw_name</code> and derive
+the URL-safe <code class="inline">:name</code> automatically.</p>
+  </section>
+</section>
+<section class="detail" id="form_with_users_changeset/2">
+
+  <div class="detail-header">
+    <a href="#form_with_users_changeset/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">form_with_users_changeset(project, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Like <a href="#form_changeset/2"><code class="inline">form_changeset/2</code></a> but also casts the <code class="inline">:project_users</code> association.</p>
+  </section>
+</section>
 <section class="detail" id="project_with_users_changeset/2">
 
   <div class="detail-header">
@@ -369,7 +436,7 @@ projects name to confirm.</p>
       <h1 class="signature" translate="no">project_with_users_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L185" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L249" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -391,7 +458,7 @@ projects name to confirm.</p>
       <h1 class="signature" translate="no">sandbox?(arg1)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L131" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L195" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -420,7 +487,7 @@ projects name to confirm.</p>
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L99" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
