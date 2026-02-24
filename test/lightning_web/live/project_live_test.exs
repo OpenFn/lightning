@@ -1156,6 +1156,33 @@ defmodule LightningWeb.ProjectLiveTest do
              )
     end
 
+    test "excluded credential types do not appear in the type picker grid",
+         %{
+           conn: conn,
+           user: user
+         } do
+      excluded_types = ["keychain"]
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      assert has_element?(view, "#new-credential-modal")
+
+      for type <- excluded_types do
+        refute has_element?(view, "button[phx-value-key='#{type}']"),
+               "#{type} should not appear in the credential type picker"
+      end
+    end
+
     test "project admin can view keychain credentials table", %{
       conn: conn,
       user: user
