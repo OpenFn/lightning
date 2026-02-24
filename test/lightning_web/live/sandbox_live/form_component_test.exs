@@ -157,6 +157,38 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert flash["error"] == error_message
     end
 
+    test "creating sandbox with name error shows inline error instead of redirecting",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        changeset =
+          Lightning.Projects.Project.changeset(
+            %Lightning.Projects.Project{},
+            %{name: "test-sandbox"}
+          )
+          |> Map.put(:action, :insert)
+          |> Ecto.Changeset.add_error(:name, "has already been taken")
+
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      html =
+        view
+        |> element("#sandbox-form-new")
+        |> render_submit(%{
+          "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+        })
+
+      # Should stay on the form with inline error, not redirect
+      assert html =~ "This value should be unique."
+      refute_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+    end
+
     test "creating sandbox shows flash error on backend changeset error",
          %{conn: conn, parent: parent} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
