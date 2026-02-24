@@ -95,10 +95,10 @@ defmodule LightningWeb.Components.Pills do
 
   def name_badge(assigns) do
     ~H"""
-    <%= if to_string(@field.value) != "" do %>
+    <span :if={to_string(@field.value) != ""}>
       {render_slot(@inner_block)}
-      <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono text-xs"><%= @name %></span>.
-    <% end %>
+      <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono text-xs">{@name}</span>.
+    </span>
     """
   end
 

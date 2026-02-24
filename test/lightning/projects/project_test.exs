@@ -207,6 +207,30 @@ defmodule Lightning.Projects.ProjectTest do
       cs = Project.form_changeset(%Project{}, %{raw_name: "root-proj"})
       assert Ecto.Changeset.get_field(cs, :env) == "main"
     end
+
+    test "requires both raw_name and name when raw_name is blank" do
+      for attrs <- [%{raw_name: ""}, %{"raw_name" => ""}] do
+        cs = Project.form_changeset(%Project{}, attrs)
+        refute cs.valid?
+
+        assert [{"can't be blank", [validation: :required]}] =
+                 Keyword.get_values(cs.errors, :raw_name)
+
+        assert [{"can't be blank", [validation: :required]}] =
+                 Keyword.get_values(cs.errors, :name)
+      end
+    end
+
+    test "requires name when raw_name resolves to a blank slug" do
+      form_cs = Project.form_changeset(%Project{}, %{raw_name: "!!!"})
+      refute form_cs.valid?
+
+      save_cs = Project.changeset(%Project{}, %{name: ""})
+      refute save_cs.valid?
+
+      assert "can't be blank" in errors_on(form_cs).name
+      assert errors_on(form_cs).name == errors_on(save_cs).name
+    end
   end
 
   describe "form_with_users_changeset/2" do

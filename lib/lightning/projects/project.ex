@@ -148,6 +148,7 @@ defmodule Lightning.Projects.Project do
     ])
     |> validate_required([:raw_name])
     |> derive_name_from_raw_name()
+    |> validate_required([:name])
     |> set_default_env_for_root_projects()
     |> validate()
   end
@@ -173,6 +174,7 @@ defmodule Lightning.Projects.Project do
     ])
     |> validate_required([:raw_name])
     |> derive_name_from_raw_name()
+    |> validate_required([:name])
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()
