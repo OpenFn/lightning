@@ -74,10 +74,8 @@ defmodule LightningWeb.ChannelLive.Index do
       :if={@live_action in [:new, :edit]}
       module={FormComponent}
       id={
-        if(@live_action == :edit,
-          do: "edit-channel-#{@selected_channel.id}",
-          else: :new
-        )
+        (@selected_channel && @selected_channel.id &&
+           "edit-channel-#{@selected_channel.id}") || :new
       }
       action={@live_action}
       channel={@selected_channel}
