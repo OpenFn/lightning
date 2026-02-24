@@ -113,6 +113,14 @@ defmodule Lightning.Channels do
   end
 
   @doc """
+  Gets a channel by ID scoped to a project. Returns `nil` if the channel
+  does not exist or belongs to a different project.
+  """
+  def get_channel_for_project(project_id, channel_id) do
+    Repo.get_by(Channel, id: channel_id, project_id: project_id)
+  end
+
+  @doc """
   Creates a channel.
   """
   @spec create_channel(map(), actor: User.t()) ::

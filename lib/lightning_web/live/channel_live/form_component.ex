@@ -106,7 +106,7 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
         <.form
           :let={f}
-          for={@changeset}
+          for={to_form(@changeset)}
           id={"channel-form-#{if @action == :edit, do: @channel.id, else: "new"}"}
           phx-target={@myself}
           phx-change="validate"
@@ -240,7 +240,9 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   end
 
   defp merge_selections(current, submitted) do
-    Map.new(current, fn {k, v} -> {k, submitted[k] || v} end)
+    Map.new(current, fn {k, _v} ->
+      {k, Map.get(submitted, k, "false") == "true"}
+    end)
   end
 
   defp build_auth_method_params(params, current_auth_methods) do

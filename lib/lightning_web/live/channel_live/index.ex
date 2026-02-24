@@ -40,7 +40,7 @@ defmodule LightningWeb.ChannelLive.Index do
           <div class="mt-14 flex justify-between mb-3">
             <h3 class="text-3xl font-bold">
               Channels
-              <span class="text-base font-normal">({length(@channels_stats)})</span>
+              <span class="text-base font-normal">({length(@channels)})</span>
             </h3>
             <.link
               :if={@can_create_channel}
@@ -62,7 +62,8 @@ defmodule LightningWeb.ChannelLive.Index do
           </div>
           <.channels_table
             id="channels-table"
-            channels_stats={@channels_stats}
+            channels={@channels}
+            can_edit_channel={@can_edit_channel}
             can_delete_channel={@can_delete_channel}
             project={@project}
           />
@@ -90,6 +91,10 @@ defmodule LightningWeb.ChannelLive.Index do
       ProjectUsers
       |> Permissions.can?(:create_channel, current_user, project)
 
+    can_edit_channel =
+      ProjectUsers
+      |> Permissions.can?(:update_channel, current_user, project)
+
     can_delete_channel =
       ProjectUsers
       |> Permissions.can?(:delete_channel, current_user, project)
@@ -99,8 +104,9 @@ defmodule LightningWeb.ChannelLive.Index do
      |> assign(
        active_menu_item: :channels,
        can_create_channel: can_create_channel,
+       can_edit_channel: can_edit_channel,
        can_delete_channel: can_delete_channel,
-       channels_stats: [],
+       channels: [],
        channel_stats: %{total_channels: 0, total_requests: 0}
      )}
   end
@@ -116,7 +122,7 @@ defmodule LightningWeb.ChannelLive.Index do
     socket
     |> assign(
       page_title: "Channels",
-      channels_stats: Channels.list_channels_for_project_with_stats(project_id),
+      channels: Channels.list_channels_for_project_with_stats(project_id),
       channel_stats: Channels.get_channel_stats_for_project(project_id),
       selected_channel: nil
     )
@@ -137,7 +143,7 @@ defmodule LightningWeb.ChannelLive.Index do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    if socket.assigns.can_create_channel do
+    if socket.assigns.can_edit_channel do
       channel = Channels.get_channel!(id, include: [:channel_auth_methods])
 
       socket
@@ -158,46 +164,72 @@ defmodule LightningWeb.ChannelLive.Index do
         %{"channel_state" => enabled?, "value_key" => channel_id},
         socket
       ) do
-    channel = Channels.get_channel!(channel_id)
+    with :ok <- check_can_edit_channel(socket),
+         {:ok, channel} <- fetch_project_channel(socket, channel_id) do
+      case Channels.update_channel(channel, %{enabled: enabled?},
+             actor: socket.assigns.current_user
+           ) do
+        {:ok, _channel} ->
+          socket
+          |> put_flash(:info, "Channel updated")
+          |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
+          |> noreply()
 
-    case Channels.update_channel(channel, %{enabled: enabled?},
-           actor: socket.assigns.current_user
-         ) do
-      {:ok, _channel} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Channel updated")
-         |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")}
-
-      {:error, _changeset} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Failed to update channel. Please try again."
-         )}
+        {:error, _changeset} ->
+          socket
+          |> put_flash(:error, "Failed to update channel. Please try again.")
+          |> noreply()
+      end
     end
   end
 
   @impl true
   def handle_event("delete_channel", %{"id" => id}, socket) do
-    channel = Channels.get_channel!(id)
+    with :ok <- check_can_delete_channel(socket),
+         {:ok, channel} <- fetch_project_channel(socket, id) do
+      case Channels.delete_channel(channel, actor: socket.assigns.current_user) do
+        {:ok, _} ->
+          socket
+          |> put_flash(:info, "Channel deleted.")
+          |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
+          |> noreply()
 
-    case Channels.delete_channel(channel, actor: socket.assigns.current_user) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Channel deleted.")
-         |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")}
+        {:error, changeset} ->
+          message =
+            if Keyword.has_key?(changeset.errors, :channel_snapshots),
+              do:
+                "Cannot delete \"#{channel.name}\" — it has request history that must be retained.",
+              else: "Failed to delete channel. Please try again."
 
-      {:error, changeset} ->
-        message =
-          if Keyword.has_key?(changeset.errors, :channel_snapshots),
-            do:
-              "Cannot delete \"#{channel.name}\" — it has request history that must be retained.",
-            else: "Failed to delete channel. Please try again."
+          socket |> put_flash(:error, message) |> noreply()
+      end
+    end
+  end
 
-        {:noreply, put_flash(socket, :error, message)}
+  defp check_can_edit_channel(socket) do
+    if socket.assigns.can_edit_channel do
+      :ok
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action.")
+      |> noreply()
+    end
+  end
+
+  defp check_can_delete_channel(socket) do
+    if socket.assigns.can_delete_channel do
+      :ok
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action.")
+      |> noreply()
+    end
+  end
+
+  defp fetch_project_channel(socket, channel_id) do
+    case Channels.get_channel_for_project(socket.assigns.project.id, channel_id) do
+      %{} = channel -> {:ok, channel}
+      nil -> socket |> put_flash(:error, "Channel not found.") |> noreply()
     end
   end
 
@@ -225,11 +257,12 @@ defmodule LightningWeb.ChannelLive.Index do
   end
 
   attr :id, :string, required: true
-  attr :channels_stats, :list, required: true
+  attr :channels, :list, required: true
   attr :project, :map, required: true
+  attr :can_edit_channel, :boolean, default: false
   attr :can_delete_channel, :boolean, default: false
 
-  defp channels_table(%{channels_stats: []} = assigns) do
+  defp channels_table(%{channels: []} = assigns) do
     ~H"""
     <div class="text-center py-8">
       <p class="text-gray-500">No channels found.</p>
@@ -252,7 +285,7 @@ defmodule LightningWeb.ChannelLive.Index do
       </:header>
       <:body>
         <%= for %{channel: channel, request_count: count, last_activity: last_at} <-
-              @channels_stats do %>
+              @channels do %>
           <.tr id={"channel-#{channel.id}"}>
             <.td class="wrap-break-word max-w-[15rem]">
               <span class={[
@@ -279,20 +312,29 @@ defmodule LightningWeb.ChannelLive.Index do
               <% end %>
             </.td>
             <.td>
-              <.input
-                id={channel.id}
-                type="toggle"
-                name="channel_state"
-                value={channel.enabled}
-                tooltip={unless channel.enabled, do: "#{channel.name} (disabled)"}
-                on_click="toggle_channel_state"
-                value_key={channel.id}
-              />
+              <%= if @can_edit_channel do %>
+                <.input
+                  id={channel.id}
+                  type="toggle"
+                  name="channel_state"
+                  value={channel.enabled}
+                  tooltip={unless channel.enabled, do: "#{channel.name} (disabled)"}
+                  on_click="toggle_channel_state"
+                  value_key={channel.id}
+                />
+              <% else %>
+                <span class={[
+                  "text-sm",
+                  if(channel.enabled, do: "text-gray-700", else: "text-gray-400")
+                ]}>
+                  {if channel.enabled, do: "Enabled", else: "Disabled"}
+                </span>
+              <% end %>
             </.td>
             <.td class="text-right">
               <div class="flex items-center justify-end gap-2">
                 <.link
-                  :if={@can_delete_channel}
+                  :if={@can_edit_channel}
                   patch={~p"/projects/#{@project}/channels/#{channel.id}/edit"}
                 >
                   <.button theme="secondary" size="sm">Edit</.button>
