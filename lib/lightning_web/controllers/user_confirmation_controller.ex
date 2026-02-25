@@ -36,12 +36,16 @@ defmodule LightningWeb.UserConfirmationController do
         |> redirect(to: "/projects")
 
       nil ->
-        conn
-        |> put_flash(
-          :error,
-          "User confirmation link is invalid or it has expired."
-        )
-        |> redirect(to: "/projects")
+        if conn.assigns.current_user.confirmed_at do
+          redirect(conn, to: "/projects")
+        else
+          conn
+          |> put_flash(
+            :error,
+            "User confirmation link is invalid or it has expired."
+          )
+          |> redirect(to: "/projects")
+        end
     end
   end
 
