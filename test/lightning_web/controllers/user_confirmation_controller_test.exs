@@ -109,25 +109,67 @@ defmodule LightningWeb.UserConfirmationControllerTest do
   end
 
   describe "GET /users/confirm/:token" do
-    test "renders the confirmation page", %{conn: conn} do
+    test "redirects to login if not logged in", %{conn: conn} do
       conn = get(conn, Routes.user_confirmation_path(conn, :edit, "some-token"))
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+
+    test "renders the confirmation page when logged in as correct user", %{conn: conn, user: user} do
+      {encoded_token, user_token} =
+        Accounts.UserToken.build_email_token(user, "confirm", user.email)
+      Repo.insert!(user_token)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.user_confirmation_path(conn, :edit, encoded_token))
+
       response = html_response(conn, 200)
       assert response =~ "Confirm account"
+    end
 
-      form_action = Routes.user_confirmation_path(conn, :update, "some-token")
-      assert response =~ "action=\"#{form_action}\""
+    test "redirects if logged in as wrong user", %{conn: conn, user: user} do
+      other_user = insert(:user)
+      {encoded_token, user_token} =
+        Accounts.UserToken.build_email_token(other_user, "confirm", other_user.email)
+      Repo.insert!(user_token)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.user_confirmation_path(conn, :edit, encoded_token))
+
+      assert redirected_to(conn) == "/projects"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "You are logged in as a different user"
+    end
+
+    test "redirects if token is invalid", %{conn: conn, user: user} do
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.user_confirmation_path(conn, :edit, "invalid-token"))
+
+      assert redirected_to(conn) == "/projects"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "User confirmation link is invalid"
     end
   end
 
   describe "POST /users/confirm/:token" do
-    test "confirms the given token once", %{conn: conn, user: user} do
+    test "redirects to login if not logged in", %{conn: conn} do
+      conn = post(conn, Routes.user_confirmation_path(conn, :update, "some-token"))
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+
+    test "confirms the given token once when logged in as correct user", %{conn: conn, user: user} do
       {encoded_token, user_token} =
         Accounts.UserToken.build_email_token(user, "confirm", user.email)
 
       Repo.insert!(user_token)
 
       conn =
-        post(conn, Routes.user_confirmation_path(conn, :update, encoded_token))
+        conn
+        |> log_in_user(user)
+        |> post(Routes.user_confirmation_path(conn, :update, encoded_token))
 
       assert redirected_to(conn) == "/projects"
 
@@ -135,30 +177,31 @@ defmodule LightningWeb.UserConfirmationControllerTest do
                "User confirmed successfully"
 
       assert Accounts.get_user!(user.id).confirmed_at
-      refute get_session(conn, :user_token)
       assert Repo.all(Accounts.UserToken) == []
+    end
 
-      # When not logged in
+    test "does not confirm if logged in as wrong user", %{conn: conn, user: user} do
+      other_user = insert(:user)
+      {encoded_token, user_token} =
+        Accounts.UserToken.build_email_token(other_user, "confirm", other_user.email)
+      Repo.insert!(user_token)
+
       conn =
-        post(conn, Routes.user_confirmation_path(conn, :update, encoded_token))
-
-      assert redirected_to(conn) == "/projects"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-               "User confirmation link is invalid or it has expired"
-
-      # When logged in
-      conn =
-        build_conn()
+        conn
         |> log_in_user(user)
         |> post(Routes.user_confirmation_path(conn, :update, encoded_token))
 
       assert redirected_to(conn) == "/projects"
-      refute Phoenix.Flash.get(conn.assigns.flash, :error)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "You are logged in as a different user"
+
+      refute Accounts.get_user!(other_user.id).confirmed_at
     end
 
     test "does not confirm email with invalid token", %{conn: conn, user: user} do
-      conn = post(conn, Routes.user_confirmation_path(conn, :update, "oops"))
+      conn =
+        conn
+        |> log_in_user(user)
+        |> post(Routes.user_confirmation_path(conn, :update, "oops"))
       assert redirected_to(conn) == "/projects"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~

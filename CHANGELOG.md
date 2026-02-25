@@ -29,6 +29,7 @@ and this project adheres to
 
 ### Fixed
 
+- Validate users before confirming new accounts [#2916](https://github.com/OpenFn/lightning/issues/2916)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)

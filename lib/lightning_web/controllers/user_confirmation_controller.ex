@@ -2,6 +2,7 @@ defmodule LightningWeb.UserConfirmationController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
 
   def new(conn, _params) do
     render(conn, "new.html")
@@ -22,7 +23,26 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def edit(conn, %{"token" => token}) do
-    render(conn, "edit.html", token: token)
+    case Accounts.get_user_by_confirmation_token(token) do
+      %User{id: id} when id == conn.assigns.current_user.id ->
+        render(conn, "edit.html", token: token)
+
+      %User{} ->
+        conn
+        |> put_flash(
+          :error,
+          "You are logged in as a different user. Please log out to confirm this account."
+        )
+        |> redirect(to: "/projects")
+
+      nil ->
+        conn
+        |> put_flash(
+          :error,
+          "User confirmation link is invalid or it has expired."
+        )
+        |> redirect(to: "/projects")
+    end
   end
 
   def confirm_email(conn, %{"token" => token}) do
@@ -67,32 +87,46 @@ defmodule LightningWeb.UserConfirmationController do
     end
   end
 
-  # Do not log in the user after confirmation to avoid a
-  # leaked token giving the user access to the account.
   def update(conn, %{"token" => token}) do
-    case Accounts.confirm_user(token) do
-      {:ok, _} ->
-        conn
-        |> put_flash(:info, "User confirmed successfully.")
-        |> redirect(to: "/projects")
+    case Accounts.get_user_by_confirmation_token(token) do
+      %User{id: id} when id == conn.assigns.current_user.id ->
+        case Accounts.confirm_user(token) do
+          {:ok, _} ->
+            conn
+            |> put_flash(:info, "User confirmed successfully.")
+            |> redirect(to: "/projects")
 
-      :error ->
-        # If there is a current user and the account was already confirmed,
-        # then odds are that the confirmation link was already visited, either
-        # by some automation or by the user themselves, so we redirect without
-        # a warning message.
-        case conn.assigns do
-          %{current_user: %{confirmed_at: confirmed_at}}
-          when not is_nil(confirmed_at) ->
-            redirect(conn, to: "/projects")
-
-          %{} ->
+          :error ->
             conn
             |> put_flash(
               :error,
               "User confirmation link is invalid or it has expired."
             )
             |> redirect(to: "/projects")
+        end
+
+      %User{} ->
+        conn
+        |> put_flash(
+          :error,
+          "You are logged in as a different user. Please log out to confirm this account."
+        )
+        |> redirect(to: "/projects")
+
+      nil ->
+        # If there is a current user and the account was already confirmed,
+        # then odds are that the confirmation link was already visited, either
+        # by some automation or by the user themselves, so we redirect without
+        # a warning message.
+        if conn.assigns.current_user.confirmed_at do
+          redirect(conn, to: "/projects")
+        else
+          conn
+          |> put_flash(
+            :error,
+            "User confirmation link is invalid or it has expired."
+          )
+          |> redirect(to: "/projects")
         end
     end
   end
