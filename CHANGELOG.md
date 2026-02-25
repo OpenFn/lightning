@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix duplicate "Log in" heading on login page
+  [#4459](https://github.com/OpenFn/lightning/issues/4459)
+
 ## [2.15.15-pre.1] - 2026-02-25
 
 ### Fixed
