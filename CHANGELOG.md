@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Show loading state in docs panel when switching adaptors
+  [#4461](https://github.com/OpenFn/lightning/issues/4461)
+
 ## [2.15.15-pre.1] - 2026-02-25
 
 ### Fixed
