@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Auto-increment job name when adaptor display name is already used in workflow
+  [#4464](https://github.com/OpenFn/lightning/issues/4464)
+
 ## [2.15.15-pre.1] - 2026-02-25
 
 ### Fixed
