@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.15.15-pre] - 2026-02-25
+
+### Changed
+
 - Editors can now provision and merge sandboxes; merge checks editor+ role on
   the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
 - Show specific workflow names in sandbox merge dialog when target project has
