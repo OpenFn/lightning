@@ -29,6 +29,8 @@ and this project adheres to
 
 ### Fixed
 
+- Lower side panel z-index to prevent covering IDE in create workflow for
+  templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)
