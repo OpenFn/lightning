@@ -8,6 +8,8 @@ defmodule Lightning.Channels.Audit do
     events: [
       "created",
       "updated",
-      "deleted"
+      "deleted",
+      "auth_method_added",
+      "auth_method_removed"
     ]
 end

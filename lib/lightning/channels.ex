@@ -133,6 +133,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: channel} ->
       Audit.event("created", channel.id, actor, changeset)
     end)
+    |> maybe_audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -153,6 +154,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: updated} ->
       Audit.event("updated", updated.id, actor, changeset)
     end)
+    |> maybe_audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -185,6 +187,76 @@ defmodule Lightning.Channels do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
     end
+  end
+
+  # Emits one "auth_method_added" or "auth_method_removed" audit step per
+  # association change. No-op when the changeset has no auth method changes
+  # (e.g. the toggle handler, which passes no "channel_auth_methods" key).
+  defp maybe_audit_auth_method_changes(multi, changeset, actor) do
+    auth_changes =
+      Ecto.Changeset.get_change(changeset, :channel_auth_methods, [])
+
+    inserted = Enum.filter(auth_changes, &(&1.action == :insert))
+    deleted = Enum.filter(auth_changes, &(&1.action == :delete))
+
+    multi
+    |> add_auth_method_added_audits(inserted, actor)
+    |> add_auth_method_removed_audits(deleted, actor)
+  end
+
+  defp add_auth_method_added_audits(multi, inserted, actor) do
+    inserted
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {cs, idx}, acc ->
+      role = Ecto.Changeset.get_field(cs, :role)
+      fields = auth_method_fields_for(cs, role)
+
+      Multi.insert(
+        acc,
+        :"audit_auth_method_added_#{idx}",
+        fn %{channel: channel} ->
+          Audit.event("auth_method_added", channel.id, actor, %{
+            before: nil,
+            after: fields
+          })
+        end
+      )
+    end)
+  end
+
+  defp add_auth_method_removed_audits(multi, deleted, actor) do
+    deleted
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {cs, idx}, acc ->
+      role = cs.data.role
+      fields = auth_method_fields_for(cs, role)
+
+      Multi.insert(
+        acc,
+        :"audit_auth_method_removed_#{idx}",
+        fn %{channel: channel} ->
+          Audit.event("auth_method_removed", channel.id, actor, %{
+            before: fields,
+            after: nil
+          })
+        end
+      )
+    end)
+  end
+
+  defp auth_method_fields_for(cs, :source) do
+    %{
+      role: "source",
+      webhook_auth_method_id:
+        Ecto.Changeset.get_field(cs, :webhook_auth_method_id)
+    }
+  end
+
+  defp auth_method_fields_for(cs, :sink) do
+    %{
+      role: "sink",
+      project_credential_id: Ecto.Changeset.get_field(cs, :project_credential_id)
+    }
   end
 
   @doc """

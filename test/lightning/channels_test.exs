@@ -139,6 +139,63 @@ defmodule Lightning.ChannelsTest do
       %{user: insert(:user)}
     end
 
+    test "emits 'auth_method_added' for each auth method on create", %{
+      user: user
+    } do
+      project = insert(:project)
+      wam = insert(:webhook_auth_method, project: project)
+
+      attrs = %{
+        name: "my channel",
+        sink_url: "https://example.com",
+        project_id: project.id,
+        channel_auth_methods: [
+          %{webhook_auth_method_id: wam.id, role: :source}
+        ]
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      added = Enum.filter(events, &(&1.event == "auth_method_added"))
+
+      assert length(added) == 1
+
+      assert hd(added).changes.after == %{
+               "role" => "source",
+               "webhook_auth_method_id" => wam.id
+             }
+    end
+
+    test "does not emit auth method audit events when created with no auth methods",
+         %{user: user} do
+      project = insert(:project)
+
+      attrs = %{
+        name: "bare",
+        sink_url: "https://example.com",
+        project_id: project.id
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      refute Enum.any?(
+               events,
+               &(&1.event in ["auth_method_added", "auth_method_removed"])
+             )
+    end
+
     test "creates a channel with valid attrs and records audit event", %{
       user: user
     } do
@@ -254,6 +311,195 @@ defmodule Lightning.ChannelsTest do
   describe "update_channel/3" do
     setup do
       %{user: insert(:user)}
+    end
+
+    test "emits 'auth_method_added' for each added source auth method", %{
+      user: user
+    } do
+      project = insert(:project)
+      wam = insert(:webhook_auth_method, project: project)
+
+      channel =
+        insert(:channel, project: project)
+        |> Repo.preload(:channel_auth_methods)
+
+      params = %{
+        "channel_auth_methods" => [
+          %{"webhook_auth_method_id" => wam.id, "role" => "source"}
+        ]
+      }
+
+      {:ok, _} = Channels.update_channel(channel, params, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      added = Enum.filter(events, &(&1.event == "auth_method_added"))
+
+      assert length(added) == 1
+
+      assert %{
+               changes: %{
+                 after: %{"role" => "source", "webhook_auth_method_id" => wam_id},
+                 before: nil
+               }
+             } = hd(added)
+
+      assert wam_id == wam.id
+    end
+
+    test "emits 'auth_method_added' for each added sink auth method", %{
+      user: user
+    } do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+
+      channel =
+        insert(:channel, project: project)
+        |> Repo.preload(:channel_auth_methods)
+
+      params = %{
+        "channel_auth_methods" => [
+          %{"project_credential_id" => pc.id, "role" => "sink"}
+        ]
+      }
+
+      {:ok, _} = Channels.update_channel(channel, params, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      added = Enum.filter(events, &(&1.event == "auth_method_added"))
+
+      assert length(added) == 1
+
+      assert %{
+               changes: %{
+                 after: %{"role" => "sink", "project_credential_id" => pc_id},
+                 before: nil
+               }
+             } = hd(added)
+
+      assert pc_id == pc.id
+    end
+
+    test "emits 'auth_method_removed' for each removed source auth method", %{
+      user: user
+    } do
+      project = insert(:project)
+      wam = insert(:webhook_auth_method, project: project)
+      channel = insert(:channel, project: project)
+
+      cam =
+        insert(:channel_auth_method,
+          channel: channel,
+          webhook_auth_method: wam,
+          role: :source
+        )
+
+      channel = Repo.preload(channel, :channel_auth_methods)
+
+      params = %{
+        "channel_auth_methods" => [
+          %{"id" => cam.id, "delete" => "true"}
+        ]
+      }
+
+      {:ok, _} = Channels.update_channel(channel, params, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      removed = Enum.filter(events, &(&1.event == "auth_method_removed"))
+
+      assert length(removed) == 1
+
+      assert %{
+               changes: %{
+                 before: %{
+                   "role" => "source",
+                   "webhook_auth_method_id" => wam_id
+                 },
+                 after: nil
+               }
+             } = hd(removed)
+
+      assert wam_id == wam.id
+    end
+
+    test "emits 'auth_method_removed' for each removed sink auth method", %{
+      user: user
+    } do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+      channel = insert(:channel, project: project)
+
+      cam =
+        insert(:channel_auth_method,
+          channel: channel,
+          webhook_auth_method: nil,
+          project_credential: pc,
+          role: :sink
+        )
+
+      channel = Repo.preload(channel, :channel_auth_methods)
+
+      params = %{
+        "channel_auth_methods" => [
+          %{"id" => cam.id, "delete" => "true"}
+        ]
+      }
+
+      {:ok, _} = Channels.update_channel(channel, params, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      removed = Enum.filter(events, &(&1.event == "auth_method_removed"))
+
+      assert length(removed) == 1
+
+      assert %{
+               changes: %{
+                 before: %{"role" => "sink", "project_credential_id" => pc_id},
+                 after: nil
+               }
+             } = hd(removed)
+
+      assert pc_id == pc.id
+    end
+
+    test "does not emit auth method audit events when no auth methods change", %{
+      user: user
+    } do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+
+      {:ok, _} =
+        Channels.update_channel(channel, %{name: "new name"}, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      refute Enum.any?(
+               events,
+               &(&1.event in ["auth_method_added", "auth_method_removed"])
+             )
     end
 
     test "updates config fields, bumps lock_version, and records audit event",
