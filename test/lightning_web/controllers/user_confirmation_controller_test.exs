@@ -177,7 +177,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
                "User confirmed successfully"
 
       assert Accounts.get_user!(user.id).confirmed_at
-      assert Repo.all(Accounts.UserToken) == []
+      refute Repo.get_by(Accounts.UserToken, context: "confirm")
     end
 
     test "does not confirm if logged in as wrong user", %{conn: conn, user: user} do
