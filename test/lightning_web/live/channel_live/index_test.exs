@@ -297,6 +297,33 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       assert html =~ "can&#39;t be blank"
     end
 
+    @tag role: :editor
+    test "submitting with a duplicate name shows inline validation error", %{
+      conn: conn,
+      project: project
+    } do
+      channel =
+        insert(:channel,
+          project: project,
+          name: "existing",
+          sink_url: "https://old.example.com"
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      form_id = "channel-form-new"
+
+      html =
+        view
+        |> form("##{form_id}",
+          channel: %{name: channel.name, sink_url: "https://example.com"}
+        )
+        |> render_submit()
+
+      assert html =~ "A channel with this name already exists in this project"
+    end
+
     @tag role: :viewer
     test "viewer is redirected when accessing /channels/new", %{
       conn: conn,
