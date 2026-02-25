@@ -49,6 +49,8 @@ and this project adheres to
 - Project settings form now auto-converts project names to url-safe format,
   matching the creation form behavior
   [#4437](https://github.com/OpenFn/lightning/issues/4437)
+- Remove Keychain from the credential type picker grid
+  [#4453](https://github.com/OpenFn/lightning/issues/4453)
 
 ## [2.15.14] - 2026-02-13
 
