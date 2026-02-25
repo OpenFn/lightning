@@ -53,6 +53,29 @@ defmodule Lightning.Config.Bootstrap do
     if config_env() == :dev do
       enabled = env!("LIVE_DEBUGGER", &Utils.ensure_boolean/1, true)
       config :live_debugger, :disabled?, not enabled
+
+      live_debugger_ip =
+        env!(
+          "LIVE_DEBUGGER_IP",
+          fn address ->
+            address
+            |> String.split(".")
+            |> Enum.map(&String.to_integer/1)
+            |> List.to_tuple()
+          end,
+          nil
+        )
+
+      if live_debugger_ip do
+        config :live_debugger, :ip, live_debugger_ip
+      end
+
+      live_debugger_external_url =
+        env!("LIVE_DEBUGGER_EXTERNAL_URL", :string, nil)
+
+      if live_debugger_external_url do
+        config :live_debugger, :external_url, live_debugger_external_url
+      end
     end
 
     # Load storage and webhook retry config early so endpoint can respect it.

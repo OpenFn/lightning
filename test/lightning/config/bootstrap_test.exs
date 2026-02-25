@@ -747,6 +747,50 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "live debugger (dev)" do
+    test "does not set :ip or :external_url by default" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == nil
+      assert get_env(:live_debugger, :external_url) == nil
+    end
+
+    test "LIVE_DEBUGGER_IP is parsed into a tuple" do
+      Dotenvy.source([%{"LIVE_DEBUGGER_IP" => "0.0.0.0"}])
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == {0, 0, 0, 0}
+    end
+
+    test "LIVE_DEBUGGER_EXTERNAL_URL is stored as a string" do
+      Dotenvy.source([
+        %{"LIVE_DEBUGGER_EXTERNAL_URL" => "http://dev-elixir.local:4007"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :external_url) ==
+               "http://dev-elixir.local:4007"
+    end
+
+    test "both env vars can be set together" do
+      Dotenvy.source([
+        %{
+          "LIVE_DEBUGGER_IP" => "0.0.0.0",
+          "LIVE_DEBUGGER_EXTERNAL_URL" => "http://dev-elixir.local:4007"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == {0, 0, 0, 0}
+
+      assert get_env(:live_debugger, :external_url) ==
+               "http://dev-elixir.local:4007"
+    end
+  end
+
   # Helpers to read the in-process config that Config writes
   defp get_env(app) do
     Process.get(@config_key)
