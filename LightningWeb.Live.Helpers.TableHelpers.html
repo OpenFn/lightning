@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.14">
+    <meta name="project" content="Lightning v2.15.15-pre">
 
 
-    <title>LightningWeb.Live.Helpers.TableHelpers — Lightning v2.15.14</title>
+    <title>LightningWeb.Live.Helpers.TableHelpers — Lightning v2.15.15-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-E66BAAC1.js"></script>
+    <script defer src="dist/sidebar_items-14F43415.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.14
+          v2.15.15-pre
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Live.Helpers.TableHelpers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.14)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.15-pre)</small>
 
     </h1>
 
@@ -222,8 +222,8 @@ that handle sortable, filterable tables.</p>
 
   <section class="docstring">
 
-<p>Combines filtering and sorting in one operation.</p><h2 id="filter_and_sort/6-examples" class="section-heading"><a href="#filter_and_sort/6-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="5020657203-1">[</span><span class="p" data-group-id="5020657203-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bob&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bob@test.com&quot;</span><span class="p" data-group-id="5020657203-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5020657203-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;alice@test.com&quot;</span><span class="p" data-group-id="5020657203-3">}</span><span class="p" data-group-id="5020657203-1">]</span><span class="w">
-</span><span class="n">filter_and_sort</span><span class="p" data-group-id="5020657203-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;test&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5020657203-5">[</span><span class="ss">:email</span><span class="p" data-group-id="5020657203-5">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5020657203-6">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ss">:name</span><span class="p" data-group-id="5020657203-6">}</span><span class="p" data-group-id="5020657203-4">)</span></code></pre>
+<p>Combines filtering and sorting in one operation.</p><h2 id="filter_and_sort/6-examples" class="section-heading"><a href="#filter_and_sort/6-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9953429096-1">[</span><span class="p" data-group-id="9953429096-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bob&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bob@test.com&quot;</span><span class="p" data-group-id="9953429096-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9953429096-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;alice@test.com&quot;</span><span class="p" data-group-id="9953429096-3">}</span><span class="p" data-group-id="9953429096-1">]</span><span class="w">
+</span><span class="n">filter_and_sort</span><span class="p" data-group-id="9953429096-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;test&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9953429096-5">[</span><span class="ss">:email</span><span class="p" data-group-id="9953429096-5">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9953429096-6">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ss">:name</span><span class="p" data-group-id="9953429096-6">}</span><span class="p" data-group-id="9953429096-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="filter_input/1">
@@ -267,9 +267,9 @@ that handle sortable, filterable tables.</p>
 
   <section class="docstring">
 
-<p>Filters a list of items based on searchable fields and a filter term.</p><h2 id="filter_items/3-examples" class="section-heading"><a href="#filter_items/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3285706863-1">[</span><span class="p" data-group-id="3285706863-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;alice@example.com&quot;</span><span class="p" data-group-id="3285706863-2">}</span><span class="p" data-group-id="3285706863-1">]</span><span class="w">
-</span><span class="n">search_fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3285706863-3">[</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:email</span><span class="p" data-group-id="3285706863-3">]</span><span class="w">
-</span><span class="n">filter_items</span><span class="p" data-group-id="3285706863-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">search_fields</span><span class="p" data-group-id="3285706863-4">)</span><span class="w">
+<p>Filters a list of items based on searchable fields and a filter term.</p><h2 id="filter_items/3-examples" class="section-heading"><a href="#filter_items/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1803361564-1">[</span><span class="p" data-group-id="1803361564-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;alice@example.com&quot;</span><span class="p" data-group-id="1803361564-2">}</span><span class="p" data-group-id="1803361564-1">]</span><span class="w">
+</span><span class="n">search_fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1803361564-3">[</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:email</span><span class="p" data-group-id="1803361564-3">]</span><span class="w">
+</span><span class="n">filter_items</span><span class="p" data-group-id="1803361564-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">search_fields</span><span class="p" data-group-id="1803361564-4">)</span><span class="w">
 </span><span class="c1"># =&gt; [%{name: &quot;Alice&quot;, email: &quot;alice@example.com&quot;}]</span></code></pre>
   </section>
 </section>
@@ -292,10 +292,10 @@ that handle sortable, filterable tables.</p>
 
   <section class="docstring">
 
-<p>Creates a sort function based on direction string.</p><h2 id="sort_compare_fn/1-examples" class="section-heading"><a href="#sort_compare_fn/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sort_compare_fn</span><span class="p" data-group-id="7942772844-1">(</span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="7942772844-1">)</span><span class="w">
+<p>Creates a sort function based on direction string.</p><h2 id="sort_compare_fn/1-examples" class="section-heading"><a href="#sort_compare_fn/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sort_compare_fn</span><span class="p" data-group-id="1284140735-1">(</span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="1284140735-1">)</span><span class="w">
 </span><span class="o">&amp;</span><span class="o">&lt;=</span><span class="o">/</span><span class="mi">2</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">sort_compare_fn</span><span class="p" data-group-id="7942772844-2">(</span><span class="s">&quot;desc&quot;</span><span class="p" data-group-id="7942772844-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">sort_compare_fn</span><span class="p" data-group-id="1284140735-2">(</span><span class="s">&quot;desc&quot;</span><span class="p" data-group-id="1284140735-2">)</span><span class="w">
 </span><span class="o">&amp;</span><span class="o">&gt;=</span><span class="o">/</span><span class="mi">2</span></code></pre>
   </section>
 </section>
@@ -318,8 +318,8 @@ that handle sortable, filterable tables.</p>
 
   <section class="docstring">
 
-<p>Sorts items by a given field and direction.</p><h2 id="sort_items/4-examples" class="section-heading"><a href="#sort_items/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2366759906-1">[</span><span class="p" data-group-id="2366759906-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bob&quot;</span><span class="p" data-group-id="2366759906-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2366759906-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p" data-group-id="2366759906-3">}</span><span class="p" data-group-id="2366759906-1">]</span><span class="w">
-</span><span class="n">sort_items</span><span class="p" data-group-id="2366759906-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2366759906-5">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ss">:name</span><span class="p" data-group-id="2366759906-5">}</span><span class="p" data-group-id="2366759906-4">)</span><span class="w">
+<p>Sorts items by a given field and direction.</p><h2 id="sort_items/4-examples" class="section-heading"><a href="#sort_items/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3304860810-1">[</span><span class="p" data-group-id="3304860810-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bob&quot;</span><span class="p" data-group-id="3304860810-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3304860810-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alice&quot;</span><span class="p" data-group-id="3304860810-3">}</span><span class="p" data-group-id="3304860810-1">]</span><span class="w">
+</span><span class="n">sort_items</span><span class="p" data-group-id="3304860810-4">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3304860810-5">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ss">:name</span><span class="p" data-group-id="3304860810-5">}</span><span class="p" data-group-id="3304860810-4">)</span><span class="w">
 </span><span class="c1"># =&gt; [%{name: &quot;Alice&quot;}, %{name: &quot;Bob&quot;}]</span></code></pre>
   </section>
 </section>
@@ -342,14 +342,14 @@ that handle sortable, filterable tables.</p>
 
   <section class="docstring">
 
-<p>Toggles sort direction between &quot;asc&quot; and &quot;desc&quot;.</p><h2 id="toggle_sort_direction/3-examples" class="section-heading"><a href="#toggle_sort_direction/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="1729420226-1">(</span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="1729420226-1">)</span><span class="w">
-</span><span class="p" data-group-id="1729420226-2">{</span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;desc&quot;</span><span class="p" data-group-id="1729420226-2">}</span><span class="w">
+<p>Toggles sort direction between &quot;asc&quot; and &quot;desc&quot;.</p><h2 id="toggle_sort_direction/3-examples" class="section-heading"><a href="#toggle_sort_direction/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="0794990475-1">(</span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="0794990475-1">)</span><span class="w">
+</span><span class="p" data-group-id="0794990475-2">{</span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;desc&quot;</span><span class="p" data-group-id="0794990475-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="1729420226-3">(</span><span class="s">&quot;desc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="1729420226-3">)</span><span class="w">
-</span><span class="p" data-group-id="1729420226-4">{</span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="1729420226-4">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="0794990475-3">(</span><span class="s">&quot;desc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="0794990475-3">)</span><span class="w">
+</span><span class="p" data-group-id="0794990475-4">{</span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="0794990475-4">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="1729420226-5">(</span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;email&quot;</span><span class="p" data-group-id="1729420226-5">)</span><span class="w">
-</span><span class="p" data-group-id="1729420226-6">{</span><span class="s">&quot;email&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="1729420226-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">toggle_sort_direction</span><span class="p" data-group-id="0794990475-5">(</span><span class="s">&quot;asc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;email&quot;</span><span class="p" data-group-id="0794990475-5">)</span><span class="w">
+</span><span class="p" data-group-id="0794990475-6">{</span><span class="s">&quot;email&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;asc&quot;</span><span class="p" data-group-id="0794990475-6">}</span></code></pre>
   </section>
 </section>
 
