@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.15-pre.1] - 2026-02-25
+
+### Fixed
+
+- Exteranl ID uniqueness migration failing because of `IO.puts`
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+
 ## [2.15.15-pre] - 2026-02-25
 
 ### Changed
