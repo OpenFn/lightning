@@ -85,15 +85,15 @@ defmodule Lightning.AdaptorIcons do
     working_dir
     |> list_icons()
     |> Enum.map(fn icon_path ->
-      [icon_name, "assets", adapter_name | _rest] =
+      [icon_name, "assets", adaptor_name | _rest] =
         Path.split(icon_path) |> Enum.reverse()
 
-      destination_name = adapter_name <> "-" <> icon_name
+      destination_name = adaptor_name <> "-" <> icon_name
       destination_path = Path.join(target_dir, destination_name)
       File.cp!(icon_path, destination_path)
 
       %{
-        adaptor: adapter_name,
+        adaptor: adaptor_name,
         shape: Path.rootname(icon_name),
         src: "/images/adaptors" <> "/#{destination_name}"
       }
