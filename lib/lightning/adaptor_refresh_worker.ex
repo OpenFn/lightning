@@ -41,13 +41,17 @@ defmodule Lightning.AdaptorRefreshWorker do
 
     if errors == [] do
       Logger.info("Scheduled adaptor refresh completed successfully")
+      Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
     else
       Logger.warning(
         "Scheduled adaptor refresh partially failed: #{inspect(errors)}"
       )
-    end
 
-    Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
+      # Only broadcast to other nodes if at least one refresh succeeded
+      if length(errors) < length(results) do
+        Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
+      end
+    end
 
     :ok
   end

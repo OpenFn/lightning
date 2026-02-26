@@ -345,7 +345,14 @@ defmodule Lightning.AdaptorRegistry do
         max_concurrency: 10,
         timeout: @timeout
       )
-      |> Stream.map(fn {:ok, detail} -> detail end)
+      |> Stream.flat_map(fn
+        {:ok, detail} ->
+          [detail]
+
+        {:exit, reason} ->
+          Logger.warning("Failed to fetch adaptor details: #{inspect(reason)}")
+          []
+      end)
       |> Enum.to_list()
 
     diff = DateTime.utc_now() |> DateTime.diff(start, :millisecond)

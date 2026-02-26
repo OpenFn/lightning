@@ -27,19 +27,22 @@ defmodule Lightning.CredentialSchemas do
           {:ok, non_neg_integer()} | {:error, term()}
   def refresh(excluded \\ @default_excluded_adaptors) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
-    File.rm_rf!(schemas_path)
-    File.mkdir_p!(schemas_path)
 
     excluded_full = Enum.map(excluded, &"@openfn/#{&1}")
 
     case fetch_package_list() do
       {:ok, packages} ->
+        tmp_dir =
+          Path.join(schemas_path, ".tmp_#{System.unique_integer([:positive])}")
+
+        File.mkdir_p!(tmp_dir)
+
         results =
           packages
           |> Enum.filter(&Regex.match?(~r/@openfn\/language-\w+/, &1))
           |> Enum.reject(&(&1 in excluded_full))
           |> Task.async_stream(
-            &persist_schema(schemas_path, &1),
+            &persist_schema(tmp_dir, &1),
             ordered: false,
             max_concurrency: 5,
             timeout: 30_000
@@ -51,6 +54,22 @@ defmodule Lightning.CredentialSchemas do
             {:ok, :ok} -> true
             _ -> false
           end)
+
+        # Only replace the existing schemas if we got at least one
+        if count > 0 do
+          schemas_path
+          |> File.ls!()
+          |> Enum.reject(&String.starts_with?(&1, ".tmp_"))
+          |> Enum.each(&File.rm!(Path.join(schemas_path, &1)))
+
+          tmp_dir
+          |> File.ls!()
+          |> Enum.each(fn file ->
+            File.rename!(Path.join(tmp_dir, file), Path.join(schemas_path, file))
+          end)
+        end
+
+        File.rm_rf(tmp_dir)
 
         {:ok, count}
 
