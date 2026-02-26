@@ -11,8 +11,11 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Channels.SearchParams
+  alias Lightning.Projects.Project
   alias Lightning.Repo
 
   @doc """
@@ -71,6 +74,51 @@ defmodule Lightning.Channels do
       }
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Returns a paginated page of ChannelRequest records for a project.
+
+  Preloads `:channel` and `:channel_events` (filtered to `:source_received`
+  and `:error` types only — enough to display request_path and error_message
+  in the UI).
+
+  ## Parameters
+    - `project` — `%Project{}` struct; scopes results to this project
+    - `search_params` — `%SearchParams{}`; currently supports `channel_id`
+      filter
+    - `params` — Scrivener page params map, e.g. `%{"page" => "2"}`
+  """
+  @spec list_channel_requests(
+          Project.t(),
+          SearchParams.t(),
+          map()
+        ) :: Scrivener.Page.t()
+  def list_channel_requests(
+        %Project{id: project_id},
+        %SearchParams{} = search_params,
+        params \\ %{}
+      ) do
+    events_query =
+      from(e in ChannelEvent,
+        where: e.type in [:source_received, :error],
+        order_by: [e.channel_request_id, e.inserted_at]
+      )
+
+    from(cr in ChannelRequest,
+      join: c in assoc(cr, :channel),
+      on: c.project_id == ^project_id,
+      order_by: [desc: cr.started_at],
+      preload: [channel: c, channel_events: ^events_query]
+    )
+    |> filter_by_channel(search_params)
+    |> Repo.paginate(params)
+  end
+
+  defp filter_by_channel(query, %SearchParams{channel_id: nil}), do: query
+
+  defp filter_by_channel(query, %SearchParams{channel_id: channel_id}) do
+    where(query, [cr], cr.channel_id == ^channel_id)
   end
 
   @doc """
