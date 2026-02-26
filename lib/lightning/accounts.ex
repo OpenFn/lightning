@@ -114,6 +114,31 @@ defmodule Lightning.Accounts do
     Repo.all(User)
   end
 
+  @admin_user_default_sort "email"
+  @admin_user_allowed_sorts ~w(first_name last_name email role enabled support_user scheduled_deletion)
+  @admin_user_default_page_size 10
+  @admin_user_max_page_size 100
+
+  @doc """
+  Returns a paginated list of users for the superuser admin table with
+  server-side filtering and sorting.
+  """
+  @spec list_users_for_admin(map()) :: Scrivener.Page.t()
+  def list_users_for_admin(params \\ %{}) do
+    %{
+      filter: filter,
+      sort: sort,
+      dir: dir,
+      page: page,
+      page_size: page_size
+    } = normalize_admin_user_params(params)
+
+    User
+    |> filter_admin_users(filter)
+    |> order_admin_users(sort, dir)
+    |> Repo.paginate(page: page, page_size: page_size)
+  end
+
   @doc """
   Returns the list of users with the given emails
   """
@@ -159,6 +184,107 @@ defmodule Lightning.Accounts do
     user = Repo.get_by(User, email: email)
     if User.valid_password?(user, password), do: user
   end
+
+  defp normalize_admin_user_params(params) do
+    params = stringify_param_keys(params)
+
+    sort = normalize_admin_sort(Map.get(params, "sort"))
+    dir = normalize_admin_dir(Map.get(params, "dir"))
+    page = parse_positive_int(Map.get(params, "page"), 1)
+
+    page_size =
+      Map.get(params, "page_size")
+      |> parse_positive_int(@admin_user_default_page_size)
+      |> min(@admin_user_max_page_size)
+
+    %{
+      filter: normalize_admin_filter(Map.get(params, "filter")),
+      sort: sort,
+      dir: dir,
+      page: page,
+      page_size: page_size
+    }
+  end
+
+  defp filter_admin_users(query, ""), do: query
+
+  defp filter_admin_users(query, filter) do
+    search = "%#{filter}%"
+
+    where(
+      query,
+      [u],
+      ilike(u.first_name, ^search) or
+        ilike(u.last_name, ^search) or
+        ilike(u.email, ^search) or
+        ilike(fragment("?::text", u.role), ^search)
+    )
+  end
+
+  defp order_admin_users(query, "enabled", "asc"),
+    do: order_by(query, [u], [desc: u.disabled])
+
+  defp order_admin_users(query, "enabled", "desc"),
+    do: order_by(query, [u], [asc: u.disabled])
+
+  defp order_admin_users(query, "scheduled_deletion", "asc"),
+    do: order_by(query, [u], [asc_nulls_last: u.scheduled_deletion])
+
+  defp order_admin_users(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [u], [desc_nulls_first: u.scheduled_deletion])
+
+  defp order_admin_users(query, "role", dir) do
+    direction = dir_to_atom(dir)
+    order_by(query, [u], [{^direction, fragment("?::text", u.role)}])
+  end
+
+  defp order_admin_users(query, sort, dir) do
+    direction = dir_to_atom(dir)
+    sort_field = String.to_existing_atom(sort)
+
+    order_by(query, [u], [{^direction, field(u, ^sort_field)}])
+  end
+
+  defp normalize_admin_sort(sort) when is_binary(sort) do
+    if sort in @admin_user_allowed_sorts, do: sort, else: @admin_user_default_sort
+  end
+
+  defp normalize_admin_sort(sort) when is_atom(sort) do
+    sort
+    |> Atom.to_string()
+    |> normalize_admin_sort()
+  end
+
+  defp normalize_admin_sort(_), do: @admin_user_default_sort
+
+  defp normalize_admin_dir(dir) when dir in ["asc", :asc], do: "asc"
+  defp normalize_admin_dir(dir) when dir in ["desc", :desc], do: "desc"
+  defp normalize_admin_dir(_), do: "asc"
+
+  defp normalize_admin_filter(nil), do: ""
+
+  defp normalize_admin_filter(filter) do
+    filter
+    |> to_string()
+    |> String.trim()
+  end
+
+  defp stringify_param_keys(params) when is_map(params) do
+    Map.new(params, fn {key, value} -> {to_string(key), value} end)
+  end
+
+  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
+    do: value
+
+  defp parse_positive_int(value, default) do
+    case Integer.parse(to_string(value || "")) do
+      {int, ""} when int > 0 -> int
+      _ -> default
+    end
+  end
+
+  defp dir_to_atom("asc"), do: :asc
+  defp dir_to_atom("desc"), do: :desc
 
   @doc """
   Gets a single user.
