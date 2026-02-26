@@ -191,6 +191,34 @@ defmodule Lightning.Projects do
     Repo.all(from(p in Project, order_by: p.name))
   end
 
+  @admin_project_default_sort "name"
+  @admin_project_allowed_sorts ~w(name inserted_at description owner scheduled_deletion)
+  @admin_project_default_page_size 10
+  @admin_project_max_page_size 100
+
+  @doc """
+  Returns a paginated list of projects for the superuser admin table with
+  server-side filtering and sorting.
+  """
+  @spec list_projects_for_admin(map()) :: Scrivener.Page.t()
+  def list_projects_for_admin(params \\ %{}) do
+    %{
+      filter: filter,
+      sort: sort,
+      dir: dir,
+      page: page,
+      page_size: page_size
+    } = normalize_admin_project_params(params)
+
+    Project
+    |> join(:left, [p], pu in assoc(p, :project_users), on: pu.role == :owner)
+    |> join(:left, [_p, pu], owner in assoc(pu, :user))
+    |> preload([_p, _pu, _owner], project_users: :user)
+    |> filter_admin_projects(filter)
+    |> order_admin_projects(sort, dir)
+    |> Repo.paginate(page: page, page_size: page_size)
+  end
+
   @doc """
   Lists all projects that have history retention
   """
@@ -219,6 +247,107 @@ defmodule Lightning.Projects do
       p -> Repo.preload(p, :parent)
     end
   end
+
+  defp normalize_admin_project_params(params) do
+    params = stringify_param_keys(params)
+
+    sort = normalize_admin_project_sort(Map.get(params, "sort"))
+    dir = normalize_admin_project_dir(Map.get(params, "dir"))
+    page = parse_positive_int(Map.get(params, "page"), 1)
+
+    page_size =
+      Map.get(params, "page_size")
+      |> parse_positive_int(@admin_project_default_page_size)
+      |> min(@admin_project_max_page_size)
+
+    %{
+      filter: normalize_admin_project_filter(Map.get(params, "filter")),
+      sort: sort,
+      dir: dir,
+      page: page,
+      page_size: page_size
+    }
+  end
+
+  defp filter_admin_projects(query, ""), do: query
+
+  defp filter_admin_projects(query, filter) do
+    search = "%#{filter}%"
+
+    where(
+      query,
+      [p, _pu, owner],
+      ilike(p.name, ^search) or
+        ilike(p.description, ^search) or
+        ilike(fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name), ^search)
+    )
+  end
+
+  defp order_admin_projects(query, "scheduled_deletion", "asc"),
+    do: order_by(query, [p, _pu, _owner], [asc_nulls_last: p.scheduled_deletion])
+
+  defp order_admin_projects(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [p, _pu, _owner], [desc_nulls_first: p.scheduled_deletion])
+
+  defp order_admin_projects(query, "owner", dir) do
+    direction = project_dir_to_atom(dir)
+
+    order_by(
+      query,
+      [_p, _pu, owner],
+      [{^direction, fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)}]
+    )
+  end
+
+  defp order_admin_projects(query, sort, dir) do
+    direction = project_dir_to_atom(dir)
+    sort_field = String.to_existing_atom(sort)
+
+    order_by(query, [p, _pu, _owner], [{^direction, field(p, ^sort_field)}])
+  end
+
+  defp normalize_admin_project_sort(sort) when is_binary(sort) do
+    if sort in @admin_project_allowed_sorts,
+      do: sort,
+      else: @admin_project_default_sort
+  end
+
+  defp normalize_admin_project_sort(sort) when is_atom(sort) do
+    sort
+    |> Atom.to_string()
+    |> normalize_admin_project_sort()
+  end
+
+  defp normalize_admin_project_sort(_), do: @admin_project_default_sort
+
+  defp normalize_admin_project_dir(dir) when dir in ["asc", :asc], do: "asc"
+  defp normalize_admin_project_dir(dir) when dir in ["desc", :desc], do: "desc"
+  defp normalize_admin_project_dir(_), do: "asc"
+
+  defp normalize_admin_project_filter(nil), do: ""
+
+  defp normalize_admin_project_filter(filter) do
+    filter
+    |> to_string()
+    |> String.trim()
+  end
+
+  defp stringify_param_keys(params) when is_map(params) do
+    Map.new(params, fn {key, value} -> {to_string(key), value} end)
+  end
+
+  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
+    do: value
+
+  defp parse_positive_int(value, default) do
+    case Integer.parse(to_string(value || "")) do
+      {int, ""} when int > 0 -> int
+      _ -> default
+    end
+  end
+
+  defp project_dir_to_atom("asc"), do: :asc
+  defp project_dir_to_atom("desc"), do: :desc
 
   @doc """
   Gets the project associated with a run.

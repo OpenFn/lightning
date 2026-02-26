@@ -33,6 +33,31 @@ defmodule Lightning.ProjectsTest do
       assert Projects.list_projects() == [project]
     end
 
+    test "list_projects_for_admin/1 supports search by project fields and owner name" do
+      owner = insert(:user, first_name: "Jane", last_name: "Owner")
+
+      project =
+        insert(:project, name: "alpha-project", description: "first project")
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      _other =
+        insert(:project, name: "beta-project", description: "second project")
+
+      page =
+        Projects.list_projects_for_admin(%{
+          "filter" => "jane",
+          "sort" => "owner",
+          "dir" => "asc",
+          "page" => "1",
+          "page_size" => "10"
+        })
+
+      assert page.page_number == 1
+      assert page.page_size == 10
+      assert Enum.map(page.entries, & &1.id) == [project.id]
+    end
+
     test "list_project_credentials/1 returns all project_credentials for a project" do
       user = insert(:user)
       project = insert(:project, project_users: [%{user_id: user.id}])
