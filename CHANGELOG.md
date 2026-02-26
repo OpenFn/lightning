@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Allow instance admins to install credential schemas and update the adaptor
+  registry on the fly [#3114](https://github.com/OpenFn/lightning/issues/3114),
+  [#2209](https://github.com/OpenFn/lightning/issues/2209),
+  [#325](https://github.com/OpenFn/lightning/issues/325),
+  [#1996](https://github.com/OpenFn/lightning/issues/1996)
+
 ### Fixed
 
 - Auto-increment job name when adaptor display name is already used in workflow
