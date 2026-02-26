@@ -56,6 +56,14 @@ defmodule LightningWeb.MaintenanceLive.Index do
             error -> {:error, Exception.message(error)}
           end
 
+        case result do
+          {:ok, _} ->
+            Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
+
+          _ ->
+            :noop
+        end
+
         send(pid, {:action_complete, action, result})
       end)
 
