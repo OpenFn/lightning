@@ -227,6 +227,10 @@ defmodule Lightning.Config.Bootstrap do
            )
 
     config :lightning,
+           :adaptor_refresh_interval_hours,
+           env!("ADAPTOR_REFRESH_INTERVAL_HOURS", :integer, 0)
+
+    config :lightning,
            :activity_cleanup_chunk_size,
            env!(
              "ACTIVITY_CLEANUP_CHUNK_SIZE",
@@ -261,7 +265,23 @@ defmodule Lightning.Config.Bootstrap do
         ],
         else: []
 
-    all_cron = base_cron ++ cleanup_cron
+    adaptor_refresh_cron =
+      case Application.get_env(
+             :lightning,
+             :adaptor_refresh_interval_hours,
+             0
+           ) do
+        hours when is_integer(hours) and hours >= 24 ->
+          [{"0 4 * * *", Lightning.AdaptorRefreshWorker}]
+
+        hours when is_integer(hours) and hours > 0 ->
+          [{"0 */#{hours} * * *", Lightning.AdaptorRefreshWorker}]
+
+        _disabled ->
+          []
+      end
+
+    all_cron = base_cron ++ cleanup_cron ++ adaptor_refresh_cron
 
     config :lightning, Oban,
       name: Lightning.Oban,
