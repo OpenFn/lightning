@@ -89,10 +89,10 @@ defmodule Lightning.AdaptorRegistry do
 
   @impl GenServer
   def handle_continue(opts, _state) do
-    adaptors =
+    {adaptors, cache_path, local_mode} =
       case Enum.into(opts, %{}) do
         %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
-          read_adaptors_from_local_repo(repo_path)
+          {read_adaptors_from_local_repo(repo_path), nil, true}
 
         %{use_cache: use_cache}
         when use_cache === true or is_binary(use_cache) ->
@@ -107,13 +107,17 @@ defmodule Lightning.AdaptorRegistry do
               ])
             end
 
-          read_from_cache(cache_path) || write_to_cache(cache_path, fetch())
+          adaptors =
+            read_from_cache(cache_path) || write_to_cache(cache_path, fetch())
+
+          {adaptors, cache_path, false}
 
         _other ->
-          fetch()
+          {fetch(), nil, false}
       end
 
-    {:noreply, adaptors}
+    {:noreply,
+     %{adaptors: adaptors, cache_path: cache_path, local_mode: local_mode}}
   end
 
   # false positive, it's a file from init
@@ -162,14 +166,18 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def handle_call(:all, _from, state) do
-    {:reply, state, state}
+  def handle_call(:all, _from, %{adaptors: adaptors} = state) do
+    {:reply, adaptors, state}
   end
 
   @impl GenServer
-  def handle_call({:versions_for, module_name}, _from, state) do
+  def handle_call(
+        {:versions_for, module_name},
+        _from,
+        %{adaptors: adaptors} = state
+      ) do
     versions =
-      state
+      adaptors
       |> Enum.find(fn %{name: name} -> name == module_name end)
       |> case do
         nil -> nil
@@ -180,9 +188,13 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def handle_call({:latest_for, module_name}, _from, state) do
+  def handle_call(
+        {:latest_for, module_name},
+        _from,
+        %{adaptors: adaptors} = state
+      ) do
     latest =
-      state
+      adaptors
       |> Enum.find(fn %{name: name} -> name == module_name end)
       |> case do
         nil -> nil
@@ -190,6 +202,27 @@ defmodule Lightning.AdaptorRegistry do
       end
 
     {:reply, latest, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:refresh, %{local_mode: true} = state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:refresh, %{cache_path: cache_path} = state) do
+    case fetch() do
+      [] ->
+        Logger.warning(
+          "Adaptor refresh returned empty results; keeping existing data"
+        )
+
+        {:noreply, state}
+
+      adaptors ->
+        if cache_path, do: write_to_cache(cache_path, adaptors)
+        {:noreply, %{state | adaptors: adaptors}}
+    end
   end
 
   @doc """
@@ -201,6 +234,17 @@ defmodule Lightning.AdaptorRegistry do
   @spec all(server :: GenServer.server()) :: list()
   def all(server \\ __MODULE__) do
     GenServer.call(server, :all, @timeout)
+  end
+
+  @doc """
+  Triggers an asynchronous refresh of the adaptor registry from NPM.
+
+  When in local mode (local_adaptors_repo is set), this is a no-op.
+  When caching is enabled, the cache file is also updated.
+  """
+  @spec refresh(server :: GenServer.server()) :: :ok
+  def refresh(server \\ __MODULE__) do
+    GenServer.cast(server, :refresh)
   end
 
   @doc """
