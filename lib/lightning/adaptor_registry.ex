@@ -84,6 +84,7 @@ defmodule Lightning.AdaptorRegistry do
 
   @impl GenServer
   def init(opts) do
+    Lightning.API.subscribe("adaptor:refresh")
     {:ok, [], {:continue, opts}}
   end
 
@@ -163,6 +164,29 @@ defmodule Lightning.AdaptorRegistry do
     Logger.info("Starting AdaptorRegistry")
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, opts, name: name)
+  end
+
+  @impl GenServer
+  def handle_info({:refresh_all, origin_node}, state)
+      when origin_node == node() do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:refresh_all, _origin_node}, %{local_mode: true} = state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:refresh_all, _origin_node}, state) do
+    GenServer.cast(self(), :refresh)
+
+    Task.start(fn ->
+      Lightning.AdaptorIcons.refresh()
+      Lightning.CredentialSchemas.refresh()
+    end)
+
+    {:noreply, state}
   end
 
   @impl GenServer

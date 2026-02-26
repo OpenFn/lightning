@@ -255,6 +255,52 @@ defmodule Lightning.AdaptorRegistryTest do
     end
   end
 
+  describe "handle_info({:refresh_all, origin_node})" do
+    test "ignores broadcast from same node" do
+      file_path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~S"""
+          [{
+            "latest": "3.0.5",
+            "name": "@openfn/language-dhis2",
+            "repo": "git+https://github.com/openfn/language-dhis2.git",
+            "versions": []
+          }]
+          """)
+        end)
+
+      pid =
+        start_supervised!(
+          {AdaptorRegistry,
+           [name: :test_refresh_all_registry, use_cache: file_path]}
+        )
+
+      initial_state = :sys.get_state(pid)
+
+      # Same node — should be ignored
+      send(pid, {:refresh_all, node()})
+
+      assert :sys.get_state(pid) == initial_state
+    end
+
+    @tag :tmp_dir
+    test "is a no-op in local mode", %{tmp_dir: tmp_dir, test: test} do
+      [tmp_dir, "packages", "foo"] |> Path.join() |> File.mkdir_p!()
+
+      pid =
+        start_supervised!(
+          {AdaptorRegistry, [name: test, local_adaptors_repo: tmp_dir]}
+        )
+
+      initial_state = :sys.get_state(pid)
+
+      send(pid, {:refresh_all, :other_node@remote})
+
+      assert :sys.get_state(pid) == initial_state
+    end
+  end
+
   describe "resolve_package_name/1" do
     test "it can split an NPM style package name" do
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==

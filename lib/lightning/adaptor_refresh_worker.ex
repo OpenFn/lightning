@@ -47,6 +47,8 @@ defmodule Lightning.AdaptorRefreshWorker do
       )
     end
 
+    Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
+
     :ok
   end
 
