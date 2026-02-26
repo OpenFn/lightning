@@ -29,6 +29,9 @@ and this project adheres to
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
   "OAuth client not found" warning
   [#4468](https://github.com/OpenFn/lightning/issues/4468)
+- Migrate form error display from `phx-feedback-for` to `used_input?/1` so
+  validation errors only appear on fields the user has interacted with
+  [#4472](https://github.com/OpenFn/lightning/pull/4472)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
 
