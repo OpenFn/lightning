@@ -111,7 +111,9 @@ defmodule LightningWeb.UserLive.TableComponent do
       params =
         route_params
         |> Enum.into(%{})
-        |> Map.merge(Map.take(table_params, ["filter", "sort", "dir", "page_size"]))
+        |> Map.merge(
+          Map.take(table_params, ["filter", "sort", "dir", "page_size"])
+        )
         |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
         |> Map.new()
 

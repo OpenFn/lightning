@@ -82,7 +82,8 @@ defmodule LightningWeb.UserLive.Index do
       "filter" => normalize_filter(Map.get(params, "filter")),
       "sort" => normalize_sort(Map.get(params, "sort")),
       "dir" => normalize_dir(Map.get(params, "dir")),
-      "page" => Map.get(params, "page") |> parse_positive_int(1) |> Integer.to_string(),
+      "page" =>
+        Map.get(params, "page") |> parse_positive_int(1) |> Integer.to_string(),
       "page_size" =>
         Map.get(params, "page_size")
         |> parse_positive_int(@default_page_size)

@@ -279,15 +279,18 @@ defmodule Lightning.Projects do
       [p, _pu, owner],
       ilike(p.name, ^search) or
         ilike(p.description, ^search) or
-        ilike(fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name), ^search)
+        ilike(
+          fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name),
+          ^search
+        )
     )
   end
 
   defp order_admin_projects(query, "scheduled_deletion", "asc"),
-    do: order_by(query, [p, _pu, _owner], [asc_nulls_last: p.scheduled_deletion])
+    do: order_by(query, [p, _pu, _owner], asc_nulls_last: p.scheduled_deletion)
 
   defp order_admin_projects(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [p, _pu, _owner], [desc_nulls_first: p.scheduled_deletion])
+    do: order_by(query, [p, _pu, _owner], desc_nulls_first: p.scheduled_deletion)
 
   defp order_admin_projects(query, "owner", dir) do
     direction = project_dir_to_atom(dir)
@@ -295,7 +298,10 @@ defmodule Lightning.Projects do
     order_by(
       query,
       [_p, _pu, owner],
-      [{^direction, fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)}]
+      [
+        {^direction,
+         fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)}
+      ]
     )
   end
 

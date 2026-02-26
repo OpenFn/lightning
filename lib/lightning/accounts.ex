@@ -222,16 +222,16 @@ defmodule Lightning.Accounts do
   end
 
   defp order_admin_users(query, "enabled", "asc"),
-    do: order_by(query, [u], [desc: u.disabled])
+    do: order_by(query, [u], desc: u.disabled)
 
   defp order_admin_users(query, "enabled", "desc"),
-    do: order_by(query, [u], [asc: u.disabled])
+    do: order_by(query, [u], asc: u.disabled)
 
   defp order_admin_users(query, "scheduled_deletion", "asc"),
-    do: order_by(query, [u], [asc_nulls_last: u.scheduled_deletion])
+    do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion)
 
   defp order_admin_users(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [u], [desc_nulls_first: u.scheduled_deletion])
+    do: order_by(query, [u], desc_nulls_first: u.scheduled_deletion)
 
   defp order_admin_users(query, "role", dir) do
     direction = dir_to_atom(dir)
@@ -246,7 +246,9 @@ defmodule Lightning.Accounts do
   end
 
   defp normalize_admin_sort(sort) when is_binary(sort) do
-    if sort in @admin_user_allowed_sorts, do: sort, else: @admin_user_default_sort
+    if sort in @admin_user_allowed_sorts,
+      do: sort,
+      else: @admin_user_default_sort
   end
 
   defp normalize_admin_sort(sort) when is_atom(sort) do
