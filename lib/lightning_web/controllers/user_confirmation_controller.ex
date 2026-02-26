@@ -4,6 +4,8 @@ defmodule LightningWeb.UserConfirmationController do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
 
+  plug :verify_confirmation_token when action in [:edit, :update]
+
   def new(conn, _params) do
     render(conn, "new.html")
   end
@@ -22,31 +24,8 @@ defmodule LightningWeb.UserConfirmationController do
     |> redirect(to: "/projects")
   end
 
-  def edit(conn, %{"token" => token}) do
-    case Accounts.get_user_by_confirmation_token(token) do
-      %User{id: id} when id == conn.assigns.current_user.id ->
-        render(conn, "edit.html", token: token)
-
-      %User{} ->
-        conn
-        |> put_flash(
-          :error,
-          "You are logged in as a different user. Please log out to confirm this account."
-        )
-        |> redirect(to: "/projects")
-
-      nil ->
-        if conn.assigns.current_user.confirmed_at do
-          redirect(conn, to: "/projects")
-        else
-          conn
-          |> put_flash(
-            :error,
-            "User confirmation link is invalid or it has expired."
-          )
-          |> redirect(to: "/projects")
-        end
-    end
+  def edit(conn, _params) do
+    render(conn, "edit.html", token: conn.assigns.confirmation_token)
   end
 
   def confirm_email(conn, %{"token" => token}) do
@@ -91,47 +70,53 @@ defmodule LightningWeb.UserConfirmationController do
     end
   end
 
-  def update(conn, %{"token" => token}) do
-    case Accounts.get_user_by_confirmation_token(token) do
-      %User{id: id} when id == conn.assigns.current_user.id ->
-        case Accounts.confirm_user(token) do
-          {:ok, _} ->
-            conn
-            |> put_flash(:info, "User confirmed successfully.")
-            |> redirect(to: "/projects")
+  def update(conn, _params) do
+    case Accounts.confirm_user(conn.assigns.confirmation_token) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "User confirmed successfully.")
+        |> redirect(to: "/projects")
 
-          :error ->
-            conn
-            |> put_flash(
-              :error,
-              "User confirmation link is invalid or it has expired."
-            )
-            |> redirect(to: "/projects")
-        end
-
-      %User{} ->
+      :error ->
         conn
         |> put_flash(
           :error,
-          "You are logged in as a different user. Please log out to confirm this account."
+          "User confirmation link is invalid or it has expired."
         )
         |> redirect(to: "/projects")
+    end
+  end
 
-      nil ->
-        # If there is a current user and the account was already confirmed,
-        # then odds are that the confirmation link was already visited, either
-        # by some automation or by the user themselves, so we redirect without
-        # a warning message.
-        if conn.assigns.current_user.confirmed_at do
-          redirect(conn, to: "/projects")
-        else
-          conn
-          |> put_flash(
-            :error,
-            "User confirmation link is invalid or it has expired."
-          )
-          |> redirect(to: "/projects")
-        end
+  defp verify_confirmation_token(conn, _opts) do
+    current_user_id = conn.assigns.current_user.id
+    token = conn.params["token"]
+
+    case Accounts.get_user_by_confirmation_token(token) do
+      %User{id: ^current_user_id} ->
+        assign(conn, :confirmation_token, token)
+
+      _ ->
+        handle_invalid_confirmation_token(conn)
+    end
+  end
+
+  # If there is a current user and the account was already confirmed,
+  # then odds are that the confirmation link was already visited, either
+  # by some automation or by the user themselves, so we redirect without
+  # a warning message.
+  defp handle_invalid_confirmation_token(conn) do
+    if conn.assigns.current_user.confirmed_at do
+      conn
+      |> redirect(to: "/projects")
+      |> halt()
+    else
+      conn
+      |> put_flash(
+        :error,
+        "User confirmation link is invalid or it has expired."
+      )
+      |> redirect(to: "/projects")
+      |> halt()
     end
   end
 end

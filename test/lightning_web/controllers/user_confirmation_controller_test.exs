@@ -152,7 +152,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert redirected_to(conn) == "/projects"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-               "You are logged in as a different user"
+               "User confirmation link is invalid or it has expired"
     end
 
     test "redirects if token is invalid", %{conn: conn, user: user} do
@@ -219,7 +219,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert redirected_to(conn) == "/projects"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-               "You are logged in as a different user"
+               "User confirmation link is invalid or it has expired"
 
       refute Accounts.get_user!(other_user.id).confirmed_at
     end
