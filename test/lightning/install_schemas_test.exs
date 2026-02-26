@@ -1,183 +1,116 @@
 defmodule Lightning.InstallSchemasTest do
   use ExUnit.Case, async: false
-  use Mimic
 
-  import ExUnit.CaptureIO
-  import ExUnit.CaptureLog
-  require Logger
+  import Mock
 
   alias Mix.Tasks.Lightning.InstallSchemas
 
-  @request_options [recv_timeout: 15_000, pool: :default]
-  @ok_200 {:ok, 200, "headers", :client}
-  @ok_400 {:ok, 400, "headers", :client}
+  setup do
+    tmp_dir =
+      Path.join(
+        System.tmp_dir!(),
+        "install_schemas_test_#{System.unique_integer([:positive])}"
+      )
 
-  @schemas_path Application.compile_env(:lightning, :schemas_path)
+    File.mkdir_p!(tmp_dir)
 
-  describe "install_schemas mix task" do
-    setup do
-      stub(:hackney)
+    previous = Application.get_env(:lightning, :schemas_path)
+    Application.put_env(:lightning, :schemas_path, tmp_dir)
 
-      :ok
-    end
+    on_exit(fn ->
+      if previous,
+        do: Application.put_env(:lightning, :schemas_path, previous),
+        else: Application.delete_env(:lightning, :schemas_path)
 
-    test "run success" do
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        @request_options ->
-          @ok_200
-      end)
+      File.rm_rf(tmp_dir)
+    end)
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok,
-         ~s({"@openfn/language-primero": "write","@openfn/language-asana": "write", "@openfn/language-common": "write"})}
-      end)
+    Mix.shell(Mix.Shell.Process)
 
-      expect(:hackney, :request, fn
-        :get,
-        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
-        [],
-        "",
-        @request_options ->
-          @ok_200
-      end)
+    %{schemas_path: tmp_dir}
+  end
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, ~s({"name": "language-asana"})}
-      end)
+  describe "run/1" do
+    test "installs schemas and prints count", %{schemas_path: schemas_path} do
+      packages =
+        Jason.encode!(%{
+          "@openfn/language-http" => "read",
+          "@openfn/language-salesforce" => "read",
+          "@openfn/language-common" => "read"
+        })
 
-      expect(:hackney, :request, fn
-        :get,
-        "https://cdn.jsdelivr.net/npm/@openfn/language-primero/configuration-schema.json",
-        [],
-        "",
-        @request_options ->
-          @ok_200
-      end)
+      schema_body = Jason.encode!(%{"type" => "object"})
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, ~s({"name": "language-primero"})}
-      end)
+      with_mock HTTPoison,
+        start: fn -> {:ok, self()} end,
+        get: fn url, _headers, _opts ->
+          cond do
+            String.contains?(url, "registry.npmjs.org") ->
+              {:ok, %HTTPoison.Response{status_code: 200, body: packages}}
 
-      File
-      |> expect(:rm_rf, fn _ -> nil end)
-      |> expect(:mkdir_p, fn _ -> nil end)
-      |> expect(:open!, fn
-        "test/fixtures/schemas/primero.json", [:write] -> nil
-        "test/fixtures/schemas/asana.json", [:write] -> nil
-      end)
-      |> expect(:close, 2, fn _ -> nil end)
+            String.contains?(url, "cdn.jsdelivr.net") ->
+              {:ok, %HTTPoison.Response{status_code: 200, body: schema_body}}
 
-      IO
-      |> expect(:binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
-      |> expect(:binwrite, fn _, ~s({"name": "language-primero"}) -> nil end)
-
-      # |> expect(:binwrite, fn _, ~s({"name": "language-common"}) -> nil end)
-
-      capture_io(fn ->
+            true ->
+              {:ok, %HTTPoison.Response{status_code: 404, body: ""}}
+          end
+        end do
         InstallSchemas.run([])
-      end)
-    end
 
-    test "run fail" do
-      expect(File, :rm_rf, fn _ -> {:error, "error occured"} end)
-      expect(File, :mkdir_p, fn _ -> {:error, "error occured"} end)
+        assert_receive {:mix_shell, :info, [msg]}
+        assert msg =~ "Schemas installation has finished. 2 installed"
 
-      assert_raise RuntimeError,
-                   "Couldn't create the schemas directory: test/fixtures/schemas, got :error occured.",
-                   fn ->
-                     InstallSchemas.run([])
-                   end
-    end
-
-    test "persist_schema fail 1" do
-      expect(:hackney, :request, fn
-        :get,
-        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
-        [],
-        "",
-        @request_options ->
-          @ok_200
-      end)
-
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:error, %HTTPoison.Error{}}
-      end)
-
-      assert_raise RuntimeError, "Unable to access @openfn/language-asana", fn ->
-        InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
+        assert File.exists?(Path.join(schemas_path, "http.json"))
+        assert File.exists?(Path.join(schemas_path, "salesforce.json"))
+        refute File.exists?(Path.join(schemas_path, "common.json"))
       end
     end
 
-    test "persist_schema fail 2" do
-      expect(:hackney, :request, fn
-        :get,
-        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
-        [],
-        "",
-        @request_options ->
-          @ok_400
-      end)
-
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, %HTTPoison.Response{status_code: 400}}
-      end)
-
-      {_result, log} =
-        with_log(fn ->
-          InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
-        end)
-
-      assert log =~
-               "Unable to fetch @openfn/language-asana configuration schema. status=400"
+    test "raises on failure" do
+      with_mock HTTPoison,
+        start: fn -> {:ok, self()} end,
+        get: fn _url, _headers, _opts ->
+          {:error, %HTTPoison.Error{reason: :econnrefused}}
+        end do
+        assert_raise Mix.Error, ~r/Schema installation failed/, fn ->
+          InstallSchemas.run([])
+        end
+      end
     end
 
-    test "fetch_schemas fail 1" do
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        @request_options ->
-          @ok_200
-      end)
+    test "passes --exclude args through" do
+      packages =
+        Jason.encode!(%{
+          "@openfn/language-http" => "read",
+          "@openfn/language-salesforce" => "read"
+        })
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:error, %HTTPoison.Error{}}
-      end)
+      schema_body = Jason.encode!(%{"type" => "object"})
 
-      assert_raise RuntimeError,
-                   "Unable to connect to NPM; no adaptors fetched.",
-                   fn ->
-                     InstallSchemas.fetch_schemas([])
-                   end
+      with_mock HTTPoison,
+        start: fn -> {:ok, self()} end,
+        get: fn url, _headers, _opts ->
+          cond do
+            String.contains?(url, "registry.npmjs.org") ->
+              {:ok, %HTTPoison.Response{status_code: 200, body: packages}}
+
+            String.contains?(url, "cdn.jsdelivr.net") ->
+              {:ok, %HTTPoison.Response{status_code: 200, body: schema_body}}
+
+            true ->
+              {:ok, %HTTPoison.Response{status_code: 404, body: ""}}
+          end
+        end do
+        InstallSchemas.run(["--exclude", "language-http"])
+
+        assert_receive {:mix_shell, :info, [msg]}
+        assert msg =~ "1 installed"
+      end
     end
+  end
 
-    test "fetch_schemas fail 2" do
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        @request_options ->
-          @ok_400
-      end)
-
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, %HTTPoison.Response{status_code: 400}}
-      end)
-
-      assert_raise RuntimeError,
-                   "Unable to access openfn user packages. status=400",
-                   fn ->
-                     InstallSchemas.fetch_schemas([])
-                   end
-    end
-
-    test "parse_excluded" do
+  describe "parse_excluded/1 delegates to CredentialSchemas" do
+    test "with --exclude args" do
       assert [
                "pack1",
                "pack2",
@@ -185,10 +118,16 @@ defmodule Lightning.InstallSchemasTest do
                "language-devtools",
                "language-divoc"
              ] ==
-               InstallSchemas.parse_excluded(["--exclude", "pack1", "pack2"])
+               Lightning.CredentialSchemas.parse_excluded([
+                 "--exclude",
+                 "pack1",
+                 "pack2"
+               ])
+    end
 
+    test "without args returns defaults" do
       assert ["language-common", "language-devtools", "language-divoc"] ==
-               InstallSchemas.parse_excluded([])
+               Lightning.CredentialSchemas.parse_excluded([])
     end
   end
 end

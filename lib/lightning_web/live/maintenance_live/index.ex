@@ -48,8 +48,14 @@ defmodule LightningWeb.MaintenanceLive.Index do
     if superuser?(socket) do
       pid = self()
 
-      Task.start_link(fn ->
-        result = run_action(action)
+      Task.start(fn ->
+        result =
+          try do
+            run_action(action)
+          rescue
+            error -> {:error, Exception.message(error)}
+          end
+
         send(pid, {:action_complete, action, result})
       end)
 
@@ -111,8 +117,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
   end
 
   defp run_action("refresh_adaptor_registry") do
-    Lightning.AdaptorRegistry.refresh()
-    {:ok, :refreshed}
+    Lightning.AdaptorRegistry.refresh_sync()
   end
 
   defp run_action("install_adaptor_icons") do

@@ -160,6 +160,101 @@ defmodule Lightning.AdaptorRegistryTest do
     end
   end
 
+  describe "refresh_sync/1" do
+    test "replaces state with fresh npm data" do
+      file_path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~S"""
+          [{
+            "latest": "3.0.5",
+            "name": "@openfn/language-dhis2",
+            "repo": "git+https://github.com/openfn/language-dhis2.git",
+            "versions": []
+          }]
+          """)
+        end)
+
+      default_npm_response =
+        File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!()
+
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_refresh_registry, use_cache: file_path]}
+      )
+
+      # Initially has 1 adaptor from cache
+      assert length(AdaptorRegistry.all(:test_refresh_registry)) == 1
+
+      # Mock npm to return fresh data
+      expect_tesla_call(
+        times: 7,
+        returns: fn env, [] ->
+          case env.url do
+            "https://registry.npmjs.org/-/user/openfn/package" ->
+              {:ok,
+               json(
+                 %Tesla.Env{status: 200},
+                 File.read!("test/fixtures/openfn-packages-npm.json")
+                 |> Jason.decode!()
+               )}
+
+            "https://registry.npmjs.org/@openfn/" <> _adaptor ->
+              {:ok, json(%Tesla.Env{status: 200}, default_npm_response)}
+          end
+        end
+      )
+
+      assert {:ok, 6} = AdaptorRegistry.refresh_sync(:test_refresh_registry)
+      assert length(AdaptorRegistry.all(:test_refresh_registry)) == 6
+    end
+
+    test "keeps existing data when refresh returns empty results" do
+      file_path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~S"""
+          [{
+            "latest": "3.0.5",
+            "name": "@openfn/language-dhis2",
+            "repo": "git+https://github.com/openfn/language-dhis2.git",
+            "versions": []
+          }]
+          """)
+        end)
+
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_empty_refresh, use_cache: file_path]}
+      )
+
+      assert length(AdaptorRegistry.all(:test_empty_refresh)) == 1
+
+      # Mock npm to return empty package list (simulates offline)
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] ->
+          {:ok, json(%Tesla.Env{status: 200}, %{})}
+        end
+      )
+
+      assert {:error, :empty_results} =
+               AdaptorRegistry.refresh_sync(:test_empty_refresh)
+
+      # State should be unchanged
+      assert length(AdaptorRegistry.all(:test_empty_refresh)) == 1
+    end
+
+    @tag :tmp_dir
+    test "is a no-op in local mode", %{tmp_dir: tmp_dir, test: test} do
+      [tmp_dir, "packages", "foo"] |> Path.join() |> File.mkdir_p!()
+
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repo: tmp_dir]}
+      )
+
+      assert {:ok, :local_mode} = AdaptorRegistry.refresh_sync(test)
+    end
+  end
+
   describe "resolve_package_name/1" do
     test "it can split an NPM style package name" do
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==

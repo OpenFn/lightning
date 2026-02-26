@@ -19,24 +19,27 @@ defmodule Lightning.AdaptorIcons do
   """
   @spec refresh() :: {:ok, map()} | {:error, term()}
   def refresh do
-    target_dir = Application.get_env(:lightning, :adaptor_icons_path)
+    target_dir = Application.fetch_env!(:lightning, :adaptor_icons_path)
+    working_dir = tmp_dir!()
 
-    with :ok <- File.mkdir_p(target_dir),
-         working_dir <- tmp_dir!(),
-         {:ok, body} <- fetch_tarball(),
-         :ok <- extract_tarball(body, working_dir) do
-      manifest = save_icons(working_dir, target_dir)
+    try do
+      with :ok <- File.mkdir_p(target_dir),
+           {:ok, body} <- fetch_tarball(),
+           :ok <- extract_tarball(body, working_dir) do
+        manifest = save_icons(working_dir, target_dir)
 
-      manifest_path = Path.join(target_dir, "adaptor_icons.json")
-      File.write!(manifest_path, Jason.encode!(manifest))
+        manifest_path = Path.join(target_dir, "adaptor_icons.json")
+        File.write!(manifest_path, Jason.encode!(manifest))
 
+        {:ok, manifest}
+      end
+    rescue
+      error ->
+        Logger.error("Failed to refresh adaptor icons: #{inspect(error)}")
+        {:error, error}
+    after
       File.rm_rf(working_dir)
-      {:ok, manifest}
     end
-  rescue
-    error ->
-      Logger.error("Failed to refresh adaptor icons: #{inspect(error)}")
-      {:error, error}
   end
 
   defp fetch_tarball do
