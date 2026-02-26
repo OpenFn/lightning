@@ -58,7 +58,6 @@ defmodule Lightning.AdaptorRefreshWorker do
         :ok -> {:ok, :done}
         {:ok, _} = ok -> ok
         {:error, _} = error -> error
-        other -> {:ok, other}
       end
     rescue
       error ->
