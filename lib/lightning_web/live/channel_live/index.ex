@@ -305,14 +305,28 @@ defmodule LightningWeb.ChannelLive.Index do
               {channel.sink_url}
             </.td>
             <.td class="text-gray-700">
-              {count}
+              <.link
+                navigate={
+                  ~p"/projects/#{@project}/channels/requests?#{%{filters: %{channel_id: channel.id}}}"
+                }
+                class="text-indigo-600 hover:text-indigo-800"
+              >
+                {count}
+              </.link>
             </.td>
             <.td class="text-gray-500 text-sm">
-              <%= if last_at do %>
-                <Common.datetime datetime={last_at} />
-              <% else %>
-                <span class="italic">Never</span>
-              <% end %>
+              <.link
+                navigate={
+                  ~p"/projects/#{@project}/channels/requests?#{%{filters: %{channel_id: channel.id}}}"
+                }
+                class="hover:text-gray-700"
+              >
+                <%= if last_at do %>
+                  <Common.datetime datetime={last_at} />
+                <% else %>
+                  <span class="italic">Never</span>
+                <% end %>
+              </.link>
             </.td>
             <.td>
               <%= if @can_edit_channel do %>
