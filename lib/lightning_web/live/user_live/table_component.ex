@@ -37,12 +37,10 @@ defmodule LightningWeb.UserLive.TableComponent do
 
   @impl true
   def mount(socket) do
-    page = Accounts.list_users_for_admin(@default_table_params)
-
     {:ok,
      socket
      |> assign(:table_params, @default_table_params)
-     |> assign_table_state(@default_table_params, page)}
+     |> assign_table_state(@default_table_params, empty_page())}
   end
 
   @impl true
@@ -104,6 +102,16 @@ defmodule LightningWeb.UserLive.TableComponent do
       table_params: table_params,
       pagination_path: pagination_path(socket, table_params)
     )
+  end
+
+  defp empty_page do
+    %Scrivener.Page{
+      entries: [],
+      page_number: 1,
+      page_size: String.to_integer(@default_table_params["page_size"]),
+      total_entries: 0,
+      total_pages: 1
+    }
   end
 
   defp pagination_path(socket, table_params) do

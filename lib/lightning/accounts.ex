@@ -216,7 +216,7 @@ defmodule Lightning.Accounts do
       [u],
       ilike(u.first_name, ^search) or
         ilike(u.last_name, ^search) or
-        ilike(u.email, ^search) or
+        ilike(fragment("?::text", u.email), ^search) or
         ilike(fragment("?::text", u.role), ^search)
     )
   end
