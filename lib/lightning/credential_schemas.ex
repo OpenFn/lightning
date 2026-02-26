@@ -18,8 +18,8 @@ defmodule Lightning.CredentialSchemas do
   Fetches credential schemas from npm/jsDelivr and writes them to the
   configured schemas directory.
 
-  Does not wipe the directory -- writes new/updated files and keeps
-  existing ones.
+  Wipes and recreates the directory to ensure a clean install, then
+  downloads all matching schemas.
 
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
@@ -27,6 +27,7 @@ defmodule Lightning.CredentialSchemas do
           {:ok, non_neg_integer()} | {:error, term()}
   def refresh(excluded \\ @default_excluded_adaptors) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+    File.rm_rf!(schemas_path)
     File.mkdir_p!(schemas_path)
 
     excluded_full = Enum.map(excluded, &"@openfn/#{&1}")
@@ -61,6 +62,23 @@ defmodule Lightning.CredentialSchemas do
       Logger.error("Failed to refresh credential schemas: #{inspect(error)}")
 
       {:error, error}
+  end
+
+  @doc """
+  Parses CLI args to build the excluded adaptors list.
+
+  If `args` starts with `["--exclude" | names]`, those names are merged
+  with the default exclusions. Otherwise the defaults are returned.
+  """
+  @spec parse_excluded([String.t()]) :: [String.t()]
+  def parse_excluded(args) do
+    case args do
+      ["--exclude" | adaptor_names] when adaptor_names != [] ->
+        (adaptor_names ++ @default_excluded_adaptors) |> Enum.uniq()
+
+      _ ->
+        @default_excluded_adaptors
+    end
   end
 
   defp fetch_package_list do

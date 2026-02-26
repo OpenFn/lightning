@@ -205,6 +205,27 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
+  def handle_call(:refresh_sync, _from, %{local_mode: true} = state) do
+    {:reply, {:ok, :local_mode}, state}
+  end
+
+  @impl GenServer
+  def handle_call(:refresh_sync, _from, %{cache_path: cache_path} = state) do
+    case fetch() do
+      [] ->
+        Logger.warning(
+          "Adaptor refresh returned empty results; keeping existing data"
+        )
+
+        {:reply, {:error, :empty_results}, state}
+
+      adaptors ->
+        if cache_path, do: write_to_cache(cache_path, adaptors)
+        {:reply, {:ok, length(adaptors)}, %{state | adaptors: adaptors}}
+    end
+  end
+
+  @impl GenServer
   def handle_cast(:refresh, %{local_mode: true} = state) do
     {:noreply, state}
   end
@@ -245,6 +266,18 @@ defmodule Lightning.AdaptorRegistry do
   @spec refresh(server :: GenServer.server()) :: :ok
   def refresh(server \\ __MODULE__) do
     GenServer.cast(server, :refresh)
+  end
+
+  @doc """
+  Synchronous version of `refresh/1` that waits for the refresh to complete.
+
+  Returns `{:ok, count}` with the number of adaptors fetched, or
+  `{:error, reason}` if the refresh failed.
+  """
+  @spec refresh_sync(server :: GenServer.server()) ::
+          {:ok, term()} | {:error, term()}
+  def refresh_sync(server \\ __MODULE__) do
+    GenServer.call(server, :refresh_sync, 60_000)
   end
 
   @doc """
