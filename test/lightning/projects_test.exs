@@ -58,6 +58,22 @@ defmodule Lightning.ProjectsTest do
       assert Enum.map(page.entries, & &1.id) == [project.id]
     end
 
+    test "list_projects_for_admin/1 falls back to safe defaults for invalid params" do
+      project = insert(:project, name: "safe-project")
+
+      page =
+        Projects.list_projects_for_admin(%{
+          "sort" => "drop table projects",
+          "dir" => "sideways",
+          "page" => "0",
+          "page_size" => "1000"
+        })
+
+      assert page.page_number == 1
+      assert page.page_size <= 100
+      assert Enum.any?(page.entries, fn entry -> entry.id == project.id end)
+    end
+
     test "list_project_credentials/1 returns all project_credentials for a project" do
       user = insert(:user)
       project = insert(:project, project_users: [%{user_id: user.id}])
