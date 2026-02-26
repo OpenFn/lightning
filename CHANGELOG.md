@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
+
 ## [2.15.15-pre.1] - 2026-02-25
 
 ### Fixed
