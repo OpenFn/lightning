@@ -1032,6 +1032,7 @@ export const LocalTimeConverter = {
       const textElement = this.el.querySelector('.datetime-text');
       if (textElement && displayTime) {
         textElement.textContent = displayTime;
+        textElement.className = 'datetime-text';
       }
     } catch (err) {
       console.error('Failed to convert timestamp to display time:', err);
