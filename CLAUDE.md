@@ -198,3 +198,4 @@ Detailed guidelines in `.claude/guidelines/`:
 - `e2e-testing.md` - Playwright E2E testing
 - `yex-guidelines.md` - Critical Yex (Yjs/Elixir) usage rules
 - `toast-notifications.md` - Notification patterns
+- `ui-patterns.md` - Button variants, disabled states, Tailwind conventions
