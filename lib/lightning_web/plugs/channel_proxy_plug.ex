@@ -1,5 +1,20 @@
 defmodule LightningWeb.ChannelProxyPlug do
-  @moduledoc false
+  @moduledoc """
+  Reverse proxy plug for channels.
+
+  Authenticates the inbound request against the channel's source auth
+  methods, resolves sink credentials, and streams the request upstream
+  via `Weir.proxy/2`. Request and response events are recorded as
+  `ChannelRequest` / `ChannelEvent` records for auditing.
+
+  ## Request ID
+
+  An `x-request-id` header is forwarded to the sink for end-to-end
+  tracing. If the caller provides one it will be used, but
+  `Plug.RequestId` requires it to be between 20 and 200 characters —
+  shorter or longer values are discarded and a new ID is generated
+  automatically.
+  """
   @behaviour Plug
 
   import Plug.Conn
@@ -177,8 +192,19 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp build_outbound_headers(conn, auth_header) do
     proxy_headers = build_proxy_headers(conn)
 
+    request_id =
+      conn
+      |> Plug.Conn.get_resp_header("x-request-id")
+      |> List.first()
+
     conn.req_headers
+    |> Enum.reject(fn {k, _} -> String.downcase(k) == "x-request-id" end)
     |> Kernel.++(proxy_headers)
+    |> then(fn headers ->
+      if request_id,
+        do: headers ++ [{"x-request-id", request_id}],
+        else: headers
+    end)
     |> maybe_set_auth(auth_header)
   end
 
