@@ -20,7 +20,6 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          use_sticky_comment: true
           prompt: |
             You are performing a security review on this PR using the
             instructions defined in .claude/agents/security-reviewer.md.
@@ -28,3 +27,6 @@ jobs:
             Read that file first, then follow its instructions exactly.
             Review only the changes introduced by this PR.
             Post your findings as a structured review comment.
+          claude_args: |
+            --max-turns 10
+            --model claude-sonnet-4-6
