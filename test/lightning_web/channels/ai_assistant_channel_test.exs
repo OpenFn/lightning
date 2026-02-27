@@ -640,6 +640,48 @@ defmodule LightningWeb.AiAssistantChannelTest do
         assert user_msg.meta["unsaved_job"]["id"] == unknown_job_id
       end)
     end
+
+    @tag :capture_log
+    test "stores follow_run_id in message.meta when provided",
+         %{
+           socket: socket,
+           job: job,
+           user: user
+         } do
+      # Create a run for the job
+      work_order = insert(:workorder, workflow: job.workflow)
+      run = insert(:run, work_order: work_order, starting_job: job)
+
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        # Simulate user selecting a run and checking "Send logs"
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help me debug these logs",
+            "follow_run_id" => run.id,
+            "attach_logs" => true
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+
+        # Verify follow_run_id was stored in message.meta
+        reloaded = AiAssistant.get_session!(session.id)
+        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+
+        assert user_msg.meta["follow_run_id"] == run.id
+      end)
+    end
   end
 
   describe "handle_in mark_disclaimer_read" do
