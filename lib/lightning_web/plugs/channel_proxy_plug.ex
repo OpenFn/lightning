@@ -47,6 +47,50 @@ defmodule LightningWeb.ChannelProxyPlug do
     ]
   end
 
+  defmodule Headers do
+    @moduledoc false
+
+    import Plug.Conn, only: [get_req_header: 2]
+
+    alias LightningWeb.ChannelProxyPlug.SinkRequest
+
+    def reject_header(headers, name) do
+      downcased = String.downcase(name)
+      Enum.reject(headers, fn {k, _} -> String.downcase(k) == downcased end)
+    end
+
+    def set_header(headers, _name, nil), do: headers
+
+    def set_header(headers, name, value) do
+      headers |> reject_header(name) |> Kernel.++([{name, value}])
+    end
+
+    def add_proxy_headers(headers, conn) do
+      original_host = get_req_header(conn, "host") |> List.first("")
+      remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
+
+      existing_xff = get_req_header(conn, "x-forwarded-for") |> List.first()
+
+      xff_value =
+        if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
+
+      headers ++
+        [
+          {"x-forwarded-for", xff_value},
+          {"x-forwarded-host", original_host},
+          {"x-forwarded-proto", to_string(conn.scheme)}
+        ]
+    end
+
+    def build_outbound_headers(conn, %SinkRequest{} = req) do
+      conn.req_headers
+      |> reject_header("x-request-id")
+      |> add_proxy_headers(conn)
+      |> set_header("x-request-id", req.request_id)
+      |> set_header("authorization", req.auth_header)
+    end
+  end
+
   @impl true
   def init(opts), do: opts
 
@@ -141,7 +185,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp proxy_upstream(conn, %SinkRequest{} = req) do
-    outbound_headers = build_outbound_headers(conn, req)
+    outbound_headers = Headers.build_outbound_headers(conn, req)
 
     handler_state = %{
       channel: req.channel,
@@ -193,44 +237,6 @@ defmodule LightningWeb.ChannelProxyPlug do
       [xff | _] -> xff |> String.split(",") |> List.first() |> String.trim()
       [] -> conn.remote_ip |> :inet.ntoa() |> to_string()
     end
-  end
-
-  # --- Header pipeline ---
-
-  defp reject_header(headers, name) do
-    downcased = String.downcase(name)
-    Enum.reject(headers, fn {k, _} -> String.downcase(k) == downcased end)
-  end
-
-  defp set_header(headers, _name, nil), do: headers
-
-  defp set_header(headers, name, value) do
-    headers |> reject_header(name) |> Kernel.++([{name, value}])
-  end
-
-  defp add_proxy_headers(headers, conn) do
-    original_host = get_req_header(conn, "host") |> List.first("")
-    remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
-
-    existing_xff = get_req_header(conn, "x-forwarded-for") |> List.first()
-
-    xff_value =
-      if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
-
-    headers ++
-      [
-        {"x-forwarded-for", xff_value},
-        {"x-forwarded-host", original_host},
-        {"x-forwarded-proto", to_string(conn.scheme)}
-      ]
-  end
-
-  defp build_outbound_headers(conn, %SinkRequest{} = req) do
-    conn.req_headers
-    |> reject_header("x-request-id")
-    |> add_proxy_headers(conn)
-    |> set_header("x-request-id", req.request_id)
-    |> set_header("authorization", req.auth_header)
   end
 
   # --- Sink auth resolution ---
