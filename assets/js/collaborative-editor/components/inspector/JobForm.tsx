@@ -16,7 +16,7 @@ import { JobSchema } from '#/collaborative-editor/types/job';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 
 import { AdaptorDisplay } from '../AdaptorDisplay';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { AdaptorSelector } from '../AdaptorSelector';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { createZodValidator } from '../form/createZodValidator';
 import { Tooltip } from '../Tooltip';
@@ -193,25 +193,22 @@ export function JobForm({ job }: JobFormProps) {
     [openCredentialModal]
   );
 
-  // Handle adaptor selection from picker
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      // Update the adaptor package in form
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      form.setFieldValue('adaptor_package', newPackage || null);
+  // Callback to sync adaptor changes to form state
+  const syncAdaptorToForm = useCallback(() => {
+    // Get current form values
+    const currentAdaptorValue = form.getFieldValue('adaptor') as string;
+    const packageMatch = currentAdaptorValue.match(/(.+?)(@|$)/);
+    const newPackage = packageMatch ? packageMatch[1] : currentAdaptorValue;
 
-      // Set version to "latest" by default when picking an adaptor
-      const fullAdaptor = `${newPackage}@latest`;
-      form.setFieldValue('adaptor', fullAdaptor);
+    // Update form state
+    form.setFieldValue('adaptor_package', newPackage || null);
+    form.setFieldValue('adaptor', currentAdaptorValue);
 
-      // Close adaptor picker and always open configure modal
-      setIsAdaptorPickerOpen(false);
-      setAdaptorPickerFromConfigure(false);
-      setIsConfigureModalOpen(true);
-    },
-    [form]
-  );
+    // Reset credential fields in form
+    form.setFieldValue('credential_id', null);
+    form.setFieldValue('project_credential_id', null);
+    form.setFieldValue('keychain_credential_id', null);
+  }, [form]);
 
   // Handler for adaptor changes - immediately syncs to Y.Doc
   const handleAdaptorChange = useCallback(
@@ -385,18 +382,21 @@ export function JobForm({ job }: JobFormProps) {
       />
 
       {/* Adaptor Selection Modal (opened from ConfigureAdaptorModal) */}
-      <AdaptorSelectionModal
+      <AdaptorSelector
         isOpen={isAdaptorPickerOpen}
+        setIsOpen={setIsAdaptorPickerOpen}
         onClose={() => {
-          setIsAdaptorPickerOpen(false);
           // Only return to configure modal if opened from there
           if (adaptorPickerFromConfigure) {
             setIsConfigureModalOpen(true);
           }
           setAdaptorPickerFromConfigure(false);
         }}
-        onSelect={handleAdaptorSelect}
+        job={job}
+        updateJob={updateJob}
+        setIsConfigureModalOpen={setIsConfigureModalOpen}
         projectAdaptors={projectAdaptors}
+        onAdaptorChangeStart={syncAdaptorToForm}
       />
     </div>
   );

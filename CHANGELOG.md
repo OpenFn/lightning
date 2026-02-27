@@ -23,6 +23,11 @@ and this project adheres to
 
 - Show loading state in docs panel when switching adaptors
   [#4461](https://github.com/OpenFn/lightning/issues/4461)
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
+- Auto-increment job name when adaptor display name is already used in workflow
+  [#4464](https://github.com/OpenFn/lightning/issues/4464)
 
 ## [2.15.15-pre.1] - 2026-02-25
 
@@ -45,6 +50,8 @@ and this project adheres to
 
 ### Fixed
 
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)
