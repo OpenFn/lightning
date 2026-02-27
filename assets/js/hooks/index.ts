@@ -760,15 +760,33 @@ export const Copy = {
       }
 
       if (text) {
-        const element = this.el;
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              this.showCopiedTooltip();
+            })
+            .catch(err => {
+              console.error('Failed to copy text: ', err);
+            });
+        } else {
+          // Fallback for insecure contexts (HTTP over non-localhost)
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+
+          try {
+            document.execCommand('copy');
             this.showCopiedTooltip();
-          })
-          .catch(err => {
+          } catch (err) {
             console.error('Failed to copy text: ', err);
-          });
+          } finally {
+            document.body.removeChild(textarea);
+          }
+        }
       }
     });
   },

@@ -8,6 +8,8 @@ defmodule LightningWeb.ChannelLive.Index do
   alias LightningWeb.ChannelLive.FormComponent
   alias LightningWeb.Components.Common
 
+  import LightningWeb.ChannelLive.Helpers
+
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
 
@@ -279,6 +281,7 @@ defmodule LightningWeb.ChannelLive.Index do
       <:header>
         <.tr>
           <.th>Name</.th>
+          <.th>Proxy URL</.th>
           <.th>Sink URL</.th>
           <.th>Requests</.th>
           <.th>Last Activity</.th>
@@ -300,6 +303,31 @@ defmodule LightningWeb.ChannelLive.Index do
               ]}>
                 {channel.name}
               </span>
+            </.td>
+            <.td>
+              <div
+                class="flex items-center gap-1"
+                phx-hook="Tooltip"
+                aria-label="Copy URL"
+                id={"copy-url-#{channel.id}"}
+              >
+                <span
+                  class="truncate font-mono text-sm text-gray-600 max-w-[16rem]"
+                  dir="rtl"
+                >
+                  {channel_proxy_url(channel.id)}
+                </span>
+                <button
+                  type="button"
+                  phx-hook="Copy"
+                  id={"copy-url-btn-#{channel.id}"}
+                  data-content={channel_proxy_url(channel.id)}
+                  class="shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <.icon name="hero-clipboard-document" class="h-4 w-4" />
+                  <span class="sr-only">Copy URL</span>
+                </button>
+              </div>
             </.td>
             <.td class="wrap-break-word max-w-[20rem] text-sm text-gray-600 font-mono">
               {channel.sink_url}
