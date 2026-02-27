@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
 
