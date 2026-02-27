@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
+
 ### Fixed
 
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
@@ -48,8 +51,6 @@ and this project adheres to
 
 ### Fixed
 
-- Validate users before confirming new accounts
-  [#2916](https://github.com/OpenFn/lightning/issues/2916)
 - Reset credentials when changing job adaptor to prevent credential mismatch
   [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
