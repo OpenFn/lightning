@@ -317,29 +317,25 @@ defmodule LightningWeb.ChannelLive.Index do
                 id={"copy-url-tip-#{channel.id}"}
                 tooltip="Copy proxy URL"
               >
-                <button
-                  type="button"
-                  phx-hook="Copy"
+                <.proxy_url_copy
                   id={"copy-url-btn-#{channel.id}"}
-                  data-content={channel_proxy_url(channel.id)}
-                  class="group/copy flex items-center gap-1.5 mt-1 leading-none cursor-pointer hover:text-gray-600"
+                  channel_id={channel.id}
+                  class="mt-1 hover:text-gray-600"
+                  text_class="text-gray-400 max-w-[16rem] group-hover/copy:text-gray-600"
                 >
-                  <.icon
-                    name="lucide-circle-dot"
-                    class="h-4 w-4 shrink-0 text-gray-300"
-                  />
-                  <span
-                    class="truncate font-mono text-xs text-gray-400 max-w-[16rem] translate-y-px group-hover/copy:text-gray-600"
-                    dir="rtl"
-                  >
-                    {channel_proxy_url(channel.id)}
-                  </span>
-                  <.icon
-                    name="hero-clipboard-document"
-                    class="h-4 w-4 shrink-0 text-gray-300 opacity-0 group-hover/copy:opacity-100 transition-opacity"
-                  />
-                  <span class="sr-only">Copy proxy URL</span>
-                </button>
+                  <:leading>
+                    <.icon
+                      name="lucide-circle-dot"
+                      class="h-4 w-4 shrink-0 text-gray-300"
+                    />
+                  </:leading>
+                  <:trailing>
+                    <.icon
+                      name="hero-clipboard-document"
+                      class="h-4 w-4 shrink-0 text-gray-300 opacity-0 group-hover/copy:opacity-100 transition-opacity"
+                    />
+                  </:trailing>
+                </.proxy_url_copy>
               </Common.wrapper_tooltip>
             </.td>
             <.td class="text-gray-700">

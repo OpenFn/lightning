@@ -108,27 +108,20 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
         <div
           :if={@action == :edit}
-          class="flex items-center gap-1 mt-1 mb-4"
+          class="mb-4"
           phx-hook="Tooltip"
-          aria-label="Copy URL"
-          id={"copy-url-modal-#{@channel.id}"}
+          aria-label="Copy proxy URL"
+          id={"copy-url-modal-tooltip-#{@channel.id}"}
         >
-          <span
-            class="truncate font-mono text-xs text-gray-500 max-w-[20rem]"
-            dir="rtl"
-          >
-            {channel_proxy_url(@channel.id)}
-          </span>
-          <button
-            type="button"
-            phx-hook="Copy"
-            id={"copy-url-modal-btn-#{@channel.id}"}
-            data-content={channel_proxy_url(@channel.id)}
-            class="shrink-0 text-gray-400 hover:text-gray-600"
-          >
-            <.icon name="hero-clipboard-document" class="h-4 w-4" />
-            <span class="sr-only">Copy URL</span>
-          </button>
+          <label class="block text-sm font-medium leading-6 text-gray-900">
+            Proxy URL
+          </label>
+          <.proxy_url_copy
+            id={"copy-url-modal-#{@channel.id}"}
+            channel_id={@channel.id}
+            class="mt-1 min-w-0 hover:text-gray-600"
+            text_class="text-gray-500"
+          />
         </div>
 
         <.form
