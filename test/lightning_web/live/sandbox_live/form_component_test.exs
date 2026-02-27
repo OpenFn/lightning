@@ -107,7 +107,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox name already exists"
     end
 
-    test "creating sandbox with blank name disables submit and keeps placeholder",
+    test "creating sandbox with blank name disables submit and shows error",
          %{
            conn: conn,
            parent: parent
@@ -115,14 +115,14 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      render_submit(
+      render_change(
         element(view, "#sandbox-form-new"),
         %{"project" => %{"raw_name" => ""}}
       )
 
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
-      assert html =~ "my-sandbox"
+      assert html =~ "can&#39;t be blank"
     end
 
     test "creating sandbox fails when limiter returns error", %{
@@ -155,6 +155,73 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
 
       assert flash["error"] == error_message
+    end
+
+    test "creating sandbox with name error shows inline error instead of redirecting",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        changeset =
+          Lightning.Projects.Project.changeset(
+            %Lightning.Projects.Project{},
+            %{name: "test-sandbox"}
+          )
+          |> Map.put(:action, :insert)
+          |> Ecto.Changeset.add_error(:name, "has already been taken")
+
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      html =
+        view
+        |> element("#sandbox-form-new")
+        |> render_submit(%{
+          "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+        })
+
+      # Should stay on the form with inline error, not redirect
+      assert html =~ "This value should be unique."
+      refute_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+    end
+
+    test "creating sandbox shows flash error on backend changeset error",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      # Override the default stub to simulate a backend validation error
+      # (e.g. parent has inconsistent retention periods)
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        changeset =
+          Lightning.Projects.Project.changeset(
+            %Lightning.Projects.Project{},
+            %{
+              name: "test-sandbox",
+              history_retention_period: 7,
+              dataclip_retention_period: 30
+            }
+          )
+          |> Map.put(:action, :insert)
+
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+      })
+
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert flash["error"] =~ "Something went wrong"
     end
   end
 
@@ -204,8 +271,8 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
           if name in [nil, ""] do
             {:error,
-             %Ecto.Changeset{}
-             |> Ecto.Changeset.change(current_sb)
+             current_sb
+             |> Ecto.Changeset.change()
              |> Map.put(:action, :update)
              |> Ecto.Changeset.add_error(:name, "can't be blank")}
           else
@@ -247,6 +314,24 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         )
 
       assert html =~ "Sandbox updated"
+    end
+
+    test "updating sandbox with blank name shows error", %{
+      conn: conn,
+      parent: parent,
+      sb: sb
+    } do
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_submit(%{"project" => %{"raw_name" => ""}})
+
+      html = render(view)
+      assert html =~ "can&#39;t be blank"
     end
 
     test "color input displays existing sandbox color", %{

@@ -909,6 +909,28 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Gets the user by confirmation token.
+
+  ## Examples
+
+      iex> get_user_by_confirmation_token("validtoken")
+      %User{}
+
+      iex> get_user_by_confirmation_token("invalidtoken")
+      nil
+
+  """
+  def get_user_by_confirmation_token(token) do
+    with {:ok, query} <-
+           UserToken.verify_email_token_query(token, "confirm"),
+         %User{} = user <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
   Confirms a user by the given token.
 
   If the token matches, the user account is marked as confirmed

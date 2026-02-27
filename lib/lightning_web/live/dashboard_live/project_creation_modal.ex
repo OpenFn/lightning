@@ -8,13 +8,14 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
   @impl true
   def update(assigns, socket) do
     project = %Project{}
-    changeset = Project.changeset(project, %{})
+    changeset = Project.form_changeset(project, %{})
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(project: project)
-     |> assign(changeset: changeset)}
+     |> assign(changeset: changeset)
+     |> assign(:name, Ecto.Changeset.get_field(changeset, :name))}
   end
 
   @impl true
@@ -25,10 +26,8 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
   def handle_event("validate", %{"project" => project_params}, socket) do
     changeset =
       socket.assigns.project
-      |> Project.changeset(
-        project_params
-        |> coerce_raw_name_to_safe_name
-      )
+      |> Project.form_changeset(project_params)
+      |> Helpers.copy_error(:name, :raw_name)
       |> Map.put(:action, :validate)
 
     {:noreply,
@@ -41,6 +40,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
     %{current_user: current_user, return_to: return_to} = socket.assigns
 
     project_params
+    |> Helpers.derive_name_param()
     |> Map.put_new("project_users", %{
       0 => %{
         "user_id" => current_user.id,
@@ -57,18 +57,9 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
          |> push_navigate(to: return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :project_changeset, changeset)}
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+        {:noreply, assign(socket, :changeset, changeset)}
     end
-  end
-
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Helpers.url_safe_name(raw_name)
-
-    params |> Map.put("name", new_name)
-  end
-
-  defp coerce_raw_name_to_safe_name(%{} = params) do
-    params
   end
 
   @impl true
@@ -105,10 +96,9 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
               <.input type="text" field={f[:raw_name]} label="Name" required="true" />
               <.input type="hidden" field={f[:name]} />
               <small class="mt-2 block text-xs text-gray-600">
-                <%= if to_string(f[:name].value) != "" do %>
-                  Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
-      <%= @name %></span>.
-                <% end %>
+                <.name_badge name={@name} field={f[:name]}>
+                  Your project will be named
+                </.name_badge>
               </small>
             </div>
             <div class="space-y-4">

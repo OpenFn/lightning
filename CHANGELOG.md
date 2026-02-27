@@ -19,19 +19,40 @@ and this project adheres to
 
 ### Changed
 
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
+
+### Fixed
+
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
+- Auto-increment job name when adaptor display name is already used in workflow
+  [#4464](https://github.com/OpenFn/lightning/issues/4464)
+
+## [2.15.15-pre.1] - 2026-02-25
+
+### Fixed
+
+- External ID uniqueness migration failing because of `IO.puts`
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+
+## [2.15.15-pre] - 2026-02-25
+
+### Changed
+
 - Editors can now provision and merge sandboxes; merge checks editor+ role on
   the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
 - Show specific workflow names in sandbox merge dialog when target project has
   diverged, instead of generic warning message
   [#4001](https://github.com/OpenFn/lightning/issues/4001)
-- Use distinct `api_provisioning` action type in provisioner to return a
-  context-appropriate error message for CLI deploy vs GitHub sync
-  [#4426](https://github.com/OpenFn/lightning/issues/4426)
 - show better error message for validation errors
   [#4429](https://github.com/OpenFn/lightning/issues/4429)
 
 ### Fixed
 
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)
@@ -40,6 +61,20 @@ and this project adheres to
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 - unable to clear runs from history & url params rewrite
   [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Usage limits incorrectly applied to CLI provisioning
+  [#4442](https://github.com/OpenFn/lightning/pull/4442)
+- Fix retention period cross-field validation being skipped when only history
+  retention is changed, which blocked sandbox creation for affected projects
+  [#4385](https://github.com/OpenFn/lightning/issues/4385)
+- Fix sandbox creation crash when cloning Kafka triggers
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Fix sandbox creation failing silently on backend validation errors
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Project settings form now auto-converts project names to url-safe format,
+  matching the creation form behavior
+  [#4437](https://github.com/OpenFn/lightning/issues/4437)
+- Remove Keychain from the credential type picker grid
+  [#4453](https://github.com/OpenFn/lightning/issues/4453)
 
 ## [2.15.14] - 2026-02-13
 
