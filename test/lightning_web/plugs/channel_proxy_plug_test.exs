@@ -187,6 +187,51 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.resp_body == "root"
     end
 
+    test "trailing slash on sink_url does not produce double slash", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}/",
+          enabled: true
+        )
+
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "root")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "root"
+    end
+
+    test "trailing slash on sink_url with subpath", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}/",
+          enabled: true
+        )
+
+      Bypass.expect_once(bypass, "GET", "/api/data", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/api/data")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
     test "proxy headers forwarded to sink", %{
       conn: conn,
       bypass: bypass,
