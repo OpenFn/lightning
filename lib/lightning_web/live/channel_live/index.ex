@@ -313,33 +313,34 @@ defmodule LightningWeb.ChannelLive.Index do
                   {channel.sink_url}
                 </span>
               </div>
-              <div class="flex items-center gap-1.5 mt-1 leading-none">
-                <.icon
-                  name="lucide-square-arrow-right-enter"
-                  class="h-4 w-4 shrink-0 text-gray-300"
-                />
-                <span
-                  class="truncate font-mono text-xs text-gray-400 max-w-[16rem] translate-y-px"
-                  dir="rtl"
+              <Common.wrapper_tooltip
+                id={"copy-url-tip-#{channel.id}"}
+                tooltip="Copy proxy URL"
+              >
+                <button
+                  type="button"
+                  phx-hook="Copy"
+                  id={"copy-url-btn-#{channel.id}"}
+                  data-content={channel_proxy_url(channel.id)}
+                  class="group/copy flex items-center gap-1.5 mt-1 leading-none cursor-pointer hover:text-gray-600"
                 >
-                  {channel_proxy_url(channel.id)}
-                </span>
-                <Common.wrapper_tooltip
-                  id={"copy-url-tip-#{channel.id}"}
-                  tooltip="Copy proxy URL"
-                >
-                  <button
-                    type="button"
-                    phx-hook="Copy"
-                    id={"copy-url-btn-#{channel.id}"}
-                    data-content={channel_proxy_url(channel.id)}
-                    class="flex shrink-0 text-gray-300 hover:text-gray-500"
+                  <.icon
+                    name="lucide-circle-dot"
+                    class="h-4 w-4 shrink-0 text-gray-300"
+                  />
+                  <span
+                    class="truncate font-mono text-xs text-gray-400 max-w-[16rem] translate-y-px group-hover/copy:text-gray-600"
+                    dir="rtl"
                   >
-                    <.icon name="hero-clipboard-document" class="h-4 w-4" />
-                    <span class="sr-only">Copy proxy URL</span>
-                  </button>
-                </Common.wrapper_tooltip>
-              </div>
+                    {channel_proxy_url(channel.id)}
+                  </span>
+                  <.icon
+                    name="hero-clipboard-document"
+                    class="h-4 w-4 shrink-0 text-gray-300 opacity-0 group-hover/copy:opacity-100 transition-opacity"
+                  />
+                  <span class="sr-only">Copy proxy URL</span>
+                </button>
+              </Common.wrapper_tooltip>
             </.td>
             <.td class="text-gray-700">
               {count}
