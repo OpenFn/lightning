@@ -166,6 +166,19 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid"
     end
+
+    test "redirects without error if already confirmed user visits stale link",
+         %{conn: conn, user: user} do
+      Repo.update!(Accounts.User.confirm_changeset(user))
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.user_confirmation_path(conn, :edit, "old-consumed-token"))
+
+      assert redirected_to(conn) == "/projects"
+      refute Phoenix.Flash.get(conn.assigns.flash, :error)
+    end
   end
 
   describe "POST /users/confirm/:token" do
