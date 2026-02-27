@@ -150,7 +150,19 @@ defmodule Lightning.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    with {:ok, pid} <- Supervisor.start_link(children, opts) do
+      schedule_adaptor_refresh()
+      {:ok, pid}
+    end
+  end
+
+  defp schedule_adaptor_refresh do
+    unless Lightning.AdaptorRegistry.local_adaptors_enabled?() or
+             Lightning.Config.env() == :test do
+      Lightning.AdaptorRefreshWorker.new(%{}, schedule_in: 0)
+      |> Oban.insert()
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration
