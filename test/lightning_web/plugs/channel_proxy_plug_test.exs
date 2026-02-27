@@ -209,6 +209,25 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.status == 200
     end
 
+    test "x-request-id forwarded to sink", %{bypass: bypass, channel: channel} do
+      test_pid = self()
+
+      Bypass.expect_once(bypass, "GET", "/trace", fn conn ->
+        [received_id] = Plug.Conn.get_req_header(conn, "x-request-id")
+        send(test_pid, {:sink_request_id, received_id})
+        Plug.Conn.send_resp(conn, 200, "traced")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/trace")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      [response_id] = Plug.Conn.get_resp_header(resp, "x-request-id")
+      assert_receive {:sink_request_id, ^response_id}
+    end
+
     test "response headers from sink forwarded to client", %{
       conn: conn,
       bypass: bypass,
