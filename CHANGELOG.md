@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
+
 ### Fixed
 
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
@@ -31,7 +34,7 @@ and this project adheres to
 
 ### Fixed
 
-- Exteranl ID uniqueness migration failing because of `IO.puts`
+- External ID uniqueness migration failing because of `IO.puts`
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 
 ## [2.15.15-pre] - 2026-02-25
