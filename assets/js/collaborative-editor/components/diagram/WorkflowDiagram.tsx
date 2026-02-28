@@ -756,13 +756,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         fallback: 'Unknown',
       });
 
+      // Generate a unique job name by appending an incrementing number if needed
+      const existingNames = new Set(jobs.map(j => j.name));
+      let uniqueName = adaptorDisplayName;
+      let counter = 1;
+      while (existingNames.has(uniqueName)) {
+        uniqueName = `${adaptorDisplayName} ${counter}`;
+        counter++;
+      }
+
       // Generate job ID
       const jobId = randomUUID();
 
       // Create job directly in Y.Doc (this will trigger animation)
       const newJob = {
         id: jobId,
-        name: adaptorDisplayName,
+        name: uniqueName,
         body: '',
         adaptor: adaptorSpec,
       };
