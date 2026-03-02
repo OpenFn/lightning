@@ -305,7 +305,8 @@ defmodule Lightning.ChannelsTest do
                  actor: user
                )
 
-      assert %{project_id: _} = errors_on(changeset)
+      assert %{name: ["A channel with this name already exists in this project"]} =
+               errors_on(changeset)
     end
   end
 

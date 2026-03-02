@@ -154,9 +154,9 @@ defmodule LightningWeb.ChannelRequestLive.IndexTest do
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project.id}/channels/requests")
 
-      assert html =~ "success"
-      assert html =~ "failed"
-      assert html =~ "pending"
+      assert html =~ "Success"
+      assert html =~ "Failed"
+      assert html =~ "Enqueued"
     end
   end
 
