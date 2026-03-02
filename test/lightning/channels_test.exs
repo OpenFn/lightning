@@ -7,7 +7,6 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Channels
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
-  alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Channels.SearchParams
@@ -782,31 +781,15 @@ defmodule Lightning.ChannelsTest do
       %{project: project, channel: channel, snapshot: snapshot}
     end
 
-    defp insert_request(channel, snapshot, attrs \\ %{}) do
-      Lightning.Repo.insert!(
-        struct(
-          %ChannelRequest{
-            channel_id: channel.id,
-            channel_snapshot_id: snapshot.id,
-            request_id: Ecto.UUID.generate(),
-            state: :success,
-            started_at: DateTime.utc_now()
-          },
-          attrs
-        )
+    defp insert_request(channel, snapshot, attrs \\ []) do
+      insert(
+        :channel_request,
+        [channel: channel, channel_snapshot: snapshot, state: :success] ++ attrs
       )
     end
 
     defp insert_event(request, attrs) do
-      Lightning.Repo.insert!(
-        struct(
-          %ChannelEvent{
-            channel_request_id: request.id,
-            type: :source_received
-          },
-          attrs
-        )
-      )
+      insert(:channel_event, [channel_request: request] ++ attrs)
     end
 
     test "returns a Scrivener.Page scoped to the given project", %{
@@ -900,10 +883,10 @@ defmodule Lightning.ChannelsTest do
          %{project: project, channel: channel, snapshot: snapshot} do
       request = insert_request(channel, snapshot)
 
-      insert_event(request, %{type: :source_received, request_path: "/inbound"})
-      insert_event(request, %{type: :sink_request})
-      insert_event(request, %{type: :sink_response})
-      insert_event(request, %{type: :error, error_message: "timeout"})
+      insert_event(request, type: :source_received, request_path: "/inbound")
+      insert_event(request, type: :sink_request)
+      insert_event(request, type: :sink_response)
+      insert_event(request, type: :error, error_message: "timeout")
 
       page = Channels.list_channel_requests(project, SearchParams.new(%{}))
 
@@ -933,8 +916,8 @@ defmodule Lightning.ChannelsTest do
       t1 = ~U[2025-01-01 10:00:00.000000Z]
       t2 = ~U[2025-01-02 10:00:00.000000Z]
 
-      insert_request(channel, snapshot, %{started_at: t1})
-      insert_request(channel, snapshot, %{started_at: t2})
+      insert_request(channel, snapshot, started_at: t1)
+      insert_request(channel, snapshot, started_at: t2)
 
       page = Channels.list_channel_requests(project, SearchParams.new(%{}))
 
