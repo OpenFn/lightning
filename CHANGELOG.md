@@ -19,6 +19,32 @@ and this project adheres to
 
 ### Changed
 
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
+
+### Fixed
+
+- Lower side panel z-index to prevent covering IDE in create workflow for
+  templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
+- Fix duplicate "Log in" heading on login page
+  [#4459](https://github.com/OpenFn/lightning/issues/4459)
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
+- Auto-increment job name when adaptor display name is already used in workflow
+  [#4464](https://github.com/OpenFn/lightning/issues/4464)
+
+## [2.15.15-pre.1] - 2026-02-25
+
+### Fixed
+
+- External ID uniqueness migration failing because of `IO.puts`
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+
+## [2.15.15-pre] - 2026-02-25
+
+### Changed
+
 - Editors can now provision and merge sandboxes; merge checks editor+ role on
   the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
 - Show specific workflow names in sandbox merge dialog when target project has
@@ -29,8 +55,8 @@ and this project adheres to
 
 ### Fixed
 
-- Lower side panel z-index to prevent covering IDE in create workflow for
-  templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)
@@ -51,6 +77,8 @@ and this project adheres to
 - Project settings form now auto-converts project names to url-safe format,
   matching the creation form behavior
   [#4437](https://github.com/OpenFn/lightning/issues/4437)
+- Remove Keychain from the credential type picker grid
+  [#4453](https://github.com/OpenFn/lightning/issues/4453)
 
 ## [2.15.14] - 2026-02-13
 
