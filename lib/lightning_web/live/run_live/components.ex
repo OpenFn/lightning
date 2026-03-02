@@ -107,7 +107,10 @@ defmodule LightningWeb.RunLive.Components do
       cancelled: "bg-gray-500 text-gray-800",
       killed: "bg-yellow-200 text-yellow-800",
       exception: "bg-gray-800 text-white",
-      lost: "bg-gray-800 text-white"
+      lost: "bg-gray-800 text-white",
+      # channel request states
+      error: "bg-red-200 text-red-800",
+      timeout: "bg-orange-200 text-orange-800"
     }
 
     assigns =

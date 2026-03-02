@@ -35,7 +35,7 @@ defmodule LightningWeb.ChannelLive.Index do
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
-        <.channel_metrics channel_stats={@channel_stats} />
+        <.channel_metrics channel_stats={@channel_stats} project={@project} />
         <div class="w-full">
           <div class="mt-14 flex justify-between mb-3">
             <h3 class="text-3xl font-bold">
@@ -239,6 +239,7 @@ defmodule LightningWeb.ChannelLive.Index do
   # --- Private components ---
 
   attr :channel_stats, :map, required: true
+  attr :project, :map, required: true
 
   defp channel_metrics(assigns) do
     ~H"""
@@ -250,7 +251,15 @@ defmodule LightningWeb.ChannelLive.Index do
         </div>
       </div>
       <div class="bg-white shadow rounded-lg py-2 px-6">
-        <h2 class="text-sm text-gray-500">Total Requests</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm text-gray-500">Total Requests</h2>
+          <.link
+            navigate={~p"/projects/#{@project}/channels/requests"}
+            class="text-xs text-indigo-600 hover:text-indigo-800"
+          >
+            View all
+          </.link>
+        </div>
         <div class="text-3xl font-bold text-gray-800">
           {@channel_stats.total_requests}
         </div>

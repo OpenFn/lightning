@@ -2,13 +2,20 @@ defmodule LightningWeb.ChannelRequestLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
-  import PetalComponents.Badge
-
   alias Lightning.Channels
   alias Lightning.Channels.SearchParams
   alias LightningWeb.Components.Common
+  alias LightningWeb.RunLive.Components, as: RunComponents
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  @empty_page %{
+    entries: [],
+    page_number: 1,
+    page_size: 0,
+    total_entries: 0,
+    total_pages: 0
+  }
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,7 +29,7 @@ defmodule LightningWeb.ChannelRequestLive.Index do
        channels: channels,
        search_params: SearchParams.new(%{}),
        filters_changeset: SearchParams.changeset(),
-       page: empty_page()
+       page: @empty_page
      )}
   end
 
@@ -77,35 +84,14 @@ defmodule LightningWeb.ChannelRequestLive.Index do
     end
   end
 
-  defp state_color(:success), do: "success"
-  defp state_color(:pending), do: "warning"
-  defp state_color(:failed), do: "danger"
-  defp state_color(:timeout), do: "warning"
-  defp state_color(:error), do: "danger"
+  defp build_pagination_path(page_params, project, %SearchParams{
+         channel_id: channel_id
+       }) do
+    params =
+      if channel_id,
+        do: Keyword.put(page_params, :filters, %{channel_id: channel_id}),
+        else: page_params
 
-  defp build_pagination_path(
-         page_params,
-         project,
-         %SearchParams{channel_id: nil}
-       ) do
-    ~p"/projects/#{project.id}/channels/requests?#{page_params}"
-  end
-
-  defp build_pagination_path(
-         page_params,
-         project,
-         %SearchParams{channel_id: channel_id}
-       ) do
-    ~p"/projects/#{project.id}/channels/requests?#{%{filters: %{channel_id: channel_id}, page: page_params}}"
-  end
-
-  defp empty_page do
-    %{
-      entries: [],
-      page_number: 1,
-      page_size: 10,
-      total_entries: 0,
-      total_pages: 0
-    }
+    ~p"/projects/#{project.id}/channels/requests?#{params}"
   end
 end

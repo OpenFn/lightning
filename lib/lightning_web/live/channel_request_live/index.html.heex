@@ -79,8 +79,10 @@
           <% else %>
             <%= for entry <- @page.entries do %>
               <.tr id={"request-#{entry.id}"}>
-                <.td class="font-mono text-xs text-gray-600">
-                  {entry.request_id}
+                <.td>
+                  <span class="link-uuid" title={entry.request_id}>
+                    {display_short_uuid(entry.request_id)}
+                  </span>
                 </.td>
                 <.td class="text-sm text-gray-700">
                   {source_event_path(entry) || "—"}
@@ -99,10 +101,7 @@
                   <Common.datetime datetime={entry.started_at} />
                 </.td>
                 <.td>
-                  <.badge
-                    color={state_color(entry.state)}
-                    label={to_string(entry.state)}
-                  />
+                  <RunComponents.state_pill state={entry.state} />
                 </.td>
                 <.td class="text-sm text-gray-500 max-w-xs truncate">
                   {error_event_message(entry) || "—"}
