@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix duplicate "Log in" heading on login page
+  [#4459](https://github.com/OpenFn/lightning/issues/4459)
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
   "OAuth client not found" warning
   [#4468](https://github.com/OpenFn/lightning/issues/4468)
