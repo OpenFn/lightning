@@ -85,7 +85,7 @@
                   </span>
                 </.td>
                 <.td class="text-sm text-gray-700">
-                  {source_event_path(entry) || "—"}
+                  {source_event_path(entry)}
                 </.td>
                 <.td class="text-sm text-gray-700">
                   <.link
@@ -104,7 +104,7 @@
                   <RunComponents.state_pill state={entry.state} />
                 </.td>
                 <.td class="text-sm text-gray-500 max-w-xs truncate">
-                  {error_event_message(entry) || "—"}
+                  {error_event_message(entry)}
                 </.td>
               </.tr>
             <% end %>

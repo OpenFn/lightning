@@ -68,7 +68,7 @@ defmodule LightningWeb.ChannelRequestLive.Index do
 
   defp source_event_path(channel_request) do
     channel_request.channel_events
-    |> Enum.find(&(&1.type == :source_received))
+    |> Enum.find(&(&1.type == :sink_response))
     |> case do
       nil -> nil
       event -> event.request_path

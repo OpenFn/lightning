@@ -101,7 +101,7 @@ defmodule Lightning.Channels do
       ) do
     events_query =
       from(e in ChannelEvent,
-        where: e.type in [:source_received, :error],
+        where: e.type in [:sink_response, :error],
         order_by: [e.channel_request_id, e.inserted_at]
       )
 
