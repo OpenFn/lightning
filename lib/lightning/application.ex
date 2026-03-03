@@ -171,8 +171,10 @@ defmodule Lightning.Application do
   defp schedule_adaptor_refresh do
     unless Lightning.AdaptorRegistry.local_adaptors_enabled?() or
              Lightning.Config.env() == :test do
-      Lightning.AdaptorRefreshWorker.new(%{}, schedule_in: 0)
-      |> Oban.insert()
+      Task.start(fn ->
+        Lightning.AdaptorRefreshWorker.new(%{}, schedule_in: 0)
+        |> then(&Oban.insert(Lightning.Oban, &1))
+      end)
     end
   end
 
