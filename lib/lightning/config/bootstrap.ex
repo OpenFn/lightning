@@ -460,8 +460,6 @@ defmodule Lightning.Config.Bootstrap do
       queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
-    host = env!("URL_HOST", :string, "example.com")
-
     port =
       env!(
         "PORT",
@@ -469,10 +467,29 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, LightningWeb.Endpoint, :http, :port])
       )
 
-    url_port = env!("URL_PORT", :integer, 443)
+    {url_host_default, url_port_default, url_scheme_default} =
+      if config_env() == :prod do
+        {"example.com", 443, "https"}
+      else
+        {
+          Utils.get_env(
+            [:lightning, LightningWeb.Endpoint, :url, :host],
+            "localhost"
+          ),
+          port,
+          Utils.get_env(
+            [:lightning, LightningWeb.Endpoint, :url, :scheme],
+            "http"
+          )
+        }
+      end
+
+    host = env!("URL_HOST", :string, url_host_default)
+    url_port = env!("URL_PORT", :integer, url_port_default)
+    url_scheme = env!("URL_SCHEME", :string, url_scheme_default)
 
     config :lightning, LightningWeb.Endpoint,
-      url: [port: port],
+      url: [host: host, port: url_port, scheme: url_scheme],
       http: [port: port]
 
     config :lightning,
@@ -542,8 +559,6 @@ defmodule Lightning.Config.Bootstrap do
           nil
         )
 
-      url_scheme = env!("URL_SCHEME", :string, "https")
-
       retry_timeout_ms = Lightning.Config.webhook_retry(:timeout_ms)
 
       idle_default_ms = max(60_000, retry_timeout_ms + 15_000)
@@ -561,7 +576,6 @@ defmodule Lightning.Config.Bootstrap do
         )
 
       config :lightning, LightningWeb.Endpoint,
-        url: [host: host, port: url_port, scheme: url_scheme],
         secret_key_base: secret_key_base,
         check_origin: origins,
         http: [
