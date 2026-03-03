@@ -451,7 +451,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.resp_body == "authenticated"
     end
 
-    test "API key auth — wrong key returns 404", %{bypass: bypass} do
+    test "API key auth — wrong key returns 401", %{bypass: bypass} do
       channel =
         create_source_auth_channel(bypass, [
           %{auth_type: :api, api_key: "correct-key"}
@@ -462,8 +462,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> put_req_header("x-api-key", "wrong-key")
         |> send_to_endpoint()
 
-      assert resp.status == 404
-      assert %{"error" => "Not Found"} = json_response(resp, 404)
+      assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
     end
 
     test "API key auth — no key sent returns 401", %{bypass: bypass} do
@@ -501,7 +501,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.resp_body == "basic-ok"
     end
 
-    test "Basic auth — wrong credentials returns 404", %{bypass: bypass} do
+    test "Basic auth — wrong credentials returns 401", %{bypass: bypass} do
       channel =
         create_source_auth_channel(bypass, [
           %{auth_type: :basic, username: "admin", password: "secret"}
@@ -514,8 +514,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> put_req_header("authorization", "Basic #{encoded}")
         |> send_to_endpoint()
 
-      assert resp.status == 404
-      assert %{"error" => "Not Found"} = json_response(resp, 404)
+      assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
     end
 
     test "Basic auth — no auth header returns 401", %{bypass: bypass} do

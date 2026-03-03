@@ -151,23 +151,12 @@ defmodule LightningWeb.ChannelProxyPlug do
       |> Enum.map(& &1.webhook_auth_method)
       |> Enum.reject(&is_nil/1)
 
-    case methods do
-      [] -> :ok
-      _ -> check_source_auth(conn, methods)
-    end
-  end
-
-  defp check_source_auth(conn, auth_methods) do
-    cond do
-      Auth.valid_key?(conn, auth_methods) or
-          Auth.valid_user?(conn, auth_methods) ->
-        :ok
-
-      Auth.has_credentials?(conn) ->
-        :not_found
-
-      true ->
-        :unauthorized
+    if methods == [] or
+         Auth.valid_key?(conn, methods) or
+         Auth.valid_user?(conn, methods) do
+      :ok
+    else
+      :unauthorized
     end
   end
 
