@@ -25,6 +25,7 @@ import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
+import { useMonacoRef } from '../../contexts/MonacoRefContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -56,8 +57,8 @@ import {
 import { isFinalState } from '../../types/history';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { AdaptorSelector } from '../AdaptorSelector';
+import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
@@ -123,8 +124,7 @@ export function FullScreenIDE({
 }: FullScreenIDEProps) {
   const { params, updateSearchParams } = useURLState();
   const jobIdFromURL = params.job ?? null;
-  // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
-  const runIdFromURL = params.run ?? params.a ?? null;
+  const runIdFromURL = params.run ?? null;
   const stepIdFromURL = params.step ?? null;
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
@@ -149,6 +149,10 @@ export function FullScreenIDE({
   const workflowId = useWorkflowState(state => state.workflow?.id);
 
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
+  // Get shared monaco ref from context (for AI Assistant diff preview)
+  // Fallback to local ref if context not available (shouldn't happen)
+  const localMonacoRef = useRef<MonacoHandle>(null);
+  const monacoRef = useMonacoRef() ?? localMonacoRef;
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -333,7 +337,7 @@ export function FullScreenIDE({
       return;
     }
 
-    const runId = params.run ?? params.a ?? null;
+    const runId = params.run ?? null;
     if (!runId) {
       return;
     }
@@ -592,24 +596,6 @@ export function FullScreenIDE({
     [openCredentialModal]
   );
 
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      if (!currentJob) return;
-
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      const fullAdaptor = `${newPackage}@latest`;
-
-      updateJob(currentJob.id, { adaptor: fullAdaptor });
-
-      setIsAdaptorPickerOpen(false);
-      setAdaptorPickerFromConfigure(false);
-      // Always open configure modal after selecting an adaptor
-      setIsConfigureModalOpen(true);
-    },
-    [currentJob, updateJob]
-  );
-
   // Handler for adaptor changes - immediately syncs to Y.Doc
   const handleAdaptorChange = useCallback(
     (adaptorPackage: string) => {
@@ -824,7 +810,7 @@ export function FullScreenIDE({
 
       {/* IDE Heading Bar */}
       <div className="flex-none bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Job Selector - show when workflow loaded, even if no job selected */}
             {workflow && (
@@ -1006,6 +992,7 @@ export function FullScreenIDE({
                           </div>
                         ) : currentJob && currentJobYText ? (
                           <CollaborativeMonaco
+                            ref={monacoRef}
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
@@ -1353,17 +1340,19 @@ export function FullScreenIDE({
             allAdaptors={allAdaptors}
           />
 
-          <AdaptorSelectionModal
+          <AdaptorSelector
             isOpen={isAdaptorPickerOpen}
+            setIsOpen={setIsAdaptorPickerOpen}
             onClose={() => {
-              setIsAdaptorPickerOpen(false);
               // Only return to configure modal if opened from there
               if (adaptorPickerFromConfigure) {
                 setIsConfigureModalOpen(true);
               }
               setAdaptorPickerFromConfigure(false);
             }}
-            onSelect={handleAdaptorSelect}
+            job={currentJob}
+            updateJob={updateJob}
+            setIsConfigureModalOpen={setIsConfigureModalOpen}
             projectAdaptors={projectAdaptors}
           />
         </>

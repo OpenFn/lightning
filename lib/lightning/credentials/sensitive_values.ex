@@ -56,5 +56,6 @@ defmodule Lightning.Credentials.SensitiveValues do
       String.downcase(k) in @safe_keys || is_nil(v)
     end)
     |> Enum.map(fn {_k, v} -> v end)
+    |> Enum.uniq()
   end
 end

@@ -63,44 +63,51 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     |> validate_number(:connect_timeout, greater_than: 0)
   end
 
-  def generate_hosts_string(changeset) do
+  def generate_hosts_string(%Ecto.Changeset{} = changeset) do
     hosts_string =
       changeset
       |> get_field(:hosts)
-      |> case do
-        nil ->
-          ""
-
-        hosts ->
-          hosts
-          |> Enum.map_join(
-            ", ",
-            fn
-              [host, port] -> "#{host}:#{port}"
-              something_else -> something_else
-            end
-          )
-      end
+      |> generate_hosts_string()
 
     changeset
     |> put_change(:hosts_string, hosts_string)
   end
 
-  def generate_topics_string(changeset) do
+  def generate_hosts_string(hosts) do
+    case hosts do
+      nil ->
+        ""
+
+      hosts when is_list(hosts) ->
+        Enum.map_join(
+          hosts,
+          ", ",
+          fn
+            [host, port] -> "#{host}:#{port}"
+            something_else -> something_else
+          end
+        )
+    end
+  end
+
+  def generate_topics_string(%Ecto.Changeset{} = changeset) do
     topics_string =
       changeset
       |> get_field(:topics)
-      |> case do
-        nil ->
-          ""
-
-        topics ->
-          topics
-          |> Enum.join(", ")
-      end
+      |> generate_topics_string()
 
     changeset
     |> put_change(:topics_string, topics_string)
+  end
+
+  def generate_topics_string(topics) do
+    case topics do
+      nil ->
+        ""
+
+      topics when is_list(topics) ->
+        Enum.join(topics, ", ")
+    end
   end
 
   def apply_hosts_string(changeset) do

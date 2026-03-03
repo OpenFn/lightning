@@ -268,6 +268,11 @@ defmodule Lightning.Config do
       promex_config() |> Keyword.get(:expensive_metrics_enabled)
     end
 
+    @impl true
+    def promex_enabled? do
+      not (promex_config() |> Keyword.get(:disabled, false))
+    end
+
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
     end
@@ -335,6 +340,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def claim_work_mem do
+      Application.get_env(:lightning, :claim_work_mem)
+    end
+
+    @impl true
     def broadcast_work_available? do
       Application.get_env(:lightning, :broadcast_work_available)
     end
@@ -387,6 +397,12 @@ defmodule Lightning.Config do
     def runtime_manager_port do
       Application.get_env(:lightning, Lightning.Runtime.RuntimeManager, [])
       |> Keyword.get(:port, 2222)
+    end
+
+    @impl true
+    def max_credential_sensitive_values do
+      Application.get_env(:lightning, Lightning.Scrubber, [])
+      |> Keyword.get(:max_credential_sensitive_values, 50)
     end
 
     defp default_webhook_retry do
@@ -447,6 +463,7 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
   @callback promex_expensive_metrics_enabled?() :: boolean()
+  @callback promex_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
   @callback default_ecto_database_timeout() :: integer()
@@ -475,12 +492,14 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
+  @callback claim_work_mem() :: String.t() | nil
   @callback broadcast_work_available?() :: boolean()
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
   @callback webhook_response_timeout_ms() :: integer()
   @callback runtime_manager_port() :: integer()
+  @callback max_credential_sensitive_values() :: pos_integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -672,6 +691,10 @@ defmodule Lightning.Config do
     impl().promex_expensive_metrics_enabled?()
   end
 
+  def promex_enabled? do
+    impl().promex_enabled?()
+  end
+
   def ui_metrics_tracking_enabled? do
     impl().ui_metrics_tracking_enabled?()
   end
@@ -728,6 +751,10 @@ defmodule Lightning.Config do
     impl().per_workflow_claim_limit()
   end
 
+  def claim_work_mem do
+    impl().claim_work_mem()
+  end
+
   def broadcast_work_available? do
     impl().broadcast_work_available?()
   end
@@ -750,6 +777,16 @@ defmodule Lightning.Config do
 
   def runtime_manager_port do
     impl().runtime_manager_port()
+  end
+
+  @doc """
+  Returns the maximum number of sensitive values allowed in a credential body.
+
+  This limit prevents performance issues with the scrubber when credentials
+  have very large bodies with many secrets.
+  """
+  def max_credential_sensitive_values do
+    impl().max_credential_sensitive_values()
   end
 
   defp impl do

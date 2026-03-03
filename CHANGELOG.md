@@ -21,8 +21,279 @@ and this project adheres to
 
 - Support a batch of logs submitted via `run:batch_logs` in run channel
   [#4123](https://github.com/OpenFn/lightning/issues/4123)
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
 
 ### Fixed
+
+- Fix duplicate "Log in" heading on login page
+  [#4459](https://github.com/OpenFn/lightning/issues/4459)
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
+- Auto-increment job name when adaptor display name is already used in workflow
+  [#4464](https://github.com/OpenFn/lightning/issues/4464)
+
+## [2.15.15] - 2026-03-02
+
+## [2.15.15-pre.1] - 2026-02-25
+
+### Fixed
+
+- External ID uniqueness migration failing because of `IO.puts`
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+
+## [2.15.15-pre] - 2026-02-25
+
+### Changed
+
+- Editors can now provision and merge sandboxes; merge checks editor+ role on
+  the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
+- Show specific workflow names in sandbox merge dialog when target project has
+  diverged, instead of generic warning message
+  [#4001](https://github.com/OpenFn/lightning/issues/4001)
+- show better error message for validation errors
+  [#4429](https://github.com/OpenFn/lightning/issues/4429)
+
+### Fixed
+
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
+- Ensure workflows have version history before sandbox creation, merging, and
+  importing to prevent squashing of the first workflow version
+  [#3958](https://github.com/OpenFn/lightning/issues/3958)
+- Enforce `external_id` uniqueness on credentials per user and per project to
+  prevent ambiguous keychain resolution
+  [#4170](https://github.com/OpenFn/lightning/issues/4170)
+- unable to clear runs from history & url params rewrite
+  [#4397](https://github.com/OpenFn/lightning/issues/4397)
+- Usage limits incorrectly applied to CLI provisioning
+  [#4442](https://github.com/OpenFn/lightning/pull/4442)
+- Fix retention period cross-field validation being skipped when only history
+  retention is changed, which blocked sandbox creation for affected projects
+  [#4385](https://github.com/OpenFn/lightning/issues/4385)
+- Fix sandbox creation crash when cloning Kafka triggers
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Fix sandbox creation failing silently on backend validation errors
+  [#4440](https://github.com/OpenFn/lightning/issues/4440)
+- Project settings form now auto-converts project names to url-safe format,
+  matching the creation form behavior
+  [#4437](https://github.com/OpenFn/lightning/issues/4437)
+- Remove Keychain from the credential type picker grid
+  [#4453](https://github.com/OpenFn/lightning/issues/4453)
+
+## [2.15.14] - 2026-02-13
+
+## [2.15.14-pre] - 2026-02-11
+
+### Added
+
+- Single AI chat for workflows and jobs
+  [#4109](https://github.com/OpenFn/lightning/issues/4109)
+
+### Changed
+
+- Refactor CircleCI to build-then-fan-out pattern, compiling once then running
+  checks in parallel to eliminate cache race conditions and reduce flaky tests
+  [#4378](https://github.com/OpenFn/lightning/pull/4378)
+
+### Fixed
+
+- Fixed code-assist widget
+  [4386](https://github.com/OpenFn/lightning/issues/4386)
+- AI Assistant button now disabled when Apollo not configured, preventing silent
+  failures [#4354](https://github.com/OpenFn/lightning/issues/4354)
+- Version chip missing tooltips
+  [#4389](https://github.com/OpenFn/lightning/pull/4389)
+- Fixed StaleEntryError when saving workflows where a job is replaced and its
+  edge retargeted to a new job (e.g. via AI assistant)
+  [#4383](https://github.com/OpenFn/lightning/issues/4383)
+
+## [2.15.13] - 2026-02-06
+
+## [2.15.13-pre1] - 2026-02-05
+
+### Fixed
+
+- Search on history page for body and log failing
+  [#4370](https://github.com/OpenFn/lightning/issues/4370)
+
+## [2.15.13-pre] - 2026-02-05
+
+### Added
+
+- Sandbox compatibility with github sync(commit before & after merge)
+  [#3957](https://github.com/OpenFn/lightning/issues/3957)
+- Add PromEx plugin to track sandbox-related metrics for Prometheus including
+  sandbox lifecycle events and workflow saves by project type
+  [#4101](https://github.com/OpenFn/lightning/issues/4101)
+
+### Changed
+
+- Child nodes no longer switch position when an edge is selected
+  [#4328](https://github.com/OpenFn/lightning/issues/4328)
+- Copy parent project users when creating sandbox
+  [#3761](https://github.com/OpenFn/lightning/issues/3761)
+- Refactor bootstrap script for cross-platform support, splitting into modular
+  files under `bin/bootstrap.d/` for macOS and Linux (Debian/Ubuntu)
+  [#4377](https://github.com/OpenFn/lightning/pull/4377)
+- Refactor AI Assistant Panel component by extracting focused hooks for diff
+  management, URL sync, and workflow application logic
+  [#4369](https://github.com/OpenFn/lightning/issues/4369)
+
+### Fixed
+
+- Fixed truncation of long user names in the collapsible side menu
+  [#4361](https://github.com/OpenFn/lightning/issues/4361)
+- Fit screen when AI generates workflow & templates pick
+  [#4345](https://github.com/OpenFn/lightning/issues/4345)
+- AI-generated code diff now clears automatically when switching jobs in IDE
+  [#4318](https://github.com/OpenFn/lightning/issues/4318)
+- Update links in history page to use collab editor query params
+  [#4371](https://github.com/OpenFn/lightning/issues/4371)
+- Step events aren't appearing realtime on canvas
+  [#4261](https://github.com/OpenFn/lightning/issues/4261)
+- Send `suggest_code` flag to apollo for more robust suggestion parsing
+  [#4373](https://github.com/OpenFn/lightning/issues/4373)
+- Modified version hashing algorithm for CLI compatibility
+  [#4346](https://github.com/OpenFn/lightning/issues/4346)
+
+## [2.15.12] - 2026-01-29
+
+### Fixed
+
+- Legacy editor modal was covered up by side menu, now it sits above like before
+  [PR#4358](https://github.com/OpenFn/lightning/pull/4358)
+
+## [2.15.12-pre3] - 2026-01-28
+
+- Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
+  rendering [PR#4356](https://github.com/OpenFn/lightning/pull/4356)
+- Fix version dropdown showing dot for workflows with cron/kafka triggers
+  [#4352](https://github.com/OpenFn/lightning/issues/4352)
+
+## [2.15.12-pre2] - 2026-01-28
+
+### Added
+
+- Provisioner updates version history of workflows on post
+  [#4343](https://github.com/OpenFn/lightning/issues/4343)
+
+### Changed
+
+- Standardise copy button feedback across collaborative editor
+  [#3578](https://github.com/OpenFn/lightning/issues/3578)
+
+### Fixed
+
+- Fix clicking nodes causing unwanted zoom in workflow diagram
+  [#4327](https://github.com/OpenFn/lightning/issues/4327)
+
+## [2.15.12-pre1] - 2026-01-21
+
+### Added
+
+- Add Unsaved Changes Indicator
+  [#3682](https://github.com/OpenFn/lightning/issues/3682)
+- Added sync/async mode controls to the trigger
+  [#4321](https://github.com/OpenFn/lightning/issues/4321)
+
+### Changed
+
+- Validate WORKER_RUNS_PRIVATE_KEY is an RSA key at application startup
+  [#4340](https://github.com/OpenFn/lightning/issues/4340)
+
+## [2.15.12-pre] - 2026-01-19
+
+### Added
+
+- Add collapsible left sidebar with keyboard shortcut (Cmd/Ctrl+M) and
+  command-palette style project picker (Cmd/Ctrl+Shift+P)
+  [#4197](https://github.com/OpenFn/lightning/pull/4197)
+
+### Changed
+
+- Add configurable `CLAIM_WORK_MEM` environment variable (default: 32MB) to set
+  PostgreSQL work_mem for claim query, eliminating temp file writes during
+  window function sorting [#4331](https://github.com/OpenFn/lightning/pull/4331)
+- Show version_history for workflows and not projects
+  [#4329](https://github.com/OpenFn/lightning/issues/4329)
+
+### Fixed
+
+- Fix unable to save a workflow with a Kafka trigger in the collab editor
+  [#4295](https://github.com/OpenFn/lightning/issues/4295)
+- Credentials Scrubber uses too much memory. Introduce a limit on the number of
+  sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
+  [#4307](https://github.com/OpenFn/lightning/issues/4307)
+
+## [2.15.11] - 2026-01-15
+
+## [2.15.11-pre] - 2026-01-15
+
+### Changed
+
+- Render AI Assistant user messages as plain text instead of markdown to prevent
+  incorrect code block formatting
+  [#4288](https://github.com/OpenFn/lightning/issues/4288)
+- Standardized "GitHub" brand capitalization throughout the UI
+  [#4313](https://github.com/OpenFn/lightning/issues/4313)
+- Optimized PromEx average claim duration query to use SQL aggregation instead
+  of fetching rows into memory
+  [#4317](https://github.com/OpenFn/lightning/pull/4317)
+- Make new editor the default & warn for deprecation of legacy
+  [#4111](https://github.com/OpenFn/lightning/issues/4111)
+
+### Fixed
+
+- Add clickable GitHub Actions link to collaborative editor's Save & Sync
+  success toast [#4281](https://github.com/OpenFn/lightning/issues/4281)
+- Fixed credential auto-selection when creating a new credential from the
+  workflow editor's ConfigureAdaptorModal
+  [#4287](https://github.com/OpenFn/lightning/issues/4287)
+- Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
+  [#4308](https://github.com/OpenFn/lightning/pull/4308)
+- Fixed ConfigureAdaptorModal growing too tall when there are many credentials
+  by adding scrollable credential lists with max-height
+  [#4316](https://github.com/OpenFn/lightning/issues/4316)
+
+## [2.15.10] - 2026-01-12
+
+## [2.15.10-pre] - 2026-01-12
+
+### Fixed
+
+- Prevent returned workflow.yaml from appearing as a job code diff when opening
+  job chat after workflow chat
+  [#4296](https://github.com/OpenFn/lightning/issues/4296)
+
+## [2.15.9] - 2026-01-09
+
+### Fixed
+
+- Fix credentials being removed from jobs after AI chat applies a generated
+  workflow yaml [#4295](https://github.com/OpenFn/lightning/issues/4295)
+
+## [2.15.8] - 2026-01-09
+
+### Fixed
+
+- Fixed AI Assistant button not being disabled when viewing pinned workflow
+  versions in collaborative editor
+  [#4292](https://github.com/OpenFn/lightning/issues/4292)
+
+## [2.15.8-pre] - 2026-01-08
+
+### Added
+
+- AI Assistant can now preview and apply code suggestions directly to job code
+  with Monaco diff editor
+  [#3369](https://github.com/OpenFn/lightning/issues/3369)
+
+### Changed
+
+- Remove Environment input from Sandbox form
+  [#3954](https://github.com/OpenFn/lightning/issues/3954)
 
 ## [2.15.7] - 2026-01-07
 

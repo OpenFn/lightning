@@ -6,11 +6,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
 
   Returns structured error responses that integrate well with the audit system.
   """
-  use Tesla
-
   alias LightningWeb.RouteHelpers
 
   require Logger
+
+  defp adapter do
+    Application.get_env(:tesla, __MODULE__, [])[:adapter]
+  end
 
   @doc """
   Revokes an OAuth token.
@@ -77,10 +79,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       redirect_uri: RouteHelpers.oidc_callback_url()
     }
 
-    Tesla.client([
-      Tesla.Middleware.FormUrlencoded
-    ])
-    |> post(client.token_endpoint, body)
+    Tesla.client(
+      [
+        Tesla.Middleware.FormUrlencoded
+      ],
+      adapter()
+    )
+    |> Tesla.post(client.token_endpoint, body)
     |> handle_response([200])
     |> maybe_introspect(client)
   end
@@ -114,10 +119,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
         grant_type: "refresh_token"
       }
 
-      Tesla.client([
-        Tesla.Middleware.FormUrlencoded
-      ])
-      |> post(client.token_endpoint, body)
+      Tesla.client(
+        [
+          Tesla.Middleware.FormUrlencoded
+        ],
+        adapter()
+      )
+      |> Tesla.post(client.token_endpoint, body)
       |> handle_response([200])
       |> maybe_introspect(client)
       |> case do
@@ -155,7 +163,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     else
       headers = [{"Authorization", "Bearer #{access_token}"}]
 
-      get(client.userinfo_endpoint, headers: headers)
+      Tesla.client([{Tesla.Middleware.Headers, headers}], adapter())
+      |> Tesla.get(client.userinfo_endpoint)
       |> handle_response([200])
     end
   end
@@ -194,10 +203,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       client_secret: client.client_secret
     }
 
-    Tesla.client([
-      Tesla.Middleware.FormUrlencoded
-    ])
-    |> post(client.revocation_endpoint, body)
+    Tesla.client(
+      [
+        Tesla.Middleware.FormUrlencoded
+      ],
+      adapter()
+    )
+    |> Tesla.post(client.revocation_endpoint, body)
     |> handle_response([200, 204])
     |> case do
       {:ok, _} ->
@@ -240,10 +252,13 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       token_type_hint: "access_token"
     }
 
-    Tesla.client([
-      Tesla.Middleware.FormUrlencoded
-    ])
-    |> post(client.introspection_endpoint, body)
+    Tesla.client(
+      [
+        Tesla.Middleware.FormUrlencoded
+      ],
+      adapter()
+    )
+    |> Tesla.post(client.introspection_endpoint, body)
     |> handle_response([200])
   end
 

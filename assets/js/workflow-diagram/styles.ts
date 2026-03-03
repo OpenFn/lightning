@@ -212,15 +212,3 @@ export const nodeLabelStyles = (selected: boolean) => {
     justifyContent: 'center',
   };
 };
-
-export const sortOrderForSvg = (a: object, b: object) => {
-  if (a.data.enabled > b.data.enabled) {
-    return 1;
-  }
-
-  if (a.data.enabled < b.data.enabled) {
-    return -1;
-  }
-
-  return a.selected - b.selected;
-};

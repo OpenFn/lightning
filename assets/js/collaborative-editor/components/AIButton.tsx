@@ -8,12 +8,14 @@ import { Tooltip } from './Tooltip';
 interface AIButtonProps {
   onClick?: () => void;
   disabled?: boolean;
+  disabledMessage?: string;
   className?: string;
 }
 
 export function AIButton({
   onClick,
   disabled = false,
+  disabledMessage,
   className = '',
 }: AIButtonProps) {
   const { toggleAIAssistantPanel, collapseCreateWorkflowPanel } =
@@ -32,16 +34,18 @@ export function AIButton({
     }
   };
 
+  const tooltipContent =
+    disabled && disabledMessage ? (
+      disabledMessage
+    ) : (
+      <>
+        {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'} (
+        <ShortcutKeys keys={['mod', 'k']} />)
+      </>
+    );
+
   return (
-    <Tooltip
-      content={
-        <>
-          {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'} (
-          <ShortcutKeys keys={['mod', 'k']} />)
-        </>
-      }
-      side="bottom"
-    >
+    <Tooltip content={tooltipContent} side="bottom">
       <button
         type="button"
         onClick={handleClick}
@@ -51,8 +55,8 @@ export function AIButton({
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           isOpen
-            ? 'bg-primary-600 text-white hover:bg-primary-500'
-            : 'bg-primary-100 text-primary-600 hover:bg-primary-200',
+            ? 'bg-primary-600 text-white hover:enabled:bg-primary-500'
+            : 'bg-primary-100 text-primary-600 hover:enabled:bg-primary-200',
           className
         )}
       >

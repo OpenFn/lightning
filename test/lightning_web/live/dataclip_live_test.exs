@@ -32,8 +32,7 @@ defmodule LightningWeb.DataclipLiveTest do
         )
 
       # Check page title appears
-      dataclip_id_short = String.slice(dataclip.id, 0..7)
-      assert html =~ "Dataclip #{dataclip_id_short}"
+      assert html =~ "Dataclip"
 
       # Check dataclip ID appears in the metadata section
       assert html =~ dataclip.id

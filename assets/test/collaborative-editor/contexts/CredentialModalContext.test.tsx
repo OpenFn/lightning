@@ -7,9 +7,12 @@
  * - Source-based callback routing (only matching source receives callbacks)
  * - Callback registration and cleanup
  * - State transitions
+ *
+ * Note: Both `credential_saved` and `credential_modal_closed` events come through
+ * the WebSocket channel via handleEvent (not DOM events).
  */
 
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import {
@@ -30,11 +33,26 @@ interface MockLiveViewActions {
   navigate: ReturnType<typeof vi.fn>;
 }
 
-function createMockLiveViewActions(): MockLiveViewActions {
+// Store event callbacks so tests can trigger them
+type EventCallbacks = {
+  credential_saved?: (payload: unknown) => void;
+  credential_modal_closed?: () => void;
+};
+
+function createMockLiveViewActions(eventCallbacks: EventCallbacks = {}) {
   return {
     pushEvent: vi.fn(),
     pushEventTo: vi.fn(),
-    handleEvent: vi.fn(() => vi.fn()),
+    handleEvent: vi.fn(
+      (event: string, callback: (payload?: unknown) => void) => {
+        if (event === 'credential_saved') {
+          eventCallbacks.credential_saved = callback;
+        } else if (event === 'credential_modal_closed') {
+          eventCallbacks.credential_modal_closed = callback as () => void;
+        }
+        return vi.fn(); // cleanup function
+      }
+    ),
     navigate: vi.fn(),
   };
 }
@@ -51,37 +69,19 @@ function createTestWrapper(mockActions: MockLiveViewActions) {
   };
 }
 
-// Helper to simulate DOM events from LiveView
-function dispatchCloseModalEvent() {
-  const element = document.getElementById('collaborative-editor-react');
-  if (element) {
-    element.dispatchEvent(new CustomEvent('close_credential_modal'));
-  }
-}
-
 describe('CredentialModalContext', () => {
   let mockActions: MockLiveViewActions;
-  let mockElement: HTMLDivElement;
+  let eventCallbacks: EventCallbacks;
 
   beforeEach(() => {
-    mockActions = createMockLiveViewActions();
-
-    // Create the DOM element that LiveView events are dispatched to
-    mockElement = document.createElement('div');
-    mockElement.id = 'collaborative-editor-react';
-    document.body.appendChild(mockElement);
-
+    eventCallbacks = {};
+    mockActions = createMockLiveViewActions(eventCallbacks);
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-
-    // Clean up DOM
-    if (mockElement && mockElement.parentNode) {
-      mockElement.parentNode.removeChild(mockElement);
-    }
   });
 
   // ===========================================================================
@@ -185,9 +185,9 @@ describe('CredentialModalContext', () => {
         result.current.openCredentialModal('http', undefined, 'ide');
       });
 
-      // Dispatch close event
+      // Simulate credential_modal_closed event from LiveView
       act(() => {
-        dispatchCloseModalEvent();
+        eventCallbacks.credential_modal_closed?.();
       });
 
       // Advance timers past the MODAL_REOPEN_DELAY (200ms)
@@ -201,17 +201,6 @@ describe('CredentialModalContext', () => {
     });
 
     test('onCredentialSaved only calls callbacks for matching source', async () => {
-      // Create a mock handleEvent that captures the callback
-      let savedEventCallback: ((payload: unknown) => void) | null = null;
-      mockActions.handleEvent.mockImplementation(
-        (event: string, callback: (payload: unknown) => void) => {
-          if (event === 'credential_saved') {
-            savedEventCallback = callback;
-          }
-          return vi.fn(); // cleanup function
-        }
-      );
-
       const { result } = renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
@@ -240,7 +229,7 @@ describe('CredentialModalContext', () => {
       };
 
       act(() => {
-        savedEventCallback?.(savedPayload);
+        eventCallbacks.credential_saved?.(savedPayload);
       });
 
       // Advance timers
@@ -253,7 +242,36 @@ describe('CredentialModalContext', () => {
       expect(ideSavedCallback).not.toHaveBeenCalled();
     });
 
-    test('callbacks with null source are called regardless of open source', async () => {
+    test('callbacks with null source are called when opened with null source', async () => {
+      const { result } = renderHook(() => useCredentialModal(), {
+        wrapper: createTestWrapper(mockActions),
+      });
+
+      const nullSourceCallback = vi.fn();
+
+      act(() => {
+        result.current.onModalClose(null, nullSourceCallback);
+      });
+
+      // Open with null source (default)
+      act(() => {
+        result.current.openCredentialModal('commcare');
+      });
+
+      // Close modal
+      act(() => {
+        eventCallbacks.credential_modal_closed?.();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // null source callback should be called
+      expect(nullSourceCallback).toHaveBeenCalledTimes(1);
+    });
+
+    test('null source callbacks are NOT called when opened with specific source', async () => {
       const { result } = renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
@@ -271,7 +289,7 @@ describe('CredentialModalContext', () => {
 
       // Close modal
       act(() => {
-        dispatchCloseModalEvent();
+        eventCallbacks.credential_modal_closed?.();
       });
 
       act(() => {
@@ -311,7 +329,7 @@ describe('CredentialModalContext', () => {
       });
 
       act(() => {
-        dispatchCloseModalEvent();
+        eventCallbacks.credential_modal_closed?.();
       });
 
       act(() => {
@@ -323,16 +341,6 @@ describe('CredentialModalContext', () => {
     });
 
     test('onCredentialSaved cleanup removes callback', async () => {
-      let savedEventCallback: ((payload: unknown) => void) | null = null;
-      mockActions.handleEvent.mockImplementation(
-        (event: string, callback: (payload: unknown) => void) => {
-          if (event === 'credential_saved') {
-            savedEventCallback = callback;
-          }
-          return vi.fn();
-        }
-      );
-
       const { result } = renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
@@ -359,7 +367,7 @@ describe('CredentialModalContext', () => {
       });
 
       act(() => {
-        savedEventCallback?.({
+        eventCallbacks.credential_saved?.({
           credential: { id: 'id' },
           is_project_credential: true,
         });
@@ -379,7 +387,7 @@ describe('CredentialModalContext', () => {
   // ===========================================================================
 
   describe('state transitions', () => {
-    test('modal closes after close event', () => {
+    test('modal closes after credential_modal_closed event', () => {
       const { result } = renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
@@ -391,25 +399,15 @@ describe('CredentialModalContext', () => {
 
       expect(result.current.isCredentialModalOpen).toBe(true);
 
-      // Close modal
+      // Close modal via event
       act(() => {
-        dispatchCloseModalEvent();
+        eventCallbacks.credential_modal_closed?.();
       });
 
       expect(result.current.isCredentialModalOpen).toBe(false);
     });
 
-    test('modal closes after credential saved event', () => {
-      let savedEventCallback: ((payload: unknown) => void) | null = null;
-      mockActions.handleEvent.mockImplementation(
-        (event: string, callback: (payload: unknown) => void) => {
-          if (event === 'credential_saved') {
-            savedEventCallback = callback;
-          }
-          return vi.fn();
-        }
-      );
-
+    test('modal stays open after credential_saved event (closed by credential_modal_closed)', () => {
       const { result } = renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
@@ -421,38 +419,23 @@ describe('CredentialModalContext', () => {
 
       expect(result.current.isCredentialModalOpen).toBe(true);
 
-      // Save credential
+      // Credential saved event doesn't close modal directly
       act(() => {
-        savedEventCallback?.({
+        eventCallbacks.credential_saved?.({
           credential: { id: 'new-id' },
           is_project_credential: false,
         });
       });
 
+      // Modal is still open - waiting for credential_modal_closed
+      expect(result.current.isCredentialModalOpen).toBe(true);
+
+      // Now close event arrives
+      act(() => {
+        eventCallbacks.credential_modal_closed?.();
+      });
+
       expect(result.current.isCredentialModalOpen).toBe(false);
-    });
-
-    test('close event is ignored if modal is not open', () => {
-      const { result } = renderHook(() => useCredentialModal(), {
-        wrapper: createTestWrapper(mockActions),
-      });
-
-      const callback = vi.fn();
-      act(() => {
-        result.current.onModalClose('ide', callback);
-      });
-
-      // Modal is not open, dispatch close event
-      act(() => {
-        dispatchCloseModalEvent();
-      });
-
-      act(() => {
-        vi.advanceTimersByTime(200);
-      });
-
-      // Callback should not be called
-      expect(callback).not.toHaveBeenCalled();
     });
   });
 
@@ -461,43 +444,17 @@ describe('CredentialModalContext', () => {
   // ===========================================================================
 
   describe('LiveView communication', () => {
-    test('sends close_credential_modal event after delay', () => {
-      const { result } = renderHook(() => useCredentialModal(), {
-        wrapper: createTestWrapper(mockActions),
-      });
-
-      act(() => {
-        result.current.openCredentialModal('http', undefined, 'ide');
-      });
-
-      act(() => {
-        dispatchCloseModalEvent();
-      });
-
-      // Not called immediately
-      expect(mockActions.pushEvent).not.toHaveBeenCalledWith(
-        'close_credential_modal',
-        {}
-      );
-
-      // Called after LIVEVIEW_CLEANUP_DELAY (500ms)
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
-
-      expect(mockActions.pushEvent).toHaveBeenCalledWith(
-        'close_credential_modal',
-        {}
-      );
-    });
-
-    test('registers handler for credential_saved event', () => {
+    test('registers handlers for both credential events', () => {
       renderHook(() => useCredentialModal(), {
         wrapper: createTestWrapper(mockActions),
       });
 
       expect(mockActions.handleEvent).toHaveBeenCalledWith(
         'credential_saved',
+        expect.any(Function)
+      );
+      expect(mockActions.handleEvent).toHaveBeenCalledWith(
+        'credential_modal_closed',
         expect.any(Function)
       );
     });
@@ -528,7 +485,7 @@ describe('CredentialModalContext', () => {
       });
 
       act(() => {
-        dispatchCloseModalEvent();
+        eventCallbacks.credential_modal_closed?.();
       });
 
       act(() => {
@@ -538,6 +495,61 @@ describe('CredentialModalContext', () => {
       expect(callback1).toHaveBeenCalledTimes(1);
       expect(callback2).toHaveBeenCalledTimes(1);
       expect(callback3).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ===========================================================================
+  // EVENT ORDER TESTS (A+ solution specific)
+  // ===========================================================================
+
+  describe('event ordering', () => {
+    test('credential_saved arrives before credential_modal_closed for save flow', async () => {
+      const { result } = renderHook(() => useCredentialModal(), {
+        wrapper: createTestWrapper(mockActions),
+      });
+
+      const savedCallback = vi.fn();
+      const closeCallback = vi.fn();
+      const callOrder: string[] = [];
+
+      act(() => {
+        result.current.onCredentialSaved('inspector', () => {
+          callOrder.push('saved');
+          savedCallback();
+        });
+        result.current.onModalClose('inspector', () => {
+          callOrder.push('close');
+          closeCallback();
+        });
+      });
+
+      act(() => {
+        result.current.openCredentialModal('http', undefined, 'inspector');
+      });
+
+      // Simulate save flow: credential_saved arrives first, then credential_modal_closed
+      act(() => {
+        eventCallbacks.credential_saved?.({
+          credential: { id: 'new-id', project_credential_id: 'proj-id' },
+          is_project_credential: true,
+        });
+      });
+
+      act(() => {
+        eventCallbacks.credential_modal_closed?.();
+      });
+
+      // Advance past all delays
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // Both callbacks should be called
+      expect(savedCallback).toHaveBeenCalledTimes(1);
+      expect(closeCallback).toHaveBeenCalledTimes(1);
+
+      // Saved should be called before close (both have same delay, but saved event arrived first)
+      expect(callOrder).toEqual(['saved', 'close']);
     });
   });
 });

@@ -143,8 +143,7 @@ import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
-import type { Workflow } from '../types/workflow';
-import { WorkflowSchema } from '../types/workflow';
+import type { BaseWorkflow, Workflow } from '../types/workflow';
 import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
@@ -207,6 +206,11 @@ function produceInitialState() {
       // AI workflow apply coordination state
       isApplyingWorkflow: false,
       applyingUser: null,
+
+      // AI job code apply coordination state
+      isApplyingJobCode: false,
+      applyingJobUser: null,
+      applyingJobCodeMessageId: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -332,13 +336,15 @@ export const createWorkflowStore = () => {
   const withSelector = createWithSelector(getSnapshot);
 
   /**
-   * Helper to check if errors actually changed (shallow comparison)
+   * Helper to check if errors actually changed (deep comparison)
    * This prevents unnecessary object updates in Immer when errors haven't
    * changed, maintaining referential stability for React memoization.
+   *
+   * Handles both flat error structures and nested ones (e.g. kafka_configuration)
    */
   function areErrorsEqual(
-    a: Record<string, string[]>,
-    b: Record<string, string[]>
+    a: Record<string, unknown>,
+    b: Record<string, unknown>
   ): boolean {
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
@@ -348,9 +354,30 @@ export const createWorkflowStore = () => {
     return keysA.every(key => {
       const valsA = a[key];
       const valsB = b[key];
+
       if (!valsA || !valsB) return false;
-      if (valsA.length !== valsB.length) return false;
-      return valsA.every((val, i) => val === valsB[i]);
+
+      // If both values are arrays (standard error format), compare them
+      if (Array.isArray(valsA) && Array.isArray(valsB)) {
+        if (valsA.length !== valsB.length) return false;
+        return valsA.every((val, i) => val === valsB[i]);
+      }
+
+      // If both values are objects (nested errors like kafka_configuration), recurse
+      if (
+        typeof valsA === 'object' &&
+        typeof valsB === 'object' &&
+        !Array.isArray(valsA) &&
+        !Array.isArray(valsB)
+      ) {
+        return areErrorsEqual(
+          valsA as Record<string, unknown>,
+          valsB as Record<string, unknown>
+        );
+      }
+
+      // Different types or one is null - not equal
+      return false;
     });
   }
 
@@ -655,6 +682,34 @@ export const createWorkflowStore = () => {
     provider.channel.on('workflow_applying', workflowApplyingHandler);
     provider.channel.on('workflow_applied', workflowAppliedHandler);
 
+    // AI job code apply coordination events
+    const jobCodeApplyingHandler = (data: unknown) => {
+      const payload = data as {
+        user_id: string;
+        user_name: string;
+        message_id: string;
+      };
+      updateState(draft => {
+        draft.isApplyingJobCode = true;
+        draft.applyingJobUser = {
+          id: payload.user_id,
+          name: payload.user_name,
+        };
+        draft.applyingJobCodeMessageId = payload.message_id;
+      }, 'job_code/applying');
+    };
+
+    const jobCodeAppliedHandler = () => {
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+        draft.applyingJobCodeMessageId = null;
+      }, 'job_code/applied');
+    };
+
+    provider.channel.on('job_code_applying', jobCodeApplyingHandler);
+    provider.channel.on('job_code_applied', jobCodeAppliedHandler);
+
     // Note: ai_session_created events are handled by AIAssistantStore._connectChannel
     // which is connected via StoreProvider when the channel is ready
 
@@ -681,6 +736,8 @@ export const createWorkflowStore = () => {
           );
           provider.channel.off('workflow_applying', workflowApplyingHandler);
           provider.channel.off('workflow_applied', workflowAppliedHandler);
+          provider.channel.off('job_code_applying', jobCodeApplyingHandler);
+          provider.channel.off('job_code_applied', jobCodeAppliedHandler);
         }
       },
     ];
@@ -1341,6 +1398,7 @@ export const createWorkflowStore = () => {
   const saveWorkflow = async (): Promise<{
     saved_at?: string;
     lock_version?: number;
+    workflow?: BaseWorkflow;
   } | null> => {
     const { ydoc, provider } = ensureConnected();
 
@@ -1365,6 +1423,7 @@ export const createWorkflowStore = () => {
       const response = await channelRequest<{
         saved_at: string;
         lock_version: number;
+        workflow: BaseWorkflow;
       }>(provider.channel, 'save_workflow', payload);
 
       logger.debug('Saved workflow', response);
@@ -1382,6 +1441,7 @@ export const createWorkflowStore = () => {
     saved_at?: string;
     lock_version?: number;
     repo?: string;
+    workflow?: BaseWorkflow;
   } | null> => {
     const { ydoc, provider } = ensureConnected();
 
@@ -1408,6 +1468,7 @@ export const createWorkflowStore = () => {
         saved_at: string;
         lock_version: number;
         repo: string;
+        workflow: BaseWorkflow;
       }>(provider.channel, 'save_and_sync', payload);
 
       logger.debug('Saved and synced workflow to GitHub', response);
@@ -1644,6 +1705,77 @@ export const createWorkflowStore = () => {
     }
   };
 
+  /**
+   * Signal that this user is starting to apply an AI-generated job code.
+   * Broadcasts to all collaborators so they can disable their Apply buttons,
+   * preventing concurrent applies that could cause Y.Doc conflicts.
+   *
+   * Returns true if coordination succeeded, false if unavailable (non-blocking).
+   *
+   * @param messageId - The AI message ID being applied
+   */
+  const startApplyingJobCode = async (messageId: string): Promise<boolean> => {
+    if (!provider?.channel) {
+      logger.warn('Cannot start applying job code - no channel available');
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'start_applying_job_code', {
+        message_id: messageId,
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to signal job code apply start', error);
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+  };
+
+  /**
+   * Signal that this user has finished applying an AI-generated job code.
+   * Broadcasts to all collaborators so they can re-enable their Apply buttons.
+   *
+   * @param messageId - The AI message ID that was applied
+   */
+  const doneApplyingJobCode = async (messageId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot complete applying job code - no channel available');
+      // Clear local state anyway
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+      }, 'job_code/applied/fallback');
+      return;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'done_applying_job_code', {
+        message_id: messageId,
+      });
+    } catch (error) {
+      logger.error('Failed to signal job code apply completion', error);
+      notifications.warning({
+        title: 'Apply completion signal failed',
+        description: 'Other users may not see that the apply has completed.',
+      });
+      // Clear local state even if signal fails
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+      }, 'job_code/applied/fallback');
+    }
+  };
+
   // Undo/Redo Commands
   // =============================================================================
   // These commands trigger Y.Doc changes via UndoManager, which then flow
@@ -1745,6 +1877,10 @@ export const createWorkflowStore = () => {
     // AI workflow apply coordination
     startApplyingWorkflow,
     doneApplyingWorkflow,
+
+    // AI job code apply coordination
+    startApplyingJobCode,
+    doneApplyingJobCode,
 
     // =============================================================================
     // Undo/Redo Commands

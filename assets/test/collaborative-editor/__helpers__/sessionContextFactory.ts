@@ -55,6 +55,7 @@ export const mockProjectContext: ProjectContext = {
  */
 export const mockAppConfig: AppConfig = {
   require_email_verification: false,
+  kafka_triggers_enabled: false,
 };
 
 /**
@@ -168,7 +169,10 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
 export const mockUpdatedSessionContext: SessionContextResponse = {
   user: mockAlternativeUserContext,
   project: mockAlternativeProjectContext,
-  config: { require_email_verification: true },
+  config: {
+    require_email_verification: true,
+    kafka_triggers_enabled: true,
+  },
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
@@ -289,6 +293,7 @@ export interface CreateSessionContextOptions {
   workflow_template?: WorkflowTemplate | null;
   has_read_ai_disclaimer?: boolean;
   limits?: Partial<Limits>;
+  workflow?: any | null;
 }
 
 /**
@@ -353,6 +358,7 @@ export function createSessionContext(
   // Handle config - always present, merge with defaults
   const config: AppConfig = {
     require_email_verification: false,
+    kafka_triggers_enabled: false,
     ...options.config,
   };
 
@@ -397,6 +403,7 @@ export function createSessionContext(
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
     has_read_ai_disclaimer: options.has_read_ai_disclaimer ?? true,
+    workflow: options.workflow,
   };
 
   // Only add limits if provided
@@ -542,6 +549,7 @@ export function createMockConfig(
 ): AppConfig {
   return {
     require_email_verification: false,
+    kafka_triggers_enabled: false,
     ...overrides,
   };
 }

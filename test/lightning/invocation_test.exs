@@ -1597,6 +1597,232 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "search_workorders with UNION queries" do
+    setup do
+      project = insert(:project)
+
+      dataclips =
+        insert_list(3, :dataclip,
+          body: %{
+            "search_term" => "findme",
+            "body_only" => "unique_body_value",
+            "date" => "2024-01-01"
+          },
+          type: :global,
+          project: project
+        )
+
+      dataclip = hd(dataclips)
+
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          starting_trigger: trigger
+        )
+
+      {:ok, step} =
+        Runs.start_step(run, %{
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      # Log lines contains the same "findme" term plus a log-only term
+      insert_list(3, :log_line,
+        run: run,
+        step: step,
+        message: "Processing findme with log_only_value",
+        timestamp: Timex.now()
+      )
+
+      %{
+        project: project,
+        workorder: workorder,
+        run: run,
+        step: step,
+        dataclip: dataclip
+      }
+    end
+
+    test "deduplicates work orders matching both body AND log",
+         %{project: project, workorder: workorder} do
+      # Search for "findme" which appears in BOTH body and log
+      # Body: "search_term" => "findme"
+      # Log: "Processing findme with log_only_value"
+
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "findme",
+            "search_fields" => ["body", "log"]
+          })
+        )
+
+      # Should return exactly one work order, not duplicates
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+    end
+
+    test "handles body-only, log-only, and body+log searches correctly",
+         %{project: project, workorder: workorder} do
+      # Body contains: "unique_body_value" (only in body, not in log)
+      # Log contains: "log_only_value" (only in log, not in body)
+
+      # Test 1: Body-only search finds the work order
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "unique_body",
+            "search_fields" => ["body"]
+          })
+        )
+
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 2: Log-only search finds the work order
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "log_only",
+            "search_fields" => ["log"]
+          })
+        )
+
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 3: Body+log search with body-only term finds it
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "unique_body",
+            "search_fields" => ["body", "log"]
+          })
+        )
+
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 4: Body+log search with log-only term finds it
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "log_only",
+            "search_fields" => ["body", "log"]
+          })
+        )
+
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 5: Body+log search with non-matching term finds nothing
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "nonexistent",
+            "search_fields" => ["body", "log"]
+          })
+        )
+
+      assert page.entries == []
+    end
+
+    test "with ID search field works correctly",
+         %{project: project, workorder: workorder} do
+      # Test 1: Search by ID with body+log fields using the work order ID
+      [id_part | _] = String.split(workorder.id, "-")
+
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => id_part,
+            "search_fields" => ["id", "body", "log"]
+          })
+        )
+
+      # Should find the work order by ID
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 2: Search by term that's in body AND log with ID field present
+      # "findme" appears in both body and log
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "findme",
+            "search_fields" => ["id", "body", "log"]
+          })
+        )
+
+      # Should find by body/log (ID won't match "findme")
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+
+      # Test 3: Verify no duplicates when ID + body + log all enabled
+      # and term matches both body and log (not ID)
+      page =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "findme",
+            "search_fields" => ["id", "body", "log"]
+          })
+        )
+
+      # Should still return only one result (UNION deduplicates)
+      assert length(page.entries) == 1
+      assert hd(page.entries).id == workorder.id
+    end
+
+    test "preserves all work order associations and preloads",
+         %{project: project} do
+      [workorder] =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "search_term" => "findme",
+            "search_fields" => ["body", "log"]
+          })
+        ).entries
+
+      # Verify all expected associations are loaded
+      assert Ecto.assoc_loaded?(workorder.dataclip)
+      assert Ecto.assoc_loaded?(workorder.workflow)
+      assert Ecto.assoc_loaded?(workorder.snapshot)
+      assert Ecto.assoc_loaded?(workorder.runs)
+
+      # Verify nested associations
+      assert [loaded_run] = workorder.runs
+      assert Ecto.assoc_loaded?(loaded_run.steps)
+      assert [loaded_step] = loaded_run.steps
+      assert Ecto.assoc_loaded?(loaded_step.job)
+      assert Ecto.assoc_loaded?(loaded_step.input_dataclip)
+      assert Ecto.assoc_loaded?(loaded_step.snapshot)
+    end
+  end
+
   describe "search_workorders by dataclip_name" do
     test "finds case-insensitive substring matches on workorder input dataclip name" do
       project = insert(:project)

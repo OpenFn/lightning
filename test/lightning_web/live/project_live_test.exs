@@ -394,6 +394,27 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "editing a project with a name that resolves to blank shows error", %{
+      conn: conn
+    } do
+      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      view
+      |> form("#project-form",
+        project: %{raw_name: "!!!"}
+      )
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "can&#39;t be blank"
+    end
+
     test "sorting projects by name works correctly", %{conn: conn} do
       _project_a = insert(:project, name: "alpha-project")
       _project_b = insert(:project, name: "beta-project")
@@ -516,24 +537,22 @@ defmodule LightningWeb.ProjectLiveTest do
     test "project filter input shows correct placeholder and clear button", %{
       conn: conn
     } do
-      {:ok, index_live, html} =
+      {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
 
       # Check filter input is present
       assert has_element?(index_live, "input[name=filter]")
 
       # Initially clear button should be hidden
-      assert html =~ "class=\"hidden\""
+      assert has_element?(index_live, "#clear_filter_button.hidden")
 
       # Type in filter
       index_live
       |> element("input[name=filter]")
       |> render_keyup(%{"key" => "a", "value" => "test"})
 
-      html = render(index_live)
-
       # Clear button should now be visible (not hidden)
-      refute html =~ "class=\"hidden\""
+      refute has_element?(index_live, "#clear_filter_button.hidden")
       assert has_element?(index_live, "a[phx-click='clear_filter']")
     end
 
@@ -825,60 +844,32 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
+      # Current project shown in breadcrumb project picker button
       assert view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_1.id}/w"}"]},
+               "#breadcrumb-project-picker-trigger",
                ~r/project-1/
              )
              |> has_element?()
 
-      assert view
-             |> element(
-               "#option-#{project_2.id}",
-               ~r/project-2/
-             )
-             |> has_element?()
-
-      refute view
-             |> element(
-               "#option-#{project_3.id}",
-               ~r/project-3/
-             )
-             |> has_element?()
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
-
+      # Project picker is a React component - check data attributes contain correct projects
+      html = render(view)
       assert html =~ project_1.name
+      assert html =~ ~s(data-current-project-id="#{project_1.id}")
 
-      assert view
-             |> element("input[id='combobox'][value='#{project_1.name}']")
-             |> has_element?()
+      # Projects data is passed as JSON to React component
+      # User's projects (project_1, project_2) should be in data-projects
+      assert html =~ project_2.id
+      # Other user's project (project_3) should NOT be in data-projects
+      refute html =~ project_3.id
 
-      assert view
-             |> element("#option-#{project_2.id}")
-             |> has_element?()
-
-      refute view
-             |> element("#option-#{project_3.id}")
-             |> has_element?()
-
-      {:ok, view, html} =
+      {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-
-      assert view
-             |> element("input[id='combobox'][value='#{project_2.name}']")
-             |> has_element?()
-
-      assert view
-             |> element("#option-#{project_1.id}")
-             |> has_element?()
-
-      refute view
-             |> element("#option-#{project_3.id}")
-             |> has_element?()
+      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ project_1.id
+      refute html =~ project_3.id
 
       assert live(conn, ~p"/projects/#{project_3}/w", on_error: :raise) ==
                {:error,
@@ -1163,6 +1154,33 @@ defmodule LightningWeb.ProjectLiveTest do
                "#new-keychain-credential-option-menu-item",
                "Keychain"
              )
+    end
+
+    test "excluded credential types do not appear in the type picker grid",
+         %{
+           conn: conn,
+           user: user
+         } do
+      excluded_types = ["keychain"]
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      assert has_element?(view, "#new-credential-modal")
+
+      for type <- excluded_types do
+        refute has_element?(view, "button[phx-value-key='#{type}']"),
+               "#{type} should not appear in the credential type picker"
+      end
     end
 
     test "project admin can view keychain credentials table", %{
@@ -1679,10 +1697,6 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Project settings"
 
-      invalid_project_name = %{
-        name: "some name"
-      }
-
       invalid_project_description = %{
         description:
           Enum.map(1..250, fn _ ->
@@ -1690,10 +1704,6 @@ defmodule LightningWeb.ProjectLiveTest do
           end)
           |> to_string()
       }
-
-      assert view
-             |> form("#project-settings-form", project: invalid_project_name)
-             |> render_change() =~ "has invalid format"
 
       assert view
              |> form("#project-settings-form",
@@ -1721,7 +1731,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       valid_project_attrs = %{
-        name: "somename",
+        raw_name: "somename",
         description: "some description"
       }
 
@@ -1733,6 +1743,56 @@ defmodule LightningWeb.ProjectLiveTest do
                name: "somename",
                description: "some description"
              } = Repo.get!(Project, project.id)
+    end
+
+    test "project settings form converts uppercase name to url-safe format",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      assert view
+             |> form("#project-settings-form",
+               project: %{raw_name: "DEP-burundi-datafi"}
+             )
+             |> render_submit() =~ "Project updated successfully"
+
+      assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
+    end
+
+    test "saving project settings with name that resolves to blank shows error",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      html =
+        view
+        |> form("#project-settings-form",
+          project: %{raw_name: "!!!"}
+        )
+        |> render_submit()
+
+      assert html =~ "can&#39;t be blank"
+
+      # Project name is unchanged
+      assert %{name: "project-1"} = Repo.get!(Project, project.id)
     end
 
     test "project admin can edit project concurrency with valid data",
@@ -1775,7 +1835,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?("input[disabled='disabled'][name='project[name]']")
+             |> has_element?(
+               "input[disabled='disabled'][name='project[raw_name]']"
+             )
 
       assert view
              |> has_element?(
@@ -1807,7 +1869,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?("input[disabled='disabled'][name='project[name]']")
+             |> has_element?(
+               "input[disabled='disabled'][name='project[raw_name]']"
+             )
 
       assert view
              |> has_element?(
@@ -2792,6 +2856,42 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.find("p")
                |> Floki.text()
                |> String.trim()
+    end
+
+    @tag role: :admin
+    test "cancel button resets retention form to saved values", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#data-storage")
+
+      # Change retention policy
+      view
+      |> form("#retention-settings-form",
+        project: %{retention_policy: "erase_all"}
+      )
+      |> render_change()
+
+      assert ["checked"] ==
+               view
+               |> element("#erase_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
+
+      # Click cancel
+      view
+      |> element("button[phx-click='cancel-retention-change']")
+      |> render_click()
+
+      # Verify it resets back to retain_all (the default)
+      assert ["checked"] ==
+               view
+               |> element("#retain_all")
+               |> render()
+               |> Floki.parse_fragment!()
+               |> Floki.attribute("input", "checked")
     end
 
     @tag role: :editor
@@ -4122,7 +4222,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       flash = assert_redirect(view, ~p"/projects/#{project.id}/settings#vcs")
 
-      assert flash["info"] == "Github account linked successfully"
+      assert flash["info"] == "GitHub account linked successfully"
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
 
@@ -4159,7 +4259,7 @@ defmodule LightningWeb.ProjectLiveTest do
       :ok = refute_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
       assert render(view) =~
-               "Oops! Github account failed to link. Please try again"
+               "Oops! GitHub account failed to link. Please try again"
 
       # button to connect is still available
       assert has_element?(view, "#connect-github-link")
@@ -4860,7 +4960,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-      assert flash["error"] == "Github Error: #{expected_error_msg}"
+      assert flash["error"] == "GitHub Error: #{expected_error_msg}"
     end
 
     test "users get a flash containing the github error in case the api returns an error with message key",
@@ -4952,7 +5052,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-      assert flash["error"] == "Github Error: #{expected_error_msg}"
+      assert flash["error"] == "GitHub Error: #{expected_error_msg}"
     end
 
     test "connect button is disabled if the usage limiter returns an error",
@@ -5898,7 +5998,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
-        assert flash["info"] == "Github sync initiated"
+        assert flash["info"] == "GitHub sync initiated"
       end
     end
 

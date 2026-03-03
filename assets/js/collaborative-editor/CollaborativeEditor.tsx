@@ -1,11 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+
+import { useURLState } from '#/react/lib/use-url-state';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
-import { useURLState } from '#/react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import {
+  BreadcrumbLink,
+  BreadcrumbProjectPicker,
+  BreadcrumbText,
+} from './components/Breadcrumbs';
+import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
@@ -14,6 +20,7 @@ import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
+import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import {
@@ -35,6 +42,7 @@ export interface CollaborativeEditorDataProps {
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
   'data-is-new-workflow'?: string;
+  'data-ai-assistant-enabled'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -58,6 +66,7 @@ interface BreadcrumbContentProps {
   projectNameFallback?: string;
   projectEnvFallback?: string;
   isNewWorkflow?: boolean;
+  aiAssistantEnabled: boolean;
 }
 
 function BreadcrumbContent({
@@ -67,6 +76,7 @@ function BreadcrumbContent({
   projectNameFallback,
   projectEnvFallback,
   isNewWorkflow = false,
+  aiAssistantEnabled,
 }: BreadcrumbContentProps) {
   const projectFromStore = useProject();
 
@@ -85,14 +95,21 @@ function BreadcrumbContent({
 
   const handleVersionSelect = useVersionSelect();
 
+  const handleProjectPickerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Dispatch the event that the global ProjectPicker listens for
+    document.body.dispatchEvent(new CustomEvent('open-project-picker'));
+  };
+
   const breadcrumbElements = useMemo(() => {
     return [
-      <BreadcrumbLink href="/projects" key="projects">
-        Projects
-      </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
+      // Project name as picker trigger
+      <BreadcrumbProjectPicker
+        key="project-picker"
+        onClick={handleProjectPickerClick}
+      >
         {projectName}
-      </BreadcrumbLink>,
+      </BreadcrumbProjectPicker>,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
         Workflows
       </BreadcrumbLink>,
@@ -141,6 +158,7 @@ function BreadcrumbContent({
       workflowId={workflowId}
       isRunPanelOpen={isRunPanelOpen}
       isIDEOpen={isIDEOpen}
+      aiAssistantEnabled={aiAssistantEnabled}
     >
       {breadcrumbElements}
     </Header>
@@ -158,6 +176,7 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectId = props['data-root-project-id'] ?? null;
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
+  const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -166,6 +185,9 @@ export const CollaborativeEditor: WithActionProps<
     handleEvent: props.handleEvent,
     navigate: props.navigate,
   };
+
+  // Monaco ref for diff preview - shared between FullScreenIDE and AIAssistantPanelWrapper
+  const monacoRef = useRef<MonacoHandle>(null);
 
   return (
     <KeyboardProvider>
@@ -183,41 +205,46 @@ export const CollaborativeEditor: WithActionProps<
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
                 <CredentialModalProvider>
-                  <VersionDebugLogger />
-                  <Toaster />
-                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                    <BreadcrumbContent
-                      workflowId={workflowId}
-                      workflowName={workflowName}
-                      isNewWorkflow={isNewWorkflow}
-                      {...(projectId !== undefined && {
-                        projectIdFallback: projectId,
-                      })}
-                      {...(projectName !== undefined && {
-                        projectNameFallback: projectName,
-                      })}
-                      {...(projectEnv !== undefined && {
-                        projectEnvFallback: projectEnv,
-                      })}
-                      {...(rootProjectId !== null && {
-                        rootProjectIdFallback: rootProjectId,
-                      })}
-                      {...(rootProjectName !== null && {
-                        rootProjectNameFallback: rootProjectName,
-                      })}
-                    />
-                    <div className="flex-1 min-h-0 overflow-hidden relative">
-                      <LoadingBoundary>
-                        <div className="h-full w-full">
-                          <WorkflowEditor
-                            parentProjectId={rootProjectId}
-                            parentProjectName={rootProjectName}
-                          />
-                        </div>
-                      </LoadingBoundary>
+                  <MonacoRefProvider monacoRef={monacoRef}>
+                    <VersionDebugLogger />
+                    <Toaster />
+                    <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                      <BreadcrumbContent
+                        workflowId={workflowId}
+                        workflowName={workflowName}
+                        isNewWorkflow={isNewWorkflow}
+                        aiAssistantEnabled={aiAssistantEnabled}
+                        {...(projectId !== undefined && {
+                          projectIdFallback: projectId,
+                        })}
+                        {...(projectName !== undefined && {
+                          projectNameFallback: projectName,
+                        })}
+                        {...(projectEnv !== undefined && {
+                          projectEnvFallback: projectEnv,
+                        })}
+                        {...(rootProjectId !== null && {
+                          rootProjectIdFallback: rootProjectId,
+                        })}
+                        {...(rootProjectName !== null && {
+                          rootProjectNameFallback: rootProjectName,
+                        })}
+                      />
+                      <div className="flex-1 min-h-0 overflow-hidden relative">
+                        <LoadingBoundary>
+                          <div className="h-full w-full">
+                            <WorkflowEditor
+                              parentProjectId={rootProjectId}
+                              parentProjectName={rootProjectName}
+                            />
+                          </div>
+                        </LoadingBoundary>
+                      </div>
                     </div>
-                  </div>
-                  <AIAssistantPanelWrapper />
+                    <AIAssistantPanelWrapper
+                      aiAssistantEnabled={aiAssistantEnabled}
+                    />
+                  </MonacoRefProvider>
                 </CredentialModalProvider>
               </LiveViewActionsProvider>
             </StoreProvider>

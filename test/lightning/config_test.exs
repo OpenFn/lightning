@@ -43,6 +43,13 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "indicates if promex is enabled" do
+      disabled = extract_from_config(Lightning.PromEx, :disabled)
+      actual = API.promex_enabled?()
+
+      assert actual == not disabled
+    end
+
     test "indicates if the tracking of UI metrics is enabled" do
       expected =
         extract_from_config(:ui_metrics_tracking, :enabled)
@@ -126,6 +133,19 @@ defmodule Lightning.Configtest do
       actual = API.per_workflow_claim_limit()
 
       assert expected == actual
+    end
+
+    test "returns the claim work_mem setting" do
+      prev = Application.get_env(:lightning, :claim_work_mem)
+
+      try do
+        Application.put_env(:lightning, :claim_work_mem, "64MB")
+        assert API.claim_work_mem() == "64MB"
+      after
+        if prev,
+          do: Application.put_env(:lightning, :claim_work_mem, prev),
+          else: Application.delete_env(:lightning, :claim_work_mem)
+      end
     end
   end
 

@@ -221,7 +221,7 @@ defmodule LightningWeb.RunLive.Components do
             <.link
               class="pl-1"
               patch={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run_id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}" <> "#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run_id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version)}" <> "#log"
               }
             >
               <.icon
@@ -413,7 +413,7 @@ defmodule LightningWeb.RunLive.Components do
             aria-label="Inspect this step"
             class="cursor-pointer"
             navigate={
-              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
+              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run.id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
                 <> "#log"
             }
           >
@@ -577,8 +577,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
-      </div>
+      <div id={"#{@id}-bg"} class="modal-backdrop" />
 
       <div
         aria-labelledby={"#{@id}-title"}

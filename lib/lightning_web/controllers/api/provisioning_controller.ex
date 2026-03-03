@@ -18,6 +18,8 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.Provisioner
+  alias Lightning.Workflows
+  alias Lightning.WorkflowVersions
 
   action_fallback(LightningWeb.FallbackController)
 
@@ -136,12 +138,22 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_resource,
              project
            ),
+         :ok <- ensure_workflows_have_versions(project),
          project <-
            Provisioner.preload_dependencies(project, params["snapshots"]) do
       conn
       |> put_status(:ok)
       |> render("create.json", project: project)
     end
+  end
+
+  defp ensure_workflows_have_versions(project) do
+    workflows =
+      Workflows.list_project_workflows(project.id,
+        include: [:jobs, :edges, :triggers]
+      )
+
+    Enum.each(workflows, &WorkflowVersions.ensure_version_recorded/1)
   end
 
   @doc """

@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
-import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
+import {
+  useMonacoRef,
+  useRegisterDiffDismissalCallback,
+} from '../contexts/MonacoRefContext';
 import {
   useAIConnectionState,
   useAIIsLoading,
@@ -14,29 +17,32 @@ import {
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
+import { useAIPanelDiffManager } from '../hooks/useAIPanelDiffManager';
+import { useAIPanelURLSync } from '../hooks/useAIPanelURLSync';
 import { useAISession } from '../hooks/useAISession';
+import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
+import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
-  useProject,
   useHasReadAIDisclaimer,
-  useMarkAIDisclaimerRead,
-  useSessionContextLoaded,
-  useLimits,
   useIsNewWorkflow,
+  useLimits,
+  useMarkAIDisclaimerRead,
+  useProject,
+  useSessionContextLoaded,
   useUser,
 } from '../hooks/useSessionContext';
 import {
+  useAIAssistantInitialMessage,
   useIsAIAssistantPanelOpen,
   useUICommands,
-  useAIAssistantInitialMessage,
 } from '../hooks/useUI';
 import {
-  useWorkflowState,
   useWorkflowActions,
   useWorkflowReadOnly,
+  useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import { notifications } from '../lib/notifications';
 import type { JobCodeContext } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
@@ -59,7 +65,11 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
-export function AIAssistantPanelWrapper() {
+export function AIAssistantPanelWrapper({
+  aiAssistantEnabled = false,
+}: {
+  aiAssistantEnabled?: boolean;
+}) {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const initialMessage = useAIAssistantInitialMessage();
   const {
@@ -69,6 +79,11 @@ export function AIAssistantPanelWrapper() {
     collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
+  const currentVersion = params['v'];
+
+  // Check if viewing a pinned version (not latest) to disable AI Assistant
+  const isPinnedVersion =
+    currentVersion !== undefined && currentVersion !== null;
 
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
@@ -84,6 +99,7 @@ export function AIAssistantPanelWrapper() {
   }, [isIDEOpen]);
 
   // Cmd+K toggles AI Assistant with mutual exclusivity
+  // Disabled when viewing a pinned version (not latest) or when Apollo not configured
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -93,7 +109,8 @@ export function AIAssistantPanelWrapper() {
       }
       toggleAIAssistantPanel();
     },
-    0
+    0,
+    { enabled: !isPinnedVersion && aiAssistantEnabled }
   );
 
   const aiStore = useAIStore();
@@ -139,53 +156,18 @@ export function AIAssistantPanelWrapper() {
     direction: 'left',
   });
 
-  /**
-   * isSyncingRef prevents re-entrant URL updates during panel state changes.
-   *
-   * Pattern explanation:
-   * - When we update URL params, React re-renders with new searchParams
-   * - This could trigger another URL update, creating an infinite loop
-   * - We use a ref to track ongoing sync operations
-   * - setTimeout(..., 0) breaks out of the current execution context,
-   *   allowing the URL update to complete before we clear the flag
-   *
-   * This is a defensive pattern for synchronizing state with URL parameters.
-   */
-  const isSyncingRef = useRef(false);
-
-  useEffect(() => {
-    if (isSyncingRef.current) return;
-
-    isSyncingRef.current = true;
-
-    if (isAIAssistantPanelOpen) {
-      updateSearchParams({
-        chat: 'true',
-      });
-    } else {
-      // When closing, clear chat param and session params
-      updateSearchParams({
-        chat: null,
-        'w-chat': null,
-        'j-chat': null,
-      });
-    }
-
-    setTimeout(() => {
-      isSyncingRef.current = false;
-    }, 0);
-  }, [isAIAssistantPanelOpen, updateSearchParams]);
-
   const aiMode = useAIMode();
 
-  const sessionIdFromURL = useMemo(() => {
-    if (!aiMode) return null;
-
-    const paramName = aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
-    const sessionId = params[paramName];
-
-    return sessionId;
-  }, [aiMode, params]);
+  // URL synchronization hook - manages ?chat=true and session ID params
+  const { sessionIdFromURL } = useAIPanelURLSync({
+    isOpen: isAIAssistantPanelOpen,
+    isNewWorkflow,
+    sessionId,
+    aiMode,
+    aiStore,
+    updateSearchParams,
+    params,
+  });
 
   // Use registry-based session management
   useAISession({
@@ -217,45 +199,6 @@ export function AIAssistantPanelWrapper() {
     },
   });
 
-  useEffect(() => {
-    // Don't sync session ID to URL when panel is closed
-    if (!isAIAssistantPanelOpen) return;
-    if (!sessionId || !aiMode) return;
-
-    const state = aiStore.getSnapshot();
-    const sessionType = state.sessionType;
-
-    // CRITICAL: Only sync to URL if session type matches current mode
-    // This prevents syncing a workflow session ID to job mode URL (or vice versa)
-    if (sessionType !== aiMode.mode) {
-      return;
-    }
-
-    const currentParamName =
-      aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
-    const otherParamName =
-      aiMode.mode === 'workflow_template' ? 'j-chat' : 'w-chat';
-    const currentValue = params[currentParamName];
-
-    if (currentValue !== sessionId) {
-      updateSearchParams({
-        [currentParamName]: sessionId,
-        [otherParamName]: null, // Clear the other mode's session
-      });
-    }
-  }, [
-    sessionId,
-    aiMode,
-    params,
-    updateSearchParams,
-    aiStore,
-    isAIAssistantPanelOpen,
-  ]);
-
-  // Close handler - URL cleanup happens automatically via the effect above
-  // when isAIAssistantPanelOpen becomes false
-  const handleClosePanel = closeAIAssistantPanel;
-
   // Push job context updates to backend when job body/adaptor/name changes
   // This ensures the AI has access to the current code when "Attach code" is checked
   useEffect(() => {
@@ -263,9 +206,8 @@ export function AIAssistantPanelWrapper() {
     if (
       !isAIAssistantPanelOpen ||
       !sessionId ||
-      sessionType !== 'job_code' ||
       !aiMode ||
-      aiMode.mode !== 'job_code'
+      aiMode?.page !== 'job_code'
     ) {
       return;
     }
@@ -278,27 +220,24 @@ export function AIAssistantPanelWrapper() {
         job_name: context.job_name,
       });
     }
-  }, [
-    isAIAssistantPanelOpen,
-    sessionId,
-    sessionType,
-    aiMode,
-    updateContextViaChannel,
-  ]);
+  }, [isAIAssistantPanelOpen, sessionId, aiMode, updateContextViaChannel]);
 
   /**
-   * appliedMessageIdsRef tracks which AI-generated workflows have been automatically applied.
+   * appliedMessageIdsRef tracks which AI-generated workflows have been
+   * automatically applied.
    *
    * Auto-apply behavior:
-   * - When the AI responds with YAML code in workflow_template mode, we automatically
-   *   apply it to the canvas (see useEffect below)
-   * - This ref prevents applying the same message multiple times if the component re-renders
+   * - When the AI responds with YAML code in workflow_template mode, we
+   *   automatically apply it to the canvas
+   * - This ref prevents applying the same message multiple times if the
+   *   component re-renders
    * - The ref is cleared when:
    *   1. Starting a new conversation (handleNewConversation)
    *   2. Switching to a different session (handleSessionSelect)
    *
-   * This provides a smooth UX where users see their workflow update in real-time
-   * as the AI generates it, without requiring manual "Apply" button clicks.
+   * This provides a smooth UX where users see their workflow update in
+   * real-time as the AI generates it, without requiring manual "Apply"
+   * button clicks.
    */
   const appliedMessageIdsRef = useRef<Set<string>>(new Set());
 
@@ -353,24 +292,6 @@ export function AIAssistantPanelWrapper() {
     clearAIAssistantInitialMessage,
   });
 
-  const handleShowSessions = useCallback(() => {
-    aiStore.clearSession();
-    // Clear session list to force reload - ensures fresh data after tab sleep
-    aiStore._clearSessionList();
-
-    // Ensure context is initialized for session list loading
-    // This handles cases where context might have been lost (e.g., after tab sleep)
-    if (aiMode) {
-      aiStore._initializeContext(aiMode.mode, aiMode.context);
-    }
-
-    // Clear session ID from URL - shows session list
-    updateSearchParams({
-      'w-chat': null,
-      'j-chat': null,
-    });
-  }, [updateSearchParams, aiStore, aiMode]);
-
   // Note: AI session creation events are now handled by AIAssistantStore._connectChannel
   // which receives events directly from the workflow channel
 
@@ -386,9 +307,38 @@ export function AIAssistantPanelWrapper() {
     ) => {
       const currentState = aiStore.getSnapshot();
 
+      // For job_code with attach_code, get CURRENT code from Y.Doc
+      let updatedAiMode = aiMode;
+      if (messageOptions?.attach_code && aiMode?.mode === 'job_code') {
+        const context = aiMode.context as JobCodeContext;
+        const jobId = context.job_id;
+
+        if (jobId) {
+          // Get fresh code from jobs array (backed by Y.Doc)
+          const currentJob = jobs.find(j => j.id === jobId);
+          if (currentJob) {
+            // Update aiMode with new context (don't mutate)
+            const projectId =
+              'project_id' in context
+                ? (context.project_id as string)
+                : project!.id;
+            updatedAiMode = {
+              ...aiMode,
+              context: {
+                ...context,
+                project_id: projectId,
+                job_body: currentJob.body,
+              },
+            };
+          }
+          // If job not found, fall back to existing context.job_body
+          // (job could be unsaved or deleted)
+        }
+      }
+
       // If no session exists, we need to include content in context for first message
-      if (!currentState.sessionId && aiMode) {
-        const { mode, context } = aiMode;
+      if (!currentState.sessionId && updatedAiMode) {
+        const { mode, context, page } = updatedAiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
@@ -402,7 +352,7 @@ export function AIAssistantPanelWrapper() {
         };
 
         // Add workflow YAML if in workflow mode
-        if (mode === 'workflow_template') {
+        if (page === 'workflow_template') {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -447,7 +397,7 @@ export function AIAssistantPanelWrapper() {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
-      if (currentState.sessionType === 'workflow_template') {
+      if (aiMode?.page === 'workflow_template') {
         const workflowData = prepareWorkflowForSerialization(
           workflow,
           jobs,
@@ -462,6 +412,9 @@ export function AIAssistantPanelWrapper() {
         if (workflowYAML) {
           options = { ...options, code: workflowYAML };
         }
+      } else {
+        // important: determines what ai to be used
+        options = { ...aiMode?.context, ...options };
       }
 
       // Update store state and send through registry
@@ -478,6 +431,7 @@ export function AIAssistantPanelWrapper() {
       aiStore,
       aiMode,
       updateSearchParams,
+      project,
     ]
   );
 
@@ -499,192 +453,91 @@ export function AIAssistantPanelWrapper() {
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
+  const [previewingMessageId, setPreviewingMessageId] = useState<string | null>(
+    null
+  );
 
-  const hasLoadedSessionRef = useRef(false);
+  // Get shared monaco ref from context for diff preview
+  const monacoRef = useMonacoRef();
 
-  // Reset hasLoadedSessionRef when session changes
-  useEffect(() => {
-    hasLoadedSessionRef.current = false;
-  }, [sessionId]);
+  // Register callback to be notified when diff is dismissed
+  useRegisterDiffDismissalCallback(() => {
+    setPreviewingMessageId(null);
+  });
 
-  const { importWorkflow, startApplyingWorkflow, doneApplyingWorkflow } =
-    useWorkflowActions();
+  // Extract diff lifecycle management into hook
+  const { handleClosePanel, handleShowSessions } = useAIPanelDiffManager({
+    isOpen: isAIAssistantPanelOpen,
+    previewingMessageId,
+    setPreviewingMessageId,
+    monacoRef,
+    currentVersion,
+    aiMode,
+    closeAIAssistantPanel,
+    aiStore,
+    updateSearchParams,
+  });
+
+  const {
+    importWorkflow,
+    startApplyingWorkflow,
+    doneApplyingWorkflow,
+    startApplyingJobCode,
+    doneApplyingJobCode,
+    updateJob,
+  } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
   const isApplyingWorkflow = useWorkflowState(
     state => state.isApplyingWorkflow
   );
-
-  const handleApplyWorkflow = useCallback(
-    async (yaml: string, messageId: string) => {
-      setApplyingMessageId(messageId);
-
-      // Signal to all collaborators that we're starting to apply
-      // Returns false if coordination failed (other users won't be notified)
-      const coordinated = await startApplyingWorkflow(messageId);
-
-      try {
-        const workflowSpec = parseWorkflowYAML(yaml);
-
-        const validateIds = (spec: Record<string, unknown>) => {
-          if (spec['jobs']) {
-            for (const [jobKey, job] of Object.entries(
-              spec['jobs'] as object
-            )) {
-              const jobItem = job as Record<string, unknown>;
-              if (
-                jobItem['id'] &&
-                typeof jobItem['id'] === 'object' &&
-                jobItem['id'] !== null
-              ) {
-                throw new Error(
-                  `Invalid ID format for job "${jobKey}". IDs must be strings or null, not objects. ` +
-                    `Please ask the AI to regenerate the workflow with proper ID format.`
-                );
-              }
-            }
-          }
-          if (spec['triggers']) {
-            for (const [triggerKey, trigger] of Object.entries(
-              spec['triggers'] as object
-            )) {
-              const triggerItem = trigger as Record<string, unknown>;
-              if (
-                triggerItem['id'] &&
-                typeof triggerItem['id'] === 'object' &&
-                triggerItem['id'] !== null
-              ) {
-                throw new Error(
-                  `Invalid ID format for trigger "${triggerKey}". IDs must be strings or null, not objects. ` +
-                    `Please ask the AI to regenerate the workflow with proper ID format.`
-                );
-              }
-            }
-          }
-          if (spec['edges']) {
-            for (const [edgeKey, edge] of Object.entries(
-              spec['edges'] as object
-            )) {
-              const edgeItem = edge as Record<string, unknown>;
-              if (
-                edgeItem['id'] &&
-                typeof edgeItem['id'] === 'object' &&
-                edgeItem['id'] !== null
-              ) {
-                throw new Error(
-                  `Invalid ID format for edge "${edgeKey}". IDs must be strings or null, not objects. ` +
-                    `Please ask the AI to regenerate the workflow with proper ID format.`
-                );
-              }
-            }
-          }
-        };
-
-        validateIds(workflowSpec);
-
-        // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
-        const workflowState = convertWorkflowSpecToState(workflowSpec);
-
-        importWorkflow(workflowState);
-      } catch (error) {
-        console.error('[AI Assistant] Failed to apply workflow:', error);
-
-        notifications.alert({
-          title: 'Failed to apply workflow',
-          description:
-            error instanceof Error ? error.message : 'Invalid workflow YAML',
-        });
-      } finally {
-        setApplyingMessageId(null);
-        // Only signal completion if we successfully coordinated
-        // (otherwise other users weren't notified of the start)
-        if (coordinated) {
-          await doneApplyingWorkflow(messageId);
-        }
-      }
-    },
-    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
+  const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
+  const applyingJobCodeMessageId = useWorkflowState(
+    state => state.applyingJobCodeMessageId
   );
 
-  /**
-   * Auto-apply workflow when AI responds with YAML code.
-   *
-   * This effect watches for new messages in workflow_template mode and automatically
-   * applies the latest workflow YAML to the canvas. This creates a seamless experience
-   * where users see their workflow update in real-time as the AI generates it.
-   *
-   * Conditions for auto-apply:
-   * - Session type is 'workflow_template' (not job_code)
-   * - There are messages in the conversation
-   * - Connection is established (prevents applying during reconnection)
-   * - The message has code and hasn't been applied yet (tracked in appliedMessageIdsRef)
-   * - The current user is the one who sent the message that triggered the AI response
-   *   (prevents duplicate applies in collaborative sessions where multiple users view the same chat)
-   *
-   * Note: We only apply the LATEST message with code to avoid applying intermediate
-   * drafts if the AI sends multiple responses quickly.
-   */
-  useEffect(() => {
-    if (sessionType !== 'workflow_template' || !messages.length) return;
-    if (connectionState !== 'connected') return;
-    // Don't auto-apply when readonly (except for new workflow creation)
-    if (!canApplyChanges) return;
+  // Hook to handle workflow/job code application logic
+  const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
+    useAIWorkflowApplications({
+      sessionId,
+      page: aiMode?.page || 'workflow_template',
+      currentSession:
+        sessionId && messages.length > 0
+          ? {
+              messages,
+              workflowTemplateContext,
+            }
+          : null,
+      currentUserId: user?.id,
+      aiMode,
+      workflowActions: {
+        importWorkflow,
+        startApplyingWorkflow,
+        doneApplyingWorkflow,
+        startApplyingJobCode,
+        doneApplyingJobCode,
+        updateJob,
+      },
+      monacoRef,
+      jobs,
+      canApplyChanges,
+      connectionState,
+      setPreviewingMessageId,
+      previewingMessageId,
+      setApplyingMessageId,
+      appliedMessageIdsRef,
+    });
 
-    const messagesWithCode = messages.filter(
-      msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
-    );
-
-    // On initial session load, mark all existing messages as already applied
-    // to prevent re-applying workflows when opening existing sessions
-    if (!hasLoadedSessionRef.current) {
-      hasLoadedSessionRef.current = true;
-      messagesWithCode.forEach(msg => {
-        appliedMessageIdsRef.current.add(msg.id);
-      });
-      return;
-    }
-
-    const latestMessage = messagesWithCode.pop();
-
-    if (
-      latestMessage?.code &&
-      !appliedMessageIdsRef.current.has(latestMessage.id)
-    ) {
-      // Find the user message that triggered this AI response
-      // Look for the most recent user message before this assistant message
-      const latestMessageIndex = messages.findIndex(
-        m => m.id === latestMessage.id
-      );
-      const precedingUserMessage = messages
-        .slice(0, latestMessageIndex)
-        .reverse()
-        .find(m => m.role === 'user');
-
-      // Only auto-apply if the current user sent the triggering message
-      // This prevents duplicate applies in collaborative sessions where
-      // multiple users view the same chat and would otherwise all auto-apply
-      const isCurrentUserAuthor =
-        precedingUserMessage?.user_id === user?.id ||
-        // Fallback: if no user_id on message (legacy), allow apply
-        !precedingUserMessage?.user_id;
-
-      appliedMessageIdsRef.current.add(latestMessage.id);
-
-      if (isCurrentUserAuthor) {
-        void handleApplyWorkflow(latestMessage.code, latestMessage.id);
-      }
-    }
-  }, [
-    messages,
-    sessionType,
-    sessionId,
-    connectionState,
-    workflowTemplateContext,
-    workflow,
-    handleApplyWorkflow,
-    canApplyChanges,
-    user?.id,
-  ]);
+  // Auto-preview job code when AI responds with code
+  // Only for the user who authored the triggering message
+  useAutoPreview({
+    aiMode,
+    session: sessionId
+      ? { id: sessionId, session_type: 'workflow_template', messages }
+      : null,
+    currentUserId: user?.id,
+    onPreview: handlePreviewJobCode,
+  });
 
   return (
     <div
@@ -724,7 +577,7 @@ export function AIAssistantPanelWrapper() {
               messageCount={messages.length}
               isLoading={isLoading}
               isResizable={true}
-              sessionType={sessionType}
+              page={aiMode?.page}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
@@ -736,15 +589,41 @@ export function AIAssistantPanelWrapper() {
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
-                  sessionType === 'workflow_template' && !isApplyingWorkflow
+                  aiMode?.page === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }
                     : undefined
                 }
-                applyingMessageId={applyingMessageId}
-                showAddButtons={sessionType === 'job_code'}
-                showApplyButton={sessionType === 'workflow_template'}
+                onApplyJobCode={
+                  aiMode?.page === 'job_code' && !isApplyingJobCode
+                    ? (code, messageId) => {
+                        void handleApplyJobCode(code, messageId);
+                      }
+                    : undefined
+                }
+                onPreviewJobCode={
+                  aiMode?.page === 'job_code' ? handlePreviewJobCode : undefined
+                }
+                applyingMessageId={
+                  // If anyone is applying (including other users), pass the message ID
+                  // to show "APPLYING..." state. Prioritize stored message ID from store,
+                  // then fall back to local state.
+                  isApplyingJobCode
+                    ? (applyingJobCodeMessageId ?? applyingMessageId)
+                    : undefined
+                }
+                previewingMessageId={previewingMessageId}
+                showAddButtons={
+                  aiMode?.page === 'job_code'
+                    ? // For job_code: hide ADD buttons when message has code field
+                      !messages.some(m => m.role === 'assistant' && m.code)
+                    : false
+                }
+                showApplyButton={
+                  aiMode?.page === 'workflow_template' ||
+                  (aiMode?.page === 'job_code' && messages.some(m => m.code))
+                }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}
               />

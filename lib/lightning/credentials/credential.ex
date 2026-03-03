@@ -45,15 +45,26 @@ defmodule Lightning.Credentials.Credential do
       :scheduled_deletion,
       :transfer_status
     ])
+    |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
     |> unique_constraint([:name, :user_id],
       message: "you have another credential with the same name"
+    )
+    |> unique_constraint([:external_id, :user_id],
+      message: "you already have a credential with the same external ID"
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
+  end
+
+  defp normalize_external_id(changeset) do
+    case get_change(changeset, :external_id) do
+      "" -> put_change(changeset, :external_id, nil)
+      _ -> changeset
+    end
   end
 end

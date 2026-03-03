@@ -32,15 +32,17 @@ defmodule Lightning.Workflows.Workflow do
              :edges,
              :jobs,
              :triggers,
+             :positions,
              :inserted_at,
-             :updated_at
+             :updated_at,
+             :concurrency,
+             :enable_job_logs
            ]}
   schema "workflows" do
     field :name, :string
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
-    field :version_history, {:array, :string}, default: []
 
     has_many :edges, Edge, on_replace: :delete_if_exists
     has_many :jobs, Job, on_replace: :delete

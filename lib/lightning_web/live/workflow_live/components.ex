@@ -101,6 +101,23 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  attr :id, :string, required: true
+
+  def deprecated_warning(assigns) do
+    ~H"""
+    <button
+      type="button"
+      id={@id}
+      phx-click="switch_to_collab_editor"
+      phx-hook="Tooltip"
+      aria-label="You're using the legacy workflow builder and will soon be upgraded. Click to switch now."
+      class="w-6 h-6 place-self-center text-yellow-500 hover:text-yellow-400 cursor-pointer"
+    >
+      <span class="hero-exclamation-triangle-solid"></span>
+    </button>
+    """
+  end
+
   attr :form, :map, required: true
   attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true
@@ -910,7 +927,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <span>
       Workflow saved and sync requested. Check the
       <.link href={@link_to_actions} target="_blank" class="link">
-        Github actions
+        GitHub actions
       </.link>
       for result
     </span>

@@ -739,19 +739,39 @@ defmodule Lightning.Collaboration.Session do
          changes: changes,
          data: %schema_module{}
        }) do
-    fields =
-      schema_module.__schema__(:associations) ++
-        schema_module.__schema__(:embeds)
+    associations = schema_module.__schema__(:associations)
+    embeds = schema_module.__schema__(:embeds)
 
-    Enum.reduce(fields, map, fn
-      field, acc when field in [:jobs, :triggers, :edges] ->
-        traverse_field_errors(acc, changes, field, fn
-          field_changeset ->
-            Ecto.Changeset.get_field(field_changeset, :id)
-        end)
+    # Process associations (jobs, triggers, edges)
+    map =
+      Enum.reduce(associations, map, fn
+        field, acc when field in [:jobs, :triggers, :edges] ->
+          traverse_field_errors(acc, changes, field, fn
+            field_changeset ->
+              Ecto.Changeset.get_field(field_changeset, :id)
+          end)
 
-      field, acc ->
-        traverse_field_errors(acc, changes, field, fn _ -> field end)
+        field, acc ->
+          traverse_field_errors(acc, changes, field, fn _ -> field end)
+      end)
+
+    # Process embeds - merge their errors directly without nesting
+    Enum.reduce(embeds, map, fn field, acc ->
+      case Map.get(changes, field) do
+        %Ecto.Changeset{} = embed_changeset ->
+          embed_errors = extract_changeset_errors(embed_changeset)
+
+          if embed_errors == %{} do
+            acc
+          else
+            # Put embed errors directly under the field name
+            # Don't nest them under the field name again
+            Map.put(acc, field, embed_errors)
+          end
+
+        _ ->
+          acc
+      end
     end)
   end
 

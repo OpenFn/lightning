@@ -88,7 +88,8 @@ defmodule Lightning.ApolloClient do
       "content" => content,
       "context" => context,
       "history" => history,
-      "meta" => meta
+      "meta" => meta,
+      "suggest_code" => true
     }
 
     client()

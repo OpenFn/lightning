@@ -25,7 +25,7 @@ defmodule LightningWeb.Components.GithubComponents do
       class={[@class, "#{if @disabled, do: "bg-primary-300 cursor-not-allowed"}"]}
       {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
     >
-      {if @user.github_oauth_token, do: "Reconnect", else: "Connect"} your Github Account
+      {if @user.github_oauth_token, do: "Reconnect", else: "Connect"} your GitHub Account
     </.link>
     """
   end

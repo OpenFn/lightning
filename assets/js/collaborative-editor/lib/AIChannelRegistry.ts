@@ -148,7 +148,7 @@ export class AIChannelRegistry {
   subscribe(
     topic: string,
     subscriberId: string,
-    context: JobCodeContext | WorkflowTemplateContext
+    context: WorkflowTemplateContext
   ): void {
     const entry = this.channels.get(topic);
 
@@ -740,7 +740,7 @@ export class AIChannelRegistry {
    * Build join parameters based on context
    */
   private buildJoinParams(
-    context: JobCodeContext | WorkflowTemplateContext
+    context: WorkflowTemplateContext
   ): Record<string, string | boolean | undefined> {
     const params: Record<string, string | boolean | undefined> = {};
 
@@ -763,6 +763,9 @@ export class AIChannelRegistry {
       }
       if (context.workflow_id) {
         params['workflow_id'] = context.workflow_id;
+      }
+      if (context.project_id) {
+        params['project_id'] = context.project_id;
       }
       if (context.content) {
         params['content'] = context.content;

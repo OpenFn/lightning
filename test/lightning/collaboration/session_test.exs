@@ -1555,6 +1555,61 @@ defmodule Lightning.SessionTest do
              ]
     end
 
+    test "writes kafka_configuration validation errors correctly (not double-nested)",
+         %{
+           session: session,
+           user: user
+         } do
+      # Add a kafka trigger with blank/invalid kafka_configuration
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_map =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "kafka",
+          "enabled" => false,
+          "kafka_configuration" =>
+            Yex.MapPrelim.from(%{
+              "hosts_string" => "",
+              "topics_string" => "",
+              "initial_offset_reset_policy" => "earliest",
+              "connect_timeout" => 30
+            })
+        })
+
+      Yex.Doc.transaction(doc, "test_add_kafka_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_map)
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check kafka_configuration errors are NOT double-nested
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Errors should be nested: %{triggers: %{trigger-id: %{kafka_configuration: %{hosts: ["error"]}}}}
+      # NOT: %{triggers: %{trigger-id: %{kafka_configuration: %{kafka_configuration: %{hosts: ["error"]}}}}}
+      assert Map.has_key?(errors, "triggers")
+      assert is_map(errors["triggers"])
+      assert Map.has_key?(errors["triggers"], trigger_id)
+      assert is_map(errors["triggers"][trigger_id])
+      assert Map.has_key?(errors["triggers"][trigger_id], "kafka_configuration")
+
+      kafka_errors = errors["triggers"][trigger_id]["kafka_configuration"]
+
+      # Should have direct error fields, NOT another nested kafka_configuration
+      refute Map.has_key?(kafka_errors, "kafka_configuration"),
+             "kafka_configuration errors should not be double-nested"
+
+      # Should have actual validation errors
+      assert Map.has_key?(kafka_errors, "hosts_string")
+      assert Map.has_key?(kafka_errors, "topics_string")
+    end
+
     test "returns error when existing workflow tries to activate trigger at limit",
          %{
            session: session,

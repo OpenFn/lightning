@@ -1,7 +1,6 @@
 import type { RunInfo, RunStep } from '../../workflow-store/store';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import {
-  sortOrderForSvg,
   styleEdge,
   styleNode,
   edgeLabelIconStyles,
@@ -94,12 +93,14 @@ const fromWorkflow = (
         },
       };
 
+      const isSelected = item.id === selectedId;
+      const zIndex = isSelected ? 2 : 1;
       if (item.id === selectedId) {
         model.selected = true;
       } else {
         model.selected = false;
       }
-
+      model.zIndex = zIndex;
       if (/(job|trigger)/.test(type)) {
         const node = item as Lightning.Node;
         model.type = type;
@@ -165,6 +166,7 @@ const fromWorkflow = (
               edge.source_trigger_id === runSteps.start_from) &&
             runStepsObj[edge.target_job_id]
           ),
+          zIndex,
         };
 
         // Note: we don't allow the user to disable the edge that goes from a
@@ -197,9 +199,7 @@ const fromWorkflow = (
   process(workflow.triggers, nodes, 'trigger');
   process(workflow.edges, edges, 'edge');
 
-  const sortedEdges = edges.sort(sortOrderForSvg);
-
-  return { nodes, edges: sortedEdges, disabled: workflow.disabled };
+  return { nodes, edges, disabled: workflow.disabled };
 };
 
 export default fromWorkflow;

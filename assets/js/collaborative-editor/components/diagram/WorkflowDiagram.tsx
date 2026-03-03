@@ -46,6 +46,7 @@ import { createEmptyRunInfo } from '../../utils/runStepsTransformer';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 
 import { PointerTrackerViewer } from './PointerTrackerViewer';
+import { useFlowEvents } from './react-flow-events';
 import flowHandlers from './react-flow-handlers';
 
 type WorkflowDiagramProps = {
@@ -53,7 +54,6 @@ type WorkflowDiagramProps = {
   containerEl: HTMLElement;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
-  forceFit?: boolean;
   showAiAssistant?: boolean;
   aiAssistantId?: string;
   showInspector?: boolean;
@@ -110,6 +110,7 @@ const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const flow = useReactFlow();
+  useFlowEvents(flow);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
@@ -153,6 +154,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const isManualLayout = Object.keys(workflowPositions).length > 0;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
@@ -339,20 +341,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     };
     const positions = await layout(model, setModel, flow, viewBounds, {
       duration: props.layoutDuration ?? LAYOUT_DURATION,
-      forceFit: props.forceFit ?? false,
+      forceFit: false,
     });
     // Note we don't update positions until the animation has finished
     chartCache.current.positions = positions;
     if (isManualLayout) updatePositions(positions);
     return positions;
-  }, [
-    flow,
-    model,
-    isManualLayout,
-    updatePositions,
-    props.layoutDuration,
-    props.forceFit,
-  ]);
+  }, [flow, model, isManualLayout, updatePositions, props.layoutDuration]);
 
   // Respond to changes pushed into the component from outside
   // This usually means the workflow has changed or its the first load, so we don't want to animate
@@ -490,7 +485,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             });
             void layout(newModel, setModel, flow, viewBounds, {
               duration: props.layoutDuration ?? LAYOUT_DURATION,
-              forceFit: props.forceFit ?? false,
+              forceFit: false,
             }).then(positions => {
               // Note we don't update positions until animation has finished
               chartCache.current.positions = positions;
@@ -625,21 +620,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       }
     };
   }, [props.showAiAssistant, props.aiAssistantId]);
-
-  useEffect(() => {
-    if (props.forceFit && flow && model.nodes.length > 0) {
-      // Immediately fit to bounds when forceFit becomes true
-      const bounds = flow.getNodesBounds(model.nodes);
-      flow
-        .fitBounds(bounds, {
-          duration: FIT_DURATION,
-          padding: FIT_PADDING,
-        })
-        .catch(error => {
-          logger.error('Failed to fit bounds:', error);
-        });
-    }
-  }, [props.forceFit, flow, model.nodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -776,13 +756,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         fallback: 'Unknown',
       });
 
+      // Generate a unique job name by appending an incrementing number if needed
+      const existingNames = new Set(jobs.map(j => j.name));
+      let uniqueName = adaptorDisplayName;
+      let counter = 1;
+      while (existingNames.has(uniqueName)) {
+        uniqueName = `${adaptorDisplayName} ${counter}`;
+        counter++;
+      }
+
       // Generate job ID
       const jobId = randomUUID();
 
       // Create job directly in Y.Doc (this will trigger animation)
       const newJob = {
         id: jobId,
-        name: adaptorDisplayName,
+        name: uniqueName,
         body: '',
         adaptor: adaptorSpec,
       };
@@ -921,6 +910,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   return (
     <>
       <ReactFlow
+        zIndexMode="manual"
         ref={workflowDiagramRef}
         maxZoom={1}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}

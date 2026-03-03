@@ -2,7 +2,7 @@ import { toast, type ExternalToast } from 'sonner';
 
 interface NotificationOptions extends ExternalToast {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
 }
 
 /**

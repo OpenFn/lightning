@@ -35,7 +35,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   useSyncExternalStore,
 } from 'react';
@@ -107,22 +106,23 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
   const initialRunData = sessionContext?.initialRunData;
 
-  // Parse initial run data once
-  const parsedInitialRunData = useMemo((): RunStepsData | null => {
-    if (!initialRunData) return null;
-    try {
-      return JSON.parse(initialRunData) as RunStepsData;
-    } catch (e) {
-      logger.warn('Failed to parse initial run data', e);
-      return null;
-    }
-  }, [initialRunData]);
-
   // Create store instances once and reuse them
-  // IMPORTANT: parsedInitialRunData is passed to historyStore during creation
-  // to pre-populate the cache SYNCHRONOUSLY before any child components render.
-  // This avoids race conditions where children try to use the cache before it's populated.
+  // IMPORTANT: Parse initialRunData INSIDE the useState initializer to ensure
+  // it's available when createHistoryStore is called. This pre-populates the cache
+  // SYNCHRONOUSLY before any child components render, avoiding race conditions
+  // where children try to use the cache before it's populated.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const [stores] = useState(() => {
+    // Parse initial run data at store creation time
+    let parsedInitialRunData: RunStepsData | null = null;
+    if (initialRunData) {
+      try {
+        parsedInitialRunData = JSON.parse(initialRunData) as RunStepsData;
+      } catch (e) {
+        logger.warn('Failed to parse initial run data', e);
+      }
+    }
+
     return {
       adaptorStore: createAdaptorStore(),
       credentialStore: createCredentialStore(),

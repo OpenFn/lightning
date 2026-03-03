@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   """
   use LightningWeb, {:live_view, container: {:div, []}}
 
+  alias Lightning.AiAssistant
   alias Lightning.Policies.Permissions
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
@@ -18,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount {LightningWeb.Hooks, :check_limits}
+  on_mount {LightningWeb.Hooks, :check_legacy_preference}
 
   @impl true
   def mount(params, _session, %{assigns: %{project: project}} = socket) do
@@ -31,7 +33,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        credential_schema: nil,
        credential_to_edit: nil,
        show_webhook_auth_modal: false,
-       webhook_auth_method: nil
+       webhook_auth_method: nil,
+       ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
 
@@ -122,6 +125,19 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      )}
   end
 
+  def handle_event("credential_modal_closed", _params, socket) do
+    # Called when the credential modal closes (via JS.push from on_modal_close)
+    # Push event to React and clean up server state
+    {:noreply,
+     socket
+     |> push_event("credential_modal_closed", %{})
+     |> assign(
+       show_credential_modal: false,
+       credential_schema: nil,
+       credential_to_edit: nil
+     )}
+  end
+
   def handle_event("open_webhook_auth_modal", %{}, socket) do
     # Open the webhook auth method creation modal
     # Create a new webhook auth method for the form
@@ -174,6 +190,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       }
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
+      data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),
@@ -186,6 +203,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       module={LightningWeb.CredentialLive.CredentialFormComponent}
       id="new-credential-modal"
       action={if @credential_to_edit, do: :edit, else: :new}
+      oauth_client={if @credential_to_edit, do: @credential_to_edit.oauth_client}
       current_user={@current_user}
       project={@project}
       projects={[@project]}
@@ -207,9 +225,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           :ok
         end
       }
-      on_modal_close={
-        JS.dispatch("close_credential_modal", to: "#collaborative-editor-react")
-      }
+      on_modal_close={JS.push("credential_modal_closed")}
       return_to={nil}
       sandbox_id={@project.parent_id}
       from_collab_editor={true}

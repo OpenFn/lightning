@@ -47,7 +47,10 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
     channelMock._test.emit('session_context', {
       user: null,
       project: null,
-      config: { require_email_verification: false },
+      config: {
+        require_email_verification: false,
+        kafka_triggers_enabled: false,
+      },
       permissions: { ...mockPermissions, can_edit_workflow },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,

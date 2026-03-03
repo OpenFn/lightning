@@ -180,6 +180,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 200)
 
+      expected_hash =
+        workflow
+        |> Repo.preload([:jobs, :edges, :triggers], force: true)
+        |> Lightning.WorkflowVersions.generate_hash()
+
+      workflow_json = %{
+        workflow_json
+        | "version_history" => ["app:#{expected_hash}"]
+      }
+
       assert %{
                "id" => ^project_id,
                "name" => ^project_name,
@@ -294,6 +304,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 200)
 
+      expected_hash =
+        workflow
+        |> Repo.preload([:jobs, :edges, :triggers], force: true)
+        |> Lightning.WorkflowVersions.generate_hash()
+
+      workflow_json = %{
+        workflow_json
+        | "version_history" => ["app:#{expected_hash}"]
+      }
+
       assert %{
                "id" => ^project_id,
                "name" => ^project_name,
@@ -335,6 +355,85 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } = response["data"]
 
       assert workflow_resp["id"] == existing_workflow.id
+    end
+
+    test "includes version_history in workflow response", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      workflow =
+        insert(:simple_workflow, project: project, name: "Test Workflow")
+
+      # Record some version history
+      {:ok, _v1} =
+        Lightning.WorkflowVersions.record_version(
+          workflow,
+          "aabbccddeeff",
+          "app"
+        )
+
+      {:ok, _v2} =
+        Lightning.WorkflowVersions.record_version(
+          workflow,
+          "112233445566",
+          "cli"
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"workflows" => [workflow_json]} = response["data"]
+      assert workflow_json["id"] == workflow.id
+
+      # Verify version_history is included and has the expected values
+      assert workflow_json["version_history"] == [
+               "app:aabbccddeeff",
+               "cli:112233445566"
+             ]
+    end
+
+    test "automatically ensures version history for workflows without versions",
+         %{
+           conn: conn,
+           user: user
+         } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      workflow =
+        insert(:simple_workflow,
+          project: project,
+          name: "Workflow Without Version"
+        )
+
+      # Verify workflow has no version history initially
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert initial_history == []
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"workflows" => [workflow_json]} = response["data"]
+      assert workflow_json["id"] == workflow.id
+
+      # Verify version was automatically created
+      workflow = Lightning.Repo.get!(Workflow, workflow.id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(version_history) == 1
+      assert [version] = version_history
+      assert String.starts_with?(version, "app:")
+
+      # Verify version_history is included in response
+      assert workflow_json["version_history"] == version_history
     end
 
     test "returns a project only with the specified snapshots", %{
@@ -688,7 +787,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
-    test "fails with 403 when usage limiter returns an error", %{
+    test "fails with 403 when repo_connection is limited by github_sync", %{
       conn: conn
     } do
       %{id: project_id} = project = insert(:project)
@@ -705,12 +804,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           "Bearer #{repo_connection.access_token}"
         )
 
-      error_text = "some error message"
+      error_text = "Upgrade to use Github Sync"
 
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(:limit_action, fn %{type: :github_sync},
                                       %{project_id: ^project_id} ->
-        {:error, :disabled, %Lightning.Extensions.Message{text: error_text}}
+        {:error, :upgrade_required,
+         %Lightning.Extensions.Message{text: error_text}}
       end)
 
       assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
@@ -949,6 +1049,139 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "records workflow version with 'cli' source when workflow is created via provisioner",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      assert length(version_history) == 1
+      assert [version] = version_history
+      assert String.starts_with?(version, "cli:")
+    end
+
+    test "records new workflow version when workflow is updated via provisioner",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # First provision - creates workflow
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+      assert [initial_version] = initial_history
+      assert String.starts_with?(initial_version, "cli:")
+
+      # Update workflow by changing job body
+      updated_body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          Enum.at(workflows, 0)
+          |> Map.update!("jobs", fn jobs ->
+            Enum.map(jobs, fn job ->
+              Map.put(job, "body", "console.log('updated');")
+            end)
+          end)
+          |> then(fn workflow ->
+            List.replace_at(workflows, 0, workflow)
+          end)
+        end)
+
+      conn = post(conn, ~p"/api/provision", updated_body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      updated_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      # we nolonger squash the first version
+      assert length(updated_history) == 2
+      assert [^initial_version, latest_version] = updated_history
+      assert String.starts_with?(latest_version, "cli:")
+
+      # Verify the hash changed after the update
+      refute initial_version == latest_version
+    end
+
+    test "does not create duplicate version when provisioning same workflow content",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # First provision - creates workflow
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+
+      # Provision again with the exact same content
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      duplicate_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      # Should still have only 1 version since content didn't change
+      assert length(duplicate_history) == 1
+      assert duplicate_history == initial_history
+    end
+
+    test "handles provisioning with no workflow changes gracefully",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # Create a project with a workflow that has an initial version
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      # First provision to create the workflow
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      # Get the workflow and its initial version history
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+
+      # Update only project metadata, keeping workflow unchanged
+      updated_body = Map.put(body, "name", "updated-project-name")
+
+      conn = post(conn, ~p"/api/provision", updated_body)
+      assert json_response(conn, 201)
+
+      # Verify version history unchanged since workflow content didn't change
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert version_history == initial_history
+
+      # Verify project name was updated
+      project = Lightning.Repo.get!(Lightning.Projects.Project, project.id)
+      assert project.name == "updated-project-name"
     end
 
     test "returns 201 for an existing project with workflows marked for deletion",

@@ -150,7 +150,10 @@ describe('TriggerInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
@@ -160,6 +163,7 @@ describe('TriggerInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
   });
@@ -251,7 +255,10 @@ describe('TriggerInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
@@ -261,6 +268,7 @@ describe('TriggerInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 

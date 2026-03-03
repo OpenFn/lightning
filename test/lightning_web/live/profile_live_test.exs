@@ -290,8 +290,11 @@ defmodule LightningWeb.ProfileLiveTest do
       refute html =~ "Scan the QR code"
 
       # show QR code
-      assert view |> element("#toggle-mfa-switch") |> render_click() =~
-               "Scan the QR code"
+      qr_html = view |> element("#toggle-mfa-switch") |> render_click()
+      assert qr_html =~ "Scan the QR code"
+
+      # QR code SVG should not contain XML declaration (not valid HTML5)
+      refute qr_html =~ "<?xml"
 
       # hide QR code
       view |> element("#toggle-mfa-switch") |> render_click()
@@ -408,7 +411,7 @@ defmodule LightningWeb.ProfileLiveTest do
     end
   end
 
-  describe "Github Component" do
+  describe "GitHub Component" do
     @describetag :capture_log
     setup :register_and_log_in_user
 
@@ -431,7 +434,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       flash = assert_redirect(view, ~p"/profile")
 
-      assert flash["info"] == "Github account linked successfully"
+      assert flash["info"] == "GitHub account linked successfully"
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
@@ -459,7 +462,7 @@ defmodule LightningWeb.ProfileLiveTest do
       :ok = refute_redirected(view, ~p"/profile")
 
       assert render(view) =~
-               "Oops! Github account failed to link. Please try again"
+               "Oops! GitHub account failed to link. Please try again"
 
       # button to connect is still available
       assert has_element?(view, "#connect-github-link")
@@ -501,7 +504,7 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       connect_button = element(view, "#connect-github-link")
       assert has_element?(connect_button)
-      assert render(connect_button) =~ "Reconnect your Github Account"
+      assert render(connect_button) =~ "Reconnect your GitHub Account"
       assert render(connect_button) =~ "Your token has expired"
       refute has_element?(view, "#disconnect-github-button")
     end
@@ -539,7 +542,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
 
-      assert html =~ "Github connection removed successfully"
+      assert html =~ "GitHub connection removed successfully"
 
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
@@ -593,7 +596,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
 
-      assert html =~ "Github connection removed successfully"
+      assert html =~ "GitHub connection removed successfully"
 
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
@@ -635,7 +638,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
 
-      assert html =~ "Github connection removed successfully"
+      assert html =~ "GitHub connection removed successfully"
 
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")

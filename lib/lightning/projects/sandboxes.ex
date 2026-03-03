@@ -23,7 +23,8 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Authorization
 
-  * **Provisioning**: Requires `:owner` or `:admin` role on the parent project or superuser
+  * **Provisioning**: Requires `:editor`, `:admin`, or `:owner` role on the parent project, or superuser
+  * **Merge**: Requires `:editor`, `:admin`, or `:owner` role on the target project, or superuser
   * **Updates/Deletion**: Requires `:owner` or `:admin` role on the sandbox itself,
                           or `:owner` or `:admin` on the root project, or superuser
 
@@ -39,6 +40,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
@@ -46,6 +48,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.WorkflowVersions
 
   @typedoc """
   Attributes for creating a new sandbox via `provision/3`.
@@ -86,7 +89,7 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `parent` - Project to clone from
-  * `actor` - User creating the sandbox (needs `:owner` or `:admin` role on parent)
+  * `actor` - User creating the sandbox (needs `:editor`, `:admin`, or `:owner` role on parent)
   * `attrs` - Creation attributes (see `t:provision_attrs/0`)
 
   ## Returns
@@ -187,14 +190,15 @@ defmodule Lightning.Projects.Sandboxes do
   @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
-    Permissions.can?(
-      :sandboxes,
-      :delete_sandbox,
-      actor,
-      sandbox
-    )
-    |> if do
-      Lightning.Projects.delete_project(sandbox)
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      case Lightning.Projects.delete_project(sandbox) do
+        {:ok, deleted} ->
+          SandboxPromExPlugin.fire_sandbox_deleted_event()
+          {:ok, deleted}
+
+        error ->
+          error
+      end
     else
       {:error, :unauthorized}
     end
@@ -240,8 +244,12 @@ defmodule Lightning.Projects.Sandboxes do
       end
     end)
     |> case do
-      {:ok, project} -> {:ok, project}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, project} ->
+        SandboxPromExPlugin.fire_sandbox_created_event()
+        {:ok, project}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 
@@ -380,6 +388,8 @@ defmodule Lightning.Projects.Sandboxes do
 
   defp create_sandbox_workflows(parent, sandbox) do
     Enum.reduce(parent.workflows, %{}, fn parent_workflow, mapping ->
+      {:ok, _} = WorkflowVersions.ensure_version_recorded(parent_workflow)
+
       {:ok, sandbox_workflow} =
         %Workflow{}
         |> Workflow.changeset(%{
@@ -459,7 +469,11 @@ defmodule Lightning.Projects.Sandboxes do
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
           cron_expression: parent_trigger.cron_expression,
-          kafka_configuration: parent_trigger.kafka_configuration
+          kafka_configuration:
+            case parent_trigger.kafka_configuration do
+              %_{} = config -> Map.from_struct(config)
+              other -> other
+            end
         }
 
         {:ok, sandbox_trigger} =
@@ -551,7 +565,6 @@ defmodule Lightning.Projects.Sandboxes do
     sandbox
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
-    |> generate_and_store_project_head_hash()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
   end
 
@@ -597,18 +610,6 @@ defmodule Lightning.Projects.Sandboxes do
       |> Workflows.maybe_create_latest_snapshot()
     end)
 
-    sandbox
-  end
-
-  defp generate_and_store_project_head_hash(sandbox) do
-    # Extract only the Project struct, removing the dynamic mapping fields
-    project_struct = Map.take(sandbox, Project.__schema__(:fields))
-    project = struct(Project, project_struct)
-
-    project_head_hash = Lightning.Projects.compute_project_head_hash(project.id)
-    Lightning.Projects.append_project_head!(project, project_head_hash)
-
-    # Return the original sandbox with mappings intact
     sandbox
   end
 

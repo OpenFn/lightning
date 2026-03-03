@@ -7,8 +7,15 @@
     />
   </:banner>
   <:header>
-    <LayoutComponents.header current_user={@current_user} project={@project}>
-      <:title>{@page_title}</:title>
+    <LayoutComponents.header current_user={@current_user}>
+      <:breadcrumbs>
+        <LayoutComponents.breadcrumbs>
+          <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+          <LayoutComponents.breadcrumb>
+            <:label>{@page_title}</:label>
+          </LayoutComponents.breadcrumb>
+        </LayoutComponents.breadcrumbs>
+      </:breadcrumbs>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
@@ -83,10 +90,17 @@
                 <div class="md:col-span-2">
                   <.input
                     type="text"
-                    field={f[:name]}
+                    field={f[:raw_name]}
+                    value={@name}
                     disabled={!@can_edit_project}
                     label="Project name"
                   />
+                  <.input type="hidden" field={f[:name]} />
+                  <small class="mt-2 block text-xs text-gray-600">
+                    <.name_badge name={@name} field={f[:name]}>
+                      Your project will be named
+                    </.name_badge>
+                  </small>
                 </div>
               </div>
               <div class="grid grid-cols gap-6">
@@ -97,6 +111,9 @@
                     disabled={!@can_edit_project}
                     label="Project environment"
                   />
+                  <small class="mt-2 block text-xs text-gray-600">
+                    Credentials will be loaded with values from this environment.
+                  </small>
                 </div>
               </div>
               <div class="grid grid-cols gap-6">
@@ -109,7 +126,7 @@
                     class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
                   />
                   <small class="mt-2 block text-xs text-gray-600">
-                    A short description of a project [max 240 characters]
+                    A short description of a project (max 240 characters)
                   </small>
                 </div>
               </div>
@@ -727,7 +744,7 @@
           </div>
         <% end %>
         <div class="mt-2">
-          Need to learn more about Github Sync?
+          Need to learn more about GitHub Sync?
           See
           <.link
             target="_blank"

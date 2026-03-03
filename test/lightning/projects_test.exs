@@ -1815,6 +1815,21 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
+    test "update_project/3 rejects lowering history below existing dataclip retention" do
+      project =
+        insert(:project,
+          history_retention_period: 30,
+          dataclip_retention_period: 30
+        )
+
+      assert {:error, changeset} =
+               Projects.update_project(project, %{history_retention_period: 7})
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               changeset
+             ).dataclip_retention_period
+    end
+
     test "update_project/3 with invalid data returns error changeset" do
       project = project_fixture() |> unload_relation(:project_users)
 
@@ -2433,157 +2448,63 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "project head hash + version history helpers" do
-    test "compute_project_head_hash/1 uses latest per workflow and is deterministic" do
+  describe "descendants_query/1 and descendant_ids/1" do
+    test "descendant_ids/1 returns empty list for empty input" do
+      assert Projects.descendant_ids([]) == []
+    end
+
+    test "descendant_ids/1 returns empty list for project with no children" do
       project = insert(:project)
-
-      # Two workflows in this project
-      w1 = insert(:simple_workflow, project: project)
-      w2 = insert(:simple_workflow, project: project)
-
-      # Insert workflow_versions with controlled inserted_at so ordering is deterministic
-      now = DateTime.utc_now(:microsecond)
-      later = DateTime.add(now, 1, :microsecond)
-      latest = DateTime.add(now, 2, :microsecond)
-
-      rows = [
-        %{
-          id: Ecto.UUID.generate(),
-          workflow_id: w1.id,
-          hash: "aaaaaaaaaaaa",
-          source: "app",
-          inserted_at: now
-        },
-        %{
-          id: Ecto.UUID.generate(),
-          workflow_id: w1.id,
-          hash: "bbbbbbbbbbbb",
-          source: "cli",
-          inserted_at: later
-        },
-        %{
-          id: Ecto.UUID.generate(),
-          workflow_id: w2.id,
-          hash: "cccccccccccc",
-          source: "app",
-          inserted_at: latest
-        }
-      ]
-
-      Repo.insert_all(Lightning.Workflows.WorkflowVersion, rows)
-
-      # Build expected digest the same way as the implementation
-      pairs =
-        [
-          {w1.id, "bbbbbbbbbbbb"},
-          {w2.id, "cccccccccccc"}
-        ]
-        |> Enum.sort_by(fn {wid, _} -> to_string(wid) end)
-        |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
-
-      expected =
-        pairs
-        |> Jason.encode!()
-        |> then(fn data -> :crypto.hash(:sha256, data) end)
-        |> Base.encode16(case: :lower)
-        |> binary_part(0, 12)
-
-      assert Projects.compute_project_head_hash(project.id) == expected
+      assert Projects.descendant_ids([project.id]) == []
     end
 
-    test "append_project_head/2 appends once and validates format" do
-      project = insert(:project, version_history: [])
+    test "descendant_ids/1 returns direct children IDs" do
+      parent = insert(:project)
+      child1 = insert(:project, parent: parent)
+      child2 = insert(:project, parent: parent)
 
-      # Valid 12-hex hash
-      h1 = "deadbeefcafe"
-      assert {:ok, p1} = Projects.append_project_head(project, h1)
-      assert p1.version_history == [h1]
-
-      # Appending the same hash again is a no-op
-      assert {:ok, p2} = Projects.append_project_head(p1, h1)
-      assert p2.version_history == [h1]
-
-      # Invalid hash returns {:error, :bad_hash}
-      assert {:error, :bad_hash} = Projects.append_project_head(p2, "not-hex")
+      result = Projects.descendant_ids([parent.id])
+      assert Enum.sort(result) == Enum.sort([child1.id, child2.id])
     end
 
-    test "append_project_head!/2 raises on bad hash and returns updated project on success" do
-      project = insert(:project, version_history: [])
+    test "descendant_ids/1 returns all descendants in a deep hierarchy" do
+      root = insert(:project)
+      child = insert(:project, parent: root)
+      grandchild = insert(:project, parent: child)
+      great_grandchild = insert(:project, parent: grandchild)
 
-      good = "0123456789ab"
-      bad = "oops"
+      result = Projects.descendant_ids([root.id])
 
-      # Success path
-      updated = Projects.append_project_head!(project, good)
-      assert updated.version_history == [good]
-
-      # Error path
-      assert_raise ArgumentError,
-                   "head_hash must be 12 lowercase hex chars",
-                   fn ->
-                     Projects.append_project_head!(updated, bad)
-                   end
+      assert Enum.sort(result) ==
+               Enum.sort([child.id, grandchild.id, great_grandchild.id])
     end
 
-    test "rejects uppercase even if otherwise valid" do
-      p = insert(:project)
+    test "descendant_ids/1 does NOT include the input project IDs" do
+      parent = insert(:project)
+      _child = insert(:project, parent: parent)
 
-      assert {:error, :bad_hash} =
-               Projects.append_project_head(p, "ABCDEF123456")
+      result = Projects.descendant_ids([parent.id])
+      refute parent.id in result
     end
 
-    test "concurrent appends of the same hash result in a single entry" do
-      p = insert(:project)
+    test "descendant_ids/1 accepts multiple project IDs and returns combined descendants without duplicates" do
+      parent1 = insert(:project)
+      child1 = insert(:project, parent: parent1)
 
-      fun = fn -> Projects.append_project_head!(p, "abcdef123456") end
-      tasks = for _ <- 1..10, do: Task.async(fun)
-      _ = Enum.map(tasks, &Task.await/1)
+      parent2 = insert(:project)
+      child2 = insert(:project, parent: parent2)
 
-      p = Repo.get!(Lightning.Projects.Project, p.id)
-      assert p.version_history == ["abcdef123456"]
+      result = Projects.descendant_ids([parent1.id, parent2.id])
+      assert Enum.sort(result) == Enum.sort([child1.id, child2.id])
     end
 
-    test "concurrent appends of different hashes keep both (order unspecified)" do
-      p = insert(:project)
+    test "descendants_query/1 returns a composable Ecto.Query" do
+      parent = insert(:project)
+      _child = insert(:project, parent: parent)
 
-      t1 = Task.async(fn -> Projects.append_project_head!(p, "aaaaaaaaaaaa") end)
-      t2 = Task.async(fn -> Projects.append_project_head!(p, "bbbbbbbbbbbb") end)
-      _ = Task.await(t1)
-      _ = Task.await(t2)
-
-      p = Repo.get!(Lightning.Projects.Project, p.id)
-
-      assert Enum.sort(p.version_history) ==
-               Enum.sort(["aaaaaaaaaaaa", "bbbbbbbbbbbb"])
-    end
-
-    test "version_history attrs are ignored by changeset (append-only via context)" do
-      {:ok, p} =
-        %Project{}
-        |> Project.changeset(%{name: "p", version_history: ["abcdef123456"]})
-        |> Repo.insert()
-
-      assert p.version_history == []
-
-      {:ok, p2} =
-        p
-        |> Project.changeset(%{version_history: ["bbbbbbbbbbbb"]})
-        |> Repo.update()
-
-      assert p2.version_history == []
-    end
-
-    test "compute_project_head_hash/1 returns stable digest for projects with no workflow versions" do
-      p = insert(:project)
-
-      expected =
-        []
-        |> Jason.encode!()
-        |> then(&:crypto.hash(:sha256, &1))
-        |> Base.encode16(case: :lower)
-        |> binary_part(0, 12)
-
-      assert Projects.compute_project_head_hash(p.id) == expected
+      query = Projects.descendants_query([parent.id])
+      assert %Ecto.Query{} = query
+      assert Repo.exists?(query)
     end
   end
 
@@ -2599,7 +2520,6 @@ defmodule Lightning.ProjectsTest do
 
       assert sandbox.parent_id == parent.id
       assert sandbox.name == "sb-1"
-      assert is_list(sandbox.version_history)
     end
 
     test "update_sandbox/3 updates basic fields on the sandbox" do

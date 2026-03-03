@@ -50,6 +50,7 @@ defmodule LightningWeb.Router do
   pipeline :authenticated_json do
     plug :accepts, ["json"]
     plug :fetch_session
+    plug :protect_from_forgery
     plug :fetch_current_user
   end
 
@@ -61,8 +62,6 @@ defmodule LightningWeb.Router do
     get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
     post "/users/confirm", UserConfirmationController, :create
-    get "/users/confirm/:token", UserConfirmationController, :edit
-    post "/users/confirm/:token", UserConfirmationController, :update
 
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
@@ -174,6 +173,9 @@ defmodule LightningWeb.Router do
 
     get "/project_files/:id/download", ProjectFileController, :download
 
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
+
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email
@@ -238,10 +240,10 @@ defmodule LightningWeb.Router do
         live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
-        live "/w/new", WorkflowLive.Edit, :new
-        live "/w/new/collaborate", WorkflowLive.Collaborate, :new
-        live "/w/:id", WorkflowLive.Edit, :edit
-        live "/w/:id/collaborate", WorkflowLive.Collaborate, :edit
+        live "/w/new/legacy", WorkflowLive.Edit, :new
+        live "/w/new", WorkflowLive.Collaborate, :new
+        live "/w/:id/legacy", WorkflowLive.Edit, :edit
+        live "/w/:id", WorkflowLive.Collaborate, :edit
 
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new

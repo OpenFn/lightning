@@ -179,11 +179,18 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "authorization" do
-    test "rejects non-admin/editor" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:editor)
+    test "rejects viewer" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:viewer)
 
       assert {:error, :unauthorized} =
-               Sandboxes.provision(parent, actor, %{name: "SB"})
+               Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+    end
+
+    test "allows editor" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:editor)
+
+      assert {:ok, %Project{}} =
+               Sandboxes.provision(parent, actor, %{name: "sb-editor"})
     end
 
     test "allows admin/owner" do
@@ -191,6 +198,58 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:ok, %Project{}} =
                Sandboxes.provision(parent, actor, %{name: "sb-ok"})
+    end
+  end
+
+  describe "telemetry events" do
+    test "provision emits sandbox created telemetry event on success" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      event = [:lightning, :sandbox, :created]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-telemetry"})
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "provision does not emit telemetry event on failure" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      event = [:lightning, :sandbox, :created]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      # Empty name causes validation error
+      {:error, _changeset} = Sandboxes.provision(parent, actor, %{name: ""})
+
+      refute_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "delete_sandbox emits sandbox deleted telemetry event on success" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "to-delete", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _deleted} = Sandboxes.delete_sandbox(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "delete_sandbox does not emit telemetry event on unauthorized" do
+      actor = insert(:user)
+      other_user = insert(:user)
+      sandbox = insert(:project, name: "unauthorized")
+      ensure_member!(sandbox, other_user, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:error, :unauthorized} = Sandboxes.delete_sandbox(sandbox, actor)
+
+      refute_received {^event, ^ref, %{}, %{}}
     end
   end
 
@@ -420,6 +479,71 @@ defmodule Lightning.Projects.SandboxesTest do
         |> Repo.one()
 
       assert cnt >= 1
+    end
+
+    test "ensures parent workflows have a version before provisioning sandbox" do
+      # Create a parent project with a workflow that has NO version_history
+      actor = insert(:user)
+      parent = insert(:project, name: "parent-no-versions")
+      ensure_member!(parent, actor, :owner)
+
+      # Create a workflow with jobs/triggers/edges but NO versions
+      workflow = insert(:workflow, project: parent, name: "NoVersions")
+      trigger = insert(:trigger, workflow: workflow, enabled: true)
+
+      job =
+        insert(:job,
+          workflow: workflow,
+          name: "TestJob",
+          body: "console.log('test');",
+          adaptor: "@openfn/language-common@latest"
+        )
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always,
+        enabled: true
+      )
+
+      # Verify workflow has no versions
+      version_count_before =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.aggregate(:count, :id)
+
+      assert version_count_before == 0
+
+      # Provision the sandbox
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "test-sandbox"})
+
+      # After provisioning, parent workflow should have a version
+      version_count_after =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.aggregate(:count, :id)
+
+      assert version_count_after == 1
+
+      # Verify the version has a valid hash
+      parent_version =
+        from(v in WorkflowVersion, where: v.workflow_id == ^workflow.id)
+        |> Repo.one!()
+
+      assert String.match?(parent_version.hash, ~r/^[a-f0-9]{12}$/)
+
+      # Verify sandbox workflow also has the same version (copied by copy_workflow_version_history)
+      sandbox_workflow =
+        from(w in Workflow,
+          where: w.project_id == ^sandbox.id and w.name == "NoVersions"
+        )
+        |> Repo.one!()
+
+      sandbox_version =
+        from(v in WorkflowVersion, where: v.workflow_id == ^sandbox_workflow.id)
+        |> Repo.one!()
+
+      assert sandbox_version.hash == parent_version.hash
     end
   end
 
@@ -687,6 +811,74 @@ defmodule Lightning.Projects.SandboxesTest do
                :count,
                :id
              ) == 0
+    end
+  end
+
+  describe "provision with inconsistent parent retention" do
+    test "returns changeset error when parent has dataclip > history retention" do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "bad-retention",
+          history_retention_period: 7,
+          dataclip_retention_period: 30
+        )
+
+      ensure_member!(parent, actor, :owner)
+
+      assert {:error, changeset} =
+               Sandboxes.provision(parent, actor, %{name: "child-sandbox"})
+
+      assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
+               changeset
+             ).dataclip_retention_period
+    end
+  end
+
+  describe "provision with Kafka triggers" do
+    test "clones Kafka trigger configuration without crashing" do
+      actor = insert(:user)
+      parent = insert(:project, name: "kafka-parent")
+      ensure_member!(parent, actor, :owner)
+
+      w = insert(:workflow, project: parent, name: "KafkaFlow")
+      kafka_config = build(:triggers_kafka_configuration)
+
+      t =
+        insert(:trigger,
+          workflow: w,
+          type: :kafka,
+          enabled: true,
+          kafka_configuration: kafka_config
+        )
+
+      j = insert(:job, workflow: w, name: "K1", body: "fn(s => s);")
+
+      insert(:edge,
+        workflow: w,
+        source_trigger_id: t.id,
+        target_job_id: j.id,
+        condition_type: :always,
+        enabled: true
+      )
+
+      add_version!(w, "kafkahash1234")
+
+      assert {:ok, sandbox} =
+               Sandboxes.provision(parent, actor, %{name: "kafka-child"})
+
+      sandbox_trigger =
+        sandbox
+        |> Repo.preload(workflows: :triggers)
+        |> then(& &1.workflows)
+        |> List.first()
+        |> then(& &1.triggers)
+        |> List.first()
+
+      assert sandbox_trigger.type == :kafka
+      assert sandbox_trigger.enabled == false
+      assert sandbox_trigger.kafka_configuration != nil
     end
   end
 

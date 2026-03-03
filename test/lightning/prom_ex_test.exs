@@ -67,6 +67,7 @@ defmodule Lightning.PromExTest do
         unclaimed_run_threshold_seconds: 40
       },
       Lightning.PromExTestPlugin,
+      Lightning.Projects.SandboxPromExPlugin,
       FooPlugin,
       BarPlugin
     ]
@@ -78,6 +79,8 @@ defmodule Lightning.PromExTest do
     Mox.stub(Lightning.MockConfig, :external_metrics_module, fn ->
       Lightning.PromExTest.ExternalMetrics
     end)
+
+    Mox.stub(Lightning.MockConfig, :promex_enabled?, fn -> true end)
 
     lightning_prom_ex_test_event = [:lightning, :prom_ex_test]
     lost_runs_count_event = [:lightning, :run, :lost]

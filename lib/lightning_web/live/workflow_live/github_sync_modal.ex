@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
                   </div>
                   <div class="ml-3">
                     <h3 class="text-sm font-medium text-yellow-800">
-                      Your github project is not properly connected with Lightning.
+                      Your GitHub project is not properly connected with Lightning.
                     </h3>
                     <div class="mt-2 text-sm text-yellow-700">
                       <p>Check the project settings page for more info</p>

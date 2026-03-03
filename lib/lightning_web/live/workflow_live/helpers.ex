@@ -326,16 +326,40 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   @param_mappings %{
     direct: %{
-      "a" => "run"
+      "a" => "run",
+      "run" => "a"
     },
     mode_to_panel: %{
       "expand" => "editor",
       "workflow_input" => "run",
-      "settings" => "settings"
+      "settings" => "settings",
+      "editor" => "expand",
+      "run" => "workflow_input"
     },
     preserved: ["v", "method", "w-chat", "j-chat", "code"],
     collaborative_only: ["panel"]
   }
+
+  def legacy_editor_url(params, live_action) do
+    base_url = legacy_base_url(params, live_action)
+
+    final_params =
+      params
+      |> Map.drop(["id", "project_id"])
+      |> Enum.reduce(%{}, fn {key, value}, acc ->
+        convert_param(key, value, acc, params)
+      end)
+
+    build_url_with_params(base_url, final_params)
+  end
+
+  defp legacy_base_url(%{"project_id" => project_id}, :new) do
+    "/projects/#{project_id}/w/new/legacy?method=template"
+  end
+
+  defp legacy_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
+    "/projects/#{project_id}/w/#{id}/legacy"
+  end
 
   @doc """
   Builds a URL to the collaborative editor with converted query parameters.
@@ -374,13 +398,13 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "s" => "job-abc",
       ...>   "m" => "expand"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/collaborate?job=job-abc&panel=editor"
+      "/projects/proj-1/w/wf-1?job=job-abc&panel=editor"
 
       # New workflow
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new/collaborate?method=template"
+      "/projects/proj-1/w/new?method=template"
 
       # With multiple query params
       iex> collaborative_editor_url(%{
@@ -390,7 +414,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "v" => "42",
       ...>   "custom" => "value"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/collaborate?custom=value&job=job-123&v=42"
+      "/projects/proj-1/w/wf-1?custom=value&job=job-123&v=42"
 
   """
   def collaborative_editor_url(params, live_action) do
@@ -412,15 +436,38 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     Map.put(acc, @param_mappings.direct["a"], value)
   end
 
+  defp convert_param("run", value, acc, _assigns) do
+    Map.put(acc, @param_mappings.direct["run"], value)
+  end
+
   defp convert_param("s", value, acc, assigns) do
     selection_type = determine_selection_type(value, assigns)
     Map.put(acc, selection_type, value)
+  end
+
+  defp convert_param("job", value, acc, _assigns) do
+    Map.put(acc, "s", value)
+  end
+
+  defp convert_param("trigger", value, acc, _assigns) do
+    Map.put(acc, "s", value)
+  end
+
+  defp convert_param("edge", value, acc, _assigns) do
+    Map.put(acc, "s", value)
   end
 
   defp convert_param("m", value, acc, _assigns) do
     case Map.get(@param_mappings.mode_to_panel, value) do
       nil -> acc
       panel -> Map.put(acc, "panel", panel)
+    end
+  end
+
+  defp convert_param("panel", value, acc, _assigns) do
+    case Map.get(@param_mappings.mode_to_panel, value) do
+      nil -> acc
+      panel -> Map.put(acc, "m", panel)
     end
   end
 
@@ -447,11 +494,11 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp collaborative_base_url(%{"project_id" => project_id}, :new) do
-    "/projects/#{project_id}/w/new/collaborate?method=template"
+    "/projects/#{project_id}/w/new?method=template"
   end
 
   defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
-    "/projects/#{project_id}/w/#{id}/collaborate"
+    "/projects/#{project_id}/w/#{id}"
   end
 
   defp build_url_with_params(base_url, params) when map_size(params) == 0 do

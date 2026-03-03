@@ -7,6 +7,8 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
   """
   use LightningWeb, :component
 
+  alias Lightning.Credentials.CredentialBody
+
   attr :form, :map, required: true
   attr :current_body, :map, default: %{}
   attr :touched, :boolean, default: false
@@ -71,10 +73,41 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
       {%{}, types}
       |> Ecto.Changeset.cast(params, [:value])
       |> maybe_add_error(valid?, error, touched)
+      |> validate_sensitive_values_count(body, touched)
       |> maybe_set_action(touched)
 
     {body_json, changeset}
   end
+
+  defp validate_sensitive_values_count(changeset, body, true = _touched?) do
+    case parse_for_validation(body) do
+      {:ok, parsed_body} ->
+        case CredentialBody.validate_sensitive_values_count(parsed_body) do
+          :ok ->
+            changeset
+
+          {:error, message} ->
+            Ecto.Changeset.add_error(changeset, :value, message)
+        end
+
+      {:error, _} ->
+        changeset
+    end
+  end
+
+  defp validate_sensitive_values_count(changeset, _body, _touched) do
+    changeset
+  end
+
+  defp parse_for_validation(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, parsed} -> {:ok, parsed}
+      {:error, _} -> {:error, :invalid_json}
+    end
+  end
+
+  defp parse_for_validation(body) when is_map(body), do: {:ok, body}
+  defp parse_for_validation(_), do: {:error, :invalid}
 
   defp parse_body(body) when is_binary(body) do
     trimmed = String.trim(body)

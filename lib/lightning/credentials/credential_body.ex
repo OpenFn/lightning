@@ -36,7 +36,50 @@ defmodule Lightning.Credentials.CredentialBody do
     |> validate_format(:name, ~r/^[a-z0-9][a-z0-9_-]{0,31}$/,
       message: "must be a short slug"
     )
+    |> validate_credential_body_complexity()
     |> unique_constraint([:credential_id, :name])
     |> assoc_constraint(:credential)
   end
+
+  @doc """
+  Validates that a credential body does not exceed the maximum allowed sensitive values.
+
+  Returns `:ok` if valid, or `{:error, message}` if the body contains too many sensitive values.
+
+  ## Examples
+
+      iex> validate_sensitive_values_count(%{"password" => "secret"})
+      :ok
+
+      iex> validate_sensitive_values_count(body_with_many_secrets)
+      {:error, "contains too many sensitive keys (250). Max allowed is 50"}
+  """
+  def validate_sensitive_values_count(body) do
+    max_values = Lightning.Config.max_credential_sensitive_values()
+    sensitive_count = count_sensitive_values(body)
+
+    if sensitive_count > max_values do
+      {:error,
+       "contains too many sensitive keys (#{sensitive_count}). Max allowed is #{max_values}"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_credential_body_complexity(changeset) do
+    validate_change(changeset, :body, fn :body, body ->
+      case validate_sensitive_values_count(body) do
+        :ok -> []
+        {:error, message} -> [body: message]
+      end
+    end)
+  end
+
+  defp count_sensitive_values(body) when is_map(body) do
+    body
+    |> Lightning.Credentials.sensitive_values_from_body()
+    |> length()
+  end
+
+  defp count_sensitive_values(_), do: 0
 end

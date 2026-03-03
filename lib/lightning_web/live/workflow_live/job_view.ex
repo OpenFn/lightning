@@ -133,19 +133,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
             />
-            <button
-              id={"inspector-collaborative-editor-toggle-#{@job.id}"}
-              phx-click="toggle_collaborative_editor"
-              class="inline-flex items-center justify-center
-              w-6 h-6 text-primary-600 hover:text-primary-700
-              hover:bg-primary-50 rounded transition-colors"
-              phx-hook="Tooltip"
-              data-placement="bottom"
-              aria-label="Switch to collaborative editor (experimental)"
-              type="button"
-            >
-              <Heroicons.beaker class="h-4 w-4" />
-            </button>
+            <LightningWeb.WorkflowLive.Components.deprecated_warning id="inspector-deprecated-warning" />
           </div>
           <div class="flex grow items-center justify-end">
             <.offline_indicator />

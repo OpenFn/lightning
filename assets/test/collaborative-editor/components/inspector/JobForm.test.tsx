@@ -1096,3 +1096,197 @@ describe('JobForm - Collaborative Validation (Phase 5)', () => {
     });
   });
 });
+
+// =============================================================================
+// CREDENTIAL CONFIGURATION TESTS
+// =============================================================================
+// Note: The full credential auto-selection flow (Issue #4287) is tested at the
+// CredentialModalContext level (see CredentialModalContext.test.tsx) where we can
+// properly simulate the WebSocket events and source-based callback routing.
+// These tests verify basic ConfigureAdaptorModal rendering behavior.
+
+describe('JobForm - Credential Configuration', () => {
+  let ydoc: Y.Doc;
+  let workflowStore: WorkflowStoreInstance;
+  let credentialStore: CredentialStoreInstance;
+  let sessionContextStore: SessionContextStoreInstance;
+  let adaptorStore: AdaptorStoreInstance;
+  let awarenessStore: AwarenessStoreInstance;
+  let mockChannel: any;
+
+  beforeEach(() => {
+    // Create Y.Doc with a job (no credential initially)
+    ydoc = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    // Create connected stores
+    workflowStore = createConnectedWorkflowStore(ydoc);
+    credentialStore = createCredentialStore();
+    sessionContextStore = createSessionContextStore();
+    adaptorStore = createAdaptorStore();
+    awarenessStore = createAwarenessStore();
+
+    // Mock channels
+    mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    credentialStore._connectChannel(mockProvider as any);
+    adaptorStore._connectChannel(mockProvider as any);
+
+    // Emit adaptors
+    act(() => {
+      (mockChannel as any)._test.emit('adaptors', {
+        adaptors: [
+          {
+            name: '@openfn/language-http',
+            latest: '1.0.0',
+            versions: [{ version: '1.0.0' }],
+          },
+        ],
+      });
+    });
+
+    // Emit permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: { id: 'user-1', email: 'test@example.com' },
+        project: { id: 'proj-1' },
+        config: { require_email_verification: false },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+      });
+    });
+
+    // Emit empty credentials by default
+    act(() => {
+      (mockChannel as any)._test.emit('credentials_list', {
+        project_credentials: [],
+        keychain_credentials: [],
+      });
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('ConfigureAdaptorModal shows empty state when no credentials exist', async () => {
+    const user = userEvent.setup();
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Verify job has no credential initially
+    expect(
+      workflowStore.getSnapshot().jobs[0].project_credential_id
+    ).toBeNull();
+    expect(
+      workflowStore.getSnapshot().jobs[0].keychain_credential_id
+    ).toBeNull();
+
+    // Open ConfigureAdaptorModal
+    const connectButton = screen.getByRole('button', {
+      name: /connect credential/i,
+    });
+    await user.click(connectButton);
+
+    // Wait for modal
+    await waitFor(
+      () => {
+        expect(screen.getByText('Configure connection')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    // Should show empty state message
+    expect(
+      screen.getByText(/No credentials found in this project/i)
+    ).toBeInTheDocument();
+
+    // Should show "Create new credential" button
+    expect(
+      screen.getByRole('button', { name: /Create new credential/i })
+    ).toBeInTheDocument();
+  });
+
+  test('job with pre-existing credential shows Connected state', async () => {
+    // Create Y.Doc with job that has a credential
+    const ydocWithCred = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
+          project_credential_id: 'existing-proj-cred',
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    const storeWithCred = createConnectedWorkflowStore(ydocWithCred);
+
+    // Emit matching credential
+    act(() => {
+      (mockChannel as any)._test.emit('credentials_list', {
+        project_credentials: [
+          {
+            id: 'cred-1',
+            project_credential_id: 'existing-proj-cred',
+            name: 'My HTTP Credential',
+            schema: 'http',
+            owner_id: 'user-1',
+            external_id: 'ext-1',
+            inserted_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        keychain_credentials: [],
+      });
+    });
+
+    const job = storeWithCred.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        storeWithCred,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // When credential is set, AdaptorDisplay shows "Edit" button instead of "Connect"
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Edit adaptor/i })
+      ).toBeInTheDocument();
+    });
+
+    // Verify Y.Doc has the credential set
+    expect(storeWithCred.getSnapshot().jobs[0].project_credential_id).toBe(
+      'existing-proj-cred'
+    );
+  });
+});

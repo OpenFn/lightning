@@ -59,12 +59,27 @@ defmodule Lightning.Factories do
     }
   end
 
-  def trigger_factory do
-    %Lightning.Workflows.Trigger{
+  def trigger_factory(attrs) do
+    type = Map.get(attrs, :type)
+    set_reply = Map.get(attrs, :webhook_reply)
+
+    webhook_reply =
+      case {to_string(type), set_reply} do
+        {_, set_reply} when not is_nil(set_reply) -> set_reply
+        {"webhook", _} -> :before_start
+        _other -> nil
+      end
+
+    trigger = %Lightning.Workflows.Trigger{
       id: fn -> Ecto.UUID.generate() end,
       workflow: build(:workflow),
-      enabled: true
+      enabled: true,
+      webhook_reply: webhook_reply
     }
+
+    trigger
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
   end
 
   def edge_factory do

@@ -24,6 +24,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
+
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -33,6 +34,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
+  alias Lightning.WorkflowVersions
 
   @doc """
   Import a project.
@@ -61,15 +63,23 @@ defmodule Lightning.Projects.Provisioner do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
     Repo.transact(fn ->
-      with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
+      with :ok <- maybe_limit_provisioning(project.id, user_or_repo_connection),
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
+           edges_to_cleanup <-
+             edges_referencing_deleted_jobs(project_changeset),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
              audit_workflows(project_changeset, user_or_repo_connection),
+           {:ok, _changes} <-
+             update_workflows_version(
+               project_changeset,
+               updated_project.workflows
+             ),
            {:ok, _changes} <-
              create_snapshots(
                project_changeset,
@@ -81,6 +91,10 @@ defmodule Lightning.Projects.Provisioner do
         project_changeset
         |> get_assoc(:workflows)
         |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+
+        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+          Lightning.Projects.Project.sandbox?(updated_project)
+        )
 
         {:ok, updated_project}
       end
@@ -140,6 +154,28 @@ defmodule Lightning.Projects.Provisioner do
   defp classify_audit(_unrecognised_changeset) do
     {:no_action, nil}
   end
+
+  defp update_workflows_version(project_changeset, inserted_workflows) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reject(fn changeset ->
+      changeset.changes == %{} or get_change(changeset, :delete)
+    end)
+    |> Enum.reduce(Multi.new(), fn changeset, multi ->
+      workflow =
+        Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
+
+      Multi.run(multi, "version_#{workflow.id}", fn _repo, _changes ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash, "cli")
+      end)
+    end)
+    |> Repo.transaction()
+    |> normalize_txn()
+  end
+
+  defp normalize_txn({:ok, changes}), do: {:ok, changes}
+  defp normalize_txn({:error, _key, reason, _}), do: {:error, reason}
 
   defp audit_workflow_multi(action, workflow_id, user_or_repo_connection) do
     Multi.new()
@@ -239,6 +275,50 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
+  # Before import, find edges referencing a job being deleted (as target or source).
+  # Returns edge IDs so we can clean them up after the FK cascade sets NULL.
+  defp edges_referencing_deleted_jobs(project_changeset) do
+    deleted_job_ids =
+      project_changeset
+      |> get_assoc(:workflows)
+      |> Enum.flat_map(fn wf_cs ->
+        wf_cs
+        |> get_assoc(:jobs)
+        |> Enum.filter(fn job_cs -> job_cs.action == :delete end)
+        |> Enum.map(&get_field(&1, :id))
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    if deleted_job_ids == [] do
+      []
+    else
+      from(e in Edge,
+        where:
+          e.target_job_id in ^deleted_job_ids or
+            e.source_job_id in ^deleted_job_ids,
+        select: e.id
+      )
+      |> Repo.all()
+    end
+  end
+
+  # After import, remove edges that were orphaned by job deletion.
+  # Only deletes edges whose IDs we captured before the FK cascade,
+  # and only if they still have a NULL FK (target or source without trigger).
+  defp cleanup_orphaned_edges([]), do: :ok
+
+  defp cleanup_orphaned_edges(edge_ids) do
+    from(e in Edge,
+      where: e.id in ^edge_ids,
+      where:
+        is_nil(e.target_job_id) or
+          (is_nil(e.source_job_id) and is_nil(e.source_trigger_id))
+    )
+    |> Repo.delete_all()
+
+    :ok
+  end
+
   defp handle_collection_deletion(project_changeset) do
     deleted_size =
       project_changeset
@@ -317,7 +397,7 @@ defmodule Lightning.Projects.Provisioner do
   defp project_changeset(project, attrs) do
     project
     |> cast(attrs, [:id, :name, :description])
-    |> validate_required([:id])
+    |> validate_required([:id, :name])
     |> validate_extraneous_params()
     |> Project.validate()
   end
@@ -337,7 +417,7 @@ defmodule Lightning.Projects.Provisioner do
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_mark_for_deletion()
-    |> validate_extraneous_params()
+    |> validate_extraneous_params(ignore: ["version_history"])
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
@@ -467,8 +547,14 @@ defmodule Lightning.Projects.Provisioner do
   For all params in the changeset, ensure that the param is in the list of
   known fields in the schema.
   """
-  def validate_extraneous_params(changeset) do
-    param_keys = changeset.params |> Map.keys() |> MapSet.new(&to_string/1)
+  def validate_extraneous_params(changeset, opts \\ []) do
+    ignore_keys = opts |> Keyword.get(:ignore, []) |> Enum.map(&to_string/1)
+
+    param_keys =
+      changeset.params
+      |> Map.keys()
+      |> Enum.reject(fn key -> to_string(key) in ignore_keys end)
+      |> MapSet.new(&to_string/1)
 
     field_keys = changeset.types |> Map.keys() |> MapSet.new(&to_string/1)
 
@@ -482,4 +568,10 @@ defmodule Lightning.Projects.Provisioner do
       changeset
     end
   end
+
+  defp maybe_limit_provisioning(project_id, %ProjectRepoConnection{}) do
+    VersionControlUsageLimiter.limit_github_sync(project_id)
+  end
+
+  defp maybe_limit_provisioning(_project_id, %User{}), do: :ok
 end

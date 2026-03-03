@@ -8,7 +8,6 @@ import { channelRequest } from '../hooks/useChannel';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
-  useLatestSnapshotLockVersion,
   useLimits,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
@@ -18,6 +17,7 @@ import {
   useTemplatePanel,
   useUICommands,
 } from '../hooks/useUI';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import {
   useCanRun,
   useCanSave,
@@ -55,6 +55,7 @@ export function SaveButton({
   label = 'Save',
   canSync,
   syncTooltipMessage,
+  hasChanges,
 }: {
   canSave: boolean;
   tooltipMessage: string;
@@ -64,11 +65,49 @@ export function SaveButton({
   label?: string;
   canSync: boolean;
   syncTooltipMessage: string | null;
+  hasChanges: boolean;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
   if (!hasGitHubIntegration) {
     return (
+      <div className="relative">
+        <div className="inline-flex rounded-md shadow-xs z-5">
+          <Tooltip
+            content={
+              canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
+            }
+            side="bottom"
+          >
+            <button
+              type="button"
+              data-testid="save-workflow-button"
+              className="rounded-md text-sm font-semibold shadow-xs
+            phx-submit-loading:opacity-75 cursor-pointer
+            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
+            bg-primary-600 hover:bg-primary-500
+            disabled:hover:bg-primary-300 text-white
+            focus-visible:outline-2 focus-visible:outline-offset-2
+            focus-visible:outline-primary-600 focus:ring-transparent"
+              onClick={onClick}
+              disabled={!canSave}
+            >
+              {label}
+            </button>
+          </Tooltip>
+        </div>
+        {hasChanges ? (
+          <div
+            className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"
+            data-is-dirty
+          ></div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
       <div className="inline-flex rounded-md shadow-xs z-5">
         <Tooltip
           content={
@@ -79,7 +118,7 @@ export function SaveButton({
           <button
             type="button"
             data-testid="save-workflow-button"
-            className="rounded-md text-sm font-semibold shadow-xs
+            className="rounded-l-md text-sm font-semibold shadow-xs
             phx-submit-loading:opacity-75 cursor-pointer
             disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
             bg-primary-600 hover:bg-primary-500
@@ -92,82 +131,61 @@ export function SaveButton({
             {label}
           </button>
         </Tooltip>
-      </div>
-    );
-  }
-
-  return (
-    <div className="inline-flex rounded-md shadow-xs z-5">
-      <Tooltip
-        content={
-          canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
-        }
-        side="bottom"
-      >
-        <button
-          type="button"
-          data-testid="save-workflow-button"
-          className="rounded-l-md text-sm font-semibold shadow-xs
-          phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-          bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-300 text-white
-          focus-visible:outline-2 focus-visible:outline-offset-2
-          focus-visible:outline-primary-600 focus:ring-transparent"
-          onClick={onClick}
-          disabled={!canSave}
-        >
-          {label}
-        </button>
-      </Tooltip>
-      <Menu as="div" className="relative -ml-px block">
-        <MenuButton
-          disabled={!canSave}
-          className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
+        <Menu as="div" className="relative -ml-px block">
+          <MenuButton
+            disabled={!canSave}
+            className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
             bg-primary-600 hover:bg-primary-500
             disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
-        >
-          <span className="sr-only">Open sync options</span>
-          <span className="hero-chevron-down w-4 h-4" />
-        </MenuButton>
-        <MenuItems
-          transition
-          className="absolute right-0 z-[100] mt-2 w-max origin-top-right
+          >
+            <span className="sr-only">Open sync options</span>
+            <span className="hero-chevron-down w-4 h-4" />
+          </MenuButton>
+          <MenuItems
+            transition
+            className="absolute right-0 z-[100] mt-2 w-max origin-top-right
           rounded-md bg-white py-1 shadow-lg outline outline-black/5
           transition data-closed:scale-95 data-closed:transform
           data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
           data-leave:duration-75 data-leave:ease-in"
-        >
-          <MenuItem>
-            <Tooltip
-              content={
-                canSave && canSync ? (
-                  <ShortcutKeys keys={['mod', 'shift', 's']} />
-                ) : !canSync && syncTooltipMessage ? (
-                  syncTooltipMessage
-                ) : (
-                  tooltipMessage
-                )
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={onSyncClick}
-                disabled={!canSave || !canSync}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700
+          >
+            <MenuItem>
+              <Tooltip
+                content={
+                  canSave && canSync ? (
+                    <ShortcutKeys keys={['mod', 'shift', 's']} />
+                  ) : !canSync && syncTooltipMessage ? (
+                    syncTooltipMessage
+                  ) : (
+                    tooltipMessage
+                  )
+                }
+                side="bottom"
+              >
+                <button
+                  type="button"
+                  onClick={onSyncClick}
+                  disabled={!canSave || !canSync}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700
               data-focus:bg-gray-100 data-focus:outline-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save & Sync
-              </button>
-            </Tooltip>
-          </MenuItem>
-        </MenuItems>
-      </Menu>
+                >
+                  Save & Sync
+                </button>
+              </Tooltip>
+            </MenuItem>
+          </MenuItems>
+        </Menu>
+      </div>
+      {hasChanges ? (
+        <div
+          className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"
+          data-is-dirty
+        ></div>
+      ) : null}
     </div>
   );
 }
@@ -179,12 +197,14 @@ export function Header({
   workflowId,
   isRunPanelOpen = false,
   isIDEOpen = false,
+  aiAssistantEnabled = false,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
+  aiAssistantEnabled?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
@@ -198,8 +218,6 @@ export function Header({
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
-  const workflow = useWorkflowState(state => state.workflow);
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isNewWorkflow = useIsNewWorkflow();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
@@ -207,6 +225,7 @@ export function Header({
   const { provider } = useSession();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
+  const { hasChanges } = useUnsavedChanges();
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -219,10 +238,18 @@ export function Header({
   const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
   const currentMethod = params['method'] as 'template' | 'import' | 'ai' | null;
 
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
+  // Check if viewing a pinned version via URL parameter
+  // When ?v= is present, user is viewing a specific version (even if latest)
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+
+  // Determine AI button disabled message based on priority
+  const aiButtonDisabledMessage = !aiAssistantEnabled
+    ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
+    : isPinnedVersion
+      ? 'Switch to the latest version of this workflow to use the AI Assistant.'
+      : undefined;
+
+  const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
@@ -279,31 +306,35 @@ export function Header({
       <EmailVerificationBanner />
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
-        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm">
+        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <button
-              type="button"
-              onClick={() => void handleSwitchToLegacyEditor()}
-              className="inline-flex items-center justify-center
-              w-6 h-6 text-primary-600 hover:text-primary-700
-              hover:bg-primary-50 rounded transition-colors ml-2"
+            <Tooltip
+              content={
+                <span>
+                  Looking for the old version of the workflow builder? You can
+                  switch back for a few more days by clicking this icon. (But it
+                  will soon be retired!)
+                </span>
+              }
+              side="bottom"
             >
-              <Tooltip
-                content={"You're using the new editor — click to switch back."}
-                side="bottom"
+              <button
+                type="button"
+                onClick={() => void handleSwitchToLegacyEditor()}
+                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
               >
-                <span className="hero-beaker-solid h-4 w-4" />
-              </Tooltip>
-            </button>
+                <span className="hero-question-mark-circle"></span>
+              </button>
+            </Tooltip>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
-              {!isOldSnapshot && (
+              {!isPinnedVersion && (
                 <Tooltip
                   content={
                     isNewWorkflow && isWorkflowEmpty
@@ -414,11 +445,16 @@ export function Header({
                 label={isNewWorkflow ? 'Create' : 'Save'}
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
+                hasChanges={showChangeIndicator}
               />
             </div>
           </div>
 
-          <AIButton className="ml-2" />
+          <AIButton
+            className="ml-2"
+            disabled={isPinnedVersion || !aiAssistantEnabled}
+            disabledMessage={aiButtonDisabledMessage}
+          />
 
           <GitHubSyncModal />
         </div>

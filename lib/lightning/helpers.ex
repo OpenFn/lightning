@@ -179,6 +179,18 @@ defmodule Lightning.Helpers do
   end
 
   @doc """
+  Derives `"name"` from `"raw_name"` in form params so that context functions
+  (which cast `:name`, not `:raw_name`) receive the correct URL-safe value
+  without relying on hidden-field timing.
+  """
+  @spec derive_name_param(map()) :: map()
+  def derive_name_param(%{"raw_name" => raw_name} = params) do
+    Map.put(params, "name", url_safe_name(raw_name))
+  end
+
+  def derive_name_param(params), do: params
+
+  @doc """
   Normalizes all map keys to strings recursively.
 
   This function walks through a map and converts all keys to strings using `to_string/1`.

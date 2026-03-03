@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import YAML from 'yaml';
 
+import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import {
   useWorkflowState,
   useCanPublishTemplate,
 } from '#/collaborative-editor/hooks/useWorkflow';
-import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
@@ -66,22 +66,8 @@ export function CodeViewPanel() {
     URL.revokeObjectURL(url);
   };
 
-  // Copy YAML to clipboard with notification feedback
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(yamlCode);
-      notifications.info({
-        title: 'Code copied',
-        description: 'Workflow YAML copied to clipboard',
-      });
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      notifications.alert({
-        title: 'Failed to copy',
-        description: 'Could not copy to clipboard. Please try again.',
-      });
-    }
-  };
+  // Copy YAML to clipboard with button text feedback
+  const { copyText, copyToClipboard } = useCopyToClipboard();
 
   // Template publishing state and handlers
   const { canPublish, buttonDisabled, tooltipMessage, buttonText } =
@@ -132,12 +118,22 @@ export function CodeViewPanel() {
           <button
             id="copy-workflow-code-btn"
             type="button"
-            onClick={() => void handleCopy()}
+            onClick={() => void copyToClipboard(yamlCode)}
             className="rounded-md px-3 py-2 text-sm font-semibold
               bg-white hover:bg-gray-50 text-gray-900
-              ring-1 ring-inset ring-gray-300 shadow-xs min-w-[6rem]"
+              ring-1 ring-inset ring-gray-300 shadow-xs inline-grid"
           >
-            Copy Code
+            {/* Invisible spacer to reserve width for longest text */}
+            <span
+              className="col-start-1 row-start-1 invisible"
+              aria-hidden="true"
+            >
+              Copy Code
+            </span>
+            {/* Actual visible text */}
+            <span className="col-start-1 row-start-1">
+              {copyText || 'Copy Code'}
+            </span>
           </button>
           {canPublish && (
             <button
