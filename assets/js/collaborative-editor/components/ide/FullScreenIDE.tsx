@@ -57,7 +57,7 @@ import {
 import { isFinalState } from '../../types/history';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { AdaptorSelector } from '../AdaptorSelector';
 import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
@@ -594,24 +594,6 @@ export function FullScreenIDE({
       openCredentialModal(adaptorName, credentialId, 'ide');
     },
     [openCredentialModal]
-  );
-
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      if (!currentJob) return;
-
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      const fullAdaptor = `${newPackage}@latest`;
-
-      updateJob(currentJob.id, { adaptor: fullAdaptor });
-
-      setIsAdaptorPickerOpen(false);
-      setAdaptorPickerFromConfigure(false);
-      // Always open configure modal after selecting an adaptor
-      setIsConfigureModalOpen(true);
-    },
-    [currentJob, updateJob]
   );
 
   // Handler for adaptor changes - immediately syncs to Y.Doc
@@ -1358,17 +1340,19 @@ export function FullScreenIDE({
             allAdaptors={allAdaptors}
           />
 
-          <AdaptorSelectionModal
+          <AdaptorSelector
             isOpen={isAdaptorPickerOpen}
+            setIsOpen={setIsAdaptorPickerOpen}
             onClose={() => {
-              setIsAdaptorPickerOpen(false);
               // Only return to configure modal if opened from there
               if (adaptorPickerFromConfigure) {
                 setIsConfigureModalOpen(true);
               }
               setAdaptorPickerFromConfigure(false);
             }}
-            onSelect={handleAdaptorSelect}
+            job={currentJob}
+            updateJob={updateJob}
+            setIsConfigureModalOpen={setIsConfigureModalOpen}
             projectAdaptors={projectAdaptors}
           />
         </>

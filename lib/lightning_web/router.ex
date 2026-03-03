@@ -62,8 +62,6 @@ defmodule LightningWeb.Router do
     get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
     post "/users/confirm", UserConfirmationController, :create
-    get "/users/confirm/:token", UserConfirmationController, :edit
-    post "/users/confirm/:token", UserConfirmationController, :update
 
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
@@ -174,6 +172,9 @@ defmodule LightningWeb.Router do
          :retry_run
 
     get "/project_files/:id/download", ProjectFileController, :download
+
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
 
     get "/profile/confirm_email/:token",
         UserConfirmationController,

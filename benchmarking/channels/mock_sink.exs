@@ -118,11 +118,19 @@ defmodule MockSink.Logger do
   Simple request logging to stdout.
   """
 
-  def log_request(method, path, status, elapsed_ms) do
+  def log_request(conn, status, elapsed_ms) do
     timestamp = Calendar.strftime(DateTime.utc_now(), "%Y-%m-%d %H:%M:%S.%f")
+    method = String.upcase(conn.method)
+    path = conn.request_path
+
+    request_id =
+      case Plug.Conn.get_req_header(conn, "x-request-id") do
+        [id | _] -> " req=#{id}"
+        [] -> ""
+      end
 
     IO.puts(
-      "[#{timestamp}] #{String.upcase(method)} #{path} -> #{status} (#{elapsed_ms}ms)"
+      "[#{timestamp}] #{method} #{path} -> #{status} (#{elapsed_ms}ms)#{request_id}"
     )
   end
 end
@@ -208,12 +216,7 @@ defmodule MockSink.Router do
 
     elapsed = System.monotonic_time(:millisecond) - start
 
-    MockSink.Logger.log_request(
-      conn.method,
-      conn.request_path,
-      status,
-      elapsed
-    )
+    MockSink.Logger.log_request(conn, status, elapsed)
 
     conn
     |> Plug.Conn.put_resp_content_type(content_type)

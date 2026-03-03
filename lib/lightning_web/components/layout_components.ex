@@ -230,17 +230,16 @@ defmodule LightningWeb.LayoutComponents do
         <%= if @breadcrumbs != [] do %>
           {render_slot(@breadcrumbs)}
         <% else %>
-          <h1 class="text-xl font-semibold text-secondary-900 flex items-center">
+          <h1 class={[
+            "text-secondary-900 flex items-center",
+            if(@current_user,
+              do: "text-xl font-semibold",
+              else: "text-3xl font-bold"
+            )
+          ]}>
             {if assigns[:title], do: render_slot(@title)}
           </h1>
         <% end %>
-
-        <h1
-          :if={!@current_user}
-          class="text-3xl font-bold text-secondary-900 flex items-center"
-        >
-          {if assigns[:title], do: render_slot(@title)}
-        </h1>
 
         <div class="grow"></div>
         {if assigns[:inner_block], do: render_slot(@inner_block)}
