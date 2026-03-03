@@ -17,6 +17,13 @@ defmodule Lightning.Workflows.WorkflowVersion do
   alias Lightning.Validators.Hex
   alias Lightning.Workflows.Workflow
 
+  @type t :: %Lightning.Workflows.WorkflowVersion{
+          hash: String.t(),
+          source: String.t(),
+          workflow_id: Ecto.UUID.t(),
+          inserted_at: DateTime.t()
+        }
+
   @sources ~w(app cli)
 
   schema "workflow_versions" do

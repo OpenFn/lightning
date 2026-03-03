@@ -230,17 +230,16 @@ defmodule LightningWeb.LayoutComponents do
         <%= if @breadcrumbs != [] do %>
           {render_slot(@breadcrumbs)}
         <% else %>
-          <h1 class="text-xl font-semibold text-secondary-900 flex items-center">
+          <h1 class={[
+            "text-secondary-900 flex items-center",
+            if(@current_user,
+              do: "text-xl font-semibold",
+              else: "text-3xl font-bold"
+            )
+          ]}>
             {if assigns[:title], do: render_slot(@title)}
           </h1>
         <% end %>
-
-        <h1
-          :if={!@current_user}
-          class="text-3xl font-bold text-secondary-900 flex items-center"
-        >
-          {if assigns[:title], do: render_slot(@title)}
-        </h1>
 
         <div class="grow"></div>
         {if assigns[:inner_block], do: render_slot(@inner_block)}
@@ -458,18 +457,14 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-[8px] primary-light opacity-50">
-          v{Application.spec(:lightning, :vsn)}
-        </div>
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <%!-- Collapsed branding: centered --%>
       <div class="sidebar-branding-collapsed hidden h-14 text-center">
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-[8px] primary-light opacity-50">
-          v{Application.spec(:lightning, :vsn)}
-        </div>
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <div class="border-t border-white/10 mt-2">
         <button

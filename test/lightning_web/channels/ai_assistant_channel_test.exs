@@ -85,10 +85,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "successfully creates session for existing job", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me with this code"
       }
 
@@ -96,26 +98,25 @@ defmodule LightningWeb.AiAssistantChannelTest do
                subscribe_and_join(
                  socket,
                  AiAssistantChannel,
-                 "ai_assistant:job_code:new",
+                 "ai_assistant:workflow_template:new",
                  params
                )
 
       assert %{
                session_id: session_id,
-               session_type: "job_code"
+               session_type: "workflow_template"
              } = response
 
       assert is_binary(session_id)
 
       session = AiAssistant.get_session!(session_id)
-      assert session.job_id == job.id
-      assert session.session_type == "job_code"
+      assert session.session_type == "workflow_template"
     end
 
     test "requires job_id parameter", %{socket: socket} do
       params = %{"content" => "Help me"}
 
-      assert {:error, %{reason: "job_id required"}} =
+      assert {:error, %{reason: "project_id required"}} =
                subscribe_and_join(
                  socket,
                  AiAssistantChannel,
@@ -124,8 +125,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
                )
     end
 
-    test "requires content parameter", %{socket: socket, job: job} do
-      params = %{"job_id" => job.id}
+    test "requires content parameter", %{
+      socket: socket,
+      job: job,
+      project: project
+    } do
+      params = %{"job_id" => job.id, "project_id" => project.id}
 
       assert {:error, %{reason: "initial content required"}} =
                subscribe_and_join(
@@ -138,12 +143,13 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "join ai_assistant:job_code:new with unsaved job" do
-    test "returns error for unsaved job", %{socket: socket} do
+    test "returns error for unsaved job", %{socket: socket, project: project} do
       # Generate a UUID for an unsaved job (not in database)
       unsaved_job_id = Ecto.UUID.generate()
 
       params = %{
         "job_id" => unsaved_job_id,
+        "project_id" => project.id,
         "content" => "Help me with this unsaved job"
       }
 
@@ -312,6 +318,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, session1} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           workflow,
           user,
           "Create workflow 1 template"
@@ -321,6 +328,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, _session2} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           workflow2,
           user,
           "Create workflow 2 template"
@@ -330,6 +338,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, _session3} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           nil,
           user,
           "Create new workflow template"
@@ -366,6 +375,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, _session1} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           workflow,
           user,
           "Workflow with ID"
@@ -376,6 +386,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         AiAssistant.create_workflow_session(
           project,
           nil,
+          nil,
           user,
           "New unsaved workflow"
         )
@@ -383,6 +394,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, _session_unsaved2} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           nil,
           user,
           "Another unsaved workflow"
@@ -420,6 +432,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           {:ok, session} =
             AiAssistant.create_workflow_session(
               project,
+              nil,
               workflow,
               user,
               "Template #{i}"
@@ -577,6 +590,56 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message.status == "error"
       assert error == limit_error_message
     end
+
+    @tag :capture_log
+    test "delegates to handle_unsaved_job_message when job_id is provided but not found in DB",
+         %{
+           socket: socket,
+           user: user,
+           workflow: workflow,
+           project: project
+         } do
+      unknown_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        ref =
+          push(socket, "new_message", %{
+            "content" => "what does this do?",
+            "job_id" => unknown_job_id,
+            "job_name" => "Draft Job",
+            "job_body" => "fn(state => state)",
+            "job_adaptor" => "@openfn/language-common@latest",
+            "workflow_id" => workflow.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+
+        reloaded = AiAssistant.get_session!(session.id)
+        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+
+        assert is_nil(user_msg.job_id)
+        assert user_msg.meta["unsaved_job"]["id"] == unknown_job_id
+      end)
+    end
   end
 
   describe "handle_in mark_disclaimer_read" do
@@ -652,6 +715,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         AiAssistant.create_workflow_session(
           project,
           nil,
+          nil,
           user,
           "Create workflow"
         )
@@ -675,37 +739,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       updated_session = Repo.reload(session)
       assert updated_session.workflow_id == workflow.id
       assert is_nil(updated_session.meta["unsaved_workflow"])
-    end
-
-    test "handles update_context for workflow_template session with no workflow_id",
-         %{
-           socket: socket,
-           project: project,
-           user: user
-         } do
-      {:ok, session} =
-        AiAssistant.create_workflow_session(
-          project,
-          nil,
-          user,
-          "Create workflow"
-        )
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:workflow_template:#{session.id}",
-          %{}
-        )
-
-      ref = push(socket, "update_context", %{})
-
-      assert_reply ref, :ok, %{success: true}
-
-      # Verify the session was not modified
-      updated_session = Repo.reload(session)
-      assert is_nil(updated_session.workflow_id)
     end
   end
 
@@ -761,7 +794,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "creates session for unsaved job with all metadata", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       unsaved_job_id = Ecto.UUID.generate()
 
@@ -771,6 +805,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_body" => "console.log('unsaved');",
         "job_adaptor" => "@openfn/language-common@1.0.0",
         "workflow_id" => workflow.id,
+        "project_id" => project.id,
         "content" => "Help me with this unsaved job"
       }
 
@@ -912,7 +947,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
     test "lists sessions for unsaved job", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       unsaved_job_id = Ecto.UUID.generate()
 
@@ -922,6 +958,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_body" => "console.log('test');",
         "job_adaptor" => "@openfn/language-common@1.0.0",
         "workflow_id" => workflow.id,
+        "project_id" => project.id,
         "content" => "Help me"
       }
 
@@ -1189,10 +1226,19 @@ defmodule LightningWeb.AiAssistantChannelTest do
     test "sets follow_run_id when joining existing session", %{
       socket: socket,
       job: job,
-      user: user
+      user: user,
+      project: project,
+      workflow: workflow
     } do
       {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
+        AiAssistant.create_workflow_session(
+          project,
+          job,
+          workflow,
+          user,
+          "Initial message",
+          []
+        )
 
       run_id = Ecto.UUID.generate()
 
@@ -1200,8 +1246,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{"follow_run_id" => run_id}
+          "ai_assistant:workflow_template:#{session.id}",
+          %{"follow_run_id" => run_id, "job_id" => job.id}
         )
 
       updated_session = AiAssistant.get_session!(session.id)
@@ -1211,12 +1257,14 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "includes follow_run_id in meta when creating new session", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       run_id = Ecto.UUID.generate()
 
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me debug",
         "follow_run_id" => run_id
       }
@@ -1225,7 +1273,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1276,6 +1324,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, session} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           nil,
           user,
           "Create workflow"
@@ -1340,7 +1389,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
   describe "authorization for unsaved jobs" do
     test "authorizes access to unsaved job via workflow", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       unsaved_job_id = Ecto.UUID.generate()
 
@@ -1348,6 +1398,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_id" => unsaved_job_id,
         "job_name" => "Unsaved Job",
         "workflow_id" => workflow.id,
+        "project_id" => project.id,
         "content" => "Help me"
       }
 
@@ -1361,7 +1412,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
 
     test "denies access to unsaved job when user not in workflow project", %{
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       other_user = user_fixture()
 
@@ -1375,6 +1427,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_id" => unsaved_job_id,
         "job_name" => "Unsaved Job",
         "workflow_id" => workflow.id,
+        "project_id" => project.id,
         "content" => "Help me"
       }
 
@@ -1420,6 +1473,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       {:ok, session} =
         AiAssistant.create_workflow_session(
           project,
+          nil,
           nil,
           user,
           "Create workflow"
@@ -1702,6 +1756,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         ref =
           push(socket, "new_message", %{
             "content" => "Help me analyze this run",
+            "job_id" => job.id,
             "attach_io_data" => true,
             "step_id" => step.id
           })
@@ -1738,7 +1793,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
         ref =
           push(socket, "new_message", %{
-            "content" => "Help me"
+            "content" => "Help me",
+            "job_id" => job.id
           })
 
         assert_reply ref, :ok, %{message: _message}
@@ -1818,12 +1874,14 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
   describe "extract_session_options edge cases" do
     @tag :capture_log
-    test "creates job_code session without follow_run_id", %{
+    test "creates workflow_template session without follow_run_id", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me"
       }
 
@@ -1831,7 +1889,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1874,13 +1932,15 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "includes attach_io_data and step_id when creating new session", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       # Create a step to reference
       step = insert(:step, job: job)
 
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me analyze this run",
         "attach_io_data" => true,
         "step_id" => step.id
@@ -1890,7 +1950,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1905,10 +1965,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "includes attach_code and attach_logs when creating new session", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me with logs",
         "attach_code" => true,
         "attach_logs" => true
@@ -1918,7 +1980,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1932,10 +1994,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
     @tag :capture_log
     test "excludes message_options when not opted in", %{
       socket: socket,
-      job: job
+      job: job,
+      project: project
     } do
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me"
       }
 
@@ -1943,7 +2007,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -1957,12 +2021,14 @@ defmodule LightningWeb.AiAssistantChannelTest do
     test "attach_io_data defaults to false when step_id provided without attach_io_data",
          %{
            socket: socket,
-           job: job
+           job: job,
+           project: project
          } do
       step = insert(:step, job: job)
 
       params = %{
         "job_id" => job.id,
+        "project_id" => project.id,
         "content" => "Help me",
         "step_id" => step.id
       }
@@ -1971,7 +2037,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         subscribe_and_join(
           socket,
           AiAssistantChannel,
-          "ai_assistant:job_code:new",
+          "ai_assistant:workflow_template:new",
           params
         )
 
@@ -2744,6 +2810,106 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert second_user_msg != nil
       assert second_user_msg.content == "Second user message"
       assert second_user_msg.user.first_name == other_user.first_name
+    end
+  end
+
+  describe "handle_unsaved_job_message/6" do
+    @tag :capture_log
+    test "saves message with all unsaved job fields captured in meta", %{
+      socket: socket,
+      user: user,
+      workflow: workflow,
+      project: project
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        ref =
+          push(socket, "new_message", %{
+            "content" => "help me debug",
+            "job_id" => unsaved_job_id,
+            "job_name" => "My Unsaved Job",
+            "job_body" => "fn(state => state)",
+            "job_adaptor" => "@openfn/language-common@1.5.0",
+            "workflow_id" => workflow.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+        assert message.content == "help me debug"
+        assert message.status in ["pending", "success"]
+
+        # All fields are persisted in the user message's meta["unsaved_job"]
+        reloaded = AiAssistant.get_session!(session.id)
+        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+        unsaved_job = user_msg.meta["unsaved_job"]
+
+        assert unsaved_job["id"] == unsaved_job_id
+        assert unsaved_job["name"] == "My Unsaved Job"
+        assert unsaved_job["body"] == "fn(state => state)"
+        assert unsaved_job["adaptor"] == "@openfn/language-common@1.5.0"
+        assert unsaved_job["workflow_id"] == workflow.id
+      end)
+    end
+
+    @tag :capture_log
+    test "broadcasts user_message so other collaborators see the new message", %{
+      socket: socket,
+      user: user,
+      workflow: workflow,
+      project: project
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        push(socket, "new_message", %{
+          "content" => "explain the code",
+          "job_id" => unsaved_job_id,
+          "job_name" => "Collab Job",
+          "job_body" => "fn(s) => s",
+          "workflow_id" => workflow.id
+        })
+
+        assert_broadcast "user_message", %{message: broadcast_msg}
+        assert broadcast_msg.content == "explain the code"
+        assert broadcast_msg.role == "user"
+      end)
     end
   end
 end

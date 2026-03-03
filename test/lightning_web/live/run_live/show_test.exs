@@ -256,7 +256,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       # Find the workflow link - should NOT include version param
       assert html =~
-               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?a=#{run_id}"/
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}"/
 
       refute html =~ ~r/&v=/
     end
@@ -292,7 +292,7 @@ defmodule LightningWeb.RunLive.ShowTest do
       # Find the workflow link - should include version param
       # Note: & is HTML-escaped as &amp; in rendered output
       assert html =~
-               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?a=#{run_id}&amp;v=#{snapshot.lock_version}"/
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}&amp;v=#{snapshot.lock_version}"/
     end
   end
 

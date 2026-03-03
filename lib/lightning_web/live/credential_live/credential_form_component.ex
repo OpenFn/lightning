@@ -1185,11 +1185,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        Routes.static_path(
          LightningWeb.Endpoint,
          "/images/raw.png"
-       ), nil},
-      {"Keychain", "keychain",
-       Routes.static_path(
-         LightningWeb.Endpoint,
-         "/images/keychain.png"
        ), nil}
     ])
     |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
@@ -1326,12 +1321,26 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {:ok, schemas_path} =
           Application.fetch_env(:lightning, :schemas_path)
 
+        keychain_option =
+          if socket.assigns[:from_collab_editor] do
+            [
+              {"Keychain", "keychain",
+               Routes.static_path(
+                 LightningWeb.Endpoint,
+                 "/images/keychain.png"
+               ), nil}
+            ]
+          else
+            []
+          end
+
         get_type_options(schemas_path)
         |> Enum.concat(
           Enum.map(oauth_clients, fn client ->
             {client.name, client.id, "/images/oauth-2.png", "oauth"}
           end)
         )
+        |> Enum.concat(keychain_option)
         |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
       else
         []

@@ -37,7 +37,7 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
-  metadata?: object | null;
+  metadata?: object;
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
@@ -95,14 +95,8 @@ export const CollaborativeMonaco = forwardRef<
         insertSpaces: true,
         automaticLayout: true,
         fixedOverflowWidgets: true,
-        dragAndDrop: false,
-        lineNumbersMinChars: 3,
-        overviewRulerLanes: 0,
-        overviewRulerBorder: false,
         codeLens: false,
         wordBasedSuggestions: 'off',
-        fontFamily: 'Fira Code VF',
-        fontLigatures: true,
         showFoldingControls: 'always',
         suggest: {
           showModules: true,
@@ -129,21 +123,6 @@ export const CollaborativeMonaco = forwardRef<
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
       addKeyboardShortcutOverrides(editor, monaco);
-
-      // Create overflow widgets container for suggestions/tooltips
-      if (!overflowNodeRef.current) {
-        const overflowNode = document.createElement('div');
-        overflowNode.className = 'monaco-editor widgets-overflow-container';
-        document.body.appendChild(overflowNode);
-        overflowNodeRef.current = overflowNode;
-
-        // Update editor options with overflow container
-        // @ts-ignore - overflowWidgetsDomNode exists but isn't in updateOptions type
-        editor.updateOptions({
-          overflowWidgetsDomNode: overflowNode,
-          fixedOverflowWidgets: true,
-        });
-      }
 
       // Configure TypeScript compiler options
       monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
@@ -455,7 +434,6 @@ export const CollaborativeMonaco = forwardRef<
 
   return (
     <div className={cn('relative', className || 'h-full w-full')}>
-      {/* Loading indicator */}
       <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && <LoadingIndicator text="Loading types" />}
       </div>

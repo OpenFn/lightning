@@ -52,6 +52,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -69,6 +70,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: false,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -89,6 +91,7 @@ describe('useAIPanelURLSync', () => {
         ({ isOpen }) =>
           useAIPanelURLSync({
             isOpen,
+            isNewWorkflow: false,
             sessionId: null,
             aiMode: createMockAIMode('workflow_template'),
             aiStore: createMockAIStore(),
@@ -122,6 +125,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-123',
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore('workflow_template'),
@@ -138,6 +142,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-123',
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore('workflow_template'),
@@ -158,6 +163,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-456',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
           aiStore: createMockAIStore('job_code'),
@@ -174,6 +180,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-456',
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
           aiStore: createMockAIStore('job_code'),
@@ -194,6 +201,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: false,
+          isNewWorkflow: false,
           sessionId: 'session-123',
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore('workflow_template'),
@@ -218,6 +226,7 @@ describe('useAIPanelURLSync', () => {
         ({ sessionId }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId,
             aiMode: createMockAIMode('workflow_template'),
             aiStore: createMockAIStore('workflow_template'),
@@ -244,6 +253,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-123',
           aiMode: null,
           aiStore: createMockAIStore('workflow_template'),
@@ -265,6 +275,7 @@ describe('useAIPanelURLSync', () => {
         ({ sessionId }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId,
             aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
             aiStore: createMockAIStore('workflow_template'), // Mismatch
@@ -291,6 +302,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -306,6 +318,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
           aiStore: createMockAIStore('job_code'),
@@ -321,6 +334,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: null,
           aiStore: createMockAIStore(),
@@ -336,6 +350,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -352,6 +367,7 @@ describe('useAIPanelURLSync', () => {
         ({ params }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId: null,
             aiMode: createMockAIMode('workflow_template'),
             aiStore: createMockAIStore(),
@@ -378,6 +394,7 @@ describe('useAIPanelURLSync', () => {
         ({ aiMode, aiStore }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId: 'session-123',
             aiMode,
             aiStore,
@@ -415,6 +432,7 @@ describe('useAIPanelURLSync', () => {
         ({ aiMode, aiStore }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId: 'session-456',
             aiMode,
             aiStore,
@@ -451,6 +469,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -466,6 +485,7 @@ describe('useAIPanelURLSync', () => {
       const { result } = renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: null,
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore(),
@@ -487,6 +507,7 @@ describe('useAIPanelURLSync', () => {
       renderHook(() =>
         useAIPanelURLSync({
           isOpen: true,
+          isNewWorkflow: false,
           sessionId: 'session-123',
           aiMode: createMockAIMode('workflow_template'),
           aiStore: createMockAIStore('workflow_template'),
@@ -508,6 +529,7 @@ describe('useAIPanelURLSync', () => {
         ({ sessionId }) =>
           useAIPanelURLSync({
             isOpen: true,
+            isNewWorkflow: false,
             sessionId,
             aiMode: createMockAIMode('workflow_template'),
             aiStore: createMockAIStore('workflow_template'),

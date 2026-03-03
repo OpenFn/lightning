@@ -21,10 +21,21 @@ import type { CreateSessionContextOptions } from '../__helpers__/sessionContextF
 import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // =============================================================================
 // TEST MOCKS
 // =============================================================================
+
+// Mock useURLState for pinned version tests
+const urlState = createMockURLState();
+
+vi.mock('../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // Mock useAdaptorIcons to prevent async fetch warnings
 vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
@@ -352,7 +363,11 @@ describe('Header - Basic Rendering', () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
-      <Header projectId="project-1" workflowId="workflow-1">
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
         {[<span key="breadcrumb-1">Breadcrumb</span>]}
       </Header>,
       { wrapper }
@@ -1325,7 +1340,11 @@ describe('Header - Keyboard Shortcuts', () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
-      <Header projectId="project-1" workflowId="workflow-1">
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
         {[<span key="breadcrumb-1">Breadcrumb</span>]}
       </Header>,
       { wrapper }
@@ -1350,5 +1369,129 @@ describe('Header - Keyboard Shortcuts', () => {
       button.querySelector('.hero-chat-bubble-left-right')
     );
     expect(aiButton).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// AI ASSISTANT BUTTON TESTS
+// =============================================================================
+
+describe('Header - AI Assistant Button', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
+  test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).not.toBeDisabled();
+  });
+
+  test('AI button is disabled when aiAssistantEnabled prop is false', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
+  });
+
+  test('AI button is disabled when viewing a pinned version', async () => {
+    // Set pinned version in URL before setup
+    urlState.setParam('v', '123');
+
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={true}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
+  });
+
+  test('AI button is disabled when both aiAssistantEnabled=false and viewing pinned version', async () => {
+    // Set pinned version in URL before setup
+    urlState.setParam('v', '123');
+
+    const { wrapper, emitSessionContext } = await createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        aiAssistantEnabled={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
   });
 });

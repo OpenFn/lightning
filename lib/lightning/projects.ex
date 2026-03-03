@@ -700,6 +700,45 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns a composable query that selects all descendant project IDs for the
+  given list of project IDs. Walks the `parent_id` tree downward using a
+  recursive CTE. The input IDs themselves are **not** included in the results.
+  """
+  @spec descendants_query([Ecto.UUID.t()]) :: Ecto.Query.t()
+  def descendants_query(project_ids) when is_list(project_ids) do
+    initial =
+      from(p in Project,
+        where: p.parent_id in ^project_ids,
+        select: %{id: p.id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: d in "project_descendants",
+        on: p.parent_id == d.id,
+        select: %{id: p.id}
+      )
+
+    "project_descendants"
+    |> recursive_ctes(true)
+    |> with_cte("project_descendants",
+      as: ^union_all(initial, ^recursion)
+    )
+    |> select([d], type(d.id, Ecto.UUID))
+  end
+
+  @doc """
+  Returns a flat list of descendant project IDs for the given project IDs.
+  Convenience wrapper around `descendants_query/1`.
+  """
+  @spec descendant_ids([Ecto.UUID.t()]) :: [Ecto.UUID.t()]
+  def descendant_ids([]), do: []
+
+  def descendant_ids(project_ids) when is_list(project_ids) do
+    descendants_query(project_ids) |> Repo.all()
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking project changes.
 
   ## Examples

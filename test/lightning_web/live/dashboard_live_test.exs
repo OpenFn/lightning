@@ -268,6 +268,21 @@ defmodule LightningWeb.DashboardLiveTest do
       assert has_element?(view, "tr#projects-table-row-#{project.id}")
     end
 
+    test "Creating a project with a name that resolves to blank shows error",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      view
+      |> form("#project-form",
+        project: %{raw_name: "!!!"}
+      )
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "can&#39;t be blank"
+      assert Enum.empty?(Lightning.Projects.get_projects_for_user(user))
+    end
+
     test "When the user closes the modal without submitting the form, the project won't be created",
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")

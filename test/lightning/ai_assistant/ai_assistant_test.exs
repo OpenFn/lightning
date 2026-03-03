@@ -1498,6 +1498,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    content
@@ -1521,6 +1522,7 @@ defmodule Lightning.AiAssistantTest do
                  AiAssistant.create_workflow_session(
                    project,
                    nil,
+                   nil,
                    user,
                    "Create new workflow"
                  )
@@ -1541,6 +1543,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    nil,
                    user,
                    "test",
@@ -1563,6 +1566,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    "test"
@@ -1582,6 +1586,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    "test"
@@ -1602,6 +1607,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    content
@@ -1620,6 +1626,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    "test message"
@@ -1649,6 +1656,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    workflow,
                    user,
                    "test message"
@@ -1672,6 +1680,7 @@ defmodule Lightning.AiAssistantTest do
         assert {:ok, session} =
                  AiAssistant.create_workflow_session(
                    project,
+                   nil,
                    nil,
                    user,
                    "test"
