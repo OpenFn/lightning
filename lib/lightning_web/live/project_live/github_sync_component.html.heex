@@ -9,50 +9,106 @@
       phx-submit="save"
       phx-target={@myself}
     >
-      <div class="">
-        <.input
-          id="select-installations-input"
-          type="custom-select"
-          field={f[:github_installation_id]}
-          label="GitHub Installation"
-          prompt="Select an installation"
-          options={installations_select_options(@installations)}
-          disabled={
-            @actions_disabled ||
-              if(@installations.loading, do: true, else: false)
-          }
-          required="true"
-          button_placement="right"
-        >
-          <.button
-            id="refresh-installation-button"
-            type="button"
-            theme="custom"
-            class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+      <.async_result assign={@installations}>
+        <:failed :let={failure}>
+          <div class="rounded-md bg-yellow-50 p-4 mb-4">
+            <div class="flex">
+              <div class="shrink-0">
+                <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">
+                  Unable to load GitHub installations
+                </h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                  <%= case failure do %>
+                    <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_certificate}} -> %>
+                      <p>GitHub App certificate is invalid or not configured.</p>
+                      <p class="mt-1">
+                        Please contact your administrator to configure the GitHub App certificate.
+                      </p>
+                    <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token, message: message}} -> %>
+                      <p>
+                        Your GitHub authentication has expired or is invalid.
+                      </p>
+                      <p class="mt-1"><code class="text-xs">{message}</code></p>
+                      <p class="mt-2">
+                        Try disconnecting and reconnecting your GitHub account in
+                        <.link href={~p"/profile"} class="underline font-medium">
+                          Settings
+                        </.link>
+                      </p>
+                    <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
+                      <p>There was a problem connecting to GitHub.</p>
+                      <p class="mt-1">
+                        <code class="text-xs">GitHub Error: {message}</code>
+                      </p>
+                    <% {:error, %{"message" => message}} -> %>
+                      <p>There was a problem connecting to GitHub.</p>
+                      <p class="mt-1">
+                        <code class="text-xs">GitHub Error: {message}</code>
+                      </p>
+                    <% _other -> %>
+                      <p>
+                        There was an unexpected problem loading your GitHub installations.
+                      </p>
+                      <p class="mt-2">
+                        Try refreshing, or disconnect and reconnect your GitHub account in
+                        <.link href={~p"/profile"} class="underline font-medium">
+                          Settings
+                        </.link>
+                      </p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </:failed>
+        <div class="">
+          <.input
+            id="select-installations-input"
+            type="custom-select"
+            field={f[:github_installation_id]}
+            label="GitHub Installation"
+            prompt="Select an installation"
+            options={installations_select_options(@installations)}
             disabled={
               @actions_disabled ||
                 if(@installations.loading, do: true, else: false)
             }
-            phx-click="refresh-installations"
-            phx-target={@myself}
+            required="true"
+            button_placement="right"
           >
-            <.icon
-              name="hero-arrow-path-mini"
-              class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
-            />
-          </.button>
-        </.input>
-      </div>
-      <div class="mt-2">
-        Can't find the right installation or repository?
-        <.link
-          target="_blank"
-          class="link"
-          href={"https://github.com/apps/#{github_config()[:app_name]}"}
-        >
-          Create/update GitHub installations or modify permissions.
-        </.link>
-      </div>
+            <.button
+              id="refresh-installation-button"
+              type="button"
+              theme="custom"
+              class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+              disabled={
+                @actions_disabled ||
+                  if(@installations.loading, do: true, else: false)
+              }
+              phx-click="refresh-installations"
+              phx-target={@myself}
+            >
+              <.icon
+                name="hero-arrow-path-mini"
+                class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
+              />
+            </.button>
+          </.input>
+        </div>
+        <div class="mt-2">
+          Can't find the right installation or repository?
+          <.link
+            target="_blank"
+            class="link"
+            href={"https://github.com/apps/#{github_config()[:app_name]}"}
+          >
+            Create/update GitHub installations or modify permissions.
+          </.link>
+        </div>
+      </.async_result>
       <div class="mt-4">
         <.input
           id="select-repos-input"
