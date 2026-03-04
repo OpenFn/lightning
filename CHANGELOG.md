@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Support a batch of logs submitted via `run:batch_logs` in run channel
+  [#4123](https://github.com/OpenFn/lightning/issues/4123)
 - Validate users before confirming new accounts
   [#2916](https://github.com/OpenFn/lightning/issues/2916)
 
