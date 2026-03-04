@@ -313,7 +313,7 @@ defmodule Lightning.DashboardStats do
   end
 
   def filter_days_ago(query, days) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-days * 24 * 60 * 60)
+    days_ago = DateTime.utc_now() |> DateTime.add(-days, :day)
 
     query
     |> where([r], r.inserted_at > ^days_ago)
