@@ -1,403 +1,299 @@
 # React Store Architecture - Collaborative Editor
 
-This document maps the store hierarchy and responsibilities for the collaborative workflow editor to help answer: **"Where should this state go?"** and **"Do we need a new store?"**
+This document maps the store responsibilities for the collaborative workflow editor to help answer: **"Where should this state go?"** and **"Do we need a new store?"**
 
 ## Architecture Overview
 
-Lightning's collaborative editor uses a **dual-source state management** pattern:
-- **Collaborative stores** use Yjs CRDTs for real-time multi-user editing
-- **Reference data stores** use Phoenix Channels for server-authoritative data
-- All stores implement `useSyncExternalStore` + Immer for React integration
+Lightning's collaborative editor uses **three layers of state management**, distinguished by their data source:
 
-## Store Hierarchy
+1. **Y.Doc-backed (collaborative)** — Real-time multi-user data via Yjs CRDTs
+   - WorkflowStore (workflow structure), AwarenessStore (user presence)
+2. **Phoenix Channel-backed (server-authoritative)** — Data pushed/pulled via the workflow channel
+   - SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
+3. **Local-only (no network)** — Client-side UI state
+   - UIStore, EditorPreferencesStore
+
+All stores share the same foundation: closure-based factory (`createXxxStore()`), Immer-managed state, `subscribe`/`getSnapshot` for `useSyncExternalStore`, `createWithSelector` for memoized selectors, and Redux DevTools integration in development.
+
+## Initialization Order
+
+All 10 stores are created as peers in `StoreProvider.tsx`'s `useState` initializer. Three `useEffect` hooks wire them to the network in dependency order:
 
 ```
-SessionStore (Infrastructure Layer)
-    ├── Manages: Y.Doc, PhoenixChannelProvider, Awareness
-    ├── Provides: Connection state, sync status
-    │
-    ├─── WorkflowStore (Collaborative Data)
-    │    ├── Uses: Y.Doc CRDTs
-    │    └── Manages: Jobs, Triggers, Edges, Positions
-    │
-    ├─── AwarenessStore (User Presence)
-    │    ├── Uses: Yjs Awareness protocol
-    │    └── Manages: User cursors, selections, presence
-    │
-    ├─── SessionContextStore (Session Context)
-    │    ├── Uses: Phoenix Channel pub/sub
-    │    └── Manages: User info, Project info, App config, Permissions
-    │
-    ├─── AdaptorStore (Reference Data)
-    │    ├── Uses: Phoenix Channel pub/sub
-    │    └── Manages: NPM adaptor catalog
-    │
-    └─── CredentialStore (Reference Data)
-         ├── Uses: Phoenix Channel pub/sub
-         └── Manages: Project & keychain credentials
-
-common.ts (Shared Utilities)
-    └── createWithSelector: Memoized selectors
-
-devtools.ts (Development Utilities)
-    └── Redux DevTools integration for all stores
+1. SessionStore.initializeSession(socket, room, userData)
+      │
+      ├─ when isConnected ──→ _connectChannel() on:
+      │     SessionContextStore, AdaptorStore, CredentialStore,
+      │     HistoryStore, AIAssistantStore
+      │
+      ├─ when isSynced ────→ WorkflowStore.connect(ydoc, provider)
+      │     (must wait for full Y.Doc sync before attaching observers)
+      │
+      └─ when awareness + user data ──→ AwarenessStore.initializeAwareness()
 ```
+
+UIStore and EditorPreferencesStore have no network dependencies and are ready immediately.
+
+---
 
 ## Store Catalog
 
 ### SessionStore
 **File:** `stores/createSessionStore.ts`
 
-**Responsibility:** Infrastructure layer for collaborative editing. Manages the foundational WebSocket connection, Y.Doc lifecycle, and synchronization state.
+**Intent:** Establish and maintain the collaborative session infrastructure so other stores can consume Y.Doc and Channel capabilities. This is pure plumbing — it knows HOW to connect but nothing about WHAT gets synced.
 
-**Data Source:** Creates and manages Yjs infrastructure
+**Key State:** `ydoc`, `provider`, `awareness`, `isConnected`, `isSynced`, `settled`, `userData`, `lastStatus`
 
-**Key State:**
-- `ydoc`: Yjs document instance (CRDT)
-- `provider`: PhoenixChannelProvider (WebSocket)
-- `awareness`: Awareness protocol instance
-- `isConnected`: Connection status
-- `isSynced`: Sync status
-- `settled`: Both connected AND first update received
-- `userData`: Local user data (id, name, color) for awareness
-- `lastStatus`: Last connection status message
+**Key behavior:**
+- `settled` means both synced AND first remote update received — the signal that Y.Doc content is ready to read
+- Reuses existing Y.Doc on reconnection to preserve offline edits buffered in Y.js transactions
+- `createSettlingSubscription()` uses AbortController + Promise.all to track the connected→synced→settled lifecycle
 
-**When to use:**
-- Need access to Y.Doc instance
-- Check connection/sync status
-- Initialize collaborative session
-- Access Phoenix Channel provider
-
-**Don't use for:** Domain data (jobs, credentials, etc.)
+**Don't use for:** Domain data (jobs, credentials, etc.) — this store has no opinion about what's in the Y.Doc.
 
 ---
 
 ### WorkflowStore
 **File:** `stores/createWorkflowStore.ts`
 
-**Responsibility:** Single source of truth for collaborative workflow editing. Bridges Yjs CRDT data structures with React rendering system for real-time multi-user workflow editing.
+**Intent:** Be the single source of truth for the workflow's structure and content, enabling real-time multi-user editing. This is the largest and most complex store — it IS the collaborative document model.
 
-**Data Source:** Yjs Y.Doc (collaborative)
+**Key State:** `workflow` (metadata), `jobs`, `triggers`, `edges`, `positions`, `undoManager`, `selectedJobId`/`selectedTriggerId`/`selectedEdgeId` (local), `enabled` (derived), `selectedNode`/`selectedEdge` (derived), `activeTriggerAuthMethods`, `isApplyingWorkflow`/`isApplyingJobCode` (AI coordination)
 
-**Key State:**
-- `workflow`: Workflow metadata (id, name)
-- `jobs`: Job nodes with Y.Text bodies
-- `triggers`: Trigger nodes (Webhook, Cron, Kafka)
-- `edges`: Connections between nodes
-- `positions`: Node layout coordinates
-- `selectedJobId`, `selectedTriggerId`, `selectedEdgeId`: Local selections (not synced)
-- `enabled`: Computed from triggers (whether workflow is enabled)
-- `selectedNode`: Computed selected job or trigger object
-- `selectedEdge`: Computed selected edge object
+**Key behavior:**
+- `connect(ydoc, provider)` obtains six Y.js structures (`workflow`, `jobs`, `triggers`, `edges`, `positions`, `errors` maps/arrays) and attaches `observeDeep` handlers
+- Creates a `Y.UndoManager` with 500ms capture timeout tracking all five non-errors structures
+- Validation errors are managed via `setClientErrors` (500ms debounced, merges client vs. server errors) and `mergeWithPreservedErrors` in observers
+- `disconnect()` removes only channel observers, preserving Y.Doc observers and UndoManager for offline editing
+- Selection state (`selectJob`, `selectTrigger`, `selectEdge`) is local-only (not synced via Y.Doc)
+- AI apply coordination broadcasts (`startApplyingWorkflow`/`doneApplyingWorkflow`) let collaborators see when AI is modifying the workflow
 
-**When to use:**
-- Read/update workflow structure
-- Add/remove/update jobs, triggers, edges
-- Manage node positions on canvas
-- Handle node selection state
-- Access job body Y.Text for Monaco editor
+**Commands:** `updateJob`, `addJob`, `removeJob`, `updateTrigger`, `addEdge`, `updateEdge`, `removeEdge`, `updatePositions`, `saveWorkflow`, `saveAndSyncWorkflow`, `resetWorkflow`, `importWorkflow`, `setClientErrors`, `undo`, `redo`
 
-**Don't use for:** User presence, credentials, adaptors
-
-**Key Methods:**
-- Commands: `updateJob()`, `addJob()`, `removeJob()`, `updateTrigger()`, `selectJob()`
-- Queries: `getJobBodyYText()`, `saveWorkflow()`, `resetWorkflow()`
+**Don't use for:** User presence, credentials, adaptors, UI panel state.
 
 ---
 
 ### AwarenessStore
 **File:** `stores/createAwarenessStore.ts`
 
-**Responsibility:** Real-time user presence and collaboration state. Manages who is online, cursor positions, and text selections.
+**Intent:** Show which users are present and what they're focused on, with graceful handling of transient disconnections. Answers "who's here?" and "what are they looking at?"
 
-**Data Source:** Yjs Awareness protocol
+**Key State:** `users` (sorted, includes cached), `localUser`, `cursorsMap` (primary keyed by Y.js clientId), `userCache` (1-min TTL Map), `isInitialized`, `isConnected`, `rawAwareness`
 
-**Key State:**
-- `users`: All connected users (sorted by name)
-- `localUser`: Current user's data (id, name, color)
-- `isInitialized`: Setup status
-- `isConnected`: Connection status
-- `rawAwareness`: Direct access to Yjs Awareness instance
-- `lastUpdated`: Timestamp of last awareness update
+**Key behavior:**
+- `handleAwarenessChange` does field-by-field equality checks (including position/selection deep compare) to minimize Immer mutations
+- **User cache**: recently-disconnected users stay visible for 60 seconds before fading out, preventing flicker on transient disconnections
+- **lastSeen timer**: broadcasts `lastSeen` every 10 seconds; handles page visibility API (webkit/moz/ms prefixed) to freeze timestamps when the tab is hidden while keeping awareness alive
+- `users` array merges live users from `cursorsMap` with non-expired cache entries, sorted by name
 
-**Each user contains:**
-- `cursor`: { x, y } for diagram interactions
-- `selection`: { anchor, head } for text selections (RelativePosition)
+**Commands:** `updateLocalCursor`, `updateLocalSelection`, `updateLastSeen`, `updateLocalUserData`, `setConnected`
+**Queries:** `getAllUsers`, `getRemoteUsers`, `getUserById`, `getUserByClientId`
 
-**When to use:**
-- Render remote user cursors on workflow diagram
-- Show user presence indicators
-- Update local cursor/selection for Monaco editor collaboration
-- Display "who's online" lists
-
-**Don't use for:** Workflow data, credentials, adaptors
-
-**Key Methods:**
-- Commands: `updateLocalCursor()`, `updateLocalSelection()`, `updateLastSeen()`
-- Queries: `getAllUsers()`, `getRemoteUsers()`, `getUserById()`
+**Don't use for:** Workflow data, credentials, adaptors.
 
 ---
 
 ### SessionContextStore
 **File:** `stores/createSessionContextStore.ts`
 
-**Responsibility:** Manages session-scoped, non-collaborative context data that defines "who is editing, and what scope". Provides user information, project metadata, and app configuration for the current editing session.
+**Intent:** Provide the server's view of "who is editing, what project, and with what permissions." This is the authorization and metadata backbone — it shapes what the UI shows and allows.
 
-**Data Source:** Phoenix Channel (server-authoritative)
+**Key State:** `user`, `project`, `config`, `permissions`, `latestSnapshotLockVersion`, `projectRepoConnection`, `webhookAuthMethods`, `versions`/`versionsLoading`/`versionsError`, `workflow_template`, `hasReadAIDisclaimer`, `limits` (runs/workflow_activation/github_sync), `isNewWorkflow`, `workflow` (base workflow metadata)
 
-**Key State:**
-- `user`: Current user data (id, first_name, last_name, email, email_confirmed, inserted_at)
-- `project`: Current project data (id, name)
-- `config`: App configuration flags (require_email_verification, etc.)
-- `permissions`: User permissions for current workflow/project
-- `latestSnapshotLockVersion`: Lock version for optimistic locking on workflow saves
-- `isLoading`: Request in progress
-- `error`: Error state
-- `lastUpdated`: Timestamp of last context update
+**Key behavior:**
+- `requestSessionContext()` sends `get_context` push; response is Zod-validated via `SessionContextResponseSchema`
+- `setLatestSnapshotLockVersion` clears the cached `versions` array when lock version changes (new save invalidates old history)
+- `getLimits(actionType)` fetches plan limits for `new_run`, `activate_workflow`, or `github_sync`
+- Listens for `session_context_updated`, `workflow_saved`, `webhook_auth_methods_updated`, `template_updated` channel events
 
-**When to use:**
-- Display user information in header (avatar initials, name)
-- Build breadcrumb navigation with project links
-- Check app configuration flags (email verification requirements)
-- Show email verification banner
-- Access session context data (who is editing what project/workflow)
+**Commands:** `requestSessionContext`, `requestVersions`, `clearVersions`, `setLatestSnapshotLockVersion`, `getLimits`, `markAIDisclaimerRead`, `setBaseWorkflow`
 
-**Don't use for:** Collaborative workflow data, user presence, credentials, adaptors
-
-**Key Methods:**
-- Commands: `requestSessionContext()`
-- Queries: Access via `user`, `project`, `config`, `permissions` state
-
-**Note:** This store represents the "context" of the current editing session - it's fetched once at session start and typically doesn't change during the session.
+**Don't use for:** Collaborative workflow data, user presence, credentials, adaptors.
 
 ---
 
 ### AdaptorStore
 **File:** `stores/createAdaptorStore.ts`
 
-**Responsibility:** Read-only reference data for available OpenFn adaptors (NPM packages) and their versions. Used for job configuration UIs.
+**Intent:** Provide the catalog of available NPM adaptors and their versions for job configuration dropdowns. Read-only reference data.
 
-**Data Source:** Phoenix Channel (server-authoritative)
+**Key State:** `adaptors` (all system adaptors, sorted by name), `projectAdaptors` (project-installed subset), `isLoading`, `error`
 
-**Key State:**
-- `adaptors`: Array of adaptors with versions
-- `isLoading`: Request in progress
-- `error`: Error state
-- `lastUpdated`: Timestamp of last adaptor data update
+**Key behavior:**
+- `requestProjectAdaptors()` returns both project and all adaptors atomically in a single response
+- Listens for `adaptors_updated` channel events for real-time list changes
+- Each adaptor's versions sorted descending by semver string
 
-**Each adaptor contains:**
-- `name`: Package name (e.g., "@openfn/language-http")
-- `versions`: Array of available versions
-- `latest`: Latest version string
-- `repo`: GitHub repository URL
-
-**When to use:**
-- Populate adaptor selection dropdowns
-- Validate adaptor names/versions
-- Display adaptor metadata
-
-**Don't use for:** Job data, credentials, user presence
-
-**Key Methods:**
-- Commands: `requestAdaptors()`
-- Queries: `findAdaptorByName()`, `getLatestVersion()`, `getVersions()`
+**Commands:** `requestAdaptors`, `requestProjectAdaptors`
+**Queries:** `findAdaptorByName`, `getLatestVersion`, `getVersions`
 
 ---
 
 ### CredentialStore
 **File:** `stores/createCredentialStore.ts`
 
-**Responsibility:** Manages credential data lifecycle for both project-scoped and keychain (global) credentials. Provides reactive state for job configuration.
+**Intent:** Provide available credentials for job configuration, handling the project vs. keychain distinction. Read-only from the client perspective — credential creation/editing happens via server forms.
 
-**Data Source:** Phoenix Channel (server-authoritative)
+**Key State:** `projectCredentials`, `keychainCredentials`, `isLoading`, `error`
+
+**Key behavior:**
+- Two credential types: project credentials have both `id` and `project_credential_id`; keychain credentials only have `id`
+- `findCredentialById(searchId)` checks both ID fields and returns a discriminated union with `type: 'project' | 'keychain'`
+- `getCredentialId` returns the appropriate selection ID (`project_credential_id` for project, `id` for keychain)
+
+**Commands:** `requestCredentials`
+**Queries:** `findCredentialById`, `credentialExists`, `getCredentialId`
+
+---
+
+### HistoryStore
+**File:** `stores/createHistoryStore.ts`
+
+**Intent:** Show workflow execution history and provide detailed run/step inspection with real-time updates for in-progress runs. Manages two distinct views: the history list panel and the run detail viewer.
 
 **Key State:**
-- `projectCredentials`: Project-scoped credentials
-- `keychainCredentials`: Global credential references
-- `isLoading`: Request in progress
-- `error`: Error state
-- `lastUpdated`: Timestamp of last credential data update
+- History panel: `history` (top 20 work orders), `isLoading`, `isChannelConnected`
+- Run steps cache: `runStepsCache` (keyed by runId), `runStepsSubscribers`, `runStepsLoading`
+- Active run viewer: `activeRunId`, `activeRun` (full detail with steps), `activeRunChannel` (dedicated `run:{id}` Phoenix channel), `selectedStepId`
 
-**When to use:**
-- Populate credential selection dropdowns in job forms
-- Display available credentials for current project
-- Access keychain credentials
+**Key behavior:**
+- **Subscription-based cache**: `subscribeToRunSteps(runId, subscriberId)` tracks which components want step data; auto-fetches on first subscription; does NOT clear cache on last unsubscribe (prevents React StrictMode double-mount issues)
+- **Dedicated run channel**: `_viewRun` creates a separate `run:{id}` Phoenix channel with guards for idempotency, stale response detection, and channel switching
+- **Real-time step updates**: `step:started` and `step:completed` events update both `activeRun.steps` and `runStepsCache` in the same Immer transaction
+- **Cache invalidation**: when a run reaches a final state AND has active subscribers, the cache entry is invalidated and refetched
+- Supports pre-population: `StoreProvider` can pass `initialRunData` parsed from server-rendered data attributes (for `?run=xxx` URL loads)
 
-**Don't use for:** Workflow data, user presence, adaptors
-
-**Note:** Credentials are read-only from client perspective. Creation/editing happens via server forms.
-
-**Key Methods:**
-- Commands: `requestCredentials()`
-- Queries: Access via `projectCredentials` and `keychainCredentials` state
+**Commands:** `requestHistory`, `requestRunSteps`, `subscribeToRunSteps`, `unsubscribeFromRunSteps`, `selectStep`
+**Internal:** `_viewRun`, `_closeRunViewer`, `_switchingFromRun`
 
 ---
+
+### UIStore
+**File:** `stores/createUIStore.ts`
+
+**Intent:** Coordinate which panels and modals are visible. Pure local state — no network, no persistence. The traffic controller for editor UI layout.
+
+**Key State:** `runPanelOpen`/`runPanelContext`, `githubSyncModalOpen`, `aiAssistantPanelOpen`/`aiAssistantInitialMessage`, `createWorkflowPanelCollapsed`, `templatePanel` (templates list, search, selection), `importPanel` (YAML content, import state machine)
+
+**Key behavior:**
+- Reads URL search parameters during initialization: `?chat=true` opens AI panel, `?method=...` expands create-workflow panel
+- AI panel takes priority when both URL params are present
+
+**Commands:** `openRunPanel`, `closeRunPanel`, `openGitHubSyncModal`, `closeGitHubSyncModal`, `openAIAssistantPanel`, `closeAIAssistantPanel`, `toggleAIAssistantPanel`, `setTemplates`, `selectTemplate`, `setImportYamlContent`, `setImportState`
+
+---
+
+### EditorPreferencesStore
+**File:** `stores/createEditorPreferencesStore.ts`
+
+**Intent:** Remember user's editor layout preferences across page loads via localStorage. The smallest store.
+
+**Key State:** `historyPanelCollapsed` (default: `true`)
+
+**Key behavior:**
+- Reads/writes localStorage via `lib0/storage` with key prefix `lightning.editor.`
+- Every command persists immediately after updating Immer state
+
+**Commands:** `setHistoryPanelCollapsed`, `resetToDefaults`
+
+---
+
+### AIAssistantStore
+**File:** `stores/createAIAssistantStore.ts`
+
+**Intent:** Manage AI assistant chat sessions, messages, and collaborative AI use. Supports multiple users viewing the same session, with send-blocking while AI is responding.
+
+**Key State:** `connectionState` (`disconnected`/`connecting`/`connected`), `sessionId`, `sessionType` (`job_code`/`workflow_template`), `messages`, `isLoading`/`isSending`, `sessionList`/`sessionListLoading`/`sessionListPagination`, `jobCodeContext`/`workflowTemplateContext`, `hasReadDisclaimer`
+
+**Key behavior:**
+- Two initialization paths: `connect()` (UI-initiated session creation) and `_initializeContext` (context setup before channel join)
+- `_connectChannel` listens for `ai_session_created` on the workflow channel — when another user creates a session, it's prepended to the local session list
+- Message deduplication via ID check before adding
+- `disconnect()` preserves `sessionId` and `messages` for reconnection continuity
+- `loadSessionList` is the only store method using `fetch` API directly (HTTP, not Channel)
+- `_setProcessingState(isProcessing)` blocks input for ALL users viewing the session during AI response generation
+- Actual AI channel management is handled externally by `useAIAssistantChannel` hook; this store only manages the state
+
+**Commands:** `connect`, `disconnect`, `setMessageSending`, `retryMessage`, `markDisclaimerRead`, `clearSession`, `loadSession`, `loadSessionList`, `updateContext`
+
+---
+
+## Shared Utilities
 
 ### common.ts
-**File:** `stores/common.ts`
-
-**Responsibility:** Foundational utilities that establish core architectural patterns for all stores.
-
-**Exports:**
-1. **`createWithSelector<TState>(getSnapshot)`**
-   - Creates memoized selectors with referential stability
-   - Enables fine-grained subscriptions to state slices
-   - Core performance optimization utility
-
-3. **`WithSelector<TState>`** type
-   - TypeScript type for selector factory functions
-   - Ensures type safety across stores
-
-**When to use:**
-- Every store MUST use `createWithSelector` for performance
-- Import `WithSelector` type for store type definitions
-
----
+`createWithSelector(getSnapshot)` — Memoized selector factory. Caches last result + last state; only re-runs selector when state reference changes. Every store MUST use this.
 
 ### devtools.ts
-**File:** `stores/devtools.ts`
-
-**Responsibility:** Redux DevTools integration for debugging and development. Provides time-travel debugging, action tracking, and state inspection for all stores in development mode.
-
-**Key Features:**
-- Wraps stores with Redux DevTools connection
-- Serializes state for DevTools (excludes circular references like `ydoc`, `provider`)
-- Tracks all store actions with timestamps
-- Automatically disabled in production builds
-
-**When to use:**
-- Automatically integrated into all stores during development
-- Open Redux DevTools browser extension to inspect store state
-- Use time-travel debugging to replay actions
-- Export/import state for bug reproduction
-
-**Don't use directly:** This utility is used internally by store implementations via `wrapStoreWithDevTools()`.
+`wrapStoreWithDevTools(config)` — Redux DevTools integration. Serializes state excluding circular references (`ydoc`, `provider`, `rawAwareness`, `userCache`). No-op in production. Used internally by all stores.
 
 ---
 
 ## Decision Tree: "Where Should This State Go?"
 
-### 1. Is it collaborative workflow data?
-**YES** → Use **WorkflowStore**
-- Jobs, triggers, edges, workflow metadata
-- Node positions on canvas
-- Anything that needs to sync between users in real-time
-
-### 2. Is it user presence/collaboration metadata?
-**YES** → Use **AwarenessStore**
-- Cursor positions
-- Text selections
-- User online status
-- "Who's editing what" indicators
-
-### 3. Is it connection/infrastructure state?
-**YES** → Use **SessionStore**
-- Connection status
-- Sync status
-- Y.Doc lifecycle
-- Phoenix Channel management
-
-### 4. Is it session-scoped context data?
-**YES** → Use **SessionContextStore**
-- Current user information
-- Current project information
-- App configuration flags
-- Session initialization data that rarely changes
-
-### 5. Is it server-managed reference data?
-**YES** → Determine type:
-- **NPM adaptors?** → Use **AdaptorStore**
-- **Credentials?** → Use **CredentialStore**
-- **Session context?** → Use **SessionContextStore**
-- **Something else?** → Consider creating new Phoenix Channel-based store (see below)
-
-### 6. Is it local component UI state?
-**YES** → Use component-local state (useState/useReducer)
-- Modal open/closed
-- Form validation errors
-- Temporary UI flags
-- Anything that doesn't need to persist or sync
-
-### 7. Is it URL-synced state?
-**YES** → Use WorkflowStore + URL sync hooks
-- Selected node IDs (see `useNodeSelection` in `hooks/useWorkflow.ts`)
-- Current view/panel state
-- Navigation state
+| Question | Store |
+|----------|-------|
+| Collaborative workflow data (jobs, triggers, edges, positions)? | **WorkflowStore** |
+| User presence, cursors, selections? | **AwarenessStore** |
+| Connection/sync infrastructure? | **SessionStore** |
+| Who am I, what project, what permissions? | **SessionContextStore** |
+| Adaptor catalog for job config? | **AdaptorStore** |
+| Credential catalog for job config? | **CredentialStore** |
+| Execution history, run inspection? | **HistoryStore** |
+| AI assistant chat sessions? | **AIAssistantStore** |
+| Panel/modal visibility, template browsing? | **UIStore** |
+| Persistent user layout preferences? | **EditorPreferencesStore** |
+| Temporary component-local UI state? | `useState` / `useReducer` |
+| Derived/computed data from existing state? | Selectors on existing stores |
 
 ---
 
 ## Store Update Patterns
 
-All stores implement one or more of these patterns:
-
-### Pattern 1: Y.Doc/Awareness → Observer → Immer → Notify
-**Used for:** Collaborative data from Yjs
-**Stores:** WorkflowStore, AwarenessStore
-**Flow:**
+### Pattern 1: Y.Doc → Observer → Immer → Notify
+**Used by:** WorkflowStore (jobs/triggers/edges/positions), AwarenessStore (user presence)
 ```
-User edits → Y.Doc transaction → Observer fires → Immer update → React re-render
+User edits → Y.Doc transaction → observeDeep fires → produce(state, draft => ...) → notify()
 ```
 
-### Pattern 2: Direct Immer → Notify + Y.Doc/Awareness Update
-**Used for:** Local commands that need immediate UI feedback + sync
-**Stores:** WorkflowStore (selections), AwarenessStore (local cursor)
-**Flow:**
+### Pattern 2: Command → Y.Doc + Immediate Immer
+**Used by:** WorkflowStore (selections + Y.Doc writes), AwarenessStore (local cursor)
 ```
-Command → Update Y.Doc → Immediate Immer update → notify → React re-render
-(Y.Doc observer also fires but state already updated = idempotent)
+Command → write to Y.Doc/Awareness → produce() for immediate UI → notify()
+(Observer also fires but state already matches = idempotent)
 ```
 
-### Pattern 3: Phoenix Channel → Zod Validation → Immer → Notify
-**Used for:** Server-authoritative reference data
-**Stores:** AdaptorStore, CredentialStore
-**Flow:**
+### Pattern 3: Channel → Zod → Immer → Notify
+**Used by:** SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
 ```
-Server broadcast → Zod validation → Immer update → React re-render
+Channel event/reply → Zod schema validation → produce(state, draft => ...) → notify()
+```
+
+### Pattern 4: Direct Immer → Notify (local-only)
+**Used by:** UIStore, EditorPreferencesStore, WorkflowStore (selection state)
+```
+Command → produce(state, draft => ...) → notify() [+ optional localStorage write]
 ```
 
 ---
 
 ## When to Create a New Store
 
-### Create a NEW store when:
+**Create a NEW store when:**
+1. New domain of data with independent lifecycle
+2. Different data source pattern (new Y.Doc structure, new channel event stream)
+3. Mixing unrelated responsibilities into an existing store (5+ unrelated concerns)
+4. High-frequency updates would cause unnecessary re-renders in unrelated UI
 
-1. **New domain of data** with independent lifecycle
-   - Example: Adding "project templates" → Create `TemplateStore`
-   - Example: Adding "notification preferences" → Create `PreferenceStore`
-
-2. **Different data source pattern**
-   - New Yjs Map/Array in Y.Doc → New collaborative store
-   - New Phoenix Channel event stream → New reference data store
-
-3. **Clear separation of concerns**
-   - Store would have 5+ unrelated responsibilities → Split into multiple stores
-   - Mixing collaborative and reference data → Separate stores
-
-4. **Performance isolation**
-   - High-frequency updates affecting unrelated UI → Separate store
-   - Large datasets that don't need to trigger other re-renders → Separate store
-
-### DON'T create a new store when:
-
-1. **Data is closely related to existing store**
-   - Adding new workflow fields → Add to WorkflowStore
-   - Adding new user presence data → Add to AwarenessStore
-
-2. **It's component-local UI state**
-   - Use `useState` or `useReducer` instead
-
-3. **It's derived/computed state**
-   - Use selectors with existing stores
-   - Example: `useWorkflowSelector(state => state.jobs.filter(...))`
-
-4. **It's temporary/session data**
-   - Use SessionStorage or in-memory caching instead
+**DON'T create a new store when:**
+1. Data is closely related to an existing store's domain
+2. It's component-local UI state (`useState`)
+3. It's derived/computed from existing state (use selectors)
 
 ---
 
 ## Store Creation Checklist
-
-If you've decided to create a new store, follow this pattern:
 
 ```typescript
 // 1. Define types
@@ -406,10 +302,8 @@ interface MyStore { subscribe, getSnapshot, withSelector, /* commands */, /* que
 
 // 2. Create factory function
 export const createMyStore = () => {
-  // Initialize Immer state
   let state: MyState = produce({ /* initial */ }, draft => draft);
 
-  // Listener management
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach(l => l());
   const subscribe = (listener: () => void) => {
@@ -417,32 +311,20 @@ export const createMyStore = () => {
     return () => listeners.delete(listener);
   };
 
-  // Store interface
   const getSnapshot = () => state;
   const withSelector = createWithSelector(getSnapshot);
 
-  // Commands (mutations) - use produce()
+  // Commands (mutations) - always use produce() + notify()
   const updateSomething = (data) => {
-    state = produce(state, draft => {
-      draft.something = data;
-    });
+    state = produce(state, draft => { draft.something = data; });
     notify();
   };
 
-  // Queries (reads) - pure functions
-  const getSomething = () => state.something;
-
-  return {
-    subscribe,
-    getSnapshot,
-    withSelector,
-    updateSomething,
-    getSomething,
-  };
+  return { subscribe, getSnapshot, withSelector, updateSomething };
 };
 ```
 
-3. Add to StoreProvider context
+3. Add to `StoreProvider.tsx` `useState` initializer
 4. Create hooks in `hooks/useMyStore.ts`
 5. Follow Command Query Separation (CQS)
 6. Use appropriate update pattern (see above)
@@ -451,53 +333,29 @@ export const createMyStore = () => {
 
 ## Key Architectural Principles
 
-1. **Command Query Separation**: Separate mutations (commands) from reads (queries)
-2. **Referential Stability**: Use Immer + `createWithSelector` for optimal React performance
-3. **Single Responsibility**: Each store manages one domain of data
-4. **Type Safety**: Zod for runtime validation, TypeScript for compile-time safety
-5. **useSyncExternalStore**: All stores implement React 18's external store pattern
-6. **Immutability**: All state updates via Immer's `produce()`
+1. **Command Query Separation** — Mutations and reads are separate methods
+2. **Referential Stability** — Immer + `createWithSelector` for optimal React performance
+3. **Single Responsibility** — Each store manages one domain of data
+4. **Type Safety** — Zod for runtime validation at network boundaries, TypeScript for compile-time
+5. **useSyncExternalStore** — All stores implement React 18's external store contract
+6. **Immutability** — All state updates via Immer's `produce()`
 
 ---
 
-## Common Anti-Patterns to Avoid
+## Common Anti-Patterns
 
-❌ **Mixing collaborative and reference data in one store**
-- Split into separate stores based on data source
-
-❌ **Creating store for component-local state**
-- Use `useState` instead
-
-❌ **Not using `createWithSelector`**
-- Results in unnecessary re-renders
-
-❌ **Updating state without `produce()`**
-- Breaks referential stability guarantees
-
-❌ **Commands that don't notify**
-- React won't re-render
-
-❌ **Queries with side effects**
-- Violates CQS principle
+- Mixing collaborative and reference data in one store — split by data source
+- Creating a store for component-local state — use `useState`
+- Skipping `createWithSelector` — causes unnecessary re-renders
+- Updating state without `produce()` — breaks referential stability
+- Commands that don't call `notify()` — React won't re-render
+- Queries with side effects — violates CQS
 
 ---
 
 ## Related Files
 
-- **Store Implementations**: `assets/js/collaborative-editor/stores/`
-  - `createSessionStore.ts` - Infrastructure layer
-  - `createWorkflowStore.ts` - Collaborative workflow data
-  - `createAwarenessStore.ts` - User presence
-  - `createSessionContextStore.ts` - Session context
-  - `createAdaptorStore.ts` - Adaptor reference data
-  - `createCredentialStore.ts` - Credential reference data
-  - `common.ts` - Shared utilities
-  - `devtools.ts` - Redux DevTools integration
-- **Store Hooks**: `assets/js/collaborative-editor/hooks/`
-- **Store Context**: `assets/js/collaborative-editor/contexts/StoreProvider.tsx`
-- **Type Definitions**: `assets/js/collaborative-editor/types/`
-
----
-
-**Last Updated:** 2025-10-08 (Fixed incorrect state properties, added devtools.ts, updated method names)
-**Maintainer:** Lightning Core Team
+- **Store Implementations:** `assets/js/collaborative-editor/stores/`
+- **Store Hooks:** `assets/js/collaborative-editor/hooks/`
+- **Store Context:** `assets/js/collaborative-editor/contexts/StoreProvider.tsx`
+- **Type Definitions:** `assets/js/collaborative-editor/types/`

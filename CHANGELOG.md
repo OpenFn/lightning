@@ -19,18 +19,30 @@ and this project adheres to
 
 ### Changed
 
+- Support a batch of logs submitted via `run:batch_logs` in run channel
+  [#4123](https://github.com/OpenFn/lightning/issues/4123)
+- Validate users before confirming new accounts
+  [#2916](https://github.com/OpenFn/lightning/issues/2916)
+
 ### Fixed
 
 - AI assistant now correctly displays logs when run is selected mid-session
   [#4380](https://github.com/OpenFn/lightning/issues/4380)
+- Fix duplicate "Log in" heading on login page
+  [#4459](https://github.com/OpenFn/lightning/issues/4459)
+- Editing an OAuth credential from the workflow canvas incorrectly showed an
+  "OAuth client not found" warning
+  [#4468](https://github.com/OpenFn/lightning/issues/4468)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
+
+## [2.15.15] - 2026-03-02
 
 ## [2.15.15-pre.1] - 2026-02-25
 
 ### Fixed
 
-- Exteranl ID uniqueness migration failing because of `IO.puts`
+- External ID uniqueness migration failing because of `IO.puts`
   [#4170](https://github.com/OpenFn/lightning/issues/4170)
 
 ## [2.15.15-pre] - 2026-02-25
@@ -47,6 +59,8 @@ and this project adheres to
 
 ### Fixed
 
+- Reset credentials when changing job adaptor to prevent credential mismatch
+  [#4395](https://github.com/OpenFn/lightning/issues/4395)
 - Ensure workflows have version history before sandbox creation, merging, and
   importing to prevent squashing of the first workflow version
   [#3958](https://github.com/OpenFn/lightning/issues/3958)

@@ -203,6 +203,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       module={LightningWeb.CredentialLive.CredentialFormComponent}
       id="new-credential-modal"
       action={if @credential_to_edit, do: :edit, else: :new}
+      oauth_client={if @credential_to_edit, do: @credential_to_edit.oauth_client}
       current_user={@current_user}
       project={@project}
       projects={[@project]}
