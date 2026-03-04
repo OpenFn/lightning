@@ -646,11 +646,20 @@ defmodule LightningWeb.AiAssistantChannelTest do
          %{
            socket: socket,
            job: job,
-           user: user
+           user: user,
+           workflow: workflow,
+           project: project
          } do
       # Create a run for the job
-      work_order = insert(:workorder, workflow: job.workflow)
-      run = insert(:run, work_order: work_order, starting_job: job)
+      dataclip = insert(:dataclip, project: project)
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job,
+          dataclip: dataclip
+        )
 
       {:ok, session} =
         AiAssistant.create_session(job, user, "Initial message", [])
@@ -677,7 +686,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
         # Verify follow_run_id was stored in message.meta
         reloaded = AiAssistant.get_session!(session.id)
-        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+
+        user_msg =
+          Enum.find(reloaded.messages, fn msg ->
+            msg.role == :user && msg.content == "Help me debug these logs"
+          end)
 
         assert user_msg.meta["follow_run_id"] == run.id
       end)
