@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix workflows index page loading slowly
+  [#3675](https://github.com/OpenFn/lightning/issues/3675)
 - Fix duplicate "Log in" heading on login page
   [#4459](https://github.com/OpenFn/lightning/issues/4459)
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
