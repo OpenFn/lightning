@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Lower side panel z-index to prevent covering IDE in create workflow for
+  templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
 - Fix workflows index page loading slowly
   [#3675](https://github.com/OpenFn/lightning/issues/3675)
 - AI assistant now correctly displays logs when run is selected mid-session

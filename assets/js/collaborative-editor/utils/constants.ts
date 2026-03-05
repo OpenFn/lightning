@@ -18,9 +18,9 @@ export const Z_INDEX = {
   /** Manual run panel */
   RUN_PANEL: 20,
   /** Side panels (Create Workflow, AI Assistant) */
-  SIDE_PANEL: 60,
+  SIDE_PANEL: 30,
   /** Toggle button for collapsed side panels */
-  SIDE_PANEL_TOGGLE: 61,
+  SIDE_PANEL_TOGGLE: 31,
 } as const;
 
 /**
