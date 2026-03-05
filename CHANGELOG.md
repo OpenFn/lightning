@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Show loading state in docs panel when switching adaptors
+  [#4461](https://github.com/OpenFn/lightning/issues/4461)
 - Lower side panel z-index to prevent covering IDE in create workflow for
   templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
 - Fix workflows index page loading slowly

@@ -18,6 +18,7 @@ const useDocs = (specifier: string) => {
       setDocs(cache[specifier]);
     } else {
       cache[specifier] = null;
+      setDocs(null);
       describePackage(specifier, {})
         .then(result => {
           cache[specifier] = result;
