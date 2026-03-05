@@ -68,6 +68,8 @@ defmodule LightningWeb.Endpoint do
 
   plug Plug.RequestId
 
+  plug CORSPlug, origin: &Lightning.Config.cors_origin/0
+
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   # Channel proxy — must be before Plug.Parsers to preserve raw body
@@ -82,8 +84,6 @@ defmodule LightningWeb.Endpoint do
                      )
 
   LightningWeb.Utils.add_dynamic_plugs(@pre_parsers_plugs)
-
-  plug CORSPlug, origin: &Lightning.Config.cors_origin/0
 
   plug Sentry.PlugContext
 
