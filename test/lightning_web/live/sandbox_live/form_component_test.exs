@@ -175,17 +175,28 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         {:error, changeset}
       end)
 
+      # Simulate race condition: name now exists when rebuilding changeset
+      Mimic.expect(Lightning.Projects, :sandbox_name_exists?, fn _parent_id,
+                                                                 _name,
+                                                                 _id ->
+        true
+      end)
+
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
       html =
         view
         |> element("#sandbox-form-new")
         |> render_submit(%{
-          "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+          "project" => %{
+            "raw_name" => "Test Sandbox",
+            "name" => "test-sandbox",
+            "color" => "#abcdef"
+          }
         })
 
       # Should stay on the form with inline error, not redirect
-      assert html =~ "This value should be unique."
+      assert html =~ "Sandbox name already exists"
       refute_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
     end
 
@@ -217,7 +228,11 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       view
       |> element("#sandbox-form-new")
       |> render_submit(%{
-        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+        "project" => %{
+          "raw_name" => "Test Sandbox",
+          "name" => "test-sandbox",
+          "color" => "#abcdef"
+        }
       })
 
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
@@ -328,7 +343,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       view
       |> element("#sandbox-form-#{sb.id}")
-      |> render_submit(%{"project" => %{"raw_name" => ""}})
+      |> render_submit(%{
+        "project" => %{"raw_name" => "", "name" => "", "color" => sb.color}
+      })
 
       html = render(view)
       assert html =~ "can&#39;t be blank"
