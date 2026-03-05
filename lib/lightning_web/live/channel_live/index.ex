@@ -256,7 +256,7 @@ defmodule LightningWeb.ChannelLive.Index do
         <div class="flex items-center justify-between">
           <h2 class="text-sm text-gray-500">Total Requests</h2>
           <.link
-            navigate={~p"/projects/#{@project}/channels/requests"}
+            navigate={~p"/projects/#{@project}/history/channels"}
             class="text-xs text-indigo-600 hover:text-indigo-800"
           >
             View all
@@ -350,7 +350,7 @@ defmodule LightningWeb.ChannelLive.Index do
             <.td class="text-gray-700">
               <.link
                 navigate={
-                  ~p"/projects/#{@project}/channels/requests?#{%{filters: %{channel_id: channel.id}}}"
+                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
                 }
                 class="text-indigo-600 hover:text-indigo-800"
               >
@@ -360,7 +360,7 @@ defmodule LightningWeb.ChannelLive.Index do
             <.td class="text-gray-500 text-sm">
               <.link
                 navigate={
-                  ~p"/projects/#{@project}/channels/requests?#{%{filters: %{channel_id: channel.id}}}"
+                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
                 }
                 class="hover:text-gray-700"
               >

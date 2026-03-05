@@ -128,6 +128,8 @@ defmodule LightningWeb.RunLive.Index do
        statuses: statuses,
        search_fields: search_fields,
        string_search_limit: Invocation.get_workorders_count_limit(),
+       channels_enabled:
+         Lightning.Accounts.experimental_features_enabled?(current_user),
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
@@ -135,7 +137,8 @@ defmodule LightningWeb.RunLive.Index do
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
-       filters: params["filters"]
+       filters: params["filters"],
+       channel_logs_params: %{}
      )}
   end
 
@@ -154,6 +157,15 @@ defmodule LightningWeb.RunLive.Index do
     }
 
   @impl true
+  def handle_params(
+        params,
+        _url,
+        %{assigns: %{live_action: :channel_logs}} = socket
+      ) do
+    {:noreply,
+     assign(socket, page_title: "History", channel_logs_params: params)}
+  end
+
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
     filters = Map.get(params, "filters", init_filters())
@@ -246,7 +258,7 @@ defmodule LightningWeb.RunLive.Index do
       )
 
   @impl true
-  def handle_info(%mod{run: run}, socket)
+  def handle_info(%mod{run: run}, %{assigns: %{live_action: :index}} = socket)
       when mod in [Events.RunCreated, Events.RunUpdated] do
     %{work_order: work_order} =
       Lightning.Repo.preload(
@@ -279,7 +291,7 @@ defmodule LightningWeb.RunLive.Index do
   """
   def handle_info(
         %Events.WorkOrderCreated{work_order: work_order},
-        socket
+        %{assigns: %{live_action: :index}} = socket
       ) do
     %{project: project, filters: filters} = socket.assigns
 
@@ -298,7 +310,7 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_info(
         %Events.WorkOrderUpdated{work_order: work_order},
-        socket
+        %{assigns: %{live_action: :index}} = socket
       ) do
     work_order =
       Lightning.Repo.preload(
@@ -319,6 +331,19 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     {:noreply, socket |> update_page(work_order)}
+  end
+
+  def handle_info({:channel_logs_filter, filters}, socket) do
+    %{project: project} = socket.assigns
+
+    {:noreply,
+     push_patch(socket,
+       to: ~p"/projects/#{project.id}/history/channels?#{%{filters: filters}}"
+     )}
+  end
+
+  def handle_info(_event, socket) do
+    {:noreply, socket}
   end
 
   @impl true
