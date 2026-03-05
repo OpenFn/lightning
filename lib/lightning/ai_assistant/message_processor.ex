@@ -92,21 +92,35 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   defp update_session_with_job_context(session, message) do
     message_meta = message.meta || %{}
 
-    cond do
-      message.job_id ->
-        %{session | job_id: message.job_id}
+    session =
+      cond do
+        message.job_id ->
+          %{session | job_id: message.job_id}
 
-      Map.has_key?(message_meta, "unsaved_job") ->
+        Map.has_key?(message_meta, "unsaved_job") ->
+          updated_meta =
+            Map.put(
+              session.meta || %{},
+              "unsaved_job",
+              message_meta["unsaved_job"]
+            )
+
+          %{session | meta: updated_meta}
+
+        true ->
+          session
+      end
+
+    # Propagate follow_run_id from message meta to in-memory session meta
+    # so that maybe_add_run_logs can find it during enrichment
+    case message_meta do
+      %{"follow_run_id" => run_id} when not is_nil(run_id) ->
         updated_meta =
-          Map.put(
-            session.meta || %{},
-            "unsaved_job",
-            message_meta["unsaved_job"]
-          )
+          Map.put(session.meta || %{}, "follow_run_id", run_id)
 
         %{session | meta: updated_meta}
 
-      true ->
+      _ ->
         session
     end
   end
