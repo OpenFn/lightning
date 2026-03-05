@@ -1,6 +1,8 @@
 defmodule Lightning.AiAssistant.MessageProcessorTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   import Mox
   import Lightning.Factories
 

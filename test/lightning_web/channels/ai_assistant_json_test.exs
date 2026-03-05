@@ -1,6 +1,8 @@
 defmodule LightningWeb.Channels.AiAssistantJSONTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   alias LightningWeb.Channels.AiAssistantJSON
 
   import Lightning.Factories

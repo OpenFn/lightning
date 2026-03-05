@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistantLiveTest do
   use LightningWeb.ConnCase, async: true
 
+  @moduletag :capture_log
+
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
   import Mox

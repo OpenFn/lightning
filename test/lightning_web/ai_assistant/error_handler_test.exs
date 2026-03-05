@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistant.ErrorHandlerTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   describe "format_error/1" do
