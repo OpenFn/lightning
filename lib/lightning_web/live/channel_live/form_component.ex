@@ -2,12 +2,12 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   @moduledoc false
   use LightningWeb, :live_component
 
+  import LightningWeb.ChannelLive.Helpers
+
   alias Lightning.Channels
   alias Lightning.Channels.Channel
   alias Lightning.Projects
   alias Lightning.WebhookAuthMethods
-
-  import LightningWeb.ChannelLive.Helpers
 
   @impl true
   def update(

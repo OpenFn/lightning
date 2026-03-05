@@ -219,17 +219,9 @@ defmodule Lightning.Channels do
   @spec delete_channel(Channel.t(), actor: User.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
-    changeset =
-      channel
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.foreign_key_constraint(:channel_snapshots,
-        name: "channel_snapshots_channel_id_fkey",
-        message: "has history that must be retained"
-      )
-
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
-    |> Multi.delete(:channel, changeset)
+    |> Multi.delete(:channel, channel)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}

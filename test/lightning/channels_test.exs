@@ -572,12 +572,13 @@ defmodule Lightning.ChannelsTest do
       assert audit.actor_id == user.id
     end
 
-    test "returns error when channel has snapshots", %{user: user} do
+    test "cascade deletes associated snapshots", %{user: user} do
       channel = insert(:channel)
-      insert(:channel_snapshot, channel: channel)
+      snapshot = insert(:channel_snapshot, channel: channel)
 
-      assert {:error, changeset} = Channels.delete_channel(channel, actor: user)
-      assert %{channel_snapshots: _} = errors_on(changeset)
+      assert {:ok, %Channel{}} = Channels.delete_channel(channel, actor: user)
+
+      refute Repo.get(ChannelSnapshot, snapshot.id)
     end
   end
 

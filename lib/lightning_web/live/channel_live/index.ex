@@ -2,13 +2,13 @@ defmodule LightningWeb.ChannelLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
+  import LightningWeb.ChannelLive.Helpers
+
   alias Lightning.Channels
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias LightningWeb.ChannelLive.FormComponent
   alias LightningWeb.Components.Common
-
-  import LightningWeb.ChannelLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}

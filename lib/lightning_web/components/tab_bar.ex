@@ -1,4 +1,5 @@
 defmodule LightningWeb.Components.TabBar do
+  @moduledoc false
   use Phoenix.Component
 
   @doc """
