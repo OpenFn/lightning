@@ -28,6 +28,8 @@ and this project adheres to
 
 - Fix workflows index page loading slowly
   [#3675](https://github.com/OpenFn/lightning/issues/3675)
+- AI assistant now correctly displays logs when run is selected mid-session
+  [#4380](https://github.com/OpenFn/lightning/issues/4380)
 - Fix duplicate "Log in" heading on login page
   [#4459](https://github.com/OpenFn/lightning/issues/4459)
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
