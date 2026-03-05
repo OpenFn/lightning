@@ -30,14 +30,6 @@ defmodule LightningWeb.Components.Menu do
       </.menu_item>
 
       <.menu_item
-        to={~p"/projects/#{@project_id}/channels/requests"}
-        active={@active_menu_item == :channel_requests}
-      >
-        <.icon name="hero-queue-list" class="h-5 w-5 shrink-0" />
-        <span class="menu-item-text truncate">Channel Requests</span>
-      </.menu_item>
-
-      <.menu_item
         to={~p"/projects/#{@project_id}/sandboxes"}
         active={@active_menu_item == :sandboxes}
       >
