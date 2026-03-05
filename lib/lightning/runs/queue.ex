@@ -73,5 +73,6 @@ defmodule Lightning.Runs.Queue do
   defp maybe_set_work_mem(_repo, nil, _log), do: {:ok, :skipped}
 
   defp maybe_set_work_mem(repo, work_mem, log),
-    do: repo.query("SET LOCAL work_mem = '#{work_mem}'", [], log: log)
+    do:
+      repo.query("SELECT set_config('work_mem', $1, true)", [work_mem], log: log)
 end
