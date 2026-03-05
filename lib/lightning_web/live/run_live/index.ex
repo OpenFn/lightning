@@ -342,7 +342,14 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  def handle_info(_event, socket) do
+  # Work order / run events are irrelevant on the channel logs tab
+  def handle_info(%mod{}, %{assigns: %{live_action: :channel_logs}} = socket)
+      when mod in [
+             Events.RunCreated,
+             Events.RunUpdated,
+             Events.WorkOrderCreated,
+             Events.WorkOrderUpdated
+           ] do
     {:noreply, socket}
   end
 
