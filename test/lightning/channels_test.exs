@@ -881,13 +881,11 @@ defmodule Lightning.ChannelsTest do
       assert channel_id == channel.id
     end
 
-    test "preloads :channel_events with only :source_received and :error types",
+    test "preloads :channel_events with only :sink_response and :error types",
          %{project: project, channel: channel, snapshot: snapshot} do
       request = insert_request(channel, snapshot)
 
-      insert_event(request, type: :source_received, request_path: "/inbound")
-      insert_event(request, type: :sink_request)
-      insert_event(request, type: :sink_response)
+      insert_event(request, type: :sink_response, request_path: "/outbound")
       insert_event(request, type: :error, error_message: "timeout")
 
       page = Channels.list_channel_requests(project, SearchParams.new(%{}))
@@ -898,15 +896,15 @@ defmodule Lightning.ChannelsTest do
 
       assert Enum.all?(
                entry.channel_events,
-               &(&1.type in [:source_received, :error])
+               &(&1.type in [:sink_response, :error])
              )
 
-      source_event =
-        Enum.find(entry.channel_events, &(&1.type == :source_received))
+      sink_event =
+        Enum.find(entry.channel_events, &(&1.type == :sink_response))
 
       error_event = Enum.find(entry.channel_events, &(&1.type == :error))
 
-      assert %{request_path: "/inbound"} = source_event
+      assert %{request_path: "/outbound"} = sink_event
       assert %{error_message: "timeout"} = error_event
     end
 

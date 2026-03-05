@@ -79,9 +79,7 @@ defmodule Lightning.Channels do
   @doc """
   Returns a paginated page of ChannelRequest records for a project.
 
-  Preloads `:channel` and `:channel_events` (filtered to `:source_received`
-  and `:error` types only — enough to display request_path and error_message
-  in the UI).
+  Preloads `:channel` and `:channel_events`.
 
   ## Parameters
     - `project` — `%Project{}` struct; scopes results to this project
