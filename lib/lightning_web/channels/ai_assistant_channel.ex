@@ -631,6 +631,14 @@ defmodule LightningWeb.AiAssistantChannel do
     []
   end
 
+  defp maybe_put_follow_run_id_in_meta(attrs, %{"follow_run_id" => run_id})
+       when not is_nil(run_id) do
+    existing_meta = Map.get(attrs, :meta, %{})
+    Map.put(attrs, :meta, Map.put(existing_meta, "follow_run_id", run_id))
+  end
+
+  defp maybe_put_follow_run_id_in_meta(attrs, _params), do: attrs
+
   defp build_message_options(params) do
     %{
       "code" => params["attach_code"] == true,
@@ -838,7 +846,10 @@ defmodule LightningWeb.AiAssistantChannel do
        ) do
     case may_get_job(params["job_id"]) do
       {:ok, job} ->
-        message_attrs = build_message_attrs(user, job, content, limit_result)
+        message_attrs =
+          build_message_attrs(user, job, content, limit_result)
+          |> maybe_put_follow_run_id_in_meta(params)
+
         opts = extract_message_options(params)
 
         case AiAssistant.save_message(session, message_attrs, opts) do
@@ -896,6 +907,7 @@ defmodule LightningWeb.AiAssistantChannel do
     message_attrs =
       build_message_attrs(user, nil, content, limit_result)
       |> Map.put(:meta, %{"unsaved_job" => unsaved_job_data})
+      |> maybe_put_follow_run_id_in_meta(params)
 
     opts = extract_message_options(params)
 
