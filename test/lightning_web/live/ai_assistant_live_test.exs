@@ -4,13 +4,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
   import Mox
-  use Oban.Testing, repo: Lightning.Repo
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
   setup :verify_on_exit!
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+
+  setup do
+    Process.put(:oban_testing, :manual)
+    :ok
+  end
 
   defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
     Ecto.Changeset.change(user, %{
@@ -612,7 +616,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ expected_answer
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "an error is displayed incase the assistant does not return 200", %{
       conn: conn,
@@ -664,7 +667,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "an error is displayed when the assistant query fails", %{
       conn: conn,
@@ -777,7 +779,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "displays apollo server error messages", %{
       conn: conn,
@@ -842,7 +843,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles timeout errors from Apollo", %{
       conn: conn,
@@ -899,7 +899,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles connection refused errors from Apollo", %{
       conn: conn,
@@ -955,7 +954,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles unexpected errors from Apollo", %{
       conn: conn,
@@ -1233,71 +1231,69 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> Lightning.Repo.update!()
 
       # Use manual testing mode to control job execution
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
-            on_error: :raise
-          )
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
+          on_error: :raise
+        )
 
-        render_async(view)
+      render_async(view)
 
-        assert has_element?(
-                 view,
-                 "#retry-message-#{List.first(session.messages).id}"
-               )
+      assert has_element?(
+               view,
+               "#retry-message-#{List.first(session.messages).id}"
+             )
 
-        refute has_element?(
-                 view,
-                 "#cancel-message-#{List.first(session.messages).id}"
-               )
+      refute has_element?(
+               view,
+               "#cancel-message-#{List.first(session.messages).id}"
+             )
 
-        # Update the mock for successful response
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
+      # Update the mock for successful response
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Hello"},
-                   %{"role" => "assistant", "content" => "Hi there!"}
-                 ]
-               }
-             }}
-        end)
-
-        # Click retry
-        view
-        |> element("#retry-message-#{List.first(session.messages).id}")
-        |> render_click()
-
-        # The message should now be in pending status
-        html = render(view)
-        assert html =~ "Sending"
-
-        # Verify job was enqueued
-        assert [job] =
-                 all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
-
-        assert job.args["message_id"] == List.first(session.messages).id
-
-        # Process the job
-        assert %{success: 1} =
-                 Oban.drain_queue(Lightning.Oban, queue: :ai_assistant)
-
-        # Re-render to see the updated state
-        html = render(view)
-
-        # Now check for the successful response
-        assert html =~ "Hi there!"
-        refute html =~ "Failed"
-        refute has_element?(view, "#assistant-failed-message")
+        %{method: :post}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "history" => [
+                 %{"role" => "user", "content" => "Hello"},
+                 %{"role" => "assistant", "content" => "Hi there!"}
+               ]
+             }
+           }}
       end)
+
+      # Click retry
+      view
+      |> element("#retry-message-#{List.first(session.messages).id}")
+      |> render_click()
+
+      # The message should now be in pending status
+      html = render(view)
+      assert html =~ "Sending"
+
+      # Verify job was enqueued
+      assert [job] =
+               all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
+
+      assert job.args["message_id"] == List.first(session.messages).id
+
+      # Process the job
+      assert %{success: 1} =
+               Oban.drain_queue(Lightning.Oban, queue: :ai_assistant)
+
+      # Re-render to see the updated state
+      html = render(view)
+
+      # Now check for the successful response
+      assert html =~ "Hi there!"
+      refute html =~ "Failed"
+      refute has_element?(view, "#assistant-failed-message")
     end
 
     @tag email: "user@openfn.org"
@@ -2085,7 +2081,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
              "Create button should be enabled after template selection"
     end
 
-    @tag :capture_log
     test "workflow mode handles template generation errors", %{
       conn: conn,
       project: project,
@@ -2521,7 +2516,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert workflow_html =~ "Describe the workflow you want to create"
     end
 
-    @tag :capture_log
     test "error handling is consistent across modes", %{
       conn: conn,
       project: project,
@@ -3391,7 +3385,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       refute html =~ "Processing..."
     end
 
-    @tag :capture_log
     test "error boundaries work correctly", %{
       conn: conn,
       project: project,
@@ -3461,7 +3454,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     setup :stub_rate_limiter_ok
     setup :stub_usage_limiter_ok
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "renders avatar with user initials for messages with users", %{
       conn: conn,
@@ -3498,7 +3490,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ first_initial
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "renders avatar with partial name when user has nil last_name", %{
       conn: conn,
@@ -3544,7 +3535,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ "Alice"
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "renders avatar with question mark when user has empty string first_name",
          %{
@@ -3590,7 +3580,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ "?"
     end
 
-    @tag :capture_log
     @tag email: "user@openfn.org"
     test "renders question mark avatar for messages without user association", %{
       conn: conn,

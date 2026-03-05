@@ -29,6 +29,8 @@ defmodule LightningWeb.ChannelCase do
 
       # The default endpoint for testing
       @endpoint LightningWeb.Endpoint
+
+      use Oban.Testing, repo: Lightning.Repo
     end
   end
 
