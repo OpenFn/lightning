@@ -1281,6 +1281,54 @@ defmodule Lightning.AiAssistantTest do
                  "@openfn/language-http@latest"
                )
     end
+
+    test "fetches logs when follow_run_id is added mid-session", %{
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      # Simulate the bug scenario: session created without follow_run_id,
+      # then user selects a run later during the session
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_job: job
+        )
+
+      step = insert(:step, job: job)
+      insert(:run_step, run: run, step: step)
+
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Debug log from mid-session run",
+        timestamp: ~U[2024-01-01 10:00:00Z]
+      )
+
+      # Session initially created without follow_run_id
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job,
+          meta: %{}
+        )
+
+      # Verify no logs without follow_run_id
+      enriched_before = AiAssistant.enrich_session_with_job_context(session)
+      assert is_nil(enriched_before.logs)
+
+      # Now simulate follow_run_id being added via message processing
+      # (this is what the message processor does after the fix)
+      session_with_run = %{session | meta: %{"follow_run_id" => run.id}}
+
+      enriched_after =
+        AiAssistant.enrich_session_with_job_context(session_with_run)
+
+      # Logs should now be present
+      assert enriched_after.logs =~ "Debug log from mid-session run"
+    end
   end
 
   describe "retry_message/1" do
