@@ -9,27 +9,34 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
 
   @impl true
   def update(assigns, socket) do
-    %{project: project, params: params} = assigns
+    params_changed? = assigns[:params] != socket.assigns[:params]
 
     socket = assign(socket, assigns)
 
-    channels = Channels.list_channels_for_project(project.id)
-    raw_filters = params["filters"] || %{}
-    search_params = SearchParams.new(raw_filters)
-    page_params = Map.take(params, ["page"])
+    if params_changed? or not Map.has_key?(socket.assigns, :page) do
+      %{project: project, params: params} = socket.assigns
 
-    page =
-      Channels.list_channel_requests(project, search_params, page_params)
+      raw_filters = params["filters"] || %{}
+      search_params = SearchParams.new(raw_filters)
+      page_params = Map.take(params, ["page"])
 
-    {:ok,
-     socket
-     |> assign(
-       channels: channels,
-       search_params: search_params,
-       filters_changeset: SearchParams.changeset(raw_filters),
-       page: page,
-       pagination_path: &build_pagination_path(&1, project, search_params)
-     )}
+      page =
+        Channels.list_channel_requests(project, search_params, page_params)
+
+      {:ok,
+       socket
+       |> assign_new(:channels, fn ->
+         Channels.list_channels_for_project(project.id)
+       end)
+       |> assign(
+         search_params: search_params,
+         filters_changeset: SearchParams.changeset(raw_filters),
+         page: page,
+         pagination_path: &build_pagination_path(&1, project, search_params)
+       )}
+    else
+      {:ok, socket}
+    end
   end
 
   @impl true
@@ -118,7 +125,7 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
                   <Common.datetime datetime={entry.started_at} />
                 </.td>
                 <.td>
-                  <RunComponents.state_pill state={entry.state} />
+                  <RunComponents.channel_state_pill state={entry.state} />
                 </.td>
                 <.td class="text-sm text-gray-500 max-w-xs truncate">
                   {error_event_message(entry)}
