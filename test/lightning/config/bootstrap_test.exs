@@ -613,6 +613,26 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "log_queue_queries" do
+    test "defaults to false" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
+    end
+
+    test "can be enabled via env var" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "true"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == true
+    end
+
+    test "can be explicitly disabled" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "false"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
+    end
+  end
+
   describe "webhook retry (dev)" do
     test "does not set :webhook_retry when no WEBHOOK_RETRY_* envs are provided" do
       Dotenvy.source([%{}])

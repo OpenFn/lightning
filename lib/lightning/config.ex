@@ -345,6 +345,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def log_queue_queries do
+      Application.get_env(:lightning, :log_queue_queries, false)
+    end
+
+    @impl true
     def broadcast_work_available? do
       Application.get_env(:lightning, :broadcast_work_available)
     end
@@ -493,6 +498,7 @@ defmodule Lightning.Config do
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
   @callback claim_work_mem() :: String.t() | nil
+  @callback log_queue_queries() :: boolean()
   @callback broadcast_work_available?() :: boolean()
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
@@ -753,6 +759,10 @@ defmodule Lightning.Config do
 
   def claim_work_mem do
     impl().claim_work_mem()
+  end
+
+  def log_queue_queries do
+    impl().log_queue_queries()
   end
 
   def broadcast_work_available? do

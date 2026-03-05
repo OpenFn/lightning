@@ -698,6 +698,10 @@ defmodule Lightning.Config.Bootstrap do
                value
            end)
 
+    config :lightning,
+           :log_queue_queries,
+           env!("LOG_QUEUE_QUERIES", &Utils.ensure_boolean/1, false)
+
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:
         env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",
