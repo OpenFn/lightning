@@ -90,7 +90,7 @@ defmodule LightningWeb.ChannelRequestLive.IndexTest do
       refute html =~ "theirs"
     end
 
-    test "shows request_path from :source_received event", %{
+    test "shows request_path from :sink_response event", %{
       conn: conn,
       project: project
     } do
@@ -99,7 +99,7 @@ defmodule LightningWeb.ChannelRequestLive.IndexTest do
 
       insert(:channel_event,
         channel_request: cr,
-        type: :source_received,
+        type: :sink_response,
         request_path: "/api/data/incoming"
       )
 
@@ -128,18 +128,19 @@ defmodule LightningWeb.ChannelRequestLive.IndexTest do
       assert html =~ "Connection timed out"
     end
 
-    test "shows dash placeholders when no source or error events exist", %{
+    test "renders without errors when no source or error events exist", %{
       conn: conn,
       project: project
     } do
       channel = insert(:channel, project: project)
-      _cr = insert_channel_request(channel)
+      cr = insert_channel_request(channel)
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project.id}/channels/requests")
 
-      # Expect em-dashes for missing request path and error message
-      assert html =~ "—"
+      # Row renders with the request ID but no request path or error message
+      assert html =~ cr.request_id
+      refute html =~ "Connection timed out"
     end
 
     test "renders state badges for each request state", %{
