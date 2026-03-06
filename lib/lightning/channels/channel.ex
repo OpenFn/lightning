@@ -52,7 +52,10 @@ defmodule Lightning.Channels.Channel do
     |> validate_required([:name, :sink_url, :project_id])
     |> Validators.validate_url(:sink_url)
     |> assoc_constraint(:project)
-    |> unique_constraint([:project_id, :name])
+    |> unique_constraint([:project_id, :name],
+      error_key: :name,
+      message: "A channel with this name already exists in this project"
+    )
     |> optimistic_lock(:lock_version)
     |> cast_assoc(:channel_auth_methods)
   end
