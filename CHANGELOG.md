@@ -26,6 +26,9 @@ and this project adheres to
 
 ### Fixed
 
+- Display error messages when GitHub installations fail to load, providing
+  specific guidance for OAuth token errors and other failure scenarios
+  [#4467](https://github.com/OpenFn/lightning/issues/4467)
 - Fix duplicate "Log in" heading on login page
   [#4459](https://github.com/OpenFn/lightning/issues/4459)
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
