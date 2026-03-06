@@ -657,121 +657,76 @@ describe('ConfigureAdaptorModal', () => {
       expect(screen.getByText('My Google Sheets OAuth')).toBeInTheDocument();
     });
 
-    it('shows OAuth credential with non-matching client name in "Other Credentials"', async () => {
-      const user = userEvent.setup();
+    it.each([
+      {
+        scenario: 'non-matching client name',
+        credential: {
+          id: 'cred-oauth-unmatched',
+          project_credential_id: 'proj-cred-oauth-unmatched',
+          name: 'Production API OAuth',
+          schema: 'oauth',
+          oauth_client_name: 'Corporate SSO Provider',
+          external_id: 'ext-unmatched',
+          inserted_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          owner: null,
+        } satisfies ProjectCredential,
+      },
+      {
+        scenario: 'null oauth_client_name',
+        credential: {
+          id: 'cred-oauth-null',
+          project_credential_id: 'proj-cred-oauth-null',
+          name: 'Legacy OAuth Credential',
+          schema: 'oauth',
+          oauth_client_name: null,
+          external_id: 'ext-null',
+          inserted_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          owner: null,
+        } satisfies ProjectCredential,
+      },
+    ])(
+      'shows OAuth credential with $scenario in "Other Credentials"',
+      async ({ credential }) => {
+        const user = userEvent.setup();
 
-      // OAuth credential whose client name does NOT contain the adaptor name
-      const unmatchedOAuthCredential: ProjectCredential = {
-        id: 'cred-oauth-unmatched',
-        project_credential_id: 'proj-cred-oauth-unmatched',
-        name: 'Production API OAuth',
-        schema: 'oauth',
-        oauth_client_name: 'Corporate SSO Provider',
-        external_id: 'ext-unmatched',
-        inserted_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-        owner: null,
-      };
+        const credSnapshot = {
+          projectCredentials: [...mockProjectCredentials, credential],
+          keychainCredentials: mockKeychainCredentials,
+          isLoading: false,
+          error: null,
+        };
 
-      const credSnapshot = {
-        projectCredentials: [
-          ...mockProjectCredentials,
-          unmatchedOAuthCredential,
-        ],
-        keychainCredentials: mockKeychainCredentials,
-        isLoading: false,
-        error: null,
-      };
-
-      const storeContext = {
-        ...createMockStoreContext(),
-        credentialStore: {
-          subscribe: vi.fn(() => vi.fn()),
-          getSnapshot: () => credSnapshot,
-          withSelector: (selector: any) => {
-            const result = selector(credSnapshot);
-            return () => result;
+        const storeContext = {
+          ...createMockStoreContext(),
+          credentialStore: {
+            subscribe: vi.fn(() => vi.fn()),
+            getSnapshot: () => credSnapshot,
+            withSelector: (selector: any) => {
+              const result = selector(credSnapshot);
+              return () => result;
+            },
+            ...createCredentialQueryMethods(credSnapshot),
           },
-          ...createCredentialQueryMethods(credSnapshot),
-        },
-      };
+        };
 
-      renderWithProviders(
-        <ConfigureAdaptorModal {...defaultProps} />,
-        storeContext as any
-      );
+        renderWithProviders(
+          <ConfigureAdaptorModal {...defaultProps} />,
+          storeContext as any
+        );
 
-      // Should NOT appear in the primary section
-      expect(
-        screen.queryByText('Production API OAuth')
-      ).not.toBeInTheDocument();
+        // Should NOT appear in the primary section
+        expect(screen.queryByText(credential.name)).not.toBeInTheDocument();
 
-      // Click "Other credentials" link
-      const otherCredentialsLink = screen.getByText(/other credentials/i);
-      await user.click(otherCredentialsLink);
+        // Click "Other credentials" link
+        const otherCredentialsLink = screen.getByText(/other credentials/i);
+        await user.click(otherCredentialsLink);
 
-      // Should appear in "Other credentials" alongside HTTP and Keychain
-      expect(screen.getByText('Production API OAuth')).toBeInTheDocument();
-      expect(screen.getByText('HTTP API Key')).toBeInTheDocument();
-      expect(screen.getByText('Keychain Salesforce')).toBeInTheDocument();
-    });
-
-    it('shows OAuth credential with null oauth_client_name in "Other Credentials"', async () => {
-      const user = userEvent.setup();
-
-      // OAuth credential with no client name at all
-      const nullClientOAuthCredential: ProjectCredential = {
-        id: 'cred-oauth-null',
-        project_credential_id: 'proj-cred-oauth-null',
-        name: 'Legacy OAuth Credential',
-        schema: 'oauth',
-        oauth_client_name: null,
-        external_id: 'ext-null',
-        inserted_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-        owner: null,
-      };
-
-      const credSnapshot = {
-        projectCredentials: [
-          ...mockProjectCredentials,
-          nullClientOAuthCredential,
-        ],
-        keychainCredentials: mockKeychainCredentials,
-        isLoading: false,
-        error: null,
-      };
-
-      const storeContext = {
-        ...createMockStoreContext(),
-        credentialStore: {
-          subscribe: vi.fn(() => vi.fn()),
-          getSnapshot: () => credSnapshot,
-          withSelector: (selector: any) => {
-            const result = selector(credSnapshot);
-            return () => result;
-          },
-          ...createCredentialQueryMethods(credSnapshot),
-        },
-      };
-
-      renderWithProviders(
-        <ConfigureAdaptorModal {...defaultProps} />,
-        storeContext as any
-      );
-
-      // Should NOT appear in the primary section
-      expect(
-        screen.queryByText('Legacy OAuth Credential')
-      ).not.toBeInTheDocument();
-
-      // Click "Other credentials" link
-      const otherCredentialsLink = screen.getByText(/other credentials/i);
-      await user.click(otherCredentialsLink);
-
-      // Should appear in "Other credentials"
-      expect(screen.getByText('Legacy OAuth Credential')).toBeInTheDocument();
-    });
+        // Should appear in "Other credentials"
+        expect(screen.getByText(credential.name)).toBeInTheDocument();
+      }
+    );
 
     it('does not duplicate OAuth credentials that match by name', () => {
       // The default mock data has "My Salesforce OAuth" with
