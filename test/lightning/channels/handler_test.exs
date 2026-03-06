@@ -18,12 +18,11 @@ defmodule Lightning.Channels.HandlerTest do
     initial_state = %{
       channel: channel,
       snapshot: snapshot,
+      request_id: Ecto.UUID.generate(),
       started_at: DateTime.utc_now(),
       request_path: "/test/path",
       client_identity: "127.0.0.1"
     }
-
-    Lightning.subscribe("channels:#{channel.id}")
 
     %{channel: channel, snapshot: snapshot, state: initial_state}
   end
@@ -36,7 +35,7 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert %ChannelRequest{} = new_state.channel_request
       assert new_state.channel_request.state == :pending
-      assert new_state.channel_request.request_id == metadata.request_id
+      assert new_state.channel_request.request_id == state.request_id
       assert new_state.channel_request.channel_id == state.channel.id
       assert new_state.channel_request.channel_snapshot_id == state.snapshot.id
       assert new_state.channel_request.client_identity == "127.0.0.1"
@@ -83,7 +82,6 @@ defmodule Lightning.Channels.HandlerTest do
   describe "handle_response_started/2" do
     test "captures TTFB and response headers", %{state: state} do
       metadata = %{
-        request_id: Ecto.UUID.generate(),
         status: 200,
         headers: [
           {"content-type", "application/json"},
@@ -128,8 +126,6 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
-      assert_receive {:channel_request_completed, _}, 1000
-
       event = Repo.one!(ChannelEvent)
       assert event.channel_request_id == state.channel_request.id
       assert event.type == :sink_response
@@ -144,7 +140,6 @@ defmodule Lightning.Channels.HandlerTest do
     test "updates ChannelRequest state to success for 2xx", %{state: state} do
       result = finished_result(status: 200)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :success
@@ -155,7 +150,6 @@ defmodule Lightning.Channels.HandlerTest do
       state = %{state | response_status: 404}
       result = finished_result(status: 404)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :failed
@@ -166,7 +160,6 @@ defmodule Lightning.Channels.HandlerTest do
     } do
       result = finished_result(status: nil, error: {:timeout, :recv_response})
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :timeout
@@ -182,7 +175,6 @@ defmodule Lightning.Channels.HandlerTest do
         )
 
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       request = Repo.get!(ChannelRequest, state.channel_request.id)
       assert request.state == :error
@@ -191,7 +183,6 @@ defmodule Lightning.Channels.HandlerTest do
     test "creates error event type when error present", %{state: state} do
       result = finished_result(status: nil, error: :some_error)
       Handler.handle_response_finished(result, state)
-      assert_receive {:channel_request_completed, _}, 1000
 
       event = Repo.one!(ChannelEvent)
       assert event.type == :error
@@ -203,7 +194,6 @@ defmodule Lightning.Channels.HandlerTest do
 
   defp request_metadata(overrides \\ []) do
     %{
-      request_id: Keyword.get(overrides, :request_id, Ecto.UUID.generate()),
       upstream_url:
         Keyword.get(overrides, :upstream_url, "http://localhost:4999"),
       method: Keyword.get(overrides, :method, "GET"),
@@ -229,7 +219,6 @@ defmodule Lightning.Channels.HandlerTest do
     }
 
     %{
-      request_id: Keyword.get(overrides, :request_id, Ecto.UUID.generate()),
       request_observation:
         Keyword.get(overrides, :request_observation, observation),
       response_observation:

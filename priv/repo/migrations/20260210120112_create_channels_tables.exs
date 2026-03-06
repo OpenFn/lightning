@@ -13,12 +13,6 @@ defmodule Lightning.Repo.Migrations.CreateChannelsTables do
       add :name, :string, null: false
       add :sink_url, :string, null: false
 
-      add :source_project_credential_id,
-          references(:project_credentials,
-            type: :binary_id,
-            on_delete: :nilify_all
-          )
-
       add :sink_project_credential_id,
           references(:project_credentials,
             type: :binary_id,
@@ -32,9 +26,51 @@ defmodule Lightning.Repo.Migrations.CreateChannelsTables do
     end
 
     create index(:channels, [:project_id])
-    create index(:channels, [:source_project_credential_id])
     create index(:channels, [:sink_project_credential_id])
     create unique_index(:channels, [:project_id, :name])
+
+    # --- channel_auth_methods ---
+    create table(:channel_auth_methods, primary_key: false) do
+      add :id, :binary_id, primary_key: true
+
+      add :channel_id,
+          references(:channels, type: :binary_id, on_delete: :delete_all),
+          null: false
+
+      add :role, :string, null: false
+
+      add :webhook_auth_method_id,
+          references(:webhook_auth_methods,
+            type: :binary_id,
+            on_delete: :delete_all
+          )
+
+      add :project_credential_id,
+          references(:project_credentials,
+            type: :binary_id,
+            on_delete: :delete_all
+          )
+
+      timestamps()
+    end
+
+    create index(:channel_auth_methods, [:channel_id])
+    create index(:channel_auth_methods, [:webhook_auth_method_id])
+    create index(:channel_auth_methods, [:project_credential_id])
+
+    create unique_index(
+             :channel_auth_methods,
+             [:channel_id, :role, :webhook_auth_method_id],
+             where: "webhook_auth_method_id IS NOT NULL",
+             name: :channel_auth_methods_wam_unique
+           )
+
+    create unique_index(
+             :channel_auth_methods,
+             [:channel_id, :role, :project_credential_id],
+             where: "project_credential_id IS NOT NULL",
+             name: :channel_auth_methods_pc_unique
+           )
 
     # --- channel_snapshots ---
     create table(:channel_snapshots, primary_key: false) do
@@ -47,8 +83,6 @@ defmodule Lightning.Repo.Migrations.CreateChannelsTables do
       add :lock_version, :integer, null: false
       add :name, :string, null: false
       add :sink_url, :string, null: false
-      add :source_project_credential_id, :binary_id
-      add :source_credential_name, :string
       add :sink_project_credential_id, :binary_id
       add :sink_credential_name, :string
       add :enabled, :boolean, null: false

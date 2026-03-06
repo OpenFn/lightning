@@ -29,6 +29,30 @@ defmodule Lightning.Channels do
   end
 
   @doc """
+  Gets a channel by ID with all auth methods preloaded.
+
+  Preloads source auth methods (with webhook_auth_method) and sink auth
+  methods (with project_credential → credential). Returns nil if not found.
+
+  Used by ChannelProxyPlug for source authentication and sink credential resolution.
+  """
+  def get_channel_with_auth(id) do
+    from(c in Channel,
+      where: c.id == ^id,
+      left_join: src in assoc(c, :source_auth_methods),
+      left_join: wam in assoc(src, :webhook_auth_method),
+      left_join: snk in assoc(c, :sink_auth_methods),
+      left_join: pc in assoc(snk, :project_credential),
+      left_join: cred in assoc(pc, :credential),
+      preload: [
+        source_auth_methods: {src, webhook_auth_method: wam},
+        sink_auth_methods: {snk, project_credential: {pc, credential: cred}}
+      ]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Gets a single channel. Raises if not found.
   """
   def get_channel!(id) do
@@ -92,9 +116,7 @@ defmodule Lightning.Channels do
           lock_version: channel.lock_version,
           name: channel.name,
           sink_url: channel.sink_url,
-          enabled: channel.enabled,
-          source_project_credential_id: channel.source_project_credential_id,
-          sink_project_credential_id: channel.sink_project_credential_id
+          enabled: channel.enabled
         }
 
         %ChannelSnapshot{}

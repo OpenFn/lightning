@@ -26,8 +26,10 @@ defmodule LoadTest.Metrics do
 
   def record_request(latency_us, status) do
     Agent.update(__MODULE__, fn state ->
+      elapsed_us = System.monotonic_time(:microsecond) - state.start_time
+
       state
-      |> Map.update!(:latencies, &[latency_us | &1])
+      |> Map.update!(:latencies, &[{elapsed_us, latency_us} | &1])
       |> Map.update!(:status_codes, fn codes ->
         Map.update(codes, status, 1, &(&1 + 1))
       end)
@@ -46,6 +48,19 @@ defmodule LoadTest.Metrics do
     end)
   end
 
+  def reset do
+    Agent.update(__MODULE__, fn state ->
+      %{
+        state
+        | latencies: [],
+          status_codes: %{},
+          errors: 0,
+          error_reasons: %{},
+          start_time: System.monotonic_time(:microsecond)
+      }
+    end)
+  end
+
   def record_memory(bytes) do
     timestamp = System.monotonic_time(:microsecond)
 
@@ -60,7 +75,7 @@ defmodule LoadTest.Metrics do
       elapsed_us = now - state.start_time
       elapsed_s = max(elapsed_us / 1_000_000, 0.001)
 
-      latencies = Enum.sort(state.latencies)
+      latencies = state.latencies |> Enum.map(&elem(&1, 1)) |> Enum.sort()
       total = length(latencies)
 
       memory_samples =
@@ -89,6 +104,27 @@ defmodule LoadTest.Metrics do
         memory_max: memory_max(memory_samples),
         memory_delta: memory_delta(memory_samples)
       }
+    end)
+  end
+
+  def latency_timeseries(bucket_s \\ 1.0) do
+    Agent.get(__MODULE__, fn state ->
+      bucket_us = round(bucket_s * 1_000_000)
+
+      state.latencies
+      |> Enum.group_by(fn {elapsed_us, _lat} -> div(elapsed_us, bucket_us) end)
+      |> Enum.sort_by(fn {bucket, _} -> bucket end)
+      |> Enum.map(fn {bucket, entries} ->
+        lats = entries |> Enum.map(&elem(&1, 1)) |> Enum.sort()
+
+        %{
+          t: Float.round((bucket + 1) * bucket_s, 1),
+          p50: percentile(lats, 50),
+          p95: percentile(lats, 95),
+          p99: percentile(lats, 99),
+          count: length(lats)
+        }
+      end)
     end)
   end
 

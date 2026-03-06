@@ -868,6 +868,13 @@ defmodule Lightning.Factories do
     }
   end
 
+  def channel_auth_method_factory do
+    %Lightning.Channels.ChannelAuthMethod{
+      role: :source,
+      webhook_auth_method: build(:webhook_auth_method)
+    }
+  end
+
   def channel_snapshot_factory do
     %Lightning.Channels.ChannelSnapshot{
       lock_version: 1,

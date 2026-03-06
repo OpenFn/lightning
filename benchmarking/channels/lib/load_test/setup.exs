@@ -150,6 +150,16 @@ defmodule LoadTest.Setup do
   end
 
   @doc """
+  Reset the telemetry collector on the remote node (between saturation steps).
+  """
+  def reset_telemetry_collector(node) do
+    case :rpc.call(node, Bench.TelemetryCollector, :reset, []) do
+      {:badrpc, _} -> :error
+      :ok -> :ok
+    end
+  end
+
+  @doc """
   Stop and clean up the telemetry collector on the remote node.
   """
   def teardown_telemetry_collector!(node) do

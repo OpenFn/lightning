@@ -11,17 +11,21 @@ defmodule LoadTest.Runner do
     duration_ms = opts[:duration] * 1_000
     node = String.to_atom(opts[:node])
 
-    # Start memory sampler in background
-    memory_task =
-      Task.async(fn -> sample_memory_loop(node, duration_ms) end)
+    # Saturation manages its own memory sampling and returns per-step results
+    if scenario == "saturation" do
+      run_saturation(channel_url, opts)
+    else
+      # Start memory sampler in background
+      memory_task =
+        Task.async(fn -> sample_memory_loop(node, duration_ms) end)
 
-    # Run the appropriate scenario
-    case scenario do
-      "ramp_up" -> run_ramp_up(channel_url, opts, duration_ms)
-      _ -> run_steady(scenario, channel_url, opts, duration_ms)
+      case scenario do
+        "ramp_up" -> run_ramp_up(channel_url, opts, duration_ms)
+        _ -> run_steady(scenario, channel_url, opts, duration_ms)
+      end
+
+      Task.await(memory_task, :infinity)
     end
-
-    Task.await(memory_task, :infinity)
   end
 
   def run_direct(scenario, channel_url, opts) do
@@ -90,6 +94,89 @@ defmodule LoadTest.Runner do
     end
   end
 
+  # -- Saturation scenario (increasing concurrency with per-step metrics) --
+
+  @saturation_levels [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
+
+  defp run_saturation(channel_url, opts) do
+    max_concurrency = opts[:concurrency]
+    duration_ms = opts[:duration] * 1_000
+    payload = generate_payload(opts[:payload_size])
+    node = String.to_atom(opts[:node])
+
+    # Build step sequence: standard levels up to max, always include max
+    steps =
+      @saturation_levels
+      |> Enum.filter(&(&1 <= max_concurrency))
+      |> then(fn levels ->
+        if max_concurrency in levels,
+          do: levels,
+          else: levels ++ [max_concurrency]
+      end)
+
+    IO.puts("  Steps: #{inspect(steps)}\n")
+
+    # Start memory sampler for the full duration (all steps)
+    total_duration_ms = duration_ms * length(steps)
+
+    memory_task =
+      Task.async(fn -> sample_memory_loop(node, total_duration_ms) end)
+
+    results =
+      steps
+      |> Enum.with_index(1)
+      |> Enum.map(fn {concurrency, step_num} ->
+        # Reset metrics for this step
+        LoadTest.Metrics.reset()
+        LoadTest.Setup.reset_telemetry_collector(node)
+
+        IO.write(
+          "  [saturation] Step #{step_num}/#{length(steps)}: " <>
+            "#{concurrency} VUs for #{opts[:duration]}s... "
+        )
+
+        # Run the work loop at this concurrency level
+        work_stream(duration_ms)
+        |> Task.async_stream(
+          fn _tick ->
+            execute_request("happy_path", channel_url, payload, opts)
+          end,
+          max_concurrency: concurrency,
+          timeout: 60_000
+        )
+        |> Stream.each(fn
+          {:ok, {latency_us, status}} ->
+            LoadTest.Metrics.record_request(latency_us, status)
+
+          {:exit, reason} ->
+            LoadTest.Metrics.record_error(reason)
+        end)
+        |> Stream.run()
+
+        # Capture step results
+        summary = LoadTest.Metrics.summary()
+        telemetry = LoadTest.Setup.get_telemetry_summary(node)
+
+        IO.puts(
+          "#{summary.rps} rps, p50=#{format_us_inline(summary.p50)}, " <>
+            "#{summary.error_count} errors"
+        )
+
+        %{concurrency: concurrency, summary: summary, telemetry: telemetry}
+      end)
+
+    Task.await(memory_task, :infinity)
+    results
+  end
+
+  defp format_us_inline(0), do: "n/a"
+  defp format_us_inline(us) when us < 1_000, do: "#{us}us"
+
+  defp format_us_inline(us) when us < 1_000_000,
+    do: "#{Float.round(us / 1_000, 1)}ms"
+
+  defp format_us_inline(us), do: "#{Float.round(us / 1_000_000, 2)}s"
+
   # -- Work stream generator --
 
   defp work_stream(duration_ms) do
@@ -122,6 +209,7 @@ defmodule LoadTest.Runner do
 
   defp pick_method("happy_path"), do: :post
   defp pick_method("ramp_up"), do: :post
+  defp pick_method("saturation"), do: :post
   defp pick_method("large_payload"), do: :post
   defp pick_method("large_response"), do: :get
   defp pick_method("slow_sink"), do: :post
