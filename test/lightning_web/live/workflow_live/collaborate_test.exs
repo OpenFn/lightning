@@ -646,6 +646,184 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
     end
   end
 
+  describe "OAuth credential creation resilience" do
+    test "OAuth flow works end-to-end after parent re-render",
+         %{conn: conn} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "new_token",
+                   "refresh_token" => "new_refresh",
+                   "token_type" => "bearer",
+                   "expires_in" => 3600,
+                   "scope" => "scope_1 scope_2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
+             }}
+        end
+      end)
+
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Google Sheets")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker, select OAuth, continue
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Trigger a parent re-render (this previously clobbered the client)
+      send(view.pid, {:update_credential_schema, "oauth"})
+      _ = render(view)
+
+      # Verify the GenericOauthComponent still has the correct client
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new-main"
+        )
+
+      assert assigns.selected_client.id == oauth_client.id
+
+      # Simulate OAuth code callback — this should succeed, not crash
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new-main",
+        code: "authcode123",
+        current_tab: "main"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new-main"
+          )
+
+        assigns[:oauth_progress] not in [:idle, :authenticating]
+      end)
+
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new-main"
+        )
+
+      assert assigns.oauth_progress in [:fetching_userinfo, :complete]
+    end
+
+    test "editing OAuth credential preserves client on parent re-render",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, user: user, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      credential =
+        insert(:credential,
+          name: "My Salesforce",
+          schema: "oauth",
+          oauth_client: oauth_client,
+          user: user
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "access_token" => "test_token",
+            "refresh_token" => "test_refresh",
+            "token_type" => "bearer",
+            "expires_in" => 3600
+          }
+        })
+
+      insert(:project_credential, project: project, credential: credential)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Open credential for editing
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{
+        "schema" => "oauth",
+        "credential_id" => credential.id
+      })
+
+      # Verify no warning
+      refute view |> has_element?("h3", "OAuth client not found")
+
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+
+      # Simulate parent re-render
+      send(view.pid, {:update_credential_schema, "oauth"})
+      _ = render(view)
+
+      # Verify client is preserved
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+      refute view |> has_element?("h3", "OAuth client not found")
+    end
+  end
+
   describe "credential modal interactions" do
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
@@ -1132,9 +1310,119 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       |> element("button", "Continue")
       |> render_click()
 
-      # Verify OAuth form appears
-      # The form should transition to page: :second with OAuth schema
-      assert render(view)
+      # Verify OAuth form appears without the false "OAuth client not found" warning
+      refute view |> has_element?("h3", "OAuth client not found")
+      assert render(view) =~ "Credential Name"
+    end
+
+    test "OAuth client selection survives parent re-renders", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker and select OAuth client
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Verify component has the correct selected_oauth_client
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+
+      # Simulate a parent re-render by sending the same message the component
+      # sends internally — this previously clobbered selected_oauth_client
+      send(view.pid, {:update_credential_schema, "oauth"})
+
+      # Allow the message to be processed
+      _ = render(view)
+
+      # Verify selected_oauth_client is preserved
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+      refute view |> has_element?("h3", "OAuth client not found")
+    end
+
+    test "back from OAuth form clears stale OAuth client state", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker, select OAuth, continue
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Go back to advanced picker
+      view |> element("button", "Back") |> render_click()
+
+      # Verify OAuth state was cleared
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert is_nil(assigns.selected_oauth_client)
+      assert is_nil(assigns.oauth_client)
     end
 
     test "selects raw JSON from advanced picker and continues", %{
