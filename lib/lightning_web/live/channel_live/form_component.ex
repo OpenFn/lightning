@@ -7,6 +7,8 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   alias Lightning.Projects
   alias Lightning.WebhookAuthMethods
 
+  import LightningWeb.ChannelLive.Helpers
+
   @impl true
   def update(
         %{channel: channel, project: project, on_close: _} = assigns,
@@ -103,6 +105,24 @@ defmodule LightningWeb.ChannelLive.FormComponent do
             </button>
           </div>
         </:title>
+
+        <div
+          :if={@action == :edit}
+          class="mb-4"
+          phx-hook="Tooltip"
+          aria-label="Copy proxy URL"
+          id={"copy-url-modal-tooltip-#{@channel.id}"}
+        >
+          <label class="block text-sm font-medium leading-6 text-gray-900">
+            Proxy URL
+          </label>
+          <.proxy_url_copy
+            id={"copy-url-modal-#{@channel.id}"}
+            channel_id={@channel.id}
+            class="mt-1 min-w-0 hover:text-gray-600"
+            text_class="text-gray-500"
+          />
+        </div>
 
         <.form
           :let={f}

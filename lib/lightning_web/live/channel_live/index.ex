@@ -8,6 +8,8 @@ defmodule LightningWeb.ChannelLive.Index do
   alias LightningWeb.ChannelLive.FormComponent
   alias LightningWeb.Components.Common
 
+  import LightningWeb.ChannelLive.Helpers
+
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
 
@@ -279,7 +281,7 @@ defmodule LightningWeb.ChannelLive.Index do
       <:header>
         <.tr>
           <.th>Name</.th>
-          <.th>Sink URL</.th>
+          <.th>Destination</.th>
           <.th>Requests</.th>
           <.th>Last Activity</.th>
           <.th>Enabled</.th>
@@ -301,8 +303,40 @@ defmodule LightningWeb.ChannelLive.Index do
                 {channel.name}
               </span>
             </.td>
-            <.td class="wrap-break-word max-w-[20rem] text-sm text-gray-600 font-mono">
-              {channel.sink_url}
+            <.td>
+              <div class="flex items-center gap-1.5 font-mono text-sm leading-none text-gray-600">
+                <.icon
+                  name="lucide-square-arrow-right-exit"
+                  class="h-4 w-4 shrink-0 text-gray-400"
+                />
+                <span class="wrap-break-word max-w-[20rem] translate-y-px">
+                  {channel.sink_url}
+                </span>
+              </div>
+              <Common.wrapper_tooltip
+                id={"copy-url-tip-#{channel.id}"}
+                tooltip="Copy proxy URL"
+              >
+                <.proxy_url_copy
+                  id={"copy-url-btn-#{channel.id}"}
+                  channel_id={channel.id}
+                  class="mt-1 hover:text-gray-600"
+                  text_class="text-gray-400 max-w-[16rem] group-hover/copy:text-gray-600"
+                >
+                  <:leading>
+                    <.icon
+                      name="lucide-circle-dot"
+                      class="h-4 w-4 shrink-0 text-gray-300"
+                    />
+                  </:leading>
+                  <:trailing>
+                    <.icon
+                      name="hero-clipboard-document"
+                      class="h-4 w-4 shrink-0 text-gray-300 opacity-0 group-hover/copy:opacity-100 transition-opacity"
+                    />
+                  </:trailing>
+                </.proxy_url_copy>
+              </Common.wrapper_tooltip>
             </.td>
             <.td class="text-gray-700">
               {count}
