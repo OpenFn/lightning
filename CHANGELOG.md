@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- OAuth credential creation failing from the collaborative editor
+  [#4492](https://github.com/OpenFn/lightning/issues/4492)
+
 ## [2.15.16-pre.1] - 2026-03-05
 
 ### Changed
