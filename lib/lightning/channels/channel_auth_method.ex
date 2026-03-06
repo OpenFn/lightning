@@ -17,6 +17,7 @@ defmodule Lightning.Channels.ChannelAuthMethod do
 
   schema "channel_auth_methods" do
     field :role, Ecto.Enum, values: @roles
+    field :delete, :boolean, virtual: true
 
     belongs_to :channel, Channel
     belongs_to :webhook_auth_method, WebhookAuthMethod
@@ -29,11 +30,11 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     struct
     |> cast(attrs, [
       :role,
-      :channel_id,
       :webhook_auth_method_id,
-      :project_credential_id
+      :project_credential_id,
+      :delete
     ])
-    |> validate_required([:role, :channel_id])
+    |> validate_required([:role])
     |> Validators.validate_exclusive(
       [:webhook_auth_method_id, :project_credential_id],
       "webhook_auth_method_id and project_credential_id are mutually exclusive"
@@ -52,6 +53,13 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     |> unique_constraint(:project_credential_id,
       name: :channel_auth_methods_pc_unique
     )
+    |> then(fn changeset ->
+      if get_change(changeset, :delete) do
+        %{changeset | action: :delete}
+      else
+        changeset
+      end
+    end)
   end
 
   defp validate_role_target_consistency(changeset) do
