@@ -64,21 +64,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     {:ok, assign(socket, credential_bodies: bodies)}
   end
 
+  # On re-renders, drop props owned by this component so parent re-renders
+  # (e.g., from :update_credential_schema messages) don't clobber internal
+  # state like selected_oauth_client or credential.
+  @component_owned_props ~w(credential oauth_client)a
+
   def update(assigns, %{assigns: %{credential: _}} = socket) do
-    parent_props =
-      Map.take(assigns, [
-        :id,
-        :current_user,
-        :project,
-        :projects,
-        :action,
-        :on_save,
-        :on_modal_close,
-        :return_to,
-        :can_create_project_credential,
-        :sandbox_id,
-        :from_collab_editor
-      ])
+    parent_props = Map.drop(assigns, @component_owned_props)
 
     {:ok, assign(socket, parent_props)}
   end
