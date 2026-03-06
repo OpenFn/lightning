@@ -187,6 +187,51 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.resp_body == "root"
     end
 
+    test "trailing slash on sink_url does not produce double slash", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}/",
+          enabled: true
+        )
+
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "root")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "root"
+    end
+
+    test "trailing slash on sink_url with subpath", %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}/",
+          enabled: true
+        )
+
+      Bypass.expect_once(bypass, "GET", "/api/data", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/api/data")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
     test "proxy headers forwarded to sink", %{
       conn: conn,
       bypass: bypass,
@@ -207,6 +252,25 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/test")
 
       assert resp.status == 200
+    end
+
+    test "x-request-id forwarded to sink", %{bypass: bypass, channel: channel} do
+      test_pid = self()
+
+      Bypass.expect_once(bypass, "GET", "/trace", fn conn ->
+        [received_id] = Plug.Conn.get_req_header(conn, "x-request-id")
+        send(test_pid, {:sink_request_id, received_id})
+        Plug.Conn.send_resp(conn, 200, "traced")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/trace")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      [response_id] = Plug.Conn.get_resp_header(resp, "x-request-id")
+      assert_receive {:sink_request_id, ^response_id}
     end
 
     test "response headers from sink forwarded to client", %{
@@ -327,6 +391,29 @@ defmodule LightningWeb.ChannelProxyPlugTest do
   end
 
   describe "source authentication" do
+    defp create_source_auth_channel(bypass, auth_method_specs) do
+      project = insert(:project)
+
+      channel_auth_methods =
+        Enum.map(auth_method_specs, fn spec ->
+          build(:channel_auth_method,
+            role: :source,
+            webhook_auth_method:
+              build(
+                :webhook_auth_method,
+                [project: project] ++ Enum.to_list(spec)
+              )
+          )
+        end)
+
+      insert(:channel,
+        project: project,
+        sink_url: "http://localhost:#{bypass.port}",
+        enabled: true,
+        channel_auth_methods: channel_auth_methods
+      )
+    end
+
     test "no auth methods configured — request passes through", %{
       conn: conn,
       bypass: bypass,
@@ -346,25 +433,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "API key auth — correct key allows request", %{
       bypass: bypass
     } do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "valid-api-key"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "valid-api-key"}
+        ])
 
       Bypass.expect_once(bypass, "GET", "/protected", fn conn ->
         Plug.Conn.send_resp(conn, 200, "authenticated")
@@ -380,25 +452,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
 
     test "API key auth — wrong key returns 404", %{bypass: bypass} do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "correct-key"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "correct-key"}
+        ])
 
       resp =
         conn(:get, "/channels/#{channel.id}/protected")
@@ -410,25 +467,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
 
     test "API key auth — no key sent returns 401", %{bypass: bypass} do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "some-key"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "some-key"}
+        ])
 
       resp =
         conn(:get, "/channels/#{channel.id}/protected")
@@ -439,26 +481,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
 
     test "Basic auth — correct credentials allows request", %{bypass: bypass} do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :basic,
-                  username: "admin",
-                  password: "secret"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :basic, username: "admin", password: "secret"}
+        ])
 
       Bypass.expect_once(bypass, "GET", "/basic", fn conn ->
         Plug.Conn.send_resp(conn, 200, "basic-ok")
@@ -476,26 +502,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
 
     test "Basic auth — wrong credentials returns 404", %{bypass: bypass} do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :basic,
-                  username: "admin",
-                  password: "secret"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :basic, username: "admin", password: "secret"}
+        ])
 
       encoded = Base.encode64("admin:wrong")
 
@@ -509,26 +519,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
 
     test "Basic auth — no auth header returns 401", %{bypass: bypass} do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :basic,
-                  username: "admin",
-                  password: "secret"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :basic, username: "admin", password: "secret"}
+        ])
 
       resp =
         conn(:get, "/channels/#{channel.id}/basic")
@@ -541,34 +535,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "multiple auth methods — either matches allows request", %{
       bypass: bypass
     } do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "key-one"
-                )
-            ),
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "key-two"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "key-one"},
+          %{auth_type: :api, api_key: "key-two"}
+        ])
 
       Bypass.expect_once(bypass, "GET", "/multi", fn conn ->
         Plug.Conn.send_resp(conn, 200, "multi-ok")
@@ -587,35 +558,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "mixed types (API + Basic) — API key matches allows request", %{
       bypass: bypass
     } do
-      project = insert(:project)
-
       channel =
-        insert(:channel,
-          project: project,
-          sink_url: "http://localhost:#{bypass.port}",
-          enabled: true,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :api,
-                  api_key: "mixed-key"
-                )
-            ),
-            build(:channel_auth_method,
-              role: :source,
-              webhook_auth_method:
-                build(:webhook_auth_method,
-                  project: project,
-                  auth_type: :basic,
-                  username: "user",
-                  password: "pass"
-                )
-            )
-          ]
-        )
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "mixed-key"},
+          %{auth_type: :basic, username: "user", password: "pass"}
+        ])
 
       Bypass.expect_once(bypass, "GET", "/mixed", fn conn ->
         Plug.Conn.send_resp(conn, 200, "mixed-ok")

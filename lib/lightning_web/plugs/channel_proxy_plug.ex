@@ -1,5 +1,20 @@
 defmodule LightningWeb.ChannelProxyPlug do
-  @moduledoc false
+  @moduledoc """
+  Reverse proxy plug for channels.
+
+  Authenticates the inbound request against the channel's source auth
+  methods, resolves sink credentials, and streams the request upstream
+  via `Weir.proxy/2`. Request and response events are recorded as
+  `ChannelRequest` / `ChannelEvent` records for auditing.
+
+  ## Request ID
+
+  An `x-request-id` header is forwarded to the sink for end-to-end
+  tracing. If the caller provides one it will be used, but
+  `Plug.RequestId` requires it to be between 20 and 200 characters —
+  shorter or longer values are discarded and a new ID is generated
+  automatically.
+  """
   @behaviour Plug
 
   import Plug.Conn
@@ -12,6 +27,69 @@ defmodule LightningWeb.ChannelProxyPlug do
   alias LightningWeb.Auth
 
   require Logger
+
+  defmodule SinkRequest do
+    @moduledoc false
+    @enforce_keys [
+      :channel,
+      :snapshot,
+      :request_id,
+      :forward_path,
+      :client_identity
+    ]
+    defstruct [
+      :channel,
+      :snapshot,
+      :request_id,
+      :forward_path,
+      :client_identity,
+      :auth_header
+    ]
+  end
+
+  defmodule Headers do
+    @moduledoc false
+
+    import Plug.Conn, only: [get_req_header: 2]
+
+    alias LightningWeb.ChannelProxyPlug.SinkRequest
+
+    def reject_header(headers, name) do
+      downcased = String.downcase(name)
+      Enum.reject(headers, fn {k, _} -> String.downcase(k) == downcased end)
+    end
+
+    def set_header(headers, _name, nil), do: headers
+
+    def set_header(headers, name, value) do
+      headers |> reject_header(name) |> Kernel.++([{name, value}])
+    end
+
+    def add_proxy_headers(headers, conn) do
+      original_host = get_req_header(conn, "host") |> List.first("")
+      remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
+
+      existing_xff = get_req_header(conn, "x-forwarded-for") |> List.first()
+
+      xff_value =
+        if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
+
+      headers ++
+        [
+          {"x-forwarded-for", xff_value},
+          {"x-forwarded-host", original_host},
+          {"x-forwarded-proto", to_string(conn.scheme)}
+        ]
+    end
+
+    def build_outbound_headers(conn, %SinkRequest{} = req) do
+      conn.req_headers
+      |> reject_header("x-request-id")
+      |> add_proxy_headers(conn)
+      |> set_header("x-request-id", req.request_id)
+      |> set_header("authorization", req.auth_header)
+    end
+  end
 
   @impl true
   def init(opts), do: opts
@@ -45,10 +123,18 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp proxy_with_auth(conn, channel, rest) do
     with {:ok, auth_header} <- resolve_sink_auth(channel),
          {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
-      forward_path = build_forward_path(rest)
+      req = %SinkRequest{
+        channel: channel,
+        snapshot: snapshot,
+        request_id:
+          conn |> Plug.Conn.get_resp_header("x-request-id") |> List.first(),
+        forward_path: build_forward_path(rest),
+        client_identity: get_client_identity(conn),
+        auth_header: auth_header
+      }
 
       conn
-      |> proxy_upstream(channel, snapshot, forward_path, auth_header)
+      |> proxy_upstream(req)
       |> halt()
     else
       {:credential_error, reason} ->
@@ -98,27 +184,22 @@ defmodule LightningWeb.ChannelProxyPlug do
     )
   end
 
-  defp proxy_upstream(conn, channel, snapshot, forward_path, auth_header) do
-    request_id =
-      conn
-      |> Plug.Conn.get_resp_header("x-request-id")
-      |> List.first()
-
-    outbound_headers = build_outbound_headers(conn, auth_header)
+  defp proxy_upstream(conn, %SinkRequest{} = req) do
+    outbound_headers = Headers.build_outbound_headers(conn, req)
 
     handler_state = %{
-      channel: channel,
-      snapshot: snapshot,
-      request_id: request_id,
+      channel: req.channel,
+      snapshot: req.snapshot,
+      request_id: req.request_id,
       started_at: DateTime.utc_now(),
-      request_path: forward_path,
-      client_identity: get_client_identity(conn)
+      request_path: req.forward_path,
+      client_identity: req.client_identity
     }
 
     metadata = %{
-      channel_id: channel.id,
-      sink_url: channel.sink_url,
-      path: forward_path
+      channel_id: req.channel.id,
+      sink_url: req.channel.sink_url,
+      path: req.forward_path
     }
 
     :telemetry.span(
@@ -127,8 +208,8 @@ defmodule LightningWeb.ChannelProxyPlug do
       fn ->
         result =
           Weir.proxy(conn,
-            upstream: channel.sink_url,
-            path: forward_path,
+            upstream: String.trim_trailing(req.channel.sink_url, "/"),
+            path: req.forward_path,
             headers: outbound_headers,
             handler: {Lightning.Channels.Handler, handler_state}
           )
@@ -158,37 +239,7 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp build_proxy_headers(conn) do
-    original_host = get_req_header(conn, "host") |> List.first("")
-    remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
-
-    existing_xff = get_req_header(conn, "x-forwarded-for") |> List.first()
-
-    xff_value =
-      if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
-
-    [
-      {"x-forwarded-for", xff_value},
-      {"x-forwarded-host", original_host},
-      {"x-forwarded-proto", to_string(conn.scheme)}
-    ]
-  end
-
-  defp build_outbound_headers(conn, auth_header) do
-    proxy_headers = build_proxy_headers(conn)
-
-    conn.req_headers
-    |> Kernel.++(proxy_headers)
-    |> maybe_set_auth(auth_header)
-  end
-
-  defp maybe_set_auth(headers, nil), do: headers
-
-  defp maybe_set_auth(headers, value) do
-    headers
-    |> Enum.reject(fn {k, _} -> String.downcase(k) == "authorization" end)
-    |> Kernel.++([{"authorization", value}])
-  end
+  # --- Sink auth resolution ---
 
   defp resolve_sink_auth(channel) do
     case channel.sink_auth_methods do
@@ -210,12 +261,25 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
+  # --- Error handling ---
+
   defp handle_credential_error(conn, channel, reason) do
     error_message = classify_credential_error(reason)
 
     case Channels.get_or_create_current_snapshot(channel) do
       {:ok, snapshot} ->
-        record_credential_error(conn, channel, snapshot, error_message)
+        req = %SinkRequest{
+          channel: channel,
+          snapshot: snapshot,
+          request_id:
+            conn
+            |> Plug.Conn.get_resp_header("x-request-id")
+            |> List.first(),
+          forward_path: conn.request_path,
+          client_identity: get_client_identity(conn)
+        }
+
+        record_credential_error(conn, req, error_message)
 
       {:error, _} ->
         Logger.error(
@@ -226,21 +290,16 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp record_credential_error(conn, channel, snapshot, error_message) do
+  defp record_credential_error(conn, %SinkRequest{} = req, error_message) do
     now = DateTime.utc_now()
-
-    request_id =
-      conn
-      |> Plug.Conn.get_resp_header("x-request-id")
-      |> List.first()
 
     with {:ok, channel_request} <-
            %ChannelRequest{}
            |> ChannelRequest.changeset(%{
-             channel_id: channel.id,
-             channel_snapshot_id: snapshot.id,
-             request_id: request_id,
-             client_identity: get_client_identity(conn),
+             channel_id: req.channel.id,
+             channel_snapshot_id: req.snapshot.id,
+             request_id: req.request_id,
+             client_identity: req.client_identity,
              state: :error,
              started_at: now,
              completed_at: now
@@ -260,7 +319,7 @@ defmodule LightningWeb.ChannelProxyPlug do
     else
       {:error, changeset} ->
         Logger.warning(
-          "Failed to record credential error for channel #{channel.id}: " <>
+          "Failed to record credential error for channel #{req.channel.id}: " <>
             "#{inspect(changeset.errors)}"
         )
     end
