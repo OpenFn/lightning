@@ -22,11 +22,6 @@
                 </h3>
                 <div class="mt-2 text-sm text-yellow-700">
                   <%= case failure do %>
-                    <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_certificate}} -> %>
-                      <p>GitHub App certificate is invalid or not configured.</p>
-                      <p class="mt-1">
-                        Please contact your administrator to configure the GitHub App certificate.
-                      </p>
                     <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token, message: message}} -> %>
                       <p>
                         Your GitHub authentication has expired or is invalid.
@@ -39,24 +34,25 @@
                         </.link>
                       </p>
                     <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
-                      <p>There was a problem connecting to GitHub.</p>
-                      <p class="mt-1">
-                        <code class="text-xs">GitHub Error: {message}</code>
+                      <p>
+                        Try the refresh button above, or contact support if the problem persists.
+                      </p>
+                      <p class="mt-2 text-xs opacity-75">
+                        <code>Error: {message}</code>
                       </p>
                     <% {:error, %{"message" => message}} -> %>
-                      <p>There was a problem connecting to GitHub.</p>
-                      <p class="mt-1">
-                        <code class="text-xs">GitHub Error: {message}</code>
+                      <p>
+                        Try the refresh button above, or contact support if the problem persists.
+                      </p>
+                      <p class="mt-2 text-xs opacity-75">
+                        <code>Error: {message}</code>
                       </p>
                     <% _other -> %>
                       <p>
-                        There was an unexpected problem loading your GitHub installations.
+                        Try the refresh button above, or contact support if the problem persists.
                       </p>
-                      <p class="mt-2">
-                        Try refreshing, or disconnect and reconnect your GitHub account in
-                        <.link href={~p"/profile"} class="underline font-medium">
-                          Settings
-                        </.link>
+                      <p class="mt-2 text-xs opacity-75">
+                        <code>{inspect(failure)}</code>
                       </p>
                   <% end %>
                 </div>
