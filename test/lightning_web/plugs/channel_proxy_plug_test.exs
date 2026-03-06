@@ -1,6 +1,9 @@
 defmodule LightningWeb.ChannelProxyPlugTest do
   use LightningWeb.ConnCase, async: true
 
+  alias Lightning.Channels.{ChannelRequest, ChannelEvent}
+
+  import Ecto.Query
   import Lightning.Factories
   import Plug.Test, only: [conn: 3]
 
@@ -265,6 +268,62 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/test")
 
       assert resp.status in [502, 504]
+    end
+  end
+
+  describe "handler persistence" do
+    test "creates ChannelRequest and ChannelEvent on successful proxy", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      Lightning.subscribe("channels:#{channel.id}")
+
+      Bypass.expect_once(bypass, "GET", "/persisted", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "persisted response")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/persisted")
+      assert resp.status == 200
+
+      assert_receive {:channel_request_completed, request_id}, 1000
+
+      request = Lightning.Repo.get!(ChannelRequest, request_id)
+      assert request.state == :success
+      assert request.completed_at != nil
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.type == :sink_response
+      assert event.response_status == 200
+      assert event.latency_ms != nil
+      assert event.request_method == "GET"
+      assert event.request_path == "/persisted"
+    end
+
+    test "creates error-state request on connection failure", %{
+      conn: conn,
+      channel: channel
+    } do
+      Lightning.subscribe("channels:#{channel.id}")
+
+      port = Enum.random(59_000..59_999)
+
+      channel
+      |> Ecto.Changeset.change(sink_url: "http://localhost:#{port}")
+      |> Lightning.Repo.update!()
+
+      resp = get(conn, "/channels/#{channel.id}/fail")
+      assert resp.status in [502, 504]
+
+      assert_receive {:channel_request_completed, request_id}, 1000
+
+      request = Lightning.Repo.get!(ChannelRequest, request_id)
+      assert request.state in [:error, :timeout]
+      assert request.completed_at != nil
     end
   end
 

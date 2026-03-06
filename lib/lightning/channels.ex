@@ -7,6 +7,7 @@ defmodule Lightning.Channels do
   import Ecto.Query
 
   alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Repo
 
   @doc """
@@ -66,5 +67,59 @@ defmodule Lightning.Channels do
       message: "has history that must be retained"
     )
     |> Repo.delete()
+  end
+
+  @doc """
+  Get or create a snapshot for the channel's current lock_version.
+
+  Returns an existing snapshot if one matches, or creates a minimal one from
+  the current channel config. Handles concurrent creation race via
+  ON CONFLICT DO NOTHING + re-fetch.
+
+  Full snapshot lifecycle management is in #4406.
+  """
+  def get_or_create_current_snapshot(%Channel{} = channel) do
+    case Repo.get_by(ChannelSnapshot,
+           channel_id: channel.id,
+           lock_version: channel.lock_version
+         ) do
+      %ChannelSnapshot{} = snapshot ->
+        {:ok, snapshot}
+
+      nil ->
+        attrs = %{
+          channel_id: channel.id,
+          lock_version: channel.lock_version,
+          name: channel.name,
+          sink_url: channel.sink_url,
+          enabled: channel.enabled,
+          source_project_credential_id: channel.source_project_credential_id,
+          sink_project_credential_id: channel.sink_project_credential_id
+        }
+
+        %ChannelSnapshot{}
+        |> ChannelSnapshot.changeset(attrs)
+        |> Repo.insert(
+          on_conflict: :nothing,
+          conflict_target: [:channel_id, :lock_version]
+        )
+        |> case do
+          {:ok, %ChannelSnapshot{id: nil}} ->
+            # ON CONFLICT DO NOTHING returns struct with nil id; re-fetch
+            snapshot =
+              Repo.get_by!(ChannelSnapshot,
+                channel_id: channel.id,
+                lock_version: channel.lock_version
+              )
+
+            {:ok, snapshot}
+
+          {:ok, snapshot} ->
+            {:ok, snapshot}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+    end
   end
 end
