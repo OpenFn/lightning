@@ -9,108 +9,107 @@
       phx-submit="save"
       phx-target={@myself}
     >
-      <.async_result assign={@installations}>
-        <:failed :let={failure}>
-          <div
-            class="rounded-md bg-yellow-50 p-4 mb-4"
-            role="alert"
-            aria-live="polite"
-          >
-            <div class="flex">
-              <div class="shrink-0">
-                <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-              </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800">
-                  Unable to load GitHub installations
-                </h3>
-                <div class="mt-2 text-sm text-yellow-700">
-                  <%= case failure do %>
-                    <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token, message: message}} -> %>
-                      <p>
-                        Your GitHub authentication has expired or is invalid.
-                      </p>
-                      <p class="mt-1"><code class="text-xs">{message}</code></p>
-                      <p class="mt-2">
-                        Try disconnecting and reconnecting your GitHub account in
-                        <.link href={~p"/profile"} class="link font-medium">
-                          Settings
-                        </.link>
-                      </p>
-                    <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
-                      <p>
-                        Try the refresh button above, or contact support if the problem persists.
-                      </p>
+      <%= if !@installations.ok? && @installations.failed do %>
+        <div
+          class="rounded-md bg-yellow-50 p-4 mb-4"
+          role="alert"
+          aria-live="polite"
+        >
+          <div class="flex">
+            <div class="shrink-0">
+              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">
+                Unable to load GitHub installations
+              </h3>
+              <div class="mt-2 text-sm text-yellow-700">
+                <%= case @installations.failed do %>
+                  <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token, message: message}} -> %>
+                    <p>
+                      Your GitHub authentication has expired or is invalid.
+                    </p>
+                    <p class="mt-1"><code class="text-xs">{message}</code></p>
+                    <p class="mt-2">
+                      Try disconnecting and reconnecting your GitHub account in
+                      <.link href={~p"/profile"} class="link font-medium">
+                        Settings
+                      </.link>
+                    </p>
+                  <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
+                    <p>
+                      Try the refresh button above, or contact support if the problem persists.
+                    </p>
+                    <p class="mt-2 text-xs opacity-75">
+                      <code>Error: {message}</code>
+                    </p>
+                  <% {:error, %{"message" => message}} -> %>
+                    <p>
+                      Try the refresh button above, or contact support if the problem persists.
+                    </p>
+                    <p class="mt-2 text-xs opacity-75">
+                      <code>Error: {message}</code>
+                    </p>
+                  <% _other -> %>
+                    <p>
+                      An unexpected error occurred. Please try the refresh button or contact support.
+                    </p>
+                    <%= if Application.get_env(:lightning, :env) == :dev do %>
                       <p class="mt-2 text-xs opacity-75">
-                        <code>Error: {message}</code>
+                        <code>{inspect(@installations.failed)}</code>
                       </p>
-                    <% {:error, %{"message" => message}} -> %>
-                      <p>
-                        Try the refresh button above, or contact support if the problem persists.
-                      </p>
-                      <p class="mt-2 text-xs opacity-75">
-                        <code>Error: {message}</code>
-                      </p>
-                    <% _other -> %>
-                      <p>
-                        An unexpected error occurred. Please try the refresh button or contact support.
-                      </p>
-                      <%= if Application.get_env(:lightning, :env) == :dev do %>
-                        <p class="mt-2 text-xs opacity-75">
-                          <code>{inspect(failure)}</code>
-                        </p>
-                      <% end %>
-                  <% end %>
-                </div>
+                    <% end %>
+                <% end %>
               </div>
             </div>
           </div>
-        </:failed>
-        <div class="">
-          <.input
-            id="select-installations-input"
-            type="custom-select"
-            field={f[:github_installation_id]}
-            label="GitHub Installation"
-            prompt="Select an installation"
-            options={installations_select_options(@installations)}
+        </div>
+      <% end %>
+      <div class="">
+        <.input
+          id="select-installations-input"
+          type="custom-select"
+          field={f[:github_installation_id]}
+          label="GitHub Installation"
+          prompt="Select an installation"
+          options={installations_select_options(@installations)}
+          disabled={
+            @actions_disabled ||
+              if(@installations.loading, do: true, else: false) ||
+              !@installations.ok?
+          }
+          required="true"
+          button_placement="right"
+        >
+          <.button
+            id="refresh-installation-button"
+            type="button"
+            theme="custom"
+            class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
             disabled={
               @actions_disabled ||
                 if(@installations.loading, do: true, else: false)
             }
-            required="true"
-            button_placement="right"
+            phx-click="refresh-installations"
+            phx-target={@myself}
           >
-            <.button
-              id="refresh-installation-button"
-              type="button"
-              theme="custom"
-              class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
-              disabled={
-                @actions_disabled ||
-                  if(@installations.loading, do: true, else: false)
-              }
-              phx-click="refresh-installations"
-              phx-target={@myself}
-            >
-              <.icon
-                name="hero-arrow-path-mini"
-                class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
-              />
-            </.button>
-          </.input>
-        </div>
-        <div class="mt-2">
-          Can't find the right installation or repository?
-          <.link
-            target="_blank"
-            class="link"
-            href={"https://github.com/apps/#{github_config()[:app_name]}"}
-          >
-            Create/update GitHub installations or modify permissions.
-          </.link>
-        </div>
-      </.async_result>
+            <.icon
+              name="hero-arrow-path-mini"
+              class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
+            />
+          </.button>
+        </.input>
+      </div>
+      <div class="mt-2">
+        Can't find the right installation or repository?
+        <.link
+          target="_blank"
+          class="link"
+          href={"https://github.com/apps/#{github_config()[:app_name]}"}
+        >
+          Create/update GitHub installations or modify permissions.
+        </.link>
+      </div>
       <div class="mt-4">
         <.input
           id="select-repos-input"
