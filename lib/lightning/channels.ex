@@ -11,8 +11,11 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Channels.SearchParams
+  alias Lightning.Projects.Project
   alias Lightning.Repo
 
   @doc """
@@ -71,6 +74,49 @@ defmodule Lightning.Channels do
       }
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Returns a paginated page of ChannelRequest records for a project.
+
+  Preloads `:channel` and `:channel_events`.
+
+  ## Parameters
+    - `project` — `%Project{}` struct; scopes results to this project
+    - `search_params` — `%SearchParams{}`; currently supports `channel_id`
+      filter
+    - `params` — Scrivener page params map, e.g. `%{"page" => "2"}`
+  """
+  @spec list_channel_requests(
+          Project.t(),
+          SearchParams.t(),
+          map()
+        ) :: Scrivener.Page.t()
+  def list_channel_requests(
+        %Project{id: project_id},
+        %SearchParams{} = search_params,
+        params \\ %{}
+      ) do
+    events_query =
+      from(e in ChannelEvent,
+        where: e.type in [:sink_response, :error],
+        order_by: [e.channel_request_id, e.inserted_at]
+      )
+
+    from(cr in ChannelRequest,
+      join: c in assoc(cr, :channel),
+      on: c.project_id == ^project_id,
+      order_by: [desc: cr.started_at],
+      preload: [channel: c, channel_events: ^events_query]
+    )
+    |> filter_by_channel(search_params)
+    |> Repo.paginate(params)
+  end
+
+  defp filter_by_channel(query, %SearchParams{channel_id: nil}), do: query
+
+  defp filter_by_channel(query, %SearchParams{channel_id: channel_id}) do
+    where(query, [cr], cr.channel_id == ^channel_id)
   end
 
   @doc """
@@ -171,17 +217,9 @@ defmodule Lightning.Channels do
   @spec delete_channel(Channel.t(), actor: User.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
-    changeset =
-      channel
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.foreign_key_constraint(:channel_snapshots,
-        name: "channel_snapshots_channel_id_fkey",
-        message: "has history that must be retained"
-      )
-
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
-    |> Multi.delete(:channel, changeset)
+    |> Multi.delete(:channel, channel)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}

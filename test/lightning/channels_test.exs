@@ -9,6 +9,7 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Channels.SearchParams
 
   describe "list_channels_for_project/1" do
     test "returns channels for a project ordered by name" do
@@ -304,7 +305,8 @@ defmodule Lightning.ChannelsTest do
                  actor: user
                )
 
-      assert %{project_id: _} = errors_on(changeset)
+      assert %{name: ["A channel with this name already exists in this project"]} =
+               errors_on(changeset)
     end
   end
 
@@ -570,12 +572,13 @@ defmodule Lightning.ChannelsTest do
       assert audit.actor_id == user.id
     end
 
-    test "returns error when channel has snapshots", %{user: user} do
+    test "cascade deletes associated snapshots", %{user: user} do
       channel = insert(:channel)
-      insert(:channel_snapshot, channel: channel)
+      snapshot = insert(:channel_snapshot, channel: channel)
 
-      assert {:error, changeset} = Channels.delete_channel(channel, actor: user)
-      assert %{channel_snapshots: _} = errors_on(changeset)
+      assert {:ok, %Channel{}} = Channels.delete_channel(channel, actor: user)
+
+      refute Repo.get(ChannelSnapshot, snapshot.id)
     end
   end
 
@@ -745,6 +748,182 @@ defmodule Lightning.ChannelsTest do
 
       assert %{total_requests: 0} =
                Channels.get_channel_stats_for_project(project.id)
+    end
+  end
+
+  describe "SearchParams.new/1" do
+    test "returns struct with nil channel_id for empty map" do
+      assert %SearchParams{channel_id: nil} = SearchParams.new(%{})
+    end
+
+    test "accepts a valid UUID string under the 'channel_id' key" do
+      uuid = Ecto.UUID.generate()
+
+      assert %SearchParams{channel_id: ^uuid} =
+               SearchParams.new(%{"channel_id" => uuid})
+    end
+
+    test "silently drops an invalid UUID, leaving channel_id as nil" do
+      assert %SearchParams{channel_id: nil} =
+               SearchParams.new(%{"channel_id" => "not-a-uuid"})
+    end
+
+    test "silently drops unknown keys" do
+      assert %SearchParams{channel_id: nil} =
+               SearchParams.new(%{"unknown_key" => "value"})
+    end
+  end
+
+  describe "list_channel_requests/3" do
+    setup do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      %{project: project, channel: channel, snapshot: snapshot}
+    end
+
+    defp insert_request(channel, snapshot, attrs \\ []) do
+      insert(
+        :channel_request,
+        [channel: channel, channel_snapshot: snapshot, state: :success] ++ attrs
+      )
+    end
+
+    defp insert_event(request, attrs) do
+      insert(:channel_event, [channel_request: request] ++ attrs)
+    end
+
+    test "returns a Scrivener.Page scoped to the given project", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      insert_request(channel, snapshot)
+      other_channel = insert(:channel)
+
+      {:ok, other_snapshot} =
+        Channels.get_or_create_current_snapshot(other_channel)
+
+      insert_request(other_channel, other_snapshot)
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      assert %Scrivener.Page{entries: [%ChannelRequest{}]} = page
+      assert page.total_entries == 1
+    end
+
+    test "excludes requests belonging to other projects", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      _mine = insert_request(channel, snapshot)
+
+      other_channel = insert(:channel)
+
+      {:ok, other_snapshot} =
+        Channels.get_or_create_current_snapshot(other_channel)
+
+      _theirs = insert_request(other_channel, other_snapshot)
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      assert page.total_entries == 1
+      [entry] = page.entries
+      assert entry.channel_id == channel.id
+    end
+
+    test "filters by channel_id when provided", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      channel_b = insert(:channel, project: project)
+      {:ok, snapshot_b} = Channels.get_or_create_current_snapshot(channel_b)
+
+      insert_request(channel, snapshot)
+      insert_request(channel_b, snapshot_b)
+
+      params = SearchParams.new(%{"channel_id" => channel.id})
+      page = Channels.list_channel_requests(project, params)
+
+      assert page.total_entries == 1
+      assert hd(page.entries).channel_id == channel.id
+    end
+
+    test "returns all project requests when no channel_id filter", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      channel_b = insert(:channel, project: project)
+      {:ok, snapshot_b} = Channels.get_or_create_current_snapshot(channel_b)
+
+      insert_request(channel, snapshot)
+      insert_request(channel_b, snapshot_b)
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      assert page.total_entries == 2
+    end
+
+    test "preloads :channel association on each entry", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      insert_request(channel, snapshot)
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      assert [%ChannelRequest{channel: %Channel{id: channel_id}}] = page.entries
+      assert channel_id == channel.id
+    end
+
+    test "preloads :channel_events with only :sink_response and :error types",
+         %{project: project, channel: channel, snapshot: snapshot} do
+      request = insert_request(channel, snapshot)
+
+      insert_event(request, type: :sink_response, request_path: "/outbound")
+      insert_event(request, type: :error, error_message: "timeout")
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      [entry] = page.entries
+
+      assert length(entry.channel_events) == 2
+
+      assert Enum.all?(
+               entry.channel_events,
+               &(&1.type in [:sink_response, :error])
+             )
+
+      sink_event =
+        Enum.find(entry.channel_events, &(&1.type == :sink_response))
+
+      error_event = Enum.find(entry.channel_events, &(&1.type == :error))
+
+      assert %{request_path: "/outbound"} = sink_event
+      assert %{error_message: "timeout"} = error_event
+    end
+
+    test "entries are ordered by started_at descending", %{
+      project: project,
+      channel: channel,
+      snapshot: snapshot
+    } do
+      t1 = ~U[2025-01-01 10:00:00.000000Z]
+      t2 = ~U[2025-01-02 10:00:00.000000Z]
+
+      insert_request(channel, snapshot, started_at: t1)
+      insert_request(channel, snapshot, started_at: t2)
+
+      page = Channels.list_channel_requests(project, SearchParams.new(%{}))
+
+      assert [first, second] = page.entries
+      assert first.started_at == t2
+      assert second.started_at == t1
     end
   end
 

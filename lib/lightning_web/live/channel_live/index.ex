@@ -2,13 +2,13 @@ defmodule LightningWeb.ChannelLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
+  import LightningWeb.ChannelLive.Helpers
+
   alias Lightning.Channels
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias LightningWeb.ChannelLive.FormComponent
   alias LightningWeb.Components.Common
-
-  import LightningWeb.ChannelLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
@@ -37,7 +37,7 @@ defmodule LightningWeb.ChannelLive.Index do
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
-        <.channel_metrics channel_stats={@channel_stats} />
+        <.channel_metrics channel_stats={@channel_stats} project={@project} />
         <div class="w-full">
           <div class="mt-14 flex justify-between mb-3">
             <h3 class="text-3xl font-bold">
@@ -241,6 +241,7 @@ defmodule LightningWeb.ChannelLive.Index do
   # --- Private components ---
 
   attr :channel_stats, :map, required: true
+  attr :project, :map, required: true
 
   defp channel_metrics(assigns) do
     ~H"""
@@ -252,7 +253,15 @@ defmodule LightningWeb.ChannelLive.Index do
         </div>
       </div>
       <div class="bg-white shadow rounded-lg py-2 px-6">
-        <h2 class="text-sm text-gray-500">Total Requests</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm text-gray-500">Total Requests</h2>
+          <.link
+            navigate={~p"/projects/#{@project}/history/channels"}
+            class="text-xs text-indigo-600 hover:text-indigo-800"
+          >
+            View all
+          </.link>
+        </div>
         <div class="text-3xl font-bold text-gray-800">
           {@channel_stats.total_requests}
         </div>
@@ -339,14 +348,28 @@ defmodule LightningWeb.ChannelLive.Index do
               </Common.wrapper_tooltip>
             </.td>
             <.td class="text-gray-700">
-              {count}
+              <.link
+                navigate={
+                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
+                }
+                class="text-indigo-600 hover:text-indigo-800"
+              >
+                {count}
+              </.link>
             </.td>
             <.td class="text-gray-500 text-sm">
-              <%= if last_at do %>
-                <Common.datetime datetime={last_at} />
-              <% else %>
-                <span class="italic">Never</span>
-              <% end %>
+              <.link
+                navigate={
+                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
+                }
+                class="hover:text-gray-700"
+              >
+                <%= if last_at do %>
+                  <Common.datetime datetime={last_at} />
+                <% else %>
+                  <span class="italic">Never</span>
+                <% end %>
+              </.link>
             </.td>
             <.td>
               <%= if @can_edit_channel do %>
