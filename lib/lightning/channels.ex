@@ -21,6 +21,13 @@ defmodule Lightning.Channels do
   end
 
   @doc """
+  Gets a single channel by ID. Returns nil if not found.
+  """
+  def get_channel(id) do
+    Repo.get(Channel, id)
+  end
+
+  @doc """
   Gets a single channel. Raises if not found.
   """
   def get_channel!(id) do

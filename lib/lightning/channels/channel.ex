@@ -7,6 +7,7 @@ defmodule Lightning.Channels.Channel do
 
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -48,6 +49,7 @@ defmodule Lightning.Channels.Channel do
       :enabled
     ])
     |> validate_required([:name, :sink_url, :project_id])
+    |> Validators.validate_url(:sink_url)
     |> assoc_constraint(:project)
     |> unique_constraint([:project_id, :name])
     |> optimistic_lock(:lock_version)
