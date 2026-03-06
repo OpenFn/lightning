@@ -128,14 +128,28 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         current_tab: tab
       )
 
-      client = socket.assigns.selected_client
+      case socket.assigns.selected_client do
+        nil ->
+          Logger.error(
+            "OAuth code received but no client selected for environment '#{socket.assigns.current_tab}'"
+          )
 
-      {:ok,
-       socket
-       |> assign(code: code, oauth_progress: :authenticating)
-       |> start_async(:token, fn ->
-         OauthHTTPClient.fetch_token(client, code)
-       end)}
+          {:ok,
+           socket
+           |> assign(
+             code: code,
+             oauth_progress: :error,
+             oauth_error: {:no_client, "OAuth client not available"}
+           )}
+
+        client ->
+          {:ok,
+           socket
+           |> assign(code: code, oauth_progress: :authenticating)
+           |> start_async(:token, fn ->
+             OauthHTTPClient.fetch_token(client, code)
+           end)}
+      end
     end
   end
 
@@ -146,7 +160,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     )
 
     Logger.warning(
-      "Failed fetching authentication code for #{socket.assigns.selected_client.name} (#{socket.assigns.current_tab}): #{inspect(error)}"
+      "Failed fetching authentication code for #{client_name(socket.assigns)} (#{socket.assigns.current_tab}): #{inspect(error)}"
     )
 
     {:ok,
@@ -183,7 +197,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     case validate_token(normalized_token, expected_scopes) do
       :ok ->
         Logger.info(
-          "Received valid token for environment '#{socket.assigns.current_tab}' from #{updated_socket.assigns.selected_client.name}"
+          "Received valid token for environment '#{socket.assigns.current_tab}' from #{client_name(updated_socket.assigns)}"
         )
 
         if updated_socket.assigns.selected_client.userinfo_endpoint do
@@ -202,7 +216,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
       {:error, %OauthValidation.Error{} = error} ->
         Logger.warning(
-          "Invalid token for environment '#{socket.assigns.current_tab}' from #{updated_socket.assigns.selected_client.name}: #{error.type}"
+          "Invalid token for environment '#{socket.assigns.current_tab}' from #{client_name(updated_socket.assigns)}: #{error.type}"
         )
 
         {:noreply,
@@ -214,7 +228,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_async(:token, {:ok, {:error, http_error}}, socket) do
     Logger.error(
-      "Failed to fetch token for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}: #{inspect(http_error)}"
+      "Failed to fetch token for environment '#{socket.assigns.current_tab}' from #{client_name(socket.assigns)}: #{inspect(http_error)}"
     )
 
     {:noreply,
@@ -225,7 +239,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_async(:token, {:exit, reason}, socket) do
     Logger.error(
-      "Token fetch crashed for environment '#{socket.assigns.current_tab}' for #{socket.assigns.selected_client.name}: #{inspect(reason)}"
+      "Token fetch crashed for environment '#{socket.assigns.current_tab}' for #{client_name(socket.assigns)}: #{inspect(reason)}"
     )
 
     {:noreply,
@@ -236,7 +250,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
     Logger.info(
-      "Successfully fetched userinfo for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}"
+      "Successfully fetched userinfo for environment '#{socket.assigns.current_tab}' from #{client_name(socket.assigns)}"
     )
 
     {:noreply,
@@ -249,7 +263,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     case error do
       %{status: 401} ->
         Logger.error(
-          "Token is invalid or revoked for environment '#{socket.assigns.current_tab}' for #{socket.assigns.selected_client.name}: #{inspect(error)}"
+          "Token is invalid or revoked for environment '#{socket.assigns.current_tab}' for #{client_name(socket.assigns)}: #{inspect(error)}"
         )
 
         oauth_error = %OauthValidation.Error{
@@ -268,7 +282,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
       _ ->
         Logger.warning(
-          "Failed to fetch userinfo for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}, continuing anyway. Error: #{inspect(error)}"
+          "Failed to fetch userinfo for environment '#{socket.assigns.current_tab}' from #{client_name(socket.assigns)}, continuing anyway. Error: #{inspect(error)}"
         )
 
         {:noreply,
@@ -280,7 +294,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_async(:userinfo, {:exit, reason}, socket) do
     Logger.error(
-      "User information fetch crashed for environment '#{socket.assigns.current_tab}' for #{socket.assigns.selected_client.name}: #{inspect(reason)}"
+      "User information fetch crashed for environment '#{socket.assigns.current_tab}' for #{client_name(socket.assigns)}: #{inspect(reason)}"
     )
 
     {:noreply, assign(socket, oauth_progress: :complete)}
@@ -454,4 +468,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     </div>
     """
   end
+
+  defp client_name(%{selected_client: %{name: name}}), do: name
+  defp client_name(_), do: "unknown"
 end
