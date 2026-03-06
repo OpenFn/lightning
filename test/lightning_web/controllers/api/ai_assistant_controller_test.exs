@@ -1,6 +1,8 @@
 defmodule LightningWeb.API.AiAssistantControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  @moduletag :capture_log
+
   import Mox
   import Lightning.Factories
 

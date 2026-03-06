@@ -126,6 +126,108 @@ defmodule Lightning.Config.BootstrapTest do
       # idle_timeout = max(60_000, 60_000 + 15_000) = 75_000
       assert endpoint_idle_timeout() == 75_000
     end
+
+    test "prod endpoint URL defaults" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "example.com"
+      assert get_in(endpoint, [:url, :port]) == 443
+      assert get_in(endpoint, [:url, :scheme]) == "https"
+    end
+
+    test "prod endpoint URL env var overrides" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "URL_HOST" => "myapp.example.com",
+        "URL_PORT" => "8443",
+        "URL_SCHEME" => "http"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "myapp.example.com"
+      assert get_in(endpoint, [:url, :port]) == 8443
+      assert get_in(endpoint, [:url, :scheme]) == "http"
+    end
+
+    test "PORT vs URL_PORT in prod" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "PORT" => "8080",
+        "URL_PORT" => "443"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 8080
+      assert get_in(endpoint, [:url, :port]) == 443
+    end
+  end
+
+  describe "endpoint URL configuration (dev)" do
+    test "URL_HOST works in dev" do
+      Dotenvy.source([%{"URL_HOST" => "dev-elixir.local"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "dev-elixir.local"
+    end
+
+    test "URL_SCHEME works in dev" do
+      Dotenvy.source([%{"URL_SCHEME" => "https"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :scheme]) == "https"
+    end
+
+    test "URL_PORT works in dev" do
+      Dotenvy.source([%{"URL_PORT" => "8080"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :port]) == 8080
+    end
+
+    test "PORT sets both http and url port in dev" do
+      Dotenvy.source([%{"PORT" => "5000"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 5000
+      assert get_in(endpoint, [:url, :port]) == 5000
+    end
+
+    test "PORT and URL_PORT can differ in dev" do
+      Dotenvy.source([%{"PORT" => "5000", "URL_PORT" => "443"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 5000
+      assert get_in(endpoint, [:url, :port]) == 443
+    end
+
+    test "dev defaults" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "localhost"
+      assert get_in(endpoint, [:url, :scheme]) == "http"
+    end
   end
 
   describe "storage" do
@@ -508,6 +610,26 @@ defmodule Lightning.Config.BootstrapTest do
                    fn ->
                      Bootstrap.configure()
                    end
+    end
+  end
+
+  describe "log_queue_queries" do
+    test "defaults to false" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
+    end
+
+    test "can be enabled via env var" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "true"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == true
+    end
+
+    test "can be explicitly disabled" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "false"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
     end
   end
 
