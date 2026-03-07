@@ -5,15 +5,8 @@ defmodule LightningWeb.UserLive.TableComponent do
   import LightningWeb.UserLive.Components
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.AdminSearchParams
   alias LightningWeb.Live.Helpers.TableHelpers
-
-  @default_table_params %{
-    "filter" => "",
-    "sort" => "email",
-    "dir" => "asc",
-    "page" => "1",
-    "page_size" => "10"
-  }
 
   @impl true
   def render(assigns) do
@@ -37,10 +30,12 @@ defmodule LightningWeb.UserLive.TableComponent do
 
   @impl true
   def mount(socket) do
+    table_params = AdminSearchParams.default_uri_params()
+
     {:ok,
      socket
-     |> assign(:table_params, @default_table_params)
-     |> assign_table_state(@default_table_params, empty_page())}
+     |> assign(:table_params, table_params)
+     |> assign_table_state(table_params, empty_page())}
   end
 
   @impl true
@@ -105,10 +100,12 @@ defmodule LightningWeb.UserLive.TableComponent do
   end
 
   defp empty_page do
+    params = AdminSearchParams.new()
+
     %Scrivener.Page{
       entries: [],
       page_number: 1,
-      page_size: String.to_integer(@default_table_params["page_size"]),
+      page_size: params.page_size,
       total_entries: 0,
       total_pages: 1
     }

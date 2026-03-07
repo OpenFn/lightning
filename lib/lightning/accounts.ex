@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -114,29 +115,18 @@ defmodule Lightning.Accounts do
     Repo.all(User)
   end
 
-  @admin_user_default_sort "email"
-  @admin_user_allowed_sorts ~w(first_name last_name email role enabled support_user scheduled_deletion)
-  @admin_user_default_page_size 10
-  @admin_user_max_page_size 100
-
   @doc """
   Returns a paginated list of users for the superuser admin table with
   server-side filtering and sorting.
   """
   @spec list_users_for_admin(map()) :: Scrivener.Page.t()
   def list_users_for_admin(params \\ %{}) do
-    %{
-      filter: filter,
-      sort: sort,
-      dir: dir,
-      page: page,
-      page_size: page_size
-    } = normalize_admin_user_params(params)
+    params = AdminSearchParams.new(params)
 
     User
-    |> filter_admin_users(filter)
-    |> order_admin_users(sort, dir)
-    |> Repo.paginate(page: page, page_size: page_size)
+    |> filter_admin_users(params.filter)
+    |> order_admin_users(params.sort, params.dir)
+    |> Repo.paginate(AdminSearchParams.pagination_opts(params))
   end
 
   @doc """
@@ -185,27 +175,6 @@ defmodule Lightning.Accounts do
     if User.valid_password?(user, password), do: user
   end
 
-  defp normalize_admin_user_params(params) do
-    params = stringify_param_keys(params)
-
-    sort = normalize_admin_sort(Map.get(params, "sort"))
-    dir = normalize_admin_dir(Map.get(params, "dir"))
-    page = parse_positive_int(Map.get(params, "page"), 1)
-
-    page_size =
-      Map.get(params, "page_size")
-      |> parse_positive_int(@admin_user_default_page_size)
-      |> min(@admin_user_max_page_size)
-
-    %{
-      filter: normalize_admin_filter(Map.get(params, "filter")),
-      sort: sort,
-      dir: dir,
-      page: page,
-      page_size: page_size
-    }
-  end
-
   defp filter_admin_users(query, ""), do: query
 
   defp filter_admin_users(query, filter) do
@@ -216,7 +185,7 @@ defmodule Lightning.Accounts do
       [u],
       ilike(u.first_name, ^search) or
         ilike(u.last_name, ^search) or
-        ilike(fragment("?::text", u.email), ^search) or
+        ilike(u.email, ^search) or
         ilike(fragment("?::text", u.role), ^search)
     )
   end
@@ -243,46 +212,6 @@ defmodule Lightning.Accounts do
     sort_field = String.to_existing_atom(sort)
 
     order_by(query, [u], [{^direction, field(u, ^sort_field)}])
-  end
-
-  defp normalize_admin_sort(sort) when is_binary(sort) do
-    if sort in @admin_user_allowed_sorts,
-      do: sort,
-      else: @admin_user_default_sort
-  end
-
-  defp normalize_admin_sort(sort) when is_atom(sort) do
-    sort
-    |> Atom.to_string()
-    |> normalize_admin_sort()
-  end
-
-  defp normalize_admin_sort(_), do: @admin_user_default_sort
-
-  defp normalize_admin_dir(dir) when dir in ["asc", :asc], do: "asc"
-  defp normalize_admin_dir(dir) when dir in ["desc", :desc], do: "desc"
-  defp normalize_admin_dir(_), do: "asc"
-
-  defp normalize_admin_filter(nil), do: ""
-
-  defp normalize_admin_filter(filter) do
-    filter
-    |> to_string()
-    |> String.trim()
-  end
-
-  defp stringify_param_keys(params) when is_map(params) do
-    Map.new(params, fn {key, value} -> {to_string(key), value} end)
-  end
-
-  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
-    do: value
-
-  defp parse_positive_int(value, default) do
-    case Integer.parse(to_string(value || "")) do
-      {int, ""} when int > 0 -> int
-      _ -> default
-    end
   end
 
   defp dir_to_atom("asc"), do: :asc

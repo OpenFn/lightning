@@ -5,13 +5,9 @@ defmodule LightningWeb.UserLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
-
-  @default_sort "email"
-  @allowed_sorts ~w(first_name last_name email role enabled support_user scheduled_deletion)
-  @default_page_size 10
-  @max_page_size 100
 
   @impl true
   def mount(_params, _session, socket) do
@@ -76,53 +72,6 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   defp normalize_table_params(params) do
-    params = Map.new(params, fn {k, v} -> {to_string(k), v} end)
-
-    %{
-      "filter" => normalize_filter(Map.get(params, "filter")),
-      "sort" => normalize_sort(Map.get(params, "sort")),
-      "dir" => normalize_dir(Map.get(params, "dir")),
-      "page" =>
-        Map.get(params, "page") |> parse_positive_int(1) |> Integer.to_string(),
-      "page_size" =>
-        Map.get(params, "page_size")
-        |> parse_positive_int(@default_page_size)
-        |> min(@max_page_size)
-        |> Integer.to_string()
-    }
-  end
-
-  defp normalize_sort(sort) when is_binary(sort) do
-    if sort in @allowed_sorts, do: sort, else: @default_sort
-  end
-
-  defp normalize_sort(sort) when is_atom(sort) do
-    sort
-    |> Atom.to_string()
-    |> normalize_sort()
-  end
-
-  defp normalize_sort(_), do: @default_sort
-
-  defp normalize_dir(dir) when dir in ["asc", :asc], do: "asc"
-  defp normalize_dir(dir) when dir in ["desc", :desc], do: "desc"
-  defp normalize_dir(_), do: "asc"
-
-  defp normalize_filter(nil), do: ""
-
-  defp normalize_filter(filter) do
-    filter
-    |> to_string()
-    |> String.trim()
-  end
-
-  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
-    do: value
-
-  defp parse_positive_int(value, default) do
-    case Integer.parse(to_string(value || "")) do
-      {int, ""} when int > 0 -> int
-      _ -> default
-    end
+    AdminSearchParams.to_uri_params(params)
   end
 end

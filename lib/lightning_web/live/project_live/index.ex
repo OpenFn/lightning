@@ -7,13 +7,9 @@ defmodule LightningWeb.ProjectLive.Index do
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects
   alias LightningWeb.Live.Helpers.TableHelpers
-
-  @default_sort "name"
-  @allowed_sorts ~w(name inserted_at description owner scheduled_deletion)
-  @default_page_size 10
-  @max_page_size 100
 
   @impl true
   def mount(_params, _session, socket) do
@@ -57,28 +53,32 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
+    default_table_params = AdminSearchParams.default_uri_params()
+
     socket
     |> assign(
       page_title: "Edit Project",
       active_menu_item: :projects,
       project: Projects.get_project_with_users!(id),
       users: Accounts.list_users(),
-      sort_key: "name",
-      sort_direction: "asc",
-      filter: ""
+      sort_key: default_table_params["sort"],
+      sort_direction: default_table_params["dir"],
+      filter: default_table_params["filter"]
     )
   end
 
   defp apply_action(socket, :new, _params) do
+    default_table_params = AdminSearchParams.default_uri_params()
+
     socket
     |> assign(
       page_title: "New Project",
       active_menu_item: :projects,
       project: %Lightning.Projects.Project{project_users: []},
       users: Accounts.list_users(),
-      sort_key: "name",
-      sort_direction: "asc",
-      filter: ""
+      sort_key: default_table_params["sort"],
+      sort_direction: default_table_params["dir"],
+      filter: default_table_params["filter"]
     )
   end
 
@@ -183,54 +183,7 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   defp normalize_table_params(params) do
-    params = Map.new(params, fn {k, v} -> {to_string(k), v} end)
-
-    %{
-      "filter" => normalize_filter(Map.get(params, "filter")),
-      "sort" => normalize_sort(Map.get(params, "sort")),
-      "dir" => normalize_dir(Map.get(params, "dir")),
-      "page" =>
-        Map.get(params, "page") |> parse_positive_int(1) |> Integer.to_string(),
-      "page_size" =>
-        Map.get(params, "page_size")
-        |> parse_positive_int(@default_page_size)
-        |> min(@max_page_size)
-        |> Integer.to_string()
-    }
-  end
-
-  defp normalize_sort(sort) when is_binary(sort) do
-    if sort in @allowed_sorts, do: sort, else: @default_sort
-  end
-
-  defp normalize_sort(sort) when is_atom(sort) do
-    sort
-    |> Atom.to_string()
-    |> normalize_sort()
-  end
-
-  defp normalize_sort(_), do: @default_sort
-
-  defp normalize_dir(dir) when dir in ["asc", :asc], do: "asc"
-  defp normalize_dir(dir) when dir in ["desc", :desc], do: "desc"
-  defp normalize_dir(_), do: "asc"
-
-  defp normalize_filter(nil), do: ""
-
-  defp normalize_filter(filter) do
-    filter
-    |> to_string()
-    |> String.trim()
-  end
-
-  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
-    do: value
-
-  defp parse_positive_int(value, default) do
-    case Integer.parse(to_string(value || "")) do
-      {int, ""} when int > 0 -> int
-      _ -> default
-    end
+    AdminSearchParams.to_uri_params(params)
   end
 
   defp pagination_path(socket, table_params) do
