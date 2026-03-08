@@ -17,8 +17,8 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
-  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project

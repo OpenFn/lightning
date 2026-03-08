@@ -7,8 +7,8 @@ defmodule LightningWeb.ProjectLive.Index do
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
-  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias LightningWeb.Live.Helpers.TableHelpers
 
   @impl true
