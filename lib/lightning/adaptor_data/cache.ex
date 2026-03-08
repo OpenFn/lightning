@@ -11,12 +11,16 @@ defmodule Lightning.AdaptorData.Cache do
 
   @doc "Create the ETS table. Called from Application.start/2."
   def init do
-    :ets.new(@table, [
-      :set,
-      :public,
-      :named_table,
-      read_concurrency: true
-    ])
+    if :ets.whereis(@table) == :undefined do
+      :ets.new(@table, [
+        :set,
+        :public,
+        :named_table,
+        read_concurrency: true
+      ])
+    end
+
+    :ok
   end
 
   @doc "Get a cached value. Falls back to DB on miss, populates ETS."
