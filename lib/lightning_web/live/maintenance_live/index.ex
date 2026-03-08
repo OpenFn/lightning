@@ -56,14 +56,6 @@ defmodule LightningWeb.MaintenanceLive.Index do
             error -> {:error, Exception.message(error)}
           end
 
-        case result do
-          {:ok, _} ->
-            Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
-
-          _ ->
-            :noop
-        end
-
         send(pid, {:action_complete, action, result})
       end)
 
@@ -133,7 +125,14 @@ defmodule LightningWeb.MaintenanceLive.Index do
   end
 
   defp run_action("install_schemas") do
-    Lightning.CredentialSchemas.refresh()
+    case Lightning.CredentialSchemas.fetch_and_store() do
+      {:ok, count} ->
+        Lightning.AdaptorData.Cache.broadcast_invalidation(["schema"])
+        {:ok, count}
+
+      error ->
+        error
+    end
   end
 
   defp put_in_status(socket, action, status) do

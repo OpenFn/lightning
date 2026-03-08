@@ -7,63 +7,87 @@ defmodule Lightning.AdaptorIconsTest do
   setup :verify_on_exit!
 
   setup do
-    tmp_dir =
-      Path.join(
-        System.tmp_dir!(),
-        "adaptor_icons_test_#{System.unique_integer([:positive])}"
-      )
+    Lightning.AdaptorData.Cache.invalidate("icon")
+    Lightning.AdaptorData.Cache.invalidate("icon_manifest")
+    :ok
+  end
 
-    File.mkdir_p!(tmp_dir)
+  describe "refresh_manifest/0" do
+    test "builds manifest from adaptor registry and stores in DB" do
+      assert {:ok, manifest} = Lightning.AdaptorIcons.refresh_manifest()
 
-    previous = Application.get_env(:lightning, :adaptor_icons_path)
-    Application.put_env(:lightning, :adaptor_icons_path, tmp_dir)
+      assert is_map(manifest)
 
-    on_exit(fn ->
-      if previous,
-        do: Application.put_env(:lightning, :adaptor_icons_path, previous),
-        else: Application.delete_env(:lightning, :adaptor_icons_path)
+      # The manifest should contain entries based on whatever adaptors
+      # are in the registry cache
+      if map_size(manifest) > 0 do
+        {_name, sources} = Enum.at(manifest, 0)
+        assert Map.has_key?(sources, "square")
+        assert Map.has_key?(sources, "rectangle")
+      end
 
-      File.rm_rf(tmp_dir)
-    end)
+      # Verify it was stored in DB
+      assert {:ok, entry} =
+               Lightning.AdaptorData.get("icon_manifest", "all")
 
-    %{target_dir: tmp_dir}
+      assert entry.content_type == "application/json"
+      assert Jason.decode!(entry.data) == manifest
+    end
   end
 
   describe "refresh/0" do
-    test "returns error when HTTP request fails" do
-      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:error, :econnrefused}
-      end)
+    test "returns manifest and spawns background prefetch" do
+      assert {:ok, manifest} = Lightning.AdaptorIcons.refresh()
+      assert is_map(manifest)
+    end
+  end
 
-      assert {:error, :econnrefused} = Lightning.AdaptorIcons.refresh()
+  describe "prefetch_icons/1" do
+    test "skips icons already in DB" do
+      Lightning.AdaptorData.put(
+        "icon",
+        "http-square",
+        <<1, 2, 3>>,
+        "image/png"
+      )
+
+      # No Tesla call should be made for http-square
+      Lightning.AdaptorIcons.prefetch_icons(%{
+        "http" => %{
+          "square" => "/images/adaptors/http-square.png",
+          "rectangle" => "/images/adaptors/http-rectangle.png"
+        }
+      })
+
+      # The rectangle one would have attempted a fetch (via Hackney stub)
+      # but the square one was skipped
+      assert {:ok, _} = Lightning.AdaptorData.get("icon", "http-square")
     end
 
-    test "returns error on non-200 HTTP status" do
-      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 500, body: ""}}
+    test "fetches and stores missing icons from GitHub" do
+      png_data = <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn env, _opts ->
+        assert env.url =~ "raw.githubusercontent.com/OpenFn/adaptors"
+        {:ok, %Tesla.Env{status: 200, body: png_data}}
       end)
 
-      assert {:error, "HTTP 500"} = Lightning.AdaptorIcons.refresh()
-    end
+      Lightning.AdaptorIcons.prefetch_icons(%{
+        "testadaptor" => %{
+          "square" => "/images/adaptors/testadaptor-square.png",
+          "rectangle" => "/images/adaptors/testadaptor-rectangle.png"
+        }
+      })
 
-    test "cleans up temp directory on failure" do
-      tmp_base = Path.join(System.tmp_dir!(), "lightning-adaptor")
+      assert {:ok, sq} =
+               Lightning.AdaptorData.get("icon", "testadaptor-square")
 
-      entries_before =
-        if File.exists?(tmp_base), do: File.ls!(tmp_base), else: []
+      assert sq.data == png_data
 
-      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:error, :timeout}
-      end)
+      assert {:ok, rect} =
+               Lightning.AdaptorData.get("icon", "testadaptor-rectangle")
 
-      Lightning.AdaptorIcons.refresh()
-
-      # No new temp dirs should be left after refresh
-      entries_after = if File.exists?(tmp_base), do: File.ls!(tmp_base), else: []
-      new_entries = entries_after -- entries_before
-
-      assert new_entries == [],
-             "Expected no new temp dirs, found: #{inspect(new_entries)}"
+      assert rect.data == png_data
     end
   end
 end

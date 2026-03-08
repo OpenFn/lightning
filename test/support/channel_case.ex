@@ -57,6 +57,12 @@ defmodule LightningWeb.ChannelCase do
         shared: not tags[:async]
       )
 
+    # Allow the AdaptorRegistry GenServer to access the test's DB connection,
+    # since it reads adaptor data from the database via AdaptorData.Cache.
+    if registry_pid = GenServer.whereis(Lightning.AdaptorRegistry) do
+      Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), registry_pid)
+    end
+
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
     :ok
   end

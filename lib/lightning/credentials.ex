@@ -575,15 +575,21 @@ defmodule Lightning.Credentials do
   """
   @spec get_schema(String.t()) :: Credentials.Schema.t()
   def get_schema(schema_name) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+    case Lightning.AdaptorData.Cache.get("schema", schema_name) do
+      %{data: data} ->
+        Credentials.Schema.new(data, schema_name)
 
-    File.read("#{schemas_path}/#{schema_name}.json")
-    |> case do
-      {:ok, raw_json} ->
-        Credentials.Schema.new(raw_json, schema_name)
+      nil ->
+        # Fall back to filesystem for backwards compatibility
+        {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-      {:error, reason} ->
-        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+        case File.read("#{schemas_path}/#{schema_name}.json") do
+          {:ok, raw_json} ->
+            Credentials.Schema.new(raw_json, schema_name)
+
+          {:error, reason} ->
+            raise "Schema '#{schema_name}' not found in DB or filesystem: #{inspect(reason)}"
+        end
     end
   end
 

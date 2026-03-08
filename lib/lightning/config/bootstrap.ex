@@ -234,6 +234,8 @@ defmodule Lightning.Config.Bootstrap do
       local_adaptors_repo:
         use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
 
+    # schemas_path is only used by build-time mix tasks (install_schemas).
+    # At runtime, the DB is the primary source via AdaptorData/ETS cache.
     config :lightning,
       schemas_path:
         env!(

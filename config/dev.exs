@@ -37,6 +37,9 @@ config :lightning, LightningWeb.Endpoint,
     storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]
 
+# schemas_path and adaptor_icons_path are only used by build-time mix tasks
+# (install_schemas, install_adaptor_icons) for baking data into Docker images.
+# At runtime, the DB is the primary source via AdaptorData/ETS cache.
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors",
