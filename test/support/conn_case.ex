@@ -74,29 +74,30 @@ defmodule LightningWeb.ConnCase do
         shared: not tags[:async]
       )
 
-    # Allow the AdaptorRegistry GenServer to access the test's DB connection,
-    # since it reads adaptor data from the database via AdaptorData.Cache.
-    if registry_pid = GenServer.whereis(Lightning.AdaptorRegistry) do
-      Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), registry_pid)
-    end
-
-    # Seed minimal adaptor registry so LiveView tests with adaptor pickers work.
-    # The ETS cache is invalidated so reads go to DB.
-    Lightning.AdaptorData.put(
-      "registry",
-      "all",
+    # Seed the ETS cache directly with minimal adaptor registry data so that
+    # AdaptorRegistry.all() never falls through to a DB query from the
+    # GenServer process (which would fail sandbox ownership checks in async tests).
+    registry_json =
       Jason.encode!([
         %{
           name: "@openfn/language-common",
           repo: "",
-          latest: "1.0.0",
-          versions: [%{version: "1.0.0"}]
+          latest: "1.6.2",
+          versions: [
+            %{version: "1.6.2"},
+            %{version: "1.5.0"},
+            %{version: "1.0.0"}
+          ]
         },
         %{
           name: "@openfn/language-http",
           repo: "",
-          latest: "1.0.0",
-          versions: [%{version: "1.0.0"}]
+          latest: "7.2.0",
+          versions: [
+            %{version: "7.2.0"},
+            %{version: "2.0.0"},
+            %{version: "1.0.0"}
+          ]
         },
         %{
           name: "@openfn/language-dhis2",
@@ -111,9 +112,12 @@ defmodule LightningWeb.ConnCase do
           versions: [%{version: "4.0.0"}]
         }
       ])
-    )
 
-    Lightning.AdaptorData.Cache.invalidate("registry")
+    :ets.insert(
+      Lightning.AdaptorData.Cache,
+      {{"registry", "all"},
+       %{data: registry_json, content_type: "application/json"}}
+    )
 
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
 
