@@ -1,7 +1,8 @@
 defmodule Lightning.AdaptorRefreshWorker do
   @moduledoc """
-  Oban worker that periodically refreshes the adaptor registry, icons,
-  and credential schemas from their upstream sources.
+  Oban worker that periodically refreshes the adaptor registry and
+  credential schemas from their upstream sources, storing results in
+  the database via `Lightning.AdaptorData`.
 
   Scheduled via cron when `ADAPTOR_REFRESH_INTERVAL_HOURS` is configured.
   Returns `:ok` even on partial failure since retries are not useful for
@@ -11,7 +12,7 @@ defmodule Lightning.AdaptorRefreshWorker do
   use Oban.Worker,
     queue: :background,
     max_attempts: 1,
-    unique: [period: 3600]
+    unique: [period: 60]
 
   require Logger
 
@@ -29,9 +30,8 @@ defmodule Lightning.AdaptorRefreshWorker do
     Logger.info("Starting scheduled adaptor refresh")
 
     results = [
-      {:registry, safe_call(fn -> Lightning.AdaptorRegistry.refresh() end)},
-      {:icons, safe_call(fn -> Lightning.AdaptorIcons.refresh() end)},
-      {:schemas, safe_call(fn -> Lightning.CredentialSchemas.refresh() end)}
+      {:registry, safe_call(&refresh_registry/0)},
+      {:schemas, safe_call(&refresh_schemas/0)}
     ]
 
     errors =
@@ -39,21 +39,40 @@ defmodule Lightning.AdaptorRefreshWorker do
       |> Enum.filter(fn {_, result} -> match?({:error, _}, result) end)
       |> Enum.map(fn {name, {:error, reason}} -> {name, reason} end)
 
+    refreshed_kinds =
+      results
+      |> Enum.filter(fn {_, result} -> match?({:ok, _}, result) end)
+      |> Enum.map(fn {kind, _} -> to_string(kind) end)
+
+    if refreshed_kinds != [] do
+      Lightning.AdaptorData.Cache.broadcast_invalidation(refreshed_kinds)
+    end
+
     if errors == [] do
       Logger.info("Scheduled adaptor refresh completed successfully")
-      Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
     else
       Logger.warning(
         "Scheduled adaptor refresh partially failed: #{inspect(errors)}"
       )
-
-      # Only broadcast to other nodes if at least one refresh succeeded
-      if length(errors) < length(results) do
-        Lightning.API.broadcast("adaptor:refresh", {:refresh_all, node()})
-      end
     end
 
     :ok
+  end
+
+  defp refresh_registry do
+    adaptors = Lightning.AdaptorRegistry.fetch()
+
+    if adaptors == [] do
+      {:error, :empty_results}
+    else
+      data = Jason.encode!(adaptors)
+      Lightning.AdaptorData.put("registry", "all", data)
+      {:ok, length(adaptors)}
+    end
+  end
+
+  defp refresh_schemas do
+    Lightning.CredentialSchemas.fetch_and_store()
   end
 
   defp safe_call(fun) do
@@ -65,7 +84,6 @@ defmodule Lightning.AdaptorRefreshWorker do
   rescue
     error ->
       Logger.error("Adaptor refresh error: #{Exception.message(error)}")
-
       {:error, Exception.message(error)}
   end
 end

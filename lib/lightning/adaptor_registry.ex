@@ -17,9 +17,9 @@ defmodule Lightning.AdaptorRegistry do
 
   **Caching**
 
-  By default the results are cached to disk, and will be reused every start.
-
-  In order to disable or configure caching pass see: `start_link/1`.
+  In non-local mode, adaptor data is read from the DB-backed ETS cache
+  (see `Lightning.AdaptorData.Cache`). The GenServer is still used for
+  local_adaptors_repo mode.
 
   The process uses `:continue` to return before the adaptors have been queried.
   This does mean that the first call to the process will be delayed until
@@ -84,65 +84,20 @@ defmodule Lightning.AdaptorRegistry do
 
   @impl GenServer
   def init(opts) do
-    Lightning.API.subscribe("adaptor:refresh")
     {:ok, [], {:continue, opts}}
   end
 
   @impl GenServer
   def handle_continue(opts, _state) do
-    {adaptors, cache_path, local_mode} =
-      case Enum.into(opts, %{}) do
-        %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
-          {read_adaptors_from_local_repo(repo_path), nil, true}
+    case Enum.into(opts, %{}) do
+      %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
+        adaptors = read_adaptors_from_local_repo(repo_path)
+        {:noreply, %{adaptors: adaptors, local_mode: true}}
 
-        %{use_cache: use_cache}
-        when use_cache === true or is_binary(use_cache) ->
-          cache_path =
-            if is_binary(use_cache) do
-              use_cache
-            else
-              Path.join([
-                System.tmp_dir!(),
-                "lightning",
-                "adaptor_registry_cache.json"
-              ])
-            end
-
-          adaptors =
-            read_from_cache(cache_path) || write_to_cache(cache_path, fetch())
-
-          {adaptors, cache_path, false}
-
-        _other ->
-          {fetch(), nil, false}
-      end
-
-    {:noreply,
-     %{adaptors: adaptors, cache_path: cache_path, local_mode: local_mode}}
-  end
-
-  # false positive, it's a file from init
-  # sobelow_skip ["Traversal.FileModule"]
-  defp write_to_cache(path, adaptors) when is_binary(path) do
-    Logger.debug("Writing Adapter Registry to #{path}")
-    cache_file = File.open!(path, [:write])
-    IO.binwrite(cache_file, Jason.encode_to_iodata!(adaptors))
-    File.close(cache_file)
-
-    adaptors
-  end
-
-  # false positive, it's a file from init
-  # sobelow_skip ["Traversal.FileModule"]
-  defp read_from_cache(path) when is_binary(path) do
-    File.read(path)
-    |> case do
-      {:ok, file} ->
-        Logger.debug("Found Adapter Registry from #{path}")
-        Jason.decode!(file, keys: :atoms!)
-
-      {:error, _} ->
-        nil
+      _other ->
+        # Non-local mode: all reads go through the DB/ETS cache.
+        # No need to fetch from NPM or read cache file on startup.
+        {:noreply, %{adaptors: [], local_mode: false}}
     end
   end
 
@@ -151,10 +106,8 @@ defmodule Lightning.AdaptorRegistry do
 
   **Options**
 
-  - `:use_cache` (defaults to false) - stores the last set of results on disk
-    and uses the cached file for every subsequent start.
-    It can either be a boolean, or a string - the latter being a file path
-    to set where the cache file is located.
+  - `:use_cache` (defaults to false) - ignored in non-local mode (reads
+    come from DB/ETS cache now). Kept for backwards compatibility.
   - `:name` (defaults to AdaptorRegistry) - the name of the process, useful
     for testing and/or running multiple versions of the registry
   """
@@ -167,38 +120,20 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def handle_info({:refresh_all, origin_node}, state)
-      when origin_node == node() do
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_info({:refresh_all, _origin_node}, %{local_mode: true} = state) do
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_info({:refresh_all, _origin_node}, state) do
-    GenServer.cast(self(), :refresh)
-
-    Task.start(fn ->
-      Lightning.AdaptorIcons.refresh()
-      Lightning.CredentialSchemas.refresh()
-    end)
-
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_call(:all, _from, %{adaptors: adaptors} = state) do
+  def handle_call(:all, _from, %{local_mode: true, adaptors: adaptors} = state) do
     {:reply, adaptors, state}
+  end
+
+  @impl GenServer
+  def handle_call(:all, _from, state) do
+    {:reply, get_adaptors_from_cache(), state}
   end
 
   @impl GenServer
   def handle_call(
         {:versions_for, module_name},
         _from,
-        %{adaptors: adaptors} = state
+        %{local_mode: true, adaptors: adaptors} = state
       ) do
     versions =
       adaptors
@@ -212,13 +147,39 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
+  def handle_call({:versions_for, module_name}, _from, state) do
+    versions =
+      get_adaptors_from_cache()
+      |> Enum.find(fn %{name: name} -> name == module_name end)
+      |> case do
+        nil -> nil
+        %{versions: versions} -> versions
+      end
+
+    {:reply, versions, state}
+  end
+
+  @impl GenServer
   def handle_call(
         {:latest_for, module_name},
         _from,
-        %{adaptors: adaptors} = state
+        %{local_mode: true, adaptors: adaptors} = state
       ) do
     latest =
       adaptors
+      |> Enum.find(fn %{name: name} -> name == module_name end)
+      |> case do
+        nil -> nil
+        %{latest: latest} -> latest
+      end
+
+    {:reply, latest, state}
+  end
+
+  @impl GenServer
+  def handle_call({:latest_for, module_name}, _from, state) do
+    latest =
+      get_adaptors_from_cache()
       |> Enum.find(fn %{name: name} -> name == module_name end)
       |> case do
         nil -> nil
@@ -234,40 +195,9 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def handle_call(:refresh_sync, _from, %{cache_path: cache_path} = state) do
-    case fetch() do
-      [] ->
-        Logger.warning(
-          "Adaptor refresh returned empty results; keeping existing data"
-        )
-
-        {:reply, {:error, :empty_results}, state}
-
-      adaptors ->
-        if cache_path, do: write_to_cache(cache_path, adaptors)
-        {:reply, {:ok, length(adaptors)}, %{state | adaptors: adaptors}}
-    end
-  end
-
-  @impl GenServer
-  def handle_cast(:refresh, %{local_mode: true} = state) do
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_cast(:refresh, %{cache_path: cache_path} = state) do
-    case fetch() do
-      [] ->
-        Logger.warning(
-          "Adaptor refresh returned empty results; keeping existing data"
-        )
-
-        {:noreply, state}
-
-      adaptors ->
-        if cache_path, do: write_to_cache(cache_path, adaptors)
-        {:noreply, %{state | adaptors: adaptors}}
-    end
+  def handle_call(:refresh_sync, _from, state) do
+    result = do_refresh()
+    {:reply, result, state}
   end
 
   @doc """
@@ -282,14 +212,14 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @doc """
-  Triggers an asynchronous refresh of the adaptor registry from NPM.
+  Fetches adaptor data from NPM and writes it to the database cache.
 
-  When in local mode (local_adaptors_repo is set), this is a no-op.
-  When caching is enabled, the cache file is also updated.
+  Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
-  @spec refresh(server :: GenServer.server()) :: :ok
+  @spec refresh(server :: GenServer.server()) ::
+          {:ok, term()} | {:error, term()}
   def refresh(server \\ __MODULE__) do
-    GenServer.cast(server, :refresh)
+    GenServer.call(server, :refresh_sync, 60_000)
   end
 
   @doc """
@@ -392,6 +322,33 @@ defmodule Lightning.AdaptorRegistry do
         versions: []
       }
     end)
+  end
+
+  defp get_adaptors_from_cache do
+    case Lightning.AdaptorData.Cache.get("registry", "all") do
+      %{data: data} ->
+        Jason.decode!(data, keys: :atoms!)
+
+      nil ->
+        []
+    end
+  end
+
+  defp do_refresh do
+    case fetch() do
+      [] ->
+        Logger.warning(
+          "Adaptor refresh returned empty results; keeping existing data"
+        )
+
+        {:error, :empty_results}
+
+      adaptors ->
+        data = Jason.encode!(adaptors)
+        Lightning.AdaptorData.put("registry", "all", data)
+        Lightning.AdaptorData.Cache.broadcast_invalidation(["registry"])
+        {:ok, length(adaptors)}
+    end
   end
 
   @doc """

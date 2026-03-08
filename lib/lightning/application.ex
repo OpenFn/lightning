@@ -64,6 +64,8 @@ defmodule Lightning.Application do
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
 
+    Lightning.AdaptorData.Cache.init()
+
     topologies =
       if System.get_env("K8S_HEADLESS_SERVICE") do
         [
@@ -135,6 +137,7 @@ defmodule Lightning.Application do
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
+        Lightning.AdaptorData.Listener,
         adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
