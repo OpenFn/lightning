@@ -88,36 +88,6 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
-    setup do
-      # Seed the adaptor registry in the DB so AdaptorRegistry.all() returns data
-      registry_data =
-        Jason.encode!([
-          %{
-            name: "@openfn/language-common",
-            repo: "https://github.com/OpenFn/adaptors",
-            latest: "1.0.0",
-            versions: [%{version: "1.0.0"}]
-          },
-          %{
-            name: "@openfn/language-http",
-            repo: "https://github.com/OpenFn/adaptors",
-            latest: "2.0.0",
-            versions: [%{version: "2.0.0"}, %{version: "1.0.0"}]
-          },
-          %{
-            name: "@openfn/language-salesforce",
-            repo: "https://github.com/OpenFn/adaptors",
-            latest: "3.0.0",
-            versions: [%{version: "3.0.0"}]
-          }
-        ])
-
-      Lightning.AdaptorData.put("registry", "all", registry_data)
-      Lightning.AdaptorData.Cache.invalidate("registry")
-
-      :ok
-    end
-
     test "handles multiple concurrent requests independently", %{
       socket: socket
     } do
