@@ -18,6 +18,7 @@ defmodule Lightning.Projects do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
@@ -192,6 +193,23 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns a paginated list of projects for the superuser admin table with
+  server-side filtering and sorting.
+  """
+  @spec list_projects_for_admin(map()) :: Scrivener.Page.t()
+  def list_projects_for_admin(params \\ %{}) do
+    params = AdminSearchParams.new(params)
+
+    Project
+    |> join(:left, [p], pu in assoc(p, :project_users), on: pu.role == :owner)
+    |> join(:left, [_p, pu], owner in assoc(pu, :user))
+    |> preload([_p, _pu, _owner], project_users: :user)
+    |> filter_admin_projects(params.filter)
+    |> order_admin_projects(params.sort, params.dir)
+    |> Repo.paginate(AdminSearchParams.pagination_opts(params))
+  end
+
+  @doc """
   Lists all projects that have history retention
   """
   @spec list_projects_having_history_retention() :: [] | [Project.t(), ...]
@@ -219,6 +237,52 @@ defmodule Lightning.Projects do
       p -> Repo.preload(p, :parent)
     end
   end
+
+  defp filter_admin_projects(query, ""), do: query
+
+  defp filter_admin_projects(query, filter) do
+    search = "%#{filter}%"
+
+    where(
+      query,
+      [p, _pu, owner],
+      ilike(p.name, ^search) or
+        ilike(p.description, ^search) or
+        ilike(
+          fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name),
+          ^search
+        )
+    )
+  end
+
+  defp order_admin_projects(query, "scheduled_deletion", "asc"),
+    do: order_by(query, [p, _pu, _owner], asc_nulls_last: p.scheduled_deletion)
+
+  defp order_admin_projects(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [p, _pu, _owner], desc_nulls_first: p.scheduled_deletion)
+
+  defp order_admin_projects(query, "owner", dir) do
+    direction = project_dir_to_atom(dir)
+
+    order_by(
+      query,
+      [_p, _pu, owner],
+      [
+        {^direction,
+         fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)}
+      ]
+    )
+  end
+
+  defp order_admin_projects(query, sort, dir) do
+    direction = project_dir_to_atom(dir)
+    sort_field = String.to_existing_atom(sort)
+
+    order_by(query, [p, _pu, _owner], [{^direction, field(p, ^sort_field)}])
+  end
+
+  defp project_dir_to_atom("asc"), do: :asc
+  defp project_dir_to_atom("desc"), do: :desc
 
   @doc """
   Gets the project associated with a run.
