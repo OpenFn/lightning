@@ -6,6 +6,7 @@ defmodule Lightning.Run do
   """
   use Lightning.Schema
 
+  import Lightning.ChangesetUtils
   import Lightning.Validators
 
   alias Lightning.Accounts.User
@@ -117,14 +118,9 @@ defmodule Lightning.Run do
   end
 
   def for(%Trigger{} = trigger, attrs) do
-    queue =
-      if trigger.webhook_reply == :after_completion,
-        do: "fast_lane",
-        else: "default"
-
     %__MODULE__{}
     |> change()
-    |> put_change(:queue, queue)
+    |> put_if_provided(:queue, attrs)
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
@@ -139,9 +135,7 @@ defmodule Lightning.Run do
   def for(%Job{} = job, attrs) do
     %__MODULE__{priority: attrs[:priority]}
     |> change()
-    |> then(fn cs ->
-      if attrs[:queue], do: put_change(cs, :queue, attrs[:queue]), else: cs
-    end)
+    |> put_if_provided(:queue, attrs)
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])

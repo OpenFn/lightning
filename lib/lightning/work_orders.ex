@@ -224,11 +224,17 @@ defmodule Lightning.WorkOrders do
           snapshot = changeset |> get_change(:snapshot)
           run_options = get_run_options(snapshot, attrs[:dataclip])
 
+          queue =
+            if trigger.webhook_reply == :after_completion,
+              do: "fast_lane",
+              else: "default"
+
           changeset
           |> put_assoc(:runs, [
             Run.for(trigger, %{
               dataclip: attrs[:dataclip],
               snapshot: snapshot,
+              queue: queue,
               options: run_options
             })
           ])
