@@ -742,7 +742,7 @@ describe('ConfigureAdaptorModal', () => {
       expect(radioButtons.length).toBe(3);
     });
 
-    it("shows informative message for adaptors that don't need credentials", () => {
+    it('shows universal and keychain credentials for common adaptor', () => {
       renderWithProviders(
         <ConfigureAdaptorModal
           {...defaultProps}
@@ -750,27 +750,24 @@ describe('ConfigureAdaptorModal', () => {
         />
       );
 
-      // Should show message that adaptor doesn't need credentials
+      // Should NOT show message that adaptor doesn't need credentials
       expect(
-        screen.getByText('This adaptor does not require credentials.')
-      ).toBeInTheDocument();
+        screen.queryByText('This adaptor does not require credentials.')
+      ).not.toBeInTheDocument();
 
-      // Should NOT show credential list or New Credential button
-      expect(screen.queryByText('HTTP API Key')).not.toBeInTheDocument();
-      expect(screen.queryByText('Keychain Salesforce')).not.toBeInTheDocument();
+      // Should show universal credentials (http, raw, oauth) and keychain
+      expect(screen.getByText('HTTP API Key')).toBeInTheDocument();
+      expect(screen.getByText('Keychain Salesforce')).toBeInTheDocument();
+
+      // Should NOT show schema-specific credentials (no schema matches "common")
       expect(
         screen.queryByText('Salesforce Production')
       ).not.toBeInTheDocument();
 
-      // New Credential button should be hidden
+      // New Credential button should be available
       expect(
-        screen.queryByRole('button', { name: /new credential/i })
-      ).not.toBeInTheDocument();
-
-      // Should NOT show "Back to matching credentials" link (no matching credentials to go back to)
-      expect(
-        screen.queryByText(/back to matching credentials/i)
-      ).not.toBeInTheDocument();
+        screen.getByRole('button', { name: /new credential/i })
+      ).toBeInTheDocument();
     });
 
     it('allows manual toggle between matching and other credentials', async () => {
