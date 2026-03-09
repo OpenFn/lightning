@@ -4,6 +4,8 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
   alias Lightning.Extensions.FifoRunQueue
   alias Lightning.WorkOrders
 
+  @default_queues ["manual", "*"]
+
   describe "claim" do
     test "claims a run from any project sorting by insertion" do
       project1 = insert(:project)
@@ -41,7 +43,7 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      actual = FifoRunQueue.claim(1)
+      actual = FifoRunQueue.claim(1, nil, @default_queues)
 
       assert match?(
                {:ok, [%{id: ^run1_id, state: :claimed}]},
@@ -51,7 +53,7 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
              Expected #{run1_id} to be claimed first
              """
 
-      actual = FifoRunQueue.claim(1)
+      actual = FifoRunQueue.claim(1, nil, @default_queues)
 
       assert match?(
                {:ok, [%{id: ^run2_id, state: :claimed}]},
@@ -67,9 +69,9 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
                 %{id: ^run3_id, state: :claimed},
                 %{id: ^run4_id, state: :claimed}
               ]} =
-               FifoRunQueue.claim(2)
+               FifoRunQueue.claim(2, nil, @default_queues)
 
-      assert {:ok, []} = FifoRunQueue.claim(1)
+      assert {:ok, []} = FifoRunQueue.claim(1, nil, @default_queues)
     end
 
     test "allows the worker name to be persisted on the claimed run" do
@@ -91,7 +93,7 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      FifoRunQueue.claim(2, "my.worker.name")
+      FifoRunQueue.claim(2, "my.worker.name", @default_queues)
 
       assert %{worker_name: "my.worker.name"} = Lightning.Repo.reload!(run1)
       assert %{worker_name: "my.worker.name"} = Lightning.Repo.reload!(run2)
@@ -116,7 +118,7 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      FifoRunQueue.claim(2)
+      FifoRunQueue.claim(2, nil, @default_queues)
 
       assert %{worker_name: nil} = Lightning.Repo.reload!(run1)
       assert %{worker_name: nil} = Lightning.Repo.reload!(run2)
@@ -161,18 +163,27 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           &fixture_for_workflow/2
         )
 
-      {:ok, [%{id: ^run1w1a_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1w1a_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
       # workflow 1a has max concurrency of 1 runs
-      {:ok, [%{id: ^run1w1b_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run2w1b_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1w1b_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, [%{id: ^run2w1b_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
       # workflow 2a has max concurrency of 1 runs
-      {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1w2_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
-      {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2w2_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, [%{id: ^run3w2_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, []} = FifoRunQueue.claim(1, nil, @default_queues)
     end
 
     test "is limited by project concurrency" do
@@ -218,18 +229,27 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           &fixture_for_workflow/2
         )
 
-      {:ok, [%{id: ^run1p1_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1p1_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
       # project 1 has max concurrency of 1 runs
-      {:ok, [%{id: ^run1p2_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run2p2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1p2_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, [%{id: ^run2p2_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
       # project 2 has max concurrency of 2 runs
-      {:ok, [%{id: ^run1p3_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run2p3_id}]} = FifoRunQueue.claim(1)
-      {:ok, [%{id: ^run3p3_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1p3_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
 
-      {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2p3_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, [%{id: ^run3p3_id}]} =
+        FifoRunQueue.claim(1, nil, @default_queues)
+
+      {:ok, []} = FifoRunQueue.claim(1, nil, @default_queues)
     end
 
     test "can claim multiple runs up to project concurrency limit" do
@@ -276,12 +296,96 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
         )
 
       {:ok, [%{id: ^run1p1_id}, %{id: ^run1p2_id}, %{id: ^run2p2_id}]} =
-        FifoRunQueue.claim(3)
+        FifoRunQueue.claim(3, nil, @default_queues)
 
       {:ok, [%{id: ^run1p3_id}, %{id: ^run2p3_id}, %{id: ^run3p3_id}]} =
-        FifoRunQueue.claim(3)
+        FifoRunQueue.claim(3, nil, @default_queues)
 
-      {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, []} = FifoRunQueue.claim(1, nil, @default_queues)
+    end
+
+    test "filters by queue in filter mode" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project)
+
+      [
+        %{id: _default_id},
+        %{id: fast_lane_id},
+        %{id: _manual_id}
+      ] =
+        Enum.with_index(
+          [{workflow, "default"}, {workflow, "fast_lane"}, {workflow, "manual"}],
+          fn {wf, queue}, index ->
+            insert_fixtures_with_queue(wf, index, 1, queue)
+          end
+        )
+
+      {:ok, claimed} =
+        FifoRunQueue.claim(10, nil, ["fast_lane"])
+
+      assert [%{id: ^fast_lane_id}] = claimed
+    end
+
+    test "preference mode returns all runs and prioritizes named queues" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project)
+
+      [
+        %{id: default_id},
+        %{id: fast_lane_id},
+        %{id: manual_id}
+      ] =
+        Enum.with_index(
+          [{workflow, "default"}, {workflow, "fast_lane"}, {workflow, "manual"}],
+          fn {wf, queue}, index ->
+            insert_fixtures_with_queue(wf, index, 1, queue)
+          end
+        )
+
+      # Claiming all: all 3 runs should be returned
+      {:ok, claimed} =
+        FifoRunQueue.claim(10, nil, ["manual", "*"])
+
+      claimed_ids = Enum.map(claimed, & &1.id) |> MapSet.new()
+
+      assert MapSet.equal?(
+               claimed_ids,
+               MapSet.new([default_id, fast_lane_id, manual_id])
+             )
+
+      # Reset: unclaim all runs
+      Lightning.Repo.update_all(
+        Lightning.Run,
+        set: [state: :available, claimed_at: nil]
+      )
+
+      # Claiming 1 with ["manual", "*"] should prioritize the manual run
+      {:ok, [claimed_one]} =
+        FifoRunQueue.claim(1, nil, ["manual", "*"])
+
+      assert claimed_one.id == manual_id
+    end
+
+    defp insert_fixtures_with_queue(workflow, index, priority, queue) do
+      %{triggers: [trigger]} = workflow
+
+      dataclip = insert(:dataclip)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          inserted_at: Timex.shift(Timex.now(), milliseconds: index)
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        priority: priority,
+        queue: queue
+      )
     end
 
     # defp fixture_for_workflow({workflow, priority}, index) do
