@@ -22,6 +22,7 @@ and this project adheres to
 ### Fixed
 
 - Allow credentials (raw JSON, HTTP, OAuth) on common adaptor jobs
+  [#4513](https://github.com/OpenFn/lightning/pull/4513)
 - Migrate form error display from `phx-feedback-for` to `used_input?/1` so
   validation errors only appear on fields the user has interacted with
   [#4472](https://github.com/OpenFn/lightning/pull/4472)
