@@ -56,8 +56,13 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
          |> assign(project: project)
          |> push_navigate(to: return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+      {:error, %Ecto.Changeset{}} ->
+        changeset =
+          socket.assigns.project
+          |> Project.form_changeset(project_params)
+          |> Helpers.copy_error(:name, :raw_name)
+          |> Map.put(:action, :validate)
+
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end

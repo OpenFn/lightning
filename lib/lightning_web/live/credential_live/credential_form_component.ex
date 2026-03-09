@@ -64,25 +64,23 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     {:ok, assign(socket, credential_bodies: bodies)}
   end
 
+  # On re-renders, drop props owned by this component so parent re-renders
+  # (e.g., from :update_credential_schema messages) don't clobber internal
+  # state like selected_oauth_client or credential.
+  @component_owned_props ~w(credential oauth_client)a
+
+  def update(assigns, %{assigns: %{credential: _}} = socket) do
+    parent_props = Map.drop(assigns, @component_owned_props)
+
+    {:ok, assign(socket, parent_props)}
+  end
+
   def update(assigns, socket) do
-    assigns =
-      if socket.assigns[:credential] && socket.assigns.credential.schema &&
-           assigns[:credential] && !assigns.credential.schema do
-        updated_credential = %{
-          assigns.credential
-          | schema: socket.assigns.credential.schema
-        }
-
-        Map.put(assigns, :credential, updated_credential)
-      else
-        assigns
-      end
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assigns_for_action()
-     |> assign_new(:component_assigns, fn -> assigns end)}
+     |> assign(:selected_oauth_client, assigns[:oauth_client])
+     |> assigns_for_action()}
   end
 
   @impl true
@@ -413,7 +411,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        came_from_advanced_picker: false,
        credential: credential,
        selected_credential_type: nil,
-       selected_credential_type_type: nil
+       selected_credential_type_type: nil,
+       oauth_client: nil,
+       selected_oauth_client: nil
      )}
   end
 
@@ -1288,10 +1288,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     socket
     |> assigns_for_credential()
-    |> assign(
-      page: page,
-      selected_oauth_client: socket.assigns[:oauth_client]
-    )
+    |> assign(page: page)
   end
 
   defp determine_page(socket) do

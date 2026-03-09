@@ -60,8 +60,12 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
     [user: user, project: project]
   end
 
+  setup do
+    Process.put(:oban_testing, :manual)
+    :ok
+  end
+
   describe "update_session_with_job_context/2" do
-    @tag :capture_log
     test "sets session.job_id from message and routes to job chat processing", %{
       user: user,
       project: project
@@ -105,7 +109,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_message.job_id == job.id
     end
 
-    @tag :capture_log
     test "copies unsaved_job from message meta into session meta and routes to job chat processing",
          %{user: user, project: project} do
       unsaved_job_id = Ecto.UUID.generate()
@@ -159,7 +162,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_message.meta["from_unsaved_job"] == unsaved_job_id
     end
 
-    @tag :capture_log
     test "leaves session unchanged and routes to workflow chat processing when message has no job context",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)
@@ -196,6 +198,64 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_message != nil
       assert is_nil(assistant_message.job_id)
       refute Map.has_key?(assistant_message.meta || %{}, "from_unsaved_job")
+    end
+
+    test "processes message successfully when follow_run_id is in message.meta",
+         %{
+           user: user,
+           project: project
+         } do
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      # Create a run for the job
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_job: job
+        )
+
+      # Create session without follow_run_id (user hasn't selected a run yet)
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          project: project,
+          job_id: job.id,
+          meta: %{}
+        )
+
+      # User later selects a run mid-session, sending follow_run_id in message params
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "help me debug these logs",
+            user: user,
+            job: job,
+            meta: %{"follow_run_id" => run.id}
+          },
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+      assert user_message.meta["follow_run_id"] == run.id
+
+      # Process the message - update_session_with_job_context should use
+      # follow_run_id from message.meta for enrichment
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_message = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      # Verify assistant message was created successfully (proving enrichment worked)
+      assert assistant_message != nil
+      assert assistant_message.job_id == job.id
     end
   end
 end

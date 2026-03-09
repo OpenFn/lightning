@@ -19,6 +19,38 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Display error messages when GitHub installations fail to load, providing
+  specific guidance for OAuth token errors and other failure scenarios
+  [#4467](https://github.com/OpenFn/lightning/issues/4467)
+- Migrate form error display from `phx-feedback-for` to `used_input?/1` so
+  validation errors only appear on fields the user has interacted with
+  [#4472](https://github.com/OpenFn/lightning/pull/4472)
+- Isolate AI assistant tests with per-module manual Oban mode to prevent side
+  effects leaking into concurrent tests
+  [#4493](https://github.com/OpenFn/lightning/pull/4493)
+
+## [2.15.16] - 2026-03-09
+
+## [2.15.16-pre.3] - 2026-03-09
+
+### Fixed
+
+- OAuth credentials invisible in Configure connection modal after creation
+  [#4499](https://github.com/OpenFn/lightning/issues/4499)
+
+## [2.15.16-pre.2] - 2026-03-06
+
+### Fixed
+
+- OAuth credential creation failing from the collaborative editor
+  [#4492](https://github.com/OpenFn/lightning/issues/4492)
+
+## [2.15.16-pre.1] - 2026-03-05
+
+### Changed
+
 - Support a batch of logs submitted via `run:batch_logs` in run channel
   [#4123](https://github.com/OpenFn/lightning/issues/4123)
 - Validate users before confirming new accounts
@@ -26,9 +58,14 @@ and this project adheres to
 
 ### Fixed
 
-- Display error messages when GitHub installations fail to load, providing
-  specific guidance for OAuth token errors and other failure scenarios
-  [#4467](https://github.com/OpenFn/lightning/issues/4467)
+- Show loading state in docs panel when switching adaptors
+  [#4461](https://github.com/OpenFn/lightning/issues/4461)
+- Lower side panel z-index to prevent covering IDE in create workflow for
+  templates [#4347](https://github.com/OpenFn/lightning/issues/4347)
+- Fix workflows index page loading slowly
+  [#3675](https://github.com/OpenFn/lightning/issues/3675)
+- AI assistant now correctly displays logs when run is selected mid-session
+  [#4380](https://github.com/OpenFn/lightning/issues/4380)
 - Fix duplicate "Log in" heading on login page
   [#4459](https://github.com/OpenFn/lightning/issues/4459)
 - Editing an OAuth credential from the workflow canvas incorrectly showed an

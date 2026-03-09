@@ -131,7 +131,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       end
 
     workflows = Workflows.get_workflows_for(project, opts)
-    workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
+    workflow_stats = DashboardStats.get_workflows_stats(workflows)
 
     sorted_stats =
       if sort_key in ["name", "enabled"] do
