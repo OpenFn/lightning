@@ -21,6 +21,29 @@ and this project adheres to
 
 ### Fixed
 
+- Migrate form error display from `phx-feedback-for` to `used_input?/1` so
+  validation errors only appear on fields the user has interacted with
+  [#4472](https://github.com/OpenFn/lightning/pull/4472)
+- Isolate AI assistant tests with per-module manual Oban mode to prevent side
+  effects leaking into concurrent tests
+  [#4493](https://github.com/OpenFn/lightning/pull/4493)
+
+## [2.15.16] - 2026-03-09
+
+## [2.15.16-pre.3] - 2026-03-09
+
+### Fixed
+
+- OAuth credentials invisible in Configure connection modal after creation
+  [#4499](https://github.com/OpenFn/lightning/issues/4499)
+
+## [2.15.16-pre.2] - 2026-03-06
+
+### Fixed
+
+- OAuth credential creation failing from the collaborative editor
+  [#4492](https://github.com/OpenFn/lightning/issues/4492)
+
 ## [2.15.16-pre.1] - 2026-03-05
 
 ### Changed
@@ -45,9 +68,6 @@ and this project adheres to
 - Editing an OAuth credential from the workflow canvas incorrectly showed an
   "OAuth client not found" warning
   [#4468](https://github.com/OpenFn/lightning/issues/4468)
-- Migrate form error display from `phx-feedback-for` to `used_input?/1` so
-  validation errors only appear on fields the user has interacted with
-  [#4472](https://github.com/OpenFn/lightning/pull/4472)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
 

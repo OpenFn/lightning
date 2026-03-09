@@ -37,6 +37,8 @@ defmodule LightningWeb.ConnCase do
       import Lightning.ModelHelpers
       import Plug.HTML
 
+      use Oban.Testing, repo: Lightning.Repo
+
       setup :stub_usage_limiter_ok
     end
   end
