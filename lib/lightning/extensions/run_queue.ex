@@ -15,7 +15,7 @@ defmodule Lightning.Extensions.RunQueue do
 
   @callback claim(
               demand :: non_neg_integer(),
-              worker_name :: String.t(),
+              worker_name :: String.t() | nil,
               queues :: [String.t()]
             ) :: {:ok, [Lightning.Run.t()]}
 

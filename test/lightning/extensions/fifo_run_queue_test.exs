@@ -388,10 +388,6 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
       )
     end
 
-    # defp fixture_for_workflow({workflow, priority}, index) do
-    #   insert_fixtures(workflow, index, priority)
-    # end
-
     defp fixture_for_workflow(workflow, index) do
       insert_fixtures(workflow, index, 1)
     end
