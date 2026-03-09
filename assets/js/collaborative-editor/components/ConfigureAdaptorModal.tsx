@@ -295,6 +295,9 @@ export function ConfigureAdaptorModal({
       };
     }
 
+    const normalizeString = (str: string) =>
+      str.toLowerCase().replace(/[\s\-_]/g, '');
+
     // Schema-matched project credentials (exact match or OAuth smart matching)
     const schemaMatched: CredentialWithType[] = projectCredentials
       .filter(c => {
@@ -302,23 +305,13 @@ export function ConfigureAdaptorModal({
         if (c.schema === adaptorName) return true;
 
         // For HTTP adaptor, all OAuth credentials are considered matching
-        // (OAuth can be used for authenticated API calls via HTTP)
         if (adaptorName === 'http' && c.schema === 'oauth') return true;
 
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
         if (c.schema === 'oauth' && c.oauth_client_name) {
-          // Normalize both strings: lowercase, remove spaces/hyphens/underscores
-          const normalizeString = (str: string) =>
-            str.toLowerCase().replace(/[\s\-_]/g, '');
-
           const normalizedClientName = normalizeString(c.oauth_client_name);
           const normalizedAdaptorName = normalizeString(adaptorName);
 
-          // Match if normalized OAuth client name contains normalized adaptor name
-          // This handles variations like:
-          // - "Google Drive" matches "googledrive"
-          // - "google-sheets" matches "googlesheets"
-          // - "Sales Force" matches "salesforce"
           return normalizedClientName.includes(normalizedAdaptorName);
         }
 
@@ -326,12 +319,14 @@ export function ConfigureAdaptorModal({
       })
       .map(c => ({ ...c, type: 'project' as const }));
 
-    // Universal project credentials (http and raw work with all adaptors)
+    // Universal project credentials (http, raw, and unmatched oauth)
+    // OAuth is a universal auth mechanism — unmatched OAuth credentials
+    // should appear here rather than becoming invisible.
     // Only show if not already in schemaMatched (avoid duplicates)
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
-        const isUniversal = c.schema === 'http' || c.schema === 'raw';
-        // Only exclude if this specific credential is already in schemaMatched
+        const isUniversal =
+          c.schema === 'http' || c.schema === 'raw' || c.schema === 'oauth';
         const alreadyInSchemaMatched = schemaMatched.some(
           matched => matched.id === c.id
         );
