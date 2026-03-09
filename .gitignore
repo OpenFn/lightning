@@ -91,5 +91,6 @@ assets/test-results
 .tsimp
 
 .claude/settings.local.json
+.context/
 test-results
 assets/coverage
