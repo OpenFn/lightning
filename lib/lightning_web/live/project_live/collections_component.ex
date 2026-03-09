@@ -205,6 +205,15 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       >
         <:actions :let={collection}>
           <div class="text-right">
+            <a
+              id={"download-collection-#{collection.id}-button"}
+              href={
+                ~p"/download/collection?#{%{project_id: @project.id, name: collection.name}}"
+              }
+              class="table-action"
+            >
+              Download
+            </a>
             <.button
               id={"edit-collection-#{collection.id}-button"}
               phx-click="toggle_action"
