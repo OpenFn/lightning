@@ -17,6 +17,8 @@ defmodule Lightning.Run do
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
 
+  @valid_queues ~w(default fast_lane manual)
+
   @derive {Jason.Encoder,
            only: [
              :id,
@@ -28,6 +30,7 @@ defmodule Lightning.Run do
              :started_at,
              :finished_at,
              :priority,
+             :queue,
              :error_type,
              :created_by,
              :starting_trigger,
@@ -106,14 +109,22 @@ defmodule Lightning.Run do
       values: [immediate: 0, normal: 1],
       default: :normal
 
+    field :queue, :string, default: "default"
+
     field :worker_name, :string
 
     timestamps(type: :utc_datetime_usec)
   end
 
   def for(%Trigger{} = trigger, attrs) do
+    queue =
+      if trigger.webhook_reply == :after_completion,
+        do: "fast_lane",
+        else: "default"
+
     %__MODULE__{}
     |> change()
+    |> put_change(:queue, queue)
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
@@ -122,11 +133,15 @@ defmodule Lightning.Run do
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
+    |> validate_inclusion(:queue, @valid_queues)
   end
 
   def for(%Job{} = job, attrs) do
     %__MODULE__{priority: attrs[:priority]}
     |> change()
+    |> then(fn cs ->
+      if attrs[:queue], do: put_change(cs, :queue, attrs[:queue]), else: cs
+    end)
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
@@ -137,6 +152,7 @@ defmodule Lightning.Run do
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_job)
+    |> validate_inclusion(:queue, @valid_queues)
   end
 
   def new(attrs \\ %{}) do
@@ -148,7 +164,7 @@ defmodule Lightning.Run do
   @doc false
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:work_order_id, :snapshot_id, :priority])
+    |> cast(attrs, [:work_order_id, :snapshot_id, :priority, :queue])
     |> cast_assoc(:steps, required: false)
     |> validate_required([:work_order_id, :snapshot_id])
     |> assoc_constraint(:work_order)
@@ -211,5 +227,6 @@ defmodule Lightning.Run do
     |> assoc_constraint(:work_order)
     |> assoc_constraint(:snapshot)
     |> check_constraint(:job, name: "validate_job_or_trigger")
+    |> validate_inclusion(:queue, @valid_queues)
   end
 end
