@@ -135,7 +135,8 @@ defmodule Lightning.WorkOrders do
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate
+        priority: :immediate,
+        queue: "manual"
       })
     end)
     |> Runs.enqueue()
@@ -223,11 +224,17 @@ defmodule Lightning.WorkOrders do
           snapshot = changeset |> get_change(:snapshot)
           run_options = get_run_options(snapshot, attrs[:dataclip])
 
+          queue =
+            if trigger.webhook_reply == :after_completion,
+              do: "fast_lane",
+              else: "default"
+
           changeset
           |> put_assoc(:runs, [
             Run.for(trigger, %{
               dataclip: attrs[:dataclip],
               snapshot: snapshot,
+              queue: queue,
               options: run_options
             })
           ])
@@ -254,6 +261,7 @@ defmodule Lightning.WorkOrders do
             dataclip: attrs[:dataclip],
             created_by: attrs[:created_by],
             priority: attrs[:priority],
+            queue: attrs[:queue],
             snapshot: snapshot,
             options: run_options
           })
@@ -692,7 +700,7 @@ defmodule Lightning.WorkOrders do
     run_options =
       Runs.get_run_options(workorder.workflow.id, workorder.workflow.project_id)
 
-    Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+    Run.new(%{priority: :immediate, queue: "manual", dataclip_id: dataclip_id})
     |> put_assoc(:snapshot, snapshot)
     |> put_assoc(:work_order, workorder)
     |> put_assoc(:starting_job, starting_job)
