@@ -14,6 +14,11 @@ defmodule Lightning.AiAssistantTest do
     [user: user, project: project, workflow: workflow]
   end
 
+  setup do
+    Process.put(:oban_testing, :manual)
+    :ok
+  end
+
   @moduletag :capture_log
 
   describe "endpoint_available?" do
@@ -468,394 +473,356 @@ defmodule Lightning.AiAssistantTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = _workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
 
-        assert session.job_id == job_1.id
-        assert session.user_id == user.id
-        assert session.expression == job_1.body
+      assert session.job_id == job_1.id
+      assert session.user_id == user.id
+      assert session.expression == job_1.body
 
-        assert session.adaptor ==
-                 Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
+      assert session.adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
 
-        assert length(session.messages) == 1
-        message = hd(session.messages)
-        assert message.role == :user
-        assert message.content == "foo"
-        assert message.user.id == user.id
-      end)
+      assert length(session.messages) == 1
+      message = hd(session.messages)
+      assert message.role == :user
+      assert message.content == "foo"
+      assert message.user.id == user.id
     end
 
     test "accepts optional parameters", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        meta = %{"key" => "value"}
-        code = "some code"
+      meta = %{"key" => "value"}
+      code = "some code"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "foo",
-                   meta: meta,
-                   code: code
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "foo",
+                 meta: meta,
+                 code: code
+               )
 
-        assert session.meta == meta
-        [message] = session.messages
-        assert message.code == code
-      end)
+      assert session.meta == meta
+      [message] = session.messages
+      assert message.code == code
     end
 
     test "truncates long session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        long_content =
-          "This is a very long content that should be truncated because it exceeds forty characters by quite a bit"
+      long_content =
+        "This is a very long content that should be truncated because it exceeds forty characters by quite a bit"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, long_content)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, long_content)
 
-        assert session.title == "This is a very long content that should"
-      end)
+      assert session.title == "This is a very long content that should"
     end
 
     test "handles single-word session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        single_word =
-          "ThisIsOneVeryLongWordThatShouldDefinitelyBeTruncatedAtSomePoint"
+      single_word =
+        "ThisIsOneVeryLongWordThatShouldDefinitelyBeTruncatedAtSomePoint"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, single_word)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, single_word)
 
-        assert session.title == "ThisIsOneVeryLongWordThatShouldDefinitel"
-      end)
+      assert session.title == "ThisIsOneVeryLongWordThatShouldDefinitel"
     end
 
     test "removes trailing punctuation from session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content_with_punctuation = "How does this work?"
+      content_with_punctuation = "How does this work?"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(
-                   job_1,
-                   user,
-                   content_with_punctuation
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_session(
+                 job_1,
+                 user,
+                 content_with_punctuation
+               )
 
-        assert session.title == "How does this work"
-      end)
+      assert session.title == "How does this work"
     end
 
     test "preserves short content as session title", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        short_content = "Quick question"
+      short_content = "Quick question"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, short_content)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, short_content)
 
-        assert session.title == "Quick question"
-      end)
+      assert session.title == "Quick question"
     end
 
     test "generates a UUID for new session", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
 
-        assert is_binary(session.id)
-        assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
-      end)
+      assert is_binary(session.id)
+      assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
     end
 
     test "creates session with initial user message", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "test message")
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "test message")
 
-        assert session.job_id == job_1.id
-        assert session.user_id == user.id
+      assert session.job_id == job_1.id
+      assert session.user_id == user.id
 
-        [initial_message] = session.messages
-        assert initial_message.role == :user
-        assert initial_message.content == "test message"
-        assert initial_message.user_id == user.id
+      [initial_message] = session.messages
+      assert initial_message.role == :user
+      assert initial_message.content == "test message"
+      assert initial_message.user_id == user.id
 
-        assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
-      end)
+      assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
     end
 
     test "enqueues message for processing when creating session", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "test message")
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "test message")
 
-        [message] = session.messages
+      [message] = session.messages
 
-        assert message.status == :pending
+      assert message.status == :pending
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
 
     test "enqueues message for processing", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
 
-        [message] = session.messages
+      [message] = session.messages
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
   end
 
   describe "save_message/3" do
     test "calls limiter to increment ai queries when role is assistant" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
+      user = insert(:user)
 
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
 
-        session = insert(:chat_session, job: job, user: user)
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          1,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        1,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        content1 = """
-        I am an assistant and I am here to help you with your questions.
-        """
+      content1 = """
+      I am an assistant and I am here to help you with your questions.
+      """
 
-        AiAssistant.save_message(session, %{
-          role: :assistant,
-          content: content1,
-          user: user
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        role: :assistant,
+        content: content1,
+        user: user
+      })
     end
 
     test "does not call limiter to increment ai queries when role is user" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
+      user = insert(:user)
 
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          0,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        0,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        AiAssistant.save_message(session, %{
-          role: :user,
-          content: "What if I want to deduplicate the headers?",
-          user: user
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        role: :user,
+        content: "What if I want to deduplicate the headers?",
+        user: user
+      })
     end
 
     test "calls limiter when role is string 'assistant'" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      user = insert(:user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          1,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        1,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        AiAssistant.save_message(session, %{
-          "role" => "assistant",
-          "content" => "AI response"
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        "role" => "assistant",
+        "content" => "AI response"
+      })
     end
 
     test "updates session meta when provided" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
 
-        session =
-          insert(:chat_session,
-            job: job,
-            user: user,
-            meta: %{"existing" => "data"}
-          )
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"existing" => "data"}
+        )
 
-        new_meta = %{"new" => "metadata", "updated" => true}
+      new_meta = %{"new" => "metadata", "updated" => true}
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "test",
-              user: user
-            },
-            meta: new_meta,
-            usage: %{}
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "test",
+            user: user
+          },
+          meta: new_meta,
+          usage: %{}
+        )
 
-        # Meta should be merged with existing meta, preserving "existing" key
-        assert updated_session.meta == %{
-                 "existing" => "data",
-                 "new" => "metadata",
-                 "updated" => true
-               }
-      end)
+      # Meta should be merged with existing meta, preserving "existing" key
+      assert updated_session.meta == %{
+               "existing" => "data",
+               "new" => "metadata",
+               "updated" => true
+             }
     end
 
     test "preserves existing meta when meta is nil" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
-        existing_meta = %{"existing" => "data"}
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      existing_meta = %{"existing" => "data"}
 
-        session =
-          insert(:chat_session, job: job, user: user, meta: existing_meta)
+      session =
+        insert(:chat_session, job: job, user: user, meta: existing_meta)
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "test",
-              user: user
-            },
-            meta: nil,
-            usage: %{}
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "test",
+            user: user
+          },
+          meta: nil,
+          usage: %{}
+        )
 
-        assert updated_session.meta == existing_meta
-      end)
+      assert updated_session.meta == existing_meta
     end
 
     test "returns error when message validation fails" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        {:error, changeset} =
-          AiAssistant.save_message(session, %{
-            role: :user,
-            user: user
-          })
+      {:error, changeset} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          user: user
+        })
 
-        assert %Ecto.Changeset{} = changeset
-      end)
+      assert %Ecto.Changeset{} = changeset
     end
 
     test "saves workflow code to message when provided" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        project = insert(:project)
-        workflow = insert(:workflow, project: project)
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
 
-        session =
-          insert(:chat_session,
-            project: project,
-            workflow: workflow,
-            user: user,
-            session_type: "workflow_template"
-          )
+      session =
+        insert(:chat_session,
+          project: project,
+          workflow: workflow,
+          user: user,
+          session_type: "workflow_template"
+        )
 
-        workflow_yaml = """
-        workflow:
-          name: Test Workflow
-          jobs:
-            - id: job1
-              name: Fetch Data
-              adaptor: "@openfn/language-http@latest"
-              body: "fn(state => state)"
-        """
+      workflow_yaml = """
+      workflow:
+        name: Test Workflow
+        jobs:
+          - id: job1
+            name: Fetch Data
+            adaptor: "@openfn/language-http@latest"
+            body: "fn(state => state)"
+      """
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "Please improve this workflow",
-              user: user
-            },
-            code: workflow_yaml
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "Please improve this workflow",
+            user: user
+          },
+          code: workflow_yaml
+        )
 
-        saved_message = List.last(updated_session.messages)
-        assert saved_message.code == workflow_yaml
-        assert saved_message.role == :user
-      end)
+      saved_message = List.last(updated_session.messages)
+      assert saved_message.code == workflow_yaml
+      assert saved_message.role == :user
     end
 
     test "enqueues user message for processing when pending", %{user: user} do
       job = insert(:job, workflow: build(:workflow))
       session = insert(:chat_session, job: job, user: user)
 
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        {:ok, updated_session} =
-          AiAssistant.save_message(session, %{
-            role: :user,
-            content: "test",
-            user: user
-          })
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "test",
+          user: user
+        })
 
-        [new_message] =
-          Enum.filter(updated_session.messages, &(&1.content == "test"))
+      [new_message] =
+        Enum.filter(updated_session.messages, &(&1.content == "test"))
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => new_message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => new_message.id}
+      )
     end
 
     test "does not enqueue assistant messages", %{user: user} do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        {:ok, _} =
-          AiAssistant.save_message(session, %{
-            role: :assistant,
-            content: "AI response"
-          })
-      end)
+      {:ok, _} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "AI response"
+        })
     end
   end
 
@@ -1540,69 +1507,63 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content = "Create a workflow for data sync"
+      content = "Create a workflow for data sync"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   content
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 content
+               )
 
-        assert session.project_id == project.id
-        assert session.user_id == user.id
-        assert session.workflow_id == workflow.id
-        assert session.session_type == "workflow_template"
-        assert length(session.messages) == 1
-        assert hd(session.messages).content == content
-      end)
+      assert session.project_id == project.id
+      assert session.user_id == user.id
+      assert session.workflow_id == workflow.id
+      assert session.session_type == "workflow_template"
+      assert length(session.messages) == 1
+      assert hd(session.messages).content == content
     end
 
     test "creates session without workflow", %{
       user: user,
       project: project
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "Create new workflow"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "Create new workflow"
+               )
 
-        assert session.project_id == project.id
-        assert session.workflow_id == nil
-      end)
+      assert session.project_id == project.id
+      assert session.workflow_id == nil
     end
 
     test "accepts optional parameters", %{
       user: user,
       project: project
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        meta = %{"key" => "value"}
-        code = "workflow code"
+      meta = %{"key" => "value"}
+      code = "workflow code"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "test",
-                   meta: meta,
-                   code: code
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "test",
+                 meta: meta,
+                 code: code
+               )
 
-        assert session.meta == meta
-        [message] = session.messages
-        assert message.code == code
-      end)
+      assert session.meta == meta
+      [message] = session.messages
+      assert message.code == code
     end
 
     test "generates a UUID for new workflow session", %{
@@ -1610,19 +1571,17 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test"
+               )
 
-        assert is_binary(session.id)
-        assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
-      end)
+      assert is_binary(session.id)
+      assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
     end
 
     test "initializes meta as empty map when not provided", %{
@@ -1630,18 +1589,16 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test"
+               )
 
-        assert session.meta == %{}
-      end)
+      assert session.meta == %{}
     end
 
     test "creates title from content", %{
@@ -1649,20 +1606,18 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content = "Create a data processing workflow for customer data"
+      content = "Create a data processing workflow for customer data"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   content
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 content
+               )
 
-        assert session.title == "Create a data processing workflow for"
-      end)
+      assert session.title == "Create a data processing workflow for"
     end
 
     test "creates workflow session with initial user message", %{
@@ -1670,29 +1625,27 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test message"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test message"
+               )
 
-        assert session.project_id == project.id
-        assert session.workflow_id == workflow.id
-        assert session.user_id == user.id
-        assert session.session_type == "workflow_template"
+      assert session.project_id == project.id
+      assert session.workflow_id == workflow.id
+      assert session.user_id == user.id
+      assert session.session_type == "workflow_template"
 
-        [initial_message] = session.messages
-        assert initial_message.role == :user
-        assert initial_message.content == "test message"
-        assert initial_message.user_id == user.id
-        assert initial_message.status == :pending
+      [initial_message] = session.messages
+      assert initial_message.role == :user
+      assert initial_message.content == "test message"
+      assert initial_message.user_id == user.id
+      assert initial_message.status == :pending
 
-        assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
-      end)
+      assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
     end
 
     test "enqueues message for processing when creating workflow session", %{
@@ -1700,23 +1653,21 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test message"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test message"
+               )
 
-        [initial_message] = session.messages
+      [initial_message] = session.messages
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => initial_message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => initial_message.id}
+      )
     end
 
     test "enqueues message for processing", %{
@@ -1724,24 +1675,22 @@ defmodule Lightning.AiAssistantTest do
       project: project
     } do
       # Use Oban's manual testing mode to ensure jobs stay enqueued
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "test"
+               )
 
-        [message] = session.messages
+      [message] = session.messages
 
-        # Verify the job was enqueued
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
+      # Verify the job was enqueued
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
   end
 

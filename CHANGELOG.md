@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Isolate AI assistant tests with per-module manual Oban mode to prevent side
+  effects leaking into concurrent tests
+  [#4493](https://github.com/OpenFn/lightning/pull/4493)
+
 ## [2.15.16] - 2026-03-09
 
 ## [2.15.16-pre.3] - 2026-03-09
