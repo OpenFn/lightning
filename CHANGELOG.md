@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.16-pre.3] - 2026-03-09
+
+### Fixed
+
 - OAuth credentials invisible in Configure connection modal after creation
   [#4499](https://github.com/OpenFn/lightning/issues/4499)
 
