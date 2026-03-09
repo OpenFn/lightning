@@ -74,11 +74,18 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
   end
 
   defp error_field(assigns) do
+    errors =
+      if Phoenix.Component.used_input?(assigns.field),
+        do: assigns.field.errors,
+        else: []
+
+    assigns = assign(assigns, :errors, errors)
+
     ~H"""
     <.error :for={
       msg <-
         Enum.map(
-          @field.errors,
+          @errors,
           &LightningWeb.CoreComponents.translate_error(&1)
         )
     }>

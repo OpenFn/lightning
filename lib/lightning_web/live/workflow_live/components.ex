@@ -230,7 +230,8 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div
             :if={
               not @project_concurrency_disabled and
-                Enum.empty?(@form[:concurrency].errors)
+                (not Phoenix.Component.used_input?(@form[:concurrency]) or
+                   Enum.empty?(@form[:concurrency].errors))
             }
             class="text-xs text-slate-500 italic"
           >
@@ -243,7 +244,8 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div
             :if={
               @project_concurrency_disabled and
-                Enum.empty?(@form[:concurrency].errors)
+                (not Phoenix.Component.used_input?(@form[:concurrency]) or
+                   Enum.empty?(@form[:concurrency].errors))
             }
             class="text-xs"
           >
