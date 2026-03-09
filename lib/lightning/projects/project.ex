@@ -188,6 +188,18 @@ defmodule Lightning.Projects.Project do
   end
 
   @doc """
+  Returns a display name for the project.
+
+  For sandbox projects with a loaded parent, returns `"parent_name:sandbox_name"`.
+  For root projects, returns the project name as-is.
+  """
+  @spec display_name(t()) :: String.t()
+  def display_name(%__MODULE__{parent: %__MODULE__{name: parent_name}, name: name}),
+    do: "#{parent_name}:#{name}"
+
+  def display_name(%__MODULE__{name: name}), do: name
+
+  @doc """
   Returns `true` if the project is a sandbox (i.e. `parent_id` is a UUID),
   `false` otherwise.
   """

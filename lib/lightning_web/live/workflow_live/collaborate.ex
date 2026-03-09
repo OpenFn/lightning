@@ -180,7 +180,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
-      data-project-name={@project.name}
+      data-project-name={Lightning.Projects.Project.display_name(@project)}
       data-project-color={@project.color}
       data-root-project-id={
         if @project.parent, do: Lightning.Projects.root_of(@project).id, else: nil

@@ -123,7 +123,11 @@
         )
       }
       data-current-project-id={
-        if assigns[:project], do: assigns[:project].id, else: nil
+        case assigns[:project] do
+          %{parent_id: pid} when is_binary(pid) -> pid
+          %{id: id} -> id
+          _ -> nil
+        end
       }
     >
     </div>

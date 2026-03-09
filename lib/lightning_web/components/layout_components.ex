@@ -286,7 +286,7 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker label={@project.name} />
+        <.breadcrumb_project_picker label={Lightning.Projects.Project.display_name(@project)} />
         <.breadcrumb_items items={[{"History", ~p"/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>

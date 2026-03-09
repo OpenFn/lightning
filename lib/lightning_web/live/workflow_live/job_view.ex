@@ -163,7 +163,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           centered
         >
           You are currently working in the sandbox
-          <span class="font-bold">{@project.name}</span>
+          <span class="font-bold">{Lightning.Projects.Project.display_name(@project)}</span>
         </Common.banner>
       </:top>
       <%= for slot <- @collapsible_panel do %>

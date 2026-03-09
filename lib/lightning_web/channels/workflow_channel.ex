@@ -859,7 +859,7 @@ defmodule LightningWeb.WorkflowChannel do
   defp render_project_context(project) do
     %{
       id: project.id,
-      name: project.name,
+      name: Lightning.Projects.Project.display_name(project),
       concurrency: project.concurrency
     }
   end

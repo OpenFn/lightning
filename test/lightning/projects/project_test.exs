@@ -269,4 +269,26 @@ defmodule Lightning.Projects.ProjectTest do
       assert Project.sandbox?(child)
     end
   end
+
+  describe "display_name/1" do
+    test "returns name for root project" do
+      project = insert(:project, name: "ethiopia-bdr")
+      assert Project.display_name(project) == "ethiopia-bdr"
+    end
+
+    test "returns parent_name:name for sandbox with loaded parent" do
+      parent = insert(:project, name: "ethiopia-bdr")
+
+      sandbox =
+        insert(:project, name: "feb-red-team", parent: parent)
+        |> Repo.preload(:parent)
+
+      assert Project.display_name(sandbox) == "ethiopia-bdr:feb-red-team"
+    end
+
+    test "returns name when parent is not loaded" do
+      sandbox = %Project{name: "feb-red-team", parent_id: Ecto.UUID.generate()}
+      assert Project.display_name(sandbox) == "feb-red-team"
+    end
+  end
 end
