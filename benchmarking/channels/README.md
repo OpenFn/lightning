@@ -305,7 +305,7 @@ This tells you exactly where time is spent inside the channel proxy:
 | ------------------ | -------------------------------------------------------------------- |
 | **Total request**  | Entire `ChannelProxyPlug.call/2` — DB lookup + proxy + plug overhead |
 | **DB lookup**      | `Ecto.UUID.cast` + `Repo.get` to find the channel                    |
-| **Upstream proxy** | `Weir.proxy` call — HTTP to the sink + response streaming back       |
+| **Upstream proxy** | `Philter.proxy` call — HTTP to the sink + response streaming back    |
 | **Plug overhead**  | `Total request` - `DB lookup` - `Upstream proxy` = plug/header work  |
 
 If `Total request` is much larger than `Upstream proxy`, the overhead is in the
@@ -357,5 +357,5 @@ elixir --sname lt --cookie bench \
 ```
 
 The difference tells you exactly what the proxy pipeline (plugs, DB lookup,
-Weir, second HTTP hop) costs per request. The telemetry breakdown further
+Philter, second HTTP hop) costs per request. The telemetry breakdown further
 decomposes that cost into DB lookup vs upstream proxy vs plug overhead.

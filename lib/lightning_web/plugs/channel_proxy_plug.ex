@@ -4,7 +4,7 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   Authenticates the inbound request against the channel's source auth
   methods, resolves sink credentials, and streams the request upstream
-  via `Weir.proxy/2`. Request and response events are recorded as
+  via `Philter.proxy/2`. Request and response events are recorded as
   `ChannelRequest` / `ChannelEvent` records for auditing.
 
   ## Request ID
@@ -196,7 +196,7 @@ defmodule LightningWeb.ChannelProxyPlug do
       metadata,
       fn ->
         result =
-          Weir.proxy(conn,
+          Philter.proxy(conn,
             upstream: String.trim_trailing(req.channel.sink_url, "/"),
             path: req.forward_path,
             headers: outbound_headers,

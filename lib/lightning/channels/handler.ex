@@ -1,10 +1,10 @@
 defmodule Lightning.Channels.Handler do
   @moduledoc """
-  Weir handler that persists every proxied Channel request.
+  Philter handler that persists every proxied Channel request.
 
   ## Lifecycle
 
-  Weir invokes three callbacks during the proxy lifecycle:
+  Philter invokes three callbacks during the proxy lifecycle:
 
   1. `handle_request_started` — creates a `ChannelRequest` record
      synchronously. If the insert fails, the request is rejected with 503.
@@ -34,11 +34,11 @@ defmodule Lightning.Channels.Handler do
 
   All fields derived from `handle_response_started` are accessed via
   `Map.get/2` with `nil` fallbacks, so this is safe. The `classify_error/1`
-  function translates known Weir error shapes into stable string identifiers
+  function translates known Philter error shapes into stable string identifiers
   for persistence.
   """
 
-  use Weir.Handler
+  use Philter.Handler
 
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
