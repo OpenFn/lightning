@@ -25,7 +25,9 @@ defmodule LightningWeb.ConnCase do
 
       # Import conveniences for testing with connections
       import Plug.Conn
-      import Phoenix.ConnTest
+      import Phoenix.ConnTest, only: :functions
+      import Bureaucrat.Helpers
+      import Bureaucrat.Macros
       import LightningWeb.ConnCase
       import LightningWeb.ConnHelpers
 
