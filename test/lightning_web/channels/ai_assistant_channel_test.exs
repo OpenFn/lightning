@@ -33,45 +33,20 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end)
 
     # Mock Tesla HTTP client to prevent real HTTP calls
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-      if String.contains?(url, "/stream") do
-        complete_payload =
-          Jason.encode!(%{
-            "response" => "This is a test AI response.",
-            "history" => [
-              %{"role" => "user", "content" => "test message"},
-              %{
-                "role" => "assistant",
-                "content" => "This is a test AI response."
-              }
-            ]
-          })
-
-        sse_body = "event: complete\ndata: #{complete_payload}\n\n"
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           headers: [{"content-type", "text/event-stream"}],
-           body: sse_body
-         }}
-      else
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "This is a test AI response.",
-             "history" => [
-               %{"role" => "user", "content" => "test message"},
-               %{
-                 "role" => "assistant",
-                 "content" => "This is a test AI response."
-               }
-             ]
-           }
-         }}
-      end
-    end)
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "This is a test AI response.",
+        "history" => [
+          %{"role" => "user", "content" => "test message"},
+          %{
+            "role" => "assistant",
+            "content" => "This is a test AI response."
+          }
+        ]
+      })
+    )
 
     # Mock usage limiter to allow by default
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{

@@ -116,6 +116,7 @@ interface ChannelEntry {
     streamingChunk: ChannelCallback;
     streamingStatus: ChannelCallback;
     streamingChanges: ChannelCallback;
+    streamingError: ChannelCallback;
   };
 }
 
@@ -552,6 +553,7 @@ export class AIChannelRegistry {
       entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
       entry.channel.off('streaming_status', entry.handlers.streamingStatus);
       entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
+      entry.channel.off('streaming_error', entry.handlers.streamingError);
       entry.channel.leave();
     }
 
@@ -624,6 +626,10 @@ export class AIChannelRegistry {
       this.store._setStreamingChanges(typedPayload.changes);
     };
 
+    const streamingErrorHandler: ChannelCallback = (_payload: unknown) => {
+      this.store._clearStreaming();
+    };
+
     channel.on('new_message', newMessageHandler);
     channel.on('user_message', userMessageHandler);
     channel.on('message_processing', messageProcessingHandler);
@@ -632,6 +638,7 @@ export class AIChannelRegistry {
     channel.on('streaming_chunk', streamingChunkHandler);
     channel.on('streaming_status', streamingStatusHandler);
     channel.on('streaming_changes', streamingChangesHandler);
+    channel.on('streaming_error', streamingErrorHandler);
 
     return {
       newMessage: newMessageHandler,
@@ -642,6 +649,7 @@ export class AIChannelRegistry {
       streamingChunk: streamingChunkHandler,
       streamingStatus: streamingStatusHandler,
       streamingChanges: streamingChangesHandler,
+      streamingError: streamingErrorHandler,
     };
   }
 

@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.AiAssistantHelpers
   import Mox
   import Ecto.Query
 
@@ -75,35 +76,18 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           condition_type: always
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "I'll update your workflow",
-            "response_yaml" => valid_workflow_yaml,
-            "usage" => %{},
-            "history" => [
-              %{"role" => "user", "content" => "Add a fetch data job"},
-              %{
-                "role" => "assistant",
-                "content" => "I'll update your workflow"
-              }
-            ]
+      stub_ai_with_health_check("http://localhost:4001", %{
+        "response" => "I'll update your workflow",
+        "response_yaml" => valid_workflow_yaml,
+        "usage" => %{},
+        "history" => [
+          %{"role" => "user", "content" => "Add a fetch data job"},
+          %{
+            "role" => "assistant",
+            "content" => "I'll update your workflow"
           }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+        ]
+      })
 
       skip_disclaimer(user)
 
@@ -176,28 +160,11 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           body: |
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "Here's your workflow",
-            "response_yaml" => invalid_yaml,
-            "usage" => %{}
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      stub_ai_with_health_check("http://localhost:4001", %{
+        "response" => "Here's your workflow",
+        "response_yaml" => invalid_yaml,
+        "usage" => %{}
+      })
 
       skip_disclaimer(user)
 
@@ -250,35 +217,18 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       workflow: workflow,
       user: user
     } do
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "Here's a workflow with validation issues",
-            "response_yaml" => """
+      stub_ai_with_health_check("http://localhost:4001", %{
+        "response" => "Here's a workflow with validation issues",
+        "response_yaml" => """
+        name: ""
+        jobs:
+          empty_job:
             name: ""
-            jobs:
-              empty_job:
-                name: ""
-                adaptor: ""
-                body: ""
-            """,
-            "usage" => %{}
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+            adaptor: ""
+            body: ""
+        """,
+        "usage" => %{}
+      })
 
       skip_disclaimer(user)
 
@@ -435,38 +385,21 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           end
         end)
 
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: "http://localhost:3000/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "response" => "Here's a workflow with validation issues",
-              "response_yaml" => workflow_yaml,
-              "usage" => %{},
-              "history" => [
-                %{
-                  "role" => "user",
-                  "content" => "Create workflow with errors"
-                },
-                %{
-                  "role" => "assistant",
-                  "content" => "Here's a workflow with validation issues"
-                }
-              ]
+        stub_ai_with_health_check("http://localhost:3000", %{
+          "response" => "Here's a workflow with validation issues",
+          "response_yaml" => workflow_yaml,
+          "usage" => %{},
+          "history" => [
+            %{
+              "role" => "user",
+              "content" => "Create workflow with errors"
+            },
+            %{
+              "role" => "assistant",
+              "content" => "Here's a workflow with validation issues"
             }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end)
+          ]
+        })
 
         skip_disclaimer(user)
 
@@ -582,38 +515,21 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           end
         end)
 
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: "http://localhost:3000/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "response" => "Here's a workflow with validation issues",
-              "response_yaml" => workflow_yaml,
-              "usage" => %{},
-              "history" => [
-                %{
-                  "role" => "user",
-                  "content" => "Create workflow with errors"
-                },
-                %{
-                  "role" => "assistant",
-                  "content" => "Here's a workflow with validation issues"
-                }
-              ]
+        stub_ai_with_health_check("http://localhost:3000", %{
+          "response" => "Here's a workflow with validation issues",
+          "response_yaml" => workflow_yaml,
+          "usage" => %{},
+          "history" => [
+            %{
+              "role" => "user",
+              "content" => "Create workflow with errors"
+            },
+            %{
+              "role" => "assistant",
+              "content" => "Here's a workflow with validation issues"
             }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end)
+          ]
+        })
 
         skip_disclaimer(user)
 
@@ -681,28 +597,11 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       workflow: workflow,
       user: user
     } do
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "Processing...",
-            "response_yaml" => nil,
-            "usage" => %{}
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      stub_ai_with_health_check("http://localhost:4001", %{
+        "response" => "Processing...",
+        "response_yaml" => nil,
+        "usage" => %{}
+      })
 
       skip_disclaimer(user)
 

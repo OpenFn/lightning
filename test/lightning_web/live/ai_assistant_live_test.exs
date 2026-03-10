@@ -257,29 +257,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "history" => [%{"role" => "assistant", "content" => "Hello!"}]
-            }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{"history" => [%{"role" => "assistant", "content" => "Hello!"}]}
       )
 
       [:owner, :admin, :editor]
@@ -513,33 +493,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            # Simply return the response immediately
-            body = %{
-              "history" => [
-                %{"role" => "user", "content" => "Ping"},
-                %{"role" => "assistant", "content" => "Pong"}
-              ]
-            }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Ping"},
+            %{"role" => "assistant", "content" => "Pong"}
+          ]
+        }
       )
 
       {:ok, view, _html} =
@@ -582,34 +543,16 @@ defmodule LightningWeb.AiAssistantLiveTest do
       expected_question = "Can you help me with this?"
       expected_answer = "No, I am a robot"
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "history" => [
-                %{"role" => "user", "content" => "Ping"},
-                %{"role" => "assistant", "content" => "Pong"},
-                %{"role" => "user", "content" => expected_question},
-                %{"role" => "assistant", "content" => expected_answer}
-              ]
-            }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Ping"},
+            %{"role" => "assistant", "content" => "Pong"},
+            %{"role" => "user", "content" => expected_question},
+            %{"role" => "assistant", "content" => expected_answer}
+          ]
+        }
       )
 
       session =
@@ -1181,31 +1124,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "history" => [
-                %{"role" => "assistant", "content" => "Response!"}
-              ]
-            }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Response!"}
+          ]
+        }
       )
 
       skip_disclaimer(user)
@@ -1300,29 +1225,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
              )
 
       # Update the mock for successful response
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "history" => [
-              %{"role" => "user", "content" => "Hello"},
-              %{"role" => "assistant", "content" => "Hi there!"}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Hello"},
+            %{"role" => "assistant", "content" => "Hi there!"}
+          ]
+        }
+      )
 
       # Click retry
       view
@@ -1498,31 +1409,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, url: url}, _opts when is_binary(url) ->
-            body = %{
-              "history" => [
-                %{"role" => "assistant", "content" => "Hello, World!"}
-              ]
-            }
-
-            if String.contains?(url, "/stream") do
-              {:ok,
-               %Tesla.Env{
-                 status: 200,
-                 headers: [{"content-type", "text/event-stream"}],
-                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-               }}
-            else
-              {:ok, %Tesla.Env{status: 200, body: body}}
-            end
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Hello, World!"}
+          ]
+        }
       )
 
       skip_disclaimer(user)
@@ -1976,34 +1869,20 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "I'll help you create a Salesforce sync workflow",
-            "response_yaml" => nil,
-            "usage" => %{},
-            "history" => [
-              %{
-                "role" => "user",
-                "content" => "Create a Salesforce sync workflow"
-              }
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "I'll help you create a Salesforce sync workflow",
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{
+              "role" => "user",
+              "content" => "Create a Salesforce sync workflow"
+            }
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2063,28 +1942,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           enabled: true
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "Here's your Salesforce sync workflow:",
-            "response_yaml" => workflow_yaml,
-            "usage" => %{}
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "Here's your Salesforce sync workflow:",
+          "response_yaml" => workflow_yaml,
+          "usage" => %{}
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2520,31 +2385,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "history" => [
-              %{
-                "role" => "assistant",
-                "content" => "Workflow created for user"
-              }
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{
+              "role" => "assistant",
+              "content" => "Workflow created for user"
+            }
+          ]
+        }
+      )
 
       user1 = insert(:user, email: "user1@test.org")
       user2 = insert(:user, email: "user2@test.org")
@@ -2729,26 +2580,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "history" => [%{"role" => "assistant", "content" => "Response"}]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [%{"role" => "assistant", "content" => "Response"}]
+        }
+      )
 
       _job_session =
         insert(:job_chat_session,
@@ -2850,28 +2687,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "history" => [
-              %{"role" => "assistant", "content" => "Message sent"}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Message sent"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2987,29 +2810,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
       2. Deploy to production
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => markdown_response,
-            "history" => [
-              %{"role" => "assistant", "content" => markdown_response}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => markdown_response,
+          "history" => [
+            %{"role" => "assistant", "content" => markdown_response}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3066,31 +2875,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       response_content = "Here's some code you can copy"
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => response_content,
-            "response_yaml" => nil,
-            "usage" => %{},
-            "history" => [
-              %{"role" => "assistant", "content" => response_content}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => response_content,
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{"role" => "assistant", "content" => response_content}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3163,29 +2958,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "history" => [
-              %{"role" => "user", "content" => "Test message"},
-              %{"role" => "assistant", "content" => "Test response"}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Test message"},
+            %{"role" => "assistant", "content" => "Test response"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3520,31 +3301,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: url}, _opts when is_binary(url) ->
-          body = %{
-            "response" => "Delayed response",
-            "response_yaml" => nil,
-            "usage" => %{},
-            "history" => [
-              %{"role" => "assistant", "content" => "Delayed response"}
-            ]
-          }
-
-          if String.contains?(url, "/stream") do
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               headers: [{"content-type", "text/event-stream"}],
-               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
-             }}
-          else
-            {:ok, %Tesla.Env{status: 200, body: body}}
-          end
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "Delayed response",
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{"role" => "assistant", "content" => "Delayed response"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
