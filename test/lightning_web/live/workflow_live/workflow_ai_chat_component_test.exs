@@ -19,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       :endpoint -> "http://localhost:4001"
       :ai_assistant_api_key -> "test_api_key"
       :timeout -> 5_000
+      :streaming_timeout -> 120_000
     end)
 
     %{workflow: workflow, snapshot: snapshot}
@@ -78,23 +79,30 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         %{method: :get, url: "http://localhost:4001/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "I'll update your workflow",
-               "response_yaml" => valid_workflow_yaml,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "user", "content" => "Add a fetch data job"},
-                 %{
-                   "role" => "assistant",
-                   "content" => "I'll update your workflow"
-                 }
-               ]
-             }
-           }}
+        %{method: :post, url: url}, _opts when is_binary(url) ->
+          body = %{
+            "response" => "I'll update your workflow",
+            "response_yaml" => valid_workflow_yaml,
+            "usage" => %{},
+            "history" => [
+              %{"role" => "user", "content" => "Add a fetch data job"},
+              %{
+                "role" => "assistant",
+                "content" => "I'll update your workflow"
+              }
+            ]
+          }
+
+          if String.contains?(url, "/stream") do
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               headers: [{"content-type", "text/event-stream"}],
+               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+             }}
+          else
+            {:ok, %Tesla.Env{status: 200, body: body}}
+          end
       end)
 
       skip_disclaimer(user)
@@ -172,16 +180,23 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         %{method: :get, url: "http://localhost:4001/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's your workflow",
-               "response_yaml" => invalid_yaml,
-               "usage" => %{}
-             }
-           }}
+        %{method: :post, url: url}, _opts when is_binary(url) ->
+          body = %{
+            "response" => "Here's your workflow",
+            "response_yaml" => invalid_yaml,
+            "usage" => %{}
+          }
+
+          if String.contains?(url, "/stream") do
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               headers: [{"content-type", "text/event-stream"}],
+               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+             }}
+          else
+            {:ok, %Tesla.Env{status: 200, body: body}}
+          end
       end)
 
       skip_disclaimer(user)
@@ -239,23 +254,30 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         %{method: :get, url: "http://localhost:4001/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's a workflow with validation issues",
-               "response_yaml" => """
-               name: ""
-               jobs:
-                 empty_job:
-                   name: ""
-                   adaptor: ""
-                   body: ""
-               """,
-               "usage" => %{}
-             }
-           }}
+        %{method: :post, url: url}, _opts when is_binary(url) ->
+          body = %{
+            "response" => "Here's a workflow with validation issues",
+            "response_yaml" => """
+            name: ""
+            jobs:
+              empty_job:
+                name: ""
+                adaptor: ""
+                body: ""
+            """,
+            "usage" => %{}
+          }
+
+          if String.contains?(url, "/stream") do
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               headers: [{"content-type", "text/event-stream"}],
+               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+             }}
+          else
+            {:ok, %Tesla.Env{status: 200, body: body}}
+          end
       end)
 
       skip_disclaimer(user)
@@ -409,6 +431,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
             :endpoint -> "http://localhost:3000"
             :ai_assistant_api_key -> "api_key"
             :timeout -> 5_000
+            :streaming_timeout -> 120_000
           end
         end)
 
@@ -416,26 +439,33 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           %{method: :get, url: "http://localhost:3000/"}, _opts ->
             {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "response" => "Here's a workflow with validation issues",
-                 "response_yaml" => workflow_yaml,
-                 "usage" => %{},
-                 "history" => [
-                   %{
-                     "role" => "user",
-                     "content" => "Create workflow with errors"
-                   },
-                   %{
-                     "role" => "assistant",
-                     "content" => "Here's a workflow with validation issues"
-                   }
-                 ]
-               }
-             }}
+          %{method: :post, url: url}, _opts when is_binary(url) ->
+            body = %{
+              "response" => "Here's a workflow with validation issues",
+              "response_yaml" => workflow_yaml,
+              "usage" => %{},
+              "history" => [
+                %{
+                  "role" => "user",
+                  "content" => "Create workflow with errors"
+                },
+                %{
+                  "role" => "assistant",
+                  "content" => "Here's a workflow with validation issues"
+                }
+              ]
+            }
+
+            if String.contains?(url, "/stream") do
+              {:ok,
+               %Tesla.Env{
+                 status: 200,
+                 headers: [{"content-type", "text/event-stream"}],
+                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+               }}
+            else
+              {:ok, %Tesla.Env{status: 200, body: body}}
+            end
         end)
 
         skip_disclaimer(user)
@@ -548,6 +578,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
             :endpoint -> "http://localhost:3000"
             :ai_assistant_api_key -> "api_key"
             :timeout -> 5_000
+            :streaming_timeout -> 120_000
           end
         end)
 
@@ -555,26 +586,33 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           %{method: :get, url: "http://localhost:3000/"}, _opts ->
             {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "response" => "Here's a workflow with validation issues",
-                 "response_yaml" => workflow_yaml,
-                 "usage" => %{},
-                 "history" => [
-                   %{
-                     "role" => "user",
-                     "content" => "Create workflow with errors"
-                   },
-                   %{
-                     "role" => "assistant",
-                     "content" => "Here's a workflow with validation issues"
-                   }
-                 ]
-               }
-             }}
+          %{method: :post, url: url}, _opts when is_binary(url) ->
+            body = %{
+              "response" => "Here's a workflow with validation issues",
+              "response_yaml" => workflow_yaml,
+              "usage" => %{},
+              "history" => [
+                %{
+                  "role" => "user",
+                  "content" => "Create workflow with errors"
+                },
+                %{
+                  "role" => "assistant",
+                  "content" => "Here's a workflow with validation issues"
+                }
+              ]
+            }
+
+            if String.contains?(url, "/stream") do
+              {:ok,
+               %Tesla.Env{
+                 status: 200,
+                 headers: [{"content-type", "text/event-stream"}],
+                 body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+               }}
+            else
+              {:ok, %Tesla.Env{status: 200, body: body}}
+            end
         end)
 
         skip_disclaimer(user)
@@ -647,16 +685,23 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         %{method: :get, url: "http://localhost:4001/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Processing...",
-               "response_yaml" => nil,
-               "usage" => %{}
-             }
-           }}
+        %{method: :post, url: url}, _opts when is_binary(url) ->
+          body = %{
+            "response" => "Processing...",
+            "response_yaml" => nil,
+            "usage" => %{}
+          }
+
+          if String.contains?(url, "/stream") do
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               headers: [{"content-type", "text/event-stream"}],
+               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+             }}
+          else
+            {:ok, %Tesla.Env{status: 200, body: body}}
+          end
       end)
 
       skip_disclaimer(user)

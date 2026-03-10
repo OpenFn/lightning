@@ -113,6 +113,9 @@ interface ChannelEntry {
     messageProcessing: ChannelCallback;
     messageError: ChannelCallback;
     messageStatusChanged: ChannelCallback;
+    streamingChunk: ChannelCallback;
+    streamingStatus: ChannelCallback;
+    streamingChanges: ChannelCallback;
   };
 }
 
@@ -546,6 +549,9 @@ export class AIChannelRegistry {
         'message_status_changed',
         entry.handlers.messageStatusChanged
       );
+      entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+      entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+      entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
       entry.channel.leave();
     }
 
@@ -601,11 +607,31 @@ export class AIChannelRegistry {
       );
     };
 
+    const streamingChunkHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { content: string };
+      this.store._appendStreamingChunk(typedPayload.content);
+    };
+
+    const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { text: string };
+      this.store._setStreamingStatus(typedPayload.text);
+    };
+
+    const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        changes: Record<string, unknown>;
+      };
+      this.store._setStreamingChanges(typedPayload.changes);
+    };
+
     channel.on('new_message', newMessageHandler);
     channel.on('user_message', userMessageHandler);
     channel.on('message_processing', messageProcessingHandler);
     channel.on('message_error', messageErrorHandler);
     channel.on('message_status_changed', messageStatusChangedHandler);
+    channel.on('streaming_chunk', streamingChunkHandler);
+    channel.on('streaming_status', streamingStatusHandler);
+    channel.on('streaming_changes', streamingChangesHandler);
 
     return {
       newMessage: newMessageHandler,
@@ -613,6 +639,9 @@ export class AIChannelRegistry {
       messageProcessing: messageProcessingHandler,
       messageError: messageErrorHandler,
       messageStatusChanged: messageStatusChangedHandler,
+      streamingChunk: streamingChunkHandler,
+      streamingStatus: streamingStatusHandler,
+      streamingChanges: streamingChangesHandler,
     };
   }
 
@@ -725,6 +754,9 @@ export class AIChannelRegistry {
       'message_status_changed',
       entry.handlers.messageStatusChanged
     );
+    entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+    entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+    entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
 
     entry.channel.leave();
     this.channels.delete(topic);

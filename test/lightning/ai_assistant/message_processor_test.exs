@@ -28,21 +28,47 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
 
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "AI response",
-           "history" => [
-             %{"role" => "user", "content" => "test"},
-             %{"role" => "assistant", "content" => "AI response"}
-           ]
-         }
-       }}
+    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+      if String.contains?(url, "/stream") do
+        # Streaming endpoint: return SSE wire format that Tesla.Middleware.SSE
+        # will parse. With `only: :data`, the middleware extracts just the data
+        # field from each event, yielding a list of raw JSON strings.
+        complete_payload =
+          Jason.encode!(%{
+            "response" => "AI response",
+            "history" => [
+              %{"role" => "user", "content" => "test"},
+              %{"role" => "assistant", "content" => "AI response"}
+            ]
+          })
+
+        sse_body =
+          "event: complete\ndata: #{complete_payload}\n\n"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: sse_body
+         }}
+      else
+        # Non-streaming endpoint
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "response" => "AI response",
+             "history" => [
+               %{"role" => "user", "content" => "test"},
+               %{"role" => "assistant", "content" => "AI response"}
+             ]
+           }
+         }}
+      end
     end)
 
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->

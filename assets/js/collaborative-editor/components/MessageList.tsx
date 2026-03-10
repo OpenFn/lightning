@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -8,6 +8,11 @@ import { cn } from '#/utils/cn';
 import type { Message } from '../types/ai-assistant';
 
 import { Tooltip } from './Tooltip';
+
+const STREAMING_MESSAGE_ID = '__streaming__' as const;
+
+const PROSE_CLASSES =
+  'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
 
 /**
  * Custom code block component for react-markdown
@@ -384,8 +389,9 @@ interface MessageListProps {
   showAddButtons?: boolean;
   showApplyButton?: boolean;
   onRetryMessage?: (messageId: string) => void;
-  /** Whether write actions (Apply/Add) are disabled due to readonly mode */
   isWriteDisabled?: boolean;
+  streamingContent?: string | null;
+  streamingStatus?: string | null;
 }
 
 export function MessageList({
@@ -400,6 +406,8 @@ export function MessageList({
   showApplyButton = false,
   onRetryMessage,
   isWriteDisabled = false,
+  streamingContent,
+  streamingStatus,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -417,9 +425,33 @@ export function MessageList({
 
   useEffect(() => {
     if (isLoading && loadingRef.current) {
-      loadingRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      loadingRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      });
     }
   }, [isLoading]);
+
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (streamingContent && messagesEndRef.current) {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: 'instant',
+          block: 'end',
+        });
+      }, 100);
+    }
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [streamingContent]);
 
   if (messages.length === 0) {
     return (
@@ -435,9 +467,30 @@ export function MessageList({
     );
   }
 
+  // Build a unified message list: real messages + optional streaming placeholder.
+  // The streaming message renders in the same loop as finalized messages,
+  // so the transition from streaming → final is a seamless in-place update
+  // instead of a DOM unmount/remount flash.
+  const displayMessages = useMemo(() => {
+    if (streamingContent) {
+      return [
+        ...messages,
+        {
+          id: STREAMING_MESSAGE_ID,
+          role: 'assistant' as const,
+          content: streamingContent,
+          status: 'streaming' as const,
+        } as Message & { status: 'streaming' },
+      ];
+    }
+    return messages;
+  }, [messages, streamingContent]);
+
+  const isStreaming = (message: Message) => message.id === STREAMING_MESSAGE_ID;
+
   return (
     <div className="h-full overflow-y-auto" data-testid="message-list">
-      {messages.map(message => (
+      {displayMessages.map(message => (
         <div
           key={message.id}
           data-role={`${message.role}-message`}
@@ -445,16 +498,28 @@ export function MessageList({
         >
           <div className="max-w-3xl mx-auto">
             {message.role === 'assistant' ? (
-              <div data-testid="assistant-message">
+              <div
+                data-testid={
+                  isStreaming(message)
+                    ? 'streaming-message'
+                    : 'assistant-message'
+                }
+              >
                 <div className="space-y-3">
                   <MarkdownContent
-                    content={message.content}
-                    showAddButtons={showAddButtons && !message.code}
+                    content={
+                      isStreaming(message)
+                        ? message.content + ' ▍'
+                        : message.content
+                    }
+                    showAddButtons={
+                      !isStreaming(message) && showAddButtons && !message.code
+                    }
                     isWriteDisabled={isWriteDisabled}
-                    className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4"
+                    className={PROSE_CLASSES}
                   />
 
-                  {message.code && (
+                  {!isStreaming(message) && message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div
                         className={cn(
@@ -524,7 +589,7 @@ export function MessageList({
                     </div>
                   )}
 
-                  {message.status === 'error' && (
+                  {!isStreaming(message) && message.status === 'error' && (
                     <div
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
                       data-testid="ai-error-message"
@@ -552,7 +617,7 @@ export function MessageList({
                     </div>
                   )}
 
-                  {message.status === 'processing' && (
+                  {!isStreaming(message) && message.status === 'processing' && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <div className="flex items-center gap-1">
                         <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
@@ -562,45 +627,47 @@ export function MessageList({
                     </div>
                   )}
 
-                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                    <span>{formatTimestamp(message.inserted_at)}</span>
-                    <span>•</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void (async () => {
-                          const success = await doCopy(message.content);
-                          if (success) {
-                            setCopiedMessageId(message.id);
-                            setTimeout(() => setCopiedMessageId(null), 2000);
-                          }
-                        })();
-                      }}
-                      className={cn(
-                        'flex items-center gap-1 transition-colors duration-200',
-                        copiedMessageId === message.id
-                          ? 'text-green-600'
-                          : 'text-gray-400 hover:text-gray-600'
-                      )}
-                      title={
-                        copiedMessageId === message.id
-                          ? 'Copied!'
-                          : 'Copy message'
-                      }
-                    >
-                      <span
+                  {!isStreaming(message) && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-400 animate-[fade-in-keys_0.3s_ease-in]">
+                      <span>{formatTimestamp(message.inserted_at)}</span>
+                      <span>•</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void (async () => {
+                            const success = await doCopy(message.content);
+                            if (success) {
+                              setCopiedMessageId(message.id);
+                              setTimeout(() => setCopiedMessageId(null), 2000);
+                            }
+                          })();
+                        }}
                         className={cn(
-                          'h-3 w-3',
+                          'flex items-center gap-1 transition-colors duration-200',
                           copiedMessageId === message.id
-                            ? 'hero-check'
-                            : 'hero-clipboard-document'
+                            ? 'text-green-600'
+                            : 'text-gray-400 hover:text-gray-600'
                         )}
-                      />
-                      <span>
-                        {copiedMessageId === message.id ? 'Copied' : 'Copy'}
-                      </span>
-                    </button>
-                  </div>
+                        title={
+                          copiedMessageId === message.id
+                            ? 'Copied!'
+                            : 'Copy message'
+                        }
+                      >
+                        <span
+                          className={cn(
+                            'h-3 w-3',
+                            copiedMessageId === message.id
+                              ? 'hero-check'
+                              : 'hero-clipboard-document'
+                          )}
+                        />
+                        <span>
+                          {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -660,17 +727,22 @@ export function MessageList({
         </div>
       ))}
 
-      {isLoading && (
+      {isLoading && !streamingContent && (
         <div
           ref={loadingRef}
           className="group px-6 py-4"
           data-testid="loading-indicator"
         >
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-              <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-              <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+              </div>
+              <span className="text-xs text-gray-400 italic">
+                {streamingStatus || 'Generating response...'}
+              </span>
             </div>
           </div>
         </div>

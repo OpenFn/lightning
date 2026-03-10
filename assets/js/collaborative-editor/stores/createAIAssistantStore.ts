@@ -86,6 +86,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       messages: [],
       isLoading: false,
       isSending: false,
+      streamingContent: null,
+      streamingStatus: null,
+      streamingChanges: null,
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
@@ -156,6 +159,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.connectionState = 'disconnected';
       draft.isLoading = false;
       draft.isSending = false;
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
     });
 
     notify('disconnect');
@@ -211,6 +217,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.messages = [];
       draft.isLoading = false;
       draft.isSending = false;
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
     });
 
     notify('clearSession');
@@ -415,6 +424,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       if (message.role === 'assistant') {
         if (message.status === 'success' || message.status === 'error') {
           draft.isLoading = false;
+          draft.streamingContent = null;
+          draft.streamingStatus = null;
+          draft.streamingChanges = null;
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -440,7 +452,12 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;
-        } else if (status === 'processing') {
+        }
+        if (status === 'error') {
+          draft.streamingContent = null;
+          draft.streamingStatus = null;
+        }
+        if (status === 'processing') {
           draft.isLoading = true;
         }
       }
@@ -557,6 +574,40 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_setProcessingState');
   };
 
+  const _appendStreamingChunk = (content: string) => {
+    state = produce(state, draft => {
+      draft.streamingContent = (draft.streamingContent || '') + content;
+      // Clear status (e.g. "Thinking...") once actual content starts arriving
+      draft.streamingStatus = null;
+    });
+    notify('_appendStreamingChunk');
+  };
+
+  const _setStreamingStatus = (text: string) => {
+    state = produce(state, draft => {
+      draft.streamingStatus = text;
+    });
+    notify('_setStreamingStatus');
+  };
+
+  const _setStreamingChanges = (changes: Record<string, unknown>) => {
+    state = produce(state, draft => {
+      draft.streamingChanges = changes;
+      // Clear status once changes arrive
+      draft.streamingStatus = null;
+    });
+    notify('_setStreamingChanges');
+  };
+
+  const _clearStreaming = () => {
+    state = produce(state, draft => {
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
+    });
+    notify('_clearStreaming');
+  };
+
   /**
    * Connect to workflow channel to listen for AI session creation events.
    * When another user creates an AI session, we receive the event and update
@@ -630,6 +681,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _appendSessionList,
     _initializeContext,
     _setProcessingState,
+    _appendStreamingChunk,
+    _setStreamingStatus,
+    _setStreamingChanges,
+    _clearStreaming,
     _connectChannel,
   };
 };

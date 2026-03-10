@@ -314,6 +314,50 @@ defmodule LightningWeb.AiAssistantChannel do
     {:noreply, socket}
   end
 
+  # Streaming: text chunk from Apollo
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_chunk,
+         %{content: content, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_chunk", %{content: content})
+    {:noreply, socket}
+  end
+
+  # Streaming: status update (e.g., "Thinking...")
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_status,
+         %{text: text, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_status", %{text: text})
+    {:noreply, socket}
+  end
+
+  # Streaming: structured changes (code edits or workflow YAML)
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_changes,
+         %{changes: changes, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_changes", %{changes: changes})
+    {:noreply, socket}
+  end
+
+  # Streaming: error during stream
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_error,
+         %{error: error, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_error", %{error: error})
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,

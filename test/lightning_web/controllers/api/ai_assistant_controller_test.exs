@@ -17,22 +17,49 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
 
     # Mock Tesla HTTP client to prevent real HTTP calls
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "This is a test AI response.",
-           "history" => [
-             %{"role" => "user", "content" => "test message"},
-             %{"role" => "assistant", "content" => "This is a test AI response."}
-           ]
-         }
-       }}
+    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+      if String.contains?(url, "/stream") do
+        complete_payload =
+          Jason.encode!(%{
+            "response" => "This is a test AI response.",
+            "history" => [
+              %{"role" => "user", "content" => "test message"},
+              %{
+                "role" => "assistant",
+                "content" => "This is a test AI response."
+              }
+            ]
+          })
+
+        sse_body = "event: complete\ndata: #{complete_payload}\n\n"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: sse_body
+         }}
+      else
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "response" => "This is a test AI response.",
+             "history" => [
+               %{"role" => "user", "content" => "test message"},
+               %{
+                 "role" => "assistant",
+                 "content" => "This is a test AI response."
+               }
+             ]
+           }
+         }}
+      end
     end)
 
     :ok

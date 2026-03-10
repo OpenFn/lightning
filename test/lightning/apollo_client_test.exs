@@ -645,6 +645,7 @@ defmodule Lightning.ApolloClientTest do
         :endpoint -> endpoint
         :ai_assistant_api_key -> api_key
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
   end
