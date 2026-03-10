@@ -318,7 +318,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     base
     |> Project.form_changeset(params)
     |> validate_unique_sandbox_name(parent_id)
-    |> Helpers.copy_error(:name, :raw_name)
+    |> Helpers.copy_error(:name, :raw_name, overwrite: false)
   end
 
   defp validate_unique_sandbox_name(changeset, parent_id) do

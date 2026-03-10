@@ -107,7 +107,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox name already exists"
     end
 
-    test "creating sandbox with blank name disables submit and shows error",
+    test "creating sandbox with blank name disables submit and shows error only once",
          %{
            conn: conn,
            parent: parent
@@ -123,6 +123,16 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
       assert html =~ "can&#39;t be blank"
+
+      # Verify the validation error only appears once (fixes #4490)
+      error_count =
+        html
+        |> String.split("can&#39;t be blank")
+        |> length()
+        |> Kernel.-(1)
+
+      assert error_count == 1,
+             "Expected 'can't be blank' to appear once, but it appeared #{error_count} times"
     end
 
     test "creating sandbox fails when limiter returns error", %{
