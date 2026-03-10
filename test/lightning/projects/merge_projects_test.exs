@@ -286,35 +286,38 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_workflow_a =
         insert(:workflow, name: "workflow_a", project: target_project)
 
-      insert(:workflow, name: "workflow_b", project: target_project)
+      target_workflow_b =
+        insert(:workflow, name: "workflow_b", project: target_project)
 
       source_workflow_a =
         insert(:workflow, name: "workflow_a", project: source_project)
 
-      source_workflow_b =
-        insert(:workflow, name: "workflow_b", project: source_project)
+      insert(:workflow, name: "workflow_b", project: source_project)
 
       result =
         MergeProjects.merge_project(source_project, target_project, %{
           selected_workflow_ids: [source_workflow_a.id]
         })
 
-      # Only the selected workflow is in the result
-      assert length(result["workflows"]) == 1
+      # Both target workflows are present: selected one is merged, unselected
+      # one is passed through unchanged so the provisioner does not raise.
+      assert length(result["workflows"]) == 2
 
-      merged_workflow = hd(result["workflows"])
-      assert merged_workflow["id"] == target_workflow_a.id
+      merged_workflow =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_a.id))
+
       assert merged_workflow["name"] == "workflow_a"
       refute merged_workflow["delete"]
 
-      # Unselected source workflow (workflow_b) is not present at all
-      refute Enum.find(
-               result["workflows"],
-               &(&1["name"] == source_workflow_b.name)
-             )
+      # Unselected target workflow is passed through unchanged (not deleted)
+      passthrough =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_b.id))
+
+      assert passthrough["name"] == "workflow_b"
+      refute passthrough["delete"]
     end
 
-    test "unselected target workflows are NOT marked for deletion" do
+    test "unselected target workflows are included as passthrough (not deleted)" do
       target_project = insert(:project, name: "Target Project")
       source_project = insert(:project, name: "Source Project")
 
@@ -334,21 +337,24 @@ defmodule Lightning.Projects.MergeProjectsTest do
           selected_workflow_ids: [source_workflow_a.id]
         })
 
-      # Only the selected workflow is included — target_workflow_b is not
-      # touched (not deleted, not present in result)
-      assert length(result["workflows"]) == 1
+      # Both target workflows are present in the result
+      assert length(result["workflows"]) == 2
 
-      refute Enum.find(
-               result["workflows"],
-               &(&1["id"] == target_workflow_b.id)
-             )
+      # target_workflow_b is included as passthrough, not marked for deletion
+      passthrough =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_b.id))
+
+      assert passthrough
+      refute passthrough["delete"]
     end
 
-    test "empty selection produces no workflows in result" do
+    test "empty selection passes through all target workflows unchanged" do
       target_project = insert(:project, name: "Target Project")
       source_project = insert(:project, name: "Source Project")
 
-      insert(:workflow, name: "workflow_a", project: target_project)
+      target_workflow =
+        insert(:workflow, name: "workflow_a", project: target_project)
+
       insert(:workflow, name: "workflow_a", project: source_project)
 
       result =
@@ -356,8 +362,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
           selected_workflow_ids: []
         })
 
-      # No source workflows processed, no target deletions
-      assert result["workflows"] == []
+      # No source workflows are merged, but target workflows are passed through
+      assert length(result["workflows"]) == 1
+      passthrough = hd(result["workflows"])
+      assert passthrough["id"] == target_workflow.id
+      refute passthrough["delete"]
     end
 
     test "selecting all workflow IDs matches nil behaviour for matched workflows" do
@@ -412,19 +421,21 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       assert deleted_in_nil["delete"]
 
-      # When providing selected_workflow_ids, unmatched targets are NOT deleted
+      # When providing selected_workflow_ids, unmatched targets are included as
+      # passthrough (not deleted) so the provisioner does not raise.
       result_selected =
         MergeProjects.merge_project(source_project, target_project, %{
           selected_workflow_ids: [source_workflow.id]
         })
 
-      deleted_in_selected =
+      passthrough_in_selected =
         Enum.find(
           result_selected["workflows"],
           &(&1["id"] == target_only_workflow.id)
         )
 
-      refute deleted_in_selected
+      assert passthrough_in_selected
+      refute passthrough_in_selected["delete"]
     end
   end
 
