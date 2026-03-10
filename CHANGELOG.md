@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- AI assistant responses now stream in real-time
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+
 ### Changed
 
 ### Fixed
