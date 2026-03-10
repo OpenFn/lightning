@@ -2957,4 +2957,94 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert broadcast_msg.role == "user"
     end
   end
+
+  describe "streaming handle_info events" do
+    setup do
+      user = user_fixture()
+      project = project_fixture(project_users: [%{user_id: user.id}])
+      workflow = workflow_fixture(project_id: project.id)
+
+      job =
+        job_fixture(
+          workflow_id: workflow.id,
+          name: "Stream Job",
+          body: "console.log('stream');",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+
+      {:ok, _reply, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          %{
+            "job_id" => job.id,
+            "project_id" => project.id,
+            "content" => "test streaming"
+          }
+        )
+
+      session_id = socket.assigns.session_id
+
+      %{socket: socket, session_id: session_id}
+    end
+
+    test "forwards streaming_chunk to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_chunk,
+         %{content: "Hello", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_chunk", %{content: "Hello"}
+    end
+
+    test "forwards streaming_status to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_status,
+         %{text: "Thinking...", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_status", %{text: "Thinking..."}
+    end
+
+    test "forwards streaming_changes to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      changes = %{"code" => "fn(state) => state;"}
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_changes,
+         %{changes: changes, session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_changes", %{changes: ^changes}
+    end
+
+    test "forwards streaming_error to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_error,
+         %{error: "connection lost", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_error", %{error: "connection lost"}
+    end
+  end
 end
