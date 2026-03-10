@@ -6,6 +6,7 @@ defmodule LightningWeb.SandboxLive.Index do
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Repo
   alias Lightning.VersionControl
   alias LightningWeb.SandboxLive.Components
 
@@ -199,6 +200,31 @@ defmodule LightningWeb.SandboxLive.Index do
               socket.assigns.workspace_projects
             )
 
+          target_project =
+            Enum.find(
+              socket.assigns.workspace_projects,
+              &(&1.id == (default_target && default_target.value))
+            )
+
+          source_workflows =
+            if target_project do
+              build_merge_workflow_list(
+                sandbox,
+                diverged_workflows,
+                target_project
+              )
+            else
+              sandbox
+              |> Repo.preload(:workflows)
+              |> Map.get(:workflows, [])
+              |> Enum.map(
+                &%{id: &1.id, name: &1.name, is_diverged: false, is_new: true}
+              )
+              |> Enum.sort_by(& &1.name)
+            end
+
+          selected_ids = MapSet.new(source_workflows, & &1.id)
+
           {:noreply,
            socket
            |> assign(:merge_modal_open?, true)
@@ -206,7 +232,9 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(:merge_target_options, target_options)
            |> assign(:merge_changeset, merge_changeset)
            |> assign(:merge_descendants, descendants)
-           |> assign(:merge_diverged_workflows, diverged_workflows)}
+           |> assign(:merge_diverged_workflows, diverged_workflows)
+           |> assign(:merge_source_workflows, source_workflows)
+           |> assign(:merge_selected_workflow_ids, selected_ids)}
         else
           {:noreply,
            socket
@@ -218,6 +246,34 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event("close-merge-modal", _params, socket) do
     {:noreply, reset_merge_modal_state(socket)}
+  end
+
+  @impl true
+  def handle_event("toggle-workflow", %{"id" => workflow_id}, socket) do
+    selected = socket.assigns.merge_selected_workflow_ids
+
+    new_selected =
+      if MapSet.member?(selected, workflow_id) do
+        MapSet.delete(selected, workflow_id)
+      else
+        MapSet.put(selected, workflow_id)
+      end
+
+    {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+  end
+
+  @impl true
+  def handle_event("toggle-all-workflows", _params, socket) do
+    all_ids = MapSet.new(socket.assigns.merge_source_workflows, & &1.id)
+
+    new_selected =
+      if MapSet.equal?(socket.assigns.merge_selected_workflow_ids, all_ids) do
+        MapSet.new()
+      else
+        all_ids
+      end
+
+    {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
   end
 
   @impl true
@@ -235,10 +291,36 @@ defmodule LightningWeb.SandboxLive.Index do
         socket.assigns.workspace_projects
       )
 
+    target_project =
+      Enum.find(socket.assigns.workspace_projects, &(&1.id == target_id))
+
+    source_workflows =
+      if target_project do
+        build_merge_workflow_list(
+          socket.assigns.merge_source_sandbox,
+          diverged_workflows,
+          target_project
+        )
+      else
+        socket.assigns.merge_source_workflows
+      end
+
+    all_ids = MapSet.new(source_workflows, & &1.id)
+
+    prev_ids =
+      MapSet.new(socket.assigns.merge_source_workflows, & &1.id)
+
+    selected_ids =
+      socket.assigns.merge_selected_workflow_ids
+      |> MapSet.intersection(all_ids)
+      |> MapSet.union(MapSet.difference(all_ids, prev_ids))
+
     {:noreply,
      socket
      |> assign(:merge_changeset, merge_changeset)
-     |> assign(:merge_diverged_workflows, diverged_workflows)}
+     |> assign(:merge_diverged_workflows, diverged_workflows)
+     |> assign(:merge_source_workflows, source_workflows)
+     |> assign(:merge_selected_workflow_ids, selected_ids)}
   end
 
   @impl true
@@ -283,8 +365,11 @@ defmodule LightningWeb.SandboxLive.Index do
                  actor,
                  target
                ) do
+              selected_ids =
+                resolve_selected_workflow_ids(socket.assigns)
+
               source
-              |> perform_merge(target, actor)
+              |> perform_merge(target, actor, selected_ids)
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
               socket
@@ -372,6 +457,8 @@ defmodule LightningWeb.SandboxLive.Index do
           changeset={@merge_changeset}
           descendants={@merge_descendants}
           diverged_workflows={@merge_diverged_workflows}
+          source_workflows={@merge_source_workflows}
+          selected_workflow_ids={@merge_selected_workflow_ids}
         />
 
         <.live_component
@@ -459,6 +546,8 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_target_options, [])
     |> assign(:merge_descendants, [])
     |> assign(:merge_diverged_workflows, [])
+    |> assign(:merge_source_workflows, [])
+    |> assign(:merge_selected_workflow_ids, MapSet.new())
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -591,6 +680,39 @@ defmodule LightningWeb.SandboxLive.Index do
     Enum.find(workspace_projects, &(&1.id == target_id))
   end
 
+  defp build_merge_workflow_list(source, diverged_names, target_project) do
+    target_workflow_names =
+      target_project
+      |> Repo.preload(:workflows)
+      |> Map.get(:workflows, [])
+      |> MapSet.new(& &1.name)
+
+    diverged_set = MapSet.new(diverged_names)
+
+    source
+    |> Repo.preload(:workflows)
+    |> Map.get(:workflows, [])
+    |> Enum.map(fn wf ->
+      %{
+        id: wf.id,
+        name: wf.name,
+        is_diverged: MapSet.member?(diverged_set, wf.name),
+        is_new: not MapSet.member?(target_workflow_names, wf.name)
+      }
+    end)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp resolve_selected_workflow_ids(assigns) do
+    all_ids = MapSet.new(assigns.merge_source_workflows, & &1.id)
+
+    if MapSet.equal?(assigns.merge_selected_workflow_ids, all_ids) do
+      nil
+    else
+      MapSet.to_list(assigns.merge_selected_workflow_ids)
+    end
+  end
+
   defp get_diverged_workflows(source, target_id, workspace_projects) do
     with true <- !is_nil(target_id),
          target_project when not is_nil(target_project) <-
@@ -601,12 +723,19 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp perform_merge(source, target, actor) do
+  defp perform_merge(source, target, actor, selected_workflow_ids) do
     maybe_commit_to_github(target, "pre-merge commit")
+
+    opts =
+      if selected_workflow_ids do
+        %{selected_workflow_ids: selected_workflow_ids}
+      else
+        %{}
+      end
 
     result =
       source
-      |> MergeProjects.merge_project(target)
+      |> MergeProjects.merge_project(target, opts)
       |> then(
         &Lightning.Projects.Provisioner.import_document(target, actor, &1,
           allow_stale: true
