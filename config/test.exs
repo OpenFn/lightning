@@ -105,6 +105,8 @@ config :lightning, Lightning.FailureAlerter,
   time_scale: 60_000,
   rate_limit: 3
 
+# schemas_path and adaptor_icons_path point to test fixtures for build-time
+# mix task tests. At runtime, tests use the DB via AdaptorData/ETS cache.
 config :lightning,
   schemas_path: "test/fixtures/schemas",
   adaptor_icons_path: "test/fixtures/adaptors/icons",

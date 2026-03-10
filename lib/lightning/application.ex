@@ -64,6 +64,8 @@ defmodule Lightning.Application do
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
 
+    Lightning.AdaptorData.Cache.init()
+
     topologies =
       if System.get_env("K8S_HEADLESS_SERVICE") do
         [
@@ -135,6 +137,7 @@ defmodule Lightning.Application do
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
+        Lightning.AdaptorData.Listener,
         adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
@@ -150,7 +153,21 @@ defmodule Lightning.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    with {:ok, pid} <- Supervisor.start_link(children, opts) do
+      schedule_adaptor_refresh()
+      {:ok, pid}
+    end
+  end
+
+  defp schedule_adaptor_refresh do
+    unless Lightning.AdaptorRegistry.local_adaptors_enabled?() or
+             Lightning.Config.env() == :test do
+      Task.start(fn ->
+        Lightning.AdaptorRefreshWorker.new(%{}, schedule_in: 0)
+        |> then(&Oban.insert(Lightning.Oban, &1))
+      end)
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

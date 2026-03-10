@@ -210,6 +210,8 @@ defmodule Lightning.Config.Bootstrap do
       local_adaptors_repo:
         use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
 
+    # schemas_path is only used by build-time mix tasks (install_schemas).
+    # At runtime, the DB is the primary source via AdaptorData/ETS cache.
     config :lightning,
       schemas_path:
         env!(
@@ -225,6 +227,10 @@ defmodule Lightning.Config.Bootstrap do
              :integer,
              Utils.get_env([:lightning, :purge_deleted_after_days], 7)
            )
+
+    config :lightning,
+           :adaptor_refresh_interval_hours,
+           env!("ADAPTOR_REFRESH_INTERVAL_HOURS", :integer, 0)
 
     config :lightning,
            :activity_cleanup_chunk_size,
@@ -261,7 +267,23 @@ defmodule Lightning.Config.Bootstrap do
         ],
         else: []
 
-    all_cron = base_cron ++ cleanup_cron
+    adaptor_refresh_cron =
+      case Application.get_env(
+             :lightning,
+             :adaptor_refresh_interval_hours,
+             0
+           ) do
+        hours when is_integer(hours) and hours >= 24 ->
+          [{"0 4 * * *", Lightning.AdaptorRefreshWorker}]
+
+        hours when is_integer(hours) and hours > 0 ->
+          [{"0 */#{hours} * * *", Lightning.AdaptorRefreshWorker}]
+
+        _disabled ->
+          []
+      end
+
+    all_cron = base_cron ++ cleanup_cron ++ adaptor_refresh_cron
 
     config :lightning, Oban,
       name: Lightning.Oban,

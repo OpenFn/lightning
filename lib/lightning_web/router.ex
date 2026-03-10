@@ -224,6 +224,8 @@ defmodule LightningWeb.Router do
       live "/settings/authentication/new", AuthProvidersLive.Index, :new
 
       live "/settings/collections", CollectionLive.Index, :index
+
+      live "/settings/maintenance", MaintenanceLive.Index, :index
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
