@@ -260,16 +260,30 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
 
           <p class="text-gray-700">
-            This will merge the selected workflows from
-            <strong>{@sandbox.name}</strong>
-            into <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>,
-            then close <strong>{@sandbox.name}</strong>
+            This will overwrite the selected workflows in
+            <strong>
+              {get_selected_target_label(
+                @target_options,
+                @merge_form[:target_id].value
+              )}
+            </strong>
+            with the versions from <strong>{@sandbox.name}</strong>,
+            then delete <strong>{@sandbox.name}</strong>
             <%= if @descendant_count == 1 do %>
               and its child sandbox <strong>{List.first(@descendants).name}</strong>
             <% end %>
             <%= if @descendant_count > 1 do %>
               and its {@descendant_count} child sandboxes
-            <% end %>. This action cannot be undone.
+            <% end %>.
+            Any changes in
+            <strong>
+              {get_selected_target_label(
+                @target_options,
+                @merge_form[:target_id].value
+              )}
+            </strong>
+            that conflict with <strong>{@sandbox.name}</strong>
+            will be lost.
           </p>
 
           <%= if @descendant_count > 1 do %>
@@ -356,8 +370,8 @@ defmodule LightningWeb.SandboxLive.Components do
 
           <Common.alert
             id="merge-beta-warning"
-            type="warning"
-            header="Beta feature warning"
+            type="danger"
+            header="This action cannot be undone"
           >
             <:message>
               Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.
