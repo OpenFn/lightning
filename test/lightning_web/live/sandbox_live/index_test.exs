@@ -1177,7 +1177,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "Beta"
+      assert html =~ "This action cannot be undone"
       assert html =~ "use the CLI to merge locally"
     end
 
