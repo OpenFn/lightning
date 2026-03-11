@@ -16,6 +16,23 @@
           </LayoutComponents.breadcrumb>
         </LayoutComponents.breadcrumbs>
       </:breadcrumbs>
+      <.pill_tabs
+        :if={@channels_enabled}
+        id="history-tabs"
+        active={
+          if @live_action == :index, do: "work-orders", else: "channel-logs"
+        }
+      >
+        <:tab id="work-orders" patch={~p"/projects/#{@project}/history"}>
+          Work Orders
+        </:tab>
+        <:tab
+          id="channel-logs"
+          patch={~p"/projects/#{@project}/history/channels"}
+        >
+          Channel Logs
+        </:tab>
+      </.pill_tabs>
     </LayoutComponents.header>
   </:header>
   <.live_component
@@ -24,7 +41,7 @@
     id="export-confirmation-modal"
     count_work_orders={@page.total_entries}
   />
-  <LayoutComponents.centered>
+  <LayoutComponents.centered :if={@live_action == :index}>
     <div>
       <%!-- Search Bar --%>
       <div class="top-0 self-start mb-2">
@@ -668,5 +685,14 @@
         show={Map.get(assigns, :show_bulk_rerun_from_job_modal, false)}
       />
     </div>
+  </LayoutComponents.centered>
+  <LayoutComponents.centered :if={@live_action == :channel_logs}>
+    <.live_component
+      module={LightningWeb.RunLive.ChannelLogsComponent}
+      id="channel-logs"
+      project={@project}
+      current_user={@current_user}
+      params={@channel_logs_params}
+    />
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

@@ -53,6 +53,29 @@ defmodule Lightning.Config.Bootstrap do
     if config_env() == :dev do
       enabled = env!("LIVE_DEBUGGER", &Utils.ensure_boolean/1, true)
       config :live_debugger, :disabled?, not enabled
+
+      live_debugger_ip =
+        env!(
+          "LIVE_DEBUGGER_IP",
+          fn address ->
+            address
+            |> String.split(".")
+            |> Enum.map(&String.to_integer/1)
+            |> List.to_tuple()
+          end,
+          nil
+        )
+
+      if live_debugger_ip do
+        config :live_debugger, :ip, live_debugger_ip
+      end
+
+      live_debugger_external_url =
+        env!("LIVE_DEBUGGER_EXTERNAL_URL", :string, nil)
+
+      if live_debugger_external_url do
+        config :live_debugger, :external_url, live_debugger_external_url
+      end
     end
 
     # Load storage and webhook retry config early so endpoint can respect it.
@@ -437,8 +460,6 @@ defmodule Lightning.Config.Bootstrap do
       queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
-    host = env!("URL_HOST", :string, "example.com")
-
     port =
       env!(
         "PORT",
@@ -446,10 +467,29 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, LightningWeb.Endpoint, :http, :port])
       )
 
-    url_port = env!("URL_PORT", :integer, 443)
+    {url_host_default, url_port_default, url_scheme_default} =
+      if config_env() == :prod do
+        {"example.com", 443, "https"}
+      else
+        {
+          Utils.get_env(
+            [:lightning, LightningWeb.Endpoint, :url, :host],
+            "localhost"
+          ),
+          port,
+          Utils.get_env(
+            [:lightning, LightningWeb.Endpoint, :url, :scheme],
+            "http"
+          )
+        }
+      end
+
+    host = env!("URL_HOST", :string, url_host_default)
+    url_port = env!("URL_PORT", :integer, url_port_default)
+    url_scheme = env!("URL_SCHEME", :string, url_scheme_default)
 
     config :lightning, LightningWeb.Endpoint,
-      url: [port: port],
+      url: [host: host, port: url_port, scheme: url_scheme],
       http: [port: port]
 
     config :lightning,
@@ -519,8 +559,6 @@ defmodule Lightning.Config.Bootstrap do
           nil
         )
 
-      url_scheme = env!("URL_SCHEME", :string, "https")
-
       retry_timeout_ms = Lightning.Config.webhook_retry(:timeout_ms)
 
       idle_default_ms = max(60_000, retry_timeout_ms + 15_000)
@@ -538,7 +576,6 @@ defmodule Lightning.Config.Bootstrap do
         )
 
       config :lightning, LightningWeb.Endpoint,
-        url: [host: host, port: url_port, scheme: url_scheme],
         secret_key_base: secret_key_base,
         check_origin: origins,
         http: [
@@ -660,6 +697,10 @@ defmodule Lightning.Config.Bootstrap do
 
                value
            end)
+
+    config :lightning,
+           :log_queue_queries,
+           env!("LOG_QUEUE_QUERIES", &Utils.ensure_boolean/1, false)
 
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:

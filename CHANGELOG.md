@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Channels: a high-performance reverse proxy for forwarding authenticated
+  requests between systems with full observability. Includes source/sink
+  authentication, request/response logging, and a searchable history UI.
+  [#4322](https://github.com/OpenFn/lightning/issues/4322)
+
 ### Changed
 
 ### Fixed

@@ -28,6 +28,17 @@ defmodule Lightning.Application do
       })
     end
 
+    # :logger.add_handler(:file_log, :logger_std_h, %{
+    #   level: :warning,
+    #   config: %{
+    #     file: ~c"log/lightning.log",
+    #     max_no_bytes: 10_000_000,
+    #     max_no_files: 5,
+    #     compress_on_rotate: true
+    #   },
+    #   formatter: Logger.Formatter.new()
+    # })
+
     adaptor_registry_childspec =
       {Lightning.AdaptorRegistry,
        Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}

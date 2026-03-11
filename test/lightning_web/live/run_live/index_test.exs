@@ -476,6 +476,168 @@ defmodule LightningWeb.RunLive.IndexTest do
     end
   end
 
+  describe "channel logs tab" do
+    test "tab bar is hidden when experimental features are disabled", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute html =~ "Channel Logs"
+      refute html =~ "Work Orders</a>"
+    end
+
+    test "tab bar is visible when experimental features are enabled", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      {:ok, _view, html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Channel Logs"
+      assert html =~ "Work Orders"
+    end
+
+    test "navigating to channel logs tab renders channel logs content", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      html = render(view)
+      assert html =~ "Channel Requests"
+      assert html =~ "channel-request-filter-form"
+    end
+
+    test "channel logs tab shows empty state with no requests", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      assert html =~ "No channel requests found."
+    end
+
+    test "channel logs tab renders channel request rows", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      channel = insert(:channel, project: project, name: "test-channel")
+
+      {:ok, snapshot} =
+        Lightning.Channels.get_or_create_current_snapshot(channel)
+
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: snapshot,
+        state: :success,
+        started_at: DateTime.utc_now()
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      assert html =~ "test-channel"
+    end
+
+    test "channel filter works within history page", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      ch1 = insert(:channel, project: project, name: "channel-one")
+      ch2 = insert(:channel, project: project, name: "channel-two")
+
+      {:ok, snap1} =
+        Lightning.Channels.get_or_create_current_snapshot(ch1)
+
+      {:ok, snap2} =
+        Lightning.Channels.get_or_create_current_snapshot(ch2)
+
+      cr1 =
+        insert(:channel_request,
+          channel: ch1,
+          channel_snapshot: snap1,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
+
+      cr2 =
+        insert(:channel_request,
+          channel: ch2,
+          channel_snapshot: snap2,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/history/channels?#{%{filters: %{channel_id: ch1.id}}}"
+        )
+
+      assert html =~ cr1.request_id
+      refute html =~ cr2.request_id
+    end
+
+    test "work orders content is hidden on channel logs tab", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      refute html =~ "workorder-filter-form"
+    end
+
+    test "old /channels/requests route no longer works", %{
+      conn: conn,
+      project: project
+    } do
+      assert_raise FunctionClauseError, fn ->
+        live(conn, "/projects/#{project.id}/channels/requests")
+      end
+    end
+  end
+
   describe "Export History" do
     test "export history button is present", %{conn: conn, project: project} do
       {:ok, view, _html} =
