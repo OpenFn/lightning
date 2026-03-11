@@ -292,6 +292,37 @@ defmodule LightningWeb.ChannelProxyPlugTest do
                "custom-value"
              ]
     end
+
+    test "host header sent to sink matches upstream URL, not client's original host",
+         %{bypass: bypass, channel: channel} do
+      test_pid = self()
+
+      Bypass.expect_once(bypass, "GET", "/host-check", fn conn ->
+        [received_host] = Plug.Conn.get_req_header(conn, "host")
+        send(test_pid, {:sink_host, received_host})
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      # Simulate a real HTTP request with an attacker-controlled host header.
+      # In production, Cowboy always includes the client's Host header in
+      # req_headers; Plug.Test.conn does not, so we inject it manually.
+      base_conn = conn(:get, "/channels/#{channel.id}/host-check")
+
+      resp =
+        %{
+          base_conn
+          | host: "evil.example.com",
+            req_headers: [
+              {"host", "evil.example.com"} | base_conn.req_headers
+            ]
+        }
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      assert_receive {:sink_host, received_host}
+      assert received_host == "localhost:#{bypass.port}"
+    end
   end
 
   describe "error cases" do
@@ -575,6 +606,123 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 200
       assert resp.resp_body == "mixed-ok"
+    end
+  end
+
+  describe "source auth header stripping" do
+    test "strips x-api-key header when source uses API key auth", %{
+      bypass: bypass
+    } do
+      channel =
+        create_source_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "valid-api-key"}
+        ])
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        api_key = Plug.Conn.get_req_header(conn, "x-api-key")
+        assert api_key == [], "x-api-key should not be forwarded to the sink"
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/test")
+      |> put_req_header("x-api-key", "valid-api-key")
+      |> send_to_endpoint()
+    end
+
+    test "strips authorization header when source uses Basic auth", %{
+      bypass: bypass
+    } do
+      channel =
+        create_source_auth_channel(bypass, [
+          %{auth_type: :basic, username: "admin", password: "secretpw"}
+        ])
+
+      encoded = Base.encode64("admin:secretpw")
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+
+        assert auth == [],
+               "source Basic auth should not be forwarded to the sink"
+
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/test")
+      |> put_req_header("authorization", "Basic #{encoded}")
+      |> send_to_endpoint()
+    end
+
+    test "replaces source Basic auth with sink Bearer auth", %{
+      bypass: bypass
+    } do
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "sink-cred", user: user)
+        |> with_body(%{body: %{"access_token" => "sink-token-xyz"}})
+
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
+
+      source_encoded = Base.encode64("user:password")
+
+      channel =
+        insert(:channel,
+          project: project,
+          sink_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :source,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :basic,
+                  username: "user",
+                  password: "password"
+                )
+            ),
+            build(:channel_auth_method,
+              role: :sink,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+
+        assert auth == ["Bearer sink-token-xyz"],
+               "sink should receive the sink Bearer token, not the source Basic auth"
+
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/test")
+      |> put_req_header("authorization", "Basic #{source_encoded}")
+      |> send_to_endpoint()
+    end
+
+    test "passes through client auth headers when no source auth configured",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+
+        assert auth == ["Bearer client-token"],
+               "client auth headers should pass through when no source auth is configured"
+
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/test")
+      |> put_req_header("authorization", "Bearer client-token")
+      |> send_to_endpoint()
     end
   end
 

@@ -43,52 +43,9 @@ defmodule LightningWeb.ChannelProxyPlug do
       :request_id,
       :forward_path,
       :client_identity,
-      :auth_header
+      :auth_header,
+      source_auth_types: []
     ]
-  end
-
-  defmodule Headers do
-    @moduledoc false
-
-    import Plug.Conn, only: [get_req_header: 2]
-
-    alias LightningWeb.ChannelProxyPlug.SinkRequest
-
-    def reject_header(headers, name) do
-      downcased = String.downcase(name)
-      Enum.reject(headers, fn {k, _} -> String.downcase(k) == downcased end)
-    end
-
-    def set_header(headers, _name, nil), do: headers
-
-    def set_header(headers, name, value) do
-      headers |> reject_header(name) |> Kernel.++([{name, value}])
-    end
-
-    def add_proxy_headers(headers, conn) do
-      original_host = get_req_header(conn, "host") |> List.first("")
-      remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
-
-      existing_xff = get_req_header(conn, "x-forwarded-for") |> List.first()
-
-      xff_value =
-        if existing_xff, do: "#{existing_xff}, #{remote_ip}", else: remote_ip
-
-      headers ++
-        [
-          {"x-forwarded-for", xff_value},
-          {"x-forwarded-host", original_host},
-          {"x-forwarded-proto", to_string(conn.scheme)}
-        ]
-    end
-
-    def build_outbound_headers(conn, %SinkRequest{} = req) do
-      conn.req_headers
-      |> reject_header("x-request-id")
-      |> add_proxy_headers(conn)
-      |> set_header("x-request-id", req.request_id)
-      |> set_header("authorization", req.auth_header)
-    end
   end
 
   @impl true
@@ -123,6 +80,13 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp proxy_with_auth(conn, channel, rest) do
     with {:ok, auth_header} <- resolve_sink_auth(channel),
          {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
+      source_auth_types =
+        channel.source_auth_methods
+        |> Enum.map(& &1.webhook_auth_method)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(& &1.auth_type)
+        |> Enum.uniq()
+
       req = %SinkRequest{
         channel: channel,
         snapshot: snapshot,
@@ -130,7 +94,8 @@ defmodule LightningWeb.ChannelProxyPlug do
           conn |> Plug.Conn.get_resp_header("x-request-id") |> List.first(),
         forward_path: build_forward_path(rest),
         client_identity: get_client_identity(conn),
-        auth_header: auth_header
+        auth_header: auth_header,
+        source_auth_types: source_auth_types
       }
 
       conn
@@ -174,8 +139,6 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp proxy_upstream(conn, %SinkRequest{} = req) do
-    outbound_headers = Headers.build_outbound_headers(conn, req)
-
     handler_state = %{
       channel: req.channel,
       snapshot: req.snapshot,
@@ -199,13 +162,43 @@ defmodule LightningWeb.ChannelProxyPlug do
           Philter.proxy(conn,
             upstream: String.trim_trailing(req.channel.sink_url, "/"),
             path: req.forward_path,
-            headers: outbound_headers,
-            handler: {Lightning.Channels.Handler, handler_state}
+            handler: {Lightning.Channels.Handler, handler_state},
+            strip_headers: build_strip_headers(req.source_auth_types),
+            extra_headers: build_extra_headers(conn, req)
           )
 
         {result, metadata}
       end
     )
+  end
+
+  defp build_extra_headers(conn, %SinkRequest{} = req) do
+    xff =
+      case Plug.Conn.get_req_header(conn, "x-forwarded-for") do
+        [existing] -> "#{existing}, #{:inet.ntoa(conn.remote_ip)}"
+        _ -> to_string(:inet.ntoa(conn.remote_ip))
+      end
+
+    headers = [
+      {"x-forwarded-for", xff},
+      {"x-forwarded-host", conn.host},
+      {"x-forwarded-proto", to_string(conn.scheme)},
+      {"x-request-id", req.request_id}
+    ]
+
+    case req.auth_header do
+      nil -> headers
+      auth -> [{"authorization", auth} | headers]
+    end
+  end
+
+  defp build_strip_headers(source_auth_types) do
+    Enum.flat_map(source_auth_types, fn
+      :api -> ["x-api-key"]
+      :basic -> ["authorization"]
+      _ -> []
+    end)
+    |> Enum.uniq()
   end
 
   defp fetch_channel(id) do

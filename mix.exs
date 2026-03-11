@@ -162,7 +162,7 @@ defmodule Lightning.MixProject do
     if path = System.get_env("PHILTER_PATH") do
       {:philter, path: path}
     else
-      {:philter, "~> 0.1.0"}
+      {:philter, "~> 0.2.0"}
     end
   end
 
