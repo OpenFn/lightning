@@ -1083,7 +1083,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.MergeProjects,
         :merge_project,
-        fn source, target ->
+        fn source, target, _opts ->
           assert source.id == child1.id
           assert target.id == root.id
           "merged_yaml"
@@ -1133,7 +1133,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.MergeProjects,
         :merge_project,
-        fn _source, _target ->
+        fn _source, _target, _opts ->
           "merged_yaml"
         end
       )
@@ -1177,7 +1177,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "Beta"
+      assert html =~ "This action cannot be undone"
       assert html =~ "use the CLI to merge locally"
     end
 
@@ -1316,7 +1316,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target ->
+                                                                        _target,
+                                                                        _opts ->
         "merged_yaml"
       end)
 
@@ -1357,7 +1358,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target ->
+                                                                        _target,
+                                                                        _opts ->
         "merged_yaml"
       end)
 
@@ -1398,7 +1400,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target ->
+                                                                        _target,
+                                                                        _opts ->
         "merged_yaml"
       end)
 
@@ -1433,7 +1436,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target ->
+                                                                        _target,
+                                                                        _opts ->
         "merged_yaml"
       end)
 
@@ -1631,7 +1635,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.MergeProjects,
         :merge_project,
-        fn _source, _target -> "merged_yaml" end
+        fn _source, _target, _opts -> "merged_yaml" end
       )
 
       Mimic.expect(
@@ -1970,12 +1974,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
       # Open the merge modal
-      view
-      |> render_click("open-merge-modal", %{"id" => sandbox.id})
+      html =
+        view
+        |> render_click("open-merge-modal", %{"id" => sandbox.id})
 
-      assert view
-             |> element("#merge-divergence-alert")
-             |> has_element?()
+      assert html =~ "Target modified"
+      assert html =~ "Test Workflow"
     end
   end
 
@@ -2360,14 +2364,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      # Assert divergence alert is present
-      assert html =~ "Target project has diverged"
+      # Assert per-row divergence indicators are present
+      assert html =~ "Target modified"
 
-      # Assert workflow names are listed
+      # Assert workflow names are listed in the workflow list
       assert html =~ "Payment Processing"
       assert html =~ "Data Sync"
-
-      assert html =~ "workflow(s) have been modified"
     end
 
     test "does not show divergence alert when workflows match", %{
@@ -2404,7 +2406,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       refute html =~ "Target project has diverged"
-      refute html =~ "Matching Workflow"
+
+      # Matching Workflow appears in the workflow list (not as a diverged workflow)
+      refute html =~ "Target modified"
     end
 
     test "updates diverged workflow list when changing merge target", %{
@@ -2469,17 +2473,303 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       html = render(view)
+      # Both workflows in source appear in the list
       assert html =~ "Parent Workflow"
-      refute html =~ "Sibling Workflow"
+      assert html =~ "Sibling Workflow"
+      # Parent Workflow is diverged (different hash in parent), Sibling is new
+      assert html =~ "Target modified"
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      parent_wf_data =
+        Enum.find(
+          assigns.merge_source_workflows,
+          &(&1.name == "Parent Workflow")
+        )
+
+      sibling_wf_data =
+        Enum.find(
+          assigns.merge_source_workflows,
+          &(&1.name == "Sibling Workflow")
+        )
+
+      assert parent_wf_data.is_diverged
+      assert sibling_wf_data.is_new
 
       # Change target to sibling_sandbox
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{merge: %{target_id: sibling_sandbox.id}})
+
+      assigns2 = :sys.get_state(view.pid).socket.assigns
+
+      parent_wf_data2 =
+        Enum.find(
+          assigns2.merge_source_workflows,
+          &(&1.name == "Parent Workflow")
+        )
+
+      sibling_wf_data2 =
+        Enum.find(
+          assigns2.merge_source_workflows,
+          &(&1.name == "Sibling Workflow")
+        )
+
+      assert parent_wf_data2.is_new
+      assert sibling_wf_data2.is_diverged
+    end
+  end
+
+  describe "workflow selection in merge modal" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, parent: parent, sandbox: sandbox}
+    end
+
+    test "opening merge modal populates source workflows with correct metadata",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      # Target (parent) has "Alpha" workflow
+      parent_wf = insert(:workflow, project: parent, name: "Alpha")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_wf,
+          "aaaaaa000000",
+          "app"
+        )
+
+      # Sandbox has "Alpha" (diverged) and "Beta" (new in target)
+      sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_alpha,
+          "bbbbbb111111",
+          "app"
+        )
+
+      _sandbox_beta = insert(:workflow, project: sandbox, name: "Beta")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert length(assigns.merge_source_workflows) == 2
+      assert MapSet.size(assigns.merge_selected_workflow_ids) == 2
+
+      alpha_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Alpha"))
+
+      beta_data = Enum.find(assigns.merge_source_workflows, &(&1.name == "Beta"))
+
+      assert %{is_diverged: true, is_new: false} = alpha_data
+      assert %{is_diverged: false, is_new: true} = beta_data
+
+      # All workflows selected by default and IDs match
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, alpha_data.id)
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, beta_data.id)
+    end
+
+    test "workflow selection UI shows per-row status badges", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      parent_wf = insert(:workflow, project: parent, name: "Diverged Flow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_wf,
+          "aaaaaa000001",
+          "app"
+        )
+
+      sandbox_wf = insert(:workflow, project: sandbox, name: "Diverged Flow")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_wf,
+          "bbbbbb111112",
+          "app"
+        )
+
+      _new_wf = insert(:workflow, project: sandbox, name: "New Flow")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
       html =
         view
-        |> form("#merge-sandbox-modal form")
-        |> render_change(%{merge: %{target_id: sibling_sandbox.id}})
+        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+        |> render_click()
 
-      refute html =~ "Parent Workflow"
-      assert html =~ "Sibling Workflow"
+      assert html =~ "Target modified"
+      assert html =~ "New"
+      assert html =~ "Diverged Flow"
+      assert html =~ "New Flow"
+    end
+
+    test "toggle-workflow event deselects and reselects a workflow", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      wf = insert(:workflow, project: sandbox, name: "My Workflow")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, wf.id)
+
+      render_click(view, "toggle-workflow", %{"id" => wf.id})
+
+      assigns2 = :sys.get_state(view.pid).socket.assigns
+      refute MapSet.member?(assigns2.merge_selected_workflow_ids, wf.id)
+
+      render_click(view, "toggle-workflow", %{"id" => wf.id})
+
+      assigns3 = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.member?(assigns3.merge_selected_workflow_ids, wf.id)
+    end
+
+    test "toggle-all-workflows deselects all when all selected, then selects all",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      _wf1 = insert(:workflow, project: sandbox, name: "Flow A")
+      _wf2 = insert(:workflow, project: sandbox, name: "Flow B")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.size(assigns.merge_selected_workflow_ids) == 2
+
+      render_click(view, "toggle-all-workflows", %{})
+
+      assigns2 = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.size(assigns2.merge_selected_workflow_ids) == 0
+
+      render_click(view, "toggle-all-workflows", %{})
+
+      assigns3 = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.size(assigns3.merge_selected_workflow_ids) == 2
+    end
+
+    test "changing merge target recomputes workflow divergence and new status",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox,
+           user: user
+         } do
+      sibling =
+        insert(:project,
+          name: "sibling",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      # "Shared" exists in parent (diverged from sandbox)
+      parent_shared = insert(:workflow, project: parent, name: "Shared")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_shared,
+          "aaaaaa000010",
+          "app"
+        )
+
+      # "Shared" exists in sandbox with different hash
+      sandbox_shared = insert(:workflow, project: sandbox, name: "Shared")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_shared,
+          "bbbbbb111120",
+          "app"
+        )
+
+      # "Only In Sibling" exists in sibling (diverged from sandbox)
+      sibling_wf = insert(:workflow, project: sibling, name: "Only In Sibling")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sibling_wf,
+          "cccccc222220",
+          "app"
+        )
+
+      sandbox_sibling_wf =
+        insert(:workflow, project: sandbox, name: "Only In Sibling")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_sibling_wf,
+          "dddddd333330",
+          "app"
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      shared_wf =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Shared"))
+
+      sibling_wf_in_list =
+        Enum.find(
+          assigns.merge_source_workflows,
+          &(&1.name == "Only In Sibling")
+        )
+
+      assert shared_wf.is_diverged
+      assert sibling_wf_in_list.is_new
+
+      # Change target to sibling — now "Only In Sibling" is diverged, "Shared" is new
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{merge: %{target_id: sibling.id}})
+
+      assigns2 = :sys.get_state(view.pid).socket.assigns
+
+      shared_wf2 =
+        Enum.find(assigns2.merge_source_workflows, &(&1.name == "Shared"))
+
+      sibling_wf2 =
+        Enum.find(
+          assigns2.merge_source_workflows,
+          &(&1.name == "Only In Sibling")
+        )
+
+      assert shared_wf2.is_new
+      assert sibling_wf2.is_diverged
     end
   end
 

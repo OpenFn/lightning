@@ -278,6 +278,167 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
   end
 
+  describe "merge_project/3 with selected_workflow_ids" do
+    test "only selected source workflow is merged when selection provided" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      target_workflow_a =
+        insert(:workflow, name: "workflow_a", project: target_project)
+
+      target_workflow_b =
+        insert(:workflow, name: "workflow_b", project: target_project)
+
+      source_workflow_a =
+        insert(:workflow, name: "workflow_a", project: source_project)
+
+      insert(:workflow, name: "workflow_b", project: source_project)
+
+      result =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow_a.id]
+        })
+
+      # Both target workflows are present: selected one is merged, unselected
+      # one is passed through unchanged so the provisioner does not raise.
+      assert length(result["workflows"]) == 2
+
+      merged_workflow =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_a.id))
+
+      assert merged_workflow["name"] == "workflow_a"
+      refute merged_workflow["delete"]
+
+      # Unselected target workflow is passed through unchanged (not deleted)
+      passthrough =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_b.id))
+
+      assert passthrough["name"] == "workflow_b"
+      refute passthrough["delete"]
+    end
+
+    test "unselected target workflows are included as passthrough (not deleted)" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      insert(:workflow, name: "workflow_a", project: target_project)
+
+      target_workflow_b =
+        insert(:workflow, name: "workflow_b", project: target_project)
+
+      source_workflow_a =
+        insert(:workflow, name: "workflow_a", project: source_project)
+
+      # Source also has workflow_b but we do NOT select it
+      insert(:workflow, name: "workflow_b", project: source_project)
+
+      result =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow_a.id]
+        })
+
+      # Both target workflows are present in the result
+      assert length(result["workflows"]) == 2
+
+      # target_workflow_b is included as passthrough, not marked for deletion
+      passthrough =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_b.id))
+
+      assert passthrough
+      refute passthrough["delete"]
+    end
+
+    test "empty selection passes through all target workflows unchanged" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      target_workflow =
+        insert(:workflow, name: "workflow_a", project: target_project)
+
+      insert(:workflow, name: "workflow_a", project: source_project)
+
+      result =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: []
+        })
+
+      # No source workflows are merged, but target workflows are passed through
+      assert length(result["workflows"]) == 1
+      passthrough = hd(result["workflows"])
+      assert passthrough["id"] == target_workflow.id
+      refute passthrough["delete"]
+    end
+
+    test "selecting all workflow IDs matches nil behaviour for matched workflows" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      target_workflow =
+        insert(:workflow, name: "shared_workflow", project: target_project)
+
+      source_workflow =
+        insert(:workflow, name: "shared_workflow", project: source_project)
+
+      result_all_selected =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow.id]
+        })
+
+      result_nil =
+        MergeProjects.merge_project(source_project, target_project)
+
+      # Both should merge the matched workflow with the target's ID
+      assert [%{"id" => merged_id_selected}] = result_all_selected["workflows"]
+      assert [%{"id" => merged_id_nil}] = result_nil["workflows"]
+
+      assert merged_id_selected == target_workflow.id
+      assert merged_id_nil == target_workflow.id
+    end
+
+    test "selecting all workflows preserves deletion of unmatched targets" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      # Target has two workflows but source only has one matching one
+      insert(:workflow, name: "shared_workflow", project: target_project)
+
+      target_only_workflow =
+        insert(:workflow, name: "target_only", project: target_project)
+
+      source_workflow =
+        insert(:workflow, name: "shared_workflow", project: source_project)
+
+      # When selecting all source workflows (nil behaviour), unmatched target
+      # workflows should still be deleted
+      result_nil =
+        MergeProjects.merge_project(source_project, target_project)
+
+      deleted_in_nil =
+        Enum.find(
+          result_nil["workflows"],
+          &(&1["id"] == target_only_workflow.id)
+        )
+
+      assert deleted_in_nil["delete"]
+
+      # When providing selected_workflow_ids, unmatched targets are included as
+      # passthrough (not deleted) so the provisioner does not raise.
+      result_selected =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow.id]
+        })
+
+      passthrough_in_selected =
+        Enum.find(
+          result_selected["workflows"],
+          &(&1["id"] == target_only_workflow.id)
+        )
+
+      assert passthrough_in_selected
+      refute passthrough_in_selected["delete"]
+    end
+  end
+
   describe "merge_workflow/2 - ported from cli" do
     test "no changes: single node workflow" do
       # Both source and target have identical single trigger
