@@ -29,9 +29,7 @@ defmodule Lightning.Runs.Queue do
     |> Ecto.Multi.run(:claim_runs, fn _repo, _changes ->
       subset_query =
         base_query
-        |> exclude(:order_by)
-        |> apply_queue_clause(queues)
-        |> order_by([r], asc: r.priority, asc: r.inserted_at)
+        |> apply_queue_and_ordering(queues)
         |> select([:id])
         |> where([r], r.state == :available)
         |> limit(^demand)
@@ -69,6 +67,19 @@ defmodule Lightning.Runs.Queue do
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
+  end
+
+  # Rebuilds ordering as: queue_preference (if any), then the base query's
+  # original ordering.  This preserves caller-supplied ordering (e.g. the
+  # project_id column used by Thunderbolt's round-robin scheduler) while
+  # letting queue preference take highest precedence.
+  defp apply_queue_and_ordering(query, queues) do
+    saved_order_bys = query.order_bys
+
+    query
+    |> exclude(:order_by)
+    |> apply_queue_clause(queues)
+    |> then(fn q -> %{q | order_bys: q.order_bys ++ saved_order_bys} end)
   end
 
   defp apply_queue_clause(query, queues) do
