@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Display error messages when GitHub installations fail to load, providing
+  specific guidance for OAuth token errors and other failure scenarios
+  [#4467](https://github.com/OpenFn/lightning/issues/4467)
 - Migrate form error display from `phx-feedback-for` to `used_input?/1` so
   validation errors only appear on fields the user has interacted with
   [#4472](https://github.com/OpenFn/lightning/pull/4472)
