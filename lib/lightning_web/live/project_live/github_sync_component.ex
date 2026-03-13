@@ -363,7 +363,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp installations_select_options(async_installations) do
-    installations = (async_installations.ok? && async_installations.result) || []
+    installations =
+      if async_installations.ok? && async_installations.result &&
+           is_map(async_installations.result) do
+        Map.get(async_installations.result, :installations, [])
+      else
+        []
+      end
 
     Enum.map(installations, fn installation ->
       {installation["account"], installation["id"]}

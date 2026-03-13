@@ -39,8 +39,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       repos: repos,
       branches: branches
     } do
-      error_message = "Bad credentials"
-      error = GithubError.invalid_oauth_token(error_message)
+      error = GithubError.invalid_oauth_token("user refresh token has expired")
       installations = AsyncResult.failed(%AsyncResult{}, {:error, error})
 
       html =
@@ -72,14 +71,14 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       # Verify error message content
       assert html =~ "Unable to load GitHub installations"
       assert html =~ "Your GitHub authentication has expired or is invalid"
-      assert html =~ error_message
 
       # Verify Settings link is present
       assert html =~ "Settings"
       assert html =~ ~s(href="/profile")
+      assert html =~ "reconnect your GitHub account"
     end
 
-    test "displays error banner for generic GitHub error", %{
+    test "displays error banner for generic GitHub API error", %{
       user: user,
       project: project,
       project_repo_connection: project_repo_connection,
@@ -87,52 +86,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       repos: repos,
       branches: branches
     } do
-      error_message = "API rate limit exceeded"
-      error = GithubError.api_error(error_message)
-      installations = AsyncResult.failed(%AsyncResult{}, {:error, error})
-
-      assigns = %{
-        id: "github-sync-component",
-        myself: %{},
-        user: user,
-        project: project,
-        project_repo_connection: project_repo_connection,
-        can_install_github: true,
-        can_initiate_github_sync: true,
-        action: :new,
-        installations: installations,
-        changeset: changeset,
-        repos: repos,
-        branches: branches,
-        actions_disabled: false,
-        actions_disabled_tooltip: nil
-      }
-
-      html =
-        rendered_template(assigns)
-
-      # Verify error banner and ARIA attributes
-      parsed = Floki.parse_document!(html)
-      alert_banner = Floki.find(parsed, "[role='alert']")
-      assert alert_banner != []
-      assert Floki.attribute(alert_banner, "aria-live") == ["polite"]
-
-      # Verify error message content
-      assert html =~ "Unable to load GitHub installations"
-      assert html =~ "Try the refresh button above, or contact support"
-      assert html =~ error_message
-    end
-
-    test "displays error banner for map format error", %{
-      user: user,
-      project: project,
-      project_repo_connection: project_repo_connection,
-      changeset: changeset,
-      repos: repos,
-      branches: branches
-    } do
-      error_message = "Resource not accessible by integration"
-      error = %{"message" => error_message}
+      error = GithubError.api_error("API rate limit exceeded")
       installations = AsyncResult.failed(%AsyncResult{}, {:error, error})
 
       assigns = %{
@@ -162,11 +116,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
 
       # Verify error message content
       assert html =~ "Unable to load GitHub installations"
+      assert html =~ "There was a problem connecting to GitHub"
       assert html =~ "Try the refresh button above, or contact support"
-      assert html =~ error_message
     end
 
-    test "displays error banner for unknown error type", %{
+    test "displays warning banner when user has no installations", %{
       user: user,
       project: project,
       project_repo_connection: project_repo_connection,
@@ -174,8 +128,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       repos: repos,
       branches: branches
     } do
-      error = {:unexpected_error, "Something went wrong"}
-      installations = AsyncResult.failed(%AsyncResult{}, error)
+      # Token is valid but user has no installations (app not installed or uninstalled)
+      installations =
+        AsyncResult.ok(%AsyncResult{}, %{installations: [], repos: %{}})
 
       assigns = %{
         id: "github-sync-component",
@@ -196,19 +151,25 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
 
       html = rendered_template(assigns)
 
-      # Verify error banner and ARIA attributes
+      # Verify warning banner is visible
       parsed = Floki.parse_document!(html)
       alert_banner = Floki.find(parsed, "[role='alert']")
       assert alert_banner != []
+
+      # Verify ARIA attributes
       assert Floki.attribute(alert_banner, "aria-live") == ["polite"]
 
-      # Verify error message content
-      assert html =~ "Unable to load GitHub installations"
-      assert html =~ "An unexpected error occurred"
-      assert html =~ "Please try the refresh button or contact support"
+      # Verify warning message content
+      assert html =~ "No GitHub installations found"
+      assert html =~ "haven't installed the OpenFn GitHub App yet"
+      assert html =~ "may have uninstalled it"
+
+      # Verify GitHub installations link is present
+      assert html =~ "Install or manage GitHub app installations"
+      assert html =~ "https://github.com/apps/"
     end
 
-    test "error banner has correct styling", %{
+    test "error and warning banners have correct styling", %{
       user: user,
       project: project,
       project_repo_connection: project_repo_connection,
@@ -216,7 +177,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       repos: repos,
       branches: branches
     } do
-      error = GithubError.api_error("Test error")
+      # Test with a token error
+      error = GithubError.invalid_oauth_token("token expired")
       installations = AsyncResult.failed(%AsyncResult{}, {:error, error})
 
       assigns = %{

@@ -9,7 +9,8 @@
       phx-submit="save"
       phx-target={@myself}
     >
-      <%= if !@installations.ok? && @installations.failed do %>
+      <%!-- Token is expired/invalid --%>
+      <%= if !@installations.ok? && @installations.failed && match?({:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}}, @installations.failed) do %>
         <div
           class="rounded-md bg-yellow-50 p-4 mb-4"
           role="alert"
@@ -24,41 +25,77 @@
                 Unable to load GitHub installations
               </h3>
               <div class="mt-2 text-sm text-yellow-700">
-                <%= case @installations.failed do %>
-                  <% {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token, message: message}} -> %>
-                    <p>
-                      Your GitHub authentication has expired or is invalid.
-                    </p>
-                    <p class="mt-1"><code class="text-xs">{message}</code></p>
-                    <p class="mt-2">
-                      Try disconnecting and reconnecting your GitHub account in
-                      <.link href={~p"/profile"} class="link font-medium">
-                        Settings
-                      </.link>
-                    </p>
-                  <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
-                    <p>
-                      Try the refresh button above, or contact support if the problem persists.
-                    </p>
-                    <p class="mt-2 text-xs opacity-75">
-                      <code>Error: {message}</code>
-                    </p>
-                  <% {:error, %{"message" => message}} -> %>
-                    <p>
-                      Try the refresh button above, or contact support if the problem persists.
-                    </p>
-                    <p class="mt-2 text-xs opacity-75">
-                      <code>Error: {message}</code>
-                    </p>
-                  <% _other -> %>
-                    <p>
-                      An unexpected error occurred. Please try the refresh button or contact support.
-                    </p>
-                    <%= if Application.get_env(:lightning, :env) == :dev do %>
-                      <p class="mt-2 text-xs opacity-75">
-                        <code>{inspect(@installations.failed)}</code>
-                      </p>
-                    <% end %>
+                <p>
+                  Your GitHub authentication has expired or is invalid.
+                </p>
+                <p class="mt-2">
+                  Go to
+                  <.link href={~p"/profile"} class="link font-medium">
+                    Settings
+                  </.link>
+                  and reconnect your GitHub account.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      <%!-- Token valid but no installations (app uninstalled/never installed) --%>
+      <%= if @installations.ok? && @installations.result && is_map(@installations.result) && match?(%{installations: []}, @installations.result) do %>
+        <div
+          class="rounded-md bg-yellow-50 p-4 mb-4"
+          role="alert"
+          aria-live="polite"
+        >
+          <div class="flex">
+            <div class="shrink-0">
+              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">
+                No GitHub installations found
+              </h3>
+              <div class="mt-2 text-sm text-yellow-700">
+                <p>
+                  You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
+                </p>
+                <p class="mt-2">
+                  <.link
+                    target="_blank"
+                    class="link font-medium"
+                    href={"https://github.com/apps/#{github_config()[:app_name]}"}
+                  >
+                    Install or manage GitHub app installations
+                  </.link>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      <%!-- GitHub API error (GitHub down or other issues) --%>
+      <%= if !@installations.ok? && @installations.failed && !match?({:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}}, @installations.failed) do %>
+        <div
+          class="rounded-md bg-yellow-50 p-4 mb-4"
+          role="alert"
+          aria-live="polite"
+        >
+          <div class="flex">
+            <div class="shrink-0">
+              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">
+                Unable to load GitHub installations
+              </h3>
+              <div class="mt-2 text-sm text-yellow-700">
+                <p>
+                  There was a problem connecting to GitHub. Try the refresh button above, or contact support if the problem persists.
+                </p>
+                <%= if Application.get_env(:lightning, :env) == :dev do %>
+                  <p class="mt-2 text-xs opacity-75">
+                    <code>{inspect(@installations.failed)}</code>
+                  </p>
                 <% end %>
               </div>
             </div>
