@@ -66,31 +66,52 @@ defmodule Lightning.Runs.Handlers do
 
     import Lightning.ChangesetUtils
 
+    alias Lightning.Invocation.Dataclip
+
     @primary_key false
     embedded_schema do
       field :state, :string
       field :reason, :string
       field :error_type, :string
+      field :final_state, :string
+      field :project_id, Ecto.UUID
       field :timestamp, Lightning.UnixDateTime
     end
 
     def call(run, params) do
       with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
-        run
-        |> Run.complete(to_run_params(complete_run))
-        |> case do
-          %{valid?: false} = changeset ->
-            {:error, changeset}
+        Repo.transact(fn ->
+          with {:ok, final_dataclip} <-
+                 maybe_save_final_dataclip(complete_run, run.options) do
+            run_params =
+              complete_run
+              |> to_run_params()
+              |> maybe_put_final_dataclip_id(final_dataclip)
 
-          changeset ->
-            Runs.update_run(changeset)
-        end
+            run
+            |> Run.complete(run_params)
+            |> case do
+              %{valid?: false} = changeset ->
+                {:error, changeset}
+
+              changeset ->
+                Runs.update_run(changeset)
+            end
+          end
+        end)
       end
     end
 
     def new(params) do
       %__MODULE__{}
-      |> cast(params, [:state, :reason, :error_type, :timestamp])
+      |> cast(params, [
+        :state,
+        :reason,
+        :error_type,
+        :final_state,
+        :project_id,
+        :timestamp
+      ])
       |> put_new_change(:timestamp, Lightning.current_time())
       |> then(fn changeset ->
         if reason = get_change(changeset, :reason) do
@@ -118,6 +139,50 @@ defmodule Lightning.Runs.Handlers do
       complete_run
       |> Map.take([:state, :error_type])
       |> Map.put(:finished_at, complete_run.timestamp)
+    end
+
+    defp maybe_put_final_dataclip_id(params, nil), do: params
+
+    defp maybe_put_final_dataclip_id(params, %Dataclip{id: id}),
+      do: Map.put(params, :final_dataclip_id, id)
+
+    defp maybe_save_final_dataclip(
+           %__MODULE__{final_state: nil},
+           _options
+         ) do
+      {:ok, nil}
+    end
+
+    defp maybe_save_final_dataclip(
+           %__MODULE__{project_id: nil},
+           _options
+         ) do
+      {:ok, nil}
+    end
+
+    defp maybe_save_final_dataclip(
+           %__MODULE__{final_state: _final_state, project_id: project_id},
+           %Runs.RunOptions{save_dataclips: false}
+         ) do
+      Dataclip.new(%{
+        project_id: project_id,
+        body: nil,
+        wiped_at: Lightning.current_time() |> DateTime.truncate(:second),
+        type: :step_result
+      })
+      |> Repo.insert()
+    end
+
+    defp maybe_save_final_dataclip(
+           %__MODULE__{final_state: final_state, project_id: project_id},
+           _options
+         ) do
+      Dataclip.new(%{
+        project_id: project_id,
+        body: Jason.decode!(final_state),
+        type: :step_result
+      })
+      |> Repo.insert()
     end
   end
 
