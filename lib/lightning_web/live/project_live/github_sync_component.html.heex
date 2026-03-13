@@ -10,97 +10,53 @@
       phx-target={@myself}
     >
       <%!-- Token is expired/invalid --%>
-      <%= if !@installations.ok? && @installations.failed && match?({:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}}, @installations.failed) do %>
-        <div
-          class="rounded-md bg-yellow-50 p-4 mb-4"
-          role="alert"
-          aria-live="polite"
-        >
-          <div class="flex">
-            <div class="shrink-0">
-              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-yellow-800">
-                Unable to load GitHub installations
-              </h3>
-              <div class="mt-2 text-sm text-yellow-700">
-                <p>
-                  Your GitHub authentication has expired or is invalid.
-                </p>
-                <p class="mt-2">
-                  Go to
-                  <.link href={~p"/profile"} class="link font-medium">
-                    Settings
-                  </.link>
-                  and reconnect your GitHub account.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <%= if show_invalid_oauth_error?(@installations) do %>
+        <.error_banner title="Unable to load GitHub installations">
+          <p>
+            Your GitHub authentication has expired or is invalid.
+          </p>
+          <p class="mt-2">
+            Go to
+            <.link href={~p"/profile"} class="link font-medium">
+              Settings
+            </.link>
+            and reconnect your GitHub account.
+          </p>
+        </.error_banner>
       <% end %>
       <%!-- Token valid but no installations (app uninstalled/never installed) --%>
-      <%= if @installations.ok? && @installations.result && is_map(@installations.result) && match?(%{installations: []}, @installations.result) do %>
-        <div
-          class="rounded-md bg-yellow-50 p-4 mb-4"
-          role="alert"
-          aria-live="polite"
-        >
-          <div class="flex">
-            <div class="shrink-0">
-              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-yellow-800">
-                No GitHub installations found
-              </h3>
-              <div class="mt-2 text-sm text-yellow-700">
-                <p>
-                  You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
-                </p>
-                <p class="mt-2">
-                  <.link
-                    target="_blank"
-                    class="link font-medium"
-                    href={"https://github.com/apps/#{github_config()[:app_name]}"}
-                  >
-                    Install or manage GitHub app installations
-                  </.link>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <%= if show_no_installations_warning?(@installations) do %>
+        <.error_banner title="No GitHub installations found">
+          <p>
+            You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
+          </p>
+          <p class="mt-2">
+            <.link
+              target="_blank"
+              rel="noopener noreferrer"
+              class="link font-medium"
+              href={"https://github.com/apps/#{github_config()[:app_name]}"}
+            >
+              Install or manage GitHub app installations
+            </.link>
+          </p>
+        </.error_banner>
       <% end %>
       <%!-- GitHub API error (GitHub down or other issues) --%>
-      <%= if !@installations.ok? && @installations.failed && !match?({:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}}, @installations.failed) do %>
-        <div
-          class="rounded-md bg-yellow-50 p-4 mb-4"
-          role="alert"
-          aria-live="polite"
-        >
-          <div class="flex">
-            <div class="shrink-0">
-              <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-yellow-800">
-                Unable to load GitHub installations
-              </h3>
-              <div class="mt-2 text-sm text-yellow-700">
-                <p>
-                  There was a problem connecting to GitHub. Try the refresh button above, or contact support if the problem persists.
-                </p>
-                <%= if Application.get_env(:lightning, :env) == :dev do %>
-                  <p class="mt-2 text-xs opacity-75">
-                    <code>{inspect(@installations.failed)}</code>
-                  </p>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
+      <%= if show_api_error?(@installations) do %>
+        <.error_banner title="Unable to load GitHub installations">
+          <p>
+            There was a problem connecting to GitHub. Try the refresh button above, or contact support if the problem persists.
+          </p>
+          <%= if Application.get_env(:lightning, :env) == :dev do %>
+            <details class="mt-2">
+              <summary class="text-xs opacity-75 cursor-pointer">
+                Show error details
+              </summary>
+              <pre class="text-xs opacity-75 mt-1 overflow-auto"><code><%= inspect(@installations.failed, pretty: true) %></code></pre>
+            </details>
+          <% end %>
+        </.error_banner>
       <% end %>
       <div class="">
         <.input

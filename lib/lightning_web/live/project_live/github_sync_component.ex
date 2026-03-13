@@ -363,13 +363,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp installations_select_options(async_installations) do
-    installations =
-      if async_installations.ok? && async_installations.result &&
-           is_map(async_installations.result) do
-        Map.get(async_installations.result, :installations, [])
-      else
-        []
-      end
+    installations = (async_installations.ok? && async_installations.result) || []
 
     Enum.map(installations, fn installation ->
       {installation["account"], installation["id"]}
@@ -414,6 +408,49 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp github_config do
     Application.get_env(:lightning, :github_app, [])
+  end
+
+  defp show_invalid_oauth_error?(installations) do
+    !installations.ok? && installations.failed &&
+      match?(
+        {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        installations.failed
+      )
+  end
+
+  defp show_no_installations_warning?(installations) do
+    installations.ok? && installations.result == []
+  end
+
+  defp show_api_error?(installations) do
+    !installations.ok? && installations.failed &&
+      !match?(
+        {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        installations.failed
+      )
+  end
+
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
+  defp error_banner(assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 p-4 mb-4" role="alert" aria-live="polite">
+      <div class="flex">
+        <div class="shrink-0">
+          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">
+            <%= @title %>
+          </h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <%= render_slot(@inner_block) %>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   attr :id, :string, required: true
