@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Bump `@openfn/ws-worker` to v1.22.0 for dev environments and installs using
+  the RuntimeManager (does not affect deployments using external workers)
+
 ### Fixed
 
 - Migrate form error display from `phx-feedback-for` to `used_input?/1` so
