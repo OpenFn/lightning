@@ -17,10 +17,10 @@ defmodule Lightning.Extensions.FifoRunQueue do
   def enqueue_many(%Multi{} = multi), do: Repo.transaction(multi)
 
   @impl true
-  def claim(demand, worker_name \\ nil) do
+  def claim(demand, worker_name, queues) do
     fifo_runs_query = Query.eligible_for_claim()
 
-    Queue.claim(demand, fifo_runs_query, worker_name)
+    Queue.claim(demand, fifo_runs_query, worker_name, queues)
   end
 
   @impl true
