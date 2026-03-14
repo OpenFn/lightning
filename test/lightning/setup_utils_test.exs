@@ -207,6 +207,61 @@ defmodule Lightning.SetupUtilsTest do
     end
   end
 
+  describe "all_keys/0" do
+    test "returns all 10 demo OAuth client keys as atoms" do
+      keys = SetupUtils.all_keys()
+
+      assert length(keys) == 10
+
+      assert :google_drive in keys
+      assert :google_sheets in keys
+      assert :gmail in keys
+      assert :salesforce in keys
+      assert :salesforce_sandbox in keys
+      assert :microsoft_sharepoint in keys
+      assert :microsoft_outlook in keys
+      assert :microsoft_calendar in keys
+      assert :microsoft_onedrive in keys
+      assert :microsoft_teams in keys
+    end
+  end
+
+  describe "env_vars_for/1" do
+    test "returns uppercased CLIENT_ID and CLIENT_SECRET var names" do
+      assert {"GOOGLE_SHEETS_CLIENT_ID", "GOOGLE_SHEETS_CLIENT_SECRET"} =
+               SetupUtils.env_vars_for(:google_sheets)
+
+      assert {"SALESFORCE_SANDBOX_CLIENT_ID", "SALESFORCE_SANDBOX_CLIENT_SECRET"} =
+               SetupUtils.env_vars_for(:salesforce_sandbox)
+
+      assert {"MICROSOFT_SHAREPOINT_CLIENT_ID",
+              "MICROSOFT_SHAREPOINT_CLIENT_SECRET"} =
+               SetupUtils.env_vars_for(:microsoft_sharepoint)
+    end
+  end
+
+  describe "demo_client_name/1" do
+    test "returns human-readable names with correct casing" do
+      assert SetupUtils.demo_client_name(:google_drive) == "Google Drive"
+      assert SetupUtils.demo_client_name(:google_sheets) == "Google Sheets"
+      assert SetupUtils.demo_client_name(:gmail) == "Gmail"
+      assert SetupUtils.demo_client_name(:salesforce) == "Salesforce"
+
+      assert SetupUtils.demo_client_name(:salesforce_sandbox) ==
+               "Salesforce Sandbox"
+
+      # Tricky casing: SharePoint, OneDrive
+      assert SetupUtils.demo_client_name(:microsoft_sharepoint) ==
+               "Microsoft SharePoint"
+
+      assert SetupUtils.demo_client_name(:microsoft_onedrive) ==
+               "Microsoft OneDrive"
+
+      assert SetupUtils.demo_client_name(:microsoft_teams) ==
+               "Microsoft Teams"
+    end
+  end
+
   describe "list_demo_oauth_clients/0" do
     test "returns all clients as configured when env vars are set" do
       with_oauth_config()
@@ -330,6 +385,34 @@ defmodule Lightning.SetupUtilsTest do
 
       cred = Lightning.Repo.preload(cred, :project_credentials)
       assert cred.project_credentials == []
+    end
+
+    test "credential token body contains expected fields and uses client scopes" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      clients =
+        SetupUtils.create_demo_oauth_clients(user, only: [:google_sheets])
+
+      {:ok, cred} =
+        SetupUtils.create_dummy_oauth_credential(clients.google_sheets, user)
+
+      cred = Lightning.Repo.preload(cred, [:oauth_client, :credential_bodies])
+
+      assert [body] = cred.credential_bodies
+      decoded = body.body
+
+      assert %{
+               "access_token" => "placeholder_replace_by_reauthorizing",
+               "refresh_token" => "placeholder_replace_by_reauthorizing",
+               "token_type" => "Bearer",
+               "expires_in" => 3600,
+               "scope" => scope
+             } = decoded
+
+      # The scope should come from the OAuth client's mandatory_scopes
+      assert scope == cred.oauth_client.mandatory_scopes
+      assert scope =~ "spreadsheets"
     end
 
     test "returns error for duplicate credential name" do
