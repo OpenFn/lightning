@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
     * `--name` - Custom credential name.
       Defaults to "<client name> - demo".
 
-    * `--email` - Email of the user who will own the credential.
+    * `--user` - Email of the user who will own the credential.
       If not provided, uses the first superuser found, or falls back to
       the first user in the system.
 
@@ -40,7 +40,7 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
       mix lightning.create_oauth_credential --client salesforce --project <project-id>
 
       # Specify owner
-      mix lightning.create_oauth_credential --client gmail --email dev@example.com
+      mix lightning.create_oauth_credential --client gmail --user dev@example.com
 
   ## Notes
 
@@ -63,11 +63,11 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
         strict: [
           client: :string,
           name: :string,
-          email: :string,
+          user: :string,
           project: :string,
           list: :boolean
         ],
-        aliases: [c: :client, n: :name, e: :email, p: :project, l: :list]
+        aliases: [c: :client, n: :name, u: :user, p: :project, l: :list]
       )
 
     if invalid != [] do
@@ -129,7 +129,7 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
 
   defp create_credential(opts) do
     with {:ok, oauth_client} <- find_oauth_client(opts[:client]),
-         {:ok, user} <- find_user(opts[:email]) do
+         {:ok, user} <- find_user(opts[:user]) do
       cred_opts =
         Enum.reject(
           [name: opts[:name], project_id: opts[:project]],

@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Lightning.SetupDemoOauthClients do
 
   ## Options
 
-    * `--email` - Email of the user who will own the OAuth clients.
+    * `--user` - Email of the user who will own the OAuth clients.
       If not provided, uses the first superuser found, or falls back to
       the first user in the system.
 
@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Lightning.SetupDemoOauthClients do
       mix lightning.setup_demo_oauth_clients --only google_sheets,salesforce
 
       # Specify a user by email
-      mix lightning.setup_demo_oauth_clients --email admin@example.com --only gmail
+      mix lightning.setup_demo_oauth_clients --user admin@example.com --only gmail
   """
 
   use Mix.Task
@@ -65,8 +65,8 @@ defmodule Mix.Tasks.Lightning.SetupDemoOauthClients do
   def run(args) do
     {opts, _, invalid} =
       OptionParser.parse(args,
-        strict: [email: :string, only: :string, list: :boolean],
-        aliases: [e: :email, o: :only, l: :list]
+        strict: [user: :string, only: :string, list: :boolean],
+        aliases: [u: :user, o: :only, l: :list]
       )
 
     if invalid != [] do
@@ -132,7 +132,7 @@ defmodule Mix.Tasks.Lightning.SetupDemoOauthClients do
 
     setup_opts =
       Enum.reject(
-        [user_email: opts[:email], only: only],
+        [user_email: opts[:user], only: only],
         fn {_k, v} -> is_nil(v) end
       )
 
@@ -150,7 +150,7 @@ defmodule Mix.Tasks.Lightning.SetupDemoOauthClients do
 
       {:error, :user_not_found} ->
         Mix.raise("""
-        User not found with email: #{opts[:email]}
+        User not found with email: #{opts[:user]}
 
         Please check the email address and try again.
         """)
