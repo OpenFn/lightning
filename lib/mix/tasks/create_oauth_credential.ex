@@ -11,6 +11,8 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
 
   ## Options
 
+    * `--list` - Show available OAuth clients and exit.
+
     * `--client` (required) - OAuth client to create the credential for.
       Accepts a client name (e.g., "Google Sheets") or UUID.
 
@@ -24,6 +26,9 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
     * `--project` - Project ID to attach the credential to.
 
   ## Examples
+
+      # List available OAuth clients
+      mix lightning.create_oauth_credential --list
 
       # Create a credential for Google Sheets
       mix lightning.create_oauth_credential --client "Google Sheets"
@@ -59,9 +64,10 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
           client: :string,
           name: :string,
           email: :string,
-          project: :string
+          project: :string,
+          list: :boolean
         ],
-        aliases: [c: :client, n: :name, e: :email, p: :project]
+        aliases: [c: :client, n: :name, e: :email, p: :project, l: :list]
       )
 
     if invalid != [] do
@@ -74,18 +80,54 @@ defmodule Mix.Tasks.Lightning.CreateOauthCredential do
       """)
     end
 
-    unless opts[:client] do
-      Mix.raise("""
-      --client is required.
-
-      Usage: mix lightning.create_oauth_credential --client <name-or-id>
-
-      Run `mix help lightning.create_oauth_credential` for more information.
-      """)
-    end
-
     Mix.Task.run("app.start")
 
+    if opts[:list] do
+      list_oauth_clients()
+    else
+      unless opts[:client] do
+        Mix.raise("""
+        --client is required.
+
+        Usage: mix lightning.create_oauth_credential --client <name-or-id>
+
+        Use --list to see available OAuth clients.
+        """)
+      end
+
+      create_credential(opts)
+    end
+  end
+
+  defp list_oauth_clients do
+    clients =
+      from(c in OauthClient, order_by: [asc: fragment("lower(?)", c.name)])
+      |> Repo.all()
+
+    if clients == [] do
+      Mix.shell().info("""
+
+      No OAuth clients found.
+
+      Create some first:
+        mix lightning.setup_demo_oauth_clients
+      """)
+    else
+      Mix.shell().info("\nAvailable OAuth clients:\n")
+
+      Enum.each(clients, fn client ->
+        global = if client.global, do: " (global)", else: ""
+        Mix.shell().info("  - #{client.name}#{global}")
+        Mix.shell().info("    ID: #{client.id}")
+      end)
+
+      Mix.shell().info(
+        "\nUse --client \"<name>\" to create a credential for one of these.\n"
+      )
+    end
+  end
+
+  defp create_credential(opts) do
     with {:ok, oauth_client} <- find_oauth_client(opts[:client]),
          {:ok, user} <- find_user(opts[:email]) do
       cred_opts =
