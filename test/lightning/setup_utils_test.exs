@@ -1,12 +1,266 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
   import Swoosh.TestAssertions
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Projects
   alias Lightning.Accounts.{User, UserToken}
   alias Lightning.Credentials.{Credential}
+
+  @test_oauth_config [
+    google_drive: [client_id: "test-gd-id", client_secret: "test-gd-secret"],
+    google_sheets: [client_id: "test-gs-id", client_secret: "test-gs-secret"],
+    gmail: [client_id: "test-gm-id", client_secret: "test-gm-secret"],
+    salesforce: [client_id: "test-sf-id", client_secret: "test-sf-secret"],
+    salesforce_sandbox: [
+      client_id: "test-sfs-id",
+      client_secret: "test-sfs-secret"
+    ],
+    microsoft_sharepoint: [
+      client_id: "test-sp-id",
+      client_secret: "test-sp-secret"
+    ],
+    microsoft_outlook: [
+      client_id: "test-ol-id",
+      client_secret: "test-ol-secret"
+    ],
+    microsoft_calendar: [
+      client_id: "test-cal-id",
+      client_secret: "test-cal-secret"
+    ],
+    microsoft_onedrive: [
+      client_id: "test-od-id",
+      client_secret: "test-od-secret"
+    ],
+    microsoft_teams: [
+      client_id: "test-tm-id",
+      client_secret: "test-tm-secret"
+    ]
+  ]
+
+  defp with_oauth_config(config \\ @test_oauth_config) do
+    previous = Application.get_env(:lightning, :demo_oauth_clients)
+    Application.put_env(:lightning, :demo_oauth_clients, config)
+
+    on_exit(fn ->
+      Application.put_env(:lightning, :demo_oauth_clients, previous)
+    end)
+  end
+
+  describe "setup_demo_oauth_clients/1" do
+    setup do
+      with_oauth_config()
+    end
+
+    test "creates all 10 OAuth clients for a user" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, clients} =
+        SetupUtils.setup_demo_oauth_clients(user_email: user.email)
+
+      created =
+        clients
+        |> Enum.reject(fn {_k, v} -> v == :skipped end)
+        |> Map.new()
+
+      assert map_size(created) == 10
+
+      assert Map.has_key?(created, :google_drive)
+      assert Map.has_key?(created, :google_sheets)
+      assert Map.has_key?(created, :gmail)
+      assert Map.has_key?(created, :salesforce)
+      assert Map.has_key?(created, :salesforce_sandbox)
+      assert Map.has_key?(created, :microsoft_sharepoint)
+      assert Map.has_key?(created, :microsoft_outlook)
+      assert Map.has_key?(created, :microsoft_calendar)
+      assert Map.has_key?(created, :microsoft_onedrive)
+      assert Map.has_key?(created, :microsoft_teams)
+
+      # Verify they are global clients
+      assert Enum.all?(created, fn {_k, client} -> client.global end)
+    end
+
+    test "is idempotent — skips already existing clients" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, first_run} =
+        SetupUtils.setup_demo_oauth_clients(user_email: user.email)
+
+      assert Enum.all?(first_run, fn {_k, v} -> v != :skipped end)
+
+      {:ok, second_run} =
+        SetupUtils.setup_demo_oauth_clients(user_email: user.email)
+
+      assert Enum.all?(second_run, fn {_k, v} -> v == :skipped end)
+    end
+
+    test "returns error when user email not found" do
+      assert {:error, :user_not_found} =
+               SetupUtils.setup_demo_oauth_clients(
+                 user_email: "nonexistent@example.com"
+               )
+    end
+
+    test "returns error when no users exist" do
+      assert {:error, :no_users_found} = SetupUtils.setup_demo_oauth_clients()
+    end
+
+    test "falls back to superuser when no email provided" do
+      %{super_user: super_user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, clients} = SetupUtils.setup_demo_oauth_clients()
+
+      {_key, client} = Enum.find(clients, fn {_k, v} -> v != :skipped end)
+      assert client.user_id == super_user.id
+    end
+
+    test "creates only specified clients with :only option" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, clients} =
+        SetupUtils.setup_demo_oauth_clients(
+          user_email: user.email,
+          only: [:google_sheets, :salesforce]
+        )
+
+      assert map_size(clients) == 2
+      assert Map.has_key?(clients, :google_sheets)
+      assert Map.has_key?(clients, :salesforce)
+      refute Map.has_key?(clients, :google_drive)
+    end
+
+    test "skips unconfigured clients when no :only specified" do
+      with_oauth_config(
+        google_sheets: [
+          client_id: "test-gs-id",
+          client_secret: "test-gs-secret"
+        ]
+      )
+
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, clients} =
+        SetupUtils.setup_demo_oauth_clients(user_email: user.email)
+
+      # google_sheets was created, everything else is :not_configured
+      assert map_size(clients) == 10
+      refute clients.google_sheets == :not_configured
+      refute clients.google_sheets == :skipped
+      assert clients.google_drive == :not_configured
+      assert clients.gmail == :not_configured
+    end
+
+    test "raises when :only requests unconfigured clients" do
+      with_oauth_config([])
+
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      assert_raise RuntimeError,
+                   ~r/Missing OAuth client configuration for: google_sheets/,
+                   fn ->
+                     SetupUtils.setup_demo_oauth_clients(
+                       user_email: user.email,
+                       only: [:google_sheets]
+                     )
+                   end
+    end
+
+    test "raises listing only the unconfigured clients when :only is mixed" do
+      with_oauth_config(
+        gmail: [client_id: "test-id", client_secret: "test-secret"]
+      )
+
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      error =
+        assert_raise RuntimeError, fn ->
+          SetupUtils.setup_demo_oauth_clients(
+            user_email: user.email,
+            only: [:gmail, :google_sheets]
+          )
+        end
+
+      assert error.message =~ "google_sheets"
+      refute error.message =~ "gmail"
+    end
+
+    test "treats partially configured client as not_configured" do
+      with_oauth_config(
+        google_sheets: [client_id: "only-id", client_secret: nil]
+      )
+
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, clients} =
+        SetupUtils.setup_demo_oauth_clients(user_email: user.email)
+
+      assert clients.google_sheets == :not_configured
+    end
+  end
+
+  describe "list_demo_oauth_clients/0" do
+    test "returns all clients as configured when env vars are set" do
+      with_oauth_config()
+
+      result = SetupUtils.list_demo_oauth_clients()
+      assert length(result) == 10
+      assert Enum.all?(result, fn {_, status} -> status == :configured end)
+    end
+
+    test "returns not_configured when env vars are missing" do
+      with_oauth_config([])
+
+      result = SetupUtils.list_demo_oauth_clients()
+      assert length(result) == 10
+      assert Enum.all?(result, fn {_, status} -> status == :not_configured end)
+    end
+
+    test "returns mixed status with partial config" do
+      with_oauth_config(gmail: [client_id: "id", client_secret: "secret"])
+
+      result = SetupUtils.list_demo_oauth_clients()
+      assert {:gmail, :configured} in result
+      assert {:google_drive, :not_configured} in result
+    end
+  end
+
+  describe "create_demo_oauth_clients/2" do
+    setup do
+      with_oauth_config()
+    end
+
+    test "is idempotent when called directly" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      first_result = SetupUtils.create_demo_oauth_clients(user)
+      assert Enum.all?(first_result, fn {_k, v} -> v != :skipped end)
+
+      # Calling again should skip all
+      second_result = SetupUtils.create_demo_oauth_clients(user)
+      assert Enum.all?(second_result, fn {_k, v} -> v == :skipped end)
+    end
+
+    test "filters with :only option" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      result = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, :gmail)
+      assert result.gmail.name == "Gmail"
+    end
+  end
 
   describe "Setup demo site seed data" do
     setup do

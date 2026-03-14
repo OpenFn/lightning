@@ -9,6 +9,7 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Jobs
+  alias Lightning.OauthClients
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
@@ -35,6 +36,62 @@ defmodule Lightning.SetupUtils do
 
     def stop(pid) do
       Agent.stop(pid)
+    end
+  end
+
+  @doc """
+  Creates demo OAuth clients for an existing user.
+
+  This function can be called independently without resetting the database.
+  It will skip creating OAuth clients that already exist (by name).
+
+  ## Options
+  - `:user_email` - Email of the user who will own the OAuth clients.
+    If not provided, uses the first superuser found, or falls back to
+    the first user in the system.
+  - `:only` - List of client keys to create. If omitted, creates all clients.
+    Available keys: `:google_drive`, `:google_sheets`, `:gmail`, `:salesforce`,
+    `:salesforce_sandbox`, `:microsoft_sharepoint`, `:microsoft_outlook`,
+    `:microsoft_calendar`, `:microsoft_onedrive`, `:microsoft_teams`
+
+  ## Examples
+
+      # Create all clients
+      Lightning.SetupUtils.setup_demo_oauth_clients()
+
+      # Create only specific clients
+      Lightning.SetupUtils.setup_demo_oauth_clients(only: [:google_sheets, :salesforce])
+
+      # Specify a user by email
+      Lightning.SetupUtils.setup_demo_oauth_clients(user_email: "admin@example.com")
+  """
+  def setup_demo_oauth_clients(opts \\ []) do
+    case find_oauth_client_owner(opts[:user_email]) do
+      {:ok, user} ->
+        {:ok, create_demo_oauth_clients(user, opts)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp find_oauth_client_owner(nil) do
+    case Repo.one(from u in User, where: u.role == :superuser, limit: 1) do
+      nil ->
+        case Repo.one(from u in User, limit: 1) do
+          nil -> {:error, :no_users_found}
+          user -> {:ok, user}
+        end
+
+      user ->
+        {:ok, user}
+    end
+  end
+
+  defp find_oauth_client_owner(email) when is_binary(email) do
+    case Accounts.get_user_by_email(email) do
+      nil -> {:error, :user_not_found}
+      user -> {:ok, user}
     end
   end
 
@@ -113,6 +170,300 @@ defmodule Lightning.SetupUtils do
       })
 
     credential
+  end
+
+  @doc """
+  Creates demo OAuth clients for Google (Drive, Sheets, Gmail), Salesforce, and Microsoft
+  (SharePoint, Outlook, Calendar, OneDrive, Teams).
+
+  Idempotent — skips any clients that already exist (by name).
+  Clients without configured environment variables are returned as `:not_configured`.
+
+  Client IDs and secrets are read from application configuration
+  (set via environment variables).
+
+  ## Parameters
+  - user: The `%User{}` who will own the OAuth clients.
+  - opts: Keyword list with options
+    - `:only` - List of client keys to create (e.g., `[:google_sheets, :salesforce]`).
+      If omitted, creates all configured clients. When `:only` is specified,
+      raises if any requested clients are missing configuration.
+
+  ## Returns
+  A map of `%{atom => %OauthClient{} | :skipped | :not_configured}`.
+  """
+  def create_demo_oauth_clients(%Accounts.User{} = user, opts \\ []) do
+    create_demo_oauth_clients_impl(user.id, opts[:only])
+  end
+
+  @doc """
+  Returns a list of all available demo OAuth client keys and their configuration status.
+
+  ## Examples
+
+      Lightning.SetupUtils.list_demo_oauth_clients()
+      #=> [
+      #=>   {:google_drive, :configured},
+      #=>   {:google_sheets, :not_configured},
+      #=>   ...
+      #=> ]
+  """
+  def list_demo_oauth_clients do
+    all_keys()
+    |> Enum.map(fn key ->
+      case get_oauth_credentials(key) do
+        {_id, _secret} -> {key, :configured}
+        :not_configured -> {key, :not_configured}
+      end
+    end)
+  end
+
+  @doc """
+  Returns the list of all available demo OAuth client keys.
+  """
+  def all_keys do
+    ~w(
+      google_drive google_sheets gmail
+      salesforce salesforce_sandbox
+      microsoft_sharepoint microsoft_outlook microsoft_calendar
+      microsoft_onedrive microsoft_teams
+    )a
+  end
+
+  @doc """
+  Returns the environment variable names needed for a given client key.
+  """
+  def env_vars_for(key) do
+    prefix = key |> Atom.to_string() |> String.upcase()
+    {"#{prefix}_CLIENT_ID", "#{prefix}_CLIENT_SECRET"}
+  end
+
+  defp create_demo_oauth_clients_impl(user_id, only) do
+    existing_names =
+      from(c in Lightning.Credentials.OauthClient, select: c.name)
+      |> Repo.all()
+      |> MapSet.new()
+
+    definitions = demo_oauth_client_definitions(user_id)
+
+    definitions =
+      if only do
+        Enum.filter(definitions, fn {key, _} -> key in only end)
+      else
+        definitions
+      end
+
+    if only do
+      validate_credentials_configured!(definitions)
+    end
+
+    Enum.reduce(definitions, %{}, fn {key, client_attrs}, acc ->
+      cond do
+        client_attrs == :not_configured ->
+          Map.put(acc, key, :not_configured)
+
+        MapSet.member?(existing_names, client_attrs.name) ->
+          Map.put(acc, key, :skipped)
+
+        true ->
+          case OauthClients.create_client(client_attrs) do
+            {:ok, client} ->
+              Map.put(acc, key, client)
+
+            {:error, changeset} ->
+              raise "Failed to create OAuth client #{key}: #{inspect(changeset.errors)}"
+          end
+      end
+    end)
+  end
+
+  defp validate_credentials_configured!(definitions) do
+    missing =
+      definitions
+      |> Enum.filter(fn {_key, attrs} -> attrs == :not_configured end)
+      |> Enum.map(fn {key, _} -> key end)
+
+    if missing != [] do
+      env_var_hints =
+        Enum.map_join(missing, "\n", fn key ->
+          {id_var, secret_var} = env_vars_for(key)
+          "  #{id_var}\n  #{secret_var}"
+        end)
+
+      raise """
+      Missing OAuth client configuration for: #{Enum.join(missing, ", ")}
+
+      Set the following environment variables (in .env or system environment):
+
+      #{env_var_hints}
+      """
+    end
+  end
+
+  @google_scopes_base "openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile"
+
+  defp demo_oauth_client_definitions(user_id) do
+    [
+      # Google services
+      {:google_drive,
+       google_oauth_client(
+         "Google Drive",
+         :google_drive,
+         "#{@google_scopes_base},https://www.googleapis.com/auth/drive",
+         user_id
+       )},
+      {:google_sheets,
+       google_oauth_client(
+         "Google Sheets",
+         :google_sheets,
+         "#{@google_scopes_base},https://www.googleapis.com/auth/spreadsheets",
+         user_id
+       )},
+      {:gmail,
+       google_oauth_client(
+         "Gmail",
+         :gmail,
+         "#{@google_scopes_base},https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send",
+         user_id
+       )},
+      # Salesforce
+      {:salesforce,
+       salesforce_oauth_client(
+         "Salesforce",
+         :salesforce,
+         "login.salesforce.com",
+         user_id
+       )},
+      {:salesforce_sandbox,
+       salesforce_oauth_client(
+         "Salesforce Sandbox",
+         :salesforce_sandbox,
+         "test.salesforce.com",
+         user_id
+       )},
+      # Microsoft services
+      {:microsoft_sharepoint,
+       microsoft_oauth_client(
+         "Microsoft SharePoint",
+         :microsoft_sharepoint,
+         "openid,email,profile,offline_access,Sites.Read.All,Sites.ReadWrite.All",
+         user_id
+       )},
+      {:microsoft_outlook,
+       microsoft_oauth_client(
+         "Microsoft Outlook",
+         :microsoft_outlook,
+         "openid,email,profile,offline_access,Mail.Read,Mail.Send",
+         user_id
+       )},
+      {:microsoft_calendar,
+       microsoft_oauth_client(
+         "Microsoft Calendar",
+         :microsoft_calendar,
+         "openid,email,profile,offline_access,Calendars.Read,Calendars.ReadWrite",
+         user_id
+       )},
+      {:microsoft_onedrive,
+       microsoft_oauth_client(
+         "Microsoft OneDrive",
+         :microsoft_onedrive,
+         "openid,email,profile,offline_access,Files.Read,Files.ReadWrite",
+         user_id
+       )},
+      {:microsoft_teams,
+       microsoft_oauth_client(
+         "Microsoft Teams",
+         :microsoft_teams,
+         "openid,email,profile,offline_access,Team.ReadBasic.All,Channel.ReadBasic.All,Chat.Read",
+         user_id
+       )}
+    ]
+  end
+
+  defp google_oauth_client(name, config_key, mandatory_scopes, user_id) do
+    case get_oauth_credentials(config_key) do
+      {client_id, client_secret} ->
+        %{
+          name: name,
+          client_id: client_id,
+          client_secret: client_secret,
+          authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+          token_endpoint: "https://oauth2.googleapis.com/token",
+          revocation_endpoint: "https://oauth2.googleapis.com/revoke",
+          userinfo_endpoint: "https://openidconnect.googleapis.com/v1/userinfo",
+          scopes_doc_url:
+            "https://developers.google.com/identity/protocols/oauth2/scopes",
+          mandatory_scopes: mandatory_scopes,
+          global: true,
+          user_id: user_id
+        }
+
+      :not_configured ->
+        :not_configured
+    end
+  end
+
+  defp salesforce_oauth_client(name, config_key, domain, user_id) do
+    case get_oauth_credentials(config_key) do
+      {client_id, client_secret} ->
+        %{
+          name: name,
+          client_id: client_id,
+          client_secret: client_secret,
+          authorization_endpoint: "https://#{domain}/services/oauth2/authorize",
+          token_endpoint: "https://#{domain}/services/oauth2/token",
+          revocation_endpoint: "https://#{domain}/services/oauth2/revoke",
+          userinfo_endpoint: "https://#{domain}/services/oauth2/userinfo",
+          scopes_doc_url:
+            "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_tokens_scopes.htm",
+          mandatory_scopes: "openid,api,refresh_token,full",
+          global: true,
+          user_id: user_id
+        }
+
+      :not_configured ->
+        :not_configured
+    end
+  end
+
+  defp microsoft_oauth_client(name, config_key, mandatory_scopes, user_id) do
+    case get_oauth_credentials(config_key) do
+      {client_id, client_secret} ->
+        %{
+          name: name,
+          client_id: client_id,
+          client_secret: client_secret,
+          authorization_endpoint:
+            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+          token_endpoint:
+            "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+          revocation_endpoint:
+            "https://login.microsoftonline.com/common/oauth2/v2.0/logout",
+          userinfo_endpoint: "https://graph.microsoft.com/oidc/userinfo",
+          scopes_doc_url:
+            "https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc",
+          mandatory_scopes: mandatory_scopes,
+          global: true,
+          user_id: user_id
+        }
+
+      :not_configured ->
+        :not_configured
+    end
+  end
+
+  defp get_oauth_credentials(config_key) do
+    config = Application.get_env(:lightning, :demo_oauth_clients, [])
+    client_config = Keyword.get(config, config_key, [])
+
+    client_id = Keyword.get(client_config, :client_id)
+    client_secret = Keyword.get(client_config, :client_secret)
+
+    if client_id && client_secret do
+      {client_id, client_secret}
+    else
+      :not_configured
+    end
   end
 
   def create_users(opts) do
