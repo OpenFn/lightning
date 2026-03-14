@@ -61,6 +61,12 @@ defmodule Lightning.Runs.Handlers do
   defmodule CompleteRun do
     @moduledoc """
     Schema to validate the input attributes of a completed run.
+
+    The worker may send either:
+    - `final_dataclip_id` — reuse an existing step output dataclip (single leaf)
+    - `final_state` — a new map to persist as a dataclip (multiple leaves)
+
+    These are mutually exclusive. If both are sent, `final_dataclip_id` wins.
     """
     use Lightning.Schema
 
@@ -73,6 +79,7 @@ defmodule Lightning.Runs.Handlers do
       field :state, :string
       field :reason, :string
       field :error_type, :string
+      field :final_dataclip_id, Ecto.UUID
       field :final_state, :map
       field :project_id, Ecto.UUID
       field :timestamp, Lightning.UnixDateTime
@@ -81,13 +88,8 @@ defmodule Lightning.Runs.Handlers do
     def call(run, params) do
       with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
         Repo.transact(fn ->
-          with {:ok, final_dataclip} <-
-                 maybe_save_final_dataclip(complete_run, run.options) do
-            run_params =
-              complete_run
-              |> to_run_params()
-              |> maybe_put_final_dataclip_id(final_dataclip)
-
+          with {:ok, run_params} <-
+                 resolve_final_dataclip(complete_run, run.options) do
             run
             |> Run.complete(run_params)
             |> case do
@@ -108,6 +110,7 @@ defmodule Lightning.Runs.Handlers do
         :state,
         :reason,
         :error_type,
+        :final_dataclip_id,
         :final_state,
         :project_id,
         :timestamp
@@ -141,27 +144,39 @@ defmodule Lightning.Runs.Handlers do
       |> Map.put(:finished_at, complete_run.timestamp)
     end
 
-    defp maybe_put_final_dataclip_id(params, nil), do: params
-
-    defp maybe_put_final_dataclip_id(params, %Dataclip{id: id}),
-      do: Map.put(params, :final_dataclip_id, id)
-
-    defp maybe_save_final_dataclip(
-           %__MODULE__{final_state: nil},
+    # When the worker sends an existing dataclip ID, use it directly.
+    defp resolve_final_dataclip(
+           %__MODULE__{final_dataclip_id: id} = complete_run,
            _options
-         ) do
-      {:ok, nil}
+         )
+         when is_binary(id) do
+      {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
     end
 
-    defp maybe_save_final_dataclip(
-           %__MODULE__{project_id: nil},
-           _options
-         ) do
-      {:ok, nil}
+    # When the worker sends a new final_state map, insert a new dataclip.
+    defp resolve_final_dataclip(
+           %__MODULE__{final_state: final_state, project_id: project_id} =
+             complete_run,
+           options
+         )
+         when is_map(final_state) and is_binary(project_id) do
+      case save_final_dataclip(final_state, project_id, options) do
+        {:ok, %Dataclip{id: id}} ->
+          {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
+
+        error ->
+          error
+      end
     end
 
-    defp maybe_save_final_dataclip(
-           %__MODULE__{final_state: _final_state, project_id: project_id},
+    # Neither provided (e.g., mark_run_lost, or worker didn't send final state).
+    defp resolve_final_dataclip(complete_run, _options) do
+      {:ok, to_run_params(complete_run)}
+    end
+
+    defp save_final_dataclip(
+           _final_state,
+           project_id,
            %Runs.RunOptions{save_dataclips: false}
          ) do
       Dataclip.new(%{
@@ -173,10 +188,7 @@ defmodule Lightning.Runs.Handlers do
       |> Repo.insert()
     end
 
-    defp maybe_save_final_dataclip(
-           %__MODULE__{final_state: final_state, project_id: project_id},
-           _options
-         ) do
+    defp save_final_dataclip(final_state, project_id, _options) do
       Dataclip.new(%{
         project_id: project_id,
         body: final_state,
