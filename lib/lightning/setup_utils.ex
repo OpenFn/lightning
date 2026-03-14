@@ -197,99 +197,32 @@ defmodule Lightning.SetupUtils do
   end
 
   @doc """
-  Creates dummy OAuth credentials for existing demo OAuth clients.
+  Creates a dummy OAuth credential for a given OAuth client.
 
-  Finds the user and delegates to `create_demo_oauth_credentials/2`.
+  The credential has placeholder token data that users can reauthorize
+  through the UI to get real access tokens.
 
-  ## Options
-  - `:user_email` - Email of the user who will own the credentials.
-  - `:only` - List of client keys to create credentials for.
-  - `:project_id` - If provided, attaches credentials to this project.
-  """
-  def setup_demo_oauth_credentials(opts \\ []) do
-    case find_oauth_client_owner(opts[:user_email]) do
-      {:ok, user} ->
-        {:ok, create_demo_oauth_credentials(user, opts)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  Creates dummy OAuth credentials for existing demo OAuth clients.
-
-  For each demo OAuth client found in the database, creates a credential
-  with placeholder token data that users can later reauthorize through the UI.
-
-  ## Options
-  - `:only` - List of client keys to create credentials for.
-  - `:project_id` - If provided, attaches credentials to this project.
+  ## Parameters
+  - `oauth_client` - The `%OauthClient{}` to create a credential for.
+  - `user` - The `%User{}` who will own the credential.
+  - `opts` - Keyword list with options:
+    - `:name` - Custom credential name. Defaults to "\#{client_name} - demo".
+    - `:project_id` - If provided, attaches the credential to this project.
 
   ## Returns
-  A map of `%{atom => %Credential{} | :skipped | :no_oauth_client}`.
+  - `{:ok, %Credential{}}` on success.
+  - `{:error, reason}` on failure.
   """
-  def create_demo_oauth_credentials(%Accounts.User{} = user, opts \\ []) do
+  def create_dummy_oauth_credential(
+        %Lightning.Credentials.OauthClient{} = oauth_client,
+        %Accounts.User{} = user,
+        opts \\ []
+      ) do
+    cred_name = opts[:name] || "#{oauth_client.name} - demo"
     project_id = opts[:project_id]
-    only = opts[:only]
 
-    keys = if only, do: only, else: all_keys()
-
-    # Look up existing OAuth clients by their demo names
-    name_map = Map.new(keys, fn key -> {demo_client_name(key), key} end)
-    client_names = Map.keys(name_map)
-
-    existing_clients =
-      from(c in Lightning.Credentials.OauthClient,
-        where: c.name in ^client_names
-      )
-      |> Repo.all()
-      |> Map.new(fn c -> {c.name, c} end)
-
-    # Check which credentials already exist for this user
-    existing_cred_names =
-      from(c in Lightning.Credentials.Credential,
-        where: c.user_id == ^user.id,
-        select: c.name
-      )
-      |> Repo.all()
-      |> MapSet.new()
-
-    Enum.reduce(keys, %{}, fn key, acc ->
-      client_name = demo_client_name(key)
-      cred_name = "#{client_name} - demo"
-      client = Map.get(existing_clients, client_name)
-
-      cond do
-        is_nil(client) ->
-          Map.put(acc, key, :no_oauth_client)
-
-        MapSet.member?(existing_cred_names, cred_name) ->
-          Map.put(acc, key, :skipped)
-
-        true ->
-          cred_attrs =
-            build_dummy_credential_attrs(
-              user.id,
-              client,
-              cred_name,
-              project_id
-            )
-
-          case Credentials.create_credential(cred_attrs) do
-            {:ok, credential} ->
-              Map.put(acc, key, credential)
-
-            {:error, reason} ->
-              raise "Failed to create credential for #{key}: #{inspect(reason)}"
-          end
-      end
-    end)
-  end
-
-  defp build_dummy_credential_attrs(user_id, oauth_client, cred_name, project_id) do
     attrs = %{
-      "user_id" => user_id,
+      "user_id" => user.id,
       "name" => cred_name,
       "schema" => "oauth",
       "oauth_client_id" => oauth_client.id,
@@ -307,13 +240,16 @@ defmodule Lightning.SetupUtils do
       ]
     }
 
-    if project_id do
-      Map.put(attrs, "project_credentials", [
-        %{"project_id" => project_id}
-      ])
-    else
-      attrs
-    end
+    attrs =
+      if project_id do
+        Map.put(attrs, "project_credentials", [
+          %{"project_id" => project_id}
+        ])
+      else
+        attrs
+      end
+
+    Credentials.create_credential(attrs)
   end
 
   @doc """

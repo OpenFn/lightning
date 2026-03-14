@@ -262,54 +262,42 @@ defmodule Lightning.SetupUtilsTest do
     end
   end
 
-  describe "create_demo_oauth_credentials/2" do
+  describe "create_dummy_oauth_credential/3" do
     setup do
       with_oauth_config()
     end
 
-    test "creates dummy credentials for each existing OAuth client" do
+    test "creates a credential with default name" do
       %{super_user: user} =
         SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
 
-      SetupUtils.create_demo_oauth_clients(user, only: [:gmail, :salesforce])
+      clients = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
 
-      result =
-        SetupUtils.create_demo_oauth_credentials(user,
-          only: [:gmail, :salesforce]
+      {:ok, cred} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user)
+
+      assert cred.name == "Gmail - demo"
+      assert cred.schema == "oauth"
+
+      cred = Lightning.Repo.preload(cred, :oauth_client)
+      assert cred.oauth_client.id == clients.gmail.id
+    end
+
+    test "creates a credential with custom name" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      clients = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      {:ok, cred} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user,
+          name: "My Gmail Testing"
         )
 
-      assert map_size(result) == 2
-      assert result.gmail.name == "Gmail - demo"
-      assert result.salesforce.name == "Salesforce - demo"
-
-      # Verify credentials are linked to their OAuth clients
-      gmail_cred = Lightning.Repo.preload(result.gmail, :oauth_client)
-      assert gmail_cred.oauth_client.name == "Gmail"
+      assert cred.name == "My Gmail Testing"
     end
 
-    test "is idempotent — skips existing credentials" do
-      %{super_user: user} =
-        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
-
-      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
-
-      first = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
-      assert first.gmail.name == "Gmail - demo"
-
-      second = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
-      assert second.gmail == :skipped
-    end
-
-    test "returns :no_oauth_client when OAuth client doesn't exist" do
-      %{super_user: user} =
-        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
-
-      # Don't create any OAuth clients first
-      result = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
-      assert result.gmail == :no_oauth_client
-    end
-
-    test "attaches credentials to a project when :project_id given" do
+    test "attaches credential to a project" do
       %{super_user: user} =
         SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
 
@@ -319,54 +307,48 @@ defmodule Lightning.SetupUtilsTest do
           project_users: [%{user_id: user.id, role: :owner}]
         })
 
-      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+      clients = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
 
-      result =
-        SetupUtils.create_demo_oauth_credentials(user,
-          only: [:gmail],
+      {:ok, cred} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user,
           project_id: project.id
         )
 
-      cred =
-        Lightning.Repo.preload(result.gmail, :project_credentials)
-
+      cred = Lightning.Repo.preload(cred, :project_credentials)
       assert length(cred.project_credentials) == 1
       assert hd(cred.project_credentials).project_id == project.id
     end
 
-    test "creates credentials without project when no :project_id" do
+    test "creates credential without project by default" do
       %{super_user: user} =
         SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
 
-      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+      clients = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
 
-      result = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
+      {:ok, cred} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user)
 
-      cred =
-        Lightning.Repo.preload(result.gmail, :project_credentials)
-
+      cred = Lightning.Repo.preload(cred, :project_credentials)
       assert cred.project_credentials == []
     end
-  end
 
-  describe "setup_demo_oauth_credentials/1" do
-    setup do
-      with_oauth_config()
-    end
-
-    test "finds user and creates credentials" do
+    test "returns error for duplicate credential name" do
       %{super_user: user} =
         SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
 
-      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+      clients = SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
 
-      {:ok, result} =
-        SetupUtils.setup_demo_oauth_credentials(
-          user_email: user.email,
-          only: [:gmail]
+      {:ok, _} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user,
+          name: "Same Name"
         )
 
-      assert result.gmail.name == "Gmail - demo"
+      {:error, changeset} =
+        SetupUtils.create_dummy_oauth_credential(clients.gmail, user,
+          name: "Same Name"
+        )
+
+      assert %Ecto.Changeset{valid?: false} = changeset
     end
   end
 
