@@ -108,8 +108,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert %{state: :success} = WorkOrders.get(workorder_id)
 
-      # There was an initial http_request dataclip and 7 run_result dataclips
-      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 8
+      # There was an initial http_request dataclip, 7 step_result dataclips,
+      # and 1 final_dataclip saved on the run
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 9
     end
 
     @tag :integration

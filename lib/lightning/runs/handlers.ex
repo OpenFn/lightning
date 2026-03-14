@@ -73,7 +73,7 @@ defmodule Lightning.Runs.Handlers do
       field :state, :string
       field :reason, :string
       field :error_type, :string
-      field :final_state, :string
+      field :final_state, :map
       field :project_id, Ecto.UUID
       field :timestamp, Lightning.UnixDateTime
     end
@@ -179,7 +179,7 @@ defmodule Lightning.Runs.Handlers do
          ) do
       Dataclip.new(%{
         project_id: project_id,
-        body: Jason.decode!(final_state),
+        body: final_state,
         type: :step_result
       })
       |> Repo.insert()
