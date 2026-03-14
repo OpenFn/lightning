@@ -197,6 +197,140 @@ defmodule Lightning.SetupUtils do
   end
 
   @doc """
+  Creates dummy OAuth credentials for existing demo OAuth clients.
+
+  Finds the user and delegates to `create_demo_oauth_credentials/2`.
+
+  ## Options
+  - `:user_email` - Email of the user who will own the credentials.
+  - `:only` - List of client keys to create credentials for.
+  - `:project_id` - If provided, attaches credentials to this project.
+  """
+  def setup_demo_oauth_credentials(opts \\ []) do
+    case find_oauth_client_owner(opts[:user_email]) do
+      {:ok, user} ->
+        {:ok, create_demo_oauth_credentials(user, opts)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Creates dummy OAuth credentials for existing demo OAuth clients.
+
+  For each demo OAuth client found in the database, creates a credential
+  with placeholder token data that users can later reauthorize through the UI.
+
+  ## Options
+  - `:only` - List of client keys to create credentials for.
+  - `:project_id` - If provided, attaches credentials to this project.
+
+  ## Returns
+  A map of `%{atom => %Credential{} | :skipped | :no_oauth_client}`.
+  """
+  def create_demo_oauth_credentials(%Accounts.User{} = user, opts \\ []) do
+    project_id = opts[:project_id]
+    only = opts[:only]
+
+    keys = if only, do: only, else: all_keys()
+
+    # Look up existing OAuth clients by their demo names
+    name_map = Map.new(keys, fn key -> {demo_client_name(key), key} end)
+    client_names = Map.keys(name_map)
+
+    existing_clients =
+      from(c in Lightning.Credentials.OauthClient,
+        where: c.name in ^client_names
+      )
+      |> Repo.all()
+      |> Map.new(fn c -> {c.name, c} end)
+
+    # Check which credentials already exist for this user
+    existing_cred_names =
+      from(c in Lightning.Credentials.Credential,
+        where: c.user_id == ^user.id,
+        select: c.name
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.reduce(keys, %{}, fn key, acc ->
+      client_name = demo_client_name(key)
+      cred_name = "#{client_name} - demo"
+      client = Map.get(existing_clients, client_name)
+
+      cond do
+        is_nil(client) ->
+          Map.put(acc, key, :no_oauth_client)
+
+        MapSet.member?(existing_cred_names, cred_name) ->
+          Map.put(acc, key, :skipped)
+
+        true ->
+          cred_attrs =
+            build_dummy_credential_attrs(
+              user.id,
+              client,
+              cred_name,
+              project_id
+            )
+
+          case Credentials.create_credential(cred_attrs) do
+            {:ok, credential} ->
+              Map.put(acc, key, credential)
+
+            {:error, reason} ->
+              raise "Failed to create credential for #{key}: #{inspect(reason)}"
+          end
+      end
+    end)
+  end
+
+  defp build_dummy_credential_attrs(user_id, oauth_client, cred_name, project_id) do
+    attrs = %{
+      "user_id" => user_id,
+      "name" => cred_name,
+      "schema" => "oauth",
+      "oauth_client_id" => oauth_client.id,
+      "credential_bodies" => [
+        %{
+          "name" => "main",
+          "body" => %{
+            "access_token" => "placeholder_replace_by_reauthorizing",
+            "refresh_token" => "placeholder_replace_by_reauthorizing",
+            "token_type" => "Bearer",
+            "scope" => oauth_client.mandatory_scopes || "openid",
+            "expires_in" => 3600
+          }
+        }
+      ]
+    }
+
+    if project_id do
+      Map.put(attrs, "project_credentials", [
+        %{"project_id" => project_id}
+      ])
+    else
+      attrs
+    end
+  end
+
+  @doc """
+  Returns the display name for a demo OAuth client key.
+  """
+  def demo_client_name(:google_drive), do: "Google Drive"
+  def demo_client_name(:google_sheets), do: "Google Sheets"
+  def demo_client_name(:gmail), do: "Gmail"
+  def demo_client_name(:salesforce), do: "Salesforce"
+  def demo_client_name(:salesforce_sandbox), do: "Salesforce Sandbox"
+  def demo_client_name(:microsoft_sharepoint), do: "Microsoft SharePoint"
+  def demo_client_name(:microsoft_outlook), do: "Microsoft Outlook"
+  def demo_client_name(:microsoft_calendar), do: "Microsoft Calendar"
+  def demo_client_name(:microsoft_onedrive), do: "Microsoft OneDrive"
+  def demo_client_name(:microsoft_teams), do: "Microsoft Teams"
+
+  @doc """
   Returns a list of all available demo OAuth client keys and their configuration status.
 
   ## Examples

@@ -262,6 +262,114 @@ defmodule Lightning.SetupUtilsTest do
     end
   end
 
+  describe "create_demo_oauth_credentials/2" do
+    setup do
+      with_oauth_config()
+    end
+
+    test "creates dummy credentials for each existing OAuth client" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      SetupUtils.create_demo_oauth_clients(user, only: [:gmail, :salesforce])
+
+      result =
+        SetupUtils.create_demo_oauth_credentials(user,
+          only: [:gmail, :salesforce]
+        )
+
+      assert map_size(result) == 2
+      assert result.gmail.name == "Gmail - demo"
+      assert result.salesforce.name == "Salesforce - demo"
+
+      # Verify credentials are linked to their OAuth clients
+      gmail_cred = Lightning.Repo.preload(result.gmail, :oauth_client)
+      assert gmail_cred.oauth_client.name == "Gmail"
+    end
+
+    test "is idempotent — skips existing credentials" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      first = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
+      assert first.gmail.name == "Gmail - demo"
+
+      second = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
+      assert second.gmail == :skipped
+    end
+
+    test "returns :no_oauth_client when OAuth client doesn't exist" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      # Don't create any OAuth clients first
+      result = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
+      assert result.gmail == :no_oauth_client
+    end
+
+    test "attaches credentials to a project when :project_id given" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "test-project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        })
+
+      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      result =
+        SetupUtils.create_demo_oauth_credentials(user,
+          only: [:gmail],
+          project_id: project.id
+        )
+
+      cred =
+        Lightning.Repo.preload(result.gmail, :project_credentials)
+
+      assert length(cred.project_credentials) == 1
+      assert hd(cred.project_credentials).project_id == project.id
+    end
+
+    test "creates credentials without project when no :project_id" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      result = SetupUtils.create_demo_oauth_credentials(user, only: [:gmail])
+
+      cred =
+        Lightning.Repo.preload(result.gmail, :project_credentials)
+
+      assert cred.project_credentials == []
+    end
+  end
+
+  describe "setup_demo_oauth_credentials/1" do
+    setup do
+      with_oauth_config()
+    end
+
+    test "finds user and creates credentials" do
+      %{super_user: user} =
+        SetupUtils.create_users(create_super: true) |> SetupUtils.confirm_users()
+
+      SetupUtils.create_demo_oauth_clients(user, only: [:gmail])
+
+      {:ok, result} =
+        SetupUtils.setup_demo_oauth_credentials(
+          user_email: user.email,
+          only: [:gmail]
+        )
+
+      assert result.gmail.name == "Gmail - demo"
+    end
+  end
+
   describe "Setup demo site seed data" do
     setup do
       Lightning.SetupUtils.setup_demo(create_super: true)
