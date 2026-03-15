@@ -1584,6 +1584,141 @@ defmodule LightningWeb.RunChannelTest do
       assert %{state: :killed} = Lightning.Repo.reload!(run)
       assert %{state: :killed} = Lightning.Repo.reload!(work_order)
     end
+
+    @tag run_state: :started
+    test "run:complete with final_dataclip_id reuses existing dataclip", %{
+      socket: socket,
+      run: run
+    } do
+      existing_dataclip =
+        insert(:dataclip,
+          project: run.work_order.workflow.project,
+          body: %{"reused" => true},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => existing_dataclip.id
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == existing_dataclip.id
+    end
+
+    @tag run_state: :started
+    test "run:complete with final_state inserts a new dataclip", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"merged" => "output"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+
+      assert run.state == :success
+      assert run.final_dataclip_id != nil
+
+      final_dataclip =
+        from(d in Dataclip, where: d.id == ^run.final_dataclip_id)
+        |> Lightning.Repo.one!()
+
+      assert final_dataclip.type == :step_result
+    end
+
+    @tag run_state: :started
+    test "run:complete with final_state respects save_dataclips: false" do
+      # Build a run with save_dataclips: false directly
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run_options = %Lightning.Runs.RunOptions{
+        save_dataclips: false,
+        run_timeout_ms: 2
+      }
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options: run_options |> Map.from_struct()
+        )
+
+      {:ok, bearer, claims} =
+        Lightning.Workers.WorkerToken.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      socket =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
+
+      {:ok, _, socket} =
+        socket
+        |> subscribe_and_join(
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{
+            "token" => Lightning.Workers.generate_run_token(run, run_options)
+          }
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"should_be" => "wiped"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.final_dataclip_id != nil
+
+      final_dataclip =
+        from(d in Dataclip, where: d.id == ^run.final_dataclip_id)
+        |> Lightning.Repo.one!()
+
+      assert final_dataclip.wiped_at != nil
+    end
+
+    @tag run_state: :started
+    test "run:complete without final state fields is backward compatible", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success"
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == nil
+    end
   end
 
   defp create_socket_and_run(context) do
