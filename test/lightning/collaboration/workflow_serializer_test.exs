@@ -759,6 +759,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "type" => "webhook",
                "enabled" => true,
                "cron_expression" => nil,
+               "cron_cursor_job_id" => nil,
                "kafka_configuration" => nil,
                "webhook_reply" => "before_start"
              } == extracted_trigger
@@ -980,6 +981,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "type" => to_string(original_trigger.type),
                "enabled" => original_trigger.enabled,
                "cron_expression" => original_trigger.cron_expression,
+               "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
                "kafka_configuration" => nil,
                "webhook_reply" => nil
              } == extracted_trigger
@@ -1290,6 +1292,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "type" => "cron",
                "enabled" => true,
                "cron_expression" => "0 */6 * * *",
+               "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
                "kafka_configuration" => nil,
                "webhook_reply" => nil
              } == trigger

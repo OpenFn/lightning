@@ -13,6 +13,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Run
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -217,41 +218,52 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Gets the next cron run dataclip for a job.
-
-  Returns the most recent output dataclip from a successful step for the given job,
-  filtered by the provided database filters.
+  Returns the dataclip that the scheduler will use for the next cron run
+  of the given trigger. Branches on cron_cursor_job_id.
   """
-  @spec get_next_cron_run_dataclip(
-          job_id :: Ecto.UUID.t(),
-          db_filters :: Ecto.Query.dynamic_expr()
-        ) ::
-          map() | nil
-  def get_next_cron_run_dataclip(job_id, db_filters) do
+  def get_next_cron_run_dataclip(%Trigger{} = trigger) do
+    case trigger.cron_cursor_job_id do
+      nil -> last_run_final_dataclip(trigger)
+      job_id -> last_successful_step_dataclip(job_id)
+    end
+  end
+
+  @doc """
+  Returns the final dataclip from the last successful run for a trigger.
+  Used when cron_cursor_job_id is nil (use final run state).
+  """
+  def last_run_final_dataclip(%Trigger{id: trigger_id}) do
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      where: wo.trigger_id == ^trigger_id,
+      where: r.state == :success,
+      where: not is_nil(r.final_dataclip_id),
+      order_by: [desc: r.finished_at],
+      limit: 1,
+      preload: [:final_dataclip]
+    )
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      run -> run.final_dataclip
+    end
+  end
+
+  @doc """
+  Returns the output dataclip from the last successful step for a job.
+  Used when cron_cursor_job_id is set to a specific job.
+  """
+  def last_successful_step_dataclip(job_id) do
     from(d in Dataclip,
       join: s in Step,
       on: s.output_dataclip_id == d.id,
       where:
         s.job_id == ^job_id and s.exit_reason == "success" and
           is_nil(d.wiped_at),
-      where: ^db_filters,
       order_by: [desc: s.finished_at],
       limit: 1
     )
     |> Repo.one()
-  end
-
-  @doc """
-  Checks if a job is triggered by a cron trigger.
-  """
-  @spec cron_triggered_job?(job_id :: Ecto.UUID.t()) :: boolean()
-  def cron_triggered_job?(job_id) do
-    from(e in Edge,
-      join: t in Trigger,
-      on: e.source_trigger_id == t.id,
-      where: e.target_job_id == ^job_id and t.type == :cron
-    )
-    |> Repo.exists?()
   end
 
   @doc """
@@ -272,11 +284,12 @@ defmodule Lightning.Invocation do
         user_filters,
         opts
       ) do
-    if cron_triggered_job?(job_id) do
-      list_dataclips_with_cron_state(job_id, user_filters, opts)
-    else
-      dataclips = list_dataclips_for_job(job, user_filters, opts)
-      {dataclips, nil}
+    case get_cron_trigger_for_job(job_id) do
+      nil ->
+        {list_dataclips_for_job(job, user_filters, opts), nil}
+
+      %Trigger{} = trigger ->
+        list_dataclips_with_cron_state(trigger, job_id, user_filters, opts)
     end
   end
 
@@ -907,10 +920,20 @@ defmodule Lightning.Invocation do
     |> Repo.transaction()
   end
 
+  defp get_cron_trigger_for_job(job_id) do
+    from(t in Trigger,
+      join: e in Edge,
+      on: e.source_trigger_id == t.id,
+      where: e.target_job_id == ^job_id and t.type == :cron,
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   # Query dataclips for cron-triggered jobs, including the next run state
-  defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
+  defp list_dataclips_with_cron_state(trigger, job_id, user_filters, opts) do
     # Get the next cron run dataclip (always needed for the ID)
-    next_cron_dataclip = get_next_cron_run_dataclip(job_id, dynamic(true))
+    next_cron_dataclip = get_next_cron_run_dataclip(trigger)
     next_cron_run_dataclip_id = next_cron_dataclip && next_cron_dataclip.id
 
     # Check if next cron dataclip matches user filters

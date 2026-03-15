@@ -51,6 +51,9 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const kafkaTriggersEnabled =
     sessionContext.config?.kafka_triggers_enabled ?? false;
 
+  // Get jobs for cron input source dropdown
+  const jobs = useWorkflowState(state => state.jobs);
+
   // Get active trigger auth methods from workflow store
   const activeTriggerAuthMethods = useWorkflowState(
     state => state.activeTriggerAuthMethods
@@ -443,7 +446,6 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
               if (currentType === 'cron') {
                 return (
                   <div className="space-y-4">
-                    {/* <div className="border-t pt-4"> */}
                     {/* Cron Expression Field */}
                     <form.Field
                       name="cron_expression"
@@ -474,7 +476,79 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         );
                       }}
                     </form.Field>
-                    {/* </div> */}
+
+                    {/* Cron Input Source */}
+                    <div
+                      className="space-y-2 pt-4 border-t
+                      border-slate-200"
+                    >
+                      <form.Field name="cron_cursor_job_id">
+                        {field => (
+                          <div>
+                            <div
+                              className="flex items-center
+                              gap-1 mb-1"
+                            >
+                              <label
+                                htmlFor={field.name}
+                                className="block text-sm font-medium text-slate-800"
+                              >
+                                Cron Input Source
+                              </label>
+                              <Tooltip
+                                content="Select which step's output to use as the input for each cron-triggered run."
+                                side="right"
+                              >
+                                <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
+                              </Tooltip>
+                            </div>
+                            <select
+                              id={field.name}
+                              value={field.state.value ?? ''}
+                              onChange={e =>
+                                field.handleChange(
+                                  e.target.value === '' ? null : e.target.value
+                                )
+                              }
+                              onBlur={field.handleBlur}
+                              disabled={isReadOnly}
+                              className={cn(
+                                'block w-full px-3 py-2',
+                                'border rounded-md text-sm',
+                                field.state.meta.errors.length > 0
+                                  ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                  : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500',
+                                'focus:outline-none',
+                                'focus:ring-1',
+                                'disabled:opacity-50',
+                                'disabled:cursor-not-allowed'
+                              )}
+                            >
+                              <option value="">
+                                Final run state (default)
+                              </option>
+                              {jobs.map(job => (
+                                <option key={job.id} value={job.id}>
+                                  {job.name}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Choose which step&apos;s output to use as input
+                              for cron-triggered runs.
+                            </p>
+                            {field.state.meta.errors.map(error => (
+                              <p
+                                key={error}
+                                className="mt-1 text-xs text-red-600"
+                              >
+                                {error}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </form.Field>
+                    </div>
                   </div>
                 );
               }

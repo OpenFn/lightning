@@ -217,6 +217,91 @@ defmodule Lightning.Workflows.TriggerTest do
       assert get_field(changeset, :webhook_reply) == nil
     end
 
+    test "cron_cursor_job_id is cast for cron triggers" do
+      job_id = Ecto.UUID.generate()
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          cron_cursor_job_id: job_id
+        })
+
+      assert get_field(changeset, :cron_cursor_job_id) == job_id
+    end
+
+    test "cron_cursor_job_id is cleared when type changes to :webhook" do
+      job_id = Ecto.UUID.generate()
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          cron_cursor_job_id: job_id
+        })
+
+      assert get_field(changeset, :cron_cursor_job_id) == nil
+
+      # Also when converting from cron to webhook
+      changeset =
+        Trigger.changeset(
+          %Trigger{
+            type: :cron,
+            cron_expression: "* * * * *",
+            cron_cursor_job_id: job_id
+          },
+          %{type: :webhook}
+        )
+
+      assert get_field(changeset, :cron_cursor_job_id) == nil
+    end
+
+    test "cron_cursor_job_id is cleared when type changes to :kafka" do
+      job_id = Ecto.UUID.generate()
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :kafka,
+          cron_cursor_job_id: job_id,
+          kafka_configuration: %{
+            group_id: "group_id",
+            hosts: [["host1", "9092"]],
+            hosts_string: "host1:9092",
+            initial_offset_reset_policy: "earliest",
+            sasl: "plain",
+            ssl: true,
+            topics: ["foo"],
+            topics_string: "foo"
+          }
+        })
+
+      assert get_field(changeset, :cron_cursor_job_id) == nil
+
+      # Also when converting from cron to kafka
+      changeset =
+        Trigger.changeset(
+          %Trigger{
+            type: :cron,
+            cron_expression: "* * * * *",
+            cron_cursor_job_id: job_id
+          },
+          %{
+            type: :kafka,
+            kafka_configuration: %{
+              group_id: "group_id",
+              hosts: [["host1", "9092"]],
+              hosts_string: "host1:9092",
+              initial_offset_reset_policy: "earliest",
+              sasl: "plain",
+              ssl: true,
+              topics: ["foo"],
+              topics_string: "foo"
+            }
+          }
+        )
+
+      assert get_field(changeset, :cron_cursor_job_id) == nil
+    end
+
     test "allows webhook_reply to be set for webhook triggers" do
       changeset =
         Trigger.changeset(%Trigger{}, %{

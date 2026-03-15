@@ -71,6 +71,7 @@ defmodule Lightning.Run do
     belongs_to :starting_trigger, Trigger
     belongs_to :created_by, User
     belongs_to :dataclip, Lightning.Invocation.Dataclip
+    belongs_to :final_dataclip, Lightning.Invocation.Dataclip
 
     has_one :workflow, through: [:work_order, :workflow]
     belongs_to :snapshot, Snapshot
@@ -169,7 +170,7 @@ defmodule Lightning.Run do
     run
     |> change()
     |> put_change(:state, nil)
-    |> cast(params, [:state, :error_type, :finished_at])
+    |> cast(params, [:state, :error_type, :finished_at, :final_dataclip_id])
     |> validate_required([:state, :finished_at])
     |> validate_inclusion(:state, @final_states)
     |> validate_state_change()
