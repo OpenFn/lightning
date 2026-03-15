@@ -108,8 +108,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert %{state: :success} = WorkOrders.get(workorder_id)
 
-      # There was an initial http_request dataclip and 7 run_result dataclips
-      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 8
+      # There was an initial http_request dataclip, 7 step_result dataclips,
+      # and 1 final_dataclip saved on the run
+      assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 9
     end
 
     @tag :integration
@@ -571,6 +572,177 @@ defmodule Lightning.WebAndWorkerTest do
         )
 
       assert work_order.state == :failed
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "returns final state with multiple leaf nodes from a branching workflow",
+         %{uri: uri} do
+      #
+      #        +---+
+      #        | T |  (webhook trigger)
+      #        +---+
+      #          |
+      #        +-+-+
+      #        | 1 |
+      #        +-+-+
+      #       /     \
+      #      /       \
+      #   +-+-+     +-+-+
+      #   | 2 |     | 3 |
+      #   +-+-+     +-+-+
+      #   / \         |
+      #  /   \        |
+      # +-+-+ +-+-+   |
+      # | 4 | | 5 |<--+
+      # +---+ +---+
+      #
+      # Step 5 is reached twice (from step 2 and step 3).
+      # Step 4 is reached once (from step 2 only).
+      # The final_state payload should have 3 keys.
+      #
+
+      project = insert(:project)
+
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.data.x * 2;
+            console.log("job1: x=" + state.x);
+            return state;
+          });
+          """,
+          name: "step-1"
+        )
+
+      job_2 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x * 3;
+            console.log("job2: x=" + state.x);
+            return state;
+          });
+          """,
+          name: "step-2"
+        )
+
+      job_3 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x * 5;
+            console.log("job3: x=" + state.x);
+            return state;
+          });
+          """,
+          name: "step-3"
+        )
+
+      job_4 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x + 1;
+            console.log("job4: x=" + state.x);
+            return state;
+          });
+          """,
+          name: "step-4"
+        )
+
+      job_5 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x + 100;
+            console.log("job5: x=" + state.x);
+            return state;
+          });
+          """,
+          name: "step-5"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job_1)
+        |> with_edge({webhook_trigger, job_1}, condition_type: :always)
+        |> with_job(job_2)
+        |> with_edge({job_1, job_2}, condition_type: :on_job_success)
+        |> with_job(job_3)
+        |> with_edge({job_1, job_3}, condition_type: :on_job_success)
+        |> with_job(job_4)
+        |> with_edge({job_2, job_4}, condition_type: :on_job_success)
+        |> with_job(job_5)
+        |> with_edge({job_2, job_5}, condition_type: :on_job_success)
+        |> with_edge({job_3, job_5}, condition_type: :on_job_success)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      # input x=1
+      # step 1: x = 1 * 2 = 2
+      # step 2: x = 2 * 3 = 6   (from step 1)
+      # step 3: x = 2 * 5 = 10  (from step 1)
+      # step 4: x = 6 + 1 = 7   (from step 2) — leaf
+      # step 5 via step 2: x = 6 + 100 = 106  — leaf
+      # step 5 via step 3: x = 10 + 100 = 110 — leaf
+      webhook_body = %{"x" => 1}
+
+      response =
+        Tesla.client(
+          [
+            {Tesla.Middleware.BaseUrl, uri},
+            Tesla.Middleware.JSON
+          ],
+          {Tesla.Adapter.Finch, name: Lightning.Finch}
+        )
+        |> Tesla.post!("/i/#{trigger.id}", webhook_body)
+
+      assert response.status == 201
+
+      assert %{"data" => final_state, "meta" => meta} = response.body
+
+      assert meta["state"] == "success"
+
+      # The final_state is keyed by job ID. When the same job is reached
+      # twice (step 5), the second entry gets a "-1" suffix.
+      assert map_size(final_state) == 3
+
+      job_4_id = job_4.id
+      job_5_id = job_5.id
+
+      # job 4 appears once, keyed by its job ID
+      assert %{"x" => 7} = final_state[job_4_id]
+
+      # job 5 appears twice: once as job_5_id, once as job_5_id <> "-1"
+      assert %{"x" => x5a} = final_state[job_5_id]
+      assert %{"x" => x5b} = final_state[job_5_id <> "-1"]
+
+      assert Enum.sort([x5a, x5b]) == [106, 110]
+
+      # Verify all steps completed successfully
+      %{entries: steps} = Invocation.list_steps_for_project(project)
+
+      # 1 root + 2 branches from root + 2 from step 2 + 1 from step 3 = 6 steps
+      assert Enum.count(steps) == 6
+      assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
     end
   end
 
