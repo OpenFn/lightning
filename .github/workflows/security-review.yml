@@ -1,0 +1,33 @@
+name: Security Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  security-review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are performing a security review on this PR using the
+            instructions defined in .claude/agents/security-reviewer.md.
+
+            Read that file first, then follow its instructions exactly.
+            Review only the changes introduced by this PR.
+            Post your findings as a structured review comment.
+          claude_args: |
+            --max-turns 10
+            --model claude-sonnet-4-6
