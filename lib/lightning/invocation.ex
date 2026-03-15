@@ -13,8 +13,8 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
-  alias Lightning.Workflows.Edge
   alias Lightning.Run
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
