@@ -129,8 +129,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
       branches: branches
     } do
       # Token is valid but user has no installations (app not installed or uninstalled)
-      installations =
-        AsyncResult.ok(%AsyncResult{}, %{installations: [], repos: %{}})
+      installations = AsyncResult.ok(%AsyncResult{}, [])
 
       assigns = %{
         id: "github-sync-component",

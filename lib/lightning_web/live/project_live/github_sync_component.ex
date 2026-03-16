@@ -413,7 +413,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp show_invalid_oauth_error?(installations) do
     !installations.ok? && installations.failed &&
       match?(
-        {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        {:error,
+         %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
         installations.failed
       )
   end
@@ -425,7 +426,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp show_api_error?(installations) do
     !installations.ok? && installations.failed &&
       !match?(
-        {:error, %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        {:error,
+         %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
         installations.failed
       )
   end
@@ -442,10 +444,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </div>
         <div class="ml-3">
           <h3 class="text-sm font-medium text-yellow-800">
-            <%= @title %>
+            {@title}
           </h3>
           <div class="mt-2 text-sm text-yellow-700">
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           </div>
         </div>
       </div>
