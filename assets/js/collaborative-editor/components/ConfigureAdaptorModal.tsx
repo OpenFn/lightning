@@ -277,13 +277,6 @@ export function ConfigureAdaptorModal({
     onCredentialChange,
   ]);
 
-  // Check if the adaptor requires credentials
-  const adaptorNeedsCredentials = useMemo(() => {
-    const adaptorName = extractAdaptorName(currentAdaptor);
-    // Common adaptor doesn't require credentials
-    return adaptorName !== 'common';
-  }, [currentAdaptor]);
-
   // Filter credentials into sections
   const credentialSections = useMemo(() => {
     const adaptorName = extractAdaptorName(currentAdaptor);
@@ -442,7 +435,10 @@ export function ConfigureAdaptorModal({
   const handleCreateCredential = () => {
     const adaptorName = extractAdaptorName(currentAdaptor);
     if (adaptorName) {
-      onOpenCredentialModal(adaptorName);
+      // Adaptors like "common" have no credential schema file, so default
+      // to "raw" (Raw JSON) which is the most flexible credential type.
+      const schema = adaptorName === 'common' ? 'raw' : adaptorName;
+      onOpenCredentialModal(schema);
     }
   };
 
@@ -590,27 +586,19 @@ export function ConfigureAdaptorModal({
                         />
                       </Tooltip>
                     </span>
-                    {adaptorNeedsCredentials && (
-                      <button
-                        type="button"
-                        aria-label="Create new credential"
-                        className="text-primary-600 hover:text-primary-700 text-sm font-medium underline focus:outline-none"
-                        onClick={handleCreateCredential}
-                      >
-                        New Credential
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      aria-label="Create new credential"
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium underline focus:outline-none"
+                      onClick={handleCreateCredential}
+                    >
+                      New Credential
+                    </button>
                   </div>
 
-                  {!adaptorNeedsCredentials ? (
-                    <div className="border border-gray-200 rounded-md p-6 text-center bg-gray-50">
-                      <p className="text-gray-600 text-sm">
-                        This adaptor does not require credentials.
-                      </p>
-                    </div>
-                  ) : credentialSections.schemaMatched.length === 0 &&
-                    credentialSections.universal.length === 0 &&
-                    credentialSections.keychain.length === 0 ? (
+                  {credentialSections.schemaMatched.length === 0 &&
+                  credentialSections.universal.length === 0 &&
+                  credentialSections.keychain.length === 0 ? (
                     <div className="border border-gray-200 rounded-md p-6 text-center">
                       <p className="text-gray-500 mb-3">
                         No credentials found in this project
