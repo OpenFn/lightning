@@ -17,7 +17,10 @@
           </p>
           <p class="mt-2">
             Go to
-            <.link href={~p"/profile"} class="link font-medium">
+            <.link
+              href={~p"/profile"}
+              class="font-medium text-yellow-800 hover:text-yellow-900 underline"
+            >
               Settings
             </.link>
             and reconnect your GitHub account.
@@ -34,7 +37,7 @@
             <.link
               target="_blank"
               rel="noopener noreferrer"
-              class="link font-medium"
+              class="font-medium text-yellow-800 hover:text-yellow-900 underline"
               href={"https://github.com/apps/#{github_config()[:app_name]}"}
             >
               Install or manage GitHub app installations
