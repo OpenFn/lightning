@@ -218,7 +218,13 @@ defmodule LightningWeb.SandboxLive.Index do
               |> Repo.preload(:workflows)
               |> Map.get(:workflows, [])
               |> Enum.map(
-                &%{id: &1.id, name: &1.name, is_diverged: false, is_new: true}
+                &%{
+                  id: &1.id,
+                  name: &1.name,
+                  is_diverged: false,
+                  is_new: true,
+                  is_deleted: false
+                }
               )
               |> Enum.sort_by(& &1.name)
             end
@@ -681,25 +687,47 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp build_merge_workflow_list(source, diverged_names, target_project) do
-    target_workflow_names =
+    target_workflows =
       target_project
       |> Repo.preload(:workflows)
       |> Map.get(:workflows, [])
-      |> MapSet.new(& &1.name)
+
+    target_workflow_names = MapSet.new(target_workflows, & &1.name)
 
     diverged_set = MapSet.new(diverged_names)
 
-    source
-    |> Repo.preload(:workflows)
-    |> Map.get(:workflows, [])
-    |> Enum.map(fn wf ->
-      %{
-        id: wf.id,
-        name: wf.name,
-        is_diverged: MapSet.member?(diverged_set, wf.name),
-        is_new: not MapSet.member?(target_workflow_names, wf.name)
-      }
-    end)
+    source_workflows =
+      source
+      |> Repo.preload(:workflows)
+      |> Map.get(:workflows, [])
+
+    source_workflow_names = MapSet.new(source_workflows, & &1.name)
+
+    source_entries =
+      Enum.map(source_workflows, fn wf ->
+        %{
+          id: wf.id,
+          name: wf.name,
+          is_diverged: MapSet.member?(diverged_set, wf.name),
+          is_new: not MapSet.member?(target_workflow_names, wf.name),
+          is_deleted: false
+        }
+      end)
+
+    deleted_entries =
+      target_workflows
+      |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
+      |> Enum.map(fn wf ->
+        %{
+          id: wf.id,
+          name: wf.name,
+          is_diverged: false,
+          is_new: false,
+          is_deleted: true
+        }
+      end)
+
+    (source_entries ++ deleted_entries)
     |> Enum.sort_by(& &1.name)
   end
 
@@ -707,9 +735,26 @@ defmodule LightningWeb.SandboxLive.Index do
     all_ids = MapSet.new(assigns.merge_source_workflows, & &1.id)
 
     if MapSet.equal?(assigns.merge_selected_workflow_ids, all_ids) do
-      nil
+      {nil, nil}
     else
-      MapSet.to_list(assigns.merge_selected_workflow_ids)
+      deleted_ids =
+        assigns.merge_source_workflows
+        |> Enum.filter(& &1.is_deleted)
+        |> MapSet.new(& &1.id)
+
+      selected = assigns.merge_selected_workflow_ids
+
+      selected_source_ids =
+        selected
+        |> Enum.reject(&MapSet.member?(deleted_ids, &1))
+        |> Enum.to_list()
+
+      selected_deleted_ids =
+        selected
+        |> Enum.filter(&MapSet.member?(deleted_ids, &1))
+        |> Enum.to_list()
+
+      {selected_source_ids, selected_deleted_ids}
     end
   end
 
@@ -723,12 +768,20 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp perform_merge(source, target, actor, selected_workflow_ids) do
+  defp perform_merge(
+         source,
+         target,
+         actor,
+         {selected_workflow_ids, deleted_target_workflow_ids}
+       ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
     opts =
       if selected_workflow_ids do
-        %{selected_workflow_ids: selected_workflow_ids}
+        %{
+          selected_workflow_ids: selected_workflow_ids,
+          deleted_target_workflow_ids: deleted_target_workflow_ids
+        }
       else
         %{}
       end

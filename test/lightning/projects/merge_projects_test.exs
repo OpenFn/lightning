@@ -437,6 +437,55 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert passthrough_in_selected
       refute passthrough_in_selected["delete"]
     end
+
+    test "deleted_target_workflow_ids marks specified target-only workflows for deletion" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      insert(:workflow, name: "shared_workflow", project: target_project)
+
+      target_only =
+        insert(:workflow, name: "target_only", project: target_project)
+
+      source_workflow =
+        insert(:workflow, name: "shared_workflow", project: source_project)
+
+      result =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow.id],
+          deleted_target_workflow_ids: [target_only.id]
+        })
+
+      deleted =
+        Enum.find(result["workflows"], &(&1["id"] == target_only.id))
+
+      assert deleted["delete"]
+    end
+
+    test "target-only workflow is kept when not in deleted_target_workflow_ids" do
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
+
+      insert(:workflow, name: "shared_workflow", project: target_project)
+
+      target_only =
+        insert(:workflow, name: "target_only", project: target_project)
+
+      source_workflow =
+        insert(:workflow, name: "shared_workflow", project: source_project)
+
+      result =
+        MergeProjects.merge_project(source_project, target_project, %{
+          selected_workflow_ids: [source_workflow.id],
+          deleted_target_workflow_ids: []
+        })
+
+      passthrough =
+        Enum.find(result["workflows"], &(&1["id"] == target_only.id))
+
+      assert passthrough
+      refute passthrough["delete"]
+    end
   end
 
   describe "merge_workflow/2 - ported from cli" do

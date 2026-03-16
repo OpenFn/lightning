@@ -364,6 +364,13 @@ defmodule LightningWeb.SandboxLive.Components do
                 >
                   New
                 </span>
+                <span
+                  :if={wf.is_deleted}
+                  class="flex items-center gap-1 text-xs text-red-600"
+                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                >
+                  Deleted in sandbox
+                </span>
               </li>
             </ul>
           </div>

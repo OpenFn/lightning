@@ -2588,6 +2588,42 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert MapSet.member?(assigns.merge_selected_workflow_ids, beta_data.id)
     end
 
+    test "target-only workflows appear in list with is_deleted flag and badge",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      # Parent has "Alpha" and "Gamma" — sandbox only has "Alpha"
+      # so "Gamma" was deleted in the sandbox
+      _parent_alpha = insert(:workflow, project: parent, name: "Alpha")
+      _parent_gamma = insert(:workflow, project: parent, name: "Gamma")
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        view
+        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+        |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      gamma_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Gamma"))
+
+      assert gamma_data
+      assert gamma_data.is_deleted
+      refute gamma_data.is_new
+      refute gamma_data.is_diverged
+
+      # The gamma workflow's ID in the list is the target (parent) workflow ID
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, gamma_data.id)
+
+      # Badge shown in HTML
+      assert html =~ "Deleted in sandbox"
+    end
+
     test "workflow selection UI shows per-row status badges", %{
       conn: conn,
       parent: parent,

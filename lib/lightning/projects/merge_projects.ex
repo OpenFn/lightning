@@ -59,6 +59,9 @@ defmodule Lightning.Projects.MergeProjects do
     new_uuid_map = Map.get(opts, :new_uuid_map, %{})
     selected_workflow_ids = Map.get(opts, :selected_workflow_ids, nil)
 
+    deleted_target_workflow_ids =
+      Map.get(opts, :deleted_target_workflow_ids, nil)
+
     workflow_mappings =
       map_project_workflow_names(source_project, target_project)
 
@@ -68,7 +71,8 @@ defmodule Lightning.Projects.MergeProjects do
       target_project,
       workflow_mappings,
       new_uuid_map,
-      selected_workflow_ids
+      selected_workflow_ids,
+      deleted_target_workflow_ids
     )
   end
 
@@ -694,7 +698,8 @@ defmodule Lightning.Projects.MergeProjects do
          target_project,
          workflow_mappings,
          new_uuid_map,
-         selected_workflow_ids
+         selected_workflow_ids,
+         deleted_target_workflow_ids
        ) do
     merged_workflows =
       build_merged_workflows(
@@ -702,7 +707,8 @@ defmodule Lightning.Projects.MergeProjects do
         target_project.workflows,
         workflow_mappings,
         new_uuid_map,
-        selected_workflow_ids
+        selected_workflow_ids,
+        deleted_target_workflow_ids
       )
 
     target_project
@@ -719,7 +725,8 @@ defmodule Lightning.Projects.MergeProjects do
          target_workflows,
          workflow_mappings,
          new_uuid_map,
-         selected_workflow_ids
+         selected_workflow_ids,
+         deleted_target_workflow_ids
        ) do
     # Filter source workflows to selected ones if a selection is specified
     effective_source_workflows =
@@ -746,9 +753,8 @@ defmodule Lightning.Projects.MergeProjects do
     merged_target_ids = MapSet.new(merged_from_source, fn wf -> wf["id"] end)
 
     # When merging everything (no selection filter), delete unmatched target
-    # workflows. When a selection is provided, include non-selected target
-    # workflows as passthrough so Ecto's cast_assoc does not raise about
-    # missing associated records (on_replace: :raise).
+    # workflows. When a selection is provided, use deleted_target_workflow_ids
+    # to determine which unmatched target workflows to delete vs pass through.
     extra_target_workflows =
       if is_nil(selected_workflow_ids) do
         target_workflows
@@ -761,7 +767,14 @@ defmodule Lightning.Projects.MergeProjects do
       else
         target_workflows
         |> Enum.reject(fn workflow -> workflow.id in merged_target_ids end)
-        |> Enum.map(&build_passthrough_workflow/1)
+        |> Enum.map(fn workflow ->
+          if deleted_target_workflow_ids &&
+               workflow.id in deleted_target_workflow_ids do
+            %{"id" => workflow.id, "delete" => true}
+          else
+            build_passthrough_workflow(workflow)
+          end
+        end)
       end
 
     merged_from_source ++ extra_target_workflows
