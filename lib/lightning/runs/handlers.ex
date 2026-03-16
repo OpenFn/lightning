@@ -144,13 +144,22 @@ defmodule Lightning.Runs.Handlers do
       |> Map.put(:finished_at, complete_run.timestamp)
     end
 
-    # When the worker sends an existing dataclip ID, use it directly.
+    # @Stu - is this necessary? I'm worried that it's overkill to check first,
+    # but also don't want a situation where we crash the channel cause it's not
+    # there.
+    # When the worker sends an existing dataclip ID, verify it exists first.
     defp resolve_final_dataclip(
            %__MODULE__{final_dataclip_id: id} = complete_run,
            _options
          )
          when is_binary(id) do
-      {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
+      import Ecto.Query, only: [from: 2]
+
+      if Repo.exists?(from d in Dataclip, where: d.id == ^id) do
+        {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
+      else
+        {:error, %{errors: %{final_dataclip_id: ["does not exist"]}}}
+      end
     end
 
     # When the worker sends a new final_state map, insert a new dataclip.

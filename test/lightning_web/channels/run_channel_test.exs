@@ -1611,6 +1611,24 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     @tag run_state: :started
+    test "run:complete with non-existent final_dataclip_id returns error", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :error, %{errors: %{final_dataclip_id: _}}
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :started
+      assert run.final_dataclip_id == nil
+    end
+
+    @tag run_state: :started
     test "run:complete with final_state inserts a new dataclip", %{
       socket: socket,
       run: run
