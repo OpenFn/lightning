@@ -48,14 +48,6 @@
           <p>
             There was a problem connecting to GitHub. Try the refresh button above, or contact support if the problem persists.
           </p>
-          <%= if Application.get_env(:lightning, :env) == :dev do %>
-            <details class="mt-2">
-              <summary class="text-xs opacity-75 cursor-pointer">
-                Show error details
-              </summary>
-              <pre class="text-xs opacity-75 mt-1 overflow-auto"><code><%= inspect(@installations.failed, pretty: true) %></code></pre>
-            </details>
-          <% end %>
         </.error_banner>
       <% end %>
       <div class="">
