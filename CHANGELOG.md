@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- When merging sandboxes, let users choose which workflows to merge
+  (#4002)[https://github.com/OpenFn/lightning/issues/4002]
+
 ### Fixed
 
 - Migrate form error display from `phx-feedback-for` to `used_input?/1` so
