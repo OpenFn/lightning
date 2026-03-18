@@ -1567,6 +1567,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.work_order_id == workorder.id
       assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
+      assert retry_run.queue == "default"
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
@@ -2249,6 +2250,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == run.work_order_id
       assert retry_run.state == :available
+      assert retry_run.queue == "default"
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
