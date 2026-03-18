@@ -10,49 +10,52 @@
       phx-target={@myself}
     >
       <%!-- Token is expired/invalid --%>
-      <%= if show_invalid_oauth_error?(@installations) do %>
-        <.error_banner title="Unable to load GitHub installations">
-          <p>
-            Your GitHub authentication has expired or is invalid.
-          </p>
-          <p class="mt-2">
-            Go to
-            <.link
-              href={~p"/profile"}
-              class="font-medium text-yellow-800 hover:text-yellow-900 underline"
-            >
-              Settings
-            </.link>
-            and reconnect your GitHub account.
-          </p>
-        </.error_banner>
-      <% end %>
+      <.error_banner
+        :if={show_invalid_oauth_error?(@installations)}
+        title="Unable to load GitHub installations"
+      >
+        <p>
+          Your GitHub authentication has expired or is invalid.
+        </p>
+        <p class="mt-2">
+          Go to
+          <.link
+            href={~p"/profile"}
+            class="font-medium text-yellow-800 hover:text-yellow-900 underline"
+          >
+            Settings
+          </.link>
+          and reconnect your GitHub account.
+        </p>
+      </.error_banner>
       <%!-- Token valid but no installations (app uninstalled/never installed) --%>
-      <%= if show_no_installations_warning?(@installations) do %>
-        <.error_banner title="No GitHub installations found">
-          <p>
-            You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
-          </p>
-          <p class="mt-2">
-            <.link
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-medium text-yellow-800 hover:text-yellow-900 underline"
-              href={"https://github.com/apps/#{github_config()[:app_name]}"}
-            >
-              Install or manage GitHub app installations
-            </.link>
-          </p>
-        </.error_banner>
-      <% end %>
+      <.error_banner
+        :if={show_no_installations_warning?(@installations)}
+        title="No GitHub installations found"
+      >
+        <p>
+          You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
+        </p>
+        <p class="mt-2">
+          <.link
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-medium text-yellow-800 hover:text-yellow-900 underline"
+            href={"https://github.com/apps/#{github_config()[:app_name]}"}
+          >
+            Install or manage GitHub app installations
+          </.link>
+        </p>
+      </.error_banner>
       <%!-- GitHub API error (GitHub down or other issues) --%>
-      <%= if show_api_error?(@installations) do %>
-        <.error_banner title="Unable to load GitHub installations">
-          <p>
-            There was a problem connecting to GitHub. Refresh the page or contact support if the problem persists.
-          </p>
-        </.error_banner>
-      <% end %>
+      <.error_banner
+        :if={show_api_error?(@installations)}
+        title="Unable to load GitHub installations"
+      >
+        <p>
+          There was a problem connecting to GitHub. Refresh the page or contact support if the problem persists.
+        </p>
+      </.error_banner>
       <div class="">
         <.input
           id="select-installations-input"
@@ -63,8 +66,7 @@
           options={installations_select_options(@installations)}
           disabled={
             @actions_disabled ||
-              if(@installations.loading, do: true, else: false) ||
-              !@installations.ok?
+              if(!@installations.ok?, do: true, else: false)
           }
           required="true"
           button_placement="right"
