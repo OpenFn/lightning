@@ -92,7 +92,7 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     defp to_arg({:backoff, v}), do: ~w(--backoff #{v[:min]}/#{v[:max]})
     defp to_arg({:capacity, v}) when is_integer(v), do: ~w(--capacity #{v})
-    defp to_arg({:col_url, v}), do: ~w(--collections-url  #{v})
+    defp to_arg({:col_url, v}), do: ~w(--collections-url #{v})
     defp to_arg({:log, v}), do: ~w(--log #{v})
     defp to_arg({:port, v}) when is_integer(v), do: ~w(--port #{v})
     defp to_arg({:repo_dir, v}) when is_binary(v), do: ~w(--repo-dir #{v})
