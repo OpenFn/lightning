@@ -19,8 +19,11 @@ jobs:
           fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
+        id: claude-review
+        continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          use_sticky_comment: true
           prompt: |
             You are performing a security review on this PR using the
             instructions defined in .claude/agents/security-reviewer.md.
@@ -29,5 +32,44 @@ jobs:
             Review only the changes introduced by this PR.
             Post your findings as a structured review comment.
           claude_args: |
-            --max-turns 10
+            --max-turns 25
             --model claude-sonnet-4-6
+
+      - name: Post fallback comment on failure
+        if: steps.claude-review.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Check if there's already a sticky comment from Claude
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const hasClaudeComment = comments.some(c =>
+              c.body && c.body.includes('Security Review')
+            );
+            if (!hasClaudeComment) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: [
+                  '## Security Review',
+                  '',
+                  '⚠️ **Automated security review did not complete.**',
+                  '',
+                  'Claude hit the max-turns limit or encountered an error before posting findings.',
+                  'A manual review of S0 (project-scoped data access), S1 (authorization policies),',
+                  'and S2 (audit trail coverage) is recommended for this PR.',
+                  '',
+                  'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for details.',
+                ].join('\n'),
+              });
+            }
+
+      - name: Fail the check if review failed
+        if: steps.claude-review.outcome == 'failure'
+        run: |
+          echo "::error::Security review did not complete successfully. See PR comments for details."
+          exit 1
