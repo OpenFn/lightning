@@ -138,7 +138,8 @@ defmodule Lightning.Config.Bootstrap do
             [:lightning, Lightning.Runtime.RuntimeManager, :port],
             2222
           )
-        )
+        ),
+      workloops: env!("WORKER_WORKLOOPS", :string, nil)
 
     config :lightning, :workers,
       private_key:

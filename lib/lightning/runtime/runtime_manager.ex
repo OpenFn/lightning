@@ -37,7 +37,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc false
 
     defstruct backoff: [min: 0.5, max: 5],
-              capacity: 5,
+              capacity: nil,
               cd: Path.expand("../../../assets", __DIR__),
               cmd: ~w(node ./node_modules/.bin/worker),
               env: [],
@@ -46,6 +46,7 @@ defmodule Lightning.Runtime.RuntimeManager do
               worker_secret: nil,
               endpoint: nil,
               log: nil,
+              workloops: nil,
               ws_url: "ws://localhost:4000/worker",
               col_url: "http://localhost:4000/collections"
 
@@ -94,7 +95,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         {:backoff, v} ->
           ~w(--backoff #{v[:min]}/#{v[:max]})
 
-        {:capacity, v} ->
+        {:capacity, v} when is_integer(v) ->
           ~w(--capacity #{v})
 
         {:log, v} ->
@@ -105,6 +106,9 @@ defmodule Lightning.Runtime.RuntimeManager do
 
         {:repo_dir, v} when is_binary(v) ->
           ~w(--repo-dir #{v})
+
+        {:workloops, v} when is_binary(v) ->
+          ["--workloops", v]
 
         {:ws_url, v} ->
           ~w(--lightning #{v})
