@@ -4378,7 +4378,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "You haven&#39;t installed the OpenFn GitHub App yet"
     end
 
-    test "shows error banner when user has expired OAuth token", %{
+    test "shows reconnect link when user has expired OAuth token", %{
       conn: conn
     } do
       project = insert(:project)
@@ -4391,11 +4391,14 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      html = render_async(view)
+      html = render(view)
 
-      assert html =~ "Unable to load GitHub installations"
-      assert html =~ "Your GitHub authentication has expired or is invalid"
-      assert html =~ "reconnect your GitHub account"
+      # When token is expired, component doesn't render
+      # Instead shows the connect section with "Reconnect" link
+      assert html =~ "Connect your OpenFn account to GitHub"
+      assert html =~ "Reconnect your GitHub Account"
+      assert has_element?(view, "#connect-github-link")
+      refute html =~ "Unable to load GitHub installations"
     end
 
     test "shows error banner when GitHub API returns an error", %{
