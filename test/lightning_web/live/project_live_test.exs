@@ -4326,6 +4326,99 @@ defmodule LightningWeb.ProjectLiveTest do
         "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
     end
 
+    test "does not show error banner when installations load successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [
+          %{
+            "id" => 1234,
+            "account" => %{"type" => "User", "login" => "username"}
+          }
+        ]
+      })
+
+      expect_create_installation_token(1234)
+      expect_get_installation_repos(200)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      refute html =~ "Unable to load GitHub installations"
+      refute html =~ "No GitHub installations found"
+    end
+
+    test "shows warning banner when user has no GitHub installations", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{"installations" => []})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "No GitHub installations found"
+      assert html =~ "You haven&#39;t installed the OpenFn GitHub App yet"
+    end
+
+    test "shows error banner when user has expired OAuth token", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_expired_github_oauth_token!(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "Unable to load GitHub installations"
+      assert html =~ "Your GitHub authentication has expired or is invalid"
+      assert html =~ "reconnect your GitHub account"
+    end
+
+    test "shows error banner when GitHub API returns an error", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(500, %{"error" => "Internal Server Error"})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "Unable to load GitHub installations"
+      assert html =~ "There was a problem connecting to GitHub"
+    end
+
     test "branches list can be refreshed successfully", %{
       conn: conn
     } do

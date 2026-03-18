@@ -26,6 +26,19 @@ defmodule Lightning.GithubHelpers do
     |> Lightning.Repo.update!()
   end
 
+  def set_expired_github_oauth_token!(user) do
+    expired_token = %{
+      "access_token" => "expired-access-token",
+      "refresh_token" => "expired-refresh-token",
+      "expires_at" => DateTime.utc_now() |> DateTime.add(-500),
+      "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(-500)
+    }
+
+    user
+    |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
+    |> Lightning.Repo.update!()
+  end
+
   def expect_get_user_installations(
         resp_status \\ 200,
         resp_body \\ %{
