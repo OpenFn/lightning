@@ -125,14 +125,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "can&#39;t be blank"
 
       # Verify the validation error only appears once (fixes #4490)
-      error_count =
-        html
-        |> String.split("can&#39;t be blank")
-        |> length()
-        |> Kernel.-(1)
-
-      assert error_count == 1,
-             "Expected 'can't be blank' to appear once, but it appeared #{error_count} times"
+      assert Regex.scan(~r/can&#39;t be blank/, html) |> length() == 1
     end
 
     test "creating sandbox fails when limiter returns error", %{
