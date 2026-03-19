@@ -1183,6 +1183,47 @@ defmodule Lightning.Runs.QueryTest do
                )
       end)
     end
+
+    test "fast_lane runs bypass project concurrency limits" do
+      # A project has concurrency = 2. Two cron (default queue) runs are
+      # in-progress, saturating concurrency. A sync webhook run on the
+      # fast_lane queue is available — it should be claimed despite the
+      # project's concurrency slots being full.
+
+      project = insert(:project, name: "fast_lane_project", concurrency: 2)
+
+      cron_workflow =
+        insert(:simple_workflow, project: project, name: "cron_workflow")
+
+      webhook_workflow =
+        insert(:simple_workflow, project: project, name: "webhook_workflow")
+
+      cron = %{project: project, workflow: cron_workflow}
+      webhook = %{project: project, workflow: webhook_workflow}
+
+      # Two cron runs in-progress, filling project concurrency
+      insert_run(cron, :started, nil, queue: "default")
+      insert_run(cron, :started, nil, queue: "default")
+
+      # One sync webhook run waiting on the fast_lane queue
+      fast_lane_run = insert_run(webhook, :available, nil, queue: "fast_lane")
+      fast_lane_run_id = fast_lane_run.id
+
+      # A dedicated fast_lane worker tries to claim
+      {:ok, claimed} =
+        Lightning.Runs.Queue.claim(
+          1,
+          Query.eligible_for_claim(),
+          "fast_lane_worker",
+          ["fast_lane"]
+        )
+
+      # The fast_lane run bypasses concurrency — claimed successfully
+      assert [%{id: ^fast_lane_run_id}] = claimed
+
+      # Verify the run state transitioned to :claimed
+      assert Repo.get!(Lightning.Run, fast_lane_run_id).state == :claimed
+    end
   end
 
   def number_of_runs_for_project(color, state \\ :available) do
@@ -1213,7 +1254,7 @@ defmodule Lightning.Runs.QueryTest do
     )
   end
 
-  defp insert_run(project_workflow_pair, state, workflow \\ nil) do
+  defp insert_run(project_workflow_pair, state, workflow \\ nil, opts \\ []) do
     workflow = workflow || project_workflow_pair.workflow
 
     case state do
@@ -1222,6 +1263,13 @@ defmodule Lightning.Runs.QueryTest do
 
       :claimed ->
         [state: state, claimed_at: fn -> build(:timestamp) end]
+
+      :started ->
+        [
+          state: state,
+          claimed_at: fn -> build(:timestamp) end,
+          started_at: fn -> build(:timestamp) end
+        ]
     end
     |> Keyword.merge(
       work_order: insert(:workorder, workflow: workflow),
@@ -1229,6 +1277,7 @@ defmodule Lightning.Runs.QueryTest do
       starting_job: hd(workflow.jobs),
       dataclip: params_with_assocs(:dataclip)
     )
+    |> Keyword.merge(opts)
     |> then(fn params -> insert(:run, params) end)
   end
 end

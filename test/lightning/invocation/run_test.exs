@@ -44,6 +44,39 @@ defmodule Lightning.Invocation.RunTest do
     end
   end
 
+  describe "queue validation" do
+    test "Run.for(%Trigger{}) rejects invalid queue" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      changeset =
+        Run.for(trigger, %{
+          snapshot: snapshot,
+          dataclip: build(:dataclip),
+          queue: "invalid",
+          options: Runs.get_run_options(workflow.id, workflow.project_id)
+        })
+
+      assert {:queue, ["is invalid"]} in errors_on(changeset)
+    end
+
+    test "Run.for(%Job{}) rejects invalid queue" do
+      %{jobs: [job]} = workflow = insert(:simple_workflow)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      changeset =
+        Run.for(job, %{
+          created_by: insert(:user),
+          snapshot: snapshot,
+          dataclip: build(:dataclip),
+          queue: "invalid",
+          options: Runs.get_run_options(workflow.id, workflow.project_id)
+        })
+
+      assert {:queue, ["is invalid"]} in errors_on(changeset)
+    end
+  end
+
   describe "snapshotting" do
     test "must belong to a snapshot" do
       workflow = insert(:workflow)

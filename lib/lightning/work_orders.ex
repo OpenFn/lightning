@@ -135,7 +135,8 @@ defmodule Lightning.WorkOrders do
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate
+        priority: :immediate,
+        queue: "manual"
       })
     end)
     |> Runs.enqueue()
@@ -223,11 +224,17 @@ defmodule Lightning.WorkOrders do
           snapshot = changeset |> get_change(:snapshot)
           run_options = get_run_options(snapshot, attrs[:dataclip])
 
+          queue =
+            if trigger.webhook_reply == :after_completion,
+              do: "fast_lane",
+              else: "default"
+
           changeset
           |> put_assoc(:runs, [
             Run.for(trigger, %{
               dataclip: attrs[:dataclip],
               snapshot: snapshot,
+              queue: queue,
               options: run_options
             })
           ])
@@ -254,6 +261,7 @@ defmodule Lightning.WorkOrders do
             dataclip: attrs[:dataclip],
             created_by: attrs[:created_by],
             priority: attrs[:priority],
+            queue: attrs[:queue],
             snapshot: snapshot,
             options: run_options
           })
@@ -339,10 +347,13 @@ defmodule Lightning.WorkOrders do
          )}
     end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)
-    |> enqueue_retry(Keyword.fetch!(opts, :created_by))
+    |> enqueue_retry(
+      Keyword.fetch!(opts, :created_by),
+      Keyword.get(opts, :queue, "manual")
+    )
   end
 
-  defp enqueue_retry(multi, creating_user) do
+  defp enqueue_retry(multi, creating_user, queue) do
     multi
     |> Multi.run(:workflow, fn _repo, %{run: run} ->
       {:ok, run.work_order.workflow}
@@ -361,7 +372,8 @@ defmodule Lightning.WorkOrders do
         dataclip_id,
         step.job,
         steps,
-        creating_user
+        creating_user,
+        queue
       )
     end)
     |> Multi.update_all(
@@ -469,6 +481,8 @@ defmodule Lightning.WorkOrders do
   end
 
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
+    opts = Keyword.put_new(opts, :queue, "default")
+
     with project_id <- Keyword.fetch!(opts, :project_id),
          runs <- Enum.uniq_by(run_steps, & &1.run_id),
          :ok <- limit_run_creation(project_id, length(runs)) do
@@ -583,7 +597,11 @@ defmodule Lightning.WorkOrders do
   @doc """
   Enqueue multiple runs for retry in the same transaction.
   """
-  def enqueue_many_for_retry(workorders_ids, creating_user_id) do
+  def enqueue_many_for_retry(
+        workorders_ids,
+        creating_user_id,
+        queue \\ "default"
+      ) do
     workorders = workorders_with_first_runs(workorders_ids)
     creating_user = Repo.get!(User, creating_user_id)
 
@@ -606,7 +624,8 @@ defmodule Lightning.WorkOrders do
           dataclip_id,
           starting_job,
           [],
-          creating_user
+          creating_user,
+          queue
         )
       end)
       |> Multi.update_all(
@@ -687,12 +706,13 @@ defmodule Lightning.WorkOrders do
          dataclip_id,
          starting_job,
          steps,
-         creating_user
+         creating_user,
+         queue
        ) do
     run_options =
       Runs.get_run_options(workorder.workflow.id, workorder.workflow.project_id)
 
-    Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+    Run.new(%{priority: :immediate, queue: queue, dataclip_id: dataclip_id})
     |> put_assoc(:snapshot, snapshot)
     |> put_assoc(:work_order, workorder)
     |> put_assoc(:starting_job, starting_job)
