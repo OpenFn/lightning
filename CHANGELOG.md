@@ -19,9 +19,14 @@ and this project adheres to
 
 ### Changed
 
-- Removed potentially dangerous cascades on dataclip/run relationships. The run
-  is "king" when it comes to auditing, and any attempts to delete related items
-  for a run should be prevented.
+- Removed potentially dangerous cascades on dataclip/run and user/run
+  relationships. The run is "king" when it comes to auditing — attempts to
+  delete dataclips or users that are referenced by runs are now prevented. Jobs
+  and triggers can still be freely deleted from workflows since the snapshot
+  system preserves their data for every run.
+  [#4538](https://github.com/OpenFn/lightning/issues/4538)
+- Show a notification in the workflow editor when navigating to a job or trigger
+  that has been deleted from the workflow.
   [#4538](https://github.com/OpenFn/lightning/issues/4538)
 
 ### Fixed

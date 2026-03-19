@@ -282,6 +282,34 @@ export const useNodeSelection = () => {
     [currentNodeId, jobId, triggerId, edgeId]
   );
 
+  // Track which missing node IDs we've already notified about to avoid
+  // showing the same warning repeatedly on re-renders.
+  const notifiedMissingRef = React.useRef<string | null>(null);
+
+  // Jobs and triggers can be deleted from a workflow while old runs still
+  // reference them via starting_job_id / starting_trigger_id (these columns
+  // have no FK constraint — the snapshot preserves all audit data). When a
+  // user clicks through from a run to a deleted node, the URL will contain
+  // a ?job= or ?trigger= param that no longer matches anything in the
+  // current workflow. Detect this and show a friendly warning.
+  // See issue #4538.
+  React.useEffect(() => {
+    const { currentNode } = stableData;
+    if (currentNodeId && currentNode.type && !currentNode.node) {
+      if (notifiedMissingRef.current !== currentNodeId) {
+        notifiedMissingRef.current = currentNodeId;
+        notifications.warning({
+          title: 'Resource not found',
+          description:
+            "Can't find the resource you're looking for. It may have been deleted.",
+        });
+        updateSearchParams({ job: null, trigger: null, edge: null });
+      }
+    } else {
+      notifiedMissingRef.current = null;
+    }
+  }, [currentNodeId, stableData, updateSearchParams]);
+
   const store = useWorkflowStoreContext();
   const selectNode = useCallback(
     (id: string | null) => {
