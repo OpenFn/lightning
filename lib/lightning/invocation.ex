@@ -235,18 +235,15 @@ defmodule Lightning.Invocation do
   def last_run_final_dataclip(%Trigger{id: trigger_id}) do
     from(r in Run,
       join: wo in assoc(r, :work_order),
+      join: d in assoc(r, :final_dataclip),
       where: wo.trigger_id == ^trigger_id,
       where: r.state == :success,
-      where: not is_nil(r.final_dataclip_id),
+      where: is_nil(d.wiped_at),
       order_by: [desc: r.finished_at],
       limit: 1,
-      preload: [:final_dataclip]
+      select: d
     )
     |> Repo.one()
-    |> case do
-      nil -> nil
-      run -> run.final_dataclip
-    end
   end
 
   @doc """

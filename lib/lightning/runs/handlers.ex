@@ -70,6 +70,7 @@ defmodule Lightning.Runs.Handlers do
     """
     use Lightning.Schema
 
+    import Ecto.Query, only: [from: 2]
     import Lightning.ChangesetUtils
 
     alias Lightning.Invocation.Dataclip
@@ -153,8 +154,6 @@ defmodule Lightning.Runs.Handlers do
            _options
          )
          when is_binary(id) do
-      import Ecto.Query, only: [from: 2]
-
       if Repo.exists?(from d in Dataclip, where: d.id == ^id) do
         {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
       else

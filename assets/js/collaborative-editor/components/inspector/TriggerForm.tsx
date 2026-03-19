@@ -504,6 +504,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </div>
                             <select
                               id={field.name}
+                              aria-describedby={`${field.name}-description`}
                               value={field.state.value ?? ''}
                               onChange={e =>
                                 field.handleChange(
@@ -533,7 +534,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 </option>
                               ))}
                             </select>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p
+                              id={`${field.name}-description`}
+                              className="mt-1 text-xs text-slate-500"
+                            >
                               Choose which step&apos;s output to use as input
                               for cron-triggered runs.
                             </p>

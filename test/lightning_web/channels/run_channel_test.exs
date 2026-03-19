@@ -1611,6 +1611,33 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     @tag run_state: :started
+    test "run:complete with both final_dataclip_id and final_state uses final_dataclip_id",
+         %{
+           socket: socket,
+           run: run
+         } do
+      existing_dataclip =
+        insert(:dataclip,
+          project: run.work_order.workflow.project,
+          body: %{"reused" => true},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => existing_dataclip.id,
+          "final_state" => %{"should_be" => "ignored"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == existing_dataclip.id
+    end
+
+    @tag run_state: :started
     test "run:complete with non-existent final_dataclip_id returns error", %{
       socket: socket,
       run: run

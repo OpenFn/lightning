@@ -12,6 +12,38 @@ defmodule Lightning.Invocation.RunTest do
     end
   end
 
+  describe "final_dataclip" do
+    test "deleting a dataclip cascades to delete the run" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+      dataclip = insert(:dataclip, project: workflow.project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: build(:dataclip)
+        )
+
+      run =
+        Run.for(trigger, %{
+          snapshot: snapshot,
+          dataclip: work_order.dataclip,
+          options: Runs.get_run_options(workflow.id, workflow.project_id)
+        })
+        |> put_assoc(:work_order, work_order)
+        |> Repo.insert!()
+
+      run
+      |> Ecto.Changeset.change(%{final_dataclip_id: dataclip.id})
+      |> Repo.update!()
+
+      Repo.delete!(dataclip)
+
+      assert is_nil(Repo.get(Run, run.id))
+    end
+  end
+
   describe "snapshotting" do
     test "must belong to a snapshot" do
       workflow = insert(:workflow)

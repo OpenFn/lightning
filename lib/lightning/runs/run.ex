@@ -33,7 +33,8 @@ defmodule Lightning.Run do
              :starting_trigger,
              :steps,
              :work_order,
-             :inserted_at
+             :inserted_at,
+             :final_dataclip_id
            ]}
 
   @final_states [
@@ -173,6 +174,7 @@ defmodule Lightning.Run do
     |> cast(params, [:state, :error_type, :finished_at, :final_dataclip_id])
     |> validate_required([:state, :finished_at])
     |> validate_inclusion(:state, @final_states)
+    |> foreign_key_constraint(:final_dataclip_id)
     |> validate_state_change()
   end
 
