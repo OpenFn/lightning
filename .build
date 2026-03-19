@@ -35,6 +35,16 @@ Lightning.BuildMacros.html
 Lightning.CLI.Result.html
 Lightning.CLI.html
 Lightning.ChangesetUtils.html
+Lightning.Channels.Audit.html
+Lightning.Channels.Channel.html
+Lightning.Channels.ChannelAuthMethod.html
+Lightning.Channels.ChannelEvent.html
+Lightning.Channels.ChannelRequest.html
+Lightning.Channels.ChannelSnapshot.html
+Lightning.Channels.Handler.html
+Lightning.Channels.SearchParams.html
+Lightning.Channels.SinkAuth.html
+Lightning.Channels.html
 Lightning.Collaborate.html
 Lightning.Collaboration.DocumentState.html
 Lightning.Collaboration.DocumentSupervisor.html
@@ -262,6 +272,7 @@ LightningWeb.AiAssistant.Component.html
 LightningWeb.AiAssistant.Quotes.html
 LightningWeb.AiAssistantChannel.html
 LightningWeb.AuditLive.Index.html
+LightningWeb.Auth.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
 LightningWeb.BackupCodesController.html
@@ -269,6 +280,8 @@ LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.ChannelHelpers.html
+LightningWeb.ChannelLive.Helpers.html
+LightningWeb.ChannelProxyPlug.html
 LightningWeb.Channels.AiAssistantJSON.html
 LightningWeb.Channels.WorkflowJSON.html
 LightningWeb.CollectionLive.CollectionCreationModal.html
@@ -428,8 +441,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-960DED8B.js
-dist/sidebar_items-F9B04936.js
+dist/search_data-175E32AF.js
+dist/sidebar_items-6C43DFF7.js
 index.html
 provisioning.html
 readme.html

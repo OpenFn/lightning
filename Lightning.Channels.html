@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.15.16">
+
+
+    <title>Lightning.Channels — Lightning v2.15.16</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-6C43DFF7.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.15.16
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Channels</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.15.16)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Context for managing Channels — HTTP proxy configurations that forward
+requests from a source to a sink.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_channel/2" data-no-tooltip="" translate="no">create_channel(attrs, list)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a channel.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_channel/2" data-no-tooltip="" translate="no">delete_channel(channel, list)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deletes a channel.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_channel/1" data-no-tooltip="" translate="no">get_channel(id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a single channel by ID. Returns nil if not found.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_channel!/2" data-no-tooltip="" translate="no">get_channel!(id, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a single channel. Raises if not found.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_channel_for_project/2" data-no-tooltip="" translate="no">get_channel_for_project(project_id, channel_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a channel by ID scoped to a project. Returns <code class="inline">nil</code> if the channel
+does not exist or belongs to a different project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_channel_stats_for_project/1" data-no-tooltip="" translate="no">get_channel_stats_for_project(project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns aggregate stats for all channels in a project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_channel_with_auth/1" data-no-tooltip="" translate="no">get_channel_with_auth(id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a channel by ID with all auth methods preloaded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_or_create_current_snapshot/1" data-no-tooltip="" translate="no">get_or_create_current_snapshot(channel)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get or create a snapshot for the channel's current lock_version.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_channel_auth_methods/1" data-no-tooltip="" translate="no">list_channel_auth_methods(channel)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns all ChannelAuthMethod records for a channel, preloading
+their associated webhook_auth_method and project_credential (with credential).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_channel_requests/3" data-no-tooltip="" translate="no">list_channel_requests(project, search_params, params \\ %{})</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a paginated page of ChannelRequest records for a project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_channels_for_project/1" data-no-tooltip="" translate="no">list_channels_for_project(project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns all channels for a project, ordered by name.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_channels_for_project_with_stats/1" data-no-tooltip="" translate="no">list_channels_for_project_with_stats(project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns channels for a project with aggregate stats from channel_requests.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_channel/3" data-no-tooltip="" translate="no">update_channel(channel, attrs, list)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Updates a channel's config fields, bumping lock_version.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="create_channel/2">
+
+  <div class="detail-header">
+    <a href="#create_channel/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_channel(attrs, list)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L174" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_channel(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), [{:actor, <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()}]) ::
+  {:ok, <a href="Lightning.Channels.Channel.html#t:t/0">Lightning.Channels.Channel.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Creates a channel.</p>
+  </section>
+</section>
+<section class="detail" id="delete_channel/2">
+
+  <div class="detail-header">
+    <a href="#delete_channel/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_channel(channel, list)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L219" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_channel(<a href="Lightning.Channels.Channel.html#t:t/0">Lightning.Channels.Channel.t</a>(), [
+  {:actor, <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()}
+]) ::
+  {:ok, <a href="Lightning.Channels.Channel.html#t:t/0">Lightning.Channels.Channel.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Deletes a channel.</p><p>Returns <code class="inline">{:error, changeset}</code> if the channel has snapshots
+(due to <code class="inline">:restrict</code> FK on <code class="inline">channel_snapshots</code>).</p>
+  </section>
+</section>
+<section class="detail" id="get_channel/1">
+
+  <div class="detail-header">
+    <a href="#get_channel/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel(id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a single channel by ID. Returns nil if not found.</p>
+  </section>
+</section>
+<section class="detail" id="get_channel!/2">
+
+    <span id="get_channel!/1"></span>
+
+  <div class="detail-header">
+    <a href="#get_channel!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel!(id, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L156" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a single channel. Raises if not found.</p>
+  </section>
+</section>
+<section class="detail" id="get_channel_for_project/2">
+
+  <div class="detail-header">
+    <a href="#get_channel_for_project/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel_for_project(project_id, channel_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L165" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a channel by ID scoped to a project. Returns <code class="inline">nil</code> if the channel
+does not exist or belongs to a different project.</p>
+  </section>
+</section>
+<section class="detail" id="get_channel_stats_for_project/1">
+
+  <div class="detail-header">
+    <a href="#get_channel_stats_for_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel_stats_for_project(project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns aggregate stats for all channels in a project.</p><p>Returns a map with:</p><ul><li><code class="inline">:total_channels</code> — number of channels in the project</li><li><code class="inline">:total_requests</code> — total channel requests across all channels</li></ul><p>Uses a single query with a LEFT JOIN so both counts are fetched in one
+database round-trip.</p>
+  </section>
+</section>
+<section class="detail" id="get_channel_with_auth/1">
+
+  <div class="detail-header">
+    <a href="#get_channel_with_auth/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel_with_auth(id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L137" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a channel by ID with all auth methods preloaded.</p><p>Preloads source auth methods (with webhook_auth_method) and sink auth
+methods (with project_credential → credential). Returns nil if not found.</p><p>Used by ChannelProxyPlug for source authentication and sink credential resolution.</p>
+  </section>
+</section>
+<section class="detail" id="get_or_create_current_snapshot/1">
+
+  <div class="detail-header">
+    <a href="#get_or_create_current_snapshot/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_or_create_current_snapshot(channel)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L321" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Get or create a snapshot for the channel's current lock_version.</p><p>Returns an existing snapshot if one matches, or creates a minimal one from
+the current channel config. Handles concurrent creation race via
+ON CONFLICT DO NOTHING + re-fetch.</p><p>Full snapshot lifecycle management is in #4406.</p>
+  </section>
+</section>
+<section class="detail" id="list_channel_auth_methods/1">
+
+  <div class="detail-header">
+    <a href="#list_channel_auth_methods/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_channel_auth_methods(channel)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L304" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns all ChannelAuthMethod records for a channel, preloading
+their associated webhook_auth_method and project_credential (with credential).</p>
+  </section>
+</section>
+<section class="detail" id="list_channel_requests/3">
+
+    <span id="list_channel_requests/2"></span>
+
+  <div class="detail-header">
+    <a href="#list_channel_requests/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_channel_requests(project, search_params, params \\ %{})</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_channel_requests(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Channels.SearchParams.html#t:t/0">Lightning.Channels.SearchParams.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) :: <a href="https://hexdocs.pm/scrivener/2.7.2/Scrivener.Page.html#t:t/0">Scrivener.Page.t</a>()</pre>
+
+      </div>
+
+<p>Returns a paginated page of ChannelRequest records for a project.</p><p>Preloads <code class="inline">:channel</code> and <code class="inline">:channel_events</code>.</p><h2 id="list_channel_requests/3-parameters" class="section-heading"><a href="#list_channel_requests/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">project</code> — <code class="inline">%Project{}</code> struct; scopes results to this project</li><li><code class="inline">search_params</code> — <code class="inline">%SearchParams{}</code>; currently supports <code class="inline">channel_id</code>
+filter</li><li><code class="inline">params</code> — Scrivener page params map, e.g. <code class="inline">%{&quot;page&quot; =&gt; &quot;2&quot;}</code></li></ul>
+  </section>
+</section>
+<section class="detail" id="list_channels_for_project/1">
+
+  <div class="detail-header">
+    <a href="#list_channels_for_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_channels_for_project(project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L24" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns all channels for a project, ordered by name.</p>
+  </section>
+</section>
+<section class="detail" id="list_channels_for_project_with_stats/1">
+
+  <div class="detail-header">
+    <a href="#list_channels_for_project_with_stats/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_channels_for_project_with_stats(project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L40" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns channels for a project with aggregate stats from channel_requests.</p><p>Each entry is a map with keys:</p><ul><li>all Channel fields (via struct)</li><li><code class="inline">:request_count</code> — total number of requests</li><li><code class="inline">:last_activity</code> — datetime of most recent request, or nil</li></ul>
+  </section>
+</section>
+<section class="detail" id="update_channel/3">
+
+  <div class="detail-header">
+    <a href="#update_channel/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_channel(channel, attrs, list)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L195" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_channel(<a href="Lightning.Channels.Channel.html#t:t/0">Lightning.Channels.Channel.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), [
+  {:actor, <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()}
+]) ::
+  {:ok, <a href="Lightning.Channels.Channel.html#t:t/0">Lightning.Channels.Channel.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Updates a channel's config fields, bumping lock_version.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

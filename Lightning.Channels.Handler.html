@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.15.16">
+
+
+    <title>Lightning.Channels.Handler — Lightning v2.15.16</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-6C43DFF7.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.15.16
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Channels.Handler</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.15.16)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/handler.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Philter handler that persists every proxied Channel request.</p><h2 id="module-lifecycle" class="section-heading"><a href="#module-lifecycle" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Lifecycle</span></h2><p>Philter invokes three callbacks during the proxy lifecycle:</p><ol><li><p><code class="inline">handle_request_started</code> — creates a <code class="inline">ChannelRequest</code> record
+synchronously. If the insert fails, the request is rejected with 503.</p></li><li><p><code class="inline">handle_response_started</code> — captures TTFB and response headers into
+handler state. <strong>May not be called</strong> — see below.</p></li><li><p><code class="inline">handle_response_finished</code> — creates a <code class="inline">ChannelEvent</code> and updates
+the <code class="inline">ChannelRequest</code> state.</p></li></ol><h2 id="module-skipped-handle_response_started" class="section-heading"><a href="#module-skipped-handle_response_started" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Skipped <code class="inline">handle_response_started</code></span></h2><p><code class="inline">handle_response_started</code> fires when the first response bytes arrive from
+the upstream (TTFB). If the upstream never sends a response, the callback
+is skipped entirely and <code class="inline">handle_response_finished</code> receives handler state
+from <code class="inline">handle_request_started</code> only — without <code class="inline">ttfb_us</code>, <code class="inline">response_status</code>,
+or <code class="inline">response_headers</code>.</p><p>This happens when:</p><ul><li>DNS resolution fails (<code class="inline">:nxdomain</code>)</li><li>The upstream refuses the connection (<code class="inline">:econnrefused</code>)</li><li>The host or network is unreachable (<code class="inline">:ehostunreach</code>, <code class="inline">:enetunreach</code>)</li><li>The connection times out before any response (<code class="inline">:connect_timeout</code>)</li><li>The response times out before headers arrive (<code class="inline">:timeout</code>)</li><li>TLS handshake fails</li></ul><p>All fields derived from <code class="inline">handle_response_started</code> are accessed via
+<a href="https://hexdocs.pm/elixir/Map.html#get/2"><code class="inline">Map.get/2</code></a> with <code class="inline">nil</code> fallbacks, so this is safe. The <code class="inline">classify_error/1</code>
+function translates known Philter error shapes into stable string identifiers
+for persistence.</p>
+    </section>
+
+</div>
+
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
