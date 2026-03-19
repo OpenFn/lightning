@@ -4,7 +4,7 @@ import {
   QueueListIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 import _logger from '#/utils/logger';
@@ -96,6 +96,10 @@ export function ManualRunPanel({
   const customBody = customBodyProp ?? customBodyInternal;
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
+
+  // Ref to avoid stale closure in async fetch callback
+  const selectedDataclipRef = useRef(selectedDataclip);
+  selectedDataclipRef.current = selectedDataclip;
 
   const setSelectedTab = useCallback(
     (tab: TabValue) => {
@@ -294,8 +298,7 @@ export function ManualRunPanel({
           response.next_cron_run_dataclip_id &&
           !disableAutoSelection &&
           !followedRunId &&
-          !isDataclipControlled &&
-          !selectedDataclip &&
+          !selectedDataclipRef.current &&
           !manuallyUnselected
         ) {
           const nextCronDataclip = response.data.find(

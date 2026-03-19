@@ -310,13 +310,7 @@ defmodule LightningWeb.Components.Common do
         ]}
         title={@message}
       >
-        <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
-          <%= if index > 0 do %>
-            <br /><span class="text-[0.45rem]">{part}</span>
-          <% else %>
-            {part}
-          <% end %>
-        <% end %>
+        {@display}
       </code>
     </div>
     """

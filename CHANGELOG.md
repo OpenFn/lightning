@@ -21,14 +21,27 @@ and this project adheres to
   requests between systems with full observability. Includes source/sink
   authentication, request/response logging, and a searchable history UI.
   [#4322](https://github.com/OpenFn/lightning/issues/4322)
+- Now saving "final output state" for runs, not just steps. (Important for
+  workflows with multiple leaf nodes.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
+- Users can now select which step output to use as the input for the _next_
+  cron-triggered run of a workflow. (A migration preserves the old behaviour,
+  but for new workflows the default is the final output state for the last run,
+  not the output state of the first step in the last run.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
 
 ### Changed
 
 ### Fixed
 
+- Display error messages when GitHub installations fail to load, providing
+  specific guidance for OAuth token errors and other failure scenarios
+  [#4467](https://github.com/OpenFn/lightning/issues/4467)
 - Migrate form error display from `phx-feedback-for` to `used_input?/1` so
   validation errors only appear on fields the user has interacted with
   [#4472](https://github.com/OpenFn/lightning/pull/4472)
+- Fix sandbox name validation errors appearing twice
+  [#4490](https://github.com/OpenFn/lightning/issues/4490)
 - Isolate AI assistant tests with per-module manual Oban mode to prevent side
   effects leaking into concurrent tests
   [#4493](https://github.com/OpenFn/lightning/pull/4493)
@@ -75,6 +88,8 @@ and this project adheres to
   [#4468](https://github.com/OpenFn/lightning/issues/4468)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
+- Fixed an issue where metadata failed to load in the Editor
+  [#4388](https://github.com/OpenFn/lightning/pull/4388)
 
 ## [2.15.15] - 2026-03-02
 

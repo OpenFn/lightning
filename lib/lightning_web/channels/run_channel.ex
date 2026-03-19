@@ -107,6 +107,8 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("run:complete", payload, socket) do
+    payload = Map.put(payload, "project_id", socket.assigns.project_id)
+
     case Runs.complete_run(socket.assigns.run, payload) do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
