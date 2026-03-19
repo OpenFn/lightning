@@ -1302,7 +1302,7 @@ export function FullScreenIDE({
                           selectedTab={selectedTab}
                           selectedDataclip={selectedDataclipState}
                           customBody={customBody}
-                          disableAutoSelection
+                          disableAutoSelection={manuallyUnselectedDataclip}
                         />
                       </ManualRunPanelErrorBoundary>
                     ) : null}

@@ -164,6 +164,21 @@ defmodule LightningWeb.RunLive.Show do
                   </:value>
                 </.list_item>
                 <.list_item>
+                  <:label>Final Output</:label>
+                  <:value>
+                    <%= if run.final_dataclip_id do %>
+                      <.link
+                        navigate={
+                          ~p"/projects/#{@project}/dataclips/#{run.final_dataclip_id}/show"
+                        }
+                        class="link font-mono"
+                      >
+                        {display_short_uuid(run.final_dataclip_id)}
+                      </.link>
+                    <% end %>
+                  </:value>
+                </.list_item>
+                <.list_item>
                   <:label>Duration</:label>
                   <:value>
                     <.elapsed_indicator item={run} context="show" />

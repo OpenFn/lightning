@@ -645,6 +645,113 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "get_next_cron_run_dataclip/1" do
+    test "returns nil when successful run has no final_dataclip_id (pre-feature data)" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      # A successful run without final_dataclip_id (simulates pre-feature data)
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: DateTime.utc_now(),
+        final_dataclip: nil
+      )
+
+      # Should return nil since the inner join on final_dataclip won't match
+      assert Invocation.get_next_cron_run_dataclip(trigger) == nil
+    end
+
+    test "returns the final dataclip from the last successful run" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project)
+
+      final_dataclip =
+        insert(:dataclip,
+          project: project,
+          body: %{"final" => "state"},
+          type: :step_result
+        )
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: DateTime.utc_now(),
+        final_dataclip: final_dataclip
+      )
+
+      result = Invocation.get_next_cron_run_dataclip(trigger)
+      assert result.id == final_dataclip.id
+    end
+
+    test "skips wiped dataclips and returns nil" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project)
+
+      wiped_dataclip =
+        insert(:dataclip,
+          project: project,
+          body: nil,
+          type: :step_result,
+          wiped_at: DateTime.utc_now()
+        )
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: DateTime.utc_now(),
+        final_dataclip: wiped_dataclip
+      )
+
+      assert Invocation.get_next_cron_run_dataclip(trigger) == nil
+    end
+  end
+
   describe "steps" do
     test "list_steps/0 returns all steps" do
       step = insert(:step)

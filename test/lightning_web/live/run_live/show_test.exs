@@ -6,7 +6,10 @@ defmodule LightningWeb.RunLive.ShowTest do
   import Lightning.WorkflowLive.Helpers
 
   alias Lightning.WorkOrders
+  alias LightningWeb.LiveHelpers
   alias Phoenix.LiveView.AsyncResult
+
+  import LiveHelpers, only: [display_short_uuid: 1]
 
   setup :stub_rate_limiter_ok
 
@@ -205,9 +208,73 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       {:ok, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
 
-      assert view
-             |> element("#run-detail-#{run_id}")
-             |> render_async() =~ "Failed"
+      html =
+        view
+        |> element("#run-detail-#{run_id}")
+        |> render_async()
+
+      assert html =~ "Failed"
+      assert html =~ "Final Output"
+      refute html =~ "dataclips/"
+    end
+
+    test "shows final output when run completes with a final_dataclip_id", %{
+      conn: conn,
+      project: project
+    } do
+      %{triggers: [%{id: webhook_trigger_id}], jobs: [job | _rest]} =
+        insert(:complex_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id} = run]} =
+        workorder = WorkOrders.get(wo_id, include: [:runs])
+
+      run =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(run, %{
+            state: :claimed,
+            claimed_at: DateTime.utc_now()
+          })
+        )
+
+      Lightning.Runs.start_run(run)
+
+      {:ok, step} =
+        Lightning.Runs.start_step(run, %{
+          step_id: Ecto.UUID.generate(),
+          job_id: job.id,
+          input_dataclip_id: workorder.dataclip_id
+        })
+
+      {:ok, _step} =
+        Lightning.Runs.complete_step(%{
+          run_id: run_id,
+          project_id: project.id,
+          step_id: step.id,
+          output_dataclip: ~s({"result": 42}),
+          output_dataclip_id: output_dataclip_id = Ecto.UUID.generate(),
+          reason: "success"
+        })
+
+      {:ok, _} =
+        Lightning.Runs.complete_run(run, %{
+          state: "success",
+          final_dataclip_id: output_dataclip_id
+        })
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html =
+        view
+        |> element("#run-detail-#{run_id}")
+        |> render_async()
+
+      assert html =~ "Final Output"
+      assert html =~ display_short_uuid(output_dataclip_id)
     end
   end
 
