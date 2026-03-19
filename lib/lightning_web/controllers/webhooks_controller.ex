@@ -16,7 +16,7 @@ defmodule LightningWeb.WebhooksController do
       %Plug.Conn.Unfetched{} ->
         conn
         |> put_status(415)
-        |> put_view(LightningWeb.ErrorView)
+        |> put_view(json: LightningWeb.ErrorJSON)
         |> render(:"415")
         |> halt()
 

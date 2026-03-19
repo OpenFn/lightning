@@ -2,7 +2,7 @@ defmodule LightningWeb.Plugs.ApiAuth do
   @moduledoc """
   Authenticates api calls based on JWT bearer token.
   """
-  use Phoenix.Controller
+  use Phoenix.Controller, formats: [:json]
   import Plug.Conn
 
   def init(opts) do
@@ -41,7 +41,7 @@ defmodule LightningWeb.Plugs.ApiAuth do
   defp deny_access(conn) do
     conn
     |> put_status(:unauthorized)
-    |> put_view(LightningWeb.ErrorView)
+    |> put_view(json: LightningWeb.ErrorJSON)
     |> render(:"401")
     |> halt()
   end

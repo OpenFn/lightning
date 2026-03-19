@@ -87,7 +87,7 @@ defmodule LightningWeb.API.ProvisioningController do
         {:error, error} ->
           conn
           |> put_status(:forbidden)
-          |> put_view(LightningWeb.ErrorView)
+          |> put_view(json: LightningWeb.ErrorJSON)
           |> render(:"403",
             error:
               case error do

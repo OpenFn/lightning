@@ -279,24 +279,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
-  attr :current_sort_key, :string, required: true
-  attr :current_sort_direction, :string, required: true
-  attr :target_sort_key, :string, required: true
-  slot :inner_block, required: true
-
-  defp sortable_table_header(assigns) do
-    ~H"""
-    <Common.sortable_table_header
-      phx-click="sort"
-      phx-value-by={@target_sort_key}
-      active={@current_sort_key == @target_sort_key}
-      sort_direction={@current_sort_direction}
-    >
-      {render_slot(@inner_block)}
-    </Common.sortable_table_header>
-    """
-  end
-
   attr :project, :map, required: true
   attr :workflow, :map, required: true
   attr :trigger_enabled, :boolean

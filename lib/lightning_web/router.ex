@@ -207,8 +207,6 @@ defmodule LightningWeb.Router do
     end
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live "/settings", SettingsLive.Index, :index
-
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
       live "/settings/users/:id/delete", UserLive.Index, :delete
@@ -230,8 +228,6 @@ defmodule LightningWeb.Router do
       live "/mfa_required", ProjectLive.MFARequired, :index
 
       scope "/projects/:project_id", as: :project do
-        live "/jobs", JobLive.Index, :index
-
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index

@@ -230,7 +230,10 @@ defmodule LightningWeb.UserAuth do
           "json" ->
             conn
             |> put_status(:unauthorized)
-            |> put_view(LightningWeb.ErrorView)
+            |> put_view(
+              html: LightningWeb.ErrorHTML,
+              json: LightningWeb.ErrorJSON
+            )
             |> render(:"401")
             |> halt()
 
@@ -263,7 +266,7 @@ defmodule LightningWeb.UserAuth do
     if is_nil(conn.assigns[:current_resource]) do
       conn
       |> put_status(:unauthorized)
-      |> put_view(LightningWeb.ErrorView)
+      |> put_view(html: LightningWeb.ErrorHTML, json: LightningWeb.ErrorJSON)
       |> render(:"401")
       |> halt()
     else
@@ -313,7 +316,10 @@ defmodule LightningWeb.UserAuth do
           "json" ->
             conn
             |> put_status(:forbidden)
-            |> put_view(LightningWeb.ErrorView)
+            |> put_view(
+              html: LightningWeb.ErrorHTML,
+              json: LightningWeb.ErrorJSON
+            )
             |> render(:"403")
             |> halt()
 

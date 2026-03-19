@@ -1,14 +1,11 @@
-defmodule LightningWeb.ErrorView do
+defmodule LightningWeb.ErrorHTML do
   @moduledoc false
 
-  # This module needs to be changed to use Layouts
-  use LightningWeb, :view
-
-  use Phoenix.Component
+  use LightningWeb, :html
 
   def render("404.html", assigns) do
     ~H"""
-    <.logo_bar conn={@conn} />
+    <.logo_bar />
     <div class="min-h-[25em] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-6 p-12 rounded-md shadow-md border bg-white">
         <div>
@@ -26,7 +23,7 @@ defmodule LightningWeb.ErrorView do
 
   def render("401.html", assigns) do
     ~H"""
-    <.logo_bar conn={@conn} />
+    <.logo_bar />
     <div class="min-h-[25em] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-6 p-12 rounded-md shadow-md border bg-white">
         <div>
@@ -37,7 +34,7 @@ defmodule LightningWeb.ErrorView do
             :if={assigns[:error]}
             class="mt-4 p-4 text-xs font-mono text-gray-600 border rounded-md bg-gray-200 grid grid-cols-2 gap-2"
           >
-            <%= for {k,v} <- @error do %>
+            <%= for {k, v} <- @error do %>
               <div class="text-right font-bold">{k}</div>
               <div>{v}</div>
             <% end %>
@@ -48,6 +45,10 @@ defmodule LightningWeb.ErrorView do
     """
   end
 
+  def render(template, _assigns) do
+    Phoenix.Controller.status_message_from_template(template)
+  end
+
   defp logo_bar(assigns) do
     ~H"""
     <nav class="bg-secondary-800">
@@ -55,33 +56,12 @@ defmodule LightningWeb.ErrorView do
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <img
-                class="h-8 w-8"
-                src={Routes.static_path(@conn, "/images/square-logo.png")}
-                alt="OpenFn"
-              />
+              <img class="h-8 w-8" src={~p"/images/square-logo.png"} alt="OpenFn" />
             </div>
           </div>
         </div>
       </div>
     </nav>
     """
-  end
-
-  # By default, Phoenix returns the status message from
-  # the template name. For example, "404.html" becomes
-  # "Not Found".
-  def template_not_found(template, assigns) do
-    if String.match?(template, ~r/.json$/) do
-      %{
-        "error" =>
-          case assigns do
-            %{error: error} -> error
-            _ -> Phoenix.Controller.status_message_from_template(template)
-          end
-      }
-    else
-      Phoenix.Controller.status_message_from_template(template)
-    end
   end
 end
