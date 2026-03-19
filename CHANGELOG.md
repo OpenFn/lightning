@@ -17,6 +17,15 @@ and this project adheres to
 
 ### Added
 
+- Now saving "final output state" for runs, not just steps. (Important for
+  workflows with multiple leaf nodes.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
+- Users can now select which step output to use as the input for the _next_
+  cron-triggered run of a workflow. (A migration preserves the old behaviour,
+  but for new workflows the default is the final output state for the last run,
+  not the output state of the first step in the last run.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
+
 ### Changed
 
 ### Fixed
