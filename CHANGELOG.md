@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.0-pre2] - 2026-03-19
+
+### Fixed
+
+- Create new snapshots for updated cron workflows
+  [PR#4544](https://github.com/OpenFn/lightning/pull/4544)
+
 ## [2.16.0-pre.1] - 2026-03-19
 
 ### Added
