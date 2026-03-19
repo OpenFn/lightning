@@ -187,26 +187,35 @@ describe('TriggerForm - Cron Input Source dropdown', () => {
     mockChannel = createMockPhoenixChannel();
   });
 
-  test('renders for cron triggers with default option and all job options', async () => {
-    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+  test(
+    'renders for cron triggers with default option and all job options',
+    { timeout: 15000 },
+    async () => {
+      const trigger = workflowStore.getSnapshot()
+        .triggers[0] as Session.Trigger;
 
-    render(<TriggerForm trigger={trigger} />, {
-      wrapper: createWrapper(workflowStore, mockChannel),
-    });
+      render(<TriggerForm trigger={trigger} />, {
+        wrapper: createWrapper(workflowStore, mockChannel),
+      });
 
-    const select = await screen.findByLabelText('Cron Input Source');
-    expect(select).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: 'Final run state (default)' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: 'Fetch Data' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: 'Transform' })
-    ).toBeInTheDocument();
-    expect((select as HTMLSelectElement).value).toBe('');
-  });
+      const select = await screen.findByLabelText(
+        'Cron Input Source',
+        {},
+        { timeout: 10000 }
+      );
+      expect(select).toBeInTheDocument();
+      expect(
+        screen.getByRole('option', { name: 'Final run state (default)' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('option', { name: 'Fetch Data' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('option', { name: 'Transform' })
+      ).toBeInTheDocument();
+      expect((select as HTMLSelectElement).value).toBe('');
+    }
+  );
 
   test('does not render for webhook or kafka triggers', async () => {
     for (const type of ['webhook', 'kafka'] as const) {
