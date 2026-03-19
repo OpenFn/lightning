@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.0-pre.1] - 2026-03-19
+
+### Added
+
 - Channels: a high-performance reverse proxy for forwarding authenticated
   requests between systems with full observability. Includes source/sink
   authentication, request/response logging, and a searchable history UI.
@@ -29,8 +37,6 @@ and this project adheres to
   but for new workflows the default is the final output state for the last run,
   not the output state of the first step in the last run.)
   [#4485](https://github.com/OpenFn/lightning/issues/4485)
-
-### Changed
 
 ### Fixed
 
