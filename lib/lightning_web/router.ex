@@ -235,6 +235,7 @@ defmodule LightningWeb.Router do
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index
+        live "/history/channels", RunLive.Index, :channel_logs
         live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
@@ -244,6 +245,10 @@ defmodule LightningWeb.Router do
         live "/w/new", WorkflowLive.Collaborate, :new
         live "/w/:id/legacy", WorkflowLive.Edit, :edit
         live "/w/:id", WorkflowLive.Collaborate, :edit
+
+        live "/channels", ChannelLive.Index, :index
+        live "/channels/new", ChannelLive.Index, :new
+        live "/channels/:id/edit", ChannelLive.Index, :edit
 
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new

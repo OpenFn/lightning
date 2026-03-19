@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Channels: a high-performance reverse proxy for forwarding authenticated
+  requests between systems with full observability. Includes source/sink
+  authentication, request/response logging, and a searchable history UI.
+  [#4322](https://github.com/OpenFn/lightning/issues/4322)
 - Now saving "final output state" for runs, not just steps. (Important for
   workflows with multiple leaf nodes.)
   [#4485](https://github.com/OpenFn/lightning/issues/4485)

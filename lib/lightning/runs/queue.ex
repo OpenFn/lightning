@@ -16,13 +16,19 @@ defmodule Lightning.Runs.Queue do
           {:ok, [Lightning.Run.t()]}
           | {:error, Ecto.Changeset.t(Lightning.Run.t())}
   def claim(demand, base_query, worker_name \\ nil, queues \\ ["manual", "*"]) do
+    log = Lightning.Config.log_queue_queries()
+
     Ecto.Multi.new()
     |> Ecto.Multi.run(:configure_session, fn repo, _changes ->
       work_mem = Lightning.Config.claim_work_mem()
 
       with {:ok, _} <-
-             repo.query("SET LOCAL plan_cache_mode = force_custom_plan"),
-           {:ok, _} <- maybe_set_work_mem(repo, work_mem) do
+             repo.query(
+               "SET LOCAL plan_cache_mode = force_custom_plan",
+               [],
+               log: log
+             ),
+           {:ok, _} <- maybe_set_work_mem(repo, work_mem, log) do
         {:ok, :session_configured}
       end
     end)
@@ -51,7 +57,8 @@ defmodule Lightning.Runs.Queue do
         |> where([a, x], a.id == x.id)
         |> select([a, _], a)
 
-      Runs.update_runs(query,
+      Runs.update_runs(
+        query,
         set: [
           state: :claimed,
           claimed_at: DateTime.utc_now(),
@@ -59,7 +66,7 @@ defmodule Lightning.Runs.Queue do
         ]
       )
     end)
-    |> Repo.transaction()
+    |> Repo.transaction(log: log)
     |> case do
       {:ok, %{claim_runs: %{runs: {_count, runs}}}} ->
         {:ok, runs}
@@ -117,8 +124,9 @@ defmodule Lightning.Runs.Queue do
     end
   end
 
-  defp maybe_set_work_mem(_repo, nil), do: {:ok, :skipped}
+  defp maybe_set_work_mem(_repo, nil, _log), do: {:ok, :skipped}
 
-  defp maybe_set_work_mem(repo, work_mem),
-    do: repo.query("SET LOCAL work_mem = '#{work_mem}'")
+  defp maybe_set_work_mem(repo, work_mem, log),
+    do:
+      repo.query("SELECT set_config('work_mem', $1, true)", [work_mem], log: log)
 end

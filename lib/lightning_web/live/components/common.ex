@@ -422,7 +422,9 @@ defmodule LightningWeb.Components.Common do
               phx-hook="Copy"
               data-content={@copy_value}
             >
-              <span class="datetime-text">{@datetime}</span>
+              <span class="datetime-text inline-block w-[20ch] h-[1em] rounded bg-gray-200/60 text-transparent align-bottom">
+                {@datetime}
+              </span>
             </span>
           </span>
         </Common.wrapper_tooltip>

@@ -383,6 +383,31 @@ defmodule Lightning.ProjectsTest do
              |> Repo.aggregate(:count, :id) == 1
     end
 
+    test "delete_project/1 deletes project with channel snapshots and requests" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot
+        )
+
+      _event = insert(:channel_event, channel_request: request)
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Lightning.Channels.Channel, channel.id)
+      refute Repo.get(Lightning.Channels.ChannelSnapshot, snapshot.id)
+      refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
+    end
+
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
