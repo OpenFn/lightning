@@ -32,7 +32,7 @@ defmodule Lightning.Repo.Migrations.ReSnapshotCronCursorJobId do
       w.id,
       w.name,
       w.lock_version,
-      COALESCE(w.positions, '{}'::jsonb),
+      w.positions,
       COALESCE(
         (SELECT jsonb_agg(jsonb_build_object(
           'id', j.id,
