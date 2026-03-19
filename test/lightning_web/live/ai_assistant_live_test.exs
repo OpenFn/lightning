@@ -310,10 +310,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
           )
 
         assert has_element?(input_element)
-        refute render(input_element) =~ "disabled=\"disabled\""
+        refute render(input_element) =~ "disabled=\"\""
         assert has_element?(submit_btn)
         # Submit button should be disabled when no content is entered
-        assert render(submit_btn) =~ "disabled=\"disabled\""
+        assert render(submit_btn) =~ "disabled=\"\""
 
         html =
           view
@@ -367,9 +367,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
           )
 
         assert has_element?(input_element)
-        assert render(input_element) =~ "disabled=\"disabled\""
+        assert render(input_element) =~ "disabled=\"\""
         assert has_element?(submit_btn)
-        assert render(submit_btn) =~ "disabled=\"disabled\""
+        assert render(submit_btn) =~ "disabled=\"\""
 
         html =
           view
@@ -431,9 +431,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       assert has_element?(input_element)
-      assert render(input_element) =~ "disabled=\"disabled\""
+      assert render(input_element) =~ "disabled=\"\""
       assert has_element?(submit_btn)
-      assert render(submit_btn) =~ "disabled=\"disabled\""
+      assert render(submit_btn) =~ "disabled=\"\""
 
       assert render(input_element) =~
                ~s(placeholder="Save your workflow first to use the AI Assistant")
@@ -2077,7 +2077,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       create_btn_after = element(view, "#create_workflow_btn")
       create_btn_html_after = render(create_btn_after)
 
-      refute create_btn_html_after =~ "disabled=\"disabled\"",
+      refute create_btn_html_after =~ "disabled=\"\"",
              "Create button should be enabled after template selection"
     end
 
@@ -2353,9 +2353,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
           "#ai-assistant-form-submit-btn-chat-input-new-workflow-panel-assistant"
         )
 
-      refute render(input_element) =~ "disabled=\"disabled\""
+      refute render(input_element) =~ "disabled=\"\""
       # Submit button should be disabled when no content is entered
-      assert render(submit_btn) =~ "disabled=\"disabled\""
+      assert render(submit_btn) =~ "disabled=\"\""
 
       refute render(input_element) =~ "Save your workflow first"
     end

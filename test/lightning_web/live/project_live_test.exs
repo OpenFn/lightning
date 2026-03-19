@@ -1835,14 +1835,10 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?(
-               "input[disabled='disabled'][name='project[raw_name]']"
-             )
+             |> has_element?("input[disabled][name='project[raw_name]']")
 
       assert view
-             |> has_element?(
-               "textarea[disabled='disabled'][name='project[description]']"
-             )
+             |> has_element?("textarea[disabled][name='project[description]']")
 
       assert view |> has_element?("button[disabled][type=submit]")
 
@@ -1869,14 +1865,10 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?(
-               "input[disabled='disabled'][name='project[raw_name]']"
-             )
+             |> has_element?("input[disabled][name='project[raw_name]']")
 
       assert view
-             |> has_element?(
-               "textarea[disabled='disabled'][name='project[description]']"
-             )
+             |> has_element?("textarea[disabled][name='project[description]']")
 
       assert view |> has_element?("button[disabled][type=submit]")
 
@@ -2755,7 +2747,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Should OpenFn store input/output data for workflow runs?"
 
       # retain_all is the default
-      assert ["checked"] ==
+      assert [""] ==
                view
                |> element("#retain_all")
                |> render()
@@ -2770,7 +2762,7 @@ defmodule LightningWeb.ProjectLiveTest do
       #          |> Floki.parse_fragment!()
       #          |> Floki.attribute("input", "checked")
 
-      refute ["checked"] ==
+      assert [] ==
                view
                |> element("#erase_all")
                |> render()
@@ -2783,7 +2775,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # 3 radio buttons descriptions
       assert "Retain input/output data for all workflow runs" =
                view
-               |> element(~s{label#[for="retain_all"]})
+               |> element(~s{label[for="retain_all"]})
                |> render()
                |> Floki.parse_fragment!()
                |> Floki.text()
@@ -2800,7 +2792,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert "Never retain input/output data (zero-persistence)" =
                view
-               |> element(~s{label#[for="erase_all"]})
+               |> element(~s{label[for="erase_all"]})
                |> render()
                |> Floki.parse_fragment!()
                |> Floki.text()
@@ -2841,7 +2833,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
       |> render_change()
 
-      assert ["checked"] ==
+      assert [""] ==
                view
                |> element("#erase_all")
                |> render()
@@ -2873,7 +2865,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
       |> render_change()
 
-      assert ["checked"] ==
+      assert [""] ==
                view
                |> element("#erase_all")
                |> render()
@@ -2886,7 +2878,7 @@ defmodule LightningWeb.ProjectLiveTest do
       |> render_click()
 
       # Verify it resets back to retain_all (the default)
-      assert ["checked"] ==
+      assert [""] ==
                view
                |> element("#retain_all")
                |> render()
@@ -2972,7 +2964,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
           |> render_change()
 
-          assert ["checked"] ==
+          assert [""] ==
                    view
                    |> element("#" <> policy)
                    |> render()
@@ -2998,7 +2990,7 @@ defmodule LightningWeb.ProjectLiveTest do
           {:ok, view, _html} =
             live(conn, ~p"/projects/#{project.id}/settings#data-storage")
 
-          assert ["checked"] ==
+          assert [""] ==
                    view
                    |> element("#" <> policy)
                    |> render()
@@ -5217,7 +5209,7 @@ defmodule LightningWeb.ProjectLiveTest do
           "Connect Branch & Initiate First Sync"
         )
 
-      assert render(submit_btn) =~ "disabled=\"disabled\""
+      assert render(submit_btn) =~ "disabled=\"\""
     end
 
     @tag :capture_log
@@ -6229,7 +6221,7 @@ defmodule LightningWeb.ProjectLiveTest do
         button = element(view, "#initiate-sync-button")
         assert has_element?(button)
 
-        assert render(button) =~ "disabled=\"disabled\""
+        assert render(button) =~ "disabled=\"\""
       end
     end
 

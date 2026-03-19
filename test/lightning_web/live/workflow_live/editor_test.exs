@@ -1317,11 +1317,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
 
       # user gets no option to rerun
-      assert has_element?(view, "button[disabled='disabled']", "Run (Retry)")
+      assert has_element?(view, "button[disabled]", "Run (Retry)")
 
       assert has_element?(
                view,
-               "button[disabled='disabled']",
+               "button[disabled]",
                "Run"
              )
 

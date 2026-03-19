@@ -6,7 +6,7 @@ defmodule Lightning.WorkflowVersionsTest do
 
   alias Lightning.Repo
   alias Lightning.WorkflowVersions
-  alias Lightning.Workflows.{Workflow, WorkflowVersion}
+  alias Lightning.Workflows.{WorkflowVersion}
 
   @a "aaaaaaaaaaaa"
   @b "bbbbbbbbbbbb"

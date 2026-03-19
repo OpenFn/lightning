@@ -998,7 +998,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element("tbody:first-child")
+        |> element("#work-orders-table")
         |> render_async()
 
       refute div =~ "workflow 1"
@@ -1008,7 +1008,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element("tbody:first-child")
+        |> element("#work-orders-table")
         |> render_async()
 
       assert div =~ "workflow 1"
@@ -1110,7 +1110,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element("tbody:first-child td.text-right:nth-child(8)")
+        |> element(
+          "tbody#workorder-#{work_order_two.id} td.text-right:nth-child(8)"
+        )
         |> render()
 
       assert div =~ "Failed"
@@ -1807,7 +1809,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   def workflow_displayed(view, name) do
     elem =
       view
-      |> element("tbody:first-child")
+      |> element("#work-orders-table")
 
     if elem |> has_element?() do
       elem |> render() =~ name

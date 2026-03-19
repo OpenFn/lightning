@@ -2865,7 +2865,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute view
              |> has_element?(
-               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
+               "span[phx-hook='Tooltip'][aria-label='OAuth client not found']"
              )
 
       # Now lets delete the oauth client
