@@ -28,7 +28,7 @@ defmodule Lightning.MixProject do
         coveralls: :test,
         verify: :test
       ],
-      compilers: Mix.compilers(),
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
 
       # Docs
       name: "Lightning",
@@ -103,20 +103,21 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_test_watch, "~> 1.4.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
-      {:oban, "~> 2.19"},
+      {:oban, "~> 2.20"},
       {:petal_components, "~> 3.0"},
-      {:phoenix, "~> 1.7.11"},
+      {:phoenix, "~> 1.8"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
-      {:phoenix_live_view, "~> 1.0.17"},
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
+      {:phoenix_live_view, "~> 1.1"},
+      {:lazy_html, ">= 0.0.0", only: :test},
+      {:phoenix_storybook, "~> 1.0", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -152,7 +153,7 @@ defmodule Lightning.MixProject do
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
-      {:y_ex, "~> 0.8.0"},
+      {:y_ex, "~> 0.10.2"},
       {:chameleon, "~> 2.5"}
     ]
   end

@@ -41,18 +41,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  slot :inner_block, required: true
-  attr :class, :string, default: ""
-  attr :id, :string, required: true
-
-  defp column(assigns) do
-    ~H"""
-    <div id={@id} class={["flex-1 px-2 pt-2 collapsible-panel", @class]}>
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
   attr :job, :map, required: true
   attr :form, :map, required: true, doc: "A form built from a job"
   attr :current_user, :map, required: true

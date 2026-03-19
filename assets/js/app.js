@@ -28,6 +28,7 @@ import * as Sentry from '@sentry/react';
 import { enableMapSet } from 'immer';
 import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
+import { hooks as colocatedHooks } from 'phoenix-colocated/lightning';
 
 import topbar from '../vendor/topbar.cjs';
 
@@ -55,6 +56,7 @@ window.sentry = sentry;
 const hooks = {
   LogViewer,
   ...Hooks,
+  ...colocatedHooks,
 };
 
 // @ts-ignore

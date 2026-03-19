@@ -522,7 +522,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       refute view
              |> element("#create_workflow_btn")
-             |> render() =~ "disabled=\"disabled\""
+             |> render() =~ "disabled=\"\""
 
       # Test with invalid payload (missing required fields)
       invalid_payload = %{
@@ -542,7 +542,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> element("#create_workflow_btn")
-             |> render() =~ "disabled=\"disabled\""
+             |> render() =~ "disabled=\"\""
     end
 
     @tag role: :editor
@@ -725,7 +725,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       refute view
              |> has_element?(
-               "[id='version-switcher-canvas-#{workflow.id}][data-version='latest']"
+               "[id='version-switcher-canvas-#{workflow.id}'][data-version='latest']"
              )
 
       view |> fill_workflow_name("#{workflow.name} v2")
@@ -763,7 +763,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                )
 
         refute view
-               |> has_element?("[id='version-switcher-inspector-#{job.id}]")
+               |> has_element?("[id='version-switcher-inspector-#{job.id}']")
 
         refute view
                |> has_element?(
@@ -890,7 +890,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         #        )
 
         assert view
-               |> has_element?("[id='version-switcher-toggle-#{job.id}]")
+               |> has_element?("[id='version-switcher-toggle-#{job.id}']")
 
         assert view |> save_is_disabled?()
       end)
@@ -1664,13 +1664,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert form_html =~ "Label"
 
       assert form_html =~
-               ~S[<option selected="selected" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
+               ~S[<option selected="" value="always">Always</option><option value="js_expression">Matches a Javascript Expression</option></select>]
 
       edge_on_edit = Enum.at(workflow.edges, 1)
       form_html = view |> select_node(edge_on_edit, workflow.lock_version)
 
       assert form_html =~
-               ~S[<option selected="selected" value="on_job_success">On Success</option>]
+               ~S[<option selected="" value="on_job_success">On Success</option>]
 
       form_html =
         view
@@ -1684,7 +1684,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert form_html =~ "Label"
 
       assert form_html =~
-               ~S[<option selected="selected" value="js_expression">Matches a Javascript Expression</option>]
+               ~S[<option selected="" value="js_expression">Matches a Javascript Expression</option>]
 
       view
       |> form("#workflow-form", %{
@@ -2947,7 +2947,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> element("button#submit-btn-github-sync-modal")
-             |> render() =~ "disabled=\"disabled\""
+             |> render() =~ "disabled=\"\""
     end
   end
 

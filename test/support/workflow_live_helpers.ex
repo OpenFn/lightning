@@ -481,7 +481,7 @@ defmodule Lightning.WorkflowLive.Helpers do
       children |> Floki.text() |> String.contains?("Save")
     end)
     |> Enum.all?(fn {_, attrs, _} ->
-      {"disabled", "disabled"} in attrs
+      List.keymember?(attrs, "disabled", 0)
     end)
   end
 

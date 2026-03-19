@@ -121,7 +121,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       )
 
       html = render(view)
-      assert html =~ ~s(<button disabled="disabled" type="submit")
+      assert html =~ ~s(<button disabled="" type="submit")
       assert html =~ "can&#39;t be blank"
 
       # Verify the validation error only appears once (fixes #4490)

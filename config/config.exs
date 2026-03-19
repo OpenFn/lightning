@@ -23,8 +23,7 @@ config :hammer,
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    view: LightningWeb.ErrorView,
-    accepts: ~w(html json),
+    formats: [html: LightningWeb.ErrorHTML, json: LightningWeb.ErrorJSON],
     layout: false
   ],
   pubsub_server: Lightning.PubSub,
@@ -101,6 +100,7 @@ config :esbuild,
          --external:path
          --external:/fonts/*
          --external:/images/*
+         --alias:@=.
          js/app.js
          js/storybook.js
          js/editor/Editor.tsx
@@ -131,7 +131,9 @@ config :esbuild,
         end
       end),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{
+      "NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]
+    }
   ]
 
 # https://fly.io/phoenix-files/tailwind-standalone/

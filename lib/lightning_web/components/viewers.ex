@@ -16,7 +16,7 @@ defmodule LightningWeb.Components.Viewers do
   import React
 
   alias Lightning.Invocation.Dataclip
-  alias LightningWeb.Components.Icon
+  # alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
@@ -336,39 +336,6 @@ defmodule LightningWeb.Components.Viewers do
         <% end %>
       </div>
       {render_slot(@footer)}
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
-
-  defp dataclip_type(assigns) do
-    assigns =
-      assign(assigns,
-        icon: Icon.dataclip_icon_class(assigns.type),
-        color: Icon.dataclip_icon_color(assigns.type)
-      )
-
-    ~H"""
-    <div
-      id={@id}
-      class={[
-        "absolute top-0 right-0 flex items-center gap-2 group z-10"
-      ]}
-    >
-      <div class="hidden group-hover:block font-mono text-white text-xs">
-        type: {@type}
-      </div>
-      <div class={[
-        "rounded-bl-md rounded-tr-md p-1 pt-0 opacity-70 group-hover:opacity-100 content-center",
-        @color
-      ]}>
-        <.icon :if={@icon} name={@icon} class="h-4 w-4 inline-block align-middle" />
-      </div>
     </div>
     """
   end

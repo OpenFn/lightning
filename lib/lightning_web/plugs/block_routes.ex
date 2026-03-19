@@ -2,7 +2,7 @@ defmodule LightningWeb.Plugs.BlockRoutes do
   @moduledoc """
   Plug to conditionally block specified routes based on configuration flags and custom messages.
   """
-  use Phoenix.Controller
+  use Phoenix.Controller, formats: [:html, :json]
   import Plug.Conn
 
   def init(opts) do

@@ -66,11 +66,11 @@ RUN mix lightning.install_adaptor_icons
 RUN mix lightning.install_schemas
 RUN npm install --prefix assets
 
-# compile assets
-RUN mix assets.deploy
-
 # Compile the release
 RUN mix compile
+
+# compile assets
+RUN mix assets.deploy
 
 # Changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/
