@@ -75,6 +75,8 @@ and this project adheres to
   [#4468](https://github.com/OpenFn/lightning/issues/4468)
 - Auto-increment job name when adaptor display name is already used in workflow
   [#4464](https://github.com/OpenFn/lightning/issues/4464)
+- Fixed an issue where metadata failed to load in the Editor
+  [#4388](https://github.com/OpenFn/lightning/pull/4388)
 
 ## [2.15.15] - 2026-03-02
 

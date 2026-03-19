@@ -25,6 +25,16 @@ export const languages = {
   typescript: {
     javascriptDefaults: {
       setCompilerOptions: () => {},
+      setDiagnosticsOptions: () => {},
+      setEagerModelSync: () => {},
+      addExtraLib: () => ({ dispose: () => {} }),
+      setExtraLibs: () => {},
+    },
+    typescriptDefaults: {
+      setCompilerOptions: () => {},
+      setDiagnosticsOptions: () => {},
+      setEagerModelSync: () => {},
+      addExtraLib: () => ({ dispose: () => {} }),
       setExtraLibs: () => {},
     },
   },
