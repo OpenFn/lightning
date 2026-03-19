@@ -20,6 +20,24 @@ defmodule Lightning.Repo.Migrations.ChangeCascadeToRestrictForRunIntegrity do
   # only blocks DDL and VACUUM).
 
   def up do
+    # --- Phase 0: Check for orphaned references ---
+    # starting_trigger_id and starting_job_id had no FK constraint since the
+    # 20240405 snapshot migration. If any triggers or jobs were deleted in that
+    # window, those runs now hold dangling references that would fail VALIDATE.
+    # Nullify them so the constraint can be applied cleanly.
+
+    execute """
+    UPDATE runs SET starting_trigger_id = NULL
+    WHERE starting_trigger_id IS NOT NULL
+      AND starting_trigger_id NOT IN (SELECT id FROM triggers)
+    """
+
+    execute """
+    UPDATE runs SET starting_job_id = NULL
+    WHERE starting_job_id IS NOT NULL
+      AND starting_job_id NOT IN (SELECT id FROM jobs)
+    """
+
     # --- Phase 1: Add indexes concurrently (no locks) ---
     # These columns had no indexes. Without them, every DELETE from the
     # referenced table would seq-scan runs to check for RESTRICT violations.

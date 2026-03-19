@@ -618,7 +618,13 @@ defmodule Lightning.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    user
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:runs,
+      name: :runs_created_by_id_fkey,
+      message: "user has associated runs and cannot be deleted"
+    )
+    |> Repo.delete()
   end
 
   @doc """
