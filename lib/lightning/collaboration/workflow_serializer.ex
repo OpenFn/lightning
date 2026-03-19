@@ -223,6 +223,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
         Yex.MapPrelim.from(%{
           "kafka_configuration" => kafka_configuration,
           "cron_expression" => trigger.cron_expression,
+          "cron_cursor_job_id" => trigger.cron_cursor_job_id,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
           "type" => trigger.type |> to_string(),
@@ -273,7 +274,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       trigger
       |> Map.take(
-        ~w(id type enabled cron_expression webhook_reply kafka_configuration)
+        ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply kafka_configuration)
       )
       |> normalize_kafka_configuration()
     end)
