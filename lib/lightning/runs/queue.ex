@@ -7,10 +7,15 @@ defmodule Lightning.Runs.Queue do
   alias Lightning.Repo
   alias Lightning.Runs
 
-  @spec claim(non_neg_integer(), Ecto.Query.t(), String.t() | nil) ::
+  @spec claim(
+          non_neg_integer(),
+          Ecto.Query.t(),
+          String.t() | nil,
+          [String.t()]
+        ) ::
           {:ok, [Lightning.Run.t()]}
           | {:error, Ecto.Changeset.t(Lightning.Run.t())}
-  def claim(demand, base_query, worker_name \\ nil) do
+  def claim(demand, base_query, worker_name \\ nil, queues \\ ["manual", "*"]) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:configure_session, fn repo, _changes ->
       work_mem = Lightning.Config.claim_work_mem()
@@ -24,6 +29,7 @@ defmodule Lightning.Runs.Queue do
     |> Ecto.Multi.run(:claim_runs, fn _repo, _changes ->
       subset_query =
         base_query
+        |> apply_queue_and_ordering(queues)
         |> select([:id])
         |> where([r], r.state == :available)
         |> limit(^demand)
@@ -60,6 +66,54 @@ defmodule Lightning.Runs.Queue do
 
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
+    end
+  end
+
+  # Rebuilds ordering as: queue_preference (if any), then the base query's
+  # original ordering.  This preserves caller-supplied ordering (e.g. the
+  # project_id column used by Thunderbolt's round-robin scheduler) while
+  # letting queue preference take highest precedence.
+  defp apply_queue_and_ordering(query, queues) do
+    saved_order_bys = query.order_bys
+
+    query
+    |> exclude(:order_by)
+    |> apply_queue_clause(queues)
+    |> then(fn q -> %{q | order_bys: q.order_bys ++ saved_order_bys} end)
+  end
+
+  defp apply_queue_clause(query, queues) do
+    if "*" in queues do
+      # Preference mode: order named queues by array position,
+      # wildcard fills the gap for all other queues
+      named =
+        Enum.map(queues, fn
+          "*" -> "__wildcard__"
+          q -> q
+        end)
+
+      # 1-based index for PostgreSQL
+      wildcard_pos = Enum.find_index(queues, &(&1 == "*")) + 1
+
+      if Enum.all?(queues, &(&1 == "*")) do
+        # ["*"] alone means no preference ordering
+        query
+      else
+        order_by(
+          query,
+          [r],
+          asc:
+            fragment(
+              "COALESCE(array_position(?, ?), ?)",
+              type(^named, {:array, :string}),
+              r.queue,
+              ^wildcard_pos
+            )
+        )
+      end
+    else
+      # Filter mode: only named queues
+      where(query, [r], r.queue in ^queues)
     end
   end
 
