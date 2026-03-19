@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Removed potentially dangerous cascades on dataclip/run relationships. The run
+  is "king" when it comes to auditing, and any attempts to delete related items
+  for a run should be prevented.
+  [#4538](https://github.com/OpenFn/lightning/issues/4538)
+
 ### Fixed
 
 - Display error messages when GitHub installations fail to load, providing
