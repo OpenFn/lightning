@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Webhook triggers with `custom` response mode now correctly use the `fast_lane`
+  queue for prioritized execution.
+  [#4546](https://github.com/OpenFn/lightning/issues/4546)
+
 ## [2.16.0-pre2] - 2026-03-19
 
 ### Fixed
