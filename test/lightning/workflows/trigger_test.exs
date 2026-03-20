@@ -4,6 +4,24 @@ defmodule Lightning.Workflows.TriggerTest do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.KafkaConfiguration
 
+  describe "synchronous?/1" do
+    test "returns true for :after_completion" do
+      assert Trigger.synchronous?(%Trigger{webhook_reply: :after_completion})
+    end
+
+    test "returns true for :custom" do
+      assert Trigger.synchronous?(%Trigger{webhook_reply: :custom})
+    end
+
+    test "returns false for :before_start" do
+      refute Trigger.synchronous?(%Trigger{webhook_reply: :before_start})
+    end
+
+    test "returns false for nil" do
+      refute Trigger.synchronous?(%Trigger{webhook_reply: nil})
+    end
+  end
+
   describe "changeset/2" do
     test "type must be valid" do
       errors = Trigger.changeset(%Trigger{}, %{type: :foo}) |> errors_on()
