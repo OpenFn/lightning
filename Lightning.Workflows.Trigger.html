@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-A5B4A7D8.js"></script>
+    <script defer src="dist/sidebar_items-4C705521.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -169,6 +169,17 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#synchronous?/1" data-no-tooltip="" translate="no">synchronous?(trigger)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns true if the trigger uses a synchronous webhook reply mode
+(i.e., the HTTP connection is held open waiting for a response).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#validate/1" data-no-tooltip="" translate="no">validate(changeset)</a>
 
       </div>
@@ -296,7 +307,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">cast_changeset(trigger, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L85" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L96" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -330,6 +341,35 @@ endpoint is called.</p>
 
   </section>
 </section>
+<section class="detail" id="synchronous?/1">
+
+  <div class="detail-header">
+    <a href="#synchronous?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">synchronous?(trigger)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L78" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> synchronous?(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Returns true if the trigger uses a synchronous webhook reply mode
+(i.e., the HTTP connection is held open waiting for a response).</p>
+  </section>
+</section>
 <section class="detail" id="validate/1">
 
   <div class="detail-header">
@@ -340,7 +380,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L100" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L111" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -362,7 +402,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">with_auth_methods_query()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L162" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L173" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
