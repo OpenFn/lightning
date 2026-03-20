@@ -70,6 +70,17 @@ defmodule Lightning.Workflows.Trigger do
     |> change(attrs)
   end
 
+  @doc """
+  Returns true if the trigger uses a synchronous webhook reply mode
+  (i.e., the HTTP connection is held open waiting for a response).
+  """
+  @spec synchronous?(t()) :: boolean()
+  def synchronous?(%__MODULE__{webhook_reply: reply})
+      when reply in [:after_completion, :custom],
+      do: true
+
+  def synchronous?(%__MODULE__{}), do: false
+
   @doc false
   def changeset(trigger, attrs) do
     trigger

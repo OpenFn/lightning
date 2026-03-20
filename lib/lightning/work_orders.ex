@@ -225,7 +225,7 @@ defmodule Lightning.WorkOrders do
           run_options = get_run_options(snapshot, attrs[:dataclip])
 
           queue =
-            if trigger.webhook_reply == :after_completion,
+            if Trigger.synchronous?(trigger),
               do: "fast_lane",
               else: "default"
 
