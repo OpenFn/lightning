@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Relax version locking to major (`@v1`) for auto-installed GitHub actions used
+  in GitHub Sync. [#4548](https://github.com/OpenFn/lightning/issues/4548)
+
 ### Fixed
 
 - Webhook triggers with `custom` response mode now correctly use the `fast_lane`
