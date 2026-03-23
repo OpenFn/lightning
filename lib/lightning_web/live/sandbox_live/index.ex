@@ -1,10 +1,6 @@
 defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
-  defmodule MergeWorkflow do
-    defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
-  end
-
   alias Ecto.Changeset
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
@@ -13,6 +9,10 @@ defmodule LightningWeb.SandboxLive.Index do
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias LightningWeb.SandboxLive.Components
+
+  defmodule MergeWorkflow do
+    defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
+  end
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
