@@ -19,6 +19,7 @@ import { RENDER_MODES, type RenderMode } from '../constants/panel';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
+import { useAppConfig } from '../hooks/useSessionContext';
 import { useCanRun } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { Workflow } from '../types/workflow';
@@ -80,6 +81,9 @@ export function ManualRunPanel({
   customBody: customBodyProp,
   disableAutoSelection = false,
 }: ManualRunPanelProps) {
+  const appConfig = useAppConfig();
+  const maxDataclipSizeBytes = appConfig?.max_dataclip_size_bytes;
+
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>('empty');
   const [selectedDataclipInternal, setSelectedDataclipInternal] =
@@ -473,6 +477,7 @@ export function ManualRunPanel({
             }
           }}
           renderMode={renderMode}
+          maxDataclipSizeBytes={maxDataclipSizeBytes}
         />
       )}
       {selectedTab === 'existing' && (
