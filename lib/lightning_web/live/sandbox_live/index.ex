@@ -1,6 +1,10 @@
 defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
+  defmodule MergeWorkflow do
+    defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
+  end
+
   alias Ecto.Changeset
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
@@ -207,27 +211,11 @@ defmodule LightningWeb.SandboxLive.Index do
             )
 
           source_workflows =
-            if target_project do
-              build_merge_workflow_list(
-                sandbox,
-                diverged_workflows,
-                target_project
-              )
-            else
-              sandbox
-              |> Repo.preload(:workflows)
-              |> Map.get(:workflows, [])
-              |> Enum.map(
-                &%{
-                  id: &1.id,
-                  name: &1.name,
-                  is_diverged: false,
-                  is_new: true,
-                  is_deleted: false
-                }
-              )
-              |> Enum.sort_by(& &1.name)
-            end
+            build_merge_workflow_list(
+              sandbox,
+              diverged_workflows,
+              target_project
+            )
 
           selected_ids = MapSet.new(source_workflows, & &1.id)
 
@@ -686,6 +674,22 @@ defmodule LightningWeb.SandboxLive.Index do
     Enum.find(workspace_projects, &(&1.id == target_id))
   end
 
+  defp build_merge_workflow_list(source, _diverged_names, nil) do
+    source
+    |> Repo.preload(:workflows)
+    |> Map.get(:workflows, [])
+    |> Enum.map(fn wf ->
+      %MergeWorkflow{
+        id: wf.id,
+        name: wf.name,
+        is_diverged: false,
+        is_new: true,
+        is_deleted: false
+      }
+    end)
+    |> Enum.sort_by(& &1.name)
+  end
+
   defp build_merge_workflow_list(source, diverged_names, target_project) do
     target_workflows =
       target_project
@@ -705,7 +709,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
     source_entries =
       Enum.map(source_workflows, fn wf ->
-        %{
+        %MergeWorkflow{
           id: wf.id,
           name: wf.name,
           is_diverged: MapSet.member?(diverged_set, wf.name),
@@ -718,7 +722,7 @@ defmodule LightningWeb.SandboxLive.Index do
       target_workflows
       |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
       |> Enum.map(fn wf ->
-        %{
+        %MergeWorkflow{
           id: wf.id,
           name: wf.name,
           is_diverged: false,
