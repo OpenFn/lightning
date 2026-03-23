@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.16.0-pre3] - 2026-03-23
+
+### Changed
+
 - Relax version locking to major (`@v1`) for auto-installed GitHub actions used
   in GitHub Sync. [#4548](https://github.com/OpenFn/lightning/issues/4548)
 
