@@ -786,7 +786,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       case item do
         %Yex.Map{} = map ->
           if Yex.Map.fetch!(map, "id") == id do
-            Yex.Map.to_map(map)
+            map
+            |> Yex.Map.to_map()
+            |> Map.new(fn
+              {k, %Yex.Text{} = t} -> {k, Yex.Text.to_string(t)}
+              kv -> kv
+            end)
           end
 
         e when is_map(e) ->

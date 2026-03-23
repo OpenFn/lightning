@@ -3409,4 +3409,43 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_broadcast "job_code_applied", %{message_id: ^message_id}
     end
   end
+
+  describe "workflow_externally_updated" do
+    test "pushes workflow_externally_updated to the connected client when the provisioner broadcasts to the collaboration topic",
+         %{socket: socket} do
+      send(
+        socket.channel_pid,
+        %{event: "workflow_externally_updated", lock_version: 42}
+      )
+
+      assert_push "workflow_externally_updated", %{
+        latest_snapshot_lock_version: 42
+      }
+    end
+
+    test "does not push workflow_externally_updated for a versioned snapshot room",
+         %{user: user, project: project, workflow: workflow} do
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, _, versioned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v0",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      send(
+        versioned_socket.channel_pid,
+        %{event: "workflow_externally_updated", lock_version: 42}
+      )
+
+      refute_push "workflow_externally_updated", _
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(versioned_socket.assigns.workflow.id)
+      end)
+    end
+  end
 end

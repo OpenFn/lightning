@@ -25,6 +25,8 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
+  alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -62,43 +64,59 @@ defmodule Lightning.Projects.Provisioner do
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
-    Repo.transact(fn ->
-      with :ok <- maybe_limit_provisioning(project.id, user_or_repo_connection),
-           project_changeset <-
-             build_import_changeset(project, user_or_repo_connection, data),
-           edges_to_cleanup <-
-             edges_referencing_deleted_jobs(project_changeset),
-           {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-           :ok <- handle_collection_deletion(project_changeset),
-           updated_project <- preload_dependencies(project),
-           {:ok, _changes} <-
-             audit_workflows(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             update_workflows_version(
-               project_changeset,
-               updated_project.workflows
-             ),
-           {:ok, _changes} <-
-             create_snapshots(
-               project_changeset,
-               updated_project.workflows,
-               user_or_repo_connection
-             ) do
-        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+    result =
+      Repo.transact(fn ->
+        with :ok <-
+               maybe_limit_provisioning(project.id, user_or_repo_connection),
+             project_changeset <-
+               build_import_changeset(project, user_or_repo_connection, data),
+             edges_to_cleanup <-
+               edges_referencing_deleted_jobs(project_changeset),
+             {:ok, %{workflows: workflows} = project} <-
+               Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+             :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+             :ok <- handle_collection_deletion(project_changeset),
+             updated_project <- preload_dependencies(project),
+             {:ok, _changes} <-
+               audit_workflows(project_changeset, user_or_repo_connection),
+             {:ok, _changes} <-
+               update_workflows_version(
+                 project_changeset,
+                 updated_project.workflows
+               ),
+             {:ok, _changes} <-
+               create_snapshots(
+                 project_changeset,
+                 updated_project.workflows,
+                 user_or_repo_connection
+               ) do
+          Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+          project_changeset
+          |> get_assoc(:workflows)
+          |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
-        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-          Lightning.Projects.Project.sandbox?(updated_project)
-        )
+          Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+            Lightning.Projects.Project.sandbox?(updated_project)
+          )
 
-        {:ok, updated_project}
-      end
-    end)
+          changed_workflow_ids =
+            project_changeset
+            |> get_assoc(:workflows)
+            |> Enum.reject(fn cs -> cs.action == :delete end)
+            |> Enum.map(fn cs -> get_field(cs, :id) end)
+
+          {:ok, {updated_project, changed_workflow_ids}}
+        end
+      end)
+
+    with {:ok, {updated_project, changed_workflow_ids}} <- result do
+      updated_project.workflows
+      |> Enum.filter(fn w -> w.id in changed_workflow_ids end)
+      |> Enum.each(&maybe_reconcile_active_shared_doc/1)
+
+      {:ok, updated_project}
+    end
   end
 
   defp build_import_changeset(project, user_or_repo_connection, data) do
@@ -574,4 +592,32 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp maybe_limit_provisioning(_project_id, %User{}), do: :ok
+
+  defp maybe_reconcile_active_shared_doc(workflow) do
+    document_name = "workflow:#{workflow.id}"
+
+    case Session.lookup_shared_doc(document_name) do
+      nil ->
+        :ok
+
+      shared_doc_pid ->
+        fresh =
+          Lightning.Workflows.get_workflow(workflow.id,
+            include: [:jobs, :edges, :triggers]
+          )
+
+        WorkflowReconciler.reconcile_to_db_state(shared_doc_pid, fresh)
+
+        # Notify connected browser tabs directly via the collaboration
+        # PubSub topic, rather than relying on the general workflow_updated
+        # event (which fires for all saves and would cause false positives).
+        Lightning.broadcast(
+          "workflow:collaborate:#{workflow.id}",
+          %{
+            event: "workflow_externally_updated",
+            lock_version: fresh.lock_version
+          }
+        )
+    end
+  end
 end

@@ -67,11 +67,6 @@ defmodule LightningWeb.WorkflowChannel do
       # Subscribe to work order events for this workflow's project
       WorkOrders.subscribe(project.id)
 
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "workflow:collaborate:#{workflow_id}"
-      )
-
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -791,6 +786,20 @@ defmodule LightningWeb.WorkflowChannel do
 
       _ ->
         :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %{event: "workflow_externally_updated", lock_version: lock_version},
+        socket
+      ) do
+    if is_nil(socket.assigns.snapshot_version) do
+      push(socket, "workflow_externally_updated", %{
+        latest_snapshot_lock_version: lock_version
+      })
     end
 
     {:noreply, socket}
