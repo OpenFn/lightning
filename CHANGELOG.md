@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Proper warn & error for exceeding max dataclip size
+  [#4524](https://github.com/OpenFn/lightning/issues/4524)
+
 ## [2.16.0-pre3] - 2026-03-23
 
 ### Changed
