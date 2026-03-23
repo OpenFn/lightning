@@ -27,6 +27,8 @@ and this project adheres to
 - Webhook triggers with `custom` response mode now correctly use the `fast_lane`
   queue for prioritized execution.
   [#4546](https://github.com/OpenFn/lightning/issues/4546)
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 
 ## [2.16.0-pre2] - 2026-03-19
 
