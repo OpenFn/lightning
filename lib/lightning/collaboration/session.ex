@@ -317,7 +317,8 @@ defmodule Lightning.Collaboration.Session do
          {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
-             skip_reconcile: true
+             skip_reconcile: true,
+             source: :collaborative_session
            ),
          :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
          {:ok, _job_cleanup_count} <-

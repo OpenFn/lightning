@@ -86,7 +86,7 @@ defmodule Lightning.Projects.Provisioner do
                updated_project.workflows,
                user_or_repo_connection
              ) do
-        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+        Enum.each(workflows, &Workflows.Events.workflow_updated(&1, :external))
 
         project_changeset
         |> get_assoc(:workflows)

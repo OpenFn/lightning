@@ -145,6 +145,7 @@ defmodule Lightning.Workflows do
         opts
       ) do
     skip_reconcile = Keyword.get(opts, :skip_reconcile, false)
+    source = Keyword.get(opts, :source, :external)
 
     Multi.new()
     |> Multi.put(:actor, actor)
@@ -184,7 +185,7 @@ defmodule Lightning.Workflows do
       {:ok, %{workflow: workflow}} ->
         publish_kafka_trigger_events(changeset)
 
-        Events.workflow_updated(workflow)
+        Events.workflow_updated(workflow, source)
 
         # Emit telemetry for workflow save metrics
         is_sandbox =
@@ -574,7 +575,7 @@ defmodule Lightning.Workflows do
         workflow
         |> Repo.preload([:triggers], force: true)
         |> tap(&notify_of_affected_kafka_triggers/1)
-        |> Events.workflow_updated()
+        |> Events.workflow_updated(:external)
       end
     end)
   end

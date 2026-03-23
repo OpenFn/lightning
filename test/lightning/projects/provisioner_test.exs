@@ -761,7 +761,8 @@ defmodule Lightning.Projects.ProvisionerTest do
                Provisioner.import_document(project, user, body)
 
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
-        workflow: %{id: ^workflow_id}
+        workflow: %{id: ^workflow_id},
+        source: :external
       }
     end
 

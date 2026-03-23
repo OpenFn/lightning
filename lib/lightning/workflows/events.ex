@@ -3,13 +3,14 @@ defmodule Lightning.Workflows.Events do
 
   defmodule WorkflowUpdated do
     @moduledoc false
-    defstruct workflow: nil
+    @type source :: :collaborative_session | :external
+    defstruct [:source, workflow: nil]
   end
 
-  def workflow_updated(workflow) do
+  def workflow_updated(workflow, source) do
     Lightning.broadcast(
       topic(workflow.project_id),
-      %WorkflowUpdated{workflow: workflow}
+      %WorkflowUpdated{workflow: workflow, source: source}
     )
   end
 

@@ -1353,6 +1353,52 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "WorkflowUpdated event source" do
+    test "save_workflow/3 broadcasts :external by default" do
+      %{id: workflow_id, project_id: project_id} = workflow = insert(:workflow)
+
+      Lightning.Workflows.Events.subscribe(project_id)
+
+      Workflows.change_workflow(workflow, %{name: "updated"})
+      |> Workflows.save_workflow(insert(:user))
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id},
+        source: :external
+      }
+    end
+
+    test "save_workflow/3 broadcasts :collaborative_session when source opt is set" do
+      %{id: workflow_id, project_id: project_id} = workflow = insert(:workflow)
+
+      Lightning.Workflows.Events.subscribe(project_id)
+
+      Workflows.change_workflow(workflow, %{name: "updated"})
+      |> Workflows.save_workflow(insert(:user),
+        skip_reconcile: true,
+        source: :collaborative_session
+      )
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id},
+        source: :collaborative_session
+      }
+    end
+
+    test "mark_for_deletion/2 broadcasts :external" do
+      %{id: workflow_id, project_id: project_id} = workflow = insert(:workflow)
+
+      Lightning.Workflows.Events.subscribe(project_id)
+
+      Workflows.mark_for_deletion(workflow, insert(:user))
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id},
+        source: :external
+      }
+    end
+  end
+
   describe "get_workflows_for/2" do
     setup do
       project = insert(:project)

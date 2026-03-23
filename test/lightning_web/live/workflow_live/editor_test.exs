@@ -559,7 +559,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert length(workflow.work_orders) == 1
 
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
-        workflow: %{id: ^initial_workflow_id}
+        workflow: %{id: ^initial_workflow_id},
+        source: :external
       }
     end
 

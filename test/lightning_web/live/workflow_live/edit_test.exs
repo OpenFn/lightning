@@ -345,7 +345,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # workflow updated event is emitted
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
-        workflow: %{id: ^workflow_id}
+        workflow: %{id: ^workflow_id},
+        source: :external
       }
     end
 
