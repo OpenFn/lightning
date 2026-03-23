@@ -277,7 +277,7 @@ defmodule LightningWeb.Router do
 
     live_session :services, @services_opts do
       Enum.each(@services_routes, fn {path, module, action, opts} ->
-        live(path, module, action, opts)
+        live(path, Module.concat([module]), action, opts)
       end)
     end
   end

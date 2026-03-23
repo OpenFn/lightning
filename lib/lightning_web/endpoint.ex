@@ -102,13 +102,5 @@ defmodule LightningWeb.Endpoint do
 
   LightningWeb.Utils.add_dynamic_plugs(@post_session_plugs)
 
-  @routing_config Application.compile_env(
-                    :lightning,
-                    Lightning.Extensions.Routing,
-                    []
-                  )
-  @app_router Keyword.get(@routing_config, :router, LightningWeb.Router)
-  plug @app_router
-
-  # plug LightningWeb.Router
+  plug LightningWeb.Router
 end
