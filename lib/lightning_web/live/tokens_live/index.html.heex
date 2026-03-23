@@ -49,8 +49,7 @@
             id="copy"
             type="button"
             phx-hook="Copy"
-            phx-click="copy"
-            phx-then={%JS{}}
+            phx-then={JS.push("copy")}
             data-to="#new_token"
             class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-xs hover:opacity-75"
           >
