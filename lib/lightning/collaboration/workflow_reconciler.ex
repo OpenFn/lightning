@@ -259,43 +259,39 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
     end)
   end
 
-  defp apply_operation(action, array_or_item, data) do
-    case action do
-      :insert ->
-        prelim_data =
-          case Map.fetch(data, "body") do
-            {:ok, body} ->
-              Map.put(data, "body", Yex.TextPrelim.from(body || ""))
+  defp apply_operation(:insert, array, data) do
+    prelim_data =
+      case Map.fetch(data, "body") do
+        {:ok, body} -> Map.put(data, "body", Yex.TextPrelim.from(body || ""))
+        :error -> data
+      end
 
-            :error ->
-              data
-          end
+    Yex.Array.push(array, Yex.MapPrelim.from(prelim_data))
+  end
 
-        Yex.Array.push(array_or_item, Yex.MapPrelim.from(prelim_data))
+  defp apply_operation(:update, map_item, data) do
+    Enum.each(data, fn
+      {"body", new_body} ->
+        case Yex.Map.fetch(map_item, "body") do
+          {:ok, %Yex.Text{} = text} ->
+            new_body_str = new_body || ""
 
-      :update ->
-        Enum.each(data, fn
-          {"body", new_body} ->
-            case Yex.Map.fetch(array_or_item, "body") do
-              {:ok, %Yex.Text{} = text} ->
-                new_body_str = new_body || ""
-
-                unless Yex.Text.to_string(text) == new_body_str do
-                  Yex.Text.delete(text, 0, Yex.Text.length(text))
-                  Yex.Text.insert(text, 0, new_body_str)
-                end
-
-              _ ->
-                :ok
+            unless Yex.Text.to_string(text) == new_body_str do
+              Yex.Text.delete(text, 0, Yex.Text.length(text))
+              Yex.Text.insert(text, 0, new_body_str)
             end
 
-          {key, value} ->
-            Yex.Map.set(array_or_item, key, value)
-        end)
+          _ ->
+            :ok
+        end
 
-      :delete ->
-        Yex.Array.delete(array_or_item, data)
-    end
+      {key, value} ->
+        Yex.Map.set(map_item, key, value)
+    end)
+  end
+
+  defp apply_operation(:delete, array, index) do
+    Yex.Array.delete(array, index)
   end
 
   defp pluck_fields(fields, cs) do
