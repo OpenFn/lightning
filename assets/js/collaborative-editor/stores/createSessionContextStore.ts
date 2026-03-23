@@ -86,6 +86,7 @@ import { z } from 'zod';
 import _logger from '#/utils/logger';
 
 import { channelRequest } from '../hooks/useChannel';
+import { notifications } from '../lib/notifications';
 import {
   type SessionContextState,
   type SessionContextStore,
@@ -461,6 +462,33 @@ export const createSessionContextStore = (
       }
     };
 
+    const workflowExternallyUpdatedHandler = (message: unknown) => {
+      logger.debug('Received workflow_externally_updated', message);
+
+      const parsed = z
+        .object({ latest_snapshot_lock_version: z.number() })
+        .safeParse(message);
+
+      if (!parsed.success) return;
+
+      setLatestSnapshotLockVersion(parsed.data.latest_snapshot_lock_version);
+
+      notifications.warning({
+        title: 'Workflow updated externally',
+        description:
+          'This workflow was updated outside the editor (e.g. via CLI ' +
+          'deploy or sandbox sync). Your unsaved changes have been ' +
+          'discarded and the editor now shows the latest version.',
+      });
+
+      // Refresh baseWorkflow so the unsaved indicator clears after
+      // reconciliation. The Y.Doc has been reset to the DB state by the
+      // server, but baseWorkflow still holds the pre-reconciliation snapshot.
+      // Calling requestSessionContext fetches fresh workflow state from the
+      // server and updates baseWorkflow via handleSessionContextReceived.
+      void requestSessionContext();
+    };
+
     const webhookAuthMethodsUpdatedHandler = (message: unknown) => {
       logger.debug('Received webhook_auth_methods_updated message', message);
       handleWebhookAuthMethodsUpdated(message);
@@ -540,6 +568,10 @@ export const createSessionContextStore = (
       channel.on('session_context_updated', sessionContextUpdatedHandler);
       channel.on('workflow_saved', workflowSavedHandler);
       channel.on(
+        'workflow_externally_updated',
+        workflowExternallyUpdatedHandler
+      );
+      channel.on(
         'webhook_auth_methods_updated',
         webhookAuthMethodsUpdatedHandler
       );
@@ -557,6 +589,10 @@ export const createSessionContextStore = (
         channel.off('session_context', sessionContextHandler);
         channel.off('session_context_updated', sessionContextUpdatedHandler);
         channel.off('workflow_saved', workflowSavedHandler);
+        channel.off(
+          'workflow_externally_updated',
+          workflowExternallyUpdatedHandler
+        );
         channel.off(
           'webhook_auth_methods_updated',
           webhookAuthMethodsUpdatedHandler
