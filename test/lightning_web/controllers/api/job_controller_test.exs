@@ -4,6 +4,20 @@ defmodule LightningWeb.API.JobControllerTest do
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
 
+  # Sample curl requests:
+  #
+  #   # List all jobs
+  #   curl http://localhost:4000/api/jobs \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Get a single job by ID
+  #   curl http://localhost:4000/api/jobs/$JOB_ID \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # List jobs for a specific project
+  #   curl http://localhost:4000/api/projects/$PROJECT_ID/jobs \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -74,6 +88,11 @@ defmodule LightningWeb.API.JobControllerTest do
 
   describe "show" do
     setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
+
+    test "returns 404 for non-existent job", %{conn: conn} do
+      conn = get(conn, ~p"/api/jobs/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 404)
+    end
 
     test "shows the job", %{conn: conn, job: job} do
       conn = get(conn, ~p"/api/jobs/#{job}")

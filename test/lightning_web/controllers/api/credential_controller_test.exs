@@ -3,6 +3,25 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
   import Lightning.Factories
 
+  # Sample curl requests:
+  #
+  #   # List your credentials
+  #   curl http://localhost:4000/api/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # List credentials for a project
+  #   curl http://localhost:4000/api/projects/$PROJECT_ID/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Create a credential
+  #   curl -X POST http://localhost:4000/api/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  #     -d '{"name":"My Cred","schema":"raw","credential_bodies":[{"name":"main","body":{"key":"val"}}]}'
+  #
+  #   # Delete a credential
+  #   curl -X DELETE http://localhost:4000/api/credentials/$CREDENTIAL_ID \
+  #     -H "Authorization: Bearer $TOKEN"
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end

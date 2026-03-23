@@ -3,6 +3,16 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
   import Lightning.Factories
 
+  # Sample curl requests:
+  #
+  #   # List all projects
+  #   curl http://localhost:4000/api/projects \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Get a single project by ID
+  #   curl http://localhost:4000/api/projects/$PROJECT_ID \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -79,6 +89,11 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
   describe "show" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    test "returns 404 for non-existent project", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 404)
+    end
 
     test "with token for other project", %{conn: conn} do
       other_project = insert(:project)

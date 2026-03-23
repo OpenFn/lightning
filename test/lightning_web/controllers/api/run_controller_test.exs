@@ -3,6 +3,24 @@ defmodule LightningWeb.API.RunControllerTest do
 
   import Lightning.Factories
 
+  # Sample curl requests:
+  #
+  #   # List all runs
+  #   curl http://localhost:4000/api/runs \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Get a single run by ID
+  #   curl http://localhost:4000/api/runs/$RUN_ID \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Filter by project, workflow, work order, or date range
+  #   curl "http://localhost:4000/api/runs?project_id=$PID&inserted_after=2024-01-01T00:00:00Z" \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Nested route: runs for a specific project
+  #   curl http://localhost:4000/api/projects/$PROJECT_ID/runs \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -473,6 +491,142 @@ defmodule LightningWeb.API.RunControllerTest do
       refute Enum.any?(response["data"], fn r -> r["id"] == run2.id end)
     end
 
+    test "filters runs by state", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      started_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      _success_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :success,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      started_run = List.first(started_wo.runs)
+
+      conn = get(conn, ~p"/api/runs?state=started")
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 1
+      assert List.first(response["data"])["id"] == started_run.id
+    end
+
+    test "filters runs by multiple comma-separated states", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      started_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      failed_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      _success_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :success,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      started_run = List.first(started_wo.runs)
+      failed_run = List.first(failed_wo.runs)
+
+      conn = get(conn, ~p"/api/runs?state=started,failed")
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 2
+      ids = Enum.map(response["data"], & &1["id"])
+      assert started_run.id in ids
+      assert failed_run.id in ids
+    end
+
+    test "returns error for invalid state filter", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: build(:dataclip),
+        runs: [
+          %{
+            state: :started,
+            dataclip: build(:dataclip),
+            starting_trigger: trigger
+          }
+        ]
+      )
+
+      conn = get(conn, ~p"/api/runs?state=bogus")
+
+      response = json_response(conn, 400)
+
+      assert %{"error" => error_message} = response
+      assert error_message =~ "Invalid state filter"
+      assert error_message =~ "bogus"
+    end
+
     test "nested route: lists runs for specific project", %{
       conn: conn,
       user: user
@@ -686,6 +840,75 @@ defmodule LightningWeb.API.RunControllerTest do
       assert %{"error" => error_message} = response
       assert error_message =~ "Invalid datetime format for 'inserted_after'"
       assert error_message =~ "123456"
+    end
+  end
+
+  describe "show" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    test "returns a single run by id", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      run = List.first(workorder.runs)
+
+      conn = get(conn, ~p"/api/runs/#{run.id}")
+
+      response = json_response(conn, 200)
+
+      assert response["data"]["id"] == run.id
+      assert response["data"]["type"] == "runs"
+      assert Map.has_key?(response["data"]["attributes"], "state")
+      assert Map.has_key?(response["data"]["attributes"], "started_at")
+      assert Map.has_key?(response["data"]["attributes"], "finished_at")
+    end
+
+    test "returns 404 for non-existent run", %{conn: conn} do
+      conn = get(conn, ~p"/api/runs/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 404)
+    end
+
+    test "returns 401 for run in project user cannot access", %{conn: conn} do
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_trigger = insert(:trigger, workflow: other_workflow)
+
+      other_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: other_trigger
+            }
+          ]
+        )
+
+      other_run = List.first(other_workorder.runs)
+
+      conn = get(conn, ~p"/api/runs/#{other_run.id}")
+
+      assert json_response(conn, 401)
     end
   end
 end

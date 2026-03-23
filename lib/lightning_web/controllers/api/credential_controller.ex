@@ -18,6 +18,38 @@ defmodule LightningWeb.API.CredentialController do
       GET /api/credentials?project_id=a1b2c3d4-...
       POST /api/credentials
       DELETE /api/credentials/a1b2c3d4-...
+
+  ## Sample curl requests
+
+  List your credentials:
+
+  ```bash
+  curl http://localhost:4000/api/credentials \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  List credentials for a project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID/credentials \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Create a credential:
+
+  ```bash
+  curl -X POST http://localhost:4000/api/credentials \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -H "Content-Type: application/json" \\
+    -d '{"name":"My Credential","schema":"raw","credential_bodies":[{"name":"main","body":{"key":"secret"}}]}'
+  ```
+
+  Delete a credential:
+
+  ```bash
+  curl -X DELETE http://localhost:4000/api/credentials/$CREDENTIAL_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
   """
   use LightningWeb, :controller
 
