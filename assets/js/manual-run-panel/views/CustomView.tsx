@@ -9,7 +9,7 @@ import FileUploader from '../FileUploader';
 
 const iconStyle = 'h-4 w-4 text-grey-400';
 
-const DEFAULT_MAX_DATACLIP_SIZE_BYTES = 10_000_000; // 10mb fallback when nothing comes from liveview
+export const DEFAULT_MAX_DATACLIP_SIZE_BYTES = 10_000_000; // 10mb fallback when nothing comes from liveview
 
 const CustomView: React.FC<{
   pushEvent: (event: string, data: any) => void;
@@ -39,7 +39,7 @@ const CustomView: React.FC<{
   const isEmpty = React.useMemo(() => !editorValue.trim(), [editorValue]);
 
   const isTooLarge = React.useMemo(
-    () => editorValue.length > maxDataclipSizeBytes,
+    () => new TextEncoder().encode(editorValue).length > maxDataclipSizeBytes,
     [editorValue, maxDataclipSizeBytes]
   );
   const jsonParseResult = React.useMemo(() => {

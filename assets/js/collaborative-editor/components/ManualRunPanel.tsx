@@ -10,7 +10,9 @@ import { useURLState } from '#/react/lib/use-url-state';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
-import CustomView from '../../manual-run-panel/views/CustomView';
+import CustomView, {
+  DEFAULT_MAX_DATACLIP_SIZE_BYTES,
+} from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
 import ExistingView from '../../manual-run-panel/views/ExistingView';
 import type { Dataclip } from '../api/dataclips';
@@ -82,7 +84,8 @@ export function ManualRunPanel({
   disableAutoSelection = false,
 }: ManualRunPanelProps) {
   const appConfig = useAppConfig();
-  const maxDataclipSizeBytes = appConfig?.max_dataclip_size_bytes;
+  const maxDataclipSizeBytes =
+    appConfig?.max_dataclip_size_bytes ?? DEFAULT_MAX_DATACLIP_SIZE_BYTES;
 
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>('empty');
@@ -213,6 +216,7 @@ export function ManualRunPanel({
     onRunSubmitted: onRunSubmitted,
     edgeId: edgeId || null,
     workflowEdges: workflow.edges,
+    maxDataclipSizeBytes,
   });
 
   const followedRunStep = useMemo(() => {
