@@ -137,12 +137,15 @@ defmodule Lightning.Helpers do
     overwrite = Keyword.get(opts, :overwrite, true)
 
     if Keyword.has_key?(changeset.errors, original_key) do
-      {error_msg, error_opts} = Keyword.fetch!(changeset.errors, original_key)
+      error = Keyword.fetch!(changeset.errors, original_key)
 
       if Keyword.has_key?(changeset.errors, new_key) and not overwrite do
         changeset
       else
-        Ecto.Changeset.add_error(changeset, new_key, error_msg, error_opts)
+        errors =
+          Keyword.reject(changeset.errors, fn {key, _val} -> key == new_key end)
+
+        %{changeset | errors: [{new_key, error} | errors]}
       end
     else
       changeset

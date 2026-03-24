@@ -813,6 +813,9 @@ defmodule Lightning.SetupUtils do
       Lightning.Projects.File,
       Lightning.Projects.ProjectOauthClient,
       Lightning.Credentials.OauthClient,
+      Lightning.Channels.ChannelRequest,
+      Lightning.Channels.ChannelSnapshot,
+      Lightning.Channels.Channel,
       Lightning.Projects.Project,
       Lightning.Collaboration.DocumentState
     ])

@@ -1388,5 +1388,166 @@ describe('ManualRunPanel', () => {
         expect(runButton).toBeDisabled();
       });
     });
+
+    test('shows cron banner when controlled selectedDataclip matches next_cron_run_dataclip_id', async () => {
+      // FullScreenIDE passes selectedDataclip as a controlled prop after it receives
+      // the onDataclipChange callback. This test verifies that when the parent passes
+      // the cron dataclip back via selectedDataclip, the banner is displayed.
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        renderMode: 'embedded',
+        selectedDataclip: mockDataclip,
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Default Next Input for Cron')
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/This workflow has a "cron" trigger/)
+        ).toBeInTheDocument();
+      });
+    });
+
+    test('does not show cron banner when controlled selectedDataclip does not match next_cron_run_dataclip_id', async () => {
+      const otherDataclip: dataclipApi.Dataclip = {
+        ...mockDataclip,
+        id: 'dataclip-other',
+        name: 'Other Dataclip',
+      };
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip, otherDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        renderMode: 'embedded',
+        selectedDataclip: otherDataclip,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Other Dataclip')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.queryByText('Default Next Input for Cron')
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('cron auto-selection with disableAutoSelection', () => {
+    test('does not auto-select cron dataclip when disableAutoSelection is true', async () => {
+      // This simulates FullScreenIDE after the user manually unselects a dataclip:
+      // manuallyUnselectedDataclip=true → disableAutoSelection=true is passed down.
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        disableAutoSelection: true,
+      });
+
+      // Give time for the fetch to complete and any auto-selection to occur
+      await waitFor(() => {
+        expect(dataclipApi.searchDataclips).toHaveBeenCalledOnce();
+      });
+
+      // The cron banner must not appear — auto-selection was suppressed
+      expect(
+        screen.queryByText('Default Next Input for Cron')
+      ).not.toBeInTheDocument();
+    });
+
+    test('auto-selects cron dataclip in embedded mode when disableAutoSelection is false', async () => {
+      // This simulates the initial FullScreenIDE load where the user has not yet
+      // manually unselected anything: manuallyUnselectedDataclip=false.
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      const onDataclipChange = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        renderMode: 'embedded',
+        disableAutoSelection: false,
+        onDataclipChange,
+      });
+
+      // The component should auto-select and notify the parent via onDataclipChange
+      await waitFor(() => {
+        expect(onDataclipChange).toHaveBeenCalledWith(mockDataclip);
+      });
+    });
+
+    test('shows cron banner when user manually selects the cron dataclip', async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      // disableAutoSelection=true prevents initial auto-select, but the user can
+      // still click the dataclip in the list and the banner should appear.
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        disableAutoSelection: true,
+      });
+
+      // Switch to Existing tab and manually click the cron dataclip
+      await user.click(screen.getByText('Existing'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Test Dataclip'));
+
+      // Banner must appear because the selected dataclip IS the cron dataclip
+      await waitFor(() => {
+        expect(
+          screen.getByText('Default Next Input for Cron')
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/This workflow has a "cron" trigger/)
+        ).toBeInTheDocument();
+      });
+    });
   });
 });

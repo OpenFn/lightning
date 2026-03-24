@@ -135,6 +135,22 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "returns the log_queue_queries setting" do
+      prev = Application.get_env(:lightning, :log_queue_queries)
+
+      try do
+        Application.put_env(:lightning, :log_queue_queries, true)
+        assert API.log_queue_queries() == true
+
+        Application.put_env(:lightning, :log_queue_queries, false)
+        assert API.log_queue_queries() == false
+      after
+        if prev,
+          do: Application.put_env(:lightning, :log_queue_queries, prev),
+          else: Application.delete_env(:lightning, :log_queue_queries)
+      end
+    end
+
     test "returns the claim work_mem setting" do
       prev = Application.get_env(:lightning, :claim_work_mem)
 

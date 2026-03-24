@@ -207,6 +207,33 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "request_metadata" do
+    test "returns job_not_found error when job does not exist", %{socket: socket} do
+      ref = push(socket, "request_metadata", %{"job_id" => Ecto.UUID.generate()})
+
+      assert_reply ref, :ok, %{
+        job_id: _job_id,
+        metadata: %{error: "job_not_found"}
+      }
+    end
+
+    test "returns metadata error when job has no credential", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      job = insert(:job, workflow: workflow)
+
+      ref = push(socket, "request_metadata", %{"job_id" => job.id})
+
+      assert_reply ref, :ok, %{
+        job_id: job_id,
+        metadata: %{error: "no_credential"}
+      }
+
+      assert job_id == job.id
+    end
+  end
+
   describe "get_context" do
     test "returns complete context with all required fields", %{
       socket: socket,

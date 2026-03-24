@@ -1,6 +1,8 @@
 defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   import Phoenix.LiveViewTest
 
   alias LightningWeb.Live.AiAssistant.Modes.JobCode

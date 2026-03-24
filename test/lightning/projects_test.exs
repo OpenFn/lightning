@@ -383,6 +383,31 @@ defmodule Lightning.ProjectsTest do
              |> Repo.aggregate(:count, :id) == 1
     end
 
+    test "delete_project/1 deletes project with channel snapshots and requests" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot
+        )
+
+      _event = insert(:channel_event, channel_request: request)
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Lightning.Channels.Channel, channel.id)
+      refute Repo.get(Lightning.Channels.ChannelSnapshot, snapshot.id)
+      refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
+    end
+
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
@@ -895,6 +920,82 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Lightning.Workflows.Job, job.id)
       assert Repo.get(Lightning.Workflows.Trigger, trigger.id)
       assert Repo.get(Lightning.Workflows.Workflow, workflow.id)
+    end
+
+    test "deletes runs used as cron input sources" do
+      project = insert(:project, history_retention_period: 7)
+
+      %{triggers: [trigger], jobs: [job | _rest]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      now = Lightning.current_time()
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      # Mode A: trigger with cron_cursor_job_id: nil; run has final_dataclip_id set
+      assert is_nil(trigger.cron_cursor_job_id)
+
+      final_dataclip = insert(:dataclip, project: project)
+
+      workorder_a =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -8),
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
+          runs: [
+            build(:run,
+              state: :success,
+              starting_trigger: trigger,
+              dataclip: build(:dataclip),
+              final_dataclip: final_dataclip,
+              finished_at: Timex.shift(now, days: -8),
+              steps: [build(:step, job: job)]
+            )
+          ]
+        )
+
+      # Mode B: trigger with cron_cursor_job_id pointing to a job;
+      # run has a step with output_dataclip_id set
+      {:ok, trigger} =
+        trigger
+        |> Ecto.Changeset.change(cron_cursor_job_id: job.id)
+        |> Repo.update()
+
+      output_dataclip = insert(:dataclip, project: project)
+
+      workorder_b =
+        insert(:workorder,
+          workflow: workflow,
+          last_activity: Timex.shift(now, days: -8),
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
+          runs: [
+            build(:run,
+              state: :success,
+              starting_trigger: trigger,
+              dataclip: build(:dataclip),
+              finished_at: Timex.shift(now, days: -8),
+              steps: [
+                build(:step,
+                  job: job,
+                  exit_reason: "success",
+                  output_dataclip: output_dataclip
+                )
+              ]
+            )
+          ]
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      refute Repo.get(WorkOrder, workorder_a.id)
+      refute Repo.get(Run, hd(workorder_a.runs).id)
+
+      refute Repo.get(WorkOrder, workorder_b.id)
+      refute Repo.get(Run, hd(workorder_b.runs).id)
     end
 
     test "does not incorrectly delete runs that reference older snapshots" do

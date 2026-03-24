@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistant.Modes.WorkflowTemplateTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
 
   describe "chat_input_disabled?/1" do

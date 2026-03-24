@@ -441,6 +441,7 @@ export const CollaborativeMonaco = forwardRef<
       <div ref={containerRef} className="h-full w-full">
         <Cursors />
         <MonacoEditor
+          defaultPath="/job.js" // Required for magic completion
           onMount={handleOnMount}
           options={editorOptions}
           theme="default"
