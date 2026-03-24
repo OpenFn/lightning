@@ -1,6 +1,6 @@
 defmodule Lightning.Collaboration.ProvisionerVersionConflictTest do
   @moduledoc """
-  Fixes version conflict bug
+  Confirms fix of version conflict bug
 
   Steps to reproduce:
     1. User A opens a workflow in Tab A and adds a job (unsaved).
@@ -40,8 +40,8 @@ defmodule Lightning.Collaboration.ProvisionerVersionConflictTest do
     :ok
   end
 
-  describe "User B opens workflow after sandbox merge" do
-    test "Tab B sees the job provisioned by User B, not the stale SharedDoc state" do
+  describe "after a sandbox merge" do
+    test "a new tab sees the merged version, not the stale editor state with unsaved changes" do
       user_a = insert(:user)
       user_b = insert(:user)
 
@@ -107,8 +107,83 @@ defmodule Lightning.Collaboration.ProvisionerVersionConflictTest do
 
       assert provisioner_job_id in job_ids,
              "Tab B should see the job that User B just deployed (#{provisioner_job_id}), " <>
-               "but the SharedDoc was not reconciled after the sandbox merge. " <>
+               "but the SharedDoc was not reset after the sandbox merge. " <>
                "Got job ids: #{inspect(job_ids)}"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Tab A saves after a provisioner import
+  # ---------------------------------------------------------------------------
+  #
+  # After the provisioner import the SharedDoc should be reset to v2.
+  # So when Tab A saves, the result should be v2 (provisioner's job present).
+  # Today it fails because the SharedDoc is never reset — Tab A saves v1 +
+  # unsaved changes, producing a v3 that skips v2's content entirely.
+
+  describe "after a sandbox merge, saving from an open tab" do
+    test "saves the merged version, not the unsaved changes" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+
+      workflow =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      project =
+        Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
+
+      [original_job] = workflow.jobs
+      document_name = "workflow:#{workflow.id}"
+
+      start_supervised!(
+        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+      )
+
+      # Tab A: User A opens the workflow and adds an unsaved job
+      session_a =
+        start_supervised!(
+          {Session,
+           user: user_a, workflow: workflow, document_name: document_name},
+          id: :session_a
+        )
+
+      tab_a_unsaved_job_id = Ecto.UUID.generate()
+
+      Session.update_doc(session_a, fn doc ->
+        Yex.Doc.get_array(doc, "jobs")
+        |> Yex.Array.push(
+          Yex.MapPrelim.from(%{
+            "id" => tab_a_unsaved_job_id,
+            "name" => "tab-a-unsaved-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "fn(state => state)"
+          })
+        )
+      end)
+
+      # User B does a provisioner import (sandbox merge / CLI deploy)
+      v2_body = build_provisioner_body(project, workflow, add_new_job: true)
+      [%{"id" => provisioner_job_id}] = new_jobs_in(v2_body, [original_job.id])
+
+      {:ok, _} = Provisioner.import_document(project, user_b, v2_body)
+
+      # Tab A saves
+      {:ok, saved_workflow} = Session.save_workflow(session_a, user_a)
+
+      saved_job_ids = Enum.map(saved_workflow.jobs, & &1.id)
+
+      # The SharedDoc should have been reset to the merged version (v2),
+      # so the save reflects v2 — not Tab A's stale pre-merge state.
+      # THIS FAILS TODAY — the SharedDoc is never reset, so Tab A saves
+      # v1 + unsaved changes and the provisioner's job is absent from the result.
+      assert provisioner_job_id in saved_job_ids,
+             "Saved workflow should include the provisioner's job (#{provisioner_job_id}). " <>
+               "Got jobs: #{saved_workflow.jobs |> Enum.map(& &1.name) |> inspect()}"
+
+      refute tab_a_unsaved_job_id in saved_job_ids,
+             "Saved workflow should not include Tab A's unsaved job — " <>
+               "the SharedDoc should have been reset to the merged version before the save."
     end
   end
 
