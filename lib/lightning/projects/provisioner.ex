@@ -25,6 +25,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
+  alias Lightning.Collaboration.DocumentState
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -85,7 +86,8 @@ defmodule Lightning.Projects.Provisioner do
                project_changeset,
                updated_project.workflows,
                user_or_repo_connection
-             ) do
+             ),
+           :ok <- invalidate_document_states(project_changeset) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
         project_changeset
@@ -325,6 +327,21 @@ defmodule Lightning.Projects.Provisioner do
           (is_nil(e.source_job_id) and is_nil(e.source_trigger_id))
     )
     |> Repo.delete_all()
+
+    :ok
+  end
+
+  defp invalidate_document_states(project_changeset) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reject(fn changeset ->
+      changeset.changes == %{} or get_change(changeset, :delete) == true or
+        not is_nil(get_change(changeset, :deleted_at))
+    end)
+    |> Enum.each(fn changeset ->
+      workflow_id = get_field(changeset, :id)
+      DocumentState.delete_for_document("workflow:#{workflow_id}")
+    end)
 
     :ok
   end
