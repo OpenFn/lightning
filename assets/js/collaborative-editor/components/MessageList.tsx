@@ -507,11 +507,7 @@ export function MessageList({
               >
                 <div className="space-y-3">
                   <MarkdownContent
-                    content={
-                      isStreaming(message)
-                        ? message.content + ' ▍'
-                        : message.content
-                    }
+                    content={message.content}
                     showAddButtons={
                       !isStreaming(message) && showAddButtons && !message.code
                     }
