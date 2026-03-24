@@ -927,7 +927,7 @@ defmodule Lightning.SetupUtils do
             reason -> reason
           end
 
-        {:ok, _} = Runs.complete_run(run, %{state: state})
+        {:ok, _, _} = Runs.complete_run(run, %{state: state})
 
         workorder
       end)

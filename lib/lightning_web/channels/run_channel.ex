@@ -110,7 +110,7 @@ defmodule LightningWeb.RunChannel do
     payload = Map.put(payload, "project_id", socket.assigns.project_id)
 
     case Runs.complete_run(socket.assigns.run, payload) do
-      {:ok, run} ->
+      {:ok, run, final_body} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
         run_with_preloads =
@@ -121,7 +121,7 @@ defmodule LightningWeb.RunChannel do
         |> Lightning.FailureAlerter.alert_on_failure()
 
         # Broadcast webhook response if after_completion is enabled
-        maybe_broadcast_webhook_response(run_with_preloads, payload)
+        maybe_broadcast_webhook_response(run_with_preloads, final_body)
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -306,7 +306,7 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(run, payload) do
+  defp maybe_broadcast_webhook_response(run, final_body) do
     work_order = run.work_order
     trigger = work_order.trigger
 
@@ -319,7 +319,7 @@ defmodule LightningWeb.RunChannel do
       status_code = determine_status_code(run.state)
 
       body = %{
-        data: payload["final_state"],
+        data: final_body,
         meta: %{
           work_order_id: work_order.id,
           run_id: run.id,
