@@ -19,8 +19,8 @@ and this project adheres to
 
 ### Changed
 
-- When merging sandboxes, let users choose which workflows to merge
-  (#4002)[https://github.com/OpenFn/lightning/issues/4002]
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
 
 ### Fixed
 
