@@ -2,6 +2,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Collaboration.DocumentState
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -1457,6 +1458,93 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert saved_job_edge.source_job_id == job_c_id
       assert saved_job_edge.target_job_id == job_b.id
+    end
+
+    test "invalidates DocumentState for changed workflows on import", %{
+      project: project,
+      user: user
+    } do
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # Seed a DocumentState for the workflow to simulate persisted Y.Doc state
+      document_name = "workflow:#{workflow_id}"
+
+      Repo.insert!(%DocumentState{
+        document_name: document_name,
+        state_data: <<1, 0>>,
+        version: :update
+      })
+
+      assert Repo.exists?(
+               from d in DocumentState, where: d.document_name == ^document_name
+             )
+
+      # Re-import with a change to the workflow
+      updated_body =
+        put_in(body, ["workflows", Access.at(0), "name"], "changed-name")
+
+      {:ok, _project} = Provisioner.import_document(project, user, updated_body)
+
+      refute Repo.exists?(
+               from d in DocumentState, where: d.document_name == ^document_name
+             ),
+             "DocumentState should be deleted for changed workflow so next load uses fresh DB state"
+    end
+
+    test "does not invalidate DocumentState for unchanged workflows on import",
+         %{
+           project: project,
+           user: user
+         } do
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # Seed a DocumentState for the workflow
+      document_name = "workflow:#{workflow_id}"
+
+      Repo.insert!(%DocumentState{
+        document_name: document_name,
+        state_data: <<1, 0>>,
+        version: :update
+      })
+
+      # Re-import with no changes
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      assert Repo.exists?(
+               from d in DocumentState, where: d.document_name == ^document_name
+             ),
+             "DocumentState should be preserved when workflow has no changes"
+    end
+
+    test "does not invalidate DocumentState for soft-deleted workflows on import",
+         %{
+           project: project,
+           user: user
+         } do
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # Seed a DocumentState for the workflow
+      document_name = "workflow:#{workflow_id}"
+
+      Repo.insert!(%DocumentState{
+        document_name: document_name,
+        state_data: <<1, 0>>,
+        version: :update
+      })
+
+      # Remove the workflow from the document to trigger soft-deletion
+      body_without_workflow = remove_workflow_from_document(body, workflow_id)
+
+      {:ok, _project} =
+        Provisioner.import_document(project, user, body_without_workflow)
+
+      assert Repo.exists?(
+               from d in DocumentState, where: d.document_name == ^document_name
+             ),
+             "DocumentState should not be deleted for soft-deleted workflows"
     end
   end
 

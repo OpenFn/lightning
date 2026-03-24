@@ -1663,173 +1663,75 @@ defmodule Lightning.SessionTest do
   end
 
   describe "persistence reconciliation" do
-    test "reconciles lock_version when loading persisted Y.Doc state", %{
+    test "restores persisted Y.Doc content on doc supervisor restart", %{
       user: user
     } do
       workflow = insert(:simple_workflow)
+      document_name = "workflow:#{workflow.id}"
 
-      # Start initial session and make some changes
+      # Start a session and add an unsaved job to the Y.Doc
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
-          workflow,
-          "workflow:#{workflow.id}"
-        )
+        Lightning.Collaborate.start_document(workflow, document_name)
 
       {:ok, session1} =
         Session.start_link(
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: "workflow:#{workflow.id}"
+          document_name: document_name
         )
 
-      # Get the SharedDoc and verify initial lock_version
-      shared_doc = Session.get_doc(session1)
-      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
-      initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
+      custom_job_id = Ecto.UUID.generate()
 
-      # Simulate workflow changes in database (e.g., from another save)
-      # This increments lock_version in the database
-      new_lock_version = initial_lock_version + 1
-
-      {:ok, updated_workflow} =
-        Lightning.Workflows.save_workflow(
-          Lightning.Workflows.change_workflow(workflow, %{
-            name: "Updated Name"
-          }),
-          user
+      Session.update_doc(session1, fn doc ->
+        Yex.Doc.get_array(doc, "jobs")
+        |> Yex.Array.push(
+          Yex.MapPrelim.from(%{
+            "id" => custom_job_id,
+            "name" => "persisted-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "fn(state => state)"
+          })
         )
+      end)
 
-      # Verify database has new lock_version
-      assert updated_workflow.lock_version == new_lock_version
-
-      # Stop the session and document supervisor to simulate server restart
+      # Stop the session and doc supervisor — PersistenceWriter flushes state
       Session.stop(session1)
       ensure_doc_supervisor_stopped(workflow.id)
 
-      # Start a new session - this will load persisted Y.Doc state
-      # The persisted state has old lock_version, but fresh workflow has new one
+      # Restart — persisted state should be restored including the custom job
       {:ok, _doc_supervisor2} =
-        Lightning.Collaborate.start_document(
-          updated_workflow,
-          "workflow:#{workflow.id}"
-        )
+        Lightning.Collaborate.start_document(workflow, document_name)
 
       {:ok, session2} =
-        Session.start_link(
-          user: user,
-          workflow: updated_workflow,
-          parent_pid: self(),
-          document_name: "workflow:#{workflow.id}"
-        )
-
-      # Get the SharedDoc and check lock_version was reconciled
-      shared_doc2 = Session.get_doc(session2)
-      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
-      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
-
-      # The lock_version should match the database, not the stale persisted state
-      assert reconciled_lock_version == new_lock_version,
-             "Expected lock_version #{new_lock_version} but got #{reconciled_lock_version}"
-
-      # Verify name was also reconciled
-      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
-      assert reconciled_name == "Updated Name"
-
-      Session.stop(session2)
-    end
-
-    test "discards stale persisted Y.Doc when lock_version changes", %{
-      user: user
-    } do
-      workflow = insert(:simple_workflow)
-
-      # Start initial session with lock_version 0
-      {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
-          workflow,
-          "workflow:#{workflow.id}"
-        )
-
-      {:ok, session1} =
         Session.start_link(
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: "workflow:#{workflow.id}"
+          document_name: document_name
         )
 
-      # Get initial state
-      shared_doc = Session.get_doc(session1)
-      jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
-      initial_job_count = Yex.Array.length(jobs_array)
+      doc = Session.get_doc(session2)
 
-      # Workflow is saved (lock_version increments)
-      {:ok, updated_workflow} =
-        Lightning.Workflows.save_workflow(
-          Lightning.Workflows.change_workflow(workflow, %{
-            name: "Changed by another user"
-          }),
-          user
-        )
+      job_ids =
+        Yex.Doc.get_array(doc, "jobs")
+        |> Yex.Array.to_json()
+        |> Enum.map(& &1["id"])
 
-      new_lock_version = updated_workflow.lock_version
-
-      # Simulate server restart - persisted Y.Doc has old lock_version
-      Session.stop(session1)
-      ensure_doc_supervisor_stopped(workflow.id)
-
-      # Start new session with updated workflow
-      # Persistence should detect stale lock_version and reload from DB
-      {:ok, _doc_supervisor2} =
-        Lightning.Collaborate.start_document(
-          updated_workflow,
-          "workflow:#{workflow.id}"
-        )
-
-      {:ok, session2} =
-        Session.start_link(
-          user: user,
-          workflow: updated_workflow,
-          parent_pid: self(),
-          document_name: "workflow:#{workflow.id}"
-        )
-
-      # Verify Y.Doc was reloaded from database
-      shared_doc2 = Session.get_doc(session2)
-      jobs_array2 = Yex.Doc.get_array(shared_doc2, "jobs")
-
-      # Should have original jobs from DB (persisted Y.Doc was discarded)
-      assert Yex.Array.length(jobs_array2) == initial_job_count
-
-      # Verify lock_version matches database
-      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
-      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
-
-      assert reconciled_lock_version == new_lock_version,
-             "Lock version should match database"
-
-      # Verify workflow name was updated from database
-      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
-      assert reconciled_name == "Changed by another user"
+      assert custom_job_id in job_ids,
+             "Persisted custom job should be restored on restart"
 
       Session.stop(session2)
     end
 
-    test "handles persisted Y.Doc with nil lock_version when DB has real version",
-         %{
-           user: user
-         } do
-      # This tests the bug fix for issue #4164
-      # When a workflow is opened before first save, Y.Doc gets lock_version: nil
-      # If that state is persisted and the workflow is later saved (getting a real lock_version),
-      # loading the persisted state would crash because extract_lock_version didn't handle {:ok, nil}
-
+    test "handles persisted Y.Doc with nil lock_version without crashing", %{
+      user: user
+    } do
       workflow = insert(:simple_workflow)
       doc_name = "workflow:#{workflow.id}"
 
-      # Manually create a persisted document state with lock_version: nil
-      # This simulates a Y.Doc that was persisted before the workflow was ever saved
+      # Manually create persisted state with nil lock_version —
+      # simulates a Y.Doc persisted before the workflow was first saved
       doc = Yex.Doc.new()
       workflow_map = Yex.Doc.get_map(doc, "workflow")
 
@@ -1847,13 +1749,9 @@ defmodule Lightning.SessionTest do
         version: :update
       })
 
-      # Now start a session - this should NOT crash
-      # The persistence layer should handle the nil lock_version and reset from DB
+      # Should not crash when loading persisted state with nil lock_version
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
-          workflow,
-          doc_name
-        )
+        Lightning.Collaborate.start_document(workflow, doc_name)
 
       {:ok, session} =
         Session.start_link(
@@ -1863,14 +1761,12 @@ defmodule Lightning.SessionTest do
           document_name: doc_name
         )
 
-      # Verify the session started and lock_version was reconciled from DB
-      shared_doc = Session.get_doc(session)
-      workflow_map2 = Yex.Doc.get_map(shared_doc, "workflow")
-      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+      # Persisted state is loaded as-is — nil lock_version stays nil
+      doc = Session.get_doc(session)
+      workflow_map2 = Yex.Doc.get_map(doc, "workflow")
+      lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
 
-      # lock_version should now match the database value
-      assert reconciled_lock_version == workflow.lock_version,
-             "Expected lock_version #{workflow.lock_version} but got #{reconciled_lock_version}"
+      assert is_nil(lock_version)
 
       Session.stop(session)
     end
