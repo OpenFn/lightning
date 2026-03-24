@@ -21,6 +21,7 @@ and this project adheres to
 
 - Allow users to select which workflow to merge for sandbox merging
   [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
 
 ### Fixed
 
