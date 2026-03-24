@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
+
 ### Fixed
 
 ## [2.16.0] - 2026-03-24
