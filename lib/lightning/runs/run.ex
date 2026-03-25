@@ -6,6 +6,8 @@ defmodule Lightning.Run do
   """
   use Lightning.Schema
 
+  require Logger
+
   import Lightning.ChangesetUtils
   import Lightning.Validators
 
@@ -212,9 +214,17 @@ defmodule Lightning.Run do
         changeset |> validate_required([:finished_at])
 
       {from, to} when from == to ->
+        Logger.warning(
+          "Run state machine: same-state transition #{inspect(from)} -> #{inspect(to)}"
+        )
+
         changeset
 
-      {_from, _to} ->
+      {from, to} ->
+        Logger.warning(
+          "Run state machine: unexpected transition #{inspect(from)} -> #{inspect(to)}"
+        )
+
         changeset
     end
   end
