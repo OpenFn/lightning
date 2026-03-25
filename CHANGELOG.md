@@ -24,6 +24,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix version-stuck bug where the collaborative editor shows stale state after a
+  sandbox merge or CLI deploy.
+  [#4535](https://github.com/OpenFn/lightning/issues/4535)
+
 ## [2.16.0] - 2026-03-24
 
 ## [2.16.0-pre3] - 2026-03-23
