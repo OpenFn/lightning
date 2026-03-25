@@ -7,17 +7,22 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
   Covers two failure modes:
   - Someone is online when the external update runs (SharedDoc is alive but
     never notified — currently red, fix pending)
-  - Nobody is online (stale DocumentState is loaded on next open — fixed)
+  - Nobody is online (stale DocumentState is loaded on next open — the
+    provisioner calls WorkflowReconciler, which goes through Collaborate.start
+    to update the doc and flush the correct state before the next user opens)
   """
 
   # async: false — we start supervised GenServers (DocumentSupervisor, Session)
   # that are not owned by the test process.
   use Lightning.DataCase, async: false
 
+  import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Mox
 
+  alias Lightning.Collaborate
   alias Lightning.Collaboration.DocumentSupervisor
+  alias Lightning.Collaboration.Registry, as: CollaborationRegistry
   alias Lightning.Collaboration.Session
   alias Lightning.Projects.Provisioner
 
@@ -47,6 +52,8 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
 
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
 
@@ -54,16 +61,14 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       document_name = "workflow:#{workflow.id}"
 
       start_supervised!(
-        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+        {DocumentSupervisor,
+         workflow: workflow,
+         document_name: document_name,
+         name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
       # --- Tab A: User A opens the workflow and adds an unsaved job ---
-      session_a =
-        start_supervised!(
-          {Session,
-           user: user_a, workflow: workflow, document_name: document_name},
-          id: :session_a
-        )
+      {:ok, session_a} = Collaborate.start(user: user_a, workflow: workflow)
 
       Session.update_doc(session_a, fn doc ->
         Yex.Doc.get_array(doc, "jobs")
@@ -84,17 +89,8 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       {:ok, _} = Provisioner.import_document(project, user_b, v2_body)
 
       # --- Tab B: User B opens the workflow to verify what they just merged ---
-      session_b =
-        start_supervised!(
-          {Session,
-           user: user_b, workflow: workflow, document_name: document_name},
-          id: :session_b
-        )
+      {:ok, session_b} = Collaborate.start(user: user_b, workflow: workflow)
 
-      # User B should see the job they just deployed.
-      # THIS FAILS TODAY — the SharedDoc is never reconciled after a provisioner
-      # import, so Tab B reads the stale Y.Doc (original job + Tab A's unsaved job)
-      # rather than the v2 content User B just merged.
       doc = Session.get_doc(session_b)
 
       job_ids =
@@ -102,6 +98,10 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         |> Yex.Doc.get_array("jobs")
         |> Yex.Array.to_json()
         |> Enum.map(& &1["id"])
+
+      Session.stop(session_a)
+      Session.stop(session_b)
+      ensure_doc_supervisor_stopped(workflow.id)
 
       assert provisioner_job_id in job_ids,
              "Tab B should see the job that User B just deployed (#{provisioner_job_id}), " <>
@@ -128,6 +128,8 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
 
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
 
@@ -135,16 +137,14 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       document_name = "workflow:#{workflow.id}"
 
       start_supervised!(
-        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+        {DocumentSupervisor,
+         workflow: workflow,
+         document_name: document_name,
+         name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
       # Tab A: User A opens the workflow and adds an unsaved job
-      session_a =
-        start_supervised!(
-          {Session,
-           user: user_a, workflow: workflow, document_name: document_name},
-          id: :session_a
-        )
+      {:ok, session_a} = Collaborate.start(user: user_a, workflow: workflow)
 
       tab_a_unsaved_job_id = Ecto.UUID.generate()
 
@@ -168,13 +168,11 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
 
       # Tab A saves
       {:ok, saved_workflow} = Session.save_workflow(session_a, user_a)
+      Session.stop(session_a)
+      ensure_doc_supervisor_stopped(workflow.id)
 
       saved_job_ids = Enum.map(saved_workflow.jobs, & &1.id)
 
-      # The SharedDoc should have been reset to the merged version (v2),
-      # so the save reflects v2 — not Tab A's stale pre-merge state.
-      # THIS FAILS TODAY — the SharedDoc is never reset, so Tab A saves
-      # v1 + unsaved changes and the provisioner's job is absent from the result.
       assert provisioner_job_id in saved_job_ids,
              "Saved workflow should include the provisioner's job (#{provisioner_job_id}). " <>
                "Got jobs: #{saved_workflow.jobs |> Enum.map(& &1.name) |> inspect()}"
@@ -205,23 +203,23 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
 
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
 
-      [original_job] = workflow.jobs
+      [_original_job] = workflow.jobs
       document_name = "workflow:#{workflow.id}"
 
       start_supervised!(
-        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+        {DocumentSupervisor,
+         workflow: workflow,
+         document_name: document_name,
+         name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
       # Tab A: User A opens the workflow and adds an unsaved job
-      session_a =
-        start_supervised!(
-          {Session,
-           user: user_a, workflow: workflow, document_name: document_name},
-          id: :session_a
-        )
+      {:ok, session_a} = Collaborate.start(user: user_a, workflow: workflow)
 
       Session.update_doc(session_a, fn doc ->
         Yex.Doc.get_array(doc, "jobs")
@@ -240,14 +238,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       v2_body = build_provisioner_body(project, workflow, add_new_job: true)
       {:ok, _} = Provisioner.import_document(project, user_b, v2_body)
 
-      # After the merge the DB lock_version has incremented (v2).
-      # The Y.Doc's workflow.lock_version is the "base" the unsaved changes
-      # indicator compares against — it must be updated to v2 so Tab A knows
-      # its unsaved diff is relative to the sandbox-merged state.
-      #
-      # THIS FAILS TODAY — the SharedDoc is never reconciled after a provisioner
-      # import, so lock_version in the Y.Doc stays at v1. The indicator
-      # will compare Tab A's changes against the wrong (pre-merge) baseline.
       v2_workflow =
         Lightning.Workflows.get_workflow(workflow.id,
           include: [:jobs, :edges, :triggers]
@@ -256,6 +246,9 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       doc = Session.get_doc(session_a)
       workflow_map = Yex.Doc.get_map(doc, "workflow")
       ydoc_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
+
+      Session.stop(session_a)
+      ensure_doc_supervisor_stopped(workflow.id)
 
       assert ydoc_lock_version == v2_workflow.lock_version,
              "Y.Doc lock_version should reflect the merged version " <>
@@ -276,15 +269,13 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
   # import writes v2 to the DB. When the next user opens the workflow, a fresh
   # SharedDoc starts and loads that stale DocumentState.
   #
-  # Without a fix, Persistence.bind loads the stale content as-is — the new
-  # user sees v1 + phantom job instead of the provisioner's v2.
+  # The fix: the provisioner calls WorkflowReconciler after committing. The
+  # reconciler calls Collaborate.start (with the provisioner's actor), applies the v2 diff
+  # to the Y.Doc, then calls Session.stop. The shutdown chain flushes the
+  # correct state to DocumentState before any real user opens the workflow.
   #
   # We insert the stale DocumentState directly (bypassing PersistenceWriter)
   # so the scenario is deterministic in tests.
-  #
-  # This test CURRENTLY FAILS because reconcile_or_reset has been removed.
-  # It will PASS once the provisioner fix also handles the nobody-online path
-  # (e.g. by invalidating stale DocumentState when writing to the DB).
 
   describe "when nobody is online during the provisioner import" do
     test "a new tab sees the merged version, not stale persisted editor state" do
@@ -293,6 +284,8 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
@@ -323,29 +316,24 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         state_data: stale_update
       })
 
-      # Provisioner runs while nobody is online (no active SharedDoc)
+      # Provisioner runs while nobody is online (no active SharedDoc).
+      # The reconciler calls Collaborate.start (user: user_b), applies the diff,
+      # then Session.stop — flushing the correct state to DocumentState.
       v2_body = build_provisioner_body(project, workflow, add_new_job: true)
       [%{"id" => provisioner_job_id}] = new_jobs_in(v2_body, [original_job.id])
       {:ok, _} = Provisioner.import_document(project, user_b, v2_body)
 
-      # New user opens the workflow — Persistence.bind finds the stale
-      # DocumentState and loads it. Without a fix, the stale content is used
-      # as-is and the new user sees v1 + phantom job, not the provisioner's v2.
+      # Open the workflow the way a real browser tab would.
+      # Collaborate.start's internal sleep+retry (iter 3b) acts as a sync point:
+      # it only succeeds after the reconciler's SharedDoc has fully auto_exited
+      # and flushed — so by the time this returns, DocumentState has the correct
+      # content.
       v2_workflow =
         Lightning.Workflows.get_workflow(workflow.id,
           include: [:jobs, :edges, :triggers]
         )
 
-      start_supervised!(
-        {DocumentSupervisor, workflow: v2_workflow, document_name: document_name}
-      )
-
-      session_b =
-        start_supervised!(
-          {Session,
-           user: user_b, workflow: v2_workflow, document_name: document_name},
-          id: :session_b
-        )
+      {:ok, session_b} = Collaborate.start(workflow: v2_workflow, user: user_b)
 
       doc = Session.get_doc(session_b)
 
@@ -355,10 +343,64 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         |> Yex.Array.to_json()
         |> Enum.map(& &1["id"])
 
+      Session.stop(session_b)
+      ensure_doc_supervisor_stopped(workflow.id)
+
       assert provisioner_job_id in job_ids,
              "User B should see the provisioner's job (#{provisioner_job_id}) " <>
                "when opening the workflow after the merge. " <>
-               "The stale persisted Y.Doc should not be loaded as-is. " <>
+               "The reconciler should have corrected the stale DocumentState. " <>
+               "Got job ids: #{inspect(job_ids)}"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # GitHub sync (ProjectRepoConnection actor)
+  # ---------------------------------------------------------------------------
+  #
+  # When a GitHub sync triggers a provisioner import, the actor is a
+  # ProjectRepoConnection, not a User. The reconciler must still work — no
+  # presence tracking should fire, but the SharedDoc must be updated correctly.
+
+  describe "when the provisioner is triggered by a GitHub sync" do
+    test "a new tab sees the synced version" do
+      workflow =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      project =
+        Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+      user = insert(:user)
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      [original_job] = workflow.jobs
+
+      v2_body = build_provisioner_body(project, workflow, add_new_job: true)
+      [%{"id" => provisioner_job_id}] = new_jobs_in(v2_body, [original_job.id])
+
+      {:ok, _} = Provisioner.import_document(project, repo_connection, v2_body)
+
+      v2_workflow =
+        Lightning.Workflows.get_workflow(workflow.id,
+          include: [:jobs, :edges, :triggers]
+        )
+
+      {:ok, session} = Collaborate.start(workflow: v2_workflow, user: user)
+
+      job_ids =
+        Session.get_doc(session)
+        |> Yex.Doc.get_array("jobs")
+        |> Yex.Array.to_json()
+        |> Enum.map(& &1["id"])
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      assert provisioner_job_id in job_ids,
+             "The reconciler should have flushed the GitHub-synced job (#{provisioner_job_id}). " <>
                "Got job ids: #{inspect(job_ids)}"
     end
   end

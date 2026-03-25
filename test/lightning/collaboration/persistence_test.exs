@@ -96,53 +96,5 @@ defmodule Lightning.Collaboration.PersistenceTest do
       # Clean up
       GenServer.stop(doc_supervisor, :normal)
     end
-
-    test "after delete_for_document, initializes from database (provisioner path)" do
-      workflow = insert(:workflow, lock_version: 5)
-      document_name = "workflow:#{workflow.id}"
-
-      # Create stale persisted state
-      doc = Yex.Doc.new()
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
-
-      Yex.Doc.transaction(doc, "setup", fn ->
-        Yex.Map.set(workflow_map, "id", workflow.id)
-        Yex.Map.set(workflow_map, "name", "Old Name")
-        Yex.Map.set(workflow_map, "lock_version", 3)
-        Yex.Map.set(workflow_map, "deleted_at", nil)
-      end)
-
-      {:ok, update_data} = Yex.encode_state_as_update(doc)
-
-      {:ok, _} =
-        Repo.insert(%DocumentState{
-          document_name: document_name,
-          state_data: update_data,
-          version: :update
-        })
-
-      # Provisioner invalidates the stale state
-      DocumentState.delete_for_document(document_name)
-
-      # Now start DocumentSupervisor — no persisted state found, initializes from DB
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
-
-      assert Process.alive?(doc_supervisor)
-
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
-
-      # Fresh DB state loaded — lock_version and name come from DB, not stale persisted state
-      assert Yex.Map.fetch!(workflow_map, "lock_version") == 5
-      assert Yex.Map.fetch!(workflow_map, "name") == workflow.name
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
-    end
   end
 end
