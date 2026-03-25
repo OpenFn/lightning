@@ -138,8 +138,8 @@ export class AIChannelRegistry {
   private streamingBuffer = '';
   private streamingDrainPos = 0;
   private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
-  // ms between words. 50ms = 20 words/sec.
-  private static readonly WORD_INTERVAL_MS = 50;
+  // ms between letters. 15ms ≈ 65 chars/sec.
+  private static readonly WORD_INTERVAL_MS = 15;
   // Callback to run after the buffer finishes draining (e.g., finalize message)
   private streamingDrainCallback: (() => void) | null = null;
 
@@ -171,16 +171,9 @@ export class AIChannelRegistry {
         return;
       }
 
-      const remaining = this.streamingBuffer.slice(this.streamingDrainPos);
-      const match = remaining.match(/^(\s*\S+)/);
-
-      if (match && match[1]) {
-        this.streamingDrainPos += match[1].length;
-        this.store._appendStreamingChunk(match[1]);
-      } else {
-        this.streamingDrainPos = this.streamingBuffer.length;
-        this.store._appendStreamingChunk(remaining);
-      }
+      const char = this.streamingBuffer[this.streamingDrainPos];
+      this.streamingDrainPos += 1;
+      this.store._appendStreamingChunk(char);
     }, AIChannelRegistry.WORD_INTERVAL_MS);
   }
 
