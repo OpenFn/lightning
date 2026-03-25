@@ -25,7 +25,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
-  alias Lightning.Collaboration.DocumentState
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -63,44 +63,63 @@ defmodule Lightning.Projects.Provisioner do
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
-    Repo.transact(fn ->
-      with :ok <- maybe_limit_provisioning(project.id, user_or_repo_connection),
-           project_changeset <-
-             build_import_changeset(project, user_or_repo_connection, data),
-           edges_to_cleanup <-
-             edges_referencing_deleted_jobs(project_changeset),
-           {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-           :ok <- handle_collection_deletion(project_changeset),
-           updated_project <- preload_dependencies(project),
-           {:ok, _changes} <-
-             audit_workflows(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             update_workflows_version(
-               project_changeset,
-               updated_project.workflows
-             ),
-           {:ok, _changes} <-
-             create_snapshots(
-               project_changeset,
-               updated_project.workflows,
-               user_or_repo_connection
-             ),
-           :ok <- invalidate_document_states(project_changeset) do
-        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+    with {:ok, updated_project} <-
+           Repo.transact(fn ->
+             with :ok <-
+                    maybe_limit_provisioning(project.id, user_or_repo_connection),
+                  project_changeset <-
+                    build_import_changeset(
+                      project,
+                      user_or_repo_connection,
+                      data
+                    ),
+                  edges_to_cleanup <-
+                    edges_referencing_deleted_jobs(project_changeset),
+                  {:ok, %{workflows: workflows} = project} <-
+                    Repo.insert_or_update(project_changeset,
+                      allow_stale: allow_stale
+                    ),
+                  :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+                  :ok <- handle_collection_deletion(project_changeset),
+                  updated_project <- preload_dependencies(project),
+                  {:ok, _changes} <-
+                    audit_workflows(project_changeset, user_or_repo_connection),
+                  {:ok, _changes} <-
+                    update_workflows_version(
+                      project_changeset,
+                      updated_project.workflows
+                    ),
+                  {:ok, _changes} <-
+                    create_snapshots(
+                      project_changeset,
+                      updated_project.workflows,
+                      user_or_repo_connection
+                    ) do
+               Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+               project_changeset
+               |> get_assoc(:workflows)
+               |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
-        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-          Lightning.Projects.Project.sandbox?(updated_project)
+               Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+                 Lightning.Projects.Project.sandbox?(updated_project)
+               )
+
+               {:ok, updated_project}
+             end
+           end) do
+      # Reconcile SharedDocs OUTSIDE the transaction — the reconciler
+      # mutates in-memory CRDT processes, not the DB.
+      Enum.each(
+        updated_project.workflows,
+        &WorkflowReconciler.reconcile_workflow_from_db(
+          &1,
+          user_or_repo_connection
         )
+      )
 
-        {:ok, updated_project}
-      end
-    end)
+      {:ok, updated_project}
+    end
   end
 
   defp build_import_changeset(project, user_or_repo_connection, data) do
@@ -327,21 +346,6 @@ defmodule Lightning.Projects.Provisioner do
           (is_nil(e.source_job_id) and is_nil(e.source_trigger_id))
     )
     |> Repo.delete_all()
-
-    :ok
-  end
-
-  defp invalidate_document_states(project_changeset) do
-    project_changeset
-    |> get_assoc(:workflows)
-    |> Enum.reject(fn changeset ->
-      changeset.changes == %{} or get_change(changeset, :delete) == true or
-        not is_nil(get_change(changeset, :deleted_at))
-    end)
-    |> Enum.each(fn changeset ->
-      workflow_id = get_field(changeset, :id)
-      DocumentState.delete_for_document("workflow:#{workflow_id}")
-    end)
 
     :ok
   end

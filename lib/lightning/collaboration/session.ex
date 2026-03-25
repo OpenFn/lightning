@@ -22,6 +22,7 @@ defmodule Lightning.Collaboration.Session do
 
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.WorkflowSerializer
+  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Yex.Sync.SharedDoc
@@ -41,7 +42,7 @@ defmodule Lightning.Collaboration.Session do
 
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
-          user: User.t(),
+          user: User.t() | ProjectRepoConnection.t(),
           parent_pid: pid()
         ]
 
@@ -67,6 +68,10 @@ defmodule Lightning.Collaboration.Session do
 
   def stop(session_pid) do
     GenServer.stop(session_pid)
+  end
+
+  def shared_doc_pid(session_pid) do
+    GenServer.call(session_pid, :shared_doc_pid)
   end
 
   def child_spec(opts) do
@@ -114,20 +119,26 @@ defmodule Lightning.Collaboration.Session do
         {:stop, {:error, :shared_doc_not_found}}
 
       shared_doc_pid ->
-        SharedDoc.observe(shared_doc_pid)
-        Logger.info("Joined SharedDoc for #{document_name}")
+        try do
+          SharedDoc.observe(shared_doc_pid)
+          Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
-        # Note: Presence tracking uses workflow.id, not document_name, because
-        # presence is about showing who is editing the workflow, not which version
-        Presence.track_user_presence(
-          user,
-          workflow.id,
-          self()
-        )
+          # We track the user presence here so the the original WorkflowLive.Edit
+          # can be stopped from editing the workflow when someone else is editing it.
+          # Note: Presence tracking uses workflow.id, not document_name, because
+          # presence is about showing who is editing the workflow, not which version.
+          # Only track presence for real users — not system actors like ProjectRepoConnection.
+          if is_struct(user, User),
+            do: Presence.track_user_presence(user, workflow.id, self())
 
-        {:ok, %{state | shared_doc_pid: shared_doc_pid}}
+          {:ok, %{state | shared_doc_pid: shared_doc_pid}}
+        catch
+          # GenServer.call raises an exit (not a rescuable exception) when the
+          # target process is dead. SharedDoc may have been registered in :pg
+          # but died before we could observe it (0ms auto_exit race).
+          # Return cleanly so Collaborate.start can retry.
+          :exit, _ -> {:stop, {:error, :shared_doc_not_found}}
+        end
     end
   end
 
@@ -144,11 +155,8 @@ defmodule Lightning.Collaboration.Session do
       SharedDoc.unobserve(shared_doc_pid)
     end
 
-    Presence.untrack_user_presence(
-      state.user,
-      state.workflow.id,
-      self()
-    )
+    if is_struct(state.user, User),
+      do: Presence.untrack_user_presence(state.user, state.workflow.id, self())
 
     :ok
   end
@@ -257,6 +265,11 @@ defmodule Lightning.Collaboration.Session do
           | {:error, :workflow_deleted | :internal_error}
   def reset_workflow(session_pid, user) do
     GenServer.call(session_pid, {:reset_workflow, user}, 10_000)
+  end
+
+  @impl true
+  def handle_call(:shared_doc_pid, _from, state) do
+    {:reply, state.shared_doc_pid, state}
   end
 
   @impl true

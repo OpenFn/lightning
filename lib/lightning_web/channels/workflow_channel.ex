@@ -673,6 +673,16 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info({:workflow_updated_externally, workflow}, socket) do
+    push(socket, "workflow_saved", %{
+      latest_snapshot_lock_version: workflow.lock_version,
+      workflow: workflow
+    })
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}

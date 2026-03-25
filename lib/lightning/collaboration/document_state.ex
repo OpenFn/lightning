@@ -117,18 +117,6 @@ defmodule Lightning.Collaboration.DocumentState do
   end
 
   @doc """
-  Deletes all persisted state for a document.
-
-  Used when an external write (e.g. provisioner import) makes any cached
-  Y.doc state stale and it should be discarded on next load.
-  """
-  @spec delete_for_document(String.t()) :: :ok
-  def delete_for_document(doc_name) do
-    Repo.delete_all(from d in __MODULE__, where: d.document_name == ^doc_name)
-    :ok
-  end
-
-  @doc """
   Loads all persisted state for a document and applies it to a Yex document.
 
   Convenience function that combines `get_checkpoint_and_updates/1` and
