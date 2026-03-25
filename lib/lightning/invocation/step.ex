@@ -84,6 +84,7 @@ defmodule Lightning.Invocation.Step do
       :finished_at
     ])
     |> validate_required([:finished_at, :exit_reason])
+    |> assoc_constraint(:output_dataclip)
   end
 
   @doc false
