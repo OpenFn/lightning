@@ -19,6 +19,21 @@ and this project adheres to
 
 ### Changed
 
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
+
+### Fixed
+
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+
+## [2.16.0] - 2026-03-24
+
+## [2.16.0-pre3] - 2026-03-23
+
+### Changed
+
 - Relax version locking to major (`@v1`) for auto-installed GitHub actions used
   in GitHub Sync. [#4548](https://github.com/OpenFn/lightning/issues/4548)
 
@@ -27,8 +42,6 @@ and this project adheres to
 - Webhook triggers with `custom` response mode now correctly use the `fast_lane`
   queue for prioritized execution.
   [#4546](https://github.com/OpenFn/lightning/issues/4546)
-- Copying api tokens doesn't work on unsecure non-localhost contexts
-  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 
 ## [2.16.0-pre2] - 2026-03-19
 
