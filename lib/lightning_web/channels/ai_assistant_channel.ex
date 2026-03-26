@@ -631,7 +631,7 @@ defmodule LightningWeb.AiAssistantChannel do
     # Include message_options for the initial message (attach_io_data, step_id, etc.)
     meta =
       if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
-           params["attach_logs"] do
+           params["attach_logs"] || params["use_global_assistant"] do
         Map.put(meta, "message_options", build_message_options(params))
       else
         meta
@@ -654,7 +654,29 @@ defmodule LightningWeb.AiAssistantChannel do
         opts
       end
 
+    opts =
+      if params["use_global_assistant"] do
+        meta = Keyword.get(opts, :meta, %{})
+
+        meta =
+          Map.put(meta, "message_options", build_message_options(params))
+
+        Keyword.put(opts, :meta, meta)
+      else
+        opts
+      end
+
     opts
+  end
+
+  defp extract_message_options(%{"use_global_assistant" => true} = params) do
+    opts = [meta: %{"message_options" => build_message_options(params)}]
+
+    if code = params["code"] do
+      [{:code, code} | opts]
+    else
+      opts
+    end
   end
 
   defp extract_message_options(%{"job_id" => _job_id} = params) do
@@ -686,7 +708,9 @@ defmodule LightningWeb.AiAssistantChannel do
       "code" => params["attach_code"] == true,
       "log" => params["attach_logs"] == true,
       "attach_io_data" => params["attach_io_data"] == true,
-      "step_id" => params["step_id"]
+      "step_id" => params["step_id"],
+      "use_global_assistant" => params["use_global_assistant"] == true,
+      "page" => params["page"]
     }
   end
 
