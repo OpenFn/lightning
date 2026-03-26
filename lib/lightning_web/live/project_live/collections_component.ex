@@ -207,9 +207,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           <div class="text-right">
             <a
               id={"download-collection-#{collection.id}-button"}
-              href={
-                ~p"/download/collection?#{%{project_id: @project.id, name: collection.name}}"
-              }
+              href={~p"/download/collections/#{collection.name}"}
               class="table-action"
             >
               Download

@@ -26,10 +26,12 @@ defmodule LightningWeb.CollectionsController do
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
   defp authorize(conn, collection) do
+    subject = conn.assigns[:subject] || conn.assigns[:current_user]
+
     Permissions.can(
       Lightning.Policies.Collections,
       :access_collection,
-      conn.assigns.subject,
+      subject,
       collection
     )
   end
@@ -101,6 +103,26 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
+  def download(conn, %{"name" => col_name}) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection) do
+      items_stream =
+        stream_all_in_chunks(
+          collection,
+          %{cursor: nil, limit: @max_database_limit + 1},
+          nil
+        )
+
+      conn
+      |> put_resp_content_type("application/json")
+      |> put_resp_header(
+        "content-disposition",
+        ~s(attachment; filename="#{col_name}.json")
+      )
+      |> stream_as_json_array(items_stream)
+    end
+  end
+
   def stream(conn, %{"name" => col_name} = params) do
     with {:ok, collection, filters} <- validate_query(conn, col_name) do
       key_pattern = Map.get(params, "key")
@@ -113,6 +135,24 @@ defmodule LightningWeb.CollectionsController do
         {:ok, conn} -> conn
       end
     end
+  end
+
+  defp stream_as_json_array(conn, items_stream) do
+    conn = send_chunked(conn, 200)
+    {:ok, conn} = Plug.Conn.chunk(conn, "[")
+
+    {conn, _first?} =
+      Enum.reduce_while(items_stream, {conn, true}, fn item, {conn, first?} ->
+        prefix = if first?, do: "", else: ","
+
+        case Plug.Conn.chunk(conn, prefix <> Jason.encode!(item)) do
+          {:ok, conn} -> {:cont, {conn, false}}
+          {:error, :closed} -> {:halt, {conn, false}}
+        end
+      end)
+
+    {:ok, conn} = Plug.Conn.chunk(conn, "]")
+    conn
   end
 
   # Streams records from database without depending on holding a transaction from database pool.
