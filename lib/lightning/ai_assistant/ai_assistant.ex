@@ -1456,40 +1456,7 @@ defmodule Lightning.AiAssistant do
   end
 
   defp build_global_message(body, session) do
-    attachments = body["attachments"] || []
-
-    # Determine if user is viewing a specific job from the page URL
-    page = get_in(session.meta || %{}, ["message_options", "page"])
-    on_job_step = page && length(String.split(page, "/")) >= 3
-
-    job_code_attachment =
-      Enum.find(attachments, fn
-        %{"type" => "job_code"} -> true
-        _ -> false
-      end)
-
-    workflow_yaml =
-      Enum.find_value(attachments, fn
-        %{"type" => "workflow_yaml", "content" => content} -> content
-        _ -> nil
-      end)
-
-    # On job step: prefer job_code (renders as code diff)
-    # On workflow overview: prefer workflow_yaml (renders as YAML card)
-    {code, job} =
-      if on_job_step && job_code_attachment do
-        job =
-          if job_code_attachment["job_key"] && session.workflow_id do
-            resolve_job_from_key(
-              session.workflow_id,
-              job_code_attachment["job_key"]
-            )
-          end
-
-        {job_code_attachment["content"], job}
-      else
-        {workflow_yaml, nil}
-      end
+    {code, job} = extract_global_code_and_job(body["attachments"], session)
 
     message_attrs = %{
       role: :assistant,
@@ -1497,11 +1464,7 @@ defmodule Lightning.AiAssistant do
     }
 
     message_attrs =
-      if job do
-        Map.put(message_attrs, :job, job)
-      else
-        message_attrs
-      end
+      if job, do: Map.put(message_attrs, :job, job), else: message_attrs
 
     opts = [
       usage: body["usage"] || %{},
@@ -1511,6 +1474,41 @@ defmodule Lightning.AiAssistant do
 
     {message_attrs, opts}
   end
+
+  # Extracts the appropriate code artifact and optional job from global chat
+  # attachments. On a job step, prefers job_code (renders as code diff).
+  # On the workflow overview, prefers workflow_yaml (renders as YAML card).
+  defp extract_global_code_and_job(attachments, session)
+       when is_list(attachments) do
+    page = get_in(session.meta || %{}, ["message_options", "page"])
+    on_job_step = page && length(String.split(page, "/")) >= 3
+
+    job_code_attachment =
+      Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
+
+    if on_job_step && job_code_attachment do
+      job =
+        resolve_job_from_key(
+          session.workflow_id,
+          job_code_attachment["job_key"]
+        )
+
+      {job_code_attachment["content"], job}
+    else
+      workflow_yaml =
+        Enum.find_value(attachments, fn
+          %{"type" => "workflow_yaml", "content" => content} -> content
+          _ -> nil
+        end)
+
+      {workflow_yaml, nil}
+    end
+  end
+
+  defp extract_global_code_and_job(_, _), do: {nil, nil}
+
+  defp resolve_job_from_key(nil, _), do: nil
+  defp resolve_job_from_key(_, nil), do: nil
 
   defp resolve_job_from_key(workflow_id, job_key) do
     import Ecto.Query
