@@ -19,10 +19,16 @@ and this project adheres to
 
 ### Changed
 
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
+
 ### Fixed
 
 - Proper warn & error for exceeding max dataclip size
   [#4524](https://github.com/OpenFn/lightning/issues/4524)
+
+## [2.16.0] - 2026-03-24
 
 ## [2.16.0-pre3] - 2026-03-23
 

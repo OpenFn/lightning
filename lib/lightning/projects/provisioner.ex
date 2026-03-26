@@ -145,6 +145,14 @@ defmodule Lightning.Projects.Provisioner do
   defp classify_audit(%{
          action: :update,
          data: %{id: workflow_id},
+         changes: %{deleted_at: _}
+       }) do
+    {:delete, workflow_id}
+  end
+
+  defp classify_audit(%{
+         action: :update,
+         data: %{id: workflow_id},
          changes: changes
        })
        when changes != %{} do
@@ -159,7 +167,8 @@ defmodule Lightning.Projects.Provisioner do
     project_changeset
     |> get_assoc(:workflows)
     |> Enum.reject(fn changeset ->
-      changeset.changes == %{} or get_change(changeset, :delete)
+      changeset.changes == %{} or get_change(changeset, :delete) == true or
+        not is_nil(get_change(changeset, :deleted_at))
     end)
     |> Enum.reduce(Multi.new(), fn changeset, multi ->
       workflow =
@@ -197,7 +206,8 @@ defmodule Lightning.Projects.Provisioner do
     project_changeset
     |> get_assoc(:workflows)
     |> Enum.reject(fn changeset ->
-      changeset.changes == %{} or get_change(changeset, :delete)
+      changeset.changes == %{} or get_change(changeset, :delete) == true or
+        not is_nil(get_change(changeset, :deleted_at))
     end)
     |> Enum.reduce(Multi.new(), fn changeset, multi ->
       workflow =
@@ -413,10 +423,10 @@ defmodule Lightning.Projects.Provisioner do
 
   defp workflow_changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:id, :name, :delete])
+    |> cast(attrs, [:id, :name, :delete, :deleted_at])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
-    |> maybe_mark_for_deletion()
+    |> maybe_soft_delete_workflow()
     |> validate_extraneous_params(ignore: ["version_history"])
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
@@ -469,6 +479,27 @@ defmodule Lightning.Projects.Provisioner do
     |> unique_constraint(:id, name: :workflow_edges_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
+  end
+
+  defp maybe_soft_delete_workflow(changeset) do
+    changeset.changes
+    |> Map.pop(:delete)
+    |> case do
+      {true, others} when map_size(others) == 0 ->
+        changeset
+        |> Map.put(:changes, others)
+        |> put_change(
+          :deleted_at,
+          DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {true, others} when map_size(others) > 0 ->
+        changeset
+        |> add_error(:delete, "cannot change or add a record while deleting")
+
+      _ ->
+        changeset
+    end
   end
 
   defp maybe_mark_for_deletion(changeset) do
