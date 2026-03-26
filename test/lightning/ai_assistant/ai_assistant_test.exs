@@ -3621,5 +3621,163 @@ defmodule Lightning.AiAssistantTest do
       assert assistant_msg.content == "General answer"
       assert is_nil(assistant_msg.code)
     end
+
+    test "uses workflow_yaml when on overview page with both attachment types",
+         %{user: user, project: project, workflow: workflow} do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/My Workflow"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "modify workflow",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Updated workflow",
+          "attachments" => [
+            %{"type" => "job_code", "content" => "fn(state => state);"},
+            %{
+              "type" => "workflow_yaml",
+              "content" => "name: My Workflow\njobs: []"
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "modify workflow",
+          workflow_yaml: "name: test",
+          page: "workflows/My Workflow"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      # On overview, should use workflow_yaml not job_code
+      assert assistant_msg.code == "name: My Workflow\njobs: []"
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "handles resolve_job_from_key with nil inputs", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/test/Some-job"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix code",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "attachments" => [
+            %{
+              "type" => "job_code",
+              "content" => "fn(state => state);",
+              "job_key" => nil
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "fix code",
+          workflow_yaml: "name: test",
+          page: "workflows/test/Some-job"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.code == "fn(state => state);"
+      # job_key is nil, so job shouldn't be resolved
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "handles non-list attachments", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{}
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "test",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "No artifacts",
+          "attachments" => nil,
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "test",
+          workflow_yaml: "name: test"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "No artifacts"
+      assert is_nil(assistant_msg.code)
+    end
   end
 end
