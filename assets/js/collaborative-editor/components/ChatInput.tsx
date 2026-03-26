@@ -13,6 +13,10 @@ interface ChatInputProps {
   isDisabled?: boolean | undefined;
   /** Show job-specific controls (attach code, attach logs) */
   showJobControls?: boolean | undefined;
+  /** Show the experimental global assistant toggle */
+  showGlobalAssistantOption?: boolean | undefined;
+  /** Callback when global assistant checkbox changes */
+  onGlobalAssistantChange?: ((active: boolean) => void) | undefined;
   /** Storage key for persisting checkbox preferences */
   storageKey?: string | undefined;
   /** Enable automatic focus management for the input */
@@ -36,6 +40,7 @@ interface MessageOptions {
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;
+  use_global_assistant?: boolean;
 }
 
 const MIN_TEXTAREA_HEIGHT = 52;
@@ -46,6 +51,8 @@ export function ChatInput({
   isLoading = false,
   isDisabled = false,
   showJobControls = false,
+  showGlobalAssistantOption = false,
+  onGlobalAssistantChange,
   storageKey,
   enableAutoFocus = false,
   focusTrigger,
@@ -91,6 +98,17 @@ export function ChatInput({
       const key = `${storageKey}:attach-io-data`;
       const saved = localStorage.getItem(key);
       return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [useGlobalAssistant, setUseGlobalAssistant] = useState(() => {
+    if (!storageKey) return false;
+    try {
+      return (
+        localStorage.getItem(`${storageKey}:use-global-assistant`) === 'true'
+      );
     } catch {
       return false;
     }
@@ -143,6 +161,14 @@ export function ChatInput({
       // Ignore localStorage errors
     }
 
+    try {
+      const globalValue =
+        localStorage.getItem(`${storageKey}:use-global-assistant`) === 'true';
+      setUseGlobalAssistant(globalValue);
+    } catch {
+      // Ignore localStorage errors
+    }
+
     setTimeout(() => {
       isLoadingFromStorageRef.current = false;
     }, 0);
@@ -182,6 +208,23 @@ export function ChatInput({
   }, [attachIoData, storageKey]);
 
   useEffect(() => {
+    if (!storageKey) return;
+    if (isLoadingFromStorageRef.current) return;
+    try {
+      localStorage.setItem(
+        `${storageKey}:use-global-assistant`,
+        String(useGlobalAssistant)
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [useGlobalAssistant, storageKey]);
+
+  useEffect(() => {
+    onGlobalAssistantChange?.(useGlobalAssistant);
+  }, [useGlobalAssistant, onGlobalAssistantChange]);
+
+  useEffect(() => {
     if (enableAutoFocus && textareaRef.current) {
       const timeoutId = setTimeout(() => {
         textareaRef.current?.focus();
@@ -214,6 +257,10 @@ export function ChatInput({
         options.attach_io_data = attachIoData;
         options.step_id = selectedStepId;
       }
+    }
+
+    if (showGlobalAssistantOption && useGlobalAssistant) {
+      options.use_global_assistant = true;
     }
 
     onSendMessage?.(input.trim(), options);
@@ -421,6 +468,31 @@ export function ChatInput({
                           Do not include PII or sensitive data
                         </span>
                       </div>
+                    )}
+
+                    {showGlobalAssistantOption && (
+                      <Tooltip
+                        content="Route messages to the experimental global assistant"
+                        side="top"
+                      >
+                        <label className="flex items-center gap-1.5 group cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={useGlobalAssistant}
+                            onChange={e =>
+                              setUseGlobalAssistant(e.target.checked)
+                            }
+                            className={cn(
+                              'w-3.5 h-3.5 rounded border-amber-400 text-amber-600',
+                              'focus:ring-amber-500 focus:ring-offset-0',
+                              'cursor-pointer'
+                            )}
+                          />
+                          <span className="text-[11px] font-medium text-amber-600 group-hover:text-amber-700">
+                            Global assistant (experimental)
+                          </span>
+                        </label>
+                      </Tooltip>
                     )}
                   </div>
 
