@@ -1,8 +1,9 @@
 defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
+
+  @moduletag :capture_log
   import Mox
   import Lightning.Factories
-  import Oban.Testing, only: [with_testing_mode: 2]
 
   import Lightning.{
     AccountsFixtures,
@@ -16,6 +17,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
   alias LightningWeb.AiAssistantChannel
 
   setup :verify_on_exit!
+
+  setup do
+    Process.put(:oban_testing, :manual)
+    :ok
+  end
 
   setup do
     # Mock Apollo configuration
@@ -82,7 +88,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "join ai_assistant:job_code:new with saved job" do
-    @tag :capture_log
     test "successfully creates session for existing job", %{
       socket: socket,
       job: job,
@@ -168,7 +173,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "join existing session" do
-    @tag :capture_log
     test "successfully joins existing job_code session", %{
       socket: socket,
       job: job,
@@ -176,6 +180,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
     } do
       {:ok, session} =
         AiAssistant.create_session(job, user, "Initial message", [])
+
+      [%{args: args}] =
+        all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
+
+      perform_job(Lightning.AiAssistant.MessageProcessor, args)
 
       assert {:ok, response, _socket} =
                subscribe_and_join(
@@ -198,7 +207,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "workflow_template sessions" do
-    @tag :capture_log
     test "successfully creates workflow template session", %{
       socket: socket,
       project: project
@@ -229,7 +237,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "join ai_assistant:workflow_template:new with create mode workflow" do
-    @tag :capture_log
     test "successfully creates session for unsaved workflow", %{
       socket: socket,
       project: project
@@ -270,7 +277,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert session.meta["unsaved_workflow"]["is_new"] == true
     end
 
-    @tag :capture_log
     test "creates session without unsaved_workflow when workflow exists", %{
       socket: socket,
       project: project,
@@ -476,34 +482,31 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "handle_in new_message" do
-    @tag :capture_log
     test "successfully saves and processes user message", %{
       socket: socket,
       job: job,
       user: user
     } do
       # Use manual mode to prevent AI response from being generated inline
-      with_testing_mode(:manual, fn ->
-        {:ok, session} =
-          AiAssistant.create_session(job, user, "Initial message", [])
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
 
-        {:ok, _, socket} =
-          subscribe_and_join(
-            socket,
-            AiAssistantChannel,
-            "ai_assistant:job_code:#{session.id}",
-            %{}
-          )
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
 
-        ref = push(socket, "new_message", %{"content" => "Help me debug this"})
+      ref = push(socket, "new_message", %{"content" => "Help me debug this"})
 
-        assert_reply ref, :ok, %{message: message}
-        # The returned message is the newly created user message
-        assert message.role == "user"
-        assert message.content == "Help me debug this"
-        # Status should be pending initially
-        assert message.status in ["pending", "success"]
-      end)
+      assert_reply ref, :ok, %{message: message}
+      # The returned message is the newly created user message
+      assert message.role == "user"
+      assert message.content == "Help me debug this"
+      # Status should be pending initially
+      assert message.status in ["pending", "success"]
     end
 
     test "rejects empty message", %{socket: socket, job: job, user: user} do
@@ -591,7 +594,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert error == limit_error_message
     end
 
-    @tag :capture_log
     test "delegates to handle_unsaved_job_message when job_id is provided but not found in DB",
          %{
            socket: socket,
@@ -619,29 +621,26 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      with_testing_mode(:manual, fn ->
-        ref =
-          push(socket, "new_message", %{
-            "content" => "what does this do?",
-            "job_id" => unknown_job_id,
-            "job_name" => "Draft Job",
-            "job_body" => "fn(state => state)",
-            "job_adaptor" => "@openfn/language-common@latest",
-            "workflow_id" => workflow.id
-          })
+      ref =
+        push(socket, "new_message", %{
+          "content" => "what does this do?",
+          "job_id" => unknown_job_id,
+          "job_name" => "Draft Job",
+          "job_body" => "fn(state => state)",
+          "job_adaptor" => "@openfn/language-common@latest",
+          "workflow_id" => workflow.id
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
 
-        reloaded = AiAssistant.get_session!(session.id)
-        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+      reloaded = AiAssistant.get_session!(session.id)
+      user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
 
-        assert is_nil(user_msg.job_id)
-        assert user_msg.meta["unsaved_job"]["id"] == unknown_job_id
-      end)
+      assert is_nil(user_msg.job_id)
+      assert user_msg.meta["unsaved_job"]["id"] == unknown_job_id
     end
 
-    @tag :capture_log
     test "stores follow_run_id in message.meta when provided",
          %{
            socket: socket,
@@ -672,28 +671,26 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      with_testing_mode(:manual, fn ->
-        # Simulate user selecting a run and checking "Send logs"
-        ref =
-          push(socket, "new_message", %{
-            "content" => "Help me debug these logs",
-            "follow_run_id" => run.id,
-            "attach_logs" => true
-          })
+      # Simulate user selecting a run and checking "Send logs"
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help me debug these logs",
+          "follow_run_id" => run.id,
+          "attach_logs" => true
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
 
-        # Verify follow_run_id was stored in message.meta
-        reloaded = AiAssistant.get_session!(session.id)
+      # Verify follow_run_id was stored in message.meta
+      reloaded = AiAssistant.get_session!(session.id)
 
-        user_msg =
-          Enum.find(reloaded.messages, fn msg ->
-            msg.role == :user && msg.content == "Help me debug these logs"
-          end)
+      user_msg =
+        Enum.find(reloaded.messages, fn msg ->
+          msg.role == :user && msg.content == "Help me debug these logs"
+        end)
 
-        assert user_msg.meta["follow_run_id"] == run.id
-      end)
+      assert user_msg.meta["follow_run_id"] == run.id
     end
   end
 
@@ -846,7 +843,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "handle_in unsaved job with proper metadata" do
-    @tag :capture_log
     test "creates session for unsaved job with all metadata", %{
       socket: socket,
       workflow: workflow,
@@ -1038,7 +1034,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "handle_in retry_message" do
-    @tag :capture_log
     test "successfully retries a failed message", %{
       socket: socket,
       job: job,
@@ -1135,7 +1130,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "handle_info message broadcasts" do
-    @tag :capture_log
     test "broadcasts new assistant message on success", %{
       socket: socket,
       job: job,
@@ -1143,6 +1137,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
     } do
       {:ok, session} =
         AiAssistant.create_session(job, user, "Initial message", [])
+
+      [%{args: args}] =
+        all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
+
+      perform_job(Lightning.AiAssistant.MessageProcessor, args)
 
       {:ok, _, socket} =
         subscribe_and_join(
@@ -1277,7 +1276,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "follow_run_id parameter" do
-    @tag :capture_log
     test "sets follow_run_id when joining existing session", %{
       socket: socket,
       job: job,
@@ -1309,7 +1307,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert updated_session.meta["follow_run_id"] == run_id
     end
 
-    @tag :capture_log
     test "includes follow_run_id in meta when creating new session", %{
       socket: socket,
       job: job,
@@ -1338,7 +1335,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "workflow_template with code parameter" do
-    @tag :capture_log
     test "includes code parameter when creating session", %{
       socket: socket,
       project: project
@@ -1370,7 +1366,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert user_message.code == code
     end
 
-    @tag :capture_log
     test "includes code and errors in new_message for workflow_template", %{
       socket: socket,
       project: project,
@@ -1655,7 +1650,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "message status without assistant message" do
-    @tag :capture_log
     test "handles success status when no assistant message exists", %{
       socket: socket,
       job: job,
@@ -1785,7 +1779,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "new_message with attach_io_data" do
-    @tag :capture_log
     test "extracts attach_io_data and step_id from params", %{
       socket: socket,
       job: job,
@@ -1795,140 +1788,128 @@ defmodule LightningWeb.AiAssistantChannelTest do
       step = insert(:step, job: job)
 
       # Use manual mode to prevent AI response from being generated inline
-      with_testing_mode(:manual, fn ->
-        {:ok, session} =
-          AiAssistant.create_session(job, user, "Initial message", [])
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
 
-        {:ok, _, socket} =
-          subscribe_and_join(
-            socket,
-            AiAssistantChannel,
-            "ai_assistant:job_code:#{session.id}",
-            %{}
-          )
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
 
-        # Push message with attach_io_data and step_id
-        ref =
-          push(socket, "new_message", %{
-            "content" => "Help me analyze this run",
-            "job_id" => job.id,
-            "attach_io_data" => true,
-            "step_id" => step.id
-          })
+      # Push message with attach_io_data and step_id
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help me analyze this run",
+          "job_id" => job.id,
+          "attach_io_data" => true,
+          "step_id" => step.id
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
-        assert message.content == "Help me analyze this run"
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
+      assert message.content == "Help me analyze this run"
 
-        # Verify the session meta contains the message_options
-        updated_session = AiAssistant.get_session!(session.id)
-        message_options = updated_session.meta["message_options"]
-        assert message_options["attach_io_data"] == true
-        assert message_options["step_id"] == step.id
-      end)
+      # Verify the session meta contains the message_options
+      updated_session = AiAssistant.get_session!(session.id)
+      message_options = updated_session.meta["message_options"]
+      assert message_options["attach_io_data"] == true
+      assert message_options["step_id"] == step.id
     end
 
-    @tag :capture_log
     test "stores attach_io_data false when not provided", %{
       socket: socket,
       job: job,
       user: user
     } do
-      with_testing_mode(:manual, fn ->
-        {:ok, session} =
-          AiAssistant.create_session(job, user, "Initial message", [])
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
 
-        {:ok, _, socket} =
-          subscribe_and_join(
-            socket,
-            AiAssistantChannel,
-            "ai_assistant:job_code:#{session.id}",
-            %{}
-          )
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
 
-        ref =
-          push(socket, "new_message", %{
-            "content" => "Help me",
-            "job_id" => job.id
-          })
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help me",
+          "job_id" => job.id
+        })
 
-        assert_reply ref, :ok, %{message: _message}
+      assert_reply ref, :ok, %{message: _message}
 
-        # Verify attach_io_data is false by default
-        updated_session = AiAssistant.get_session!(session.id)
-        message_options = updated_session.meta["message_options"]
-        assert message_options["attach_io_data"] == false
-      end)
+      # Verify attach_io_data is false by default
+      updated_session = AiAssistant.get_session!(session.id)
+      message_options = updated_session.meta["message_options"]
+      assert message_options["attach_io_data"] == false
     end
   end
 
   describe "extract_message_options edge cases" do
-    @tag :capture_log
     test "handles attach_code and attach_logs for job_code", %{
       socket: socket,
       job: job,
       user: user
     } do
       # Use manual mode to prevent AI response from being generated inline
-      with_testing_mode(:manual, fn ->
-        {:ok, session} =
-          AiAssistant.create_session(job, user, "Initial message", [])
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
 
-        {:ok, _, socket} =
-          subscribe_and_join(
-            socket,
-            AiAssistantChannel,
-            "ai_assistant:job_code:#{session.id}",
-            %{}
-          )
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
 
-        # Test with both attach_code and attach_logs true
-        ref =
-          push(socket, "new_message", %{
-            "content" => "Help with logs",
-            "attach_code" => true,
-            "attach_logs" => true
-          })
+      # Test with both attach_code and attach_logs true
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help with logs",
+          "attach_code" => true,
+          "attach_logs" => true
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
-      end)
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
     end
 
-    @tag :capture_log
     test "handles attach_code false for job_code", %{
       socket: socket,
       job: job,
       user: user
     } do
       # Use manual mode to prevent AI response from being generated inline
-      with_testing_mode(:manual, fn ->
-        {:ok, session} =
-          AiAssistant.create_session(job, user, "Initial message", [])
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
 
-        {:ok, _, socket} =
-          subscribe_and_join(
-            socket,
-            AiAssistantChannel,
-            "ai_assistant:job_code:#{session.id}",
-            %{}
-          )
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
 
-        # Test with attach_code explicitly false
-        ref =
-          push(socket, "new_message", %{
-            "content" => "Help without code",
-            "attach_code" => false
-          })
+      # Test with attach_code explicitly false
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help without code",
+          "attach_code" => false
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
-      end)
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
     end
   end
 
   describe "extract_session_options edge cases" do
-    @tag :capture_log
     test "creates workflow_template session without follow_run_id", %{
       socket: socket,
       job: job,
@@ -1953,7 +1934,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       refute Map.has_key?(session.meta, "follow_run_id")
     end
 
-    @tag :capture_log
     test "creates workflow_template session without code", %{
       socket: socket,
       project: project
@@ -1984,7 +1964,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "attach_io_data in new session (first message)" do
-    @tag :capture_log
     test "includes attach_io_data and step_id when creating new session", %{
       socket: socket,
       job: job,
@@ -2017,7 +1996,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["step_id"] == step.id
     end
 
-    @tag :capture_log
     test "includes attach_code and attach_logs when creating new session", %{
       socket: socket,
       job: job,
@@ -2046,7 +2024,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["log"] == true
     end
 
-    @tag :capture_log
     test "excludes message_options when not opted in", %{
       socket: socket,
       job: job,
@@ -2072,7 +2049,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       refute Map.has_key?(session.meta, "message_options")
     end
 
-    @tag :capture_log
     test "attach_io_data defaults to false when step_id provided without attach_io_data",
          %{
            socket: socket,
@@ -2566,7 +2542,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "collaborative session behavior" do
-    @tag :capture_log
     test "broadcasts user_message when user sends a message", %{
       socket: socket,
       job: job,
@@ -2583,22 +2558,19 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      with_testing_mode(:manual, fn ->
-        ref = push(socket, "new_message", %{"content" => "Test collaborative"})
+      ref = push(socket, "new_message", %{"content" => "Test collaborative"})
 
-        assert_reply ref, :ok, %{message: _message}
+      assert_reply ref, :ok, %{message: _message}
 
-        # The user_message should be broadcast to all subscribers
-        assert_broadcast "user_message", %{message: broadcast_message}
-        assert broadcast_message.content == "Test collaborative"
-        assert broadcast_message.role == "user"
-        # Message should include user info for attribution
-        assert broadcast_message.user.first_name != nil
-        assert broadcast_message.user.last_name != nil
-      end)
+      # The user_message should be broadcast to all subscribers
+      assert_broadcast "user_message", %{message: broadcast_message}
+      assert broadcast_message.content == "Test collaborative"
+      assert broadcast_message.role == "user"
+      # Message should include user info for attribution
+      assert broadcast_message.user.first_name != nil
+      assert broadcast_message.user.last_name != nil
     end
 
-    @tag :capture_log
     test "broadcasts message_processing when AI is processing", %{
       socket: socket,
       job: job,
@@ -2631,7 +2603,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert_broadcast "message_processing", %{session_id: ^session_id}
     end
 
-    @tag :capture_log
     test "broadcasts new_message to all subscribers on AI response", %{
       socket: socket,
       job: job,
@@ -2639,6 +2610,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
     } do
       {:ok, session} =
         AiAssistant.create_session(job, user, "Initial message", [])
+
+      [%{args: args}] =
+        all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
+
+      perform_job(Lightning.AiAssistant.MessageProcessor, args)
 
       {:ok, _, socket} =
         subscribe_and_join(
@@ -2666,7 +2642,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message.role == "assistant"
     end
 
-    @tag :capture_log
     test "broadcasts message_error on AI failure", %{
       socket: socket,
       job: job,
@@ -2711,7 +2686,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       }
     end
 
-    @tag :capture_log
     test "broadcasts message_error on failed status", %{
       socket: socket,
       job: job,
@@ -2756,7 +2730,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       }
     end
 
-    @tag :capture_log
     test "messages include user info for attribution", %{
       socket: socket,
       job: job,
@@ -2785,7 +2758,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       end
     end
 
-    @tag :capture_log
     test "any project member can access session", %{
       project: project,
       job: job,
@@ -2818,7 +2790,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert length(response.messages) > 0
     end
 
-    @tag :capture_log
     test "messages sent by different users show correct attribution", %{
       project: project,
       job: job,
@@ -2869,7 +2840,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "handle_unsaved_job_message/6" do
-    @tag :capture_log
     test "saves message with all unsaved job fields captured in meta", %{
       socket: socket,
       user: user,
@@ -2896,36 +2866,33 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      with_testing_mode(:manual, fn ->
-        ref =
-          push(socket, "new_message", %{
-            "content" => "help me debug",
-            "job_id" => unsaved_job_id,
-            "job_name" => "My Unsaved Job",
-            "job_body" => "fn(state => state)",
-            "job_adaptor" => "@openfn/language-common@1.5.0",
-            "workflow_id" => workflow.id
-          })
+      ref =
+        push(socket, "new_message", %{
+          "content" => "help me debug",
+          "job_id" => unsaved_job_id,
+          "job_name" => "My Unsaved Job",
+          "job_body" => "fn(state => state)",
+          "job_adaptor" => "@openfn/language-common@1.5.0",
+          "workflow_id" => workflow.id
+        })
 
-        assert_reply ref, :ok, %{message: message}
-        assert message.role == "user"
-        assert message.content == "help me debug"
-        assert message.status in ["pending", "success"]
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
+      assert message.content == "help me debug"
+      assert message.status in ["pending", "success"]
 
-        # All fields are persisted in the user message's meta["unsaved_job"]
-        reloaded = AiAssistant.get_session!(session.id)
-        user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
-        unsaved_job = user_msg.meta["unsaved_job"]
+      # All fields are persisted in the user message's meta["unsaved_job"]
+      reloaded = AiAssistant.get_session!(session.id)
+      user_msg = Enum.find(reloaded.messages, &(&1.role == :user))
+      unsaved_job = user_msg.meta["unsaved_job"]
 
-        assert unsaved_job["id"] == unsaved_job_id
-        assert unsaved_job["name"] == "My Unsaved Job"
-        assert unsaved_job["body"] == "fn(state => state)"
-        assert unsaved_job["adaptor"] == "@openfn/language-common@1.5.0"
-        assert unsaved_job["workflow_id"] == workflow.id
-      end)
+      assert unsaved_job["id"] == unsaved_job_id
+      assert unsaved_job["name"] == "My Unsaved Job"
+      assert unsaved_job["body"] == "fn(state => state)"
+      assert unsaved_job["adaptor"] == "@openfn/language-common@1.5.0"
+      assert unsaved_job["workflow_id"] == workflow.id
     end
 
-    @tag :capture_log
     test "broadcasts user_message so other collaborators see the new message", %{
       socket: socket,
       user: user,
@@ -2952,19 +2919,17 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      with_testing_mode(:manual, fn ->
-        push(socket, "new_message", %{
-          "content" => "explain the code",
-          "job_id" => unsaved_job_id,
-          "job_name" => "Collab Job",
-          "job_body" => "fn(s) => s",
-          "workflow_id" => workflow.id
-        })
+      push(socket, "new_message", %{
+        "content" => "explain the code",
+        "job_id" => unsaved_job_id,
+        "job_name" => "Collab Job",
+        "job_body" => "fn(s) => s",
+        "workflow_id" => workflow.id
+      })
 
-        assert_broadcast "user_message", %{message: broadcast_msg}
-        assert broadcast_msg.content == "explain the code"
-        assert broadcast_msg.role == "user"
-      end)
+      assert_broadcast "user_message", %{message: broadcast_msg}
+      assert broadcast_msg.content == "explain the code"
+      assert broadcast_msg.role == "user"
     end
   end
 end

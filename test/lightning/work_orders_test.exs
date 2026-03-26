@@ -73,6 +73,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.starting_trigger.id == trigger.id
       assert run.dataclip_id == dataclip.id
+      assert run.queue == "default"
 
       assert run.options == %Lightning.Runs.RunOptions{
                enable_job_logs: workflow.enable_job_logs,
@@ -89,6 +90,58 @@ defmodule Lightning.WorkOrdersTest do
       assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
+    end
+
+    @tag trigger_type: :webhook
+    test "with a sync webhook trigger (after_completion)", context do
+      %{workflow: existing_workflow} = context
+
+      job = build(:job)
+      trigger = build(:trigger, type: :webhook, webhook_reply: :after_completion)
+
+      workflow =
+        build(:workflow, project: existing_workflow.project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      trigger = trigger |> Repo.reload!()
+      dataclip = insert(:dataclip)
+
+      {:ok, workorder} =
+        WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
+
+      [run] = workorder.runs
+      assert run.queue == "fast_lane"
+    end
+
+    @tag trigger_type: :webhook
+    test "with a sync webhook trigger (custom)", context do
+      %{workflow: existing_workflow} = context
+
+      job = build(:job)
+      trigger = build(:trigger, type: :webhook, webhook_reply: :custom)
+
+      workflow =
+        build(:workflow, project: existing_workflow.project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      trigger = trigger |> Repo.reload!()
+      dataclip = insert(:dataclip)
+
+      {:ok, workorder} =
+        WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
+
+      [run] = workorder.runs
+      assert run.queue == "fast_lane"
     end
 
     test "with a webhook trigger (without runs)", context do
@@ -142,6 +195,7 @@ defmodule Lightning.WorkOrdersTest do
 
       assert run.starting_trigger.id == trigger.id
       assert run.snapshot_id == snapshot.id
+      assert run.queue == "default"
 
       assert run.options == %Lightning.Runs.RunOptions{
                enable_job_logs: workflow.enable_job_logs,
@@ -217,6 +271,7 @@ defmodule Lightning.WorkOrdersTest do
              }
 
       assert run.priority == :immediate
+      assert run.queue == "manual"
       assert run.created_by.id == user.id
       assert run.snapshot_id == snapshot.id
 
@@ -331,6 +386,7 @@ defmodule Lightning.WorkOrdersTest do
              "Retrying automatically picks the newest snapshot for a workflow"
 
       assert retry_run.state == :available
+      assert retry_run.queue == "manual"
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
@@ -1537,6 +1593,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.work_order_id == workorder.id
       assert retry_run.snapshot_id == snapshot.id
       assert retry_run.state == :available
+      assert retry_run.queue == "default"
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"
@@ -2219,6 +2276,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.created_by_id == user.id
       assert retry_run.work_order_id == run.work_order_id
       assert retry_run.state == :available
+      assert retry_run.queue == "default"
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == [],
              "retrying a run from the start should not copy over steps"

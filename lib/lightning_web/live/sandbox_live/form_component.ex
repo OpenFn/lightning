@@ -107,8 +107,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")
       |> noreply()
     else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+      {:error, %Ecto.Changeset{}} ->
+        changeset =
+          socket.assigns
+          |> base_struct()
+          |> form_changeset(params, parent.id)
+          |> Map.put(:action, :validate)
 
         if changeset.errors[:raw_name] do
           socket
@@ -159,8 +163,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
          |> put_flash(:info, "Sandbox updated")
          |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+      {:error, %Ecto.Changeset{}} ->
+        changeset =
+          socket.assigns
+          |> base_struct()
+          |> form_changeset(params, get_parent_id(socket.assigns))
+          |> Map.put(:action, :validate)
 
         {:noreply,
          socket

@@ -61,9 +61,6 @@ export default {
     //     <div class="phx-click-loading:animate-ping">
     //
     plugin(({ addVariant }) =>
-      addVariant('phx-no-feedback', ['.phx-no-feedback&', '.phx-no-feedback &'])
-    ),
-    plugin(({ addVariant }) =>
       addVariant('phx-click-loading', [
         '.phx-click-loading&',
         '.phx-click-loading &',
@@ -122,6 +119,42 @@ export default {
               display: 'inline-block',
               width: size,
               height: size,
+            };
+          },
+        },
+        { values }
+      );
+    }),
+    // Embeds Lucide icons (https://lucide.dev) into your app.css bundle
+    // Only a subset of icons are vendored. Add more SVGs to vendor/lucide/optimized/
+    //
+    plugin(function ({ matchComponents, theme }) {
+      let iconsDir = path.join(
+        __dirname,
+        './vendor/lucide/optimized/24/outline'
+      );
+      let values: Record<string, { name: string; fullPath: string }> = {};
+      fs.readdirSync(iconsDir).forEach(file => {
+        let name = path.basename(file, '.svg');
+        values[name] = { name, fullPath: path.join(iconsDir, file) };
+      });
+      matchComponents(
+        {
+          lucide: ({ name, fullPath }) => {
+            let content = fs
+              .readFileSync(fullPath)
+              .toString()
+              .replace(/\r?\n|\r/g, '');
+            return {
+              [`--lucide-${name}`]: `url('data:image/svg+xml;utf8,${content}')`,
+              '-webkit-mask': `var(--lucide-${name})`,
+              mask: `var(--lucide-${name})`,
+              'mask-repeat': 'no-repeat',
+              'background-color': 'currentColor',
+              'vertical-align': 'middle',
+              display: 'inline-block',
+              width: theme('spacing.6'),
+              height: theme('spacing.6'),
             };
           },
         },

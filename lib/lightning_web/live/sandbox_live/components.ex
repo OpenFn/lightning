@@ -201,6 +201,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :changeset, :any, required: true
   attr :descendants, :list, default: []
   attr :diverged_workflows, :list, default: []
+  attr :source_workflows, :list, required: true
+  attr :selected_workflow_ids, :any, required: true
 
   def merge_modal(assigns) do
     assigns =
@@ -258,15 +260,30 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
 
           <p class="text-gray-700">
-            This will merge all workflows from <strong>{@sandbox.name}</strong>
-            into <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>,
-            then close <strong>{@sandbox.name}</strong>
+            This will overwrite the selected workflows in
+            <strong>
+              {get_selected_target_label(
+                @target_options,
+                @merge_form[:target_id].value
+              )}
+            </strong>
+            with the versions from <strong>{@sandbox.name}</strong>,
+            then delete <strong>{@sandbox.name}</strong>
             <%= if @descendant_count == 1 do %>
               and its child sandbox <strong>{List.first(@descendants).name}</strong>
             <% end %>
             <%= if @descendant_count > 1 do %>
               and its {@descendant_count} child sandboxes
-            <% end %>. This action cannot be undone.
+            <% end %>.
+            Any changes in
+            <strong>
+              {get_selected_target_label(
+                @target_options,
+                @merge_form[:target_id].value
+              )}
+            </strong>
+            that conflict with <strong>{@sandbox.name}</strong>
+            will be lost.
           </p>
 
           <%= if @descendant_count > 1 do %>
@@ -304,39 +321,64 @@ defmodule LightningWeb.SandboxLive.Components do
             </Common.alert>
           <% end %>
 
-          <%= if @diverged_workflows != [] do %>
-            <Common.alert
-              id="merge-divergence-alert"
-              type="danger"
-              header="Target project has diverged"
-            >
-              <:message>
-                <p class="mb-2">
-                  The following workflow(s) have been modified in
-                  <strong>
-                    {get_selected_target_label(
-                      @target_options,
-                      @merge_form[:target_id].value
-                    )}
-                  </strong>
-                  since this sandbox was created. Merging may result in lost changes to:
-                </p>
-                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
-                  <li :for={workflow_name <- @diverged_workflows}>
-                    {workflow_name}
-                  </li>
-                </ul>
-                <p>
-                  Are you sure you wish to proceed?
-                </p>
-              </:message>
-            </Common.alert>
-          <% end %>
+          <div class="border border-gray-200 rounded-md overflow-hidden">
+            <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+              <span class="text-sm font-medium text-gray-700">
+                Workflows to merge
+              </span>
+              <button
+                type="button"
+                class="text-sm text-indigo-600 hover:text-indigo-500"
+                phx-click="toggle-all-workflows"
+              >
+                {if MapSet.size(@selected_workflow_ids) == length(@source_workflows),
+                  do: "Deselect all",
+                  else: "Select all"}
+              </button>
+            </div>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={wf <- @source_workflows}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-workflow"
+                phx-value-id={wf.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_workflow_ids, wf.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-800">{wf.name}</span>
+                <span
+                  :if={wf.is_diverged}
+                  class="flex items-center gap-1 text-xs text-amber-600"
+                  title="This workflow has been modified in the target since this sandbox was created"
+                >
+                  Target modified
+                </span>
+                <span
+                  :if={wf.is_new}
+                  class="flex items-center gap-1 text-xs text-blue-600"
+                  title="This workflow doesn't exist in the target — it will be created"
+                >
+                  New
+                </span>
+                <span
+                  :if={wf.is_deleted}
+                  class="flex items-center gap-1 text-xs text-red-600"
+                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                >
+                  Deleted in sandbox
+                </span>
+              </li>
+            </ul>
+          </div>
 
           <Common.alert
             id="merge-beta-warning"
-            type="warning"
-            header="Beta feature warning"
+            type="danger"
+            header="This action cannot be undone"
           >
             <:message>
               Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.

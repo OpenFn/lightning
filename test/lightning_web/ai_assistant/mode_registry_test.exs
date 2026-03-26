@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistant.ModeRegistryTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   import Mox
 
   alias LightningWeb.Live.AiAssistant.ModeRegistry

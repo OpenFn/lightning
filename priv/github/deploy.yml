@@ -15,7 +15,7 @@ jobs:
       contents: write
     steps:
       - name: openfn deploy
-        uses: openfn/cli-deploy-action@v1.0.0
+        uses: openfn/cli-deploy-action@v1
         with:
           secret_input: ${{ secrets.<%= @api_secret_name %> }}
           config_path_input: '<%= @config_path %>'

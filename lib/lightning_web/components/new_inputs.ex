@@ -427,12 +427,15 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors =
+      if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
     assigns
     |> maybe_assign_radio_checked()
     |> assign(field: nil)
     |> assign(
       :errors,
-      Enum.map(field.errors, &LightningWeb.CoreComponents.translate_error(&1))
+      Enum.map(errors, &LightningWeb.CoreComponents.translate_error(&1))
     )
     |> assign_new(:name, fn ->
       if assigns.multiple, do: field.name <> "[]", else: field.name
@@ -443,7 +446,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "checkbox"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
         <.checkbox_element {assigns} />
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
@@ -455,7 +458,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label :if={@label} class="mb-2" for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
         <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
@@ -513,7 +516,7 @@ defmodule LightningWeb.Components.NewInputs do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label :if={@label} class="mb-2" for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
@@ -605,7 +608,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
+    <div class={@stretch && "h-full"}>
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
@@ -624,7 +627,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "codearea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
+    <div class={@stretch && "h-full"}>
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
@@ -651,7 +654,7 @@ defmodule LightningWeb.Components.NewInputs do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
@@ -666,11 +669,11 @@ defmodule LightningWeb.Components.NewInputs do
           placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-            "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+            "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @class,
             @errors == [] &&
               "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
-            @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+            @errors != [] &&
               "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
           ]}
           {@rest}
@@ -737,7 +740,6 @@ defmodule LightningWeb.Components.NewInputs do
       id={"#{@id}-container"}
       class="tag-input-container"
       phx-hook="TagInput"
-      phx-feedback-for={@name}
       data-standalone-mode={@standalone}
       data-text-el={"#{@id}_raw"}
       data-hidden-el={@id}
@@ -760,7 +762,7 @@ defmodule LightningWeb.Components.NewInputs do
           placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-            "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+            "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @errors == [] &&
               "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
             @errors != [] &&
@@ -965,7 +967,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label :if={@label} for={@id} class="mb-2">
         {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
@@ -1032,7 +1034,7 @@ defmodule LightningWeb.Components.NewInputs do
       value={@value}
       class={[
         "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-        "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+        "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
         @errors == [] &&
           "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
@@ -1073,7 +1075,7 @@ defmodule LightningWeb.Components.NewInputs do
         "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
         "block w-full focus:ring-0",
         "sm:text-sm sm:leading-6",
-        "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
+        "overflow-y-auto",
         @errors == [] &&
           "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
@@ -1198,12 +1200,17 @@ defmodule LightningWeb.Components.NewInputs do
   attr :field, Phoenix.HTML.FormField, required: true
 
   def errors(assigns) do
+    errors =
+      if Phoenix.Component.used_input?(assigns.field),
+        do: assigns.field.errors,
+        else: []
+
     assigns =
       assigns
       |> assign(
         :errors,
         Enum.map(
-          assigns.field.errors,
+          errors,
           &LightningWeb.CoreComponents.translate_error(&1)
         )
       )
@@ -1224,7 +1231,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <p
       data-tag="error_message"
-      class="phx-no-feedback:hidden mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
+      class="mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       {render_slot(@inner_block)}
