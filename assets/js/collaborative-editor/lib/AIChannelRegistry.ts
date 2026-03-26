@@ -138,8 +138,8 @@ export class AIChannelRegistry {
   private streamingBuffer = '';
   private streamingDrainPos = 0;
   private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
-  // ms between letters. 15ms ≈ 65 chars/sec.
-  private static readonly WORD_INTERVAL_MS = 15;
+  // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
+  private static readonly LETTER_INTERVAL_MS = 15;
   // Callback to run after the buffer finishes draining (e.g., finalize message)
   private streamingDrainCallback: (() => void) | null = null;
 
@@ -174,7 +174,7 @@ export class AIChannelRegistry {
       const char = this.streamingBuffer[this.streamingDrainPos];
       this.streamingDrainPos += 1;
       this.store._appendStreamingChunk(char);
-    }, AIChannelRegistry.WORD_INTERVAL_MS);
+    }, AIChannelRegistry.LETTER_INTERVAL_MS);
   }
 
   private stopDraining(): void {
