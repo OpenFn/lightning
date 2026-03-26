@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+
 ## [2.16.0] - 2026-03-24
 
 ## [2.16.0-pre3] - 2026-03-23
