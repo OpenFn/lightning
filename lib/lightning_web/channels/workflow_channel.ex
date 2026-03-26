@@ -896,8 +896,7 @@ defmodule LightningWeb.WorkflowChannel do
       require_email_verification:
         Lightning.Config.check_flag?(:require_email_verification),
       kafka_triggers_enabled: Lightning.Config.kafka_triggers_enabled?(),
-      max_dataclip_size_bytes:
-        Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
+      max_dataclip_size_bytes: Lightning.Config.max_dataclip_size_bytes()
     }
   end
 
