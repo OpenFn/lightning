@@ -625,47 +625,52 @@ export function MessageList({
                     </div>
                   )}
 
-                  {!isStreaming(message) && (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-400 animate-[fade-in-keys_0.3s_ease-in]">
-                      <span>{formatTimestamp(message.inserted_at)}</span>
-                      <span>•</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void (async () => {
-                            const success = await doCopy(message.content);
-                            if (success) {
-                              setCopiedMessageId(message.id);
-                              setTimeout(() => setCopiedMessageId(null), 2000);
-                            }
-                          })();
-                        }}
+                  <div
+                    className={cn(
+                      'mt-2 flex items-center gap-2 text-xs text-gray-400',
+                      isStreaming(message)
+                        ? 'invisible'
+                        : 'animate-[fade-in-keys_0.3s_ease-in]'
+                    )}
+                  >
+                    <span>{formatTimestamp(message.inserted_at)}</span>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const success = await doCopy(message.content);
+                          if (success) {
+                            setCopiedMessageId(message.id);
+                            setTimeout(() => setCopiedMessageId(null), 2000);
+                          }
+                        })();
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 transition-colors duration-200',
+                        copiedMessageId === message.id
+                          ? 'text-green-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      )}
+                      title={
+                        copiedMessageId === message.id
+                          ? 'Copied!'
+                          : 'Copy message'
+                      }
+                    >
+                      <span
                         className={cn(
-                          'flex items-center gap-1 transition-colors duration-200',
+                          'h-3 w-3',
                           copiedMessageId === message.id
-                            ? 'text-green-600'
-                            : 'text-gray-400 hover:text-gray-600'
+                            ? 'hero-check'
+                            : 'hero-clipboard-document'
                         )}
-                        title={
-                          copiedMessageId === message.id
-                            ? 'Copied!'
-                            : 'Copy message'
-                        }
-                      >
-                        <span
-                          className={cn(
-                            'h-3 w-3',
-                            copiedMessageId === message.id
-                              ? 'hero-check'
-                              : 'hero-clipboard-document'
-                          )}
-                        />
-                        <span>
-                          {copiedMessageId === message.id ? 'Copied' : 'Copy'}
-                        </span>
-                      </button>
-                    </div>
-                  )}
+                      />
+                      <span>
+                        {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
