@@ -450,18 +450,22 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   def sidebar_footer(assigns) do
+    label = Lightning.release()[:label]
+    compact? = is_binary(label) and not String.contains?(label, " ")
+    assigns = assign(assigns, :compact_version?, compact?)
+
     ~H"""
     <div class="flex-shrink-0 sidebar-footer flex flex-col border-t border-white/10 pt-3 mt-3">
       <%!-- Expanded branding: centered --%>
-      <div class="sidebar-branding-expanded h-14 text-center">
-        <div class="pt-2 pb-1">
+      <div class="sidebar-branding-expanded h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
+        <div class="pt-2">
           <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
         <LightningWeb.Components.Common.version_chip />
       </div>
       <%!-- Collapsed branding: centered --%>
-      <div class="sidebar-branding-collapsed hidden h-14 text-center">
-        <div class="pt-2 pb-1">
+      <div class="sidebar-branding-collapsed hidden h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
+        <div class={if @compact_version?, do: "pt-2", else: "pt-0.5"}>
           <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
         </div>
         <LightningWeb.Components.Common.version_chip />

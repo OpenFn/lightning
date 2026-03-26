@@ -14,6 +14,7 @@ defmodule Lightning.Workflows.Trigger do
   use Lightning.Schema
   import Ecto.Query
 
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
 
@@ -32,6 +33,7 @@ defmodule Lightning.Workflows.Trigger do
              :comment,
              :custom_path,
              :cron_expression,
+             :cron_cursor_job_id,
              :type,
              :enabled,
              :webhook_reply
@@ -45,6 +47,7 @@ defmodule Lightning.Workflows.Trigger do
     field :webhook_reply, Ecto.Enum, values: @webhook_reply_types
 
     belongs_to :workflow, Workflow
+    belongs_to :cron_cursor_job, Job
 
     has_many :edges, Lightning.Workflows.Edge, foreign_key: :source_trigger_id
 
@@ -67,6 +70,17 @@ defmodule Lightning.Workflows.Trigger do
     |> change(attrs)
   end
 
+  @doc """
+  Returns true if the trigger uses a synchronous webhook reply mode
+  (i.e., the HTTP connection is held open waiting for a response).
+  """
+  @spec synchronous?(t()) :: boolean()
+  def synchronous?(%__MODULE__{webhook_reply: reply})
+      when reply in [:after_completion, :custom],
+      do: true
+
+  def synchronous?(%__MODULE__{}), do: false
+
   @doc false
   def changeset(trigger, attrs) do
     trigger
@@ -88,6 +102,7 @@ defmodule Lightning.Workflows.Trigger do
       :type,
       :workflow_id,
       :cron_expression,
+      :cron_cursor_job_id,
       :has_auth_method,
       :webhook_reply
     ])
@@ -123,6 +138,7 @@ defmodule Lightning.Workflows.Trigger do
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> put_change(:cron_cursor_job_id, nil)
         |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
 
@@ -136,6 +152,7 @@ defmodule Lightning.Workflows.Trigger do
       :kafka ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> put_change(:cron_cursor_job_id, nil)
         |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
 

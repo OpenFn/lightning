@@ -1,5 +1,7 @@
 defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
+
+  @moduletag :capture_log
   import Mox
   import Lightning.Factories
 

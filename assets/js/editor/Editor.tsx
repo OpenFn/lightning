@@ -226,6 +226,7 @@ export default function Editor({
 
   const handleEditorDidMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      window.monaco = monaco;
       setMonaco(monaco);
 
       editor.addCommand(

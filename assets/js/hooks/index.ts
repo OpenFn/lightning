@@ -760,17 +760,48 @@ export const Copy = {
       }
 
       if (text) {
-        const element = this.el;
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            this.showCopiedTooltip();
-          })
-          .catch(err => {
-            console.error('Failed to copy text: ', err);
-          });
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              this.showCopiedTooltip();
+              this.execPhxThen();
+            })
+            .catch(() => {
+              // Clipboard API rejected (e.g. insecure context) — try execCommand fallback
+              this.execCommandCopy(text);
+            });
+        } else {
+          this.execCommandCopy(text);
+        }
       }
     });
+  },
+
+  execCommandCopy(text: string) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+      this.showCopiedTooltip();
+      this.execPhxThen();
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  },
+
+  execPhxThen() {
+    const js = this.el.getAttribute('phx-then');
+    if (js) {
+      this.liveSocket.execJS(this.el, js);
+    }
   },
 
   showCopiedTooltip() {
@@ -1014,6 +1045,7 @@ export const LocalTimeConverter = {
       const textElement = this.el.querySelector('.datetime-text');
       if (textElement && displayTime) {
         textElement.textContent = displayTime;
+        textElement.className = 'datetime-text';
       }
     } catch (err) {
       console.error('Failed to convert timestamp to display time:', err);

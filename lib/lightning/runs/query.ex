@@ -210,7 +210,8 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, ipw],
       r.state == :available and
-        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+        (r.queue == "fast_lane" or
+           is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
     )
     |> select([r, ipw], %{id: r.id, project_id: ipw.project_id})
     |> order_by([r, ipw], asc: r.priority, asc: r.inserted_at)

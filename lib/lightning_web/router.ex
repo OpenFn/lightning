@@ -145,6 +145,7 @@ defmodule LightningWeb.Router do
     post "/users/two-factor", UserTOTPController, :create
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
+    get "/download/collections/:name", CollectionsController, :download
     get "/dataclip/body/:id", DataclipController, :show
 
     get "/projects/:project_id/jobs/:job_id/dataclips",
@@ -235,6 +236,7 @@ defmodule LightningWeb.Router do
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index
+        live "/history/channels", RunLive.Index, :channel_logs
         live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
@@ -244,6 +246,10 @@ defmodule LightningWeb.Router do
         live "/w/new", WorkflowLive.Collaborate, :new
         live "/w/:id/legacy", WorkflowLive.Edit, :edit
         live "/w/:id", WorkflowLive.Collaborate, :edit
+
+        live "/channels", ChannelLive.Index, :index
+        live "/channels/new", ChannelLive.Index, :new
+        live "/channels/:id/edit", ChannelLive.Index, :edit
 
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new

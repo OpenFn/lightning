@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   alias LightningWeb.Live.AiAssistant.Modes.JobCode
 
   describe "chat_input_disabled?/1" do

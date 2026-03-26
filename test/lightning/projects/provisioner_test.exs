@@ -690,19 +690,21 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       changeset = Provisioner.parse_document(project, body)
 
-      assert %{action: :delete} =
+      assert %{action: :update, changes: %{deleted_at: deleted_at}} =
                changeset
                |> Ecto.Changeset.get_change(:workflows)
                |> Enum.find(fn workflow_changeset ->
                  workflow_changeset |> Ecto.Changeset.get_field(:id) ==
                    workflow_id
                end),
-             "The workflow should be marked for deletion"
+             "The workflow should be soft-deleted"
+
+      assert %DateTime{} = deleted_at
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows == [],
-             "The workflow should be removed from the project"
+             "The soft-deleted workflow should be excluded from the project"
     end
 
     test "marking a new/changed record for deletion", %{
