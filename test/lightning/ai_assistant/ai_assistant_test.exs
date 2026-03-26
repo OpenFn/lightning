@@ -3793,6 +3793,65 @@ defmodule Lightning.AiAssistantTest do
       assert is_nil(assistant_msg.job_id)
     end
 
+    test "handles non-string job_key in attachment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/test/Some-job"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix code",
+          user: user
+        })
+
+      # job_key is an integer instead of a string
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "attachments" => [
+            %{
+              "type" => "job_code",
+              "content" => "fn(state => state);",
+              "job_key" => 12345
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "fix code",
+          workflow_yaml: "name: test",
+          page: "workflows/test/Some-job"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.code == "fn(state => state);"
+      # Non-string job_key won't match any job name
+      assert is_nil(assistant_msg.job_id)
+    end
+
     test "handles non-list attachments", %{
       user: user,
       project: project,
