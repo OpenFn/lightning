@@ -453,26 +453,14 @@ export function MessageList({
     };
   }, [streamingContent]);
 
-  if (messages.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center h-full"
-        data-testid="empty-state"
-      >
-        <div className="flex items-center gap-2 text-gray-600">
-          <span className="hero-arrow-path h-5 w-5 animate-spin" />
-          <span className="text-sm">Loading session...</span>
-        </div>
-      </div>
-    );
-  }
-
   // Build a unified message list: real messages + optional streaming placeholder.
   // The streaming message renders in the same loop as finalized messages,
   // so the transition from streaming → final is a seamless in-place update
   // instead of a DOM unmount/remount flash.
+  // NOTE: This useMemo must be BEFORE the early return to maintain consistent
+  // hook count across renders (React rules of hooks).
   const displayMessages = useMemo(() => {
-    if (streamingContent) {
+    if (streamingContent && messages.length > 0) {
       return [
         ...messages,
         {
@@ -487,6 +475,20 @@ export function MessageList({
   }, [messages, streamingContent]);
 
   const isStreaming = (message: Message) => message.id === STREAMING_MESSAGE_ID;
+
+  if (messages.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        data-testid="empty-state"
+      >
+        <div className="flex items-center gap-2 text-gray-600">
+          <span className="hero-arrow-path h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading session...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto" data-testid="message-list">
