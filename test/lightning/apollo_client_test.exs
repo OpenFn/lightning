@@ -767,6 +767,65 @@ defmodule Lightning.ApolloClientTest do
     end
   end
 
+  describe "global_chat_stream/2" do
+    test "sends streaming request with all parameters" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        %{method: :post, url: url, body: body} = env
+        assert url == "http://localhost:3000/services/global_chat/stream"
+
+        decoded = Jason.decode!(body)
+        assert decoded["content"] == "Help me build a workflow"
+        assert decoded["api_key"] == "api_key"
+        assert decoded["workflow_yaml"] == "workflow:\n  name: test"
+        assert decoded["page"] == "/projects/abc/workflows/def/jobs/ghi"
+        assert decoded["options"] == %{"stream" => true}
+
+        assert decoded["history"] == [
+                 %{"role" => "user", "content" => "previous"}
+               ]
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.global_chat_stream("Help me build a workflow",
+          workflow_yaml: "workflow:\n  name: test",
+          page: "/projects/abc/workflows/def/jobs/ghi",
+          history: [%{role: "user", content: "previous"}]
+        )
+    end
+
+    test "filters nil values from payload" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
+        decoded = Jason.decode!(body)
+        refute Map.has_key?(decoded, "workflow_yaml")
+        refute Map.has_key?(decoded, "page")
+        assert decoded["options"] == %{"stream" => true}
+        assert decoded["content"] == "Hello"
+        assert decoded["history"] == []
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("Hello")
+    end
+
+    test "handles network errors" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} =
+               ApolloClient.global_chat_stream("test")
+    end
+  end
+
   # Private helper function to stub Apollo configuration
   defp stub_apollo_config(
          endpoint \\ "http://localhost:3000",
