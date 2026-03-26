@@ -158,9 +158,7 @@ export async function submitManualRun(
 
   if (!response.ok) {
     if (response.status === 413) {
-      throw new Error(
-        'Dataclip is too large. Please reduce the size and try again.'
-      );
+      throw new Error('Dataclip is too large. Reduce the size and try again.');
     }
     let errorMessage = 'Failed to submit manual run';
     try {
