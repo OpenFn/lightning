@@ -3735,6 +3735,64 @@ defmodule Lightning.AiAssistantTest do
       assert is_nil(assistant_msg.job_id)
     end
 
+    test "handles resolve_job_from_key with nil workflow_id", %{
+      user: user,
+      project: project
+    } do
+      # Session without a workflow (workflow_id is nil)
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: nil,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/test/Some-job"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix code",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "attachments" => [
+            %{
+              "type" => "job_code",
+              "content" => "fn(state => state);",
+              "job_key" => "Some-job"
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "fix code",
+          workflow_yaml: "name: test",
+          page: "workflows/test/Some-job"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.code == "fn(state => state);"
+      # workflow_id is nil, so job can't be resolved
+      assert is_nil(assistant_msg.job_id)
+    end
+
     test "handles non-list attachments", %{
       user: user,
       project: project,
