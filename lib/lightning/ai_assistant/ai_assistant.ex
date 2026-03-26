@@ -1059,6 +1059,39 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Queries the Apollo global chat endpoint with SSE streaming.
+
+  The global chat unifies job and workflow assistance behind a router.
+  Uses the same streaming pipeline as job_chat and workflow_chat.
+  """
+  @spec query_global_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_global_stream(session, content, opts \\ []) do
+    workflow_yaml = Keyword.get(opts, :workflow_yaml)
+    page = Keyword.get(opts, :page)
+    history = build_history(session)
+
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    case ApolloClient.global_chat_stream(content,
+           workflow_yaml: workflow_yaml,
+           page: page,
+           history: history
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(
+          session,
+          body,
+          &build_global_message(&1, session)
+        )
+
+      error ->
+        handle_error_response(error, session)
+    end
+  end
+
+  @doc """
   Resets a message status to pending and enqueues it for reprocessing.
   Handles both the database update and Oban job creation atomically.
   """
@@ -1421,6 +1454,83 @@ defmodule Lightning.AiAssistant do
 
     {message_attrs, opts}
   end
+
+  defp build_global_message(body, session) do
+    attachments = body["attachments"] || []
+
+    # Determine if user is viewing a specific job from the page URL
+    page = get_in(session.meta || %{}, ["message_options", "page"])
+    on_job_step = page && length(String.split(page, "/")) >= 3
+
+    job_code_attachment =
+      Enum.find(attachments, fn
+        %{"type" => "job_code"} -> true
+        _ -> false
+      end)
+
+    workflow_yaml =
+      Enum.find_value(attachments, fn
+        %{"type" => "workflow_yaml", "content" => content} -> content
+        _ -> nil
+      end)
+
+    # On job step: prefer job_code (renders as code diff)
+    # On workflow overview: prefer workflow_yaml (renders as YAML card)
+    {code, job} =
+      if on_job_step && job_code_attachment do
+        job =
+          if job_code_attachment["job_key"] && session.workflow_id do
+            resolve_job_from_key(
+              session.workflow_id,
+              job_code_attachment["job_key"]
+            )
+          end
+
+        {job_code_attachment["content"], job}
+      else
+        {workflow_yaml, nil}
+      end
+
+    message_attrs = %{
+      role: :assistant,
+      content: body["response"]
+    }
+
+    message_attrs =
+      if job do
+        Map.put(message_attrs, :job, job)
+      else
+        message_attrs
+      end
+
+    opts = [
+      usage: body["usage"] || %{},
+      meta: body["meta"],
+      code: code
+    ]
+
+    {message_attrs, opts}
+  end
+
+  defp resolve_job_from_key(workflow_id, job_key) do
+    import Ecto.Query
+
+    Lightning.Workflows.Job
+    |> where([j], j.workflow_id == ^workflow_id)
+    |> Repo.all()
+    |> Enum.find(fn job ->
+      normalize_job_name(job.name) == normalize_job_name(job_key)
+    end)
+  end
+
+  defp normalize_job_name(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+  end
+
+  defp normalize_job_name(_), do: ""
 
   defp build_history(session) do
     messages = session.messages || []
