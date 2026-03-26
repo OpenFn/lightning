@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to export all collection items as a JSON file.
+  [#4527](https://github.com/OpenFn/lightning/issues/4527)
+
 ### Changed
 
 - Allow users to select which workflow to merge for sandbox merging

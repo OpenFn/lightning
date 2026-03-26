@@ -996,6 +996,81 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
+  describe "GET /download/collections/:name" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    setup %{conn: conn} do
+      {:ok, conn: put_req_header(conn, "accept", "text/html,*/*")}
+    end
+
+    test "downloads collection items as JSON array", %{
+      conn: conn,
+      project: project
+    } do
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "key-1",
+        value: ~s({"name": "Alice"})
+      )
+
+      insert(:collection_item,
+        collection: collection,
+        key: "key-2",
+        value: ~s({"name": "Bob"})
+      )
+
+      response = get(conn, ~p"/download/collections/#{collection.name}")
+
+      assert response.status == 200
+
+      assert {"content-type", "application/json; charset=utf-8"} in response.resp_headers
+
+      assert Enum.any?(response.resp_headers, fn
+               {"content-disposition", value} ->
+                 String.contains?(value, "attachment") and
+                   String.contains?(value, collection.name)
+
+               _ ->
+                 false
+             end)
+
+      items = Jason.decode!(response.resp_body)
+      assert length(items) == 2
+      assert Enum.any?(items, fn item -> item["key"] == "key-1" end)
+      assert Enum.any?(items, fn item -> item["key"] == "key-2" end)
+    end
+
+    test "downloads empty collection as empty JSON array", %{
+      conn: conn,
+      project: project
+    } do
+      collection = insert(:collection, project: project)
+
+      response = get(conn, ~p"/download/collections/#{collection.name}")
+
+      assert response.status == 200
+      assert Jason.decode!(response.resp_body) == []
+    end
+
+    test "returns 401 when user is not a project member", %{conn: conn} do
+      other_project = insert(:project)
+      collection = insert(:collection, project: other_project)
+
+      response = get(conn, ~p"/download/collections/#{collection.name}")
+
+      assert response.status == 401
+    end
+
+    test "returns 404 for non-existent collection", %{conn: conn} do
+      response = get(conn, ~p"/download/collections/non-existent")
+
+      assert response.status == 404
+    end
+  end
+
   defp encode_decode(item) do
     item
     |> Jason.encode!()
