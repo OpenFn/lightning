@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 
 - AI assistant responses now stream in real-time
+- Add experimental global AI assistant option for users with experimental
+  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
   [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
