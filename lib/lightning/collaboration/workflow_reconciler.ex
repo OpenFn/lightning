@@ -167,6 +167,7 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
     delete_ops =
       phantom_ids
       |> Enum.map(&find_index_in_array(jobs_array, &1))
+      |> Enum.reject(&is_nil/1)
       |> Enum.sort(:desc)
       |> Enum.map(&{:delete, jobs_array, &1})
 
@@ -242,6 +243,7 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
     delete_ops =
       phantom_ids
       |> Enum.map(&find_index_in_array(edges_array, &1))
+      |> Enum.reject(&is_nil/1)
       |> Enum.sort(:desc)
       |> Enum.map(&{:delete, edges_array, &1})
 
@@ -311,6 +313,7 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
     delete_ops =
       phantom_ids
       |> Enum.map(&find_index_in_array(triggers_array, &1))
+      |> Enum.reject(&is_nil/1)
       |> Enum.sort(:desc)
       |> Enum.map(&{:delete, triggers_array, &1})
 
