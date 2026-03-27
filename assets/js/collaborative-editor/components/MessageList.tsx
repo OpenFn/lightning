@@ -411,6 +411,8 @@ export function MessageList({
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const userScrolledAwayRef = useRef(false);
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
@@ -432,23 +434,34 @@ export function MessageList({
     }
   }, [isLoading]);
 
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  // Reset scroll tracking when streaming starts
+  useEffect(() => {
+    if (streamingContent) {
+      userScrolledAwayRef.current = false;
+    }
+  }, [!!streamingContent]);
+
+  // Auto-scroll during streaming, but stop if user scrolls away.
+  // Uses requestAnimationFrame to coalesce multiple updates per frame
+  // instead of setTimeout debounce (which defers scrolling until streaming pauses).
+  const scrollRafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (streamingContent && messagesEndRef.current) {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      scrollTimeoutRef.current = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: 'instant',
-          block: 'end',
+    if (streamingContent && !userScrolledAwayRef.current) {
+      if (!scrollRafRef.current) {
+        scrollRafRef.current = requestAnimationFrame(() => {
+          messagesEndRef.current?.scrollIntoView({
+            behavior: 'instant',
+            block: 'end',
+          });
+          scrollRafRef.current = 0;
         });
-      }, 100);
+      }
     }
     return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = 0;
       }
     };
   }, [streamingContent]);
@@ -491,7 +504,19 @@ export function MessageList({
   }
 
   return (
-    <div className="h-full overflow-y-auto" data-testid="message-list">
+    <div
+      ref={containerRef}
+      className="h-full overflow-y-auto"
+      data-testid="message-list"
+      onScroll={() => {
+        const el = containerRef.current;
+        if (el && streamingContent) {
+          const isNearBottom =
+            el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+          userScrolledAwayRef.current = !isNearBottom;
+        }
+      }}
+    >
       {displayMessages.map(message => (
         <div
           key={message.id}
@@ -509,7 +534,11 @@ export function MessageList({
               >
                 <div className="space-y-3">
                   <MarkdownContent
-                    content={message.content}
+                    content={
+                      isStreaming(message)
+                        ? message.content.replace(/\n+$/, '')
+                        : message.content
+                    }
                     showAddButtons={
                       !isStreaming(message) && showAddButtons && !message.code
                     }
