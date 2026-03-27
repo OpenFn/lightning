@@ -126,6 +126,10 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
       end)
 
     # Step 4: Compute all operations before opening the transaction
+    # Note: positions are intentionally not reconciled here. The provisioner
+    # changeset does not accept positions (validate_extraneous_params rejects
+    # them), so the DB value can never be newer than the Y.Doc. Reconciling
+    # positions would risk overwriting unsaved node drags from open editor tabs.
     job_ops = compute_job_ops(jobs_array, ydoc_jobs, workflow.jobs, body_texts)
     edge_ops = compute_edge_ops(edges_array, ydoc_edges, workflow.edges)
 
