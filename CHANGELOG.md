@@ -17,16 +17,24 @@ and this project adheres to
 
 ### Added
 
+- Allow users to export all collection items as a JSON file.
+  [#4527](https://github.com/OpenFn/lightning/issues/4527)
+
 ### Changed
 
 - Allow users to select which workflow to merge for sandbox merging
   [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
 
 ### Fixed
 
 - Fix version-stuck bug where the collaborative editor shows stale state after a
   sandbox merge or CLI deploy.
   [#4535](https://github.com/OpenFn/lightning/issues/4535)
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+- Fix AI assistant authorization for support users on projects with support
+  access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
 
 ## [2.16.0] - 2026-03-24
 

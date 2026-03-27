@@ -39,10 +39,9 @@ defmodule LightningWeb.TokensLiveTest do
              |> element("div[data-entity='new_token']")
              |> has_element?()
 
-      assert token_live |> element("button#copy") |> has_element?()
-
-      assert token_live |> element("button#copy") |> render_click() =~
-               "Token copied successfully"
+      assert token_live
+             |> element("button#copy[phx-hook='Copy']")
+             |> has_element?()
 
       assert token_live
              |> element("input#new_token")
