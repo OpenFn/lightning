@@ -105,6 +105,39 @@ export const useAIIsLoading = () => {
 };
 
 /**
+ * Get streaming content
+ */
+export const useAIStreamingContent = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingContent)
+  );
+};
+
+/**
+ * Get streaming changes (code edits or workflow YAML sent before text streams)
+ */
+export const useAIStreamingChanges = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingChanges)
+  );
+};
+
+/**
+ * Get streaming status
+ */
+export const useAIStreamingStatus = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingStatus)
+  );
+};
+
+/**
  * Get sending state
  */
 export const useAIIsSending = () => {
