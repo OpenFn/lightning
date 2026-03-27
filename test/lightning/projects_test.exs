@@ -381,6 +381,19 @@ defmodule Lightning.ProjectsTest do
 
       assert Lightning.Projects.project_steps_query(p2)
              |> Repo.aggregate(:count, :id) == 1
+
+      refute Repo.get(Dataclip, p1_dataclip.id),
+             "Dataclips should be deleted as part of project deletion"
+
+      p2_dataclip_record = Repo.get!(Dataclip, p2_dataclip.id)
+
+      error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(p2_dataclip_record)
+        end
+
+      assert error.constraint =~ "dataclip_id",
+             "RESTRICT should prevent deletion of dataclips referenced by runs or steps"
     end
 
     test "change_project/1 returns a project changeset" do

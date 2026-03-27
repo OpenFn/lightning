@@ -685,6 +685,37 @@ defmodule Lightning.AccountsTest do
       assert Repo.all(Credentials.Credential)
              |> Enum.any?(fn x -> x.user_id == user_2.id end)
     end
+
+    test "purging a user with associated runs does not silently succeed" do
+      user = insert(:user)
+
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _run =
+        insert(:run,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      result = Accounts.purge_user(user.id)
+
+      # purge_user should propagate the delete_user failure, not return :ok
+      assert {:error, _changeset} = result
+
+      # The user should still exist since deletion was blocked by RESTRICT
+      assert Repo.get(User, user.id)
+    end
   end
 
   describe "The default Oban function Accounts.perform/1" do
