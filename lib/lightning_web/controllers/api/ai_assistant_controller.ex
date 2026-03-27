@@ -118,9 +118,7 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp authorize_access("workflow_template", project, user) do
-    project_user = Projects.get_project_user(project, user)
-
-    case Permissions.can(:workflows, :access_read, user, project_user) do
+    case Permissions.can(:workflows, :access_read, user, project) do
       :ok -> :ok
       {:error, _reason} -> {:error, :forbidden}
     end
@@ -156,12 +154,7 @@ defmodule LightningWeb.API.AiAssistantController do
   defp check_unsaved_job_access(_, _user), do: :ok
 
   defp check_workflow_access(workflow, user) do
-    project_user =
-      Enum.find(workflow.project.project_users, fn pu ->
-        pu.user_id == user.id
-      end)
-
-    case Permissions.can(:workflows, :access_read, user, project_user) do
+    case Permissions.can(:workflows, :access_read, user, workflow.project) do
       :ok -> :ok
       {:error, _reason} -> {:error, :forbidden}
     end

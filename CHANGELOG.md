@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- AI assistant responses now stream in real-time
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+- Allow users to export all collection items as a JSON file.
+  [#4527](https://github.com/OpenFn/lightning/issues/4527)
+
 ### Changed
 
 - Allow users to select which workflow to merge for sandbox merging
@@ -27,6 +32,10 @@ and this project adheres to
 
 - Proper warn & error for exceeding max dataclip size
   [#4524](https://github.com/OpenFn/lightning/issues/4524)
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+- Fix AI assistant authorization for support users on projects with support
+  access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
 
 ## [2.16.0] - 2026-03-24
 

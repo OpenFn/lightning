@@ -765,30 +765,43 @@ export const Copy = {
             .writeText(text)
             .then(() => {
               this.showCopiedTooltip();
+              this.execPhxThen();
             })
-            .catch(err => {
-              console.error('Failed to copy text: ', err);
+            .catch(() => {
+              // Clipboard API rejected (e.g. insecure context) — try execCommand fallback
+              this.execCommandCopy(text);
             });
         } else {
-          // Fallback for insecure contexts (HTTP over non-localhost)
-          const textarea = document.createElement('textarea');
-          textarea.value = text;
-          textarea.style.position = 'fixed';
-          textarea.style.opacity = '0';
-          document.body.appendChild(textarea);
-          textarea.select();
-
-          try {
-            document.execCommand('copy');
-            this.showCopiedTooltip();
-          } catch (err) {
-            console.error('Failed to copy text: ', err);
-          } finally {
-            document.body.removeChild(textarea);
-          }
+          this.execCommandCopy(text);
         }
       }
     });
+  },
+
+  execCommandCopy(text: string) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+      this.showCopiedTooltip();
+      this.execPhxThen();
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  },
+
+  execPhxThen() {
+    const js = this.el.getAttribute('phx-then');
+    if (js) {
+      this.liveSocket.execJS(this.el, js);
+    }
   },
 
   showCopiedTooltip() {

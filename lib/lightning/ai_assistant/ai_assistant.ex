@@ -930,6 +930,42 @@ defmodule Lightning.AiAssistant do
     |> handle_ai_response(session, &build_job_message/1)
   end
 
+  @doc """
+  Queries the AI service for job assistance with streaming.
+
+  Same as `query/3` but uses SSE streaming. Text chunks and status updates
+  are broadcast via PubSub as they arrive. The complete message is saved
+  to the database when the stream finishes.
+  """
+  @spec query_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_stream(session, content, opts \\ []) do
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    initial_context = %{
+      expression: session.expression,
+      adaptor: session.adaptor,
+      log: session.logs
+    }
+
+    context = build_context(initial_context, opts)
+    history = build_history(session)
+    meta = session.meta || %{}
+
+    case ApolloClient.job_chat_stream(content,
+           context: context,
+           history: history,
+           meta: meta
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(session, body, &build_job_message/1)
+
+      error ->
+        handle_error_response(error, session)
+    end
+  end
+
   defp build_context(context, opts) do
     Enum.reduce(opts, context, fn opt, acc ->
       case opt do
@@ -991,6 +1027,35 @@ defmodule Lightning.AiAssistant do
       meta: meta
     )
     |> handle_ai_response(session, &build_workflow_message/1)
+  end
+
+  @doc """
+  Queries the AI service for workflow template generation with streaming.
+
+  Same as `query_workflow/3` but uses SSE streaming.
+  """
+  @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_workflow_stream(session, content, opts \\ []) do
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
+    meta = Keyword.get(opts, :meta, session.meta || %{})
+
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    case ApolloClient.workflow_chat_stream(content,
+           code: code,
+           errors: errors,
+           history: build_history(session),
+           meta: meta
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(session, body, &build_workflow_message/1)
+
+      error ->
+        handle_error_response(error, session)
+    end
   end
 
   @doc """
@@ -1125,6 +1190,167 @@ defmodule Lightning.AiAssistant do
         |> String.slice(0, @title_max_length)
         |> String.replace(~r/[.!?,;:]$/, "")
     end
+  end
+
+  # All SSE events from Apollo come through the Node.js bridge with an
+  # explicit `event:` type prefix. The SSE middleware parses them into
+  # maps with both :event and :data keys:
+  #
+  #   event: log\ndata: "..."                    → %{event: "log", data: "..."}
+  #   event: content_block_delta\ndata: {...}    → %{event: "content_block_delta", data: "..."}
+  #   event: complete\ndata: {...}               → %{event: "complete", data: "..."}
+  #   event: error\ndata: {...}                  → %{event: "error", data: "..."}
+  #
+  # When stream: true is sent in the payload, Apollo forwards Anthropic
+  # streaming events (content_block_start, content_block_delta, etc.)
+  # as typed SSE events. The `complete` event always arrives last with
+  # the full response payload.
+
+  defp process_stream(session, body_stream, message_builder) do
+    complete_payload =
+      body_stream
+      |> Enum.reduce(nil, fn sse_event, acc ->
+        handle_sse_event(session.id, sse_event, acc)
+      end)
+
+    if complete_payload do
+      {message_attrs, opts} = message_builder.(complete_payload)
+      save_message(session, message_attrs, opts)
+    else
+      {:error, "Stream ended without complete response"}
+    end
+  rescue
+    e ->
+      broadcast_streaming_error(
+        session.id,
+        "Streaming failed: #{Exception.message(e)}"
+      )
+
+      {:error, Exception.message(e)}
+  catch
+    :exit, reason ->
+      message = "Streaming connection lost"
+
+      broadcast_streaming_error(session.id, message)
+
+      Logger.error(
+        "[AI Assistant] Stream exited for session #{session.id}: #{inspect(reason)}"
+      )
+
+      {:error, message}
+  end
+
+  # Bridge event: complete — final payload (same shape as sync response)
+  defp handle_sse_event(_session_id, %{event: "complete", data: data}, _acc) do
+    case Jason.decode(data) do
+      {:ok, payload} when is_map(payload) -> payload
+      _ -> nil
+    end
+  end
+
+  # Bridge event: error
+  defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"message" => message}} ->
+        broadcast_streaming_error(session_id, message)
+
+      {:ok, error} ->
+        broadcast_streaming_error(session_id, inspect(error))
+
+      _ ->
+        broadcast_streaming_error(session_id, data)
+    end
+
+    acc
+  end
+
+  # Bridge event: changes — structured data (code edits or workflow YAML)
+  # sent before text streaming begins
+  defp handle_sse_event(session_id, %{event: "changes", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, changes} when is_map(changes) ->
+        broadcast_streaming_changes(session_id, changes)
+
+      _ ->
+        :ok
+    end
+
+    acc
+  end
+
+  # Bridge event: log — skip Python stdout
+  defp handle_sse_event(_session_id, %{event: "log"}, acc), do: acc
+
+  # Anthropic streaming events forwarded through the bridge
+  # (e.g. content_block_delta, content_block_start, message_stop, etc.)
+  defp handle_sse_event(session_id, %{data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"type" => _} = event} ->
+        handle_stream_event(session_id, event)
+
+      _ ->
+        :ok
+    end
+
+    acc
+  end
+
+  # Catch-all for anything unexpected
+  defp handle_sse_event(_session_id, _event, acc), do: acc
+
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_delta",
+         "delta" => %{"type" => "text_delta", "text" => text}
+       }) do
+    broadcast_streaming_chunk(session_id, text)
+  end
+
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_start",
+         "content_block" => %{"type" => "thinking"}
+       }) do
+    broadcast_streaming_status(session_id, "Thinking...")
+  end
+
+  # Apollo sends discrete thinking blocks as progress updates
+  # (e.g. "Searching documentation...", "Loading adaptor documentation...")
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_delta",
+         "delta" => %{"type" => "thinking_delta", "thinking" => text}
+       }) do
+    broadcast_streaming_status(session_id, text)
+  end
+
+  defp handle_stream_event(_session_id, _event), do: :ok
+
+  defp broadcast_streaming_chunk(session_id, content) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_chunk,
+       %{content: content, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_status(session_id, text) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_status, %{text: text, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_changes(session_id, changes) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_changes,
+       %{changes: changes, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_error(session_id, error) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_error, %{error: error, session_id: session_id}}
+    )
   end
 
   defp handle_ai_response(response, session, message_builder) do

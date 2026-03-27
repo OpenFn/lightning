@@ -136,6 +136,10 @@ export interface AIAssistantState {
   isLoading: boolean;
   isSending: boolean;
 
+  streamingContent: string | null;
+  streamingStatus: string | null;
+  streamingChanges: Record<string, unknown> | null;
+
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
   sessionListPagination: {
@@ -194,6 +198,10 @@ export interface AIAssistantStore {
     context: JobCodeContext | WorkflowTemplateContext
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
+  _appendStreamingChunk: (content: string) => void;
+  _setStreamingStatus: (text: string) => void;
+  _setStreamingChanges: (changes: Record<string, unknown>) => void;
+  _clearStreaming: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 
