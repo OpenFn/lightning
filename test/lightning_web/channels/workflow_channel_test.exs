@@ -3409,4 +3409,20 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_broadcast "job_code_applied", %{message_id: ^message_id}
     end
   end
+
+  describe "handle_info :workflow_updated_externally" do
+    test "pushes workflow_saved to the socket when the workflow is updated externally",
+         %{socket: socket, workflow: workflow} do
+      loaded_workflow =
+        Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+
+      send(socket.channel_pid, {:workflow_updated_externally, loaded_workflow})
+
+      assert_push "workflow_saved", %{
+        latest_snapshot_lock_version: lock_version
+      }
+
+      assert lock_version == loaded_workflow.lock_version
+    end
+  end
 end
