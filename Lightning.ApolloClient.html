@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-19333CA7.js"></script>
+    <script defer src="dist/sidebar_items-5872C45D.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -168,6 +168,16 @@ language descriptions</li></ol><h2 id="module-configuration" class="section-head
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#job_chat_stream/2" data-no-tooltip="" translate="no">job_chat_stream(content, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Requests AI assistance for job-specific tasks with SSE streaming.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#test/0" data-no-tooltip="" translate="no">test()</a>
 
       </div>
@@ -183,6 +193,16 @@ language descriptions</li></ol><h2 id="module-configuration" class="section-head
       </div>
 
         <div class="summary-synopsis"><p>Generates or improves workflow templates using AI assistance.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#workflow_chat_stream/2" data-no-tooltip="" translate="no">workflow_chat_stream(content, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Generates or improves workflow templates with SSE streaming.</p></div>
 
     </div>
 
@@ -302,6 +322,40 @@ Apollo job_chat service. The AI provides targeted assistance for coding tasks,
 error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_chat/2-parameters" class="section-heading"><a href="#job_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request for assistance</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:context</code> - Job context including expression code and adaptor info (default: %{})</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata like session IDs or user preferences (default: %{})</li></ul></li></ul><h2 id="job_chat/2-returns" class="section-heading"><a href="#job_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;history&quot;</code> - Updated conversation including AI response</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li><li><code class="inline">&quot;meta&quot;</code> - Updated metadata</li></ul>
   </section>
 </section>
+<section class="detail" id="job_chat_stream/2">
+
+    <span id="job_chat_stream/1"></span>
+
+  <div class="detail-header">
+    <a href="#job_chat_stream/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">job_chat_stream(content, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L156" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> job_chat_stream(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:opts/0">opts</a>()) :: <a href="https://hexdocs.pm/tesla/1.15.3/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+
+      </div>
+
+<p>Requests AI assistance for job-specific tasks with SSE streaming.</p><p>Same as <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> but connects to Apollo's streaming endpoint,
+returning the response body as a lazy <a href="https://hexdocs.pm/elixir/Stream.html"><code class="inline">Stream</code></a> of parsed SSE data strings.
+Each element is a raw JSON string that must be decoded with <a href="https://hexdocs.pm/jason/1.4.4/Jason.html#decode!/1"><code class="inline">Jason.decode!/1</code></a>.</p><p>The stream emits Anthropic-formatted events (<code class="inline">content_block_delta</code>, etc.)
+followed by a final <code class="inline">complete</code> event containing the full response payload
+(same shape as the synchronous <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> response).</p>
+  </section>
+</section>
 <section class="detail" id="test/0">
 
   <div class="detail-header">
@@ -362,6 +416,37 @@ ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-r
 <p>Generates or improves workflow templates using AI assistance.</p><p>Sends requests to the Apollo workflow_chat service to create complete workflow
 YAML definitions from natural language descriptions. Can also iteratively improve
 existing workflows based on validation errors or user feedback.</p><h2 id="workflow_chat/2-parameters" class="section-heading"><a href="#workflow_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - Natural language description of desired workflow functionality</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:code</code> - Optional existing workflow YAML to modify or improve</li><li><code class="inline">:errors</code> - Optional validation errors from previous workflow attempts</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata (default: %{})</li></ul></li></ul><h2 id="workflow_chat/2-returns" class="section-heading"><a href="#workflow_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;response&quot;</code> - Human-readable explanation of the generated workflow</li><li><code class="inline">&quot;response_yaml&quot;</code> - Complete workflow YAML definition</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li></ul>
+  </section>
+</section>
+<section class="detail" id="workflow_chat_stream/2">
+
+    <span id="workflow_chat_stream/1"></span>
+
+  <div class="detail-header">
+    <a href="#workflow_chat_stream/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">workflow_chat_stream(content, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> workflow_chat_stream(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:opts/0">opts</a>()) :: <a href="https://hexdocs.pm/tesla/1.15.3/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+
+      </div>
+
+<p>Generates or improves workflow templates with SSE streaming.</p><p>Same as <a href="#workflow_chat/2"><code class="inline">workflow_chat/2</code></a> but connects to Apollo's streaming endpoint.
+See <a href="#job_chat_stream/2"><code class="inline">job_chat_stream/2</code></a> for details on the stream format.</p>
   </section>
 </section>
 
