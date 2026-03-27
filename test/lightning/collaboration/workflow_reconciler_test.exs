@@ -780,6 +780,293 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
   end
 
+  describe "reconcile_workflow_from_db/2" do
+    setup %{user: _user} do
+      workflow =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      %{workflow: workflow}
+    end
+
+    test "phantom job (in Y.Doc but not in DB) is removed from the doc",
+         %{user: user, workflow: workflow} do
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      phantom_id = Ecto.UUID.generate()
+
+      Session.update_doc(session, fn doc ->
+        Yex.Doc.get_array(doc, "jobs")
+        |> Yex.Array.push(
+          Yex.MapPrelim.from(%{
+            "id" => phantom_id,
+            "name" => "phantom-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => ""
+          })
+        )
+      end)
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      doc = Session.get_doc(session)
+      jobs = Yex.Doc.get_array(doc, "jobs") |> Yex.Array.to_json()
+      job_ids = Enum.map(jobs, & &1["id"])
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      [original_job] = workflow.jobs
+      assert original_job.id in job_ids
+      refute phantom_id in job_ids
+    end
+
+    test "multiple phantom jobs are all removed from the doc",
+         %{user: user, workflow: workflow} do
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      phantom_ids = Enum.map(1..3, fn _ -> Ecto.UUID.generate() end)
+
+      Session.update_doc(session, fn doc ->
+        array = Yex.Doc.get_array(doc, "jobs")
+
+        Enum.each(phantom_ids, fn pid ->
+          Yex.Array.push(
+            array,
+            Yex.MapPrelim.from(%{
+              "id" => pid,
+              "name" => "p",
+              "adaptor" => "",
+              "body" => ""
+            })
+          )
+        end)
+      end)
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      doc = Session.get_doc(session)
+      jobs = Yex.Doc.get_array(doc, "jobs") |> Yex.Array.to_json()
+      job_ids = Enum.map(jobs, & &1["id"])
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      assert length(job_ids) == 1
+      [original_job] = workflow.jobs
+      assert original_job.id in job_ids
+      Enum.each(phantom_ids, fn pid -> refute pid in job_ids end)
+    end
+
+    test "job body is updated in the doc when it differs from DB",
+         %{user: user, workflow: workflow} do
+      [db_job] = workflow.jobs
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      Session.update_doc(session, fn doc ->
+        jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+        job_map =
+          Enum.find(jobs_array, fn m -> Yex.Map.fetch!(m, "id") == db_job.id end)
+
+        {:ok, body_text} = Yex.Map.fetch(job_map, "body")
+        len = Yex.Text.length(body_text)
+        if len > 0, do: Yex.Text.delete(body_text, 0, len)
+        Yex.Text.insert(body_text, 0, "stale editor body")
+      end)
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      doc = Session.get_doc(session)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_map =
+        Enum.find(jobs_array, fn m -> Yex.Map.fetch!(m, "id") == db_job.id end)
+
+      {:ok, body_text} = Yex.Map.fetch(job_map, "body")
+      body_string = Yex.Text.to_string(body_text)
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      assert body_string == db_job.body
+    end
+
+    test "no-op reconcile does not modify Y.Doc when doc is already in sync with DB",
+         %{user: user, workflow: workflow} do
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      [db_job] = workflow.jobs
+      doc = Session.get_doc(session)
+
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_map =
+        Enum.find(jobs_array, fn m -> Yex.Map.fetch!(m, "id") == db_job.id end)
+
+      name_before = Yex.Map.fetch!(job_map, "name")
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      name_after = Yex.Map.fetch!(job_map, "name")
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      assert name_before == name_after
+      assert name_after == db_job.name
+    end
+
+    test "phantom edge (in Y.Doc but not in DB) is removed from the doc",
+         %{user: user, workflow: workflow} do
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      phantom_edge_id = Ecto.UUID.generate()
+
+      Session.update_doc(session, fn doc ->
+        Yex.Doc.get_array(doc, "edges")
+        |> Yex.Array.push(
+          Yex.MapPrelim.from(%{
+            "id" => phantom_edge_id,
+            "condition_type" => "always",
+            "enabled" => true,
+            "source_trigger_id" => nil,
+            "source_job_id" => nil,
+            "target_job_id" => nil
+          })
+        )
+      end)
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      doc = Session.get_doc(session)
+
+      edge_ids =
+        Yex.Doc.get_array(doc, "edges")
+        |> Yex.Array.to_json()
+        |> Enum.map(& &1["id"])
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      [original_edge] = workflow.edges
+      assert original_edge.id in edge_ids
+      refute phantom_edge_id in edge_ids
+    end
+
+    test "phantom trigger (in Y.Doc but not in DB) is removed from the doc",
+         %{user: user, workflow: workflow} do
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      phantom_trigger_id = Ecto.UUID.generate()
+
+      Session.update_doc(session, fn doc ->
+        Yex.Doc.get_array(doc, "triggers")
+        |> Yex.Array.push(
+          Yex.MapPrelim.from(%{
+            "id" => phantom_trigger_id,
+            "type" => "webhook",
+            "enabled" => true,
+            "cron_expression" => nil,
+            "kafka_configuration" => nil
+          })
+        )
+      end)
+
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+
+      doc = Session.get_doc(session)
+
+      trigger_ids =
+        Yex.Doc.get_array(doc, "triggers")
+        |> Yex.Array.to_json()
+        |> Enum.map(& &1["id"])
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      [original_trigger] = workflow.triggers
+      assert original_trigger.id in trigger_ids
+      refute phantom_trigger_id in trigger_ids
+    end
+
+    test "new kafka trigger is inserted with kafka_configuration fields",
+         %{user: user, workflow: workflow} do
+      kafka_trigger =
+        insert(:trigger,
+          type: :kafka,
+          workflow: workflow,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      updated_workflow =
+        Lightning.Workflows.get_workflow(workflow.id,
+          include: [:jobs, :triggers, :edges]
+        )
+
+      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user)
+
+      doc = Session.get_doc(session)
+      triggers = Yex.Doc.get_array(doc, "triggers") |> Yex.Array.to_json()
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      kafka_t = Enum.find(triggers, &(&1["id"] == kafka_trigger.id))
+
+      assert kafka_t != nil, "kafka trigger should be inserted into Y.Doc"
+
+      assert %{"group_id" => _, "hosts_string" => _} =
+               kafka_t["kafka_configuration"]
+    end
+
+    test "trigger cron_expression is updated in the doc when it differs from DB",
+         %{user: user, workflow: workflow} do
+      [original_trigger] = workflow.triggers
+
+      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      Session.update_doc(session, fn doc ->
+        triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+        t_map =
+          Enum.find(triggers_array, fn m ->
+            Yex.Map.fetch!(m, "id") == original_trigger.id
+          end)
+
+        Yex.Map.set(t_map, "cron_expression", "stale_value")
+      end)
+
+      updated_trigger =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(original_trigger, cron_expression: "0 * * * *")
+        )
+
+      updated_workflow = %{workflow | triggers: [updated_trigger]}
+
+      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user)
+
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      t_map =
+        Enum.find(triggers_array, fn m ->
+          Yex.Map.fetch!(m, "id") == original_trigger.id
+        end)
+
+      cron_expression = Yex.Map.fetch!(t_map, "cron_expression")
+
+      Session.stop(session)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      assert cron_expression == "0 * * * *"
+    end
+  end
+
   defp find_in_ydoc_array(array, id) do
     array
     |> Enum.reduce_while(nil, fn item, _ ->

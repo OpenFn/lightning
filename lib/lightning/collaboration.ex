@@ -25,6 +25,7 @@ defmodule Lightning.Collaborate do
 
       Collaborate.start(user: user, workflow: workflow)
   """
+  alias Lightning.Accounts.User
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Session
@@ -36,6 +37,20 @@ defmodule Lightning.Collaborate do
 
   @spec start(opts :: Keyword.t()) :: GenServer.on_start()
   def start(opts) do
+    case do_start(opts) do
+      {:error, {:error, :shared_doc_not_found}} ->
+        # A SharedDoc was registered in :pg but died before the Session could
+        # observe it (0ms auto_exit race). Yield one ms — enough for the timer
+        # to fire and clear :pg — then try once more from scratch.
+        Process.sleep(1)
+        do_start(opts)
+
+      result ->
+        result
+    end
+  end
+
+  defp do_start(opts) do
     session_id = Ecto.UUID.generate()
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
@@ -64,13 +79,15 @@ defmodule Lightning.Collaborate do
     end
 
     # Start session for this user
+    user_id = if is_struct(user, User), do: user.id, else: nil
+
     SessionSupervisor.start_child({
       Session,
       workflow: workflow,
       user: user,
       parent_pid: parent_pid,
       document_name: document_name,
-      name: Registry.via({:session, "#{document_name}:#{session_id}", user.id})
+      name: Registry.via({:session, "#{document_name}:#{session_id}", user_id})
     })
   end
 
