@@ -273,7 +273,15 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      p1_step_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_output_dataclip = insert(:dataclip, body: %{result: "ok"}, project: p1)
+
+      p1_step_1 =
+        insert(:step,
+          input_dataclip: p1_dataclip,
+          output_dataclip: p1_output_dataclip,
+          job: e1.target_job
+        )
+
       p1_step_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
 
       insert(:workorder,
