@@ -3024,4 +3024,70 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert_broadcast "streaming_error", %{error: "connection lost"}
     end
   end
+
+  describe "support user authorization" do
+    test "support user can join workflow template session on project with allow_support_access" do
+      support_user =
+        insert(:user, support_user: true)
+
+      project =
+        project_fixture(
+          project_users: [],
+          allow_support_access: true
+        )
+
+      workflow =
+        workflow_fixture(project_id: project.id, name: "Support WF Tmpl")
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Build a workflow",
+        "workflow_id" => workflow.id
+      }
+
+      {:ok, _response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
+    end
+
+    test "support user cannot join AI session on project without allow_support_access" do
+      support_user =
+        insert(:user, support_user: true)
+
+      project =
+        project_fixture(
+          project_users: [],
+          allow_support_access: false
+        )
+
+      workflow =
+        workflow_fixture(project_id: project.id, name: "No Support WF")
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Help me",
+        "workflow_id" => workflow.id
+      }
+
+      {:error, %{reason: "unauthorized"}} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
+    end
+  end
 end

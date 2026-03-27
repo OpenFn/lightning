@@ -610,14 +610,12 @@ defmodule LightningWeb.AiAssistantChannel do
   defp check_workflow_access_by_id(workflow_id, user, permission) do
     workflow = Workflows.get_workflow(workflow_id)
     project = Projects.get_project(workflow.project_id)
-    project_user = Projects.get_project_user(project, user)
-    Permissions.can(:workflows, permission, user, project_user)
+    Permissions.can(:workflows, permission, user, project)
   end
 
   defp check_project_access(project_id, user, permission) do
     project = Projects.get_project(project_id)
-    project_user = Projects.get_project_user(project, user)
-    Permissions.can(:workflows, permission, user, project_user)
+    Permissions.can(:workflows, permission, user, project)
   end
 
   defp extract_session_options("job_code", params) do
