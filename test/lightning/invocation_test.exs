@@ -866,6 +866,85 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "search_workorders_for_cancel/2" do
+    test "returns workorders that have available runs" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      # Work order with available run — should be returned
+      wo_available =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        work_order: wo_available,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        state: :available
+      )
+
+      # Work order with claimed run — should NOT be returned
+      wo_claimed =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        work_order: wo_claimed,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        state: :claimed,
+        claimed_at: build(:timestamp)
+      )
+
+      found =
+        Invocation.search_workorders_for_cancel(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()})
+        )
+
+      assert [wo_available.id] == Enum.map(found, & &1.id)
+    end
+
+    test "includes workorders with wiped dataclips (unlike retry)" do
+      project = insert(:project)
+      wiped_dataclip = insert(:dataclip, wiped_at: Timex.now())
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: wiped_dataclip,
+        starting_trigger: trigger,
+        state: :available
+      )
+
+      found =
+        Invocation.search_workorders_for_cancel(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()})
+        )
+
+      assert [wo.id] == Enum.map(found, & &1.id)
+    end
+  end
+
   describe "search_workorders/1" do
     test "returns workorders ordered inserted at desc, with nulls first" do
       project = insert(:project)

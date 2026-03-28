@@ -536,11 +536,13 @@ defmodule Lightning.WorkOrders do
     project_id = Keyword.fetch!(opts, :project_id)
     work_order_ids = Enum.map(work_orders, & &1.id)
 
-    CancelManyWorkOrdersJob.new(%{
-      work_order_ids: work_order_ids,
-      project_id: project_id
-    })
-    |> Oban.insert(Lightning.Oban)
+    Oban.insert(
+      Lightning.Oban,
+      CancelManyWorkOrdersJob.new(%{
+        work_order_ids: work_order_ids,
+        project_id: project_id
+      })
+    )
   end
 
   def get_workorders_with_runs(workflow_id, run_id) do

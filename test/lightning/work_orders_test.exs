@@ -3058,4 +3058,44 @@ defmodule Lightning.WorkOrdersTest do
       end
     end
   end
+
+  describe "cancel_many_async/2" do
+    test "enqueues an Oban job to cancel work orders in the background" do
+      trigger = build(:trigger, type: :webhook)
+
+      workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> insert()
+
+      trigger = Repo.reload!(trigger)
+      snapshot = Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!()
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: wo,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :available
+        )
+
+      # With testing: :inline, the job executes immediately
+      assert {:ok, %Oban.Job{}} =
+               WorkOrders.cancel_many_async([wo],
+                 project_id: workflow.project_id
+               )
+
+      assert Repo.reload!(run).state == :cancelled
+    end
+  end
 end

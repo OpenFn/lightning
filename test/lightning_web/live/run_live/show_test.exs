@@ -533,6 +533,31 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       assert html =~ "already been claimed"
     end
+
+    test "cancel-run with nonexistent run shows error",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} =
+        WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      view |> element("#run-detail-#{run_id}") |> render_async()
+
+      html =
+        render_click(view, "cancel-run", %{
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      assert html =~ "Run not found."
+    end
   end
 
   defp select_step(view, run, job_name) do

@@ -1065,6 +1065,117 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       assert html =~ "Work order could not be cancelled"
     end
+
+    @tag role: :editor
+    test "cancel-run with nonexistent run shows error",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      html =
+        render_click(view, "cancel-run", %{"run_id" => Ecto.UUID.generate()})
+
+      assert html =~ "Run not found."
+    end
+
+    @tag role: :editor
+    test "cancel-run when run already claimed shows info flash",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :running,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :claimed,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          claimed_at: build(:timestamp)
+        )
+
+      run = List.first(pending_wo.runs)
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{running: true}
+          )
+        )
+
+      html = render_click(view, "cancel-run", %{"run_id" => run.id})
+
+      assert html =~ "no longer available"
+    end
+
+    @tag role: :viewer
+    test "viewers cannot cancel individual runs",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      html =
+        render_click(view, "cancel-run", %{"run_id" => Ecto.UUID.generate()})
+
+      assert html =~ "You are not authorized to perform this action."
+    end
+
+    @tag role: :editor
+    test "bulk cancel all matching work orders via async path",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      for _i <- 1..3 do
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+      end
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      # Select all
+      render_change(view, "toggle_all_selections", %{
+        all_selections: true
+      })
+
+      # Use "all" type to trigger the async path
+      result = render_click(view, "bulk-cancel", %{type: "all"})
+      {:ok, _view, html} = follow_redirect(result, conn)
+
+      assert html =~ "Cancelling runs for"
+      assert html =~ "work order"
+      assert html =~ "in the background"
+    end
   end
 
   describe "Export History" do
