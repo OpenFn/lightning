@@ -257,18 +257,6 @@
       <%!-- Search Bar --%>
       <div>
         <div class="mt-2">
-          <%= if search = get_change(@filters_changeset, :search_term) do %>
-            <div class="text-md text-gray-500 font-medium truncate mb-2">
-              {@page.total_entries}{if @page.total_entries >=
-                                         @string_search_limit,
-                                       do: "+"} work orders with runs matching "{search}"
-              <%= if @page.total_entries >= @string_search_limit do %>
-                <span class="text-xs text-gray">
-                  (try more specific filters)
-                </span>
-              <% end %>
-            </div>
-          <% end %>
           <div class="flex items-center gap-2 w-full">
             <.form
               :let={f}
@@ -376,7 +364,18 @@
         </div>
       </div>
     </div>
-
+    <%= if search = get_change(@filters_changeset, :search_term) do %>
+      <div class="text-sm text-gray-500 truncate m-2">
+        {@page.total_entries}{if @page.total_entries >=
+                                   @string_search_limit,
+                                 do: "+"} work orders with runs matching "{search}"
+        <%= if @page.total_entries >= @string_search_limit do %>
+          <span class="text-xs text-gray">
+            (try more specific filters)
+          </span>
+        <% end %>
+      </div>
+    <% end %>
     <div>
       <div class="mt-2">
         <.table id="work-orders-table" page={@page} url={@pagination_path}>
