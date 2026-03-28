@@ -523,8 +523,8 @@ defmodule LightningWeb.RunLive.IndexTest do
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
       html = render(view)
-      assert html =~ "Channel Requests"
-      assert html =~ "channel-request-filter-form"
+      assert html =~ "Channel is"
+      assert html =~ "channel_filter_dropdown"
     end
 
     test "channel logs tab shows empty state with no requests", %{

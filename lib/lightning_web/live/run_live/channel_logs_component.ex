@@ -2,10 +2,14 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
   @moduledoc false
   use LightningWeb, :live_component
 
+  import Ecto.Changeset, only: [get_change: 2]
+
   alias Lightning.Channels
   alias Lightning.Channels.SearchParams
   alias LightningWeb.Components.Common
   alias LightningWeb.RunLive.Components, as: RunComponents
+
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(assigns, socket) do
@@ -44,36 +48,68 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
     ~H"""
     <div>
       <%!-- Filters --%>
-      <div class="top-0 self-start mb-2">
-        <.form
-          :let={f}
-          for={@filters_changeset}
-          as={:filters}
-          id="channel-request-filter-form"
-          phx-change="apply_filters"
-          phx-target={@myself}
-        >
-          <div class="flex gap-2">
-            <div>
-              <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
-                Channel
-              </div>
-              <.input
-                type="select"
-                field={f[:channel_id]}
-                prompt="All Channels"
-                options={Enum.map(@channels, fn c -> {c.name, c.id} end)}
-                class="w-60"
-              />
-            </div>
-          </div>
-        </.form>
-      </div>
+      <div class="top-0 self-start mb-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <% selected_channel =
+              Enum.find(@channels, fn c ->
+                get_change(@filters_changeset, :channel_id) == c.id
+              end) %>
+            <.filter_chip
+              id="channel-filter-chip"
+              active={selected_channel != nil}
+              clear_fields={[{:channel_id, nil}]}
+              changeset={@filters_changeset}
+              target={@myself}
+              phx-click={show_dropdown("channel_filter_dropdown")}
+            >
+              Channel is
+              <%= if selected_channel do %>
+                {selected_channel.name}
+              <% else %>
+                any
+              <% end %>
+            </.filter_chip>
 
-      <div class="mt-2">
-        <div class="flex justify-between items-end">
-          <div class="text-md text-gray-500 font-medium truncate w-full">
-            Channel Requests
+            <div
+              class="hidden absolute left-0 z-10 mt-2 w-60 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
+              role="menu"
+              id="channel_filter_dropdown"
+              phx-click-away={hide_dropdown("channel_filter_dropdown")}
+            >
+              <div class="py-1" role="none">
+                <a
+                  href="#"
+                  phx-click={
+                    JS.push("apply_filters",
+                      target: @myself,
+                      value: %{filters: %{channel_id: nil}}
+                    )
+                    |> JS.hide(to: "#channel_filter_dropdown")
+                  }
+                  class={"#{if(selected_channel == nil, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                  role="menuitem"
+                >
+                  All Channels
+                </a>
+                <%= for channel <- @channels do %>
+                  <a
+                    href="#"
+                    phx-click={
+                      JS.push("apply_filters",
+                        target: @myself,
+                        value: %{filters: %{channel_id: channel.id}}
+                      )
+                      |> JS.hide(to: "#channel_filter_dropdown")
+                    }
+                    class={"#{if(selected_channel && selected_channel.id == channel.id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                    role="menuitem"
+                  >
+                    {channel.name}
+                  </a>
+                <% end %>
+              </div>
+            </div>
           </div>
         </div>
       </div>

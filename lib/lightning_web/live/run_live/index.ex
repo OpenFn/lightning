@@ -655,6 +655,22 @@ defmodule LightningWeb.RunLive.Index do
     date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 
+  defp format_date_range(date_after, date_before) do
+    case {date_after, date_before} do
+      {nil, nil} ->
+        "any time"
+
+      {after_date, nil} ->
+        "after #{maybe_humanize_date(after_date)}"
+
+      {nil, before_date} ->
+        "before #{maybe_humanize_date(before_date)}"
+
+      {after_date, before_date} ->
+        "#{maybe_humanize_date(after_date)} – #{maybe_humanize_date(before_date)}"
+    end
+  end
+
   defp append_to_page(socket, workorder) do
     %{page: page, async_page: async_page} = socket.assigns
 
