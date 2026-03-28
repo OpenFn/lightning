@@ -11,7 +11,6 @@ defmodule Lightning.Workflows.Scheduler do
     unique: [period: 59]
 
   alias Lightning.Invocation
-  alias Lightning.Repo
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.WorkOrders
@@ -38,19 +37,15 @@ defmodule Lightning.Workflows.Scheduler do
   defp invoke_cronjob(%Edge{target_job: job, source_trigger: trigger}) do
     with %{project_id: project_id} <- job.workflow,
          :ok <- WorkOrders.limit_run_creation(project_id) do
-      case last_state_for_job(job.id) do
+      dataclip = Invocation.get_next_cron_run_dataclip(trigger)
+
+      case dataclip do
         nil ->
           Logger.debug(fn ->
             # coveralls-ignore-start
             "Starting cronjob #{job.id} for the first time. (No previous final state.)"
             # coveralls-ignore-stop
           end)
-
-          # Add a facility to specify _which_ global state should be use as
-          # the first initial state for a cron-triggered job.
-          # The implementation would look like:
-          # default_state_for_job(id)
-          # %{id: uuid, type: :global, body: %{arbitrary: true}}
 
           WorkOrders.create_for(trigger,
             dataclip: %{
@@ -73,18 +68,6 @@ defmodule Lightning.Workflows.Scheduler do
             workflow: job.workflow
           )
       end
-    end
-  end
-
-  defp last_state_for_job(id) do
-    step =
-      %Workflows.Job{id: id}
-      |> Invocation.Query.last_successful_step_for_job()
-      |> Repo.one()
-
-    case step do
-      nil -> nil
-      step -> Invocation.get_output_dataclip_query(step) |> Repo.one()
     end
   end
 end

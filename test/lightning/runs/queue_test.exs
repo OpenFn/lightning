@@ -72,7 +72,7 @@ defmodule Lightning.Runs.QueueTest do
                         %{query: "SET LOCAL plan_cache_mode" <> _}}
 
         assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
-                        %{query: "SET LOCAL work_mem = '64MB'"}}
+                        %{query: "SELECT set_config('work_mem', $1, true)"}}
       after
         if prev,
           do: Application.put_env(:lightning, :claim_work_mem, prev),
@@ -97,7 +97,7 @@ defmodule Lightning.Runs.QueueTest do
                         %{query: "SET LOCAL plan_cache_mode" <> _}}
 
         refute_receive {[:lightning, :repo, :query], ^ref, _measurements,
-                        %{query: "SET LOCAL work_mem" <> _}},
+                        %{query: "SELECT set_config('work_mem'" <> _}},
                        100
       after
         if prev,

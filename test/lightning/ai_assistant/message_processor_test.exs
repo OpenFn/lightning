@@ -1,6 +1,8 @@
 defmodule Lightning.AiAssistant.MessageProcessorTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   import Mox
   import Lightning.Factories
 
@@ -28,22 +30,21 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
 
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "AI response",
-           "history" => [
-             %{"role" => "user", "content" => "test"},
-             %{"role" => "assistant", "content" => "AI response"}
-           ]
-         }
-       }}
-    end)
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "AI response",
+        "history" => [
+          %{"role" => "user", "content" => "test"},
+          %{"role" => "assistant", "content" => "AI response"}
+        ]
+      })
+    )
 
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
       :ok

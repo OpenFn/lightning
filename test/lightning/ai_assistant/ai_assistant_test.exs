@@ -28,6 +28,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -89,6 +90,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -136,6 +138,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -158,6 +161,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -180,6 +184,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -203,6 +208,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -237,6 +243,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -287,6 +294,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -334,6 +342,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -379,6 +388,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -437,6 +447,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1354,6 +1365,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1366,6 +1378,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> nil
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1378,6 +1391,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> nil
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1390,6 +1404,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> nil
           :ai_assistant_api_key -> nil
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1402,6 +1417,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> 123
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1414,6 +1430,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> 123
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1946,6 +1963,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -1986,6 +2004,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2018,6 +2037,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2045,6 +2065,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2072,6 +2093,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2099,6 +2121,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2149,6 +2172,7 @@ defmodule Lightning.AiAssistantTest do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
           :timeout -> 5_000
+          :streaming_timeout -> 120_000
         end
       end)
 
@@ -2520,6 +2544,787 @@ defmodule Lightning.AiAssistantTest do
   describe "title_max_length/0" do
     test "returns the configured maximum title length" do
       assert AiAssistant.title_max_length() == 40
+    end
+  end
+
+  describe "query_stream/3" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+          :streaming_timeout -> 120_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "processes SSE stream and saves complete response", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "help me",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "help me"},
+            %{"role" => "assistant", "content" => "Here is help"}
+          ],
+          "usage" => %{"tokens" => 100}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Here"}
+            })
+        },
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => " is help"}
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/job_chat/stream"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_stream(session, "help me")
+
+      assert length(updated_session.messages) == 2
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Here is help"
+      assert assistant_msg.role == :assistant
+
+      # Verify streaming chunks were broadcast
+      assert_received {:ai_assistant, :streaming_chunk,
+                       %{content: "Here", session_id: _}}
+
+      assert_received {:ai_assistant, :streaming_chunk,
+                       %{content: " is help", session_id: _}}
+    end
+
+    test "broadcasts thinking status events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "help",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "help"},
+            %{"role" => "assistant", "content" => "Done"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_start",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_start",
+              "content_block" => %{"type" => "thinking"}
+            })
+        },
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{
+                "type" => "thinking_delta",
+                "thinking" => "Searching docs..."
+              }
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "help")
+
+      assert_received {:ai_assistant, :streaming_status,
+                       %{text: "Thinking...", session_id: _}}
+
+      assert_received {:ai_assistant, :streaming_status,
+                       %{text: "Searching docs...", session_id: _}}
+    end
+
+    test "broadcasts changes events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      changes = %{"code" => "fn(state) => state;"}
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "fix it"},
+            %{"role" => "assistant", "content" => "Fixed"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "changes", data: Jason.encode!(changes)},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "fix it")
+
+      assert_received {:ai_assistant, :streaming_changes,
+                       %{changes: ^changes, session_id: _}}
+    end
+
+    test "skips changes event with invalid JSON data", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "fix it"},
+            %{"role" => "assistant", "content" => "Fixed"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "changes", data: "not valid json"},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "fix it")
+
+      refute_received {:ai_assistant, :streaming_changes, _}
+    end
+
+    test "broadcasts error events from SSE stream", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{
+          event: "error",
+          data: Jason.encode!(%{"message" => "rate limited"})
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "rate limited", session_id: _}}
+    end
+
+    test "handles error event with non-message JSON", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "error", data: Jason.encode!(%{"code" => 500})},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      # Non-message error JSON gets inspected
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: error_text, session_id: _}}
+
+      assert error_text =~ "500"
+    end
+
+    test "handles error event with non-JSON data", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "error", data: "raw error text"},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "raw error text", session_id: _}}
+    end
+
+    test "returns error when stream has no complete event", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      sse_stream = [
+        %{event: "log", data: "some log output"}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, "Stream ended without complete response"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "returns error when complete event has invalid JSON", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      sse_stream = [
+        %{event: "complete", data: "not valid json"}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, "Stream ended without complete response"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "skips log events and unknown events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "log", data: "python stdout"},
+        %{event: "unknown_event", data: "something"},
+        # Valid JSON with a "type" key that doesn't match any known stream event
+        %{
+          event: "content_block_delta",
+          data: Jason.encode!(%{"type" => "content_block_stop", "index" => 0})
+        },
+        :unexpected_format,
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles HTTP error responses", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session = insert(:chat_session, user: user, job: job_1)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 400,
+           body: %{"message" => "Bad request"}
+         }}
+      end)
+
+      assert {:error, "Bad request"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles network errors", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session = insert(:chat_session, user: user, job: job_1)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, "Request timed out. Please try again."} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles exceptions during stream processing", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      # A stream that raises when enumerated
+      raising_stream =
+        Stream.map([1], fn _ ->
+          raise "boom"
+        end)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: raising_stream}}
+      end)
+
+      assert {:error, "boom"} =
+               AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "Streaming failed: boom", session_id: _}}
+    end
+
+    test "handles exit signals during stream processing (e.g. Mint transport errors)",
+         %{
+           user: user,
+           workflow: %{jobs: [job_1 | _]}
+         } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      # A stream that exits when enumerated (simulates Mint.TransportError)
+      exiting_stream =
+        Stream.map([1], fn _ ->
+          exit({:error, %{reason: :closed}})
+        end)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: exiting_stream}}
+      end)
+
+      assert {:error, "Streaming connection lost"} =
+               AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "Streaming connection lost", session_id: _}}
+    end
+  end
+
+  describe "query_workflow_stream/3" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+          :streaming_timeout -> 120_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "processes SSE stream and saves workflow response", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          messages: [
+            %{
+              role: :user,
+              content: "create workflow",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Here is your workflow",
+          "response_yaml" => "workflow:\n  name: test",
+          "usage" => %{"tokens" => 50}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{
+                "type" => "text_delta",
+                "text" => "Here is your workflow"
+              }
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
+
+      assert length(updated_session.messages) == 2
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Here is your workflow"
+      assert assistant_msg.code == "workflow:\n  name: test"
+    end
+
+    test "handles HTTP error responses", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 500,
+           body: %{"message" => "Internal error"}
+         }}
+      end)
+
+      assert {:error, "Internal error"} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
+    end
+
+    test "handles network errors", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :econnrefused}
+      end)
+
+      assert {:error, "Unable to reach the AI server. Please try again later."} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
+    end
+
+    test "passes code and errors options to Apollo", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "response_yaml" => "workflow:\n  name: fixed",
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
+        decoded = Jason.decode!(body)
+        assert decoded["existing_yaml"] == "workflow: broken"
+        assert decoded["errors"] == "invalid cron"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} =
+               AiAssistant.query_workflow_stream(session, "fix it",
+                 code: "workflow: broken",
+                 errors: "invalid cron"
+               )
     end
   end
 end

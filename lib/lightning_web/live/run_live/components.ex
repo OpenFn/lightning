@@ -86,6 +86,20 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  attr :text, :string, required: true
+  attr :classes, :string, required: true
+
+  defp base_pill(assigns) do
+    ~H"""
+    <span class={[
+      "my-auto whitespace-nowrap rounded-full py-2 px-4 text-center align-baseline text-xs font-medium leading-none",
+      @classes
+    ]}>
+      {@text}
+    </span>
+    """
+  end
+
   attr :state, :atom, required: true
 
   @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
@@ -97,7 +111,7 @@ defmodule LightningWeb.RunLive.Components do
       rejected: "bg-red-300 text-gray-800",
       pending: "bg-gray-200 text-gray-800",
       running: "bg-blue-200 text-blue-800",
-      #  run and workorder states...
+      # run and workorder states...
       available: "bg-gray-200 text-gray-800",
       claimed: "bg-blue-200 text-blue-800",
       started: "bg-blue-200 text-blue-800",
@@ -117,10 +131,29 @@ defmodule LightningWeb.RunLive.Components do
       )
 
     ~H"""
-    <span class={["my-auto whitespace-nowrap rounded-full
-    py-2 px-4 text-center align-baseline text-xs font-medium leading-none", @classes]}>
-      {@text}
-    </span>
+    <.base_pill text={@text} classes={@classes} />
+    """
+  end
+
+  attr :state, :atom, required: true
+
+  @doc """
+  Renders a status pill for channel request states.
+  """
+  def channel_state_pill(%{state: state} = assigns) do
+    config = %{
+      pending: %{text: "In Progress", classes: "bg-blue-200 text-blue-800"},
+      success: %{text: "Success", classes: "bg-green-200 text-green-800"},
+      failed: %{text: "Failed", classes: "bg-red-200 text-red-800"},
+      timeout: %{text: "Timeout", classes: "bg-orange-200 text-orange-800"},
+      error: %{text: "Error", classes: "bg-red-200 text-red-800"}
+    }
+
+    %{text: text, classes: classes} = Map.fetch!(config, state)
+    assigns = assign(assigns, text: text, classes: classes)
+
+    ~H"""
+    <.base_pill text={@text} classes={@classes} />
     """
   end
 

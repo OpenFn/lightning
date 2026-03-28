@@ -1,6 +1,8 @@
 defmodule LightningWeb.API.AiAssistantControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  @moduletag :capture_log
+
   import Mox
   import Lightning.Factories
 
@@ -17,23 +19,25 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
 
     # Mock Tesla HTTP client to prevent real HTTP calls
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "This is a test AI response.",
-           "history" => [
-             %{"role" => "user", "content" => "test message"},
-             %{"role" => "assistant", "content" => "This is a test AI response."}
-           ]
-         }
-       }}
-    end)
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "This is a test AI response.",
+        "history" => [
+          %{"role" => "user", "content" => "test message"},
+          %{
+            "role" => "assistant",
+            "content" => "This is a test AI response."
+          }
+        ]
+      })
+    )
 
     :ok
   end

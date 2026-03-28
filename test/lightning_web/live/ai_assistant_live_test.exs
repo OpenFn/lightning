@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistantLiveTest do
   use LightningWeb.ConnCase, async: true
 
+  @moduletag :capture_log
+
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
   import Mox
@@ -36,6 +38,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       refute String.match?(user.email, ~r/@openfn\.org/i)
@@ -65,6 +68,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> nil
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -95,6 +99,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       skip_disclaimer(user)
@@ -128,6 +133,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -175,6 +181,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
@@ -211,6 +218,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       skip_disclaimer(user)
@@ -248,24 +256,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [%{"role" => "assistant", "content" => "Hello!"}]
-               }
-             }}
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{"history" => [%{"role" => "assistant", "content" => "Hello!"}]}
       )
 
       [:owner, :admin, :editor]
@@ -393,6 +389,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -451,6 +448,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -494,28 +492,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            # Simply return the response immediately
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Ping"},
+            %{"role" => "assistant", "content" => "Pong"}
+          ]
+        }
       )
 
       {:ok, view, _html} =
@@ -552,32 +539,22 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       expected_question = "Can you help me with this?"
       expected_answer = "No, I am a robot"
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"},
-                   %{"role" => "user", "content" => expected_question},
-                   %{"role" => "assistant", "content" => expected_answer}
-                 ]
-               }
-             }}
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Ping"},
+            %{"role" => "assistant", "content" => "Pong"},
+            %{"role" => "user", "content" => expected_question},
+            %{"role" => "assistant", "content" => expected_answer}
+          ]
+        }
       )
 
       session =
@@ -628,6 +605,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -679,6 +657,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -738,6 +717,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001/health_check"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       error_message = "You have reached your quota of AI queries"
@@ -791,6 +771,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -855,6 +836,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -911,6 +893,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -966,6 +949,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -1016,6 +1000,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -1138,26 +1123,16 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "assistant", "content" => "Response!"}
-                 ]
-               }
-             }}
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Response!"}
+          ]
+        }
       )
 
       skip_disclaimer(user)
@@ -1204,6 +1179,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1251,22 +1227,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
              )
 
       # Update the mock for successful response
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Hello"},
-                 %{"role" => "assistant", "content" => "Hi there!"}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Hello"},
+            %{"role" => "assistant", "content" => "Hi there!"}
+          ]
+        }
+      )
 
       # Click retry
       view
@@ -1309,6 +1278,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1438,26 +1408,16 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "assistant", "content" => "Hello, World!"}
-                 ]
-               }
-             }}
-        end
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Hello, World!"}
+          ]
+        }
       )
 
       skip_disclaimer(user)
@@ -1509,6 +1469,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -1518,21 +1479,28 @@ defmodule LightningWeb.AiAssistantLiveTest do
           %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
             {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post, body: json_body}, _opts ->
-            body = Jason.decode!(json_body)
-            assert body["context"]["expression"] == job_expression
-            assert body["context"]["adaptor"] == adaptor
+          %{method: :post, body: json_body, url: url}, _opts ->
+            decoded = Jason.decode!(json_body)
+            assert decoded["context"]["expression"] == job_expression
+            assert decoded["context"]["adaptor"] == adaptor
 
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
+            resp_body = %{
+              "history" => [
+                %{"role" => "user", "content" => "Ping"},
+                %{"role" => "assistant", "content" => "Pong"}
+              ]
+            }
+
+            if String.contains?(url, "/stream") do
+              {:ok,
+               %Tesla.Env{
+                 status: 200,
+                 headers: [{"content-type", "text/event-stream"}],
+                 body: "event: complete\ndata: #{Jason.encode!(resp_body)}\n\n"
+               }}
+            else
+              {:ok, %Tesla.Env{status: 200, body: resp_body}}
+            end
         end
       )
 
@@ -1585,6 +1553,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -1594,21 +1563,28 @@ defmodule LightningWeb.AiAssistantLiveTest do
           %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
             {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post, body: json_body}, _opts ->
-            body = Jason.decode!(json_body)
-            refute Map.has_key?(body["context"], "expression")
-            assert body["context"]["adaptor"] == adaptor
+          %{method: :post, body: json_body, url: url}, _opts ->
+            decoded = Jason.decode!(json_body)
+            refute Map.has_key?(decoded["context"], "expression")
+            assert decoded["context"]["adaptor"] == adaptor
 
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
+            resp_body = %{
+              "history" => [
+                %{"role" => "user", "content" => "Ping"},
+                %{"role" => "assistant", "content" => "Pong"}
+              ]
+            }
+
+            if String.contains?(url, "/stream") do
+              {:ok,
+               %Tesla.Env{
+                 status: 200,
+                 headers: [{"content-type", "text/event-stream"}],
+                 body: "event: complete\ndata: #{Jason.encode!(resp_body)}\n\n"
+               }}
+            else
+              {:ok, %Tesla.Env{status: 200, body: resp_body}}
+            end
         end
       )
 
@@ -1687,6 +1663,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(
@@ -1782,6 +1759,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Lightning.Tesla.Mock
@@ -1792,21 +1770,30 @@ defmodule LightningWeb.AiAssistantLiveTest do
           %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
             {:ok, %Tesla.Env{status: 200}}
 
-          %{method: :post, body: json_body}, _opts ->
-            body = Jason.decode!(json_body)
-            assert Map.has_key?(body["context"], "log")
-            assert body["context"]["log"] == log1.message <> "\n" <> log2.message
+          %{method: :post, body: json_body, url: url}, _opts ->
+            decoded = Jason.decode!(json_body)
+            assert Map.has_key?(decoded["context"], "log")
 
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
+            assert decoded["context"]["log"] ==
+                     log1.message <> "\n" <> log2.message
+
+            resp_body = %{
+              "history" => [
+                %{"role" => "user", "content" => "Ping"},
+                %{"role" => "assistant", "content" => "Pong"}
+              ]
+            }
+
+            if String.contains?(url, "/stream") do
+              {:ok,
+               %Tesla.Env{
+                 status: 200,
+                 headers: [{"content-type", "text/event-stream"}],
+                 body: "event: complete\ndata: #{Jason.encode!(resp_body)}\n\n"
+               }}
+            else
+              {:ok, %Tesla.Env{status: 200, body: resp_body}}
+            end
         end
       )
 
@@ -1843,6 +1830,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1880,29 +1868,23 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "I'll help you create a Salesforce sync workflow",
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{
-                   "role" => "user",
-                   "content" => "Create a Salesforce sync workflow"
-                 }
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "I'll help you create a Salesforce sync workflow",
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{
+              "role" => "user",
+              "content" => "Create a Salesforce sync workflow"
+            }
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -1936,6 +1918,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       workflow_yaml = """
@@ -1961,21 +1944,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           enabled: true
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's your Salesforce sync workflow:",
-               "response_yaml" => workflow_yaml,
-               "usage" => %{}
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "Here's your Salesforce sync workflow:",
+          "response_yaml" => workflow_yaml,
+          "usage" => %{}
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2092,6 +2068,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2137,6 +2114,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2202,6 +2180,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2231,6 +2210,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       error_message = "Monthly workflow generation limit reached"
@@ -2273,6 +2253,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2330,6 +2311,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2371,6 +2353,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2401,26 +2384,20 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{
-                   "role" => "assistant",
-                   "content" => "Workflow created for user"
-                 }
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{
+              "role" => "assistant",
+              "content" => "Workflow created for user"
+            }
+          ]
+        }
+      )
 
       user1 = insert(:user, email: "user1@test.org")
       user2 = insert(:user, email: "user2@test.org")
@@ -2483,6 +2460,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2528,6 +2506,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2600,21 +2579,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [%{"role" => "assistant", "content" => "Response"}]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [%{"role" => "assistant", "content" => "Response"}]
+        }
+      )
 
       _job_session =
         insert(:job_chat_session,
@@ -2664,6 +2637,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       error_message = "AI usage limit reached"
@@ -2712,23 +2686,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Message sent"}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "assistant", "content" => "Message sent"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2769,6 +2737,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -2823,6 +2792,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       markdown_response = """
@@ -2842,22 +2812,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
       2. Deploy to production
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => markdown_response,
-               "history" => [
-                 %{"role" => "assistant", "content" => markdown_response}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => markdown_response,
+          "history" => [
+            %{"role" => "assistant", "content" => markdown_response}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -2909,28 +2872,22 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       response_content = "Here's some code you can copy"
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => response_content,
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "assistant", "content" => response_content}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => response_content,
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{"role" => "assistant", "content" => response_content}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3000,24 +2957,18 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Test message"},
-                 %{"role" => "assistant", "content" => "Test response"}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "history" => [
+            %{"role" => "user", "content" => "Test message"},
+            %{"role" => "assistant", "content" => "Test response"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3069,6 +3020,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3147,6 +3099,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3236,47 +3189,51 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
         %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post, url: ^apollo_endpoint <> "/query"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response content"}
-               ]
-             }
-           }}
+        %{method: :post, url: url}, _opts when is_binary(url) ->
+          body =
+            cond do
+              String.contains?(url, "/query") ->
+                %{
+                  "history" => [
+                    %{"role" => "assistant", "content" => "Response content"}
+                  ]
+                }
 
-        %{method: :post, url: ^apollo_endpoint <> "/workflow_chat"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Response content",
-               "response_yaml" => nil,
-               "usage" => %{}
-             }
-           }}
+              String.contains?(url, "/workflow_chat") ->
+                %{
+                  "response" => "Response content",
+                  "response_yaml" => nil,
+                  "usage" => %{}
+                }
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response content"}
-               ],
-               "response" => "Response content",
-               "response_yaml" => nil,
-               "usage" => %{}
-             }
-           }}
+              true ->
+                %{
+                  "history" => [
+                    %{"role" => "assistant", "content" => "Response content"}
+                  ],
+                  "response" => "Response content",
+                  "response_yaml" => nil,
+                  "usage" => %{}
+                }
+            end
+
+          if String.contains?(url, "/stream") do
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               headers: [{"content-type", "text/event-stream"}],
+               body: "event: complete\ndata: #{Jason.encode!(body)}\n\n"
+             }}
+          else
+            {:ok, %Tesla.Env{status: 200, body: body}}
+          end
       end)
 
       skip_disclaimer(user)
@@ -3343,26 +3300,20 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Delayed response",
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "assistant", "content" => "Delayed response"}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_ai_with_health_check(
+        apollo_endpoint,
+        %{
+          "response" => "Delayed response",
+          "response_yaml" => nil,
+          "usage" => %{},
+          "history" => [
+            %{"role" => "assistant", "content" => "Delayed response"}
+          ]
+        }
+      )
 
       skip_disclaimer(user)
 
@@ -3397,6 +3348,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3623,6 +3575,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       :endpoint -> apollo_endpoint
       :ai_assistant_api_key -> "ai_assistant_api_key"
       :timeout -> 5_000
+      :streaming_timeout -> 120_000
     end)
 
     Mox.stub(

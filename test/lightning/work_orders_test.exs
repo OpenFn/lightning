@@ -118,6 +118,32 @@ defmodule Lightning.WorkOrdersTest do
       assert run.queue == "fast_lane"
     end
 
+    @tag trigger_type: :webhook
+    test "with a sync webhook trigger (custom)", context do
+      %{workflow: existing_workflow} = context
+
+      job = build(:job)
+      trigger = build(:trigger, type: :webhook, webhook_reply: :custom)
+
+      workflow =
+        build(:workflow, project: existing_workflow.project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      trigger = trigger |> Repo.reload!()
+      dataclip = insert(:dataclip)
+
+      {:ok, workorder} =
+        WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
+
+      [run] = workorder.runs
+      assert run.queue == "fast_lane"
+    end
+
     test "with a webhook trigger (without runs)", context do
       %{workflow: workflow, trigger: trigger, snapshot: snapshot} = context
 

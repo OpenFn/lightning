@@ -63,7 +63,7 @@ defmodule LightningWeb.WebhooksController do
       )
       |> case do
         {:ok, work_order} ->
-          if trigger.webhook_reply != :before_start do
+          if Workflows.Trigger.synchronous?(trigger) do
             handle_delayed_response(conn, work_order)
           else
             json(conn, %{work_order_id: work_order.id})

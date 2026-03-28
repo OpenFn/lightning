@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.15.16",
+      version: "2.16.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -152,9 +152,18 @@ defmodule Lightning.MixProject do
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      philter_dep(),
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
     ]
+  end
+
+  defp philter_dep do
+    if path = System.get_env("PHILTER_PATH") do
+      {:philter, path: path}
+    else
+      {:philter, "~> 0.2.1"}
+    end
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- AI assistant responses now stream in real-time
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+- Allow users to export all collection items as a JSON file.
+  [#4527](https://github.com/OpenFn/lightning/issues/4527)
+
 ### Changed
 
 - Removed potentially dangerous cascades on dataclip/run and user/run
@@ -25,9 +30,55 @@ and this project adheres to
   and triggers can still be freely deleted from workflows since the snapshot
   system preserves their data for every run.
   [#4538](https://github.com/OpenFn/lightning/issues/4538)
-- Show a notification in the workflow editor when navigating to a job or trigger
-  that has been deleted from the workflow.
-  [#4538](https://github.com/OpenFn/lightning/issues/4538)
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
+
+### Fixed
+
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+- Fix AI assistant authorization for support users on projects with support
+  access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
+
+## [2.16.0] - 2026-03-24
+
+## [2.16.0-pre3] - 2026-03-23
+
+### Changed
+
+- Relax version locking to major (`@v1`) for auto-installed GitHub actions used
+  in GitHub Sync. [#4548](https://github.com/OpenFn/lightning/issues/4548)
+
+### Fixed
+
+- Webhook triggers with `custom` response mode now correctly use the `fast_lane`
+  queue for prioritized execution.
+  [#4546](https://github.com/OpenFn/lightning/issues/4546)
+
+## [2.16.0-pre2] - 2026-03-19
+
+### Fixed
+
+- Create new snapshots for updated cron workflows
+  [PR#4544](https://github.com/OpenFn/lightning/pull/4544)
+
+## [2.16.0-pre.1] - 2026-03-19
+
+### Added
+
+- Channels: a high-performance reverse proxy for forwarding authenticated
+  requests between systems with full observability. Includes source/sink
+  authentication, request/response logging, and a searchable history UI.
+  [#4322](https://github.com/OpenFn/lightning/issues/4322)
+- Now saving "final output state" for runs, not just steps. (Important for
+  workflows with multiple leaf nodes.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
+- Users can now select which step output to use as the input for the _next_
+  cron-triggered run of a workflow. (A migration preserves the old behaviour,
+  but for new workflows the default is the final output state for the last run,
+  not the output state of the first step in the last run.)
+  [#4485](https://github.com/OpenFn/lightning/issues/4485)
 
 ### Fixed
 

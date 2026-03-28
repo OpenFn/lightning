@@ -1,5 +1,7 @@
 defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
+
+  @moduletag :capture_log
   import Mox
   import Lightning.Factories
 
@@ -28,23 +30,25 @@ defmodule LightningWeb.AiAssistantChannelTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
+        :streaming_timeout -> 120_000
       end
     end)
 
     # Mock Tesla HTTP client to prevent real HTTP calls
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "This is a test AI response.",
-           "history" => [
-             %{"role" => "user", "content" => "test message"},
-             %{"role" => "assistant", "content" => "This is a test AI response."}
-           ]
-         }
-       }}
-    end)
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "This is a test AI response.",
+        "history" => [
+          %{"role" => "user", "content" => "test message"},
+          %{
+            "role" => "assistant",
+            "content" => "This is a test AI response."
+          }
+        ]
+      })
+    )
 
     # Mock usage limiter to allow by default
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
@@ -2928,6 +2932,162 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert_broadcast "user_message", %{message: broadcast_msg}
       assert broadcast_msg.content == "explain the code"
       assert broadcast_msg.role == "user"
+    end
+  end
+
+  describe "streaming handle_info events" do
+    setup do
+      user = user_fixture()
+      project = project_fixture(project_users: [%{user_id: user.id}])
+      workflow = workflow_fixture(project_id: project.id)
+
+      job =
+        job_fixture(
+          workflow_id: workflow.id,
+          name: "Stream Job",
+          body: "console.log('stream');",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+
+      {:ok, _reply, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          %{
+            "job_id" => job.id,
+            "project_id" => project.id,
+            "content" => "test streaming"
+          }
+        )
+
+      session_id = socket.assigns.session_id
+
+      %{socket: socket, session_id: session_id}
+    end
+
+    test "forwards streaming_chunk to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_chunk,
+         %{content: "Hello", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_chunk", %{content: "Hello"}
+    end
+
+    test "forwards streaming_status to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_status,
+         %{text: "Thinking...", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_status", %{text: "Thinking..."}
+    end
+
+    test "forwards streaming_changes to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      changes = %{"code" => "fn(state) => state;"}
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_changes,
+         %{changes: changes, session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_changes", %{changes: ^changes}
+    end
+
+    test "forwards streaming_error to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_error,
+         %{error: "connection lost", session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_error", %{error: "connection lost"}
+    end
+  end
+
+  describe "support user authorization" do
+    test "support user can join workflow template session on project with allow_support_access" do
+      support_user =
+        insert(:user, support_user: true)
+
+      project =
+        project_fixture(
+          project_users: [],
+          allow_support_access: true
+        )
+
+      workflow =
+        workflow_fixture(project_id: project.id, name: "Support WF Tmpl")
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Build a workflow",
+        "workflow_id" => workflow.id
+      }
+
+      {:ok, _response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
+    end
+
+    test "support user cannot join AI session on project without allow_support_access" do
+      support_user =
+        insert(:user, support_user: true)
+
+      project =
+        project_fixture(
+          project_users: [],
+          allow_support_access: false
+        )
+
+      workflow =
+        workflow_fixture(project_id: project.id, name: "No Support WF")
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Help me",
+        "workflow_id" => workflow.id
+      }
+
+      {:error, %{reason: "unauthorized"}} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
     end
   end
 end

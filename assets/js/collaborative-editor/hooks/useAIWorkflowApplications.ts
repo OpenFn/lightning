@@ -259,6 +259,13 @@ export function useAIWorkflowApplications({
         return;
       }
 
+      // If we're previewing from streaming and the real message arrives,
+      // just update the message ID without re-rendering the diff
+      if (previewingMessageId === '__streaming__') {
+        setPreviewingMessageId(messageId);
+        return;
+      }
+
       const monaco = monacoRef?.current;
 
       // Clear any existing diff first
