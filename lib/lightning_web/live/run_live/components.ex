@@ -814,7 +814,7 @@ defmodule LightningWeb.RunLive.Components do
                 class="w-full sm:col-start-1 sm:col-end-3"
                 phx-click={hide_modal(@id)}
               >
-                Cancel
+                Go back
               </.button>
             </div>
             <div
