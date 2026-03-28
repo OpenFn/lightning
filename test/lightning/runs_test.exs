@@ -974,23 +974,6 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "Run.cancel/1" do
-    test "produces valid changeset when run is available" do
-      run = build(:run, state: :available)
-      changeset = Run.cancel(run)
-      assert changeset.valid?
-      assert Ecto.Changeset.get_change(changeset, :state) == :cancelled
-    end
-
-    test "produces error changeset for non-available states" do
-      for state <- [:claimed, :started | Run.final_states()] do
-        run = build(:run, state: state)
-        changeset = Run.cancel(run)
-        refute changeset.valid?, "expected invalid changeset for state #{state}"
-      end
-    end
-  end
-
   describe "cancel_run/1" do
     test "cancels an available run and updates work order state" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)

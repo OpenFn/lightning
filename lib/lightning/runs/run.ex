@@ -195,19 +195,6 @@ defmodule Lightning.Run do
     |> validate_state_change()
   end
 
-  @doc """
-  Builds a changeset to cancel an available run.
-
-  Unlike `complete/2`, this does not set `finished_at` or `error_type` because
-  the run never executed.
-  """
-  @spec cancel(%__MODULE__{}) :: Ecto.Changeset.t()
-  def cancel(%__MODULE__{} = run) do
-    run
-    |> change(%{state: :cancelled, updated_at: DateTime.utc_now()})
-    |> validate_state_change()
-  end
-
   # credo:disable-for-next-line
   defp validate_state_change(changeset) do
     {changeset.data |> Map.get(:state), get_field(changeset, :state)}

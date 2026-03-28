@@ -21,6 +21,8 @@ and this project adheres to
   [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
+- Allow users to cancel available runs (runs for work orders in pending state)
+  [#1622](https://github.com/OpenFn/lightning/issues/1622)
 
 ### Changed
 
