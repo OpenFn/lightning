@@ -576,14 +576,6 @@ defmodule LightningWeb.RunLive.Index do
 
           {:noreply,
            socket |> put_flash(:info, message) |> push_navigate(to: redirect_to)}
-
-        {:error, _reason} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling work orders."
-           )}
       end
     else
       false ->
@@ -618,14 +610,6 @@ defmodule LightningWeb.RunLive.Index do
              :info,
              "Work order could not be cancelled" <>
                " — it is no longer pending."
-           )}
-
-        {:error, _} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
            )}
       end
     else
