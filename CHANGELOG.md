@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Changed
 
+- Streamlined filters/search on history page, better for small screens
+  [#4579](https://github.com/OpenFn/lightning/issues/4579)
 - Allow users to select which workflow to merge for sandbox merging
   [#4002](https://github.com/OpenFn/lightning/issues/4002)
 - Bump ws-worker to `v1.23.1`
