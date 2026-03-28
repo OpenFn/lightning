@@ -236,23 +236,6 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "dequeue/1" do
-    test "removes a run from the queue" do
-      %{triggers: [trigger]} =
-        workflow = insert(:simple_workflow) |> with_snapshot()
-
-      {:ok, %{runs: [run]}} =
-        WorkOrders.create_for(trigger,
-          workflow: workflow,
-          dataclip: params_with_assocs(:dataclip)
-        )
-
-      assert {:ok, dequeued} = Runs.dequeue(run)
-
-      refute dequeued |> Repo.reload()
-    end
-  end
-
   describe "start_step/1" do
     test "creates a new step for a run" do
       dataclip = insert(:dataclip)

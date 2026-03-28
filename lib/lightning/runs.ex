@@ -45,14 +45,6 @@ defmodule Lightning.Runs do
     RunQueue.claim(demand, worker_name, queues)
   end
 
-  # @doc """
-  # Removes a run from the queue.
-  # """
-  @impl Lightning.Extensions.RunQueue
-  def dequeue(run) do
-    RunQueue.dequeue(run)
-  end
-
   @doc """
   Get a run by id.
 
