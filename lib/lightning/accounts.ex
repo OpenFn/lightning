@@ -37,7 +37,7 @@ defmodule Lightning.Accounts do
     count > 0
   end
 
-  @spec purge_user(id :: Ecto.UUID.t()) :: :ok
+  @spec purge_user(id :: Ecto.UUID.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def purge_user(id) do
     Logger.debug(fn ->
       # coveralls-ignore-start
@@ -53,15 +53,19 @@ defmodule Lightning.Accounts do
     Credentials.list_credentials(%User{id: id})
     |> Enum.each(&Credentials.delete_credential/1)
 
-    Repo.get(User, id) |> delete_user()
+    case Repo.get(User, id) |> delete_user() do
+      {:ok, _user} ->
+        Logger.debug(fn ->
+          # coveralls-ignore-start
+          "User ##{id} purged."
+          # coveralls-ignore-stop
+        end)
 
-    Logger.debug(fn ->
-      # coveralls-ignore-start
-      "User ##{id} purged."
-      # coveralls-ignore-stop
-    end)
+        :ok
 
-    :ok
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
