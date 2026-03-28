@@ -538,6 +538,15 @@ defmodule Lightning.Invocation do
     project_id
     |> base_query()
     |> search_workorders_query(search_params)
+    |> where(
+      [wo],
+      exists(
+        from(r in Lightning.Run,
+          where: r.work_order_id == parent_as(:workorder).id,
+          where: r.state == :available
+        )
+      )
+    )
     |> Repo.all()
   end
 

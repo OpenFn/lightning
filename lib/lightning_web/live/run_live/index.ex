@@ -135,6 +135,7 @@ defmodule LightningWeb.RunLive.Index do
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
+       available_actions: [],
        show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
@@ -471,7 +472,11 @@ defmodule LightningWeb.RunLive.Index do
         rest
       end
 
-    {:noreply, assign(socket, selected_work_orders: work_orders)}
+    {:noreply,
+     assign(socket,
+       selected_work_orders: work_orders,
+       available_actions: available_bulk_actions(work_orders)
+     )}
   end
 
   def handle_event(
@@ -496,7 +501,11 @@ defmodule LightningWeb.RunLive.Index do
         []
       end
 
-    {:noreply, assign(socket, selected_work_orders: work_orders)}
+    {:noreply,
+     assign(socket,
+       selected_work_orders: work_orders,
+       available_actions: available_bulk_actions(work_orders)
+     )}
   end
 
   def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
@@ -548,18 +557,34 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-cancel", attrs, socket) do
-    with true <- socket.assigns.can_run_workflow,
-         {:ok, cancelled} <- handle_bulk_cancel(socket, attrs) do
-      message =
-        "Cancelled #{cancelled} run#{if cancelled != 1, do: "s"}"
+    redirect_to =
+      ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
 
-      {:noreply,
-       socket
-       |> put_flash(:info, message)
-       |> push_navigate(
-         to:
-           ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
-       )}
+    with true <- socket.assigns.can_run_workflow,
+         result <- handle_bulk_cancel(socket, attrs) do
+      case result do
+        {:ok, cancelled} ->
+          message =
+            "Cancelled #{cancelled} run#{if cancelled != 1, do: "s"}"
+
+          {:noreply,
+           socket |> put_flash(:info, message) |> push_navigate(to: redirect_to)}
+
+        {:async, count} ->
+          message =
+            "Cancelling runs for #{count} work order#{if count != 1, do: "s"} in the background..."
+
+          {:noreply,
+           socket |> put_flash(:info, message) |> push_navigate(to: redirect_to)}
+
+        {:error, _reason} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling work orders."
+           )}
+      end
     else
       false ->
         {:noreply,
@@ -567,14 +592,6 @@ defmodule LightningWeb.RunLive.Index do
            socket,
            :error,
            "You are not authorized to perform this action."
-         )}
-
-      {:error, _reason} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "An error occurred while cancelling work orders."
          )}
     end
   end
@@ -623,28 +640,32 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
     if socket.assigns.can_run_workflow do
-      run = Runs.get(run_id)
+      case Runs.get(run_id) do
+        nil ->
+          {:noreply, put_flash(socket, :error, "Run not found.")}
 
-      case Runs.cancel_run(run) do
-        {:ok, _run} ->
-          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+        run ->
+          case Runs.cancel_run(run) do
+            {:ok, _run} ->
+              {:noreply, put_flash(socket, :info, "Run cancelled.")}
 
-        {:error, :not_available} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :info,
-             "Run could not be cancelled" <>
-               " — it is no longer available."
-           )}
+            {:error, :not_available} ->
+              {:noreply,
+               put_flash(
+                 socket,
+                 :info,
+                 "Run could not be cancelled" <>
+                   " — it is no longer available."
+               )}
 
-        {:error, _} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
-           )}
+            {:error, _} ->
+              {:noreply,
+               put_flash(
+                 socket,
+                 :error,
+                 "An error occurred while cancelling."
+               )}
+          end
       end
     else
       {:noreply,
@@ -759,12 +780,18 @@ defmodule LightningWeb.RunLive.Index do
       socket.assigns.project
       |> Invocation.search_workorders_for_cancel(filter)
 
-    WorkOrders.cancel_many_async(
-      work_orders,
-      project_id: socket.assigns.project.id
-    )
+    case work_orders do
+      [] ->
+        {:ok, 0}
 
-    {:ok, length(work_orders)}
+      _ ->
+        WorkOrders.cancel_many_async(
+          work_orders,
+          project_id: socket.assigns.project.id
+        )
+
+        {:async, length(work_orders)}
+    end
   end
 
   @retryable_states [

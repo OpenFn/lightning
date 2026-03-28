@@ -419,34 +419,61 @@ defmodule Lightning.Runs do
   @doc """
   Cancels an available run, transitioning it to `:cancelled` state.
 
-  The run must be in `:available` state. This updates the run, recalculates
-  the work order state, and broadcasts events via `update_run/1`.
+  The run must be in `:available` state. The state guard is enforced
+  atomically in the UPDATE query (not just in-memory), so a concurrent
+  claim by a worker cannot be overwritten.
 
   Returns `{:error, :not_available}` if the run is not in `:available` state.
   """
   @spec cancel_run(Run.t()) ::
           {:ok, Run.t()} | {:error, :not_available | Ecto.Changeset.t()}
   def cancel_run(%Run{} = run) do
-    if run.state == :available do
-      run
-      |> Run.cancel()
-      |> update_run()
-    else
-      {:error, :not_available}
+    subset_query =
+      from(r in Run,
+        where: r.id == ^run.id,
+        where: r.state == :available,
+        lock: "FOR UPDATE SKIP LOCKED"
+      )
+
+    update_query =
+      Run
+      |> with_cte("cancel_subset", as: ^subset_query)
+      |> join(:inner, [r], s in fragment(~s("cancel_subset")), on: r.id == s.id)
+      |> select([r, _], r)
+
+    case update_runs(update_query,
+           set: [state: :cancelled, updated_at: DateTime.utc_now()]
+         ) do
+      {:ok, %{runs: {1, [cancelled_run]}}} ->
+        {:ok, cancelled_run}
+
+      {:ok, %{runs: {0, []}}} ->
+        {:error, :not_available}
+
+      {:error, _} = error ->
+        error
     end
   end
 
   @doc """
   Atomically cancels up to `limit` available runs belonging to the given
-  work order IDs. Returns the result of `update_runs/2` which handles
-  work order state updates and event broadcasting.
+  work order IDs, scoped to the given project. Returns the result of
+  `update_runs/2` which handles work order state updates and event
+  broadcasting.
   """
-  @spec cancel_available_for_work_orders([Ecto.UUID.t()], pos_integer()) ::
+  @spec cancel_available_for_work_orders(
+          [Ecto.UUID.t()],
+          Ecto.UUID.t(),
+          pos_integer()
+        ) ::
           {:ok, map()} | {:error, any()}
-  def cancel_available_for_work_orders(work_order_ids, limit \\ 100) do
+  def cancel_available_for_work_orders(work_order_ids, project_id, limit \\ 100) do
     subset_query =
       from(r in Run,
+        join: wo in assoc(r, :work_order),
+        join: w in assoc(wo, :workflow),
         where: r.work_order_id in ^work_order_ids,
+        where: w.project_id == ^project_id,
         where: r.state == :available,
         limit: ^limit,
         lock: "FOR UPDATE SKIP LOCKED"

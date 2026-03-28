@@ -198,7 +198,7 @@ defmodule LightningWeb.RunLive.Show do
                       phx-click="cancel-run"
                       phx-value-run_id={run.id}
                     >
-                      <.icon name="hero-x-mark-mini" class="h-4 w-4 mr-1" /> Cancel
+                      Cancel
                     </.button>
                   </:value>
                 </.list_item>
@@ -367,28 +367,32 @@ defmodule LightningWeb.RunLive.Show do
   @impl true
   def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
     if socket.assigns.can_run_workflow do
-      run = Runs.get(run_id)
+      case Runs.get(run_id) do
+        nil ->
+          {:noreply, put_flash(socket, :error, "Run not found.")}
 
-      case Runs.cancel_run(run) do
-        {:ok, _run} ->
-          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+        run ->
+          case Runs.cancel_run(run) do
+            {:ok, _run} ->
+              {:noreply, put_flash(socket, :info, "Run cancelled.")}
 
-        {:error, :not_available} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :info,
-             "Run could not be cancelled — it has already been " <>
-               "claimed by a worker."
-           )}
+            {:error, :not_available} ->
+              {:noreply,
+               put_flash(
+                 socket,
+                 :info,
+                 "Run could not be cancelled — it has already been " <>
+                   "claimed by a worker."
+               )}
 
-        {:error, _} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
-           )}
+            {:error, _} ->
+              {:noreply,
+               put_flash(
+                 socket,
+                 :error,
+                 "An error occurred while cancelling."
+               )}
+          end
       end
     else
       {:noreply,

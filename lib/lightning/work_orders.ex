@@ -513,10 +513,10 @@ defmodule Lightning.WorkOrders do
   def cancel_many([], _opts), do: {:ok, 0}
 
   def cancel_many([%WorkOrder{} | _rest] = work_orders, opts) do
-    _project_id = Keyword.fetch!(opts, :project_id)
+    project_id = Keyword.fetch!(opts, :project_id)
     work_order_ids = Enum.map(work_orders, & &1.id)
 
-    case Runs.cancel_available_for_work_orders(work_order_ids) do
+    case Runs.cancel_available_for_work_orders(work_order_ids, project_id) do
       {:ok, %{runs: {n, _runs}}} ->
         {:ok, n}
 
@@ -532,10 +532,14 @@ defmodule Lightning.WorkOrders do
   """
   @spec cancel_many_async([WorkOrder.t()], keyword()) ::
           {:ok, Oban.Job.t()}
-  def cancel_many_async([%WorkOrder{} | _rest] = work_orders, _opts) do
+  def cancel_many_async([%WorkOrder{} | _rest] = work_orders, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
     work_order_ids = Enum.map(work_orders, & &1.id)
 
-    CancelManyWorkOrdersJob.new(%{work_order_ids: work_order_ids})
+    CancelManyWorkOrdersJob.new(%{
+      work_order_ids: work_order_ids,
+      project_id: project_id
+    })
     |> Oban.insert(Lightning.Oban)
   end
 

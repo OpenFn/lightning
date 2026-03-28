@@ -417,7 +417,7 @@
                     :if={!none_selected?(@selected_work_orders)}
                     class="absolute left-full top-1/2 -translate-y-1/2 ml-3 flex items-center gap-1 z-10 bg-gray-50 pr-4 whitespace-nowrap"
                   >
-                    <%= if :cancel in available_bulk_actions(@selected_work_orders) do %>
+                    <%= if :cancel in @available_actions do %>
                       <.button
                         size="sm"
                         type="button"
@@ -432,7 +432,7 @@
                       <span
                         phx-hook="Tooltip"
                         id="bulk-cancel-disabled-tooltip"
-                        aria-label="Cancel is only available when all selected work orders are Pending"
+                        aria-label="Cancel is only available when all selected work orders are pending"
                       >
                         <.button
                           size="sm"
@@ -445,7 +445,7 @@
                         </.button>
                       </span>
                     <% end %>
-                    <%= if :retry in available_bulk_actions(@selected_work_orders) do %>
+                    <%= if :retry in @available_actions do %>
                       <.button
                         size="sm"
                         type="button"
@@ -481,7 +481,7 @@
                       </span>
                     <% end %>
                     <%= if selected_workflow_count(@selected_work_orders) == 1 do %>
-                      <%= if :retry in available_bulk_actions(@selected_work_orders) do %>
+                      <%= if :retry in @available_actions do %>
                         <.button
                           size="sm"
                           type="button"
