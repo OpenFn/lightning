@@ -117,7 +117,7 @@
                 changeset={@filters_changeset}
                 phx-click={show_dropdown("status_filter_dropdown")}
               >
-                Status is
+                Status {if length(selected_statuses) > 1, do: "in", else: "is"}
                 <%= if selected_statuses != [] do %>
                   {Enum.map_join(selected_statuses, ", ", & &1.label)}
                 <% else %>
