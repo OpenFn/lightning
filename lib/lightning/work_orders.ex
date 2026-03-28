@@ -52,6 +52,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.CancelManyWorkOrdersJob
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
@@ -500,6 +501,42 @@ defmodule Lightning.WorkOrders do
 
   def retry_many([], _opts) do
     {:ok, 0, 0}
+  end
+
+  @doc """
+  Cancels available runs for the given work orders.
+
+  For small batches, cancels synchronously via atomic UPDATE. Returns
+  `{:ok, count}` where count is the number of runs cancelled.
+  """
+  @spec cancel_many([WorkOrder.t()], keyword()) :: {:ok, non_neg_integer()}
+  def cancel_many([], _opts), do: {:ok, 0}
+
+  def cancel_many([%WorkOrder{} | _rest] = work_orders, opts) do
+    _project_id = Keyword.fetch!(opts, :project_id)
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    case Runs.cancel_available_for_work_orders(work_order_ids) do
+      {:ok, %{runs: {n, _runs}}} ->
+        {:ok, n}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Enqueues a single background job to cancel all available runs matching
+  the given work order IDs. Used for "cancel all matching" where the count
+  may be large.
+  """
+  @spec cancel_many_async([WorkOrder.t()], keyword()) ::
+          {:ok, Oban.Job.t()}
+  def cancel_many_async([%WorkOrder{} | _rest] = work_orders, _opts) do
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    CancelManyWorkOrdersJob.new(%{work_order_ids: work_order_ids})
+    |> Oban.insert(Lightning.Oban)
   end
 
   def get_workorders_with_runs(workflow_id, run_id) do

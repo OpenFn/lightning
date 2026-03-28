@@ -363,6 +363,178 @@ defmodule LightningWeb.RunLive.ShowTest do
     end
   end
 
+  describe "cancel run" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "cancel button visible when run is available and user has permission",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} =
+        WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      assert html =~ "Cancel"
+      assert has_element?(view, "button[phx-click='cancel-run']")
+    end
+
+    test "cancel button not visible for non-available run states",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}], jobs: [job | _rest]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id} = run]} =
+        workorder = WorkOrders.get(wo_id, include: [:runs])
+
+      # Transition to claimed
+      run =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(run, %{
+            state: :claimed,
+            claimed_at: DateTime.utc_now()
+          })
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      refute html =~ "cancel-run"
+
+      # Transition to started
+      Lightning.Runs.start_run(run)
+
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      refute html =~ "cancel-run"
+
+      # Complete the run
+      {:ok, step} =
+        Lightning.Runs.start_step(run, %{
+          step_id: Ecto.UUID.generate(),
+          job_id: job.id,
+          input_dataclip_id: workorder.dataclip_id
+        })
+
+      Lightning.Runs.complete_step(%{
+        run_id: run_id,
+        project_id: project.id,
+        step_id: step.id,
+        output_dataclip: ~s({"y": 2}),
+        output_dataclip_id: Ecto.UUID.generate(),
+        reason: "success"
+      })
+
+      {:ok, _} = Lightning.Runs.complete_run(run, %{state: "success"})
+
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      refute html =~ "cancel-run"
+    end
+
+    @tag role: :viewer
+    test "cancel button not visible for viewer role",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} =
+        WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      refute html =~ "cancel-run"
+    end
+
+    test "clicking cancel transitions run to cancelled and button disappears",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} =
+        WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      view |> element("#run-detail-#{run_id}") |> render_async()
+
+      # Cancel the run
+      html = render_click(view, "cancel-run", %{"run_id" => run_id})
+
+      assert html =~ "Run cancelled."
+
+      # Button should be gone and state should show Cancelled
+      html =
+        view |> element("#run-detail-#{run_id}") |> render_async()
+
+      refute html =~ "cancel-run"
+      assert html =~ "Cancelled"
+    end
+
+    test "cancel when run already claimed shows graceful flash",
+         %{conn: conn, project: project} do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id} = run]} =
+        WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      view |> element("#run-detail-#{run_id}") |> render_async()
+
+      # Claim the run behind the scenes
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(run, %{
+          state: :claimed,
+          claimed_at: DateTime.utc_now()
+        })
+      )
+
+      # Try to cancel — should get graceful error
+      html = render_click(view, "cancel-run", %{"run_id" => run_id})
+
+      assert html =~ "already been claimed"
+    end
+  end
+
   defp select_step(view, run, job_name) do
     view
     |> element("#step-list-#{run.id} a[data-phx-link]", job_name)

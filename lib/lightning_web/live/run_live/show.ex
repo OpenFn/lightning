@@ -8,6 +8,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Runs
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
@@ -188,6 +189,19 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Status</:label>
                   <:value><.state_pill state={run.state} /></:value>
                 </.list_item>
+                <.list_item :if={run.state == :available and @can_run_workflow}>
+                  <:label>Action</:label>
+                  <:value>
+                    <.button
+                      size="sm"
+                      theme="secondary"
+                      phx-click="cancel-run"
+                      phx-value-run_id={run.id}
+                    >
+                      <.icon name="hero-x-mark-mini" class="h-4 w-4 mr-1" /> Cancel
+                    </.button>
+                  </:value>
+                </.list_item>
               </.detail_list>
 
               <.step_list
@@ -294,6 +308,14 @@ defmodule LightningWeb.RunLive.Show do
     %{current_user: user, project_user: project_user, project: project} =
       socket.assigns
 
+    can_run_workflow =
+      ProjectUsers
+      |> Permissions.can?(
+        :run_workflow,
+        user,
+        project
+      )
+
     {:ok,
      socket
      |> assign(
@@ -317,6 +339,7 @@ defmodule LightningWeb.RunLive.Show do
            project_user
          )
      )
+     |> assign(can_run_workflow: can_run_workflow)
      |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
      |> get_run_async(id)}
   end
@@ -339,6 +362,42 @@ defmodule LightningWeb.RunLive.Show do
     selected_step_id = Map.get(params, "step")
 
     {:noreply, socket |> apply_selected_step_id(selected_step_id)}
+  end
+
+  @impl true
+  def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
+    if socket.assigns.can_run_workflow do
+      run = Runs.get(run_id)
+
+      case Runs.cancel_run(run) do
+        {:ok, _run} ->
+          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+
+        {:error, :not_available} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Run could not be cancelled — it has already been " <>
+               "claimed by a worker."
+           )}
+
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
   end
 
   @impl true

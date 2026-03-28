@@ -416,6 +416,53 @@ defmodule Lightning.Runs do
     end
   end
 
+  @doc """
+  Cancels an available run, transitioning it to `:cancelled` state.
+
+  The run must be in `:available` state. This updates the run, recalculates
+  the work order state, and broadcasts events via `update_run/1`.
+
+  Returns `{:error, :not_available}` if the run is not in `:available` state.
+  """
+  @spec cancel_run(Run.t()) ::
+          {:ok, Run.t()} | {:error, :not_available | Ecto.Changeset.t()}
+  def cancel_run(%Run{} = run) do
+    if run.state == :available do
+      run
+      |> Run.cancel()
+      |> update_run()
+    else
+      {:error, :not_available}
+    end
+  end
+
+  @doc """
+  Atomically cancels up to `limit` available runs belonging to the given
+  work order IDs. Returns the result of `update_runs/2` which handles
+  work order state updates and event broadcasting.
+  """
+  @spec cancel_available_for_work_orders([Ecto.UUID.t()], pos_integer()) ::
+          {:ok, map()} | {:error, any()}
+  def cancel_available_for_work_orders(work_order_ids, limit \\ 100) do
+    subset_query =
+      from(r in Run,
+        where: r.work_order_id in ^work_order_ids,
+        where: r.state == :available,
+        limit: ^limit,
+        lock: "FOR UPDATE SKIP LOCKED"
+      )
+
+    update_query =
+      Run
+      |> with_cte("cancel_subset", as: ^subset_query)
+      |> join(:inner, [r], s in fragment(~s("cancel_subset")), on: r.id == s.id)
+      |> select([r, _], r)
+
+    update_runs(update_query,
+      set: [state: :cancelled, updated_at: DateTime.utc_now()]
+    )
+  end
+
   @spec mark_steps_lost(Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
   def mark_steps_lost(steps_query) do
     {updated_count, nil} =

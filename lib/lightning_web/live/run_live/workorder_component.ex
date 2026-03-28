@@ -106,7 +106,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           end
         }
       >
-        <.td>
+        <.td class="!pr-1">
           <%= if wo_dataclip_available?(@work_order) do %>
             <form
               phx-change="toggle_selection"
@@ -235,7 +235,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             item={@last_run}
             context="table"
           />
-          <span :if={is_nil(@last_run)}>Not started</span>
         </.td>
         <.td class="text-right w-32">
           <div class="flex items-center justify-end gap-2">
@@ -245,55 +244,77 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td class="text-right w-20">
           <%= if @work_order.runs !== [] do %>
             <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
-              <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
+              <%= if @work_order.state == :pending and @can_run_workflow do %>
                 <button
                   type="button"
-                  id={"retry-workorder-#{@work_order.id}"}
+                  id={"cancel-wo-#{@work_order.id}"}
                   phx-click={
-                    JS.push("bulk-rerun",
-                      value: %{type: "single", workorder_id: @work_order.id}
+                    JS.push("cancel",
+                      value: %{workorder_id: @work_order.id}
                     )
-                    |> JS.push("toggle_details", target: @myself)
                     |> JS.exec("event.stopPropagation()")
                   }
-                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-red-500 cursor-pointer rounded"
                   phx-hook="Tooltip"
-                  aria-label="Retry (run from the start)"
+                  aria-label="Cancel pending run"
                 >
-                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                  <.icon name="hero-x-mark-mini" class="h-4 w-4" />
                 </button>
-              <% else %>
-                <span
-                  id={"retry-disabled-#{@work_order.id}"}
-                  class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
-                  phx-hook="Tooltip"
-                  data-allow-html="true"
-                  data-placement="top"
-                  data-interactive={@can_edit_data_retention && "true"}
-                  aria-label={
-                    cond do
-                      not @can_run_workflow ->
-                        "You are not authorized to start runs for this project."
-
-                      not wo_dataclip_available?(@work_order) ->
-                        rerun_zero_persistence_tooltip_message(
-                          @project.id,
-                          @can_edit_data_retention
-                        )
-                    end
-                  }
-                >
-                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
-                </span>
               <% end %>
-              <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
+              <%= if @work_order.state not in [:pending, :running] do %>
+                <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
+                  <button
+                    type="button"
+                    id={"retry-workorder-#{@work_order.id}"}
+                    phx-click={
+                      JS.push("bulk-rerun",
+                        value: %{
+                          type: "single",
+                          workorder_id: @work_order.id
+                        }
+                      )
+                      |> JS.push("toggle_details", target: @myself)
+                      |> JS.exec("event.stopPropagation()")
+                    }
+                    class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                    phx-hook="Tooltip"
+                    aria-label="Retry (run from the start)"
+                  >
+                    <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                  </button>
+                <% else %>
+                  <span
+                    id={"retry-disabled-#{@work_order.id}"}
+                    class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
+                    phx-hook="Tooltip"
+                    data-allow-html="true"
+                    data-placement="top"
+                    data-interactive={@can_edit_data_retention && "true"}
+                    aria-label={
+                      cond do
+                        not @can_run_workflow ->
+                          "You are not authorized to start runs for this project."
+
+                        not wo_dataclip_available?(@work_order) ->
+                          rerun_zero_persistence_tooltip_message(
+                            @project.id,
+                            @can_edit_data_retention
+                          )
+                      end
+                    }
+                  >
+                    <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                  </span>
+                <% end %>
+              <% end %>
               <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                 {Enum.count(@work_order.runs)}
               </span>
-              <%!-- <% end %> --%>
               <.icon
                 name={
-                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
+                  if @show_details,
+                    do: "hero-chevron-up",
+                    else: "hero-chevron-down"
                 }
                 class="size-4 text-gray-400"
               />
@@ -313,7 +334,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   >
                     <div class="bg-gray-200 text-xs flex items-center w-full">
                       <div class="flex-1 py-2 text-left">
-                        <div class="pl-4">
+                        <div class="pl-4 flex items-center gap-1">
                           Run
                           <.link navigate={
                             ~p"/projects/#{@project.id}/runs/#{run.id}"
@@ -339,28 +360,33 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                               </span>
                             <% end %>
                           <% end %>
-                          &bull;
                           <%= case run.state do %>
                             <% :available -> %>
-                              enqueued
+                              &bull; enqueued
                               <Common.datetime
                                 datetime={run.inserted_at}
                                 format={:relative_detailed}
                               />
                             <% :claimed -> %>
-                              claimed
+                              &bull; claimed
                               <Common.datetime
                                 datetime={run.claimed_at}
                                 format={:relative_detailed}
                               />
                             <% :started -> %>
-                              started
+                              &bull; started
                               <Common.datetime
                                 datetime={run.started_at}
                                 format={:relative_detailed}
                               />
+                            <% :cancelled -> %>
+                              &bull; cancelled
+                              <Common.datetime
+                                datetime={run.updated_at}
+                                format={:relative_detailed}
+                              />
                             <% _state -> %>
-                              finished
+                              &bull; finished
                               <Common.datetime
                                 datetime={run.finished_at}
                                 format={:relative_detailed}
@@ -368,12 +394,30 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                           <% end %>
                         </div>
                       </div>
-                      <div class="flex-shrink-0 py-2 px-4 text-right min-w-[240px]">
+                      <div class="shrink-0 py-2 px-4 text-right min-w-[240px]">
                         <div class="flex items-center justify-end gap-3">
                           <div class="w-16 text-right">
-                            <.elapsed_indicator item={run} context="details" />
+                            <.elapsed_indicator
+                              :if={run.state not in [:available, :cancelled]}
+                              item={run}
+                              context="details"
+                            />
                           </div>
                           <span class="font-mono w-24 text-right">{run.state}</span>
+                          <button
+                            :if={run.state == :available and @can_run_workflow}
+                            id={"cancel-run-#{run.id}"}
+                            phx-click={
+                              JS.push("cancel-run",
+                                value: %{run_id: run.id}
+                              )
+                            }
+                            phx-hook="Tooltip"
+                            aria-label="Cancel this run"
+                            class="inline-flex items-center p-1 text-gray-600 hover:text-red-500 cursor-pointer"
+                          >
+                            <.icon name="hero-x-mark-mini" class="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>

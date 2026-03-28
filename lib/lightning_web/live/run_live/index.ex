@@ -11,6 +11,8 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Runs
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
@@ -457,7 +459,8 @@ defmodule LightningWeb.RunLive.Index do
       if selected? and !is_nil(workorder) do
         selected_workorder = %Lightning.WorkOrder{
           id: workorder.id,
-          workflow_id: workorder.workflow_id
+          workflow_id: workorder.workflow_id,
+          state: workorder.state
         }
 
         [selected_workorder | selected_work_orders]
@@ -483,7 +486,11 @@ defmodule LightningWeb.RunLive.Index do
         page.entries
         |> Enum.filter(fn wo -> is_nil(wo.dataclip.wiped_at) end)
         |> Enum.map(fn entry ->
-          %Lightning.WorkOrder{id: entry.id, workflow_id: entry.workflow_id}
+          %Lightning.WorkOrder{
+            id: entry.id,
+            workflow_id: entry.workflow_id,
+            state: entry.state
+          }
         end)
       else
         []
@@ -538,6 +545,115 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> put_flash(:error, error_message)}
+  end
+
+  def handle_event("bulk-cancel", attrs, socket) do
+    with true <- socket.assigns.can_run_workflow,
+         {:ok, cancelled} <- handle_bulk_cancel(socket, attrs) do
+      message =
+        "Cancelled #{cancelled} run#{if cancelled != 1, do: "s"}"
+
+      {:noreply,
+       socket
+       |> put_flash(:info, message)
+       |> push_navigate(
+         to:
+           ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
+       )}
+    else
+      false ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "You are not authorized to perform this action."
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "An error occurred while cancelling work orders."
+         )}
+    end
+  end
+
+  def handle_event(
+        "cancel",
+        %{"workorder_id" => workorder_id},
+        socket
+      ) do
+    if socket.assigns.can_run_workflow do
+      work_order = %WorkOrder{id: workorder_id}
+
+      case WorkOrders.cancel_many(
+             [work_order],
+             project_id: socket.assigns.project.id
+           ) do
+        {:ok, n} when n > 0 ->
+          {:noreply, put_flash(socket, :info, "Work order cancelled.")}
+
+        {:ok, 0} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Work order could not be cancelled" <>
+               " — it is no longer pending."
+           )}
+
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
+  end
+
+  def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
+    if socket.assigns.can_run_workflow do
+      run = Runs.get(run_id)
+
+      case Runs.cancel_run(run) do
+        {:ok, _run} ->
+          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+
+        {:error, :not_available} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Run could not be cancelled" <>
+               " — it is no longer available."
+           )}
+
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
   end
 
   def handle_event("show-export-modal", _params, socket) do
@@ -629,6 +745,56 @@ defmodule LightningWeb.RunLive.Index do
       created_by: socket.assigns.current_user,
       project_id: socket.assigns.project.id
     )
+  end
+
+  defp handle_bulk_cancel(socket, %{"type" => "selected"}) do
+    socket.assigns.selected_work_orders
+    |> WorkOrders.cancel_many(project_id: socket.assigns.project.id)
+  end
+
+  defp handle_bulk_cancel(socket, %{"type" => "all"}) do
+    filter = SearchParams.new(socket.assigns.filters)
+
+    work_orders =
+      socket.assigns.project
+      |> Invocation.search_workorders_for_cancel(filter)
+
+    WorkOrders.cancel_many_async(
+      work_orders,
+      project_id: socket.assigns.project.id
+    )
+
+    {:ok, length(work_orders)}
+  end
+
+  @retryable_states [
+    :success,
+    :failed,
+    :crashed,
+    :killed,
+    :exception,
+    :lost,
+    :cancelled,
+    :rejected
+  ]
+
+  def available_bulk_actions(selected_work_orders) do
+    states = Enum.map(selected_work_orders, & &1.state)
+
+    actions = []
+
+    actions =
+      if Enum.all?(states, &(&1 == :pending)) do
+        [:cancel | actions]
+      else
+        actions
+      end
+
+    if Enum.all?(states, &(&1 in @retryable_states)) do
+      [:retry | actions]
+    else
+      actions
+    end
   end
 
   defp all_selected?(work_orders, entries) do
