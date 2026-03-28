@@ -59,7 +59,6 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
               id="channel-filter-chip"
               active={selected_channel != nil}
               clear_fields={[{:channel_id, nil}]}
-              changeset={@filters_changeset}
               target={@myself}
               phx-click={show_dropdown("channel_filter_dropdown")}
             >
@@ -87,7 +86,13 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
                     )
                     |> JS.hide(to: "#channel_filter_dropdown")
                   }
-                  class={"#{if(selected_channel == nil, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                  class={[
+                    "block px-4 py-2 text-sm hover:bg-gray-100",
+                    if(selected_channel == nil,
+                      do: "bg-gray-100 text-gray-900",
+                      else: "text-gray-700"
+                    )
+                  ]}
                   role="menuitem"
                 >
                   All Channels
@@ -102,7 +107,13 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
                       )
                       |> JS.hide(to: "#channel_filter_dropdown")
                     }
-                    class={"#{if(selected_channel && selected_channel.id == channel.id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                    class={[
+                      "block px-4 py-2 text-sm hover:bg-gray-100",
+                      if(selected_channel && selected_channel.id == channel.id,
+                        do: "bg-gray-100 text-gray-900",
+                        else: "text-gray-700"
+                      )
+                    ]}
                     role="menuitem"
                   >
                     {channel.name}

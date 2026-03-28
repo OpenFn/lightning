@@ -652,7 +652,14 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp maybe_humanize_date(date) do
-    date && Timex.format!(date, "{D}/{M}/{YY}")
+    if date do
+      if date.year == DateTime.utc_now().year do
+        Timex.format!(date, "{Mshort}-{D}")
+      else
+        Timex.format!(date, "{YYYY}") <>
+          "-" <> Timex.format!(date, "{Mshort}-{D}")
+      end
+    end
   end
 
   defp format_date_range(date_after, date_before) do
@@ -667,7 +674,7 @@ defmodule LightningWeb.RunLive.Index do
         "before #{maybe_humanize_date(before_date)}"
 
       {after_date, before_date} ->
-        "#{maybe_humanize_date(after_date)} – #{maybe_humanize_date(before_date)}"
+        "#{maybe_humanize_date(after_date)} to #{maybe_humanize_date(before_date)}"
     end
   end
 

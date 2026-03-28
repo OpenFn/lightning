@@ -60,7 +60,6 @@
                 id="workflow-filter-chip"
                 active={get_change(@filters_changeset, :workflow_id) != nil}
                 clear_fields={[{:workflow_id, nil}]}
-                changeset={@filters_changeset}
                 phx-click={show_dropdown("workflow_filter_dropdown")}
               >
                 Workflow is
@@ -90,7 +89,15 @@
                         )
                         |> JS.hide(to: "#workflow_filter_dropdown")
                       }
-                      class={"#{if(get_change(@filters_changeset, :workflow_id) == workflow_id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                      class={[
+                        "block px-4 py-2 text-sm hover:bg-gray-100",
+                        if(
+                          get_change(@filters_changeset, :workflow_id) ==
+                            workflow_id,
+                          do: "bg-gray-100 text-gray-900",
+                          else: "text-gray-700"
+                        )
+                      ]}
                       role="menuitem"
                       tabindex="-1"
                       id={"select-workflow-#{workflow_id}"}
@@ -114,7 +121,6 @@
                 clear_fields={
                   Enum.map(selected_statuses, fn s -> {s.id, false} end)
                 }
-                changeset={@filters_changeset}
                 phx-click={show_dropdown("status_filter_dropdown")}
               >
                 Status {if length(selected_statuses) > 1, do: "in", else: "is"}
@@ -158,7 +164,6 @@
                 id="received-filter-chip"
                 active={has_received}
                 clear_fields={[{:wo_date_after, nil}, {:wo_date_before, nil}]}
-                changeset={@filters_changeset}
                 phx-click={show_dropdown("wo_date_received_filter")}
               >
                 Received
@@ -203,7 +208,6 @@
                 id="activity-filter-chip"
                 active={has_activity}
                 clear_fields={[{:date_after, nil}, {:date_before, nil}]}
-                changeset={@filters_changeset}
                 phx-click={show_dropdown("wo_last_activity_filter")}
               >
                 Last activity
@@ -245,7 +249,6 @@
                 id="workorder-id-filter-chip"
                 active={true}
                 clear_fields={[{:workorder_id, nil}]}
-                changeset={@filters_changeset}
               >
                 Work order: {display_short_uuid(workorder_id)}
               </.filter_chip>

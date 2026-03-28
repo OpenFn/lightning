@@ -638,6 +638,169 @@ defmodule LightningWeb.RunLive.IndexTest do
     end
   end
 
+  describe "filter chips" do
+    test "workflow filter chip shows active state when workflow selected", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      # Initially shows "Workflow is any"
+      chip = element(view, "#workflow-filter-chip")
+      assert render(chip) =~ "Workflow is"
+      assert render(chip) =~ "any"
+
+      # Select a workflow via the apply_filters event
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"workflow_id" => workflow.id}
+      })
+
+      # Chip now shows the workflow name and the clear button
+      html = render(view)
+      assert html =~ workflow.name
+      assert has_element?(view, "[aria-label=\"Clear filter\"]")
+    end
+
+    test "clearing workflow filter resets chip to inactive", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workflow_id: workflow.id}
+          )
+        )
+
+      # Workflow is active
+      html = render(view)
+      assert html =~ workflow.name
+
+      # Clear the filter
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"workflow_id" => ""}
+      })
+
+      html = render(view)
+      assert html =~ "Workflow is"
+      assert html =~ "any"
+    end
+
+    test "status filter chip shows selected statuses", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      # Initially shows "Status is any"
+      chip = element(view, "#status-filter-chip")
+      assert render(chip) =~ "Status"
+      assert render(chip) =~ "any"
+
+      # Select a status via apply_filters
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"failed" => "true"}
+      })
+
+      html = render(view)
+      assert html =~ "Failed"
+    end
+
+    test "status filter chip shows 'in' for multiple statuses", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{failed: true, success: true}
+          )
+        )
+
+      html = render(view)
+      assert html =~ "Status in"
+      assert html =~ "Failed"
+      assert html =~ "Success"
+    end
+
+    test "date filter chips show date range when active", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2025-01-01T00:00"}
+          )
+        )
+
+      chip = element(view, "#received-filter-chip")
+      html = render(chip)
+      assert html =~ "Received"
+      assert html =~ "after"
+    end
+
+    test "clearing date filter resets chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2025-01-01T00:00"}
+          )
+        )
+
+      # Clear the received date filter
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"wo_date_after" => "", "wo_date_before" => ""}
+      })
+
+      chip = element(view, "#received-filter-chip")
+      html = render(chip)
+      assert html =~ "any time"
+    end
+
+    test "workorder ID chip appears when workorder_id filter is set", %{
+      conn: conn,
+      project: project,
+      work_order_1: wo
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              workorder_id: wo.id,
+              failed: true
+            }
+          )
+        )
+
+      assert has_element?(view, "#workorder-id-filter-chip")
+      chip = element(view, "#workorder-id-filter-chip")
+      assert render(chip) =~ "Work order:"
+    end
+  end
+
   describe "Export History" do
     test "export history button is present", %{conn: conn, project: project} do
       {:ok, view, _html} =

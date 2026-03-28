@@ -3,9 +3,9 @@ defmodule LightningWeb.Components.Pills do
   UI component to render a pill to create tags.
   """
   use Phoenix.Component
-  alias Phoenix.LiveView.JS
   import LightningWeb.Components.Icons
   import LightningWeb.Components.NewInputs
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a pill with a color.
@@ -180,10 +180,8 @@ defmodule LightningWeb.Components.Pills do
   Gray when inactive, indigo when a filter is active.
   """
   attr :active, :boolean, default: false
-  attr :label, :string, default: nil
   attr :clear_fields, :list, default: []
   attr :id, :string, required: true
-  attr :changeset, :any, default: nil
   attr :target, :any, default: nil
   attr :rest, :global
 
@@ -208,22 +206,27 @@ defmodule LightningWeb.Components.Pills do
                 else: opts
 
             JS.push("apply_filters", opts)
+          else
+            nil
           end
       )
 
     ~H"""
-    <div class={[
-      "inline-flex items-center gap-x-1 rounded-full pl-3 text-sm font-medium transition-colors",
-      if(@active,
-        do: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-        else: "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
-      ),
-      if(@active && @clear_fields != [],
-        do: "pr-1.5",
-        else: "pr-3"
-      ),
-      "py-1.5"
-    ]}>
+    <div
+      id={@id}
+      class={[
+        "inline-flex items-center gap-x-1 rounded-full pl-3 text-sm font-medium transition-colors",
+        if(@active,
+          do: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+          else: "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+        ),
+        if(@active && @clear_fields != [],
+          do: "pr-1.5",
+          else: "pr-3"
+        ),
+        "py-1.5"
+      ]}
+    >
       <button type="button" class="cursor-pointer" {@rest}>
         {render_slot(@inner_block)}
       </button>
