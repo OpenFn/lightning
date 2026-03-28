@@ -654,10 +654,10 @@ defmodule LightningWeb.RunLive.Index do
   defp maybe_humanize_date(date) do
     if date do
       if date.year == DateTime.utc_now().year do
-        Timex.format!(date, "{Mshort}-{D}")
+        Timex.format!(date, "{D}-{Mshort}")
       else
-        Timex.format!(date, "{YYYY}") <>
-          "-" <> Timex.format!(date, "{Mshort}-{D}")
+        Timex.format!(date, "{D}-{Mshort}") <>
+          "-" <> Timex.format!(date, "{YYYY}")
       end
     end
   end
