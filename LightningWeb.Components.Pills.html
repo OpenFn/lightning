@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-7A8ACAFB.js"></script>
+    <script defer src="dist/sidebar_items-3B024610.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -130,11 +130,12 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#filter_badge/1" data-no-tooltip="" translate="no">filter_badge(assigns)</a>
+        <a href="#filter_chip/1" data-no-tooltip="" translate="no">filter_chip(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Renders a filter badge with a close button.</p></div>
+        <div class="summary-synopsis"><p>A filter chip that acts as both a state display and a dropdown trigger.
+Gray when inactive, indigo when a filter is active.</p></div>
 
     </div>
 
@@ -172,17 +173,17 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="filter_badge/1">
+<section class="detail" id="filter_chip/1">
 
   <div class="detail-header">
-    <a href="#filter_badge/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#filter_chip/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">filter_badge(assigns)</h1>
+      <h1 class="signature" translate="no">filter_chip(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L138" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L118" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -191,21 +192,8 @@ Lightning
 
   <section class="docstring">
 
-<p>Renders a filter badge with a close button.</p><h2 id="filter_badge/1-example" class="section-heading"><a href="#filter_badge/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">filter_badge</span><span class="w">
-  </span><span class="n">form</span><span class="o">=</span><span class="p" data-group-id="4987073689-1">{</span><span class="na">@filters_changeset</span><span class="p" data-group-id="4987073689-1">}</span><span class="w">
-  </span><span class="n">fields</span><span class="o">=</span><span class="p" data-group-id="4987073689-2">{</span><span class="p" data-group-id="4987073689-3">[</span><span class="p" data-group-id="4987073689-4">{</span><span class="ss">:workflow_id</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="4987073689-4">}</span><span class="p" data-group-id="4987073689-3">]</span><span class="p" data-group-id="4987073689-2">}</span><span class="w">
-  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;workflow_badge_123&quot;</span><span class="w">
-</span><span class="o">&gt;</span><span class="w">
-  </span><span class="ss">Workflow</span><span class="p">:</span><span class="w"> </span><span class="nc">My</span><span class="w"> </span><span class="nc">Workflow</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">filter_badge</span><span class="o">&gt;</span><span class="w">
-
-</span><span class="o">&lt;</span><span class="o">.</span><span class="n">filter_badge</span><span class="w">
-  </span><span class="n">form</span><span class="o">=</span><span class="p" data-group-id="4987073689-5">{</span><span class="na">@filters_changeset</span><span class="p" data-group-id="4987073689-5">}</span><span class="w">
-  </span><span class="n">fields</span><span class="o">=</span><span class="p" data-group-id="4987073689-6">{</span><span class="p" data-group-id="4987073689-7">[</span><span class="p" data-group-id="4987073689-8">{</span><span class="ss">:wo_date_after</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="4987073689-8">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4987073689-9">{</span><span class="ss">:wo_date_before</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="4987073689-9">}</span><span class="p" data-group-id="4987073689-7">]</span><span class="p" data-group-id="4987073689-6">}</span><span class="w">
-  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;workorder_date_badge&quot;</span><span class="w">
-</span><span class="o">&gt;</span><span class="w">
-  </span><span class="nc">Date</span><span class="w"> </span><span class="ss">range</span><span class="p">:</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="o">*</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">filter_badge</span><span class="o">&gt;</span></code></pre><h2 id="filter_badge/1-attributes" class="section-heading"><a href="#filter_badge/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">form</code> (<code class="inline">:any</code>) (required) - The form changeset.</li><li><code class="inline">fields</code> (<code class="inline">:list</code>) (required) - List of {field_name, field_value} tuples representing the fields to reset.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) (required) - Unique ID for the badge.</li></ul><h2 id="filter_badge/1-slots" class="section-heading"><a href="#filter_badge/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>A filter chip that acts as both a state display and a dropdown trigger.
+Gray when inactive, indigo when a filter is active.</p><h2 id="filter_chip/1-attributes" class="section-heading"><a href="#filter_chip/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">active</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">clear_fields</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted.</li></ul><h2 id="filter_chip/1-slots" class="section-heading"><a href="#filter_chip/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="name_badge/1">
@@ -218,7 +206,7 @@ Lightning
       <h1 class="signature" translate="no">name_badge(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L97" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -227,9 +215,9 @@ Lightning
 
   <section class="docstring">
 
-<p>Renders a preview of a derived URL-safe name inside a yellow badge.</p><p>Shows the badge only when the derived name is non-empty.</p><h2 id="name_badge/1-example" class="section-heading"><a href="#name_badge/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="0404016442-out-1">&lt;</span><span class="nf">.name_badge</span><span class="w"> </span><span class="na">name</span><span class="o">=</span><span class="p" data-group-id="0404016442-1">{</span><span class="na">@name</span><span class="p" data-group-id="0404016442-1">}</span><span class="s"> </span><span class="na">field</span><span class="o">=</span><span class="p" data-group-id="0404016442-2">{</span><span class="n">f</span><span class="p" data-group-id="0404016442-ex-1">[</span><span class="ss">:name</span><span class="p" data-group-id="0404016442-ex-1">]</span><span class="p" data-group-id="0404016442-2">}</span><span class="p" data-group-id="0404016442-out-1">&gt;</span><span class="s">
+<p>Renders a preview of a derived URL-safe name inside a yellow badge.</p><p>Shows the badge only when the derived name is non-empty.</p><h2 id="name_badge/1-example" class="section-heading"><a href="#name_badge/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="0220014885-out-1">&lt;</span><span class="nf">.name_badge</span><span class="w"> </span><span class="na">name</span><span class="o">=</span><span class="p" data-group-id="0220014885-1">{</span><span class="na">@name</span><span class="p" data-group-id="0220014885-1">}</span><span class="s"> </span><span class="na">field</span><span class="o">=</span><span class="p" data-group-id="0220014885-2">{</span><span class="n">f</span><span class="p" data-group-id="0220014885-ex-1">[</span><span class="ss">:name</span><span class="p" data-group-id="0220014885-ex-1">]</span><span class="p" data-group-id="0220014885-2">}</span><span class="p" data-group-id="0220014885-out-1">&gt;</span><span class="s">
   Your project will be named
-</span><span class="p" data-group-id="0404016442-out-2">&lt;/</span><span class="nf">.name_badge</span><span class="p" data-group-id="0404016442-out-2">&gt;</span></code></pre><h2 id="name_badge/1-attributes" class="section-heading"><a href="#name_badge/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">name</code> (<code class="inline">:string</code>) (required) - The derived URL-safe name.</li><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.3.0/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) (required) - The hidden :name field.</li></ul><h2 id="name_badge/1-slots" class="section-heading"><a href="#name_badge/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code></li></ul>
+</span><span class="p" data-group-id="0220014885-out-2">&lt;/</span><span class="nf">.name_badge</span><span class="p" data-group-id="0220014885-out-2">&gt;</span></code></pre><h2 id="name_badge/1-attributes" class="section-heading"><a href="#name_badge/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">name</code> (<code class="inline">:string</code>) (required) - The derived URL-safe name.</li><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.3.0/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) (required) - The hidden :name field.</li></ul><h2 id="name_badge/1-slots" class="section-heading"><a href="#name_badge/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code></li></ul>
   </section>
 </section>
 <section class="detail" id="pill/1">
@@ -242,7 +230,7 @@ Lightning
       <h1 class="signature" translate="no">pill(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L45" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/pills.ex#L46" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -268,11 +256,11 @@ Lightning
 
 </span><span class="c1">## Attributes</span><span class="w">
 
-</span><span class="o">*</span><span class="w"> </span><span class="err">`</span><span class="n">color</span><span class="err">`</span><span class="w"> </span><span class="p" data-group-id="9472091105-1">(</span><span class="err">`</span><span class="ss">:string</span><span class="err">`</span><span class="p" data-group-id="9472091105-1">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nc">Defaults</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;gray&quot;</span><span class="err">`</span><span class="o">.</span><span class="w"> </span><span class="nc">Must</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;gray&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;red&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;yellow&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;green&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;blue&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;indigo&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;purple&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;pink&quot;</span><span class="err">`</span><span class="o">.</span><span class="w">
+</span><span class="o">*</span><span class="w"> </span><span class="err">`</span><span class="n">color</span><span class="err">`</span><span class="w"> </span><span class="p" data-group-id="9314871749-1">(</span><span class="err">`</span><span class="ss">:string</span><span class="err">`</span><span class="p" data-group-id="9314871749-1">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nc">Defaults</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;gray&quot;</span><span class="err">`</span><span class="o">.</span><span class="w"> </span><span class="nc">Must</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;gray&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;red&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;yellow&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;green&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;blue&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;indigo&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;purple&quot;</span><span class="err">`</span><span class="p">,</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="s">&quot;pink&quot;</span><span class="err">`</span><span class="o">.</span><span class="w">
 </span><span class="o">*</span><span class="w"> </span><span class="nc">Global</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">accepted</span><span class="o">.</span><span class="w">
 </span><span class="c1">## Slots</span><span class="w">
 
-</span><span class="o">*</span><span class="w"> </span><span class="err">`</span><span class="n">inner_block</span><span class="err">`</span><span class="w"> </span><span class="p" data-group-id="9472091105-2">(</span><span class="n">required</span><span class="p" data-group-id="9472091105-2">)</span></code></pre>
+</span><span class="o">*</span><span class="w"> </span><span class="err">`</span><span class="n">inner_block</span><span class="err">`</span><span class="w"> </span><span class="p" data-group-id="9314871749-2">(</span><span class="n">required</span><span class="p" data-group-id="9314871749-2">)</span></code></pre>
   </section>
 </section>
 
