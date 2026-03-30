@@ -229,14 +229,16 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Returns the final dataclip from the last successful run for a trigger.
-  Used when cron_cursor_job_id is nil (use final run state).
+  Returns the final dataclip from the last successful run for a trigger's
+  workflow. Used when cron_cursor_job_id is nil (use final run state).
+
+  Scopes by workflow (not trigger) so that manual runs are also considered.
   """
-  def last_run_final_dataclip(%Trigger{id: trigger_id}) do
+  def last_run_final_dataclip(%Trigger{workflow_id: workflow_id}) do
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: d in assoc(r, :final_dataclip),
-      where: wo.trigger_id == ^trigger_id,
+      where: wo.workflow_id == ^workflow_id,
       where: r.state == :success,
       where: is_nil(d.wiped_at),
       order_by: [desc: r.finished_at],
