@@ -30,6 +30,8 @@ and this project adheres to
 
 ### Fixed
 
+- Proper warn & error for exceeding max dataclip size
+  [#4524](https://github.com/OpenFn/lightning/issues/4524)
 - Copying api tokens doesn't work on unsecure non-localhost contexts
   [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 - Fix AI assistant authorization for support users on projects with support

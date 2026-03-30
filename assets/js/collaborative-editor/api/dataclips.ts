@@ -157,8 +157,15 @@ export async function submitManualRun(
   );
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string };
-    throw new Error(error.error || 'Failed to submit manual run');
+    if (response.status === 413) {
+      throw new Error('Dataclip is too large. Reduce the size and try again.');
+    }
+    let errorMessage = 'Failed to submit manual run';
+    try {
+      const error = (await response.json()) as { error?: string };
+      errorMessage = error.error || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
   }
 
   return response.json() as Promise<ManualRunResponse>;
