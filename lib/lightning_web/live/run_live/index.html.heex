@@ -109,8 +109,6 @@
               </div>
             </div>
 
-            <span class="text-sm text-gray-400">and</span>
-
             <%!-- Status chip --%>
             <div class="relative">
               <% selected_statuses =
@@ -157,8 +155,6 @@
               </div>
             </div>
 
-            <span class="text-sm text-gray-400">and</span>
-
             <%!-- Received date chip --%>
             <div class="relative">
               <% has_received =
@@ -202,8 +198,6 @@
                 </div>
               </div>
             </div>
-
-            <span class="text-sm text-gray-400">and</span>
 
             <%!-- Last activity chip --%>
             <div class="relative">
@@ -251,7 +245,6 @@
 
             <%!-- Work order ID chip (only when workorder_id filter is active) --%>
             <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
-              <span class="text-sm text-gray-400">and</span>
               <.filter_chip
                 id="workorder-id-filter-chip"
                 active={true}
