@@ -15,6 +15,8 @@ defmodule LightningWeb.RunLive.IndexTest do
     %{project: project, triggers: [trigger], jobs: jobs} =
       workflow = insert(:complex_workflow, project: project) |> with_snapshot()
 
+    snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
     dataclip = insert(:dataclip, project: project)
 
     work_order_1 =
@@ -35,10 +37,11 @@ defmodule LightningWeb.RunLive.IndexTest do
           |> Enum.map(fn j ->
             build(:step,
               job: j,
+              snapshot: snapshot,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_reason: "failed"
+              exit_reason: "fail"
             )
           end)
       )
@@ -63,10 +66,11 @@ defmodule LightningWeb.RunLive.IndexTest do
           |> Enum.map(fn j ->
             build(:step,
               job: j,
+              snapshot: snapshot,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_reason: "failed"
+              exit_reason: "fail"
             )
           end)
       )
