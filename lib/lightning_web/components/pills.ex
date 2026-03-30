@@ -4,7 +4,6 @@ defmodule LightningWeb.Components.Pills do
   """
   use Phoenix.Component
   import LightningWeb.Components.Icons
-  import LightningWeb.Components.NewInputs
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -105,77 +104,6 @@ defmodule LightningWeb.Components.Pills do
   end
 
   @doc """
-  Renders a filter badge with a close button.
-
-  ## Example
-
-  ```
-  <.filter_badge
-    form={@filters_changeset}
-    fields={[{:workflow_id, nil}]}
-    id="workflow_badge_123"
-  >
-    Workflow: My Workflow
-  </.filter_badge>
-
-  <.filter_badge
-    form={@filters_changeset}
-    fields={[{:wo_date_after, nil}, {:wo_date_before, nil}]}
-    id="workorder_date_badge"
-  >
-    Date range: * - *
-  </.filter_badge>
-  ```
-  """
-  attr :form, :any, required: true, doc: "The form changeset"
-
-  attr :fields, :list,
-    required: true,
-    doc:
-      "List of {field_name, field_value} tuples representing the fields to reset"
-
-  attr :id, :string, required: true, doc: "Unique ID for the badge"
-  slot :inner_block, required: true
-
-  def filter_badge(assigns) do
-    ~H"""
-    <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-      <span class="flex items-center">{render_slot(@inner_block)}</span>
-      <.form
-        :let={f}
-        for={@form}
-        as={:filters}
-        class="inline"
-        phx-submit="apply_filters"
-      >
-        <%= for {{field_name, field_value}, idx} <- Enum.with_index(@fields) do %>
-          <.input
-            id={"#{@id}_#{idx}"}
-            type="hidden"
-            field={f[field_name]}
-            value={field_value}
-          />
-        <% end %>
-
-        <button
-          type="submit"
-          class="group relative -mr-1 flex items-center justify-center h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-          aria-label="Remove filter"
-        >
-          <span class="sr-only">Remove</span>
-          <svg
-            viewBox="0 0 14 14"
-            class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-          >
-            <path d="M4 4l6 6m0-6l-6 6" />
-          </svg>
-        </button>
-      </.form>
-    </span>
-    """
-  end
-
-  @doc """
   A filter chip that acts as both a state display and a dropdown trigger.
   Gray when inactive, indigo when a filter is active.
   """
@@ -188,28 +116,7 @@ defmodule LightningWeb.Components.Pills do
   slot :inner_block, required: true
 
   def filter_chip(assigns) do
-    assigns =
-      assign(assigns,
-        clear_js:
-          if assigns[:clear_fields] != [] do
-            clear_value =
-              Map.new(assigns.clear_fields, fn
-                {field_name, nil} -> {field_name, ""}
-                {field_name, value} -> {field_name, value}
-              end)
-
-            opts = [value: %{filters: clear_value}]
-
-            opts =
-              if assigns[:target],
-                do: opts ++ [target: assigns.target],
-                else: opts
-
-            JS.push("apply_filters", opts)
-          else
-            nil
-          end
-      )
+    assigns = assign(assigns, :clear_js, build_clear_js(assigns))
 
     ~H"""
     <div
@@ -245,4 +152,23 @@ defmodule LightningWeb.Components.Pills do
     </div>
     """
   end
+
+  defp build_clear_js(%{active: true, clear_fields: [_ | _]} = assigns) do
+    clear_value =
+      Map.new(assigns.clear_fields, fn
+        {field_name, nil} -> {field_name, ""}
+        {field_name, value} -> {field_name, value}
+      end)
+
+    opts = [value: %{filters: clear_value}]
+
+    opts =
+      if assigns[:target],
+        do: opts ++ [target: assigns.target],
+        else: opts
+
+    JS.push("apply_filters", opts)
+  end
+
+  defp build_clear_js(_assigns), do: nil
 end
