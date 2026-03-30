@@ -222,15 +222,14 @@ defmodule Lightning.Channels do
   @spec delete_channel(Channel.t(), actor: User.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
+    from(cr in ChannelRequest,
+      where: cr.channel_id == ^channel.id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
-    |> Multi.run(:delete_requests, fn _repo, _changes ->
-      {count, _} =
-        from(cr in ChannelRequest, where: cr.channel_id == ^channel.id)
-        |> Repo.delete_all()
-
-      {:ok, count}
-    end)
     |> Multi.delete(:channel, channel)
     |> Repo.transaction()
     |> case do
@@ -383,33 +382,11 @@ defmodule Lightning.Channels do
   @spec delete_expired_requests(Ecto.UUID.t(), pos_integer()) :: :ok
   def delete_expired_requests(project_id, period_days)
       when is_binary(project_id) and is_integer(period_days) do
-    batch_size = Config.activity_cleanup_chunk_size()
+    request_count =
+      expired_requests_query(project_id, period_days)
+      |> batch_delete_requests()
 
-    expired_query = expired_requests_query(project_id, period_days)
-
-    total =
-      Repo.aggregate(expired_query, :count,
-        timeout: Config.default_ecto_database_timeout() * 3
-      )
-
-    if total > 0 do
-      delete_query =
-        ChannelRequest
-        |> with_cte("requests_to_delete",
-          as: ^limit(expired_query, ^batch_size)
-        )
-        |> join(:inner, [cr], rtd in "requests_to_delete", on: cr.id == rtd.id)
-
-      Stream.iterate(0, &(&1 + 1))
-      |> Stream.take(ceil(total / batch_size))
-      |> Enum.each(fn _i ->
-        {_count, _} =
-          Repo.delete_all(delete_query,
-            returning: false,
-            timeout: Config.default_ecto_database_timeout() * 3
-          )
-      end)
-
+    if request_count > 0 do
       Logger.info("Deleted expired channel requests for project #{project_id}")
     end
 
@@ -432,18 +409,22 @@ defmodule Lightning.Channels do
   """
   @spec delete_channel_requests_for_project(Project.t()) :: :ok
   def delete_channel_requests_for_project(%Project{id: project_id}) do
+    from(cr in ChannelRequest,
+      join: c in Channel,
+      on: cr.channel_id == c.id,
+      where: c.project_id == ^project_id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
+    :ok
+  end
+
+  defp batch_delete_requests(query) do
     batch_size = Config.activity_cleanup_chunk_size()
 
-    all_requests_query =
-      from(cr in ChannelRequest,
-        join: c in Channel,
-        on: cr.channel_id == c.id,
-        where: c.project_id == ^project_id,
-        select: cr.id
-      )
-
     total =
-      Repo.aggregate(all_requests_query, :count,
+      Repo.aggregate(query, :count,
         timeout: Config.default_ecto_database_timeout() * 3
       )
 
@@ -451,7 +432,7 @@ defmodule Lightning.Channels do
       delete_query =
         ChannelRequest
         |> with_cte("requests_to_delete",
-          as: ^limit(all_requests_query, ^batch_size)
+          as: ^limit(query, ^batch_size)
         )
         |> join(:inner, [cr], rtd in "requests_to_delete", on: cr.id == rtd.id)
 
@@ -466,7 +447,7 @@ defmodule Lightning.Channels do
       end)
     end
 
-    :ok
+    total
   end
 
   defp expired_requests_query(project_id, period_days) do
