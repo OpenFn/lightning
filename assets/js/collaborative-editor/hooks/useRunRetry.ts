@@ -75,6 +75,7 @@ export interface UseRunRetryOptions {
   onRunSubmitted: ((runId: string, dataclip?: Dataclip) => void) | undefined;
   edgeId: string | null;
   workflowEdges?: Workflow.Edge[];
+  maxDataclipSizeBytes?: number;
 }
 
 export interface UseRunRetryReturn {
@@ -119,6 +120,7 @@ export function useRunRetry({
   onRunSubmitted,
   edgeId,
   workflowEdges = [],
+  maxDataclipSizeBytes,
 }: UseRunRetryOptions): UseRunRetryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
@@ -214,10 +216,17 @@ export function useRunRetry({
     }
   }, [customBody]);
 
+  const isCustomBodyTooLarge = useMemo(() => {
+    if (!maxDataclipSizeBytes || selectedTab !== 'custom' || !customBody) {
+      return false;
+    }
+    return new TextEncoder().encode(customBody).length > maxDataclipSizeBytes;
+  }, [customBody, maxDataclipSizeBytes, selectedTab]);
+
   const hasValidInput =
     selectedTab === 'empty' ||
     (selectedTab === 'existing' && !!selectedDataclip) ||
-    (selectedTab === 'custom' && isValidCustomBody);
+    (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
