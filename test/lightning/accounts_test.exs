@@ -685,6 +685,37 @@ defmodule Lightning.AccountsTest do
       assert Repo.all(Credentials.Credential)
              |> Enum.any?(fn x -> x.user_id == user_2.id end)
     end
+
+    test "purging a user with associated runs does not silently succeed" do
+      user = insert(:user)
+
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      _run =
+        insert(:run,
+          created_by: user,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      result = Accounts.purge_user(user.id)
+
+      # purge_user should propagate the delete_user failure, not return :ok
+      assert {:error, _changeset} = result
+
+      # The user should still exist since deletion was blocked by RESTRICT
+      assert Repo.get(User, user.id)
+    end
   end
 
   describe "The default Oban function Accounts.perform/1" do
@@ -1408,39 +1439,15 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
     end
 
-    test "removes any associated Run and RunStep records" do
+    test "cannot delete a user who has associated runs" do
       user_1 = insert(:user)
-      user_2 = insert(:user)
 
-      run_1 = insert_run(user_1)
-      run_2 = insert_run(user_1)
-      run_3 = insert_run(user_2)
+      _run = insert_run(user_1)
 
-      _run_step_1_1 = insert_run_step(run_1)
-      _run_step_1_2 = insert_run_step(run_1)
-      _run_step_2_1 = insert_run_step(run_2)
-      run_step_3_1 = insert_run_step(run_3)
+      assert {:error, changeset} = Accounts.delete_user(user_1)
 
-      Accounts.delete_user(user_1)
-
-      assert only_record_for_type?(run_3)
-
-      assert only_record_for_type?(run_step_3_1)
-    end
-
-    test "removes any associated LogLine records" do
-      user_1 = insert(:user)
-      user_2 = insert(:user)
-
-      insert_run(user_1, build_list(2, :log_line))
-      insert_run(user_1, build_list(2, :log_line))
-
-      run_3 = insert_run(user_2)
-      log_line_3_1 = insert(:log_line, run: run_3)
-
-      Accounts.delete_user(user_1)
-
-      assert only_record_for_type?(log_line_3_1)
+      assert {"user has associated runs and cannot be deleted", _} =
+               changeset.errors[:runs]
     end
 
     defp insert_run(user, log_lines \\ []) do
@@ -1451,10 +1458,6 @@ defmodule Lightning.AccountsTest do
         starting_job: build(:job),
         log_lines: log_lines
       )
-    end
-
-    defp insert_run_step(run) do
-      insert(:run_step, run: run, step: build(:step))
     end
   end
 
