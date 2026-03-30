@@ -1499,6 +1499,119 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Projects.File, project_file1.id)
       assert Repo.get(Projects.File, project_file2.id)
     end
+
+    test "deletes channel request history based on started_at" do
+      project = insert(:project, history_retention_period: 7)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      old_event = insert(:channel_event, channel_request: old_request)
+
+      recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      recent_event = insert(:channel_event, channel_request: recent_request)
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Old request and its event should be deleted
+      refute Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
+      refute Repo.get(Lightning.Channels.ChannelEvent, old_event.id)
+
+      # Recent request and its event should remain
+      assert Repo.get(Lightning.Channels.ChannelRequest, recent_request.id)
+      assert Repo.get(Lightning.Channels.ChannelEvent, recent_event.id)
+    end
+
+    test "cleans up orphaned channel snapshots after request deletion" do
+      project = insert(:project, history_retention_period: 7)
+
+      channel =
+        insert(:channel, project: project, lock_version: 2)
+
+      now = Lightning.current_time()
+
+      # Snapshot matching the channel's current lock_version (should never
+      # be deleted, even if no requests reference it)
+      current_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 2)
+
+      # Older snapshot referenced only by an expired request
+      orphan_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 1)
+
+      # Older snapshot still referenced by a recent request
+      referenced_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 0)
+
+      _old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: orphan_snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      _recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: referenced_snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Orphan snapshot (old lock_version, no remaining requests) is deleted
+      refute Repo.get(Lightning.Channels.ChannelSnapshot, orphan_snapshot.id)
+
+      # Current snapshot is preserved (matches channel lock_version)
+      assert Repo.get(Lightning.Channels.ChannelSnapshot, current_snapshot.id)
+
+      # Referenced snapshot is preserved (still has a recent request)
+      assert Repo.get(
+               Lightning.Channels.ChannelSnapshot,
+               referenced_snapshot.id
+             )
+    end
+
+    test "does not delete channel requests when history_retention_period is nil" do
+      project = insert(:project, history_retention_period: nil)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -30)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => project.id,
+                   "type" => "data_retention"
+                 }
+               })
+
+      assert Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
+    end
   end
 
   describe "invite_collaborators/3" do

@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Channel request logs are now cleaned up by the project history retention
+  period, matching how workflow run history is managed. Orphaned channel
+  snapshots are also cleaned up after expired requests are removed.
+  [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - AI assistant responses now stream in real-time
   [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
@@ -26,6 +30,11 @@ and this project adheres to
 
 - Streamlined filters/search on history page, better for small screens
   [#4579](https://github.com/OpenFn/lightning/issues/4579)
+- Channel requests FK constraint changed from CASCADE to RESTRICT, following the
+  "run is king" audit integrity pattern. Deleting a channel now explicitly
+  cleans up its request history first, and project deletion handles channel
+  requests before cascading.
+  [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - Removed potentially dangerous cascades on dataclip/run and user/run
   relationships. The run is "king" when it comes to auditing — attempts to
   delete dataclips or users that are referenced by runs are now prevented. Jobs

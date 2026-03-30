@@ -26,6 +26,7 @@ defmodule Lightning.Extensions.ProjectHook do
     end)
 
     Projects.delete_project_workorders(project)
+    Lightning.Channels.delete_channel_requests_for_project(project)
     Projects.project_jobs_query(project) |> Repo.delete_all()
     Projects.project_triggers_query(project) |> Repo.delete_all()
     Projects.project_workflows_query(project) |> Repo.delete_all()
