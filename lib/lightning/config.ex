@@ -209,6 +209,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def max_dataclip_size_bytes do
+      Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
+    end
+
+    @impl true
     def kafka_alternate_storage_enabled? do
       kafka_trigger_config() |> Keyword.get(:alternate_storage_enabled)
     end
@@ -459,6 +464,7 @@ defmodule Lightning.Config do
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
+  @callback max_dataclip_size_bytes() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
@@ -651,6 +657,10 @@ defmodule Lightning.Config do
 
   def kafka_triggers_enabled? do
     impl().kafka_triggers_enabled?()
+  end
+
+  def max_dataclip_size_bytes do
+    impl().max_dataclip_size_bytes()
   end
 
   def kafka_alternate_storage_enabled? do

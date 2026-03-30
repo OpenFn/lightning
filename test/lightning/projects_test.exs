@@ -273,7 +273,15 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      p1_step_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_output_dataclip = insert(:dataclip, body: %{result: "ok"}, project: p1)
+
+      p1_step_1 =
+        insert(:step,
+          input_dataclip: p1_dataclip,
+          output_dataclip: p1_output_dataclip,
+          job: e1.target_job
+        )
+
       p1_step_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
 
       insert(:workorder,
@@ -298,8 +306,14 @@ defmodule Lightning.ProjectsTest do
       )
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
+      p2_output_dataclip = insert(:dataclip, body: %{baz: "qux"}, project: p2)
 
-      p2_step = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
+      p2_step =
+        insert(:step,
+          input_dataclip: p2_dataclip,
+          output_dataclip: p2_output_dataclip,
+          job: e2.target_job
+        )
 
       p2_log_line = build(:log_line, step: p2_step)
 
@@ -381,6 +395,32 @@ defmodule Lightning.ProjectsTest do
 
       assert Lightning.Projects.project_steps_query(p2)
              |> Repo.aggregate(:count, :id) == 1
+
+      refute Repo.get(Dataclip, p1_dataclip.id),
+             "Dataclips should be deleted as part of project deletion"
+
+      refute Repo.get(Dataclip, p1_output_dataclip.id),
+             "Output dataclips should be deleted as part of project deletion"
+
+      p2_dataclip_record = Repo.get!(Dataclip, p2_dataclip.id)
+
+      error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(p2_dataclip_record)
+        end
+
+      assert error.constraint =~ "dataclip_id",
+             "RESTRICT should prevent deletion of dataclips referenced by runs or steps"
+
+      p2_output_dataclip_record = Repo.get!(Dataclip, p2_output_dataclip.id)
+
+      output_error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(p2_output_dataclip_record)
+        end
+
+      assert output_error.constraint =~ "output_dataclip_id",
+             "RESTRICT should prevent deletion of dataclips referenced as step outputs"
     end
 
     test "delete_project/1 deletes project with channel snapshots and requests" do
