@@ -24,12 +24,15 @@ and this project adheres to
 
 ### Changed
 
+- Streamlined filters/search on history page, better for small screens
+  [#4579](https://github.com/OpenFn/lightning/issues/4579)
 - Removed potentially dangerous cascades on dataclip/run and user/run
   relationships. The run is "king" when it comes to auditing — attempts to
   delete dataclips or users that are referenced by runs are now prevented. Jobs
   and triggers can still be freely deleted from workflows since the snapshot
   system preserves their data for every run.
   [#4538](https://github.com/OpenFn/lightning/issues/4538)
+
 - Allow users to select which workflow to merge for sandbox merging
   [#4002](https://github.com/OpenFn/lightning/issues/4002)
 - Bump ws-worker to `v1.23.1`
