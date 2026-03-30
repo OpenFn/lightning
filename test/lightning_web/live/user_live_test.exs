@@ -463,6 +463,7 @@ defmodule LightningWeb.UserLiveTest do
 
       # The UI should not claim the user was deleted when they weren't
       refute html =~ "User deleted"
+      assert html =~ "Cannot delete user with associated activity"
       assert Repo.get(User, user.id), "User should still exist in the database"
     end
 

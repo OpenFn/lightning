@@ -94,7 +94,18 @@ defmodule Lightning.Accounts do
       )
       |> Repo.all()
 
-    :ok = Enum.each(users_to_delete, fn u -> purge_user(u.id) end)
+    :ok =
+      Enum.each(users_to_delete, fn u ->
+        case purge_user(u.id) do
+          :ok ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.warning(fn ->
+              "Failed to purge user ##{u.id}: #{inspect(changeset.errors)}"
+            end)
+        end
+      end)
 
     {:ok, %{users_deleted: users_to_delete}}
   end
