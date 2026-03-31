@@ -39,6 +39,9 @@ and this project adheres to
 
 ### Fixed
 
+- Consider manual runs for "next cron run input" via the
+  `last_run_final_dataclip` function
+  [#4584](https://github.com/OpenFn/lightning/issues/4584)
 - Proper warn & error for exceeding max dataclip size
   [#4524](https://github.com/OpenFn/lightning/issues/4524)
 - Copying api tokens doesn't work on unsecure non-localhost contexts
