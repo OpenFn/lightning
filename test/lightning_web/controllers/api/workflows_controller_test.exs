@@ -3,24 +3,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
   import Lightning.Factories
 
-  # Sample curl requests:
-  #
-  #   # List all workflows
-  #   curl -s http://localhost:4000/api/workflows \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Get a single workflow by ID
-  #   curl -s http://localhost:4000/api/workflows/$WORKFLOW_ID \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Filter by project (query parameter)
-  #   curl -s "http://localhost:4000/api/workflows?project_id=$PROJECT_ID" \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Nested route: workflows for a specific project
-  #   curl -s http://localhost:4000/api/projects/$PROJECT_ID/workflows \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end

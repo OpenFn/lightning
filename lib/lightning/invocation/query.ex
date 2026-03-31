@@ -143,7 +143,7 @@ defmodule Lightning.Invocation.Query do
     from([work_order: wo] in query, where: wo.id == ^work_order_id)
   end
 
-  @valid_run_states ~w(available claimed started success failed crashed cancelled killed exception lost)
+  @valid_run_states Lightning.Run.states() |> Enum.map(&to_string/1)
 
   defp filter_runs_by_state(query, nil), do: query
 
@@ -377,7 +377,7 @@ defmodule Lightning.Invocation.Query do
     from([workflow: w] in query, where: w.id == ^workflow_id)
   end
 
-  @valid_states ~w(rejected pending running success failed crashed cancelled killed exception lost)
+  @valid_states Lightning.WorkOrder.states() |> Enum.map(&to_string/1)
 
   defp filter_work_orders_by_state(query, nil), do: query
 

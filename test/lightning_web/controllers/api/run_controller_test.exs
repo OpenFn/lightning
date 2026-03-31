@@ -3,24 +3,6 @@ defmodule LightningWeb.API.RunControllerTest do
 
   import Lightning.Factories
 
-  # Sample curl requests:
-  #
-  #   # List all runs
-  #   curl http://localhost:4000/api/runs \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Get a single run by ID
-  #   curl http://localhost:4000/api/runs/$RUN_ID \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Filter by project, workflow, work order, or date range
-  #   curl "http://localhost:4000/api/runs?project_id=$PID&inserted_after=2024-01-01T00:00:00Z" \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Nested route: runs for a specific project
-  #   curl http://localhost:4000/api/projects/$PROJECT_ID/runs \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end

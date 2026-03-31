@@ -3,16 +3,6 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
   import Lightning.Factories
 
-  # Sample curl requests:
-  #
-  #   # List all projects
-  #   curl http://localhost:4000/api/projects \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Get a single project by ID
-  #   curl http://localhost:4000/api/projects/$PROJECT_ID \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end

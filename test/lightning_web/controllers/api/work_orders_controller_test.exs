@@ -3,28 +3,6 @@ defmodule LightningWeb.API.WorkOrdersControllerTest do
 
   import Lightning.Factories
 
-  # Sample curl requests:
-  #
-  #   # List all work orders
-  #   curl http://localhost:4000/api/work_orders \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Get a single work order by ID
-  #   curl http://localhost:4000/api/work_orders/$WORK_ORDER_ID \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Filter by comma-separated IDs
-  #   curl "http://localhost:4000/api/work_orders?id=$ID1,$ID2" \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Filter by project, workflow, or date range
-  #   curl "http://localhost:4000/api/work_orders?project_id=$PID&inserted_after=2024-01-01T00:00:00Z" \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Nested route: work orders for a specific project
-  #   curl http://localhost:4000/api/projects/$PROJECT_ID/work_orders \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end

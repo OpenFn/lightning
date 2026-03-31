@@ -4,20 +4,6 @@ defmodule LightningWeb.API.JobControllerTest do
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
 
-  # Sample curl requests:
-  #
-  #   # List all jobs
-  #   curl http://localhost:4000/api/jobs \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # Get a single job by ID
-  #   curl http://localhost:4000/api/jobs/$JOB_ID \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-  #
-  #   # List jobs for a specific project
-  #   curl http://localhost:4000/api/projects/$PROJECT_ID/jobs \
-  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
-
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
