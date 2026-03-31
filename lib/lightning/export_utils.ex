@@ -28,7 +28,14 @@ defmodule Lightning.ExportUtils do
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
-    trigger: [:type, :cron_expression, :enabled, :kafka_configuration],
+    trigger: [
+      :type,
+      :webhook_reply,
+      :cron_expression,
+      :cron_cursor_job,
+      :enabled,
+      :kafka_configuration
+    ],
     edge: [
       :source_trigger,
       :source_job,
@@ -58,7 +65,7 @@ defmodule Lightning.ExportUtils do
 
     %{
       # The identifier here for our YAML reducer will be the hyphenated name
-      id: hyphenate(job.name),
+      id: job_key(job),
       name: job.name,
       node_type: :job,
       adaptor: job.adaptor,
@@ -68,7 +75,7 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp trigger_to_treenode(trigger) do
+  defp trigger_to_treenode(trigger, jobs) do
     base = %{
       id: trigger.id,
       enabled: trigger.enabled,
@@ -79,7 +86,18 @@ defmodule Lightning.ExportUtils do
 
     case trigger.type do
       :cron ->
-        Map.put(base, :cron_expression, trigger.cron_expression)
+        base
+        |> Map.put(:cron_expression, trigger.cron_expression)
+        |> then(fn cron ->
+          if trigger.cron_cursor_job_id do
+            cursor_job =
+              Enum.find(jobs, fn j -> j.id == trigger.cron_cursor_job_id end)
+
+            Map.put(cron, :cron_cursor_job, job_key(cursor_job))
+          else
+            cron
+          end
+        end)
 
       :kafka ->
         kafka_config =
@@ -102,8 +120,12 @@ defmodule Lightning.ExportUtils do
 
         Map.put(base, :kafka_configuration, kafka_config)
 
-      _ ->
-        base
+      :webhook ->
+        if trigger.webhook_reply do
+          Map.put(base, :webhook_reply, Atom.to_string(trigger.webhook_reply))
+        else
+          base
+        end
     end
   end
 
@@ -113,7 +135,7 @@ defmodule Lightning.ExportUtils do
 
     target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
     trigger_name = to_string(source_trigger.type)
-    target_job_name = hyphenate(target_job.name)
+    target_job_name = job_key(target_job)
 
     %{
       name: "#{trigger_name}->#{target_job_name}",
@@ -125,8 +147,8 @@ defmodule Lightning.ExportUtils do
   defp edge_to_treenode(%{source_trigger_id: nil} = edge, _triggers, jobs) do
     target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
     source_job = Enum.find(jobs, fn j -> j.id == edge.source_job_id end)
-    source_job_name = hyphenate(source_job.name)
-    target_job_name = hyphenate(target_job.name)
+    source_job_name = job_key(source_job)
+    target_job_name = job_key(target_job)
 
     %{
       name: "#{source_job_name}->#{target_job_name}",
@@ -348,6 +370,10 @@ defmodule Lightning.ExportUtils do
     }
   end
 
+  defp job_key(job) do
+    hyphenate(job.name)
+  end
+
   defp project_credential_key(project_credential) do
     hyphenate(
       "#{project_credential.credential.user.email} #{project_credential.credential.name}"
@@ -378,7 +404,7 @@ defmodule Lightning.ExportUtils do
     triggers =
       workflow.triggers
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(fn t -> trigger_to_treenode(t) end)
+      |> Enum.map(fn t -> trigger_to_treenode(t, workflow.jobs) end)
 
     edges =
       workflow.edges

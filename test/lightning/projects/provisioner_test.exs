@@ -324,6 +324,105 @@ defmodule Lightning.Projects.ProvisionerTest do
              } = collection
     end
 
+    test "imports trigger with webhook_reply field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      updated_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "webhook",
+            "webhook_reply" => "after_completion"
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", updated_triggers)
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.webhook_reply == :after_completion
+    end
+
+    test "imports cron trigger with cron_cursor_job_id field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        project_id: project_id,
+        workflows: [%{first_job_id: first_job_id, trigger_id: trigger_id}]
+      } = valid_document()
+
+      # Set the trigger to cron (without cron_cursor_job_id yet, to avoid FK
+      # ordering issues on initial insert)
+      cron_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "cron",
+            "cron_expression" => "0 * * * *"
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [Map.put(workflow, "triggers", cron_triggers)])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id} = project
+
+      # Now re-import with cron_cursor_job_id pointing to the existing job
+      updated_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "cron",
+            "cron_expression" => "0 * * * *",
+            "cron_cursor_job_id" => first_job_id
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", updated_triggers)
+        ])
+
+      {:ok, project} =
+        Provisioner.import_document(project, user, body)
+
+      assert %{workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.id == trigger_id
+      assert trigger.type == :cron
+      assert trigger.cron_cursor_job_id == first_job_id
+    end
+
     test "trigger->firstjob edge is enabled even if params says disabled" do
       Mox.verify_on_exit!()
       user = insert(:user)

@@ -220,6 +220,62 @@ defmodule Lightning.CliDeployTest do
              )
     end
 
+    test "pull exports webhook_reply and cron_cursor_job fields", %{
+      user: user,
+      config: config,
+      config_path: config_path
+    } do
+      File.write(config_path, Jason.encode!(config))
+
+      # Build a project with a webhook trigger (webhook_reply) and a cron
+      # trigger with cron_cursor_job_id
+      webhook_trigger =
+        build(:trigger, type: :webhook, webhook_reply: :after_completion)
+
+      reply_job = build(:job, name: "reply job", body: "fn(state => state)")
+
+      webhook_workflow =
+        build(:workflow, name: "webhook reply workflow", project: nil)
+        |> with_trigger(webhook_trigger)
+        |> with_job(reply_job)
+        |> with_edge({webhook_trigger, reply_job}, condition_type: :always)
+
+      cron_trigger = build(:trigger, type: :cron, cron_expression: "0 6 * * *")
+      cursor_job = build(:job, name: "cursor job", body: "fn(state => state)")
+
+      cron_workflow =
+        build(:workflow, name: "cron cursor workflow", project: nil)
+        |> with_trigger(cron_trigger)
+        |> with_job(cursor_job)
+        |> with_edge({cron_trigger, cursor_job}, condition_type: :always)
+
+      project =
+        insert(:project,
+          name: "webhook-reply-and-cron-cursor-project",
+          project_users: [%{user: user, role: :owner}],
+          workflows: [webhook_workflow, cron_workflow]
+        )
+
+      cron_trigger = Lightning.Repo.reload(cron_trigger)
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(cron_trigger, cron_cursor_job_id: cursor_job.id)
+      )
+
+      System.cmd(
+        @cli_path,
+        ["pull", project.id, "-c", config_path],
+        env: @required_env
+      )
+
+      expected_yaml =
+        File.read!("test/fixtures/webhook_reply_and_cron_cursor_project.yaml")
+
+      actual_yaml = File.read!(config.specPath)
+
+      assert actual_yaml == expected_yaml
+    end
+
     test "deploy updates to an existing project on a Lightning server", %{
       user: user,
       config: config,
@@ -369,7 +425,14 @@ defmodule Lightning.CliDeployTest do
 
   defp expected_trigger_state(trigger) do
     trigger
-    |> Map.take([:id, :type, :enabled, :cron_expression])
+    |> Map.take([
+      :id,
+      :type,
+      :enabled,
+      :cron_expression,
+      :webhook_reply,
+      :cron_cursor_job_id
+    ])
     |> Map.reject(fn {_key, val} -> is_nil(val) end)
   end
 

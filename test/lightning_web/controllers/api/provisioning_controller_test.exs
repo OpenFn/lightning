@@ -554,6 +554,85 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              )
     end
 
+    test "returns a webhook trigger with webhook_reply in the response", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          webhook_reply: :after_completion
+        )
+
+      job = build(:job)
+
+      %{triggers: [%{id: trigger_id}]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "webhook",
+               "enabled" => true,
+               "webhook_reply" => "after_completion"
+             } = trigger_json
+    end
+
+    test "returns a cron trigger with cron_cursor_job_id in the response", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      %{triggers: [trigger], jobs: [%{id: job_id}]} =
+        insert(:simple_workflow, project: project)
+
+      trigger_id = trigger.id
+
+      {:ok, _trigger} =
+        trigger
+        |> Ecto.Changeset.change(
+          type: :cron,
+          cron_expression: "0 * * * *",
+          cron_cursor_job_id: job_id
+        )
+        |> Lightning.Repo.update()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "cron",
+               "cron_expression" => "0 * * * *",
+               "cron_cursor_job_id" => ^job_id
+             } = trigger_json
+    end
+
     test "returns a project if user has owner access", %{
       conn: conn,
       user: user

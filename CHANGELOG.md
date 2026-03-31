@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.0-a] - 2026-03-31
+
+### Added
+
+- Support `webhook_reply` and `cron_cursor_job` in the provisioner
+  [#4587](https://github.com/OpenFn/lightning/issues/4587)
+
 ## [2.16.0] - 2026-03-24
 
 ## [2.16.0-pre3] - 2026-03-23
