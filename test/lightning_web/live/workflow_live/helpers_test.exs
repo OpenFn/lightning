@@ -78,6 +78,45 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       assert result == "/projects/proj-1/w/wf-1?job=unknown-id"
     end
 
+    test "maps 's' to 'trigger' when assigns identify it as a trigger" do
+      params = %{
+        "s" => "trigger-xyz",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
+      }
+
+      assigns = %{selected_trigger: %{id: "trigger-xyz"}}
+
+      result = Helpers.collaborative_editor_url(params, :edit, assigns)
+      assert result == "/projects/proj-1/w/wf-1?trigger=trigger-xyz"
+    end
+
+    test "maps 's' to 'edge' when assigns identify it as an edge" do
+      params = %{
+        "s" => "edge-123",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
+      }
+
+      assigns = %{selected_edge: %{id: "edge-123"}}
+
+      result = Helpers.collaborative_editor_url(params, :edit, assigns)
+      assert result == "/projects/proj-1/w/wf-1?edge=edge-123"
+    end
+
+    test "maps 's' to 'job' when assigns identify it as a job" do
+      params = %{
+        "s" => "job-abc",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
+      }
+
+      assigns = %{selected_job: %{id: "job-abc"}}
+
+      result = Helpers.collaborative_editor_url(params, :edit, assigns)
+      assert result == "/projects/proj-1/w/wf-1?job=job-abc"
+    end
+
     test "converts 'm=expand' to 'panel=editor'" do
       params = %{
         "m" => "expand",

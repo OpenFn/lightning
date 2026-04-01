@@ -417,12 +417,12 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       "/projects/proj-1/w/wf-1?custom=value&job=job-123&v=42"
 
   """
-  def collaborative_editor_url(params, live_action) do
+  def collaborative_editor_url(params, live_action, assigns \\ %{}) do
     collaborative_params =
       params
       |> Map.drop(["id", "project_id"])
       |> Enum.reduce(%{}, fn {key, value}, acc ->
-        convert_param(key, value, acc, params)
+        convert_param(key, value, acc, assigns)
       end)
 
     base_url = collaborative_base_url(params, live_action)

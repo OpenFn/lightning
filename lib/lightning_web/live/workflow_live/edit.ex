@@ -1644,7 +1644,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       })
 
     collaborative_url =
-      Helpers.collaborative_editor_url(params, socket.assigns.live_action)
+      Helpers.collaborative_editor_url(params, socket.assigns.live_action, socket.assigns)
 
     {:noreply, push_navigate(socket, to: collaborative_url)}
   end
