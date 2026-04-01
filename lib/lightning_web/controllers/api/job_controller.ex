@@ -54,6 +54,7 @@ defmodule LightningWeb.API.JobController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias LightningWeb.API.Helpers
 
   action_fallback LightningWeb.FallbackController
 
@@ -94,7 +95,8 @@ defmodule LightningWeb.API.JobController do
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    with project <- Lightning.Projects.get_project(project_id),
+    with :ok <- Helpers.validate_uuid(project_id),
+         project <- Lightning.Projects.get_project(project_id),
          :ok <-
            ProjectUsers
            |> Permissions.can(
@@ -145,7 +147,8 @@ defmodule LightningWeb.API.JobController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with {:ok, job} <- Jobs.get_job(id, include: [workflow: :project]),
+    with :ok <- Helpers.validate_uuid(id),
+         {:ok, job} <- Jobs.get_job(id, include: [workflow: :project]),
          :ok <-
            ProjectUsers
            |> Permissions.can(
