@@ -113,6 +113,10 @@ interface ChannelEntry {
     messageProcessing: ChannelCallback;
     messageError: ChannelCallback;
     messageStatusChanged: ChannelCallback;
+    streamingChunk: ChannelCallback;
+    streamingStatus: ChannelCallback;
+    streamingChanges: ChannelCallback;
+    streamingError: ChannelCallback;
   };
 }
 
@@ -129,9 +133,80 @@ export class AIChannelRegistry {
   // Short enough to not waste resources, long enough to handle accidental clicks
   private cleanupDelayMs = 2_000; // 2 seconds
 
+  // Word-by-word streaming buffer — smooths out bursty TCP chunks into
+  // a readable typing effect. Drains one word per tick at a fixed interval.
+  private streamingBuffer = '';
+  private streamingDrainPos = 0;
+  private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
+  // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
+  private static readonly LETTER_INTERVAL_MS = 15;
+  // Callback to run after the buffer finishes draining (e.g., finalize message)
+  private streamingDrainCallback: (() => void) | null = null;
+
   constructor(socket: PhoenixSocket, store: AIAssistantStore) {
     this.socket = socket;
     this.store = store;
+  }
+
+  /**
+   * Buffer a streaming text chunk and start draining word-by-word.
+   */
+  private bufferStreamingChunk(content: string): void {
+    this.streamingBuffer += content;
+    this.startDraining();
+  }
+
+  private startDraining(): void {
+    if (this.streamingDrainTimer !== null) return;
+
+    this.streamingDrainTimer = setInterval(() => {
+      if (this.streamingDrainPos >= this.streamingBuffer.length) {
+        // Buffer fully drained — if a callback is waiting, run it now
+        if (this.streamingDrainCallback) {
+          this.stopDraining();
+          const cb = this.streamingDrainCallback;
+          this.streamingDrainCallback = null;
+          cb();
+        }
+        return;
+      }
+
+      const char = this.streamingBuffer[this.streamingDrainPos];
+      this.streamingDrainPos += 1;
+      this.store._appendStreamingChunk(char);
+    }, AIChannelRegistry.LETTER_INTERVAL_MS);
+  }
+
+  private stopDraining(): void {
+    if (this.streamingDrainTimer !== null) {
+      clearInterval(this.streamingDrainTimer);
+      this.streamingDrainTimer = null;
+    }
+    this.streamingBuffer = '';
+    this.streamingDrainPos = 0;
+  }
+
+  /**
+   * Let the buffer finish draining at normal pace, then run callback.
+   * If buffer is already empty, runs callback immediately.
+   */
+  private drainThenRun(callback: () => void): void {
+    if (this.streamingDrainPos >= this.streamingBuffer.length) {
+      // Nothing left to drain
+      this.stopDraining();
+      callback();
+    } else {
+      // Wait for drain to finish
+      this.streamingDrainCallback = callback;
+    }
+  }
+
+  /**
+   * Discard buffer without flushing. Called on streaming error.
+   */
+  private discardStreamingBuffer(): void {
+    this.streamingDrainCallback = null;
+    this.stopDraining();
   }
 
   /**
@@ -533,6 +608,8 @@ export class AIChannelRegistry {
       count: this.channels.size,
     });
 
+    this.discardStreamingBuffer();
+
     for (const entry of this.channels.values()) {
       if (entry.cleanupTimer) {
         clearTimeout(entry.cleanupTimer);
@@ -546,6 +623,10 @@ export class AIChannelRegistry {
         'message_status_changed',
         entry.handlers.messageStatusChanged
       );
+      entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+      entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+      entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
+      entry.channel.off('streaming_error', entry.handlers.streamingError);
       entry.channel.leave();
     }
 
@@ -563,7 +644,11 @@ export class AIChannelRegistry {
     const newMessageHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { message: Message };
       if (typedPayload.message && typedPayload.message.id) {
-        this.store._addMessage(typedPayload.message);
+        // Let the word-by-word buffer finish draining at normal pace,
+        // then seamlessly replace the streaming message with the final one.
+        this.drainThenRun(() => {
+          this.store._addMessage(typedPayload.message);
+        });
       }
     };
 
@@ -601,11 +686,37 @@ export class AIChannelRegistry {
       );
     };
 
+    const streamingChunkHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { content: string };
+      this.bufferStreamingChunk(typedPayload.content);
+    };
+
+    const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { text: string };
+      this.store._setStreamingStatus(typedPayload.text);
+    };
+
+    const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        changes: Record<string, unknown>;
+      };
+      this.store._setStreamingChanges(typedPayload.changes);
+    };
+
+    const streamingErrorHandler: ChannelCallback = (_payload: unknown) => {
+      this.discardStreamingBuffer();
+      this.store._clearStreaming();
+    };
+
     channel.on('new_message', newMessageHandler);
     channel.on('user_message', userMessageHandler);
     channel.on('message_processing', messageProcessingHandler);
     channel.on('message_error', messageErrorHandler);
     channel.on('message_status_changed', messageStatusChangedHandler);
+    channel.on('streaming_chunk', streamingChunkHandler);
+    channel.on('streaming_status', streamingStatusHandler);
+    channel.on('streaming_changes', streamingChangesHandler);
+    channel.on('streaming_error', streamingErrorHandler);
 
     return {
       newMessage: newMessageHandler,
@@ -613,6 +724,10 @@ export class AIChannelRegistry {
       messageProcessing: messageProcessingHandler,
       messageError: messageErrorHandler,
       messageStatusChanged: messageStatusChangedHandler,
+      streamingChunk: streamingChunkHandler,
+      streamingStatus: streamingStatusHandler,
+      streamingChanges: streamingChangesHandler,
+      streamingError: streamingErrorHandler,
     };
   }
 
@@ -725,6 +840,9 @@ export class AIChannelRegistry {
       'message_status_changed',
       entry.handlers.messageStatusChanged
     );
+    entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+    entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+    entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
 
     entry.channel.leave();
     this.channels.delete(topic);

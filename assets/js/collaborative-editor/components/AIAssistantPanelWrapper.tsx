@@ -12,6 +12,9 @@ import {
   useAISessionId,
   useAISessionType,
   useAIStore,
+  useAIStreamingChanges,
+  useAIStreamingContent,
+  useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
@@ -122,6 +125,9 @@ export function AIAssistantPanelWrapper({
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
+  const streamingContent = useAIStreamingContent();
+  const streamingStatus = useAIStreamingStatus();
+  const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
@@ -539,6 +545,58 @@ export function AIAssistantPanelWrapper({
     onPreview: handlePreviewJobCode,
   });
 
+  // Auto-apply streaming changes as soon as they arrive (before text finishes)
+  // This triggers the same apply/preview logic that normally runs on new_message,
+  // but earlier — as soon as Apollo sends the structured changes event.
+  const appliedStreamingChangesRef = useRef<Record<string, unknown> | null>(
+    null
+  );
+  // Track whether we applied via streaming so we can skip the duplicate
+  // auto-apply when the final new_message arrives
+  const appliedViaStreamingRef = useRef(false);
+  useEffect(() => {
+    if (!streamingChanges || !canApplyChanges) return;
+    // Avoid re-applying the same streaming changes object
+    if (appliedStreamingChangesRef.current === streamingChanges) return;
+    appliedStreamingChangesRef.current = streamingChanges;
+
+    if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
+      const yaml = streamingChanges['yaml'] as string;
+      if (yaml) {
+        appliedViaStreamingRef.current = true;
+        void handleApplyWorkflow(yaml, '__streaming__');
+      }
+    } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
+      const code = streamingChanges['code'] as string;
+      if (code) {
+        appliedViaStreamingRef.current = true;
+        handlePreviewJobCode(code, '__streaming__');
+      }
+    }
+  }, [
+    streamingChanges,
+    aiMode?.page,
+    canApplyChanges,
+    handleApplyWorkflow,
+    handlePreviewJobCode,
+  ]);
+
+  // When a new assistant message with code arrives after we already applied
+  // via streaming, mark it as already applied to prevent duplicate auto-apply
+  // and update previewingMessageId to the real ID to prevent diff flicker
+  useEffect(() => {
+    if (!appliedViaStreamingRef.current) return;
+
+    const latestAssistantMessage = [...messages]
+      .reverse()
+      .find(m => m.role === 'assistant' && m.code && m.status === 'success');
+
+    if (latestAssistantMessage) {
+      appliedMessageIdsRef.current.add(latestAssistantMessage.id);
+      appliedViaStreamingRef.current = false;
+    }
+  }, [messages, appliedMessageIdsRef]);
+
   return (
     <div
       className="flex h-full flex-shrink-0"
@@ -626,6 +684,8 @@ export function AIAssistantPanelWrapper({
                 }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}
+                streamingContent={streamingContent}
+                streamingStatus={streamingStatus}
               />
             </AIAssistantPanel>
           </div>

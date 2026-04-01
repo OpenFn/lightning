@@ -136,9 +136,27 @@ detect_stale_native_caches() {
   fi
 }
 
+ensure_tool_versions() {
+  if [[ ! -f .tool-versions ]]; then return; fi
+
+  if command -v mise &>/dev/null; then
+    echo "Installing tool versions via mise..."
+    mise install
+  elif command -v asdf &>/dev/null; then
+    echo "Installing tool versions via asdf..."
+    asdf install
+  else
+    echo "Warning: No version manager found (mise/asdf)."
+    echo "Ensure versions in .tool-versions are installed manually."
+  fi
+}
+
 run_bootstrap() {
   echo "Gathering environment information..."
   echo "Platform: $OS $ARCH"
+  echo ""
+
+  ensure_tool_versions
   echo ""
 
   echo "Checking common dependencies..."

@@ -17,23 +17,30 @@ defmodule Lightning.Projects.MergeProjects do
 
   Maps workflows from source to target project based on exact name matching.
   Uses the existing merge_workflow/2 logic for individual workflow merging.
-  Workflows that don't match are marked for deletion (target) or creation (source).
+  Workflows that don't match are marked for deletion (target) or creation
+  (source).
 
   ## Parameters
     * `source_project` - The project with modifications to merge
     * `target_project` - The target project to merge changes onto
+    * `opts` - Keyword options:
+      * `:new_uuid_map` - Map of source UUID to target UUID (default: `%{}`)
+      * `:selected_workflow_ids` - List of source workflow IDs to merge.
+        When provided, only those source workflows are processed and no target
+        workflows are marked for deletion. When `nil` (default), all source
+        workflows are processed and unmatched target workflows are deleted.
 
   ## Returns
     A map with the merged project structure ready for import, containing
     workflow mappings and project data.
   """
   @spec merge_project(Project.t(), Project.t(), map()) :: map()
-  def merge_project(source, target, new_uuid_map \\ %{})
+  def merge_project(source, target, opts \\ %{})
 
   def merge_project(
         %Project{} = source_project,
         %Project{} = target_project,
-        new_uuid_map
+        opts
       ) do
     source_project =
       Repo.preload(source_project, workflows: [:jobs, :triggers, :edges])
@@ -44,11 +51,17 @@ defmodule Lightning.Projects.MergeProjects do
     merge_project(
       Map.from_struct(source_project),
       Map.from_struct(target_project),
-      new_uuid_map
+      opts
     )
   end
 
-  def merge_project(source_project, target_project, new_uuid_map) do
+  def merge_project(source_project, target_project, opts) do
+    new_uuid_map = Map.get(opts, :new_uuid_map, %{})
+    selected_workflow_ids = Map.get(opts, :selected_workflow_ids, nil)
+
+    deleted_target_workflow_ids =
+      Map.get(opts, :deleted_target_workflow_ids, nil)
+
     workflow_mappings =
       map_project_workflow_names(source_project, target_project)
 
@@ -57,7 +70,9 @@ defmodule Lightning.Projects.MergeProjects do
       source_project,
       target_project,
       workflow_mappings,
-      new_uuid_map
+      new_uuid_map,
+      selected_workflow_ids,
+      deleted_target_workflow_ids
     )
   end
 
@@ -682,14 +697,18 @@ defmodule Lightning.Projects.MergeProjects do
          source_project,
          target_project,
          workflow_mappings,
-         new_uuid_map
+         new_uuid_map,
+         selected_workflow_ids,
+         deleted_target_workflow_ids
        ) do
     merged_workflows =
       build_merged_workflows(
         source_project.workflows,
         target_project.workflows,
         workflow_mappings,
-        new_uuid_map
+        new_uuid_map,
+        selected_workflow_ids,
+        deleted_target_workflow_ids
       )
 
     target_project
@@ -705,11 +724,21 @@ defmodule Lightning.Projects.MergeProjects do
          source_workflows,
          target_workflows,
          workflow_mappings,
-         new_uuid_map
+         new_uuid_map,
+         selected_workflow_ids,
+         deleted_target_workflow_ids
        ) do
+    # Filter source workflows to selected ones if a selection is specified
+    effective_source_workflows =
+      if selected_workflow_ids do
+        Enum.filter(source_workflows, &(&1.id in selected_workflow_ids))
+      else
+        source_workflows
+      end
+
     # Process source workflows (matched and new)
     merged_from_source =
-      Enum.map(source_workflows, fn source_workflow ->
+      Enum.map(effective_source_workflows, fn source_workflow ->
         case Map.get(workflow_mappings, source_workflow.id) do
           nil ->
             build_new_workflow(source_workflow, new_uuid_map)
@@ -721,17 +750,93 @@ defmodule Lightning.Projects.MergeProjects do
         end
       end)
 
-    # Mark unmatched target workflows for deletion
-    deleted_targets =
-      target_workflows
-      |> Enum.reject(fn workflow ->
-        workflow.id in Map.values(workflow_mappings)
-      end)
-      |> Enum.map(fn workflow ->
-        %{"id" => workflow.id, "delete" => true}
+    merged_target_ids = MapSet.new(merged_from_source, fn wf -> wf["id"] end)
+
+    # When merging everything (no selection filter), delete unmatched target
+    # workflows. When a selection is provided, use deleted_target_workflow_ids
+    # to determine which unmatched target workflows to delete vs pass through.
+    extra_target_workflows =
+      if is_nil(selected_workflow_ids) do
+        target_workflows
+        |> Enum.reject(fn workflow ->
+          workflow.id in Map.values(workflow_mappings)
+        end)
+        |> Enum.map(fn workflow ->
+          %{"id" => workflow.id, "delete" => true}
+        end)
+      else
+        target_workflows
+        |> Enum.reject(fn workflow -> workflow.id in merged_target_ids end)
+        |> Enum.map(fn workflow ->
+          if deleted_target_workflow_ids &&
+               workflow.id in deleted_target_workflow_ids do
+            %{"id" => workflow.id, "delete" => true}
+          else
+            build_passthrough_workflow(workflow)
+          end
+        end)
+      end
+
+    merged_from_source ++ extra_target_workflows
+  end
+
+  defp build_passthrough_workflow(workflow) do
+    jobs =
+      Enum.map(workflow.jobs, fn job ->
+        job
+        |> Map.take([
+          :name,
+          :body,
+          :adaptor,
+          :project_credential_id,
+          :keychain_credential_id
+        ])
+        |> Map.put(:id, job.id)
+        |> stringify_keys()
       end)
 
-    merged_from_source ++ deleted_targets
+    triggers =
+      Enum.map(workflow.triggers, fn trigger ->
+        trigger
+        |> Map.take([
+          :comment,
+          :custom_path,
+          :cron_expression,
+          :type,
+          :kafka_configuration
+        ])
+        |> Map.put(:id, trigger.id)
+        |> stringify_keys()
+      end)
+
+    edges =
+      Enum.map(workflow.edges, fn edge ->
+        edge
+        |> Map.take([
+          :condition_type,
+          :condition_expression,
+          :condition_label,
+          :enabled
+        ])
+        |> Map.merge(%{
+          id: edge.id,
+          source_job_id: edge.source_job_id,
+          source_trigger_id: edge.source_trigger_id,
+          target_job_id: edge.target_job_id
+        })
+        |> stringify_keys()
+      end)
+
+    workflow
+    |> Map.take([:name, :concurrency, :enable_job_logs, :positions])
+    |> Map.merge(%{
+      id: workflow.id,
+      lock_version: workflow.lock_version,
+      jobs: jobs,
+      triggers: triggers,
+      edges: edges
+    })
+    |> stringify_keys()
   end
 
   defp build_new_workflow(source_workflow, new_uuid_map) do

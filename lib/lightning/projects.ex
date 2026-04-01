@@ -160,6 +160,7 @@ defmodule Lightning.Projects do
       }) do
     project = get_project!(project_id)
     delete_history_for(project)
+    delete_channel_history_for(project)
     wipe_dataclips_for(project)
     remove_expired_files_for(project)
 
@@ -1073,6 +1074,16 @@ defmodule Lightning.Projects do
   defp delete_history_for(_project) do
     {:error, :missing_history_retention_period}
   end
+
+  defp delete_channel_history_for(%Project{
+         id: project_id,
+         history_retention_period: period_days
+       })
+       when is_integer(period_days) do
+    Lightning.Channels.delete_expired_requests(project_id, period_days)
+  end
+
+  defp delete_channel_history_for(_project), do: :ok
 
   defp delete_workorders_history(
          project_workorders_query,

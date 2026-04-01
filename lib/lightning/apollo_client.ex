@@ -141,6 +141,75 @@ defmodule Lightning.ApolloClient do
     client() |> Tesla.post("/services/workflow_chat", payload)
   end
 
+  @doc """
+  Requests AI assistance for job-specific tasks with SSE streaming.
+
+  Same as `job_chat/2` but connects to Apollo's streaming endpoint,
+  returning the response body as a lazy `Stream` of parsed SSE data strings.
+  Each element is a raw JSON string that must be decoded with `Jason.decode!/1`.
+
+  The stream emits Anthropic-formatted events (`content_block_delta`, etc.)
+  followed by a final `complete` event containing the full response payload
+  (same shape as the synchronous `job_chat/2` response).
+  """
+  @spec job_chat_stream(String.t(), opts()) :: Tesla.Env.result()
+  def job_chat_stream(content, opts \\ []) do
+    context = Keyword.get(opts, :context, %{})
+    history = Keyword.get(opts, :history, [])
+    meta = Keyword.get(opts, :meta, %{})
+
+    payload =
+      Jason.encode!(%{
+        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+        "content" => content,
+        "context" => context,
+        "history" => history,
+        "meta" => meta,
+        "suggest_code" => true,
+        "stream" => true
+      })
+
+    stream_client()
+    |> Tesla.post("/services/job_chat/stream", payload,
+      headers: [{"content-type", "application/json"}],
+      opts: [adapter: [response: :stream]]
+    )
+  end
+
+  @doc """
+  Generates or improves workflow templates with SSE streaming.
+
+  Same as `workflow_chat/2` but connects to Apollo's streaming endpoint.
+  See `job_chat_stream/2` for details on the stream format.
+  """
+  @spec workflow_chat_stream(String.t(), opts()) :: Tesla.Env.result()
+  def workflow_chat_stream(content, opts \\ []) do
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
+    history = Keyword.get(opts, :history, [])
+    meta = Keyword.get(opts, :meta, %{})
+
+    payload =
+      %{
+        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+        "content" => content,
+        "existing_yaml" => code,
+        "errors" => errors,
+        "history" => history,
+        "meta" => meta,
+        "stream" => true
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+      |> Jason.encode!()
+
+    stream_client()
+    |> Tesla.post("/services/workflow_chat/stream", payload,
+      headers: [{"content-type", "application/json"}],
+      opts: [adapter: [response: :stream]]
+    )
+  end
+
   defp client do
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
@@ -154,6 +223,27 @@ defmodule Lightning.ApolloClient do
         {Tesla.Adapter.Finch,
          name: Lightning.Finch,
          receive_timeout: Lightning.Config.apollo(:timeout)}
+      )
+    else
+      Tesla.client(client_params)
+    end
+  end
+
+  defp stream_client do
+    streaming_timeout =
+      Lightning.Config.apollo(:streaming_timeout) || 120_000
+
+    client_params = [
+      {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
+      Tesla.Middleware.SSE,
+      Tesla.Middleware.KeepRequest
+    ]
+
+    if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
+      Tesla.client(
+        client_params,
+        {Tesla.Adapter.Finch,
+         name: Lightning.Finch, receive_timeout: streaming_timeout}
       )
     else
       Tesla.client(client_params)

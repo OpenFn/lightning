@@ -273,7 +273,15 @@ defmodule Lightning.ProjectsTest do
 
       p1_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p1)
 
-      p1_step_1 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
+      p1_output_dataclip = insert(:dataclip, body: %{result: "ok"}, project: p1)
+
+      p1_step_1 =
+        insert(:step,
+          input_dataclip: p1_dataclip,
+          output_dataclip: p1_output_dataclip,
+          job: e1.target_job
+        )
+
       p1_step_2 = insert(:step, input_dataclip: p1_dataclip, job: e1.target_job)
 
       insert(:workorder,
@@ -298,8 +306,14 @@ defmodule Lightning.ProjectsTest do
       )
 
       p2_dataclip = insert(:dataclip, body: %{foo: "bar"}, project: p2)
+      p2_output_dataclip = insert(:dataclip, body: %{baz: "qux"}, project: p2)
 
-      p2_step = insert(:step, input_dataclip: p2_dataclip, job: e2.target_job)
+      p2_step =
+        insert(:step,
+          input_dataclip: p2_dataclip,
+          output_dataclip: p2_output_dataclip,
+          job: e2.target_job
+        )
 
       p2_log_line = build(:log_line, step: p2_step)
 
@@ -381,6 +395,32 @@ defmodule Lightning.ProjectsTest do
 
       assert Lightning.Projects.project_steps_query(p2)
              |> Repo.aggregate(:count, :id) == 1
+
+      refute Repo.get(Dataclip, p1_dataclip.id),
+             "Dataclips should be deleted as part of project deletion"
+
+      refute Repo.get(Dataclip, p1_output_dataclip.id),
+             "Output dataclips should be deleted as part of project deletion"
+
+      p2_dataclip_record = Repo.get!(Dataclip, p2_dataclip.id)
+
+      error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(p2_dataclip_record)
+        end
+
+      assert error.constraint =~ "dataclip_id",
+             "RESTRICT should prevent deletion of dataclips referenced by runs or steps"
+
+      p2_output_dataclip_record = Repo.get!(Dataclip, p2_output_dataclip.id)
+
+      output_error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(p2_output_dataclip_record)
+        end
+
+      assert output_error.constraint =~ "output_dataclip_id",
+             "RESTRICT should prevent deletion of dataclips referenced as step outputs"
     end
 
     test "delete_project/1 deletes project with channel snapshots and requests" do
@@ -1458,6 +1498,119 @@ defmodule Lightning.ProjectsTest do
 
       refute Repo.get(Projects.File, project_file1.id)
       assert Repo.get(Projects.File, project_file2.id)
+    end
+
+    test "deletes channel request history based on started_at" do
+      project = insert(:project, history_retention_period: 7)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      old_event = insert(:channel_event, channel_request: old_request)
+
+      recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      recent_event = insert(:channel_event, channel_request: recent_request)
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Old request and its event should be deleted
+      refute Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
+      refute Repo.get(Lightning.Channels.ChannelEvent, old_event.id)
+
+      # Recent request and its event should remain
+      assert Repo.get(Lightning.Channels.ChannelRequest, recent_request.id)
+      assert Repo.get(Lightning.Channels.ChannelEvent, recent_event.id)
+    end
+
+    test "cleans up orphaned channel snapshots after request deletion" do
+      project = insert(:project, history_retention_period: 7)
+
+      channel =
+        insert(:channel, project: project, lock_version: 2)
+
+      now = Lightning.current_time()
+
+      # Snapshot matching the channel's current lock_version (should never
+      # be deleted, even if no requests reference it)
+      current_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 2)
+
+      # Older snapshot referenced only by an expired request
+      orphan_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 1)
+
+      # Older snapshot still referenced by a recent request
+      referenced_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 0)
+
+      _old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: orphan_snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      _recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: referenced_snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Orphan snapshot (old lock_version, no remaining requests) is deleted
+      refute Repo.get(Lightning.Channels.ChannelSnapshot, orphan_snapshot.id)
+
+      # Current snapshot is preserved (matches channel lock_version)
+      assert Repo.get(Lightning.Channels.ChannelSnapshot, current_snapshot.id)
+
+      # Referenced snapshot is preserved (still has a recent request)
+      assert Repo.get(
+               Lightning.Channels.ChannelSnapshot,
+               referenced_snapshot.id
+             )
+    end
+
+    test "does not delete channel requests when history_retention_period is nil" do
+      project = insert(:project, history_retention_period: nil)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -30)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => project.id,
+                   "type" => "data_retention"
+                 }
+               })
+
+      assert Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
     end
   end
 

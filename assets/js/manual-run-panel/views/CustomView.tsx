@@ -9,10 +9,17 @@ import FileUploader from '../FileUploader';
 
 const iconStyle = 'h-4 w-4 text-grey-400';
 
+export const DEFAULT_MAX_DATACLIP_SIZE_BYTES = 10_000_000; // 10mb fallback when nothing comes from liveview
+
 const CustomView: React.FC<{
   pushEvent: (event: string, data: any) => void;
   renderMode?: 'standalone' | 'embedded';
-}> = ({ pushEvent, renderMode = 'standalone' }) => {
+  maxDataclipSizeBytes?: number;
+}> = ({
+  pushEvent,
+  renderMode = 'standalone',
+  maxDataclipSizeBytes = DEFAULT_MAX_DATACLIP_SIZE_BYTES,
+}) => {
   const [editorValue, setEditorValue] = React.useState('');
 
   async function uploadFiles(f: File[]) {
@@ -30,6 +37,11 @@ const CustomView: React.FC<{
   }
 
   const isEmpty = React.useMemo(() => !editorValue.trim(), [editorValue]);
+
+  const isTooLarge = React.useMemo(
+    () => new TextEncoder().encode(editorValue).length > maxDataclipSizeBytes,
+    [editorValue, maxDataclipSizeBytes]
+  );
   const jsonParseResult = React.useMemo(() => {
     try {
       const parsed = JSON.parse(editorValue);
@@ -76,7 +88,12 @@ const CustomView: React.FC<{
         </div>
       </div>
       <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-        {!isEmpty && !jsonParseResult.success ? (
+        {!isEmpty && isTooLarge ? (
+          <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
+            <InformationCircleIcon className={iconStyle} /> Dataclip exceeds the{' '}
+            {Math.round(maxDataclipSizeBytes / 1_000_000)} MB size limit
+          </div>
+        ) : !isEmpty && !jsonParseResult.success ? (
           <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
             <InformationCircleIcon className={iconStyle} />{' '}
             {jsonParseResult.message}

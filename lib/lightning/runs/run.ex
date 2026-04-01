@@ -72,6 +72,13 @@ defmodule Lightning.Run do
   schema "runs" do
     belongs_to :work_order, WorkOrder
 
+    # starting_job and starting_trigger have NO database-level FK constraint.
+    # This is intentional: the snapshot system preserves the full job/trigger
+    # data (name, body, adaptor, config) for every run, so the live rows in
+    # the jobs/triggers tables can be freely deleted from workflows without
+    # affecting audit history. These columns are bare UUID pointers used for
+    # convenience lookups — the snapshot is the authoritative audit record.
+    # See issue #4538 and migration 20260319103734 for context.
     belongs_to :starting_job, Job
     belongs_to :starting_trigger, Trigger
     belongs_to :created_by, User

@@ -17,16 +17,47 @@ and this project adheres to
 
 ### Added
 
+- Support `webhook_reply` and `cron_cursor_job` in the provisioner
+  [#4587](https://github.com/OpenFn/lightning/issues/4587)
+- Channel request logs are now cleaned up by the project history retention
+  period, matching how workflow run history is managed. Orphaned channel
+  snapshots are also cleaned up after expired requests are removed.
+  [#4504](https://github.com/OpenFn/lightning/issues/4504)
+- AI assistant responses now stream in real-time
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+- Allow users to export all collection items as a JSON file.
+  [#4527](https://github.com/OpenFn/lightning/issues/4527)
+
 ### Changed
+
+- Streamlined filters/search on history page, better for small screens
+  [#4579](https://github.com/OpenFn/lightning/issues/4579)
+- Channel requests FK constraint changed from CASCADE to RESTRICT, following the
+  "run is king" audit integrity pattern. Deleting a channel now explicitly
+  cleans up its request history first, and project deletion handles channel
+  requests before cascading.
+  [#4504](https://github.com/OpenFn/lightning/issues/4504)
+- Removed potentially dangerous cascades on dataclip/run and user/run
+  relationships. The run is "king" when it comes to auditing — attempts to
+  delete dataclips or users that are referenced by runs are now prevented. Jobs
+  and triggers can still be freely deleted from workflows since the snapshot
+  system preserves their data for every run.
+  [#4538](https://github.com/OpenFn/lightning/issues/4538)
+- Allow users to select which workflow to merge for sandbox merging
+  [#4002](https://github.com/OpenFn/lightning/issues/4002)
+- Bump ws-worker to `v1.23.1`
 
 ### Fixed
 
-## [2.16.0-a] - 2026-03-31
-
-### Added
-
-- Support `webhook_reply` and `cron_cursor_job` in the provisioner
-  [#4587](https://github.com/OpenFn/lightning/issues/4587)
+- Consider manual runs for "next cron run input" via the
+  `last_run_final_dataclip` function
+  [#4584](https://github.com/OpenFn/lightning/issues/4584)
+- Proper warn & error for exceeding max dataclip size
+  [#4524](https://github.com/OpenFn/lightning/issues/4524)
+- Copying api tokens doesn't work on unsecure non-localhost contexts
+  [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+- Fix AI assistant authorization for support users on projects with support
+  access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
 
 ## [2.16.0] - 2026-03-24
 
