@@ -77,15 +77,6 @@ const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
       };
     }
 
-    const regex = /^[a-zA-Z0-9_\- ]*$/;
-    if (!regex.test(name)) {
-      return {
-        isValid: false,
-        message:
-          'Name can only contain alphanumeric characters, underscores, dashes, and spaces.',
-      };
-    }
-
     return {
       isValid: true,
       message: 'Valid name.',

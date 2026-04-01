@@ -113,9 +113,6 @@ defmodule Lightning.Workflows.Job do
       max: 100,
       message: "job name should be at most %{count} character(s)"
     )
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "job name has invalid format"
-    )
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

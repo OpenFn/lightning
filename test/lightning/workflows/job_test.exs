@@ -152,11 +152,11 @@ defmodule Lightning.Workflows.JobTest do
       assert errors[:name] == ["job name should be at most 100 character(s)"]
     end
 
-    test "name can't contain non url-safe chars" do
-      ["My project @ OpenFn", "Can't have a / slash"]
+    test "name accepts special characters and non-latin scripts" do
+      ["My project @ OpenFn", "Can't have a / slash", "حساب", "étape 1"]
       |> Enum.each(fn name ->
         errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
-        assert errors[:name] == ["job name has invalid format"]
+        refute errors[:name]
       end)
     end
 

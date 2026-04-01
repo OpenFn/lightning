@@ -39,6 +39,8 @@ and this project adheres to
 
 ### Fixed
 
+- Allow special characters and non-Latin scripts in workflow step names
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
 - Consider manual runs for "next cron run input" via the
   `last_run_final_dataclip` function
   [#4584](https://github.com/OpenFn/lightning/issues/4584)

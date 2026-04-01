@@ -20,7 +20,6 @@ export const JobSchema = z
       .string()
       .min(1, "Job name can't be blank")
       .max(100, "Job name shouldn't be longer than 100 characters.")
-      .regex(/^[a-zA-Z0-9_\- ]*$/, "Job name can't include special characters.")
       .transform(val => val.trim()), // Auto-trim whitespace like backend
     body: z.string().min(1, "can't be blank"),
     adaptor: adaptorSchema.default('@openfn/language-common@latest'),
