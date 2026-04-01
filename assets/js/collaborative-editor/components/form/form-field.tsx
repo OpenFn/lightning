@@ -5,7 +5,7 @@ export const INPUT_CLASSES =
 
 interface FormFieldProps {
   name: string;
-  label: string;
+  label: React.ReactNode;
   meta: any; // TanStack Form meta type
   helpText?: string | undefined;
   children: React.ReactNode;

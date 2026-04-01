@@ -141,26 +141,21 @@ export function WorkflowSettings() {
 
       {/* Concurrency Section */}
       <div>
-        <div className="flex items-center gap-1 mb-2">
-          <h3 className="text-sm font-medium text-gray-900">Concurrency</h3>
-          {isSyncMode && (
-            <Tooltip
-              content="Concurrency cannot be set for workflows triggered in sync (response) mode. The trigger holds the HTTP connection open until the run completes, so only one run can be active per request."
-              side="right"
-            >
-              <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
-            </Tooltip>
-          )}
-        </div>
-        <p className="text-sm text-gray-600 mb-3">
-          Control how many of this workflow's <em>Runs</em> are executed at the
-          same time
-        </p>
         <form.AppField name="concurrency">
           {field => (
             <>
               <field.NumberField
-                label="Max Concurrency"
+                label={
+                  <>
+                    Max Concurrency
+                    <Tooltip
+                      content="Limit the number of concurrent runs for this workflow, up to the project's maximum"
+                      side="right"
+                    >
+                      <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
+                    </Tooltip>
+                  </>
+                }
                 placeholder="Unlimited (up to max available)"
                 helpText={
                   field.state.value === null
@@ -169,14 +164,18 @@ export function WorkflowSettings() {
                 }
                 min={1}
                 max={projectConcurrency ?? undefined}
-                disabled={isReadOnly || isProjectConcurrencyDisabled || isSyncMode}
+                disabled={isReadOnly || isProjectConcurrencyDisabled}
               />
               {isSyncMode && (
                 <div className="text-xs mt-2">
                   <div className="italic text-gray-500">
-                    This workflow's trigger uses sync (response) mode, which
-                    holds the HTTP connection open until the run completes.
-                    Concurrency is not respected in this mode.
+                    <span className="hero-exclamation-triangle-mini h-4 w-4 text-yellow-500 inline-block align-text-bottom mr-1" />
+                    This workflow uses a sync-mode trigger. Because sync-mode is
+                    time sensitive, most OpenFn instances ignore concurrency
+                    limits for these workflows and process as many as possible
+                    at once. (You may set this setting, but as your OpenFn host
+                    scales the workers and adjusts their priorities over time it
+                    may not have any impact.)
                   </div>
                 </div>
               )}
