@@ -46,6 +46,9 @@ and this project adheres to
   [#4524](https://github.com/OpenFn/lightning/issues/4524)
 - Copying api tokens doesn't work on unsecure non-localhost contexts
   [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
+- Copy token button on the Personal Access Tokens page now shows a
+  'Copied!' tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
 - Fix AI assistant authorization for support users on projects with support
   access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
 
