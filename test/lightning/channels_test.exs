@@ -142,7 +142,7 @@ defmodule Lightning.ChannelsTest do
       %{user: insert(:user)}
     end
 
-    test "emits 'auth_method_added' for each auth method on create", %{
+    test "emits 'auth_method_added' for client auth method on create", %{
       user: user
     } do
       project = insert(:project)
@@ -150,10 +150,10 @@ defmodule Lightning.ChannelsTest do
 
       attrs = %{
         name: "my channel",
-        sink_url: "https://example.com",
+        destination_url: "https://example.com",
         project_id: project.id,
-        channel_auth_methods: [
-          %{webhook_auth_method_id: wam.id, role: :source}
+        client_auth_methods: [
+          %{webhook_auth_method_id: wam.id}
         ]
       }
 
@@ -170,8 +170,39 @@ defmodule Lightning.ChannelsTest do
       assert length(added) == 1
 
       assert hd(added).changes.after == %{
-               "role" => "source",
+               "role" => "client",
                "webhook_auth_method_id" => wam.id
+             }
+    end
+
+    test "emits 'auth_method_added' for destination auth method on create", %{
+      user: user
+    } do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+
+      attrs = %{
+        name: "my channel",
+        destination_url: "https://example.com",
+        project_id: project.id,
+        destination_auth_method: %{project_credential_id: pc.id}
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      added = Enum.filter(events, &(&1.event == "auth_method_added"))
+
+      assert length(added) == 1
+
+      assert hd(added).changes.after == %{
+               "role" => "destination",
+               "project_credential_id" => pc.id
              }
     end
 
@@ -181,7 +212,7 @@ defmodule Lightning.ChannelsTest do
 
       attrs = %{
         name: "bare",
-        sink_url: "https://example.com",
+        destination_url: "https://example.com",
         project_id: project.id
       }
 
@@ -208,7 +239,7 @@ defmodule Lightning.ChannelsTest do
                Channels.create_channel(
                  %{
                    name: "my-channel",
-                   sink_url: "https://example.com/sink",
+                   destination_url: "https://example.com/sink",
                    project_id: project.id
                  },
                  actor: user
@@ -234,50 +265,50 @@ defmodule Lightning.ChannelsTest do
       assert {:error, changeset} =
                Channels.create_channel(%{}, actor: user)
 
-      assert %{name: _, sink_url: _, project_id: _} = errors_on(changeset)
+      assert %{name: _, destination_url: _, project_id: _} = errors_on(changeset)
     end
 
-    test "returns error for non-URL sink_url", %{user: user} do
+    test "returns error for non-URL destination_url", %{user: user} do
       project = insert(:project)
 
       assert {:error, changeset} =
                Channels.create_channel(
                  %{
                    name: "bad-sink",
-                   sink_url: "not a url",
+                   destination_url: "not a url",
                    project_id: project.id
                  },
                  actor: user
                )
 
-      assert %{sink_url: ["must be a valid URL"]} = errors_on(changeset)
+      assert %{destination_url: ["must be a valid URL"]} = errors_on(changeset)
     end
 
-    test "returns error for non-http scheme sink_url", %{user: user} do
+    test "returns error for non-http scheme destination_url", %{user: user} do
       project = insert(:project)
 
       assert {:error, changeset} =
                Channels.create_channel(
                  %{
                    name: "ftp-sink",
-                   sink_url: "ftp://example.com",
+                   destination_url: "ftp://example.com",
                    project_id: project.id
                  },
                  actor: user
                )
 
-      assert %{sink_url: ["must be either a http or https URL"]} =
+      assert %{destination_url: ["must be either a http or https URL"]} =
                errors_on(changeset)
     end
 
-    test "accepts valid http and https sink_urls", %{user: user} do
+    test "accepts valid http and https destination_urls", %{user: user} do
       project = insert(:project)
 
       assert {:ok, _} =
                Channels.create_channel(
                  %{
                    name: "http-sink",
-                   sink_url: "http://example.com/path",
+                   destination_url: "http://example.com/path",
                    project_id: project.id
                  },
                  actor: user
@@ -287,7 +318,7 @@ defmodule Lightning.ChannelsTest do
                Channels.create_channel(
                  %{
                    name: "https-sink",
-                   sink_url: "https://example.com/path",
+                   destination_url: "https://example.com/path",
                    project_id: project.id
                  },
                  actor: user
@@ -301,7 +332,7 @@ defmodule Lightning.ChannelsTest do
                Channels.create_channel(
                  %{
                    name: channel.name,
-                   sink_url: "https://example.com/other",
+                   destination_url: "https://example.com/other",
                    project_id: channel.project_id
                  },
                  actor: user
@@ -317,7 +348,7 @@ defmodule Lightning.ChannelsTest do
       %{user: insert(:user)}
     end
 
-    test "emits 'auth_method_added' for each added source auth method", %{
+    test "emits 'auth_method_added' for each added client auth method", %{
       user: user
     } do
       project = insert(:project)
@@ -325,11 +356,11 @@ defmodule Lightning.ChannelsTest do
 
       channel =
         insert(:channel, project: project)
-        |> Repo.preload(:channel_auth_methods)
+        |> Repo.preload(:client_auth_methods)
 
       params = %{
-        "channel_auth_methods" => [
-          %{"webhook_auth_method_id" => wam.id, "role" => "source"}
+        "client_auth_methods" => [
+          %{"webhook_auth_method_id" => wam.id}
         ]
       }
 
@@ -347,7 +378,7 @@ defmodule Lightning.ChannelsTest do
 
       assert %{
                changes: %{
-                 after: %{"role" => "source", "webhook_auth_method_id" => wam_id},
+                 after: %{"role" => "client", "webhook_auth_method_id" => wam_id},
                  before: nil
                }
              } = hd(added)
@@ -355,7 +386,7 @@ defmodule Lightning.ChannelsTest do
       assert wam_id == wam.id
     end
 
-    test "emits 'auth_method_added' for each added sink auth method", %{
+    test "emits 'auth_method_added' when setting destination auth method", %{
       user: user
     } do
       project = insert(:project)
@@ -363,12 +394,10 @@ defmodule Lightning.ChannelsTest do
 
       channel =
         insert(:channel, project: project)
-        |> Repo.preload(:channel_auth_methods)
+        |> Repo.preload(:destination_auth_method)
 
       params = %{
-        "channel_auth_methods" => [
-          %{"project_credential_id" => pc.id, "role" => "sink"}
-        ]
+        "destination_auth_method" => %{"project_credential_id" => pc.id}
       }
 
       {:ok, _} = Channels.update_channel(channel, params, actor: user)
@@ -385,7 +414,10 @@ defmodule Lightning.ChannelsTest do
 
       assert %{
                changes: %{
-                 after: %{"role" => "sink", "project_credential_id" => pc_id},
+                 after: %{
+                   "role" => "destination",
+                   "project_credential_id" => pc_id
+                 },
                  before: nil
                }
              } = hd(added)
@@ -393,7 +425,7 @@ defmodule Lightning.ChannelsTest do
       assert pc_id == pc.id
     end
 
-    test "emits 'auth_method_removed' for each removed source auth method", %{
+    test "emits 'auth_method_removed' for each removed client auth method", %{
       user: user
     } do
       project = insert(:project)
@@ -404,13 +436,13 @@ defmodule Lightning.ChannelsTest do
         insert(:channel_auth_method,
           channel: channel,
           webhook_auth_method: wam,
-          role: :source
+          role: :client
         )
 
-      channel = Repo.preload(channel, :channel_auth_methods)
+      channel = Repo.preload(channel, :client_auth_methods)
 
       params = %{
-        "channel_auth_methods" => [
+        "client_auth_methods" => [
           %{"id" => cam.id, "delete" => "true"}
         ]
       }
@@ -430,7 +462,7 @@ defmodule Lightning.ChannelsTest do
       assert %{
                changes: %{
                  before: %{
-                   "role" => "source",
+                   "role" => "client",
                    "webhook_auth_method_id" => wam_id
                  },
                  after: nil
@@ -440,28 +472,24 @@ defmodule Lightning.ChannelsTest do
       assert wam_id == wam.id
     end
 
-    test "emits 'auth_method_removed' for each removed sink auth method", %{
+    test "emits 'auth_method_removed' when clearing destination auth method", %{
       user: user
     } do
       project = insert(:project)
       pc = insert(:project_credential, project: project)
       channel = insert(:channel, project: project)
 
-      cam =
-        insert(:channel_auth_method,
-          channel: channel,
-          webhook_auth_method: nil,
-          project_credential: pc,
-          role: :sink
-        )
+      insert(:channel_auth_method,
+        channel: channel,
+        webhook_auth_method: nil,
+        project_credential: pc,
+        role: :destination
+      )
 
-      channel = Repo.preload(channel, :channel_auth_methods)
+      channel = Repo.preload(channel, :destination_auth_method)
 
-      params = %{
-        "channel_auth_methods" => [
-          %{"id" => cam.id, "delete" => "true"}
-        ]
-      }
+      # Passing nil clears the has_one; on_replace: :delete removes the record
+      params = %{"destination_auth_method" => nil}
 
       {:ok, _} = Channels.update_channel(channel, params, actor: user)
 
@@ -477,12 +505,67 @@ defmodule Lightning.ChannelsTest do
 
       assert %{
                changes: %{
-                 before: %{"role" => "sink", "project_credential_id" => pc_id},
+                 before: %{
+                   "role" => "destination",
+                   "project_credential_id" => pc_id
+                 },
                  after: nil
                }
              } = hd(removed)
 
       assert pc_id == pc.id
+    end
+
+    test "swapping destination credential emits 'auth_method_changed'",
+         %{user: user} do
+      project = insert(:project)
+      pc_old = insert(:project_credential, project: project)
+      pc_new = insert(:project_credential, project: project)
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        webhook_auth_method: nil,
+        project_credential: pc_old,
+        role: :destination
+      )
+
+      channel = Repo.preload(channel, :destination_auth_method)
+
+      params = %{
+        "destination_auth_method" => %{"project_credential_id" => pc_new.id}
+      }
+
+      {:ok, _} = Channels.update_channel(channel, params, actor: user)
+
+      events =
+        Repo.all(
+          from a in Audit,
+            where: a.item_id == ^channel.id and a.item_type == "channel"
+        )
+
+      changed = Enum.filter(events, &(&1.event == "auth_method_changed"))
+
+      assert length(changed) == 1
+
+      assert hd(changed).changes == %{
+               before: %{
+                 "role" => "destination",
+                 "project_credential_id" => pc_old.id
+               },
+               after: %{
+                 "role" => "destination",
+                 "project_credential_id" => pc_new.id
+               }
+             }
+
+      # TODO: Remove this refutation once the old two-event pattern is fully
+      # gone — at that point added/removed won't fire for swaps and this
+      # negative assertion adds no value.
+      refute Enum.any?(
+               events,
+               &(&1.event in ["auth_method_added", "auth_method_removed"])
+             )
     end
 
     test "does not emit auth method audit events when no auth methods change", %{
@@ -585,7 +668,7 @@ defmodule Lightning.ChannelsTest do
   end
 
   describe "get_channel_with_auth/1" do
-    test "returns channel with preloaded source auth methods" do
+    test "returns channel with preloaded client auth methods" do
       project = insert(:project)
 
       channel =
@@ -593,7 +676,7 @@ defmodule Lightning.ChannelsTest do
           project: project,
           channel_auth_methods: [
             build(:channel_auth_method,
-              role: :source,
+              role: :client,
               webhook_auth_method:
                 build(:webhook_auth_method,
                   project: project,
@@ -607,21 +690,41 @@ defmodule Lightning.ChannelsTest do
       result = Channels.get_channel_with_auth(channel.id)
 
       assert result.id == channel.id
-      assert length(result.source_auth_methods) == 1
+      assert length(result.client_auth_methods) == 1
 
-      [cam] = result.source_auth_methods
-      assert cam.role == :source
+      [cam] = result.client_auth_methods
+      assert cam.role == :client
       assert cam.webhook_auth_method.auth_type == :api
       assert cam.webhook_auth_method.api_key == "test-key"
     end
 
-    test "returns channel with empty source_auth_methods when none configured" do
+    test "returns channel with preloaded destination auth method" do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        webhook_auth_method: nil,
+        project_credential: pc,
+        role: :destination
+      )
+
+      result = Channels.get_channel_with_auth(channel.id)
+
+      assert result.destination_auth_method.role == :destination
+      assert result.destination_auth_method.project_credential.id == pc.id
+    end
+
+    test "returns channel with empty client_auth_methods when none configured" do
       channel = insert(:channel)
 
       result = Channels.get_channel_with_auth(channel.id)
 
       assert result.id == channel.id
-      assert result.source_auth_methods == []
+      assert result.client_auth_methods == []
+      assert result.destination_auth_method == nil
     end
 
     test "returns nil for non-existent channel" do
@@ -635,7 +738,7 @@ defmodule Lightning.ChannelsTest do
       assert Channels.list_channel_auth_methods(channel) == []
     end
 
-    test "returns preloaded source and sink records for a channel with both" do
+    test "returns preloaded client and destination records for a channel with both" do
       project = insert(:project)
       wam = insert(:webhook_auth_method, project: project)
       pc = insert(:project_credential, project: project)
@@ -645,11 +748,11 @@ defmodule Lightning.ChannelsTest do
           project: project,
           channel_auth_methods: [
             build(:channel_auth_method,
-              role: :source,
+              role: :client,
               webhook_auth_method: wam
             ),
             build(:channel_auth_method,
-              role: :sink,
+              role: :destination,
               webhook_auth_method: nil,
               project_credential: pc
             )
@@ -660,23 +763,23 @@ defmodule Lightning.ChannelsTest do
 
       assert length(cams) == 2
 
-      source = Enum.find(cams, &(&1.role == :source))
-      sink = Enum.find(cams, &(&1.role == :sink))
+      client = Enum.find(cams, &(&1.role == :client))
+      destination = Enum.find(cams, &(&1.role == :destination))
 
       assert %ChannelAuthMethod{
-               role: :source,
+               role: :client,
                webhook_auth_method_id: wam_id,
                webhook_auth_method: %{id: preloaded_wam_id}
-             } = source
+             } = client
 
       assert wam_id == wam.id
       assert preloaded_wam_id == wam.id
 
       assert %ChannelAuthMethod{
-               role: :sink,
+               role: :destination,
                project_credential_id: pc_id,
                project_credential: %{id: preloaded_pc_id}
-             } = sink
+             } = destination
 
       assert pc_id == pc.id
       assert preloaded_pc_id == pc.id
@@ -943,7 +1046,7 @@ defmodule Lightning.ChannelsTest do
       assert snapshot.channel_id == channel.id
       assert snapshot.lock_version == channel.lock_version
       assert snapshot.name == channel.name
-      assert snapshot.sink_url == channel.sink_url
+      assert snapshot.destination_url == channel.destination_url
       assert snapshot.enabled == channel.enabled
     end
 
@@ -1130,6 +1233,123 @@ defmodule Lightning.ChannelsTest do
 
       refute Repo.get(ChannelRequest, request.id)
       refute Repo.get(ChannelEvent, event.id)
+    end
+  end
+
+  describe "destination auth method contract" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "cast_assoc(:destination_auth_method) auto-sets role to :destination",
+         %{user: user} do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+
+      # No "role" key in the params — the with: function should set it
+      attrs = %{
+        name: "auto-role",
+        destination_url: "https://example.com",
+        project_id: project.id,
+        destination_auth_method: %{project_credential_id: pc.id}
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      channel = Repo.preload(channel, :destination_auth_method)
+      assert channel.destination_auth_method.role == :destination
+    end
+
+    test "cast_assoc(:client_auth_methods) auto-sets role to :client", %{
+      user: user
+    } do
+      project = insert(:project)
+      wam = insert(:webhook_auth_method, project: project)
+
+      # No "role" key in the params — the with: function should set it
+      attrs = %{
+        name: "auto-role-client",
+        destination_url: "https://example.com",
+        project_id: project.id,
+        client_auth_methods: [%{webhook_auth_method_id: wam.id}]
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      channel = Repo.preload(channel, :client_auth_methods)
+      assert length(channel.client_auth_methods) == 1
+      assert hd(channel.client_auth_methods).role == :client
+    end
+
+    test "destination_credential preloads through destination_auth_method" do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        webhook_auth_method: nil,
+        project_credential: pc,
+        role: :destination
+      )
+
+      channel = Repo.preload(channel, :destination_credential)
+
+      assert channel.destination_credential.id == pc.id
+    end
+
+    # TODO: Remove the sink_url refutation once the rename is fully landed —
+    # at that point the old field name won't exist anywhere and this negative
+    # assertion adds no value.
+    test "audit 'created' event diff contains 'destination_url' not 'sink_url'",
+         %{user: user} do
+      project = insert(:project)
+
+      {:ok, channel} =
+        Channels.create_channel(
+          %{
+            name: "audit-field",
+            destination_url: "https://example.com",
+            project_id: project.id
+          },
+          actor: user
+        )
+
+      [audit] =
+        Repo.all(
+          from a in Audit,
+            where:
+              a.item_id == ^channel.id and a.item_type == "channel" and
+                a.event == "created"
+        )
+
+      assert Map.has_key?(audit.changes.after, "destination_url")
+      refute Map.has_key?(audit.changes.after, "sink_url")
+    end
+
+    test "create with both client and destination auth methods", %{user: user} do
+      project = insert(:project)
+      wam = insert(:webhook_auth_method, project: project)
+      pc = insert(:project_credential, project: project)
+
+      attrs = %{
+        name: "both-auth",
+        destination_url: "https://example.com",
+        project_id: project.id,
+        client_auth_methods: [%{webhook_auth_method_id: wam.id}],
+        destination_auth_method: %{project_credential_id: pc.id}
+      }
+
+      {:ok, channel} = Channels.create_channel(attrs, actor: user)
+
+      channel =
+        Repo.preload(channel, [:client_auth_methods, :destination_auth_method])
+
+      assert length(channel.client_auth_methods) == 1
+      assert hd(channel.client_auth_methods).role == :client
+
+      assert channel.destination_auth_method.role == :destination
+      assert channel.destination_auth_method.project_credential_id == pc.id
     end
   end
 
