@@ -242,6 +242,11 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 404) == %{"error" => "Not Found"}
     end
 
+    test "returns 400 for malformed project_id", %{conn: conn, user: _user} do
+      conn = get(conn, ~p"/api/projects/not-a-uuid/credentials")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+
     test "returns empty list when project has no credentials", %{
       conn: conn,
       user: user
@@ -822,7 +827,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
     test "handles invalid UUID format", %{conn: conn, user: _user} do
       conn = delete(conn, ~p"/api/credentials/invalid-uuid")
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
     end
   end
 end

@@ -48,6 +48,9 @@ and this project adheres to
   [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 - Fix AI assistant authorization for support users on projects with support
   access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
+- REST API controllers now return 400 instead of 500 for malformed UUID
+  parameters. Extracts a shared `validate_uuid/1` helper used across all API
+  controllers. [#4588](https://github.com/OpenFn/lightning/issues/4588)
 
 ## [2.16.0] - 2026-03-24
 

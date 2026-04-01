@@ -86,6 +86,11 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
 
+    test "returns 400 for malformed id", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/not-a-uuid")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+
     test "shows the project", %{conn: conn, project: project} do
       conn = get(conn, Routes.api_project_path(conn, :show, project))
       response = json_response(conn, 200)

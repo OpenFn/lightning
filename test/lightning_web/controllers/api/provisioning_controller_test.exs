@@ -1362,4 +1362,18 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       end)
     end)
   end
+
+  describe "malformed UUID params" do
+    setup [:assign_bearer_for_api]
+
+    test "returns 400 for malformed id in show", %{conn: conn} do
+      conn = get(conn, ~p"/api/provision/not-a-uuid")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+
+    test "returns 400 for malformed id in show_yaml", %{conn: conn} do
+      conn = get(conn, ~p"/api/provision/yaml?id=not-a-uuid")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+  end
 end

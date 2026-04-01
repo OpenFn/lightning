@@ -446,4 +446,18 @@ defmodule LightningWeb.API.WorkOrdersControllerTest do
       assert error_message =~ "123456"
     end
   end
+
+  describe "malformed UUID params" do
+    setup [:assign_bearer_for_api]
+
+    test "returns 400 for malformed project_id in index", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/not-a-uuid/work_orders")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+
+    test "returns 400 for malformed id in show", %{conn: conn} do
+      conn = get(conn, ~p"/api/work_orders/not-a-uuid")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+  end
 end
