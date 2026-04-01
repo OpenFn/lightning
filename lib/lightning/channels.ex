@@ -15,8 +15,11 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Channels.SearchParams
+  alias Lightning.Config
   alias Lightning.Projects.Project
   alias Lightning.Repo
+
+  require Logger
 
   @doc """
   Returns all channels for a project, ordered by name.
@@ -211,12 +214,20 @@ defmodule Lightning.Channels do
   @doc """
   Deletes a channel.
 
-  Returns `{:error, changeset}` if the channel has snapshots
-  (due to `:restrict` FK on `channel_snapshots`).
+  Explicitly deletes all channel_requests first (required because
+  `channel_requests.channel_id` uses `on_delete: :restrict`). Channel
+  events cascade automatically, and channel snapshots cascade via
+  `on_delete: :delete_all` on `channel_snapshots.channel_id`.
   """
   @spec delete_channel(Channel.t(), actor: User.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
+    from(cr in ChannelRequest,
+      where: cr.channel_id == ^channel.id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
     |> Multi.delete(:channel, channel)
@@ -359,5 +370,142 @@ defmodule Lightning.Channels do
             {:error, changeset}
         end
     end
+  end
+
+  @doc """
+  Deletes channel_requests older than `period_days` for channels in the
+  given project. Channel events are cascade-deleted by the database FK.
+
+  After deletion, removes orphaned channel_snapshots that are no longer
+  referenced by any request and are not the current version.
+  """
+  @spec delete_expired_requests(Ecto.UUID.t(), pos_integer()) :: :ok
+  def delete_expired_requests(project_id, period_days)
+      when is_binary(project_id) and is_integer(period_days) do
+    request_count =
+      expired_requests_query(project_id, period_days)
+      |> batch_delete_requests()
+
+    if request_count > 0 do
+      Logger.info("Deleted expired channel requests for project #{project_id}")
+    end
+
+    {snapshot_count, _} = delete_unused_channel_snapshots(project_id)
+
+    if snapshot_count > 0 do
+      Logger.info(
+        "Deleted #{snapshot_count} unused channel snapshots for project #{project_id}"
+      )
+    end
+
+    :ok
+  end
+
+  @doc """
+  Deletes ALL channel_requests for a project's channels.
+
+  Used during project deletion to satisfy the RESTRICT FK constraint
+  on `channel_requests.channel_id` before channels are cascade-deleted.
+  """
+  @spec delete_channel_requests_for_project(Project.t()) :: :ok
+  def delete_channel_requests_for_project(%Project{id: project_id}) do
+    from(cr in ChannelRequest,
+      join: c in Channel,
+      on: cr.channel_id == c.id,
+      where: c.project_id == ^project_id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
+    :ok
+  end
+
+  defp batch_delete_requests(query) do
+    batch_size = Config.activity_cleanup_chunk_size()
+
+    total =
+      Repo.aggregate(query, :count,
+        timeout: Config.default_ecto_database_timeout() * 3
+      )
+
+    if total > 0 do
+      delete_query =
+        ChannelRequest
+        |> with_cte("requests_to_delete",
+          as: ^limit(query, ^batch_size)
+        )
+        |> join(:inner, [cr], rtd in "requests_to_delete", on: cr.id == rtd.id)
+
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.take(ceil(total / batch_size))
+      |> Enum.each(fn _i ->
+        {_count, _} =
+          Repo.delete_all(delete_query,
+            returning: false,
+            timeout: Config.default_ecto_database_timeout() * 3
+          )
+      end)
+    end
+
+    total
+  end
+
+  defp expired_requests_query(project_id, period_days) do
+    from(cr in ChannelRequest,
+      join: c in Channel,
+      on: cr.channel_id == c.id,
+      where: c.project_id == ^project_id,
+      where: cr.started_at < ago(^period_days, "day"),
+      select: cr.id
+    )
+  end
+
+  defp delete_unused_channel_snapshots(project_id) do
+    batch_size = Config.activity_cleanup_chunk_size()
+
+    unused_query =
+      from(cs in ChannelSnapshot,
+        as: :channel_snapshot,
+        join: c in Channel,
+        on: cs.channel_id == c.id,
+        where: c.project_id == ^project_id,
+        where: cs.lock_version != c.lock_version,
+        where:
+          not exists(
+            from(cr in ChannelRequest,
+              where:
+                cr.channel_snapshot_id ==
+                  parent_as(:channel_snapshot).id,
+              select: 1
+            )
+          ),
+        select: cs.id
+      )
+
+    total =
+      Repo.aggregate(unused_query, :count,
+        timeout: Config.default_ecto_database_timeout() * 3
+      )
+
+    if total > 0 do
+      delete_query =
+        ChannelSnapshot
+        |> with_cte("snapshots_to_delete",
+          as: ^limit(unused_query, ^batch_size)
+        )
+        |> join(:inner, [cs], std in "snapshots_to_delete", on: cs.id == std.id)
+
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.take(ceil(total / batch_size))
+      |> Enum.each(fn _i ->
+        {_count, _} =
+          Repo.delete_all(delete_query,
+            returning: false,
+            timeout: Config.default_ecto_database_timeout() * 3
+          )
+      end)
+    end
+
+    {total, nil}
   end
 end

@@ -7,9 +7,11 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Channels
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Channels.SearchParams
+  alias Lightning.Projects.Project
 
   describe "list_channels_for_project/1" do
     test "returns channels for a project ordered by name" do
@@ -966,6 +968,196 @@ defmodule Lightning.ChannelsTest do
       assert snapshot1.id != snapshot2.id
       assert snapshot2.lock_version == updated.lock_version
       assert snapshot2.name == "updated-name"
+    end
+  end
+
+  describe "delete_expired_requests/2" do
+    test "deletes requests older than retention period" do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Lightning.current_time() |> Timex.shift(days: -8)
+        )
+
+      recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Lightning.current_time() |> Timex.shift(days: -6)
+        )
+
+      assert :ok = Channels.delete_expired_requests(project.id, 7)
+
+      refute Repo.get(ChannelRequest, old_request.id)
+      assert Repo.get(ChannelRequest, recent_request.id)
+    end
+
+    test "cascades deletion to channel_events" do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Lightning.current_time() |> Timex.shift(days: -8)
+        )
+
+      recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Lightning.current_time() |> Timex.shift(days: -6)
+        )
+
+      old_event =
+        insert(:channel_event,
+          channel_request: old_request,
+          type: :sink_response
+        )
+
+      recent_event =
+        insert(:channel_event,
+          channel_request: recent_request,
+          type: :sink_response
+        )
+
+      assert :ok = Channels.delete_expired_requests(project.id, 7)
+
+      refute Repo.get(ChannelEvent, old_event.id)
+      assert Repo.get(ChannelEvent, recent_event.id)
+    end
+
+    test "cleans up orphaned channel_snapshots" do
+      user = insert(:user)
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+
+      {:ok, old_snapshot} =
+        Channels.get_or_create_current_snapshot(channel)
+
+      {:ok, updated_channel} =
+        Channels.update_channel(channel, %{name: "updated"}, actor: user)
+
+      {:ok, current_snapshot} =
+        Channels.get_or_create_current_snapshot(updated_channel)
+
+      # Old request referencing the old snapshot
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: old_snapshot,
+        started_at: Lightning.current_time() |> Timex.shift(days: -8)
+      )
+
+      # Recent request referencing the current snapshot
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: current_snapshot,
+        started_at: Lightning.current_time() |> Timex.shift(days: -6)
+      )
+
+      assert :ok = Channels.delete_expired_requests(project.id, 7)
+
+      # Old snapshot is orphaned (no remaining requests, lock_version
+      # doesn't match channel) and should be deleted
+      refute Repo.get(ChannelSnapshot, old_snapshot.id)
+
+      # Current snapshot still has a request and matches lock_version
+      assert Repo.get(ChannelSnapshot, current_snapshot.id)
+    end
+
+    test "preserves snapshots still referenced by non-expired requests" do
+      user = insert(:user)
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+
+      {:ok, old_snapshot} =
+        Channels.get_or_create_current_snapshot(channel)
+
+      {:ok, _updated_channel} =
+        Channels.update_channel(channel, %{name: "updated"}, actor: user)
+
+      # Recent request still references the old snapshot
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: old_snapshot,
+        started_at: Lightning.current_time() |> Timex.shift(days: -6)
+      )
+
+      assert :ok = Channels.delete_expired_requests(project.id, 7)
+
+      # Old snapshot is NOT deleted because a non-expired request
+      # still references it
+      assert Repo.get(ChannelSnapshot, old_snapshot.id)
+    end
+
+    test "returns :ok with no expired requests" do
+      project = insert(:project)
+      _channel = insert(:channel, project: project)
+
+      assert :ok = Channels.delete_expired_requests(project.id, 7)
+    end
+  end
+
+  describe "delete_channel_requests_for_project/1" do
+    test "deletes all channel requests for a project" do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot
+        )
+
+      event =
+        insert(:channel_event,
+          channel_request: request,
+          type: :sink_response
+        )
+
+      assert :ok =
+               Channels.delete_channel_requests_for_project(%Project{
+                 id: project.id
+               })
+
+      refute Repo.get(ChannelRequest, request.id)
+      refute Repo.get(ChannelEvent, event.id)
+    end
+  end
+
+  describe "delete_channel/2 with requests" do
+    test "removes requests before deleting channel" do
+      user = insert(:user)
+      channel = insert(:channel)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot
+        )
+
+      event =
+        insert(:channel_event,
+          channel_request: request,
+          type: :sink_response
+        )
+
+      assert {:ok, %Channel{}} =
+               Channels.delete_channel(channel, actor: user)
+
+      refute Repo.get(Channel, channel.id)
+      refute Repo.get(ChannelRequest, request.id)
+      refute Repo.get(ChannelEvent, event.id)
+      refute Repo.get(ChannelSnapshot, snapshot.id)
     end
   end
 end
