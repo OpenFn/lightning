@@ -39,6 +39,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix `collaborative_editor_url/2` incorrectly mapping trigger/edge selections
+  to `job` param when switching from legacy to collaborative editor
+  [#4375](https://github.com/OpenFn/lightning/issues/4375)
 - Consider manual runs for "next cron run input" via the
   `last_run_final_dataclip` function
   [#4584](https://github.com/OpenFn/lightning/issues/4584)
