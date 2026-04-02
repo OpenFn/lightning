@@ -371,13 +371,12 @@ defmodule Lightning.Projects.ProvisionerTest do
         workflows: [%{first_job_id: first_job_id, trigger_id: trigger_id}]
       } = valid_document()
 
-      # Set the trigger to cron (without cron_cursor_job_id yet, to avoid FK
-      # ordering issues on initial insert)
       cron_triggers =
         Enum.map(workflow["triggers"], fn trigger ->
           Map.merge(trigger, %{
             "type" => "cron",
-            "cron_expression" => "0 * * * *"
+            "cron_expression" => "0 * * * *",
+            "cron_cursor_job_id" => first_job_id
           })
         end)
 
@@ -397,27 +396,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           body
         )
 
-      assert %{id: ^project_id} = project
-
-      # Now re-import with cron_cursor_job_id pointing to the existing job
-      updated_triggers =
-        Enum.map(workflow["triggers"], fn trigger ->
-          Map.merge(trigger, %{
-            "type" => "cron",
-            "cron_expression" => "0 * * * *",
-            "cron_cursor_job_id" => first_job_id
-          })
-        end)
-
-      body =
-        Map.put(body, "workflows", [
-          Map.put(workflow, "triggers", updated_triggers)
-        ])
-
-      {:ok, project} =
-        Provisioner.import_document(project, user, body)
-
-      assert %{workflows: [%{triggers: [trigger]}]} = project
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
       assert trigger.id == trigger_id
       assert trigger.type == :cron
       assert trigger.cron_cursor_job_id == first_job_id

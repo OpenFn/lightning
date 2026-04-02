@@ -28,7 +28,7 @@ export type StateWebhookTrigger = {
   id: string;
   enabled: boolean;
   type: 'webhook';
-  webhook_reply: 'before_start' | 'after_completion' | null;
+  webhook_reply: 'before_start' | 'after_completion' | 'custom' | null;
 };
 
 export type StateKafkaTrigger = {

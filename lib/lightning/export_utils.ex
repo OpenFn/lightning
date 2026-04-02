@@ -93,7 +93,7 @@ defmodule Lightning.ExportUtils do
             cursor_job =
               Enum.find(jobs, fn j -> j.id == trigger.cron_cursor_job_id end)
 
-            Map.put(cron, :cron_cursor_job, job_key(cursor_job))
+            Map.put(cron, :cron_cursor_job, cursor_job && job_key(cursor_job))
           else
             cron
           end
