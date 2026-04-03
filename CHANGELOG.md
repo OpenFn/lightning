@@ -19,6 +19,15 @@ and this project adheres to
 
 - Support `webhook_reply` and `cron_cursor_job` in the provisioner
   [#4587](https://github.com/OpenFn/lightning/issues/4587)
+
+### Changed
+
+### Fixed
+
+## [2.16.1-pre] - 2026-04-03
+
+### Added
+
 - Channel request logs are now cleaned up by the project history retention
   period, matching how workflow run history is managed. Orphaned channel
   snapshots are also cleaned up after expired requests are removed.
