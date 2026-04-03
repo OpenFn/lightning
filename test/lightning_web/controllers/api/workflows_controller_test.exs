@@ -131,6 +131,20 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert length(wf["edges"]) == 1
     end
 
+    test "returns exact workflow JSON for nested route", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, name: "exact-check", project: project)
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/workflows")
+
+      assert json_response(conn, 200) == %{
+               "errors" => %{},
+               "workflows" => [encode_decode(workflow)]
+             }
+    end
+
     test "returns 401 for project user cannot access", %{conn: conn} do
       other_project = insert(:project)
 
@@ -227,6 +241,21 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{"workflow" => wf, "errors" => %{}} = response
       assert wf["id"] == workflow.id
       assert wf["name"] == "Nested Show"
+    end
+
+    test "returns exact workflow JSON for nested route", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project)
+
+      conn =
+        get(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}")
+
+      assert json_response(conn, 200) == %{
+               "errors" => %{},
+               "workflow" => encode_decode(workflow)
+             }
     end
 
     test "returns 404 for non-existent workflow", %{conn: conn} do
@@ -584,17 +613,21 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } = json_response(conn, 422)
     end
 
-    test "returns 422 on project id mismatch", %{conn: conn, user: user} do
+    test "returns 422 on project id mismatch", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
       other_project =
         insert(:project, project_users: [%{user: user, role: :owner}])
 
       workflow =
-        build(:simple_workflow, name: "work1", project_id: other_project.id)
+        build(:simple_workflow, name: "work1", project_id: project.id)
 
       conn =
         post(
           conn,
-          ~p"/api/projects/#{Ecto.UUID.generate()}/workflows",
+          ~p"/api/projects/#{other_project.id}/workflows",
           Jason.encode!(workflow)
         )
 
