@@ -160,7 +160,7 @@ defmodule Lightning.ExportUtils do
   defp merge_edge_common_fields(json, edge, target_job) do
     json
     |> Map.merge(%{
-      target_job: hyphenate(target_job.name),
+      target_job: job_key(target_job),
       condition_type: edge.condition_type |> Atom.to_string(),
       enabled: edge.enabled,
       node_type: :edge

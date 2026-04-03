@@ -240,8 +240,15 @@ defmodule Lightning.CliDeployTest do
         |> with_job(reply_job)
         |> with_edge({webhook_trigger, reply_job}, condition_type: :always)
 
-      cron_trigger = build(:trigger, type: :cron, cron_expression: "0 6 * * *")
+      # Build the job first so we have its id
       cursor_job = build(:job, name: "cursor job", body: "fn(state => state)")
+
+      cron_trigger =
+        build(:trigger,
+          type: :cron,
+          cron_expression: "0 6 * * *",
+          cron_cursor_job_id: cursor_job.id
+        )
 
       cron_workflow =
         build(:workflow, name: "cron cursor workflow", project: nil)
@@ -255,12 +262,6 @@ defmodule Lightning.CliDeployTest do
           project_users: [%{user: user, role: :owner}],
           workflows: [webhook_workflow, cron_workflow]
         )
-
-      cron_trigger = Lightning.Repo.reload(cron_trigger)
-
-      Lightning.Repo.update!(
-        Ecto.Changeset.change(cron_trigger, cron_cursor_job_id: cursor_job.id)
-      )
 
       System.cmd(
         @cli_path,
