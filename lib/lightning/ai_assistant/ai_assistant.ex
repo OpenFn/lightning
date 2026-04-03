@@ -1456,15 +1456,29 @@ defmodule Lightning.AiAssistant do
   end
 
   defp build_global_message(body, session) do
-    {code, job} = extract_global_code_and_job(body["attachments"], session)
+    {code, job, job_key} =
+      extract_global_code_and_job(body["attachments"], session)
 
     message_attrs = %{
       role: :assistant,
       content: body["response"]
     }
 
+    # Set job on message for "Generated Job Code" rendering.
+    # For saved jobs, set the job association directly.
+    # For unsaved jobs, set from_unsaved_job in meta so
+    # format_message can use it as a fallback job_id.
     message_attrs =
-      if job, do: Map.put(message_attrs, :job, job), else: message_attrs
+      cond do
+        job ->
+          Map.put(message_attrs, :job, job)
+
+        job_key ->
+          Map.put(message_attrs, :meta, %{"from_global_job_code" => job_key})
+
+        true ->
+          message_attrs
+      end
 
     opts = [
       usage: body["usage"] || %{},
@@ -1487,13 +1501,12 @@ defmodule Lightning.AiAssistant do
       Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
 
     if on_job_step && job_code_attachment do
-      job =
-        resolve_job_from_key(
-          session.workflow_id,
-          job_code_attachment["job_key"]
-        )
+      job_key = job_code_attachment["job_key"]
 
-      {job_code_attachment["content"], job}
+      job =
+        resolve_job_from_key(session.workflow_id, job_key)
+
+      {job_code_attachment["content"], job, job_key}
     else
       workflow_yaml =
         Enum.find_value(attachments, fn
@@ -1501,11 +1514,11 @@ defmodule Lightning.AiAssistant do
           _ -> nil
         end)
 
-      {workflow_yaml, nil}
+      {workflow_yaml, nil, nil}
     end
   end
 
-  defp extract_global_code_and_job(_, _), do: {nil, nil}
+  defp extract_global_code_and_job(_, _), do: {nil, nil, nil}
 
   defp resolve_job_from_key(nil, _), do: nil
   defp resolve_job_from_key(_, nil), do: nil

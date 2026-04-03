@@ -725,6 +725,10 @@ defmodule LightningWeb.AiAssistantChannel do
         when not is_nil(unsaved_job_id) ->
           unsaved_job_id
 
+        %{"from_global_job_code" => job_key}
+        when not is_nil(job_key) ->
+          job_key
+
         _ ->
           message.job_id
       end
