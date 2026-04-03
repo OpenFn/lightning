@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.1-pre] - 2026-04-03
+
+### Added
+
 - Channel request logs are now cleaned up by the project history retention
   period, matching how workflow run history is managed. Orphaned channel
   snapshots are also cleaned up after expired requests are removed.
