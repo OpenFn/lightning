@@ -196,8 +196,7 @@ defmodule Lightning.ExportWorkerTest do
                  args: %{
                    "project_id" => non_existent_project_id,
                    "project_file" => project_file.id,
-                   "search_params" =>
-                     to_string_key_map(search_params)
+                   "search_params" => to_string_key_map(search_params)
                  }
                })
 

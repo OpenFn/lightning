@@ -78,9 +78,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
       {:error, reason} ->
         mark_project_file_failed(project_file_id)
 
-        Logger.error(
-          "Export failed with reason: #{inspect(reason)}"
-        )
+        Logger.error("Export failed with reason: #{inspect(reason)}")
 
         {:error, reason}
     end
