@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
+
 ## [2.16.1-pre1] - 2026-04-04
 
 ### Added

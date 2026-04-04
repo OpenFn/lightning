@@ -1021,13 +1021,22 @@ defmodule Lightning.Projects do
           f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
       )
       |> Repo.all()
-      |> Enum.each(fn %{path: object_path} = project_file ->
-        result = Lightning.Storage.delete(object_path)
+      |> Enum.each(fn
+        %{path: nil} = project_file ->
+          Logger.warning(
+            "Deleting orphaned project file #{project_file.id} " <>
+              "with nil path (likely a failed export)"
+          )
 
-        if match?({:ok, _res}, result) or
-             match?({:error, %{status: 404}}, result) do
           Repo.delete(project_file)
-        end
+
+        %{path: object_path} = project_file ->
+          result = Lightning.Storage.delete(object_path)
+
+          if match?({:ok, _res}, result) or
+               match?({:error, %{status: 404}}, result) do
+            Repo.delete(project_file)
+          end
       end)
     end
 

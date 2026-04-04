@@ -183,6 +183,28 @@ defmodule Lightning.ExportWorkerTest do
 
       :zip.zip_close(zip_handle)
     end
+
+    test "marks project file as failed when export fails",
+         %{
+           project_file: project_file,
+           search_params: search_params
+         } do
+      non_existent_project_id = Ecto.UUID.generate()
+
+      assert {:error, :project_not_found} ==
+               ExportWorker.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => non_existent_project_id,
+                   "project_file" => project_file.id,
+                   "search_params" =>
+                     to_string_key_map(search_params)
+                 }
+               })
+
+      project_file = Repo.reload(project_file)
+      assert project_file.status == :failed
+      assert is_nil(project_file.path)
+    end
   end
 
   def extract_and_read(zip_file_path, target_file_name) do
