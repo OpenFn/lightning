@@ -41,6 +41,8 @@ defmodule Lightning.Run do
              :final_dataclip_id
            ]}
 
+  @active_states [:available, :claimed, :started]
+
   @final_states [
     :success,
     :failed,
@@ -68,7 +70,7 @@ defmodule Lightning.Run do
 
   These are all non-final states: available, claimed, and started.
   """
-  def active_states, do: [:available, :claimed, :started]
+  def active_states, do: @active_states
 
   @doc """
   Returns the list of failure states for a run.
