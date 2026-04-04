@@ -60,13 +60,12 @@ defmodule Lightning.WorkOrders.ExportWorker do
          {:ok, zip_file} <-
            process_export(project, search_params, project_file),
          {:ok, storage_path} <-
-           store_project_file(zip_file, project_file) do
-      {:ok, project_file} =
-        update_project_file(project_file, %{
-          status: :completed,
-          path: storage_path
-        })
-
+           store_project_file(zip_file, project_file),
+         {:ok, project_file} <-
+           update_project_file(project_file, %{
+             status: :completed,
+             path: storage_path
+           }) do
       UserNotifier.notify_history_export_completion(
         project_file.created_by,
         project_file
@@ -510,6 +509,17 @@ defmodule Lightning.WorkOrders.ExportWorker do
         project_file
         |> Projects.File.mark_failed()
         |> Repo.update()
+        |> case do
+          {:ok, _project_file} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to mark project file #{project_file_id} as failed: #{inspect(changeset.errors)}"
+            )
+
+            {:error, changeset}
+        end
     end
   end
 end
