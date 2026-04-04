@@ -57,6 +57,13 @@ defmodule Lightning.Run do
   def final_states, do: @final_states
 
   @doc """
+  Returns the list of active (in-progress) states for a run.
+
+  These are all non-final states: available, claimed, and started.
+  """
+  def active_states, do: [:available, :claimed, :started]
+
+  @doc """
   Returns the list of failure states for a run.
 
   These are all final states except :success.

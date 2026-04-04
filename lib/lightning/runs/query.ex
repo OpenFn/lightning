@@ -231,7 +231,7 @@ defmodule Lightning.Runs.Query do
     # Step 1: Rank runs within each workflow by priority and insertion time
     ranked_runs_query =
       from(r in Run,
-        where: r.state in [:available, :claimed, :started],
+        where: r.state in ^Run.active_states(),
         join: wo in assoc(r, :work_order),
         join: w in assoc(wo, :workflow),
         join: p in assoc(w, :project)

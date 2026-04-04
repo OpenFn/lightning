@@ -11,6 +11,8 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
+  @wo_active WorkOrder.active_states()
+  @run_active Run.active_states()
   @days_back 30
 
   defmodule WorkflowStats do
@@ -58,7 +60,10 @@ defmodule Lightning.DashboardStats do
     last_workorders = batch_get_last_workorders(workflow_ids)
 
     last_failed_workorders =
-      batch_get_last_workorders(workflow_ids, [:pending, :running, :success])
+      batch_get_last_workorders(
+        workflow_ids,
+        WorkOrder.active_states() ++ [:success]
+      )
 
     Enum.map(workflows, fn workflow ->
       wf_id = workflow.id
@@ -229,7 +234,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:pending, :running] ->
+      {state, cnt}, acc when state in @wo_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -251,7 +256,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:available, :claimed, :started] ->
+      {state, cnt}, acc when state in @run_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -333,7 +338,7 @@ defmodule Lightning.DashboardStats do
           :success ->
             %{current | success: cnt}
 
-          s when s in [:pending, :running] ->
+          s when s in @wo_active ->
             Map.update!(current, :pending, &(&1 + cnt))
 
           _ ->
@@ -361,7 +366,7 @@ defmodule Lightning.DashboardStats do
           :success ->
             %{current | success: cnt}
 
-          s when s in [:available, :claimed, :started] ->
+          s when s in @run_active ->
             Map.update!(current, :pending, &(&1 + cnt))
 
           _ ->

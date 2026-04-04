@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase
+  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
 ### Fixed
 
 ## [2.16.1-pre1] - 2026-04-04
