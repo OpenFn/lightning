@@ -1500,6 +1500,28 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Projects.File, project_file2.id)
     end
 
+    test "deletes orphaned project files with nil path" do
+      project =
+        insert(:project, history_retention_period: 7)
+
+      more_days_ago = Date.utc_today() |> Date.add(-8)
+
+      orphaned_file =
+        insert(:project_file,
+          project: project,
+          path: nil,
+          status: :in_progress,
+          inserted_at: DateTime.new!(more_days_ago, ~T[00:00:00])
+        )
+
+      :ok =
+        Projects.perform(%Oban.Job{
+          args: %{"type" => "data_retention"}
+        })
+
+      refute Repo.get(Projects.File, orphaned_file.id)
+    end
+
     test "deletes channel request history based on started_at" do
       project = insert(:project, history_retention_period: 7)
       channel = insert(:channel, project: project)
