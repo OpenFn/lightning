@@ -17,12 +17,16 @@ and this project adheres to
 
 ### Added
 
-- Support `webhook_reply` and `cron_cursor_job` in the provisioner
-  [#4587](https://github.com/OpenFn/lightning/issues/4587)
-
 ### Changed
 
 ### Fixed
+
+## [2.16.1-pre1] - 2026-04-04
+
+### Added
+
+- Support `webhook_reply` and `cron_cursor_job` in the provisioner
+  [#4587](https://github.com/OpenFn/lightning/issues/4587)
 
 ## [2.16.1-pre] - 2026-04-03
 
