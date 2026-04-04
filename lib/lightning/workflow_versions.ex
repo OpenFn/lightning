@@ -246,7 +246,13 @@ defmodule Lightning.WorkflowVersions do
       :body
     ]
 
-    trigger_keys = [:type, :cron_expression, :enabled]
+    trigger_keys = [
+      :type,
+      :cron_expression,
+      :enabled,
+      :webhook_reply,
+      :cron_cursor_job_id
+    ]
 
     edge_keys = [
       :name,
