@@ -61,16 +61,28 @@ export const convertWorkflowStateToSpec = (
   const triggers: { [key: string]: SpecTrigger } = {};
   workflowState.triggers.forEach(trigger => {
     const pos = workflowState.positions?.[trigger.id];
+
     const triggerDetails: SpecTrigger = {
       ...(includeIds && { id: trigger.id }),
       type: trigger.type,
       enabled: trigger.enabled,
       pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
-      cron_expression:
-        trigger.type === 'cron' && 'cron_expression' in trigger
-          ? trigger.cron_expression
-          : undefined,
     } as SpecTrigger;
+
+    if (trigger.type === 'cron') {
+      const cursorJob = trigger.cron_cursor_job_id
+        ? workflowState.jobs.find(job => job.id === trigger.cron_cursor_job_id)
+        : null;
+
+      triggerDetails.cron_expression = trigger.cron_expression ?? null;
+      triggerDetails.cron_cursor_job = cursorJob
+        ? hyphenate(cursorJob.name)
+        : null;
+    }
+
+    if (trigger.type === 'webhook') {
+      triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
+    }
 
     // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
@@ -158,17 +170,22 @@ export const convertWorkflowSpecToState = (
 
     let trigger: StateTrigger;
     if (specTrigger.type === 'cron') {
+      const cursorJob = specTrigger.cron_cursor_job
+        ? (stateJobs[specTrigger.cron_cursor_job] ?? null)
+        : null;
       trigger = {
         id: uId,
         type: 'cron',
         enabled,
         cron_expression: specTrigger.cron_expression,
+        cron_cursor_job_id: cursorJob ? cursorJob.id : null,
       };
     } else if (specTrigger.type === 'webhook') {
       trigger = {
         id: uId,
         type: 'webhook',
         enabled,
+        webhook_reply: specTrigger.webhook_reply,
       };
     } else {
       trigger = {

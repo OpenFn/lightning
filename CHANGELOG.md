@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Support `webhook_reply` and `cron_cursor_job` in the provisioner
+  [#4587](https://github.com/OpenFn/lightning/issues/4587)
+
 ### Changed
 
 ### Fixed
@@ -49,7 +52,6 @@ and this project adheres to
   and triggers can still be freely deleted from workflows since the snapshot
   system preserves their data for every run.
   [#4538](https://github.com/OpenFn/lightning/issues/4538)
-
 - Allow users to select which workflow to merge for sandbox merging
   [#4002](https://github.com/OpenFn/lightning/issues/4002)
 - Bump ws-worker to `v1.23.1`

@@ -103,7 +103,9 @@ defmodule LightningWeb.API.ProvisioningJSON do
         )
 
     trigger
-    |> Map.take(~w(id type cron_expression enabled)a)
+    |> Map.take(
+      ~w(id type cron_expression enabled webhook_reply cron_cursor_job_id)a
+    )
     |> Map.put(:kafka_configuration, kafka_configuration)
     |> drop_keys_with_nil_value()
   end
