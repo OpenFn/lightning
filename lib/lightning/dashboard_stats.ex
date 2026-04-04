@@ -197,7 +197,7 @@ defmodule Lightning.DashboardStats do
   end
 
   defp get_last_failed_workorder(workflow, %{state: :success}) do
-    excluded_states = [:pending, :running, :success]
+    excluded_states = @wo_active ++ [:success]
     get_last_workorder(workflow, excluded_states)
   end
 
