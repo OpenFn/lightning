@@ -234,17 +234,8 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   end
 
   defp save_channel(socket, :new, params) do
-    built = %{
-      "project_id" => socket.assigns.project.id,
-      "client_auth_methods" => build_client_auth_params(params, [])
-    }
-
-    dest = build_destination_auth_param(params, [])
-
-    built =
-      if dest, do: Map.put(built, "destination_auth_method", dest), else: built
-
-    params = Map.merge(params, built)
+    params =
+      build_auth_params(params, [], %{"project_id" => socket.assigns.project.id})
 
     case Channels.create_channel(params, actor: socket.assigns.current_user) do
       {:ok, _channel} ->
@@ -260,17 +251,7 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
   defp save_channel(socket, :edit, params) do
     current = socket.assigns.channel.channel_auth_methods
-
-    built = %{
-      "client_auth_methods" => build_client_auth_params(params, current)
-    }
-
-    dest = build_destination_auth_param(params, current)
-
-    built =
-      if dest, do: Map.put(built, "destination_auth_method", dest), else: built
-
-    params = Map.merge(params, built)
+    params = build_auth_params(params, current)
 
     case Channels.update_channel(
            socket.assigns.channel,
@@ -286,6 +267,22 @@ defmodule LightningWeb.ChannelLive.FormComponent do
       {:error, changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
+  end
+
+  defp build_auth_params(params, current_auth_methods, extra \\ %{}) do
+    built =
+      Map.merge(extra, %{
+        "client_auth_methods" =>
+          build_client_auth_params(params, current_auth_methods)
+      })
+
+    built =
+      case build_destination_auth_param(params, current_auth_methods) do
+        nil -> built
+        dest -> Map.put(built, "destination_auth_method", dest)
+      end
+
+    Map.merge(params, built)
   end
 
   defp merge_selections(current, submitted) do
