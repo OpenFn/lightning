@@ -118,26 +118,19 @@ defmodule Lightning.Channels.Audit do
   defp add_auth_method_audits(multi, _direction, [], _role, _actor), do: multi
 
   defp add_auth_method_audits(multi, direction, changesets, role, actor) do
-    event_name =
+    {event_name, extract_fields, wrap} =
       case direction do
-        :added -> "auth_method_added"
-        :removed -> "auth_method_removed"
+        :added ->
+          {"auth_method_added", &fields_for_changeset(&1, role), &{nil, &1}}
+
+        :removed ->
+          {"auth_method_removed", &fields_for_data(&1.data, role), &{&1, nil}}
       end
 
     changesets
     |> Enum.with_index()
     |> Enum.reduce(multi, fn {cs, idx}, acc ->
-      fields =
-        case direction do
-          :added -> fields_for_changeset(cs, role)
-          :removed -> fields_for_data(cs.data, role)
-        end
-
-      {before, after_val} =
-        case direction do
-          :added -> {nil, fields}
-          :removed -> {fields, nil}
-        end
+      {before, after_val} = wrap.(extract_fields.(cs))
 
       Multi.insert(
         acc,
