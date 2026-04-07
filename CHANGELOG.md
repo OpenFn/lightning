@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+- Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
+  `true` or `if_available` this would result in TLS-related failures when trying
+  to send emails. This is now fixed for a limited number of use cases (see
+  (DEPLOYMENT.md)[https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#mail]
+  for details). [#4602](https://github.com/OpenFn/lightning/issues/4602)
+
 ## [2.16.1] - 2026-04-07
 
 ## [2.16.1-pre1] - 2026-04-04
