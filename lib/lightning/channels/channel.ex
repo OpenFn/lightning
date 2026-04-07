@@ -81,7 +81,6 @@ defmodule Lightning.Channels.Channel do
     Map.put(attrs, key, role)
   end
 
-  defp has_string_keys?(attrs) do
-    attrs |> Map.keys() |> List.first() |> is_binary()
-  end
+  defp has_string_keys?(attrs) when map_size(attrs) == 0, do: false
+  defp has_string_keys?(attrs), do: attrs |> Map.keys() |> hd() |> is_binary()
 end

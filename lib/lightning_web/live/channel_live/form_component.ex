@@ -279,6 +279,7 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     built =
       case build_destination_auth_param(params, current_auth_methods) do
         nil -> built
+        :clear -> Map.put(built, "destination_auth_method", nil)
         dest -> Map.put(built, "destination_auth_method", dest)
       end
 
@@ -318,7 +319,7 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
     case {existing, selected_id} do
       {nil, nil} -> nil
-      {%{id: id}, nil} -> %{id: id, delete: true}
+      {%{}, nil} -> :clear
       {%{id: id, project_credential_id: pc_id}, pc_id} -> %{id: id}
       {_, _} -> %{project_credential_id: selected_id}
     end

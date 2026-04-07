@@ -246,6 +246,39 @@ defmodule Lightning.ChannelsTest do
       assert audit.actor_id == user.id
     end
 
+    test "passing nil for destination_auth_method removes the join record",
+         %{user: user} do
+      project = insert(:project)
+      pc = insert(:project_credential, project: project)
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: pc
+      )
+
+      channel =
+        Channels.get_channel!(channel.id, include: [:destination_auth_method])
+
+      assert channel.destination_auth_method != nil
+
+      assert {:ok, updated} =
+               Channels.update_channel(
+                 channel,
+                 %{"destination_auth_method" => nil},
+                 actor: user
+               )
+
+      reloaded =
+        Channels.get_channel!(updated.id,
+          include: [:destination_auth_method]
+        )
+
+      assert reloaded.destination_auth_method == nil
+    end
+
     test "returns stale error on lock_version conflict", %{user: user} do
       channel = insert(:channel)
 
