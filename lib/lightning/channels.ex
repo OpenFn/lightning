@@ -10,7 +10,6 @@ defmodule Lightning.Channels do
   alias Lightning.Accounts.User
   alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
@@ -123,10 +122,30 @@ defmodule Lightning.Channels do
   end
 
   @doc """
-  Gets a single channel by ID. Returns nil if not found.
+  Gets a single channel by ID. Returns `nil` if not found.
+
+  ## Options
+
+    * `:include` - list of associations to preload (default: `[]`)
   """
-  def get_channel(id) do
-    Repo.get(Channel, id)
+  def get_channel(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one()
+  end
+
+  @doc """
+  Gets a single channel by ID. Raises `Ecto.NoResultsError` if not found.
+
+  Accepts the same options as `get_channel/2`.
+  """
+  def get_channel!(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one!()
+  end
+
+  defp channel_query(id, opts) do
+    preloads = Keyword.get(opts, :include, [])
+
+    from(c in Channel, where: c.id == ^id)
+    |> preload(^preloads)
   end
 
   @doc """
@@ -152,14 +171,6 @@ defmodule Lightning.Channels do
       ]
     )
     |> Repo.one()
-  end
-
-  @doc """
-  Gets a single channel. Raises if not found.
-  """
-  def get_channel!(id, opts \\ []) do
-    preloads = Keyword.get(opts, :include, [])
-    Repo.get!(Channel, id) |> Repo.preload(preloads)
   end
 
   @doc """
@@ -237,18 +248,6 @@ defmodule Lightning.Channels do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
     end
-  end
-
-  @doc """
-  Returns all ChannelAuthMethod records for a channel, preloading
-  their associated webhook_auth_method and project_credential (with credential).
-  """
-  def list_channel_auth_methods(%Channel{} = channel) do
-    from(cam in ChannelAuthMethod,
-      where: cam.channel_id == ^channel.id,
-      preload: [:webhook_auth_method, project_credential: :credential]
-    )
-    |> Repo.all()
   end
 
   @doc """

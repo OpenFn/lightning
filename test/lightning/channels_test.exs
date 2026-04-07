@@ -6,7 +6,6 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Channels
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
@@ -732,60 +731,6 @@ defmodule Lightning.ChannelsTest do
 
     test "returns nil for non-existent channel" do
       assert Channels.get_channel_with_auth(Ecto.UUID.generate()) == nil
-    end
-  end
-
-  describe "list_channel_auth_methods/1" do
-    test "returns empty list for a channel with no auth methods" do
-      channel = insert(:channel)
-      assert Channels.list_channel_auth_methods(channel) == []
-    end
-
-    test "returns preloaded client and destination records for a channel with both" do
-      project = insert(:project)
-      wam = insert(:webhook_auth_method, project: project)
-      pc = insert(:project_credential, project: project)
-
-      channel =
-        insert(:channel,
-          project: project,
-          channel_auth_methods: [
-            build(:channel_auth_method,
-              role: :client,
-              webhook_auth_method: wam
-            ),
-            build(:channel_auth_method,
-              role: :destination,
-              webhook_auth_method: nil,
-              project_credential: pc
-            )
-          ]
-        )
-
-      cams = Channels.list_channel_auth_methods(channel)
-
-      assert length(cams) == 2
-
-      client = Enum.find(cams, &(&1.role == :client))
-      destination = Enum.find(cams, &(&1.role == :destination))
-
-      assert %ChannelAuthMethod{
-               role: :client,
-               webhook_auth_method_id: wam_id,
-               webhook_auth_method: %{id: preloaded_wam_id}
-             } = client
-
-      assert wam_id == wam.id
-      assert preloaded_wam_id == wam.id
-
-      assert %ChannelAuthMethod{
-               role: :destination,
-               project_credential_id: pc_id,
-               project_credential: %{id: preloaded_pc_id}
-             } = destination
-
-      assert pc_id == pc.id
-      assert preloaded_pc_id == pc.id
     end
   end
 

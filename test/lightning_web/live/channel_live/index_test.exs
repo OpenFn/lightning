@@ -274,9 +274,12 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       assert channel
 
-      assert [cam] = Channels.list_channel_auth_methods(channel)
-      assert cam.role == :client
-      assert cam.webhook_auth_method_id == wam.id
+      channel = Repo.preload(channel, :channel_auth_methods)
+
+      assert [%{role: :client, webhook_auth_method_id: wam_id}] =
+               channel.channel_auth_methods
+
+      assert wam_id == wam.id
     end
 
     @tag role: :editor

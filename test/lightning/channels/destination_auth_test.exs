@@ -3,12 +3,6 @@ defmodule Lightning.Channels.DestinationAuthTest do
 
   alias Lightning.Channels.DestinationAuth
 
-  describe "supported_schemas/0" do
-    test "returns expected schemas" do
-      assert DestinationAuth.supported_schemas() == ["http", "dhis2", "oauth"]
-    end
-  end
-
   describe "build_auth_header/2 with http schema" do
     test "Bearer token from access_token" do
       assert {:ok, "Bearer tok-123"} =

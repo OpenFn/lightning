@@ -12,15 +12,6 @@ defmodule Lightning.Channels.DestinationAuth do
   somehow reaches runtime, `build_auth_header/2` returns an error.
   """
 
-  @supported_schemas ~w(http dhis2 oauth)
-
-  @doc """
-  Returns the list of credential schema types that can be used for destination auth.
-  Used for config-time validation.
-  """
-  @spec supported_schemas() :: [String.t()]
-  def supported_schemas, do: @supported_schemas
-
   @doc """
   Given a credential schema name and decrypted body map, returns the
   Authorization header value to set on the outbound request.
