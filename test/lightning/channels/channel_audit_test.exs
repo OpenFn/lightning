@@ -69,7 +69,7 @@ defmodule Lightning.Channels.ChannelAuditTest do
     # TODO: Remove the sink_url refutation once the rename migration has
     # been run everywhere — at that point the old column won't exist and
     # this negative assertion adds no value.
-    test "audit 'created' event diff contains 'destination_url' not 'sink_url'",
+    test "audit 'created' event diff contains 'destination_url'",
          %{user: user} do
       project = insert(:project)
 
