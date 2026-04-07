@@ -336,6 +336,101 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     end
   end
 
+  describe "form structure" do
+    @tag role: :editor
+    test "renders fields in the correct order with labels, sublabels, and placeholder",
+         %{conn: conn, project: project} do
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # Fields appear in this order: Name, Destination URL, Destination Credential,
+      # Enabled, Client Credentials
+      name_pos = :binary.match(html, "Name") |> elem(0)
+      dest_url_pos = :binary.match(html, "Destination URL") |> elem(0)
+      dest_cred_pos = :binary.match(html, "Destination Credential") |> elem(0)
+      enabled_pos = :binary.match(html, "Enabled") |> elem(0)
+      client_cred_pos = :binary.match(html, "Client Credentials") |> elem(0)
+
+      assert name_pos < dest_url_pos
+      assert dest_url_pos < dest_cred_pos
+      assert dest_cred_pos < enabled_pos
+      assert enabled_pos < client_cred_pos
+
+      # Sublabels
+      assert html =~ "The service OpenFn will forward requests to"
+      assert html =~ "How OpenFn authenticates with the destination service"
+      assert html =~ "Credentials that you can use to access this channel"
+
+      # Destination URL placeholder
+      assert has_element?(
+               view,
+               "input[name='channel[destination_url]'][placeholder='https://']"
+             )
+    end
+
+    @tag role: :editor
+    test "Destination Credential is a select dropdown with None plus project credentials",
+         %{conn: conn, project: project, user: user} do
+      cred1 =
+        insert(:credential, project: project, user: user, name: "My API Key")
+
+      _pc1 = insert(:project_credential, project: project, credential: cred1)
+
+      cred2 =
+        insert(:credential, project: project, user: user, name: "OAuth Token")
+
+      _pc2 = insert(:project_credential, project: project, credential: cred2)
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # Renders as a <select>, not checkboxes
+      assert has_element?(
+               view,
+               "select[name='channel[destination_credential_id]']"
+             )
+
+      refute has_element?(
+               view,
+               "input[type='checkbox'][id^='destination_auth_']"
+             )
+
+      # "None" is the first option, credentials follow
+      assert has_element?(view, "select option[value='']", "None")
+      assert html =~ "My API Key"
+      assert html =~ "OAuth Token"
+    end
+
+    @tag role: :editor
+    test "Client Credentials still renders as multi-select checkboxes", %{
+      conn: conn,
+      project: project
+    } do
+      wam1 = insert(:webhook_auth_method, project: project, name: "API Key Auth")
+      wam2 = insert(:webhook_auth_method, project: project, name: "Basic Auth")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      assert has_element?(view, "input[type='checkbox']#client_auth_#{wam1.id}")
+      assert has_element?(view, "input[type='checkbox']#client_auth_#{wam2.id}")
+      assert has_element?(view, "label", "API Key Auth")
+      assert has_element?(view, "label", "Basic Auth")
+    end
+
+    @tag role: :editor
+    test "shows Add New links for client credentials and destination credential",
+         %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      assert html =~ "/settings#webhook_security"
+      assert html =~ "/settings#credentials"
+      assert html =~ "Add New"
+      refute html =~ "Create a new one in project settings."
+    end
+  end
+
   describe "edit channel form" do
     @tag role: :editor
     test "/channels/:id/edit mounts form pre-populated with channel values", %{
@@ -395,8 +490,11 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     end
 
     @tag role: :editor
-    test "shows settings links even when auth methods and credentials exist",
-         %{conn: conn, project: project, user: user} do
+    test "edit form shows available auth methods and credentials", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
       wam = insert(:webhook_auth_method, project: project)
       credential = insert(:credential, project: project, user: user)
       _pc = insert(:project_credential, project: project, credential: credential)
@@ -405,18 +503,12 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Checkboxes for existing items are rendered
       assert html =~ wam.name
       assert html =~ credential.name
-      # Settings links are still present alongside the checkboxes
-      assert html =~ "/settings#webhook_security"
-      assert html =~ "/settings#credentials"
     end
-  end
 
-  describe "edit channel with existing auth methods" do
     @tag role: :editor
-    test "pre-selects existing client and destination auth methods", %{
+    test "pre-selects existing client checkbox and destination dropdown", %{
       conn: conn,
       project: project,
       user: user
@@ -443,18 +535,19 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      assert has_element?(view, "label", wam.name)
-      assert has_element?(view, "label", credential.name)
+      # Client auth method is checked
       assert has_element?(view, "#client_auth_#{wam.id}[value='true']")
-      assert has_element?(view, "#destination_auth_#{pc.id}[value='true']")
+
+      # Destination credential is selected in the dropdown
+      assert has_element?(
+               view,
+               "select[name='channel[destination_credential_id]'] option[value='#{pc.id}'][selected]"
+             )
     end
 
     @tag role: :editor
-    test "saving can remove, keep, and add auth methods in a single save", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
+    test "saving can remove a client auth, keep destination, and add a new client in one save",
+         %{conn: conn, project: project, user: user} do
       wam1 = insert(:webhook_auth_method, project: project)
       wam2 = insert(:webhook_auth_method, project: project)
       credential = insert(:credential, project: project, user: user)
@@ -478,13 +571,13 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Remove wam1, keep pc (destination), add wam2 as a new client
+      # Remove wam1, add wam2, keep destination credential via dropdown
       view
       |> form("#channel-form-#{channel.id}",
         channel: %{
           name: channel.name,
           client_auth_methods: %{wam1.id => "false", wam2.id => "true"},
-          destination_auth_methods: %{pc.id => "true"}
+          destination_credential_id: pc.id
         }
       )
       |> render_change()
@@ -507,6 +600,167 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       assert length(destination_cams) == 1
       assert hd(destination_cams).project_credential_id == pc.id
+    end
+  end
+
+  describe "destination credential round-trips" do
+    @tag role: :editor
+    test "creating a channel with a destination credential saves the auth method",
+         %{conn: conn, project: project, user: user} do
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "with-dest-cred",
+          destination_url: "https://example.com/api",
+          destination_credential_id: pc.id
+        }
+      )
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+      assert render(view) =~ "Channel created successfully"
+
+      channel =
+        Channels.list_channels_for_project(project.id)
+        |> Enum.find(&(&1.name == "with-dest-cred"))
+
+      assert channel
+
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert length(dest_cams) == 1
+      assert hd(dest_cams).project_credential_id == pc.id
+    end
+
+    @tag role: :editor
+    test "creating a channel with None destination credential saves no auth method",
+         %{conn: conn, project: project, user: user} do
+      credential = insert(:credential, project: project, user: user)
+      _pc = insert(:project_credential, project: project, credential: credential)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # Select "None" (empty value) in the destination credential dropdown
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "no-dest-cred",
+          destination_url: "https://example.com/api",
+          destination_credential_id: ""
+        }
+      )
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+
+      channel =
+        Channels.list_channels_for_project(project.id)
+        |> Enum.find(&(&1.name == "no-dest-cred"))
+
+      assert channel
+
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert dest_cams == []
+    end
+
+    @tag role: :editor
+    test "changing destination credential from one to another swaps the auth method",
+         %{conn: conn, project: project, user: user} do
+      cred1 = insert(:credential, project: project, user: user, name: "Cred A")
+      pc1 = insert(:project_credential, project: project, credential: cred1)
+
+      cred2 = insert(:credential, project: project, user: user, name: "Cred B")
+      pc2 = insert(:project_credential, project: project, credential: cred2)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: pc1
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      # Swap from pc1 to pc2 via the dropdown
+      view
+      |> form("#channel-form-#{channel.id}",
+        channel: %{destination_credential_id: pc2.id}
+      )
+      |> render_change()
+
+      view
+      |> form("#channel-form-#{channel.id}")
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert length(dest_cams) == 1
+      assert hd(dest_cams).project_credential_id == pc2.id
+    end
+
+    @tag role: :editor
+    test "selecting None removes an existing destination auth method",
+         %{conn: conn, project: project, user: user} do
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: pc
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      # Select "None" (empty value)
+      view
+      |> form("#channel-form-#{channel.id}",
+        channel: %{destination_credential_id: ""}
+      )
+      |> render_change()
+
+      view
+      |> form("#channel-form-#{channel.id}")
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert dest_cams == []
     end
   end
 
