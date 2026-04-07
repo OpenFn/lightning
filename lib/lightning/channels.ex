@@ -166,6 +166,7 @@ defmodule Lightning.Channels do
       left_join: cred in assoc(pc, :credential),
       preload: [
         client_auth_methods: {cli, webhook_auth_method: wam},
+        client_webhook_auth_methods: wam,
         destination_auth_method:
           {dest, project_credential: {pc, credential: cred}}
       ]
@@ -177,8 +178,10 @@ defmodule Lightning.Channels do
   Gets a channel by ID scoped to a project. Returns `nil` if the channel
   does not exist or belongs to a different project.
   """
-  def get_channel_for_project(project_id, channel_id) do
-    Repo.get_by(Channel, id: channel_id, project_id: project_id)
+  def get_channel_for_project(project_id, channel_id, opts \\ []) do
+    channel_query(channel_id, opts)
+    |> where([c], c.project_id == ^project_id)
+    |> Repo.one()
   end
 
   @doc """

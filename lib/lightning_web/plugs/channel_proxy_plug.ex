@@ -81,9 +81,7 @@ defmodule LightningWeb.ChannelProxyPlug do
     with {:ok, auth_header} <- resolve_destination_auth(channel),
          {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
       client_auth_types =
-        channel.client_auth_methods
-        |> Enum.map(& &1.webhook_auth_method)
-        |> Enum.reject(&is_nil/1)
+        channel.client_webhook_auth_methods
         |> Enum.map(& &1.auth_type)
         |> Enum.uniq()
 
@@ -111,10 +109,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp authenticate_client(conn, channel) do
-    methods =
-      channel.client_auth_methods
-      |> Enum.map(& &1.webhook_auth_method)
-      |> Enum.reject(&is_nil/1)
+    methods = channel.client_webhook_auth_methods
 
     if methods == [] or
          Auth.valid_key?(conn, methods) or

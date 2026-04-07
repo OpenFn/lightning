@@ -32,6 +32,9 @@ defmodule Lightning.Channels.Channel do
 
     has_many :client_auth_methods, ChannelAuthMethod, where: [role: :client]
 
+    has_many :client_webhook_auth_methods,
+      through: [:client_auth_methods, :webhook_auth_method]
+
     has_one :destination_auth_method, ChannelAuthMethod,
       where: [role: :destination],
       on_replace: :delete
