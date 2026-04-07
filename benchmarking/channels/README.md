@@ -15,8 +15,8 @@ Lightning instance.
 Three terminals:
 
 ```bash
-# Terminal 1 — Mock sink (simulates the downstream HTTP service)
-elixir benchmarking/channels/mock_sink.exs
+# Terminal 1 — Mock destination (simulates the downstream HTTP service)
+elixir benchmarking/channels/mock_destination.exs
 
 # Terminal 2 — Lightning (as a named node)
 iex --sname lightning --cookie bench -S mix phx.server
@@ -31,15 +31,15 @@ benchmarking/channels/run_all.sh --duration 30 --concurrency 20
 ```
 
 The load test will automatically create a "load-test" project and channel
-pointing at the mock sink, then drive traffic through the proxy and report
-results.
+pointing at the mock destination, then drive traffic through the proxy and
+report results.
 
 ## File Structure
 
 ```
 benchmarking/channels/
 ├── load_test.exs              # Entry point (~20 lines): Mix.install, loads modules, calls main()
-├── mock_sink.exs              # Standalone mock HTTP sink server
+├── mock_destination.exs              # Standalone mock HTTP destination server
 ├── run_all.sh                 # Runs all 7 scenarios in sequence
 ├── lib/
 │   ├── load_test/
@@ -58,13 +58,13 @@ The entry point (`load_test.exs`) installs deps via `Mix.install`, loads all
 modules via `Code.require_file` in dependency order, then calls
 `LoadTest.main(System.argv())`.
 
-## Mock Sink (`mock_sink.exs`)
+## Mock Destination (`mock_destination.exs`)
 
 A standalone Bandit HTTP server that accepts all requests and responds according
 to the configured mode.
 
 ```bash
-elixir benchmarking/channels/mock_sink.exs [options]
+elixir benchmarking/channels/mock_destination.exs [options]
 ```
 
 ### Options
@@ -87,7 +87,7 @@ elixir benchmarking/channels/mock_sink.exs [options]
 
 ### Query Parameters
 
-The mock sink supports per-request overrides via query parameters:
+The mock destination supports per-request overrides via query parameters:
 
 | Parameter          | Description                                     |
 | ------------------ | ----------------------------------------------- |
@@ -96,7 +96,7 @@ The mock sink supports per-request overrides via query parameters:
 | `?status=N`        | Override `--status` for this request (e.g. 503) |
 
 This lets the load test control response sizes and delays without restarting the
-sink:
+destination:
 
 ```bash
 # Default body size
@@ -116,16 +116,16 @@ curl "http://localhost:4001/test?delay=500&response_size=5000"
 
 ```bash
 # Default: fast 200 responses
-elixir benchmarking/channels/mock_sink.exs
+elixir benchmarking/channels/mock_destination.exs
 
 # Simulate flaky upstream
-elixir benchmarking/channels/mock_sink.exs --mode mixed
+elixir benchmarking/channels/mock_destination.exs --mode mixed
 
 # Large response bodies (5MB)
-elixir benchmarking/channels/mock_sink.exs --body-size 5000000
+elixir benchmarking/channels/mock_destination.exs --body-size 5000000
 
 # Require authentication
-elixir benchmarking/channels/mock_sink.exs --mode auth
+elixir benchmarking/channels/mock_destination.exs --mode auth
 
 # Slow responses via query param (no restart needed)
 curl "http://localhost:4001/test?delay=2000"
@@ -147,32 +147,32 @@ to the Lightning BEAM for channel setup, memory sampling, and telemetry.
 
 ### Options
 
-| Option                  | Default                 | Description                                          |
-| ----------------------- | ----------------------- | ---------------------------------------------------- |
-| `--target URL`          | `http://localhost:4000` | Lightning base URL                                   |
-| `--sink URL`            | `http://localhost:4001` | Mock sink URL (for channel creation)                 |
-| `--node NODE`           | `lightning@hostname`    | Lightning node name                                  |
-| `--cookie COOKIE`       | —                       | Erlang cookie (also settable via `elixir --cookie`)  |
-| `--channel NAME`        | `load-test`             | Channel name to find/create                          |
-| `--scenario NAME`       | `happy_path`            | Test scenario (see below)                            |
-| `--concurrency N`       | 10                      | Concurrent virtual users                             |
-| `--duration SECS`       | 30                      | Test duration                                        |
-| `--payload-size BYTES`  | 1024                    | Request body size                                    |
-| `--response-size BYTES` | —                       | Response body size override (via `?response_size=N`) |
-| `--delay MS`            | — (slow_sink: 2000)     | Sink response delay (via `?delay=N`)                 |
-| `--csv PATH`            | —                       | Optional CSV output file                             |
+| Option                  | Default                    | Description                                          |
+| ----------------------- | -------------------------- | ---------------------------------------------------- |
+| `--target URL`          | `http://localhost:4000`    | Lightning base URL                                   |
+| `--destination URL`     | `http://localhost:4001`    | Mock destination URL (for channel creation)          |
+| `--node NODE`           | `lightning@hostname`       | Lightning node name                                  |
+| `--cookie COOKIE`       | —                          | Erlang cookie (also settable via `elixir --cookie`)  |
+| `--channel NAME`        | `load-test`                | Channel name to find/create                          |
+| `--scenario NAME`       | `happy_path`               | Test scenario (see below)                            |
+| `--concurrency N`       | 10                         | Concurrent virtual users                             |
+| `--duration SECS`       | 30                         | Test duration                                        |
+| `--payload-size BYTES`  | 1024                       | Request body size                                    |
+| `--response-size BYTES` | —                          | Response body size override (via `?response_size=N`) |
+| `--delay MS`            | — (slow_destination: 2000) | Destination response delay (via `?delay=N`)          |
+| `--csv PATH`            | —                          | Optional CSV output file                             |
 
 ### Scenarios
 
-| Scenario           | Description                                     | Mock sink mode        |
-| ------------------ | ----------------------------------------------- | --------------------- |
-| **happy_path**     | Sustained POST requests at constant concurrency | `fixed` (default)     |
-| **ramp_up**        | Linearly ramp from 1 → N VUs over duration      | `fixed`               |
-| **large_payload**  | POST with large request bodies (default 1MB)    | `fixed`               |
-| **large_response** | GET requests with large response bodies         | `fixed --body-size N` |
-| **mixed_methods**  | Rotate through GET, POST, PUT, PATCH, DELETE    | `fixed`               |
-| **slow_sink**      | Measure latency with a slow upstream            | `fixed` + `?delay=N`  |
-| **direct_sink**    | Hit mock sink directly (baseline measurement)   | `fixed` (default)     |
+| Scenario               | Description                                          | Mock destination mode |
+| ---------------------- | ---------------------------------------------------- | --------------------- |
+| **happy_path**         | Sustained POST requests at constant concurrency      | `fixed` (default)     |
+| **ramp_up**            | Linearly ramp from 1 → N VUs over duration           | `fixed`               |
+| **large_payload**      | POST with large request bodies (default 1MB)         | `fixed`               |
+| **large_response**     | GET requests with large response bodies              | `fixed --body-size N` |
+| **mixed_methods**      | Rotate through GET, POST, PUT, PATCH, DELETE         | `fixed`               |
+| **slow_destination**   | Measure latency with a slow upstream                 | `fixed` + `?delay=N`  |
+| **direct_destination** | Hit mock destination directly (baseline measurement) | `fixed` (default)     |
 
 ### Examples
 
@@ -192,14 +192,14 @@ elixir --sname lt --cookie bench \
   benchmarking/channels/load_test.exs \
   --scenario ramp_up --concurrency 50 --duration 60 --csv results.csv
 
-# Slow upstream latency test (delay applied via query param, no sink restart)
+# Slow upstream latency test (delay applied via query param, no destination restart)
 elixir --sname lt --cookie bench \
   benchmarking/channels/load_test.exs \
-  --scenario slow_sink --delay 2000 --concurrency 10 --duration 30
+  --scenario slow_destination --delay 2000 --concurrency 10 --duration 30
 
-# Baseline: hit mock sink directly (no Lightning needed, no --sname required)
+# Baseline: hit mock destination directly (no Lightning needed, no --sname required)
 elixir benchmarking/channels/load_test.exs \
-  --scenario direct_sink --concurrency 20 --duration 10
+  --scenario direct_destination --concurrency 20 --duration 10
 
 # Large response test with explicit response size
 elixir --sname lt --cookie bench \
@@ -210,7 +210,7 @@ elixir --sname lt --cookie bench \
 ## Run All Scenarios (`run_all.sh`)
 
 Runs all 7 scenarios in sequence, logging output to a timestamped file and
-appending CSV rows for each scenario. Assumes Lightning and mock sink are
+appending CSV rows for each scenario. Assumes Lightning and mock destination are
 already running. Bails on first failure.
 
 ```bash
@@ -228,15 +228,15 @@ benchmarking/channels/run_all.sh [options]
 
 ### Scenario Order
 
-| #   | Scenario         | Extra flags               |
-| --- | ---------------- | ------------------------- |
-| 1   | `direct_sink`    | (none — baseline)         |
-| 2   | `happy_path`     | (none)                    |
-| 3   | `ramp_up`        | (none)                    |
-| 4   | `large_payload`  | `--payload-size 1048576`  |
-| 5   | `large_response` | `--response-size 1048576` |
-| 6   | `mixed_methods`  | (none)                    |
-| 7   | `slow_sink`      | `--delay 2000`            |
+| #   | Scenario             | Extra flags               |
+| --- | -------------------- | ------------------------- |
+| 1   | `direct_destination` | (none — baseline)         |
+| 2   | `happy_path`         | (none)                    |
+| 3   | `ramp_up`            | (none)                    |
+| 4   | `large_payload`      | `--payload-size 1048576`  |
+| 5   | `large_response`     | `--response-size 1048576` |
+| 6   | `mixed_methods`      | (none)                    |
+| 7   | `slow_destination`   | `--delay 2000`            |
 
 ### Examples
 
@@ -287,9 +287,9 @@ The load test prints a summary like:
 
 ### Telemetry Timing Breakdown
 
-When running through Lightning (not `direct_sink`), the load test automatically
-deploys a telemetry collector onto the Lightning BEAM node. After the test, it
-prints a server-side timing breakdown:
+When running through Lightning (not `direct_destination`), the load test
+automatically deploys a telemetry collector onto the Lightning BEAM node. After
+the test, it prints a server-side timing breakdown:
 
 ```
 ───────────────────────────────────────
@@ -301,16 +301,16 @@ prints a server-side timing breakdown:
 
 This tells you exactly where time is spent inside the channel proxy:
 
-| Metric             | What it measures                                                     |
-| ------------------ | -------------------------------------------------------------------- |
-| **Total request**  | Entire `ChannelProxyPlug.call/2` — DB lookup + proxy + plug overhead |
-| **DB lookup**      | `Ecto.UUID.cast` + `Repo.get` to find the channel                    |
-| **Upstream proxy** | `Philter.proxy` call — HTTP to the sink + response streaming back    |
-| **Plug overhead**  | `Total request` - `DB lookup` - `Upstream proxy` = plug/header work  |
+| Metric             | What it measures                                                         |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Total request**  | Entire `ChannelProxyPlug.call/2` — DB lookup + proxy + plug overhead     |
+| **DB lookup**      | `Ecto.UUID.cast` + `Repo.get` to find the channel                        |
+| **Upstream proxy** | `Philter.proxy` call — HTTP to the destination + response streaming back |
+| **Plug overhead**  | `Total request` - `DB lookup` - `Upstream proxy` = plug/header work      |
 
 If `Total request` is much larger than `Upstream proxy`, the overhead is in the
 Plug pipeline or DB lookup. If `Upstream proxy` dominates, the time is in the
-network hop to the sink.
+network hop to the destination.
 
 The telemetry collector uses ETS with `:public` access and `write_concurrency`
 for minimal overhead — handlers run in the connection processes, not through a
@@ -324,9 +324,9 @@ GenServer bottleneck.
   correct streaming behaviour. A growing delta suggests the proxy is buffering
   entire request/response bodies in memory.
 
-- **Throughput** depends heavily on your machine and the mock sink
-  configuration. With a fast local sink and 20 VUs, expect 500+ req/s on modern
-  hardware.
+- **Throughput** depends heavily on your machine and the mock destination
+  configuration. With a fast local destination and 20 VUs, expect 500+ req/s on
+  modern hardware.
 
 - **Latency p95** should be close to p50 for the `happy_path` scenario (no
   artificial delays). A large gap indicates contention or resource exhaustion.
@@ -334,13 +334,14 @@ GenServer bottleneck.
 - **Error rate** should be 0% for `happy_path` and `large_payload` scenarios.
   Non-zero errors suggest proxy bugs or resource limits.
 
-### Measuring proxy overhead with `direct_sink`
+### Measuring proxy overhead with `direct_destination`
 
-The `direct_sink` scenario hits the mock sink directly, bypassing Lightning
-entirely. This gives a baseline for the test harness + mock sink latency:
+The `direct_destination` scenario hits the mock destination directly, bypassing
+Lightning entirely. This gives a baseline for the test harness + mock
+destination latency:
 
 ```
-proxy_overhead = happy_path_latency - direct_sink_latency
+proxy_overhead = happy_path_latency - direct_destination_latency
 ```
 
 Run both and compare:
@@ -348,7 +349,7 @@ Run both and compare:
 ```bash
 # Baseline (no Lightning needed)
 elixir benchmarking/channels/load_test.exs \
-  --scenario direct_sink --concurrency 20 --duration 10
+  --scenario direct_destination --concurrency 20 --duration 10
 
 # Through proxy
 elixir --sname lt --cookie bench \

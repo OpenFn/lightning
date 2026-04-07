@@ -53,7 +53,7 @@ defmodule LoadTest.Setup do
 
   def ensure_channel!(node, opts) do
     channel_name = opts[:channel]
-    destination_url = opts[:sink]
+    destination_url = opts[:destination]
 
     IO.write("Looking up channel '#{channel_name}'... ")
 
@@ -77,7 +77,7 @@ defmodule LoadTest.Setup do
   end
 
   def preflight_destination!(opts) do
-    destination_url = opts[:sink]
+    destination_url = opts[:destination]
     IO.write("Checking mock destination at #{destination_url}... ")
 
     request = Finch.build(:get, destination_url)
@@ -100,7 +100,7 @@ defmodule LoadTest.Setup do
         IO.puts(:stderr, """
 
         Start the mock destination first:
-          elixir benchmarking/channels/mock_sink.exs
+          elixir benchmarking/channels/mock_destination.exs
         """)
 
         System.halt(1)
