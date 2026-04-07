@@ -317,21 +317,13 @@ defmodule LightningWeb.ChannelLive.FormComponent do
         id -> id
       end
 
-    existing =
-      Enum.find(current_auth_methods, &(&1.role == :destination))
+    existing = Enum.find(current_auth_methods, &(&1.role == :destination))
 
-    cond do
-      is_nil(selected_id) && is_nil(existing) ->
-        nil
-
-      is_nil(selected_id) && existing ->
-        %{id: existing.id, delete: true}
-
-      existing && existing.project_credential_id == selected_id ->
-        %{id: existing.id}
-
-      true ->
-        %{project_credential_id: selected_id}
+    case {existing, selected_id} do
+      {nil, nil} -> nil
+      {%{id: id}, nil} -> %{id: id, delete: true}
+      {%{id: id, project_credential_id: pc_id}, pc_id} -> %{id: id}
+      {_, _} -> %{project_credential_id: selected_id}
     end
   end
 end
