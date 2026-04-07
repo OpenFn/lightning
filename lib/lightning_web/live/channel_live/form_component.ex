@@ -24,16 +24,16 @@ defmodule LightningWeb.ChannelLive.FormComponent do
       |> Enum.filter(&(&1.role == :client))
       |> Enum.map(& &1.webhook_auth_method_id)
 
-    current_destination_ids =
-      channel.channel_auth_methods
-      |> Enum.filter(&(&1.role == :destination))
-      |> Enum.map(& &1.project_credential_id)
-
     client_selections =
       Map.new(wams, fn wam -> {wam.id, wam.id in current_client_ids} end)
 
-    destination_selections =
-      Map.new(pcs, fn pc -> {pc.id, pc.id in current_destination_ids} end)
+    destination_credential_id =
+      channel.channel_auth_methods
+      |> Enum.find(&(&1.role == :destination))
+      |> case do
+        nil -> nil
+        cam -> cam.project_credential_id
+      end
 
     {:ok,
      socket
@@ -43,7 +43,7 @@ defmodule LightningWeb.ChannelLive.FormComponent do
        webhook_auth_methods: wams,
        project_credentials: pcs,
        client_selections: client_selections,
-       destination_selections: destination_selections
+       destination_credential_id: destination_credential_id
      )}
   end
 
@@ -60,17 +60,17 @@ defmodule LightningWeb.ChannelLive.FormComponent do
         Map.get(params, "client_auth_methods", %{})
       )
 
-    destination_selections =
-      merge_selections(
-        socket.assigns.destination_selections,
-        Map.get(params, "destination_auth_methods", %{})
-      )
+    destination_credential_id =
+      case Map.get(params, "destination_credential_id", "") do
+        "" -> nil
+        id -> id
+      end
 
     {:noreply,
      assign(socket,
        changeset: changeset,
        client_selections: client_selections,
-       destination_selections: destination_selections
+       destination_credential_id: destination_credential_id
      )}
   end
 
@@ -135,12 +135,49 @@ defmodule LightningWeb.ChannelLive.FormComponent do
           <div class="space-y-6 bg-white">
             <.input field={f[:name]} label="Name" type="text" phx-debounce="300" />
 
-            <.input
-              field={f[:destination_url]}
-              label="Destination URL"
-              type="text"
-              phx-debounce="300"
-            />
+            <div>
+              <.input
+                field={f[:destination_url]}
+                label="Destination URL"
+                type="text"
+                placeholder="https://"
+                phx-debounce="300"
+              />
+              <p class="mt-1 text-xs text-gray-500">
+                The service OpenFn will forward requests to
+              </p>
+            </div>
+
+            <div>
+              <div class="flex items-baseline gap-2 mb-2">
+                <p class="text-sm/6 font-medium text-slate-800">
+                  Destination Credential
+                </p>
+                <.link
+                  href={~p"/projects/#{@project}/settings#credentials"}
+                  target="_blank"
+                  class="text-xs link"
+                >
+                  Add New
+                </.link>
+              </div>
+              <p class="mb-2 text-xs text-gray-500">
+                How OpenFn authenticates with the destination service
+              </p>
+              <select
+                name={"#{f.name}[destination_credential_id]"}
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 sm:text-sm"
+              >
+                <option value="">None</option>
+                <option
+                  :for={pc <- @project_credentials}
+                  value={pc.id}
+                  selected={@destination_credential_id == pc.id}
+                >
+                  {pc.credential.name}
+                </option>
+              </select>
+            </div>
 
             <.input field={f[:enabled]} label="Enabled" type="toggle" />
 
@@ -150,12 +187,22 @@ defmodule LightningWeb.ChannelLive.FormComponent do
                   Client Credentials
                 </p>
                 <.link
-                  navigate={~p"/projects/#{@project}/settings#webhook_security"}
+                  href={~p"/projects/#{@project}/settings#webhook_security"}
+                  target="_blank"
                   class="text-xs link"
                 >
-                  Create a new one in project settings.
+                  Add New
                 </.link>
               </div>
+              <p class="mb-2 text-xs text-gray-500">
+                Credentials that you can use to access this channel
+              </p>
+              <p
+                :if={@webhook_auth_methods == []}
+                class="italic text-xs text-gray-400"
+              >
+                No webhook auth methods available.
+              </p>
               <div
                 :if={@webhook_auth_methods != []}
                 class="grid grid-cols-2 gap-x-4 gap-y-2"
@@ -167,33 +214,6 @@ defmodule LightningWeb.ChannelLive.FormComponent do
                   type="checkbox"
                   value={Map.get(@client_selections, wam.id, false)}
                   label={wam.name}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-baseline gap-2 mb-2">
-                <p class="text-sm/6 font-medium text-slate-800">
-                  Destination Credential
-                </p>
-                <.link
-                  navigate={~p"/projects/#{@project}/settings#credentials"}
-                  class="text-xs link"
-                >
-                  Create a new one in project settings.
-                </.link>
-              </div>
-              <div
-                :if={@project_credentials != []}
-                class="grid grid-cols-2 gap-x-4 gap-y-2"
-              >
-                <.input
-                  :for={pc <- @project_credentials}
-                  id={"destination_auth_#{pc.id}"}
-                  name={"#{f.name}[destination_auth_methods][#{pc.id}]"}
-                  type="checkbox"
-                  value={Map.get(@destination_selections, pc.id, false)}
-                  label={pc.credential.name}
                 />
               </div>
             </div>
@@ -292,16 +312,20 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
   defp build_destination_auth_param(params, current_auth_methods) do
     selected_id =
-      params
-      |> Map.get("destination_auth_methods", %{})
-      |> Enum.find_value(fn {k, v} -> if v == "true", do: k end)
+      case Map.get(params, "destination_credential_id", "") do
+        "" -> nil
+        id -> id
+      end
 
     existing =
       Enum.find(current_auth_methods, &(&1.role == :destination))
 
     cond do
-      is_nil(selected_id) ->
+      is_nil(selected_id) && is_nil(existing) ->
         nil
+
+      is_nil(selected_id) && existing ->
+        %{id: existing.id, delete: true}
 
       existing && existing.project_credential_id == selected_id ->
         %{id: existing.id}

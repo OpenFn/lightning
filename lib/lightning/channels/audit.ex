@@ -93,6 +93,12 @@ defmodule Lightning.Channels.Audit do
             after: fields
           })
         end)
+
+      %Ecto.Changeset{action: :delete} when has_existing? ->
+        audit_destination_removed(multi, old, actor)
+
+      %Ecto.Changeset{action: :delete} ->
+        multi
     end
   end
 
