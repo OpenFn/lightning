@@ -158,7 +158,7 @@ defmodule Lightning.Channels.Handler do
   end
 
   defp derive_event_type(result) do
-    if result.error != nil, do: :error, else: :sink_response
+    if result.error != nil, do: :error, else: :destination_response
   end
 
   defp redact_headers(headers) when is_list(headers) do

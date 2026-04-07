@@ -898,7 +898,7 @@ defmodule Lightning.Factories do
 
   def channel_event_factory do
     %Lightning.Channels.ChannelEvent{
-      type: :sink_response
+      type: :destination_response
     }
   end
 end

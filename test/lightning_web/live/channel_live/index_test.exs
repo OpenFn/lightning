@@ -87,7 +87,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
         insert(:channel,
           project: project,
           name: "test-channel",
-          sink_url: "https://sink.example.com/data"
+          destination_url: "https://destination.example.com/data"
         )
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
@@ -97,7 +97,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       html = render(view)
 
       assert html =~ "test-channel"
-      assert html =~ "https://sink.example.com/data"
+      assert html =~ "https://destination.example.com/data"
       assert html =~ "Never"
     end
 
@@ -231,7 +231,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       |> form("##{form_id}",
         channel: %{
           name: "new-channel",
-          sink_url: "https://example.com/sink"
+          destination_url: "https://example.com/destination"
         }
       )
       |> render_submit()
@@ -247,7 +247,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     end
 
     @tag role: :editor
-    test "submitting with a source auth method saves the association", %{
+    test "submitting with a client auth method saves the association", %{
       conn: conn,
       project: project
     } do
@@ -260,8 +260,8 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       |> form("#channel-form-new",
         channel: %{
           name: "channel-with-auth",
-          sink_url: "https://example.com/sink",
-          source_auth_methods: %{wam.id => "true"}
+          destination_url: "https://example.com/destination",
+          client_auth_methods: %{wam.id => "true"}
         }
       )
       |> render_submit()
@@ -275,7 +275,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       assert channel
 
       assert [cam] = Channels.list_channel_auth_methods(channel)
-      assert cam.role == :source
+      assert cam.role == :client
       assert cam.webhook_auth_method_id == wam.id
     end
 
@@ -291,7 +291,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       html =
         view
-        |> form("##{form_id}", channel: %{name: "", sink_url: ""})
+        |> form("##{form_id}", channel: %{name: "", destination_url: ""})
         |> render_submit()
 
       assert html =~ "can&#39;t be blank"
@@ -306,7 +306,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
         insert(:channel,
           project: project,
           name: "existing",
-          sink_url: "https://old.example.com"
+          destination_url: "https://old.example.com"
         )
 
       {:ok, view, _html} =
@@ -317,7 +317,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       html =
         view
         |> form("##{form_id}",
-          channel: %{name: channel.name, sink_url: "https://example.com"}
+          channel: %{name: channel.name, destination_url: "https://example.com"}
         )
         |> render_submit()
 
@@ -346,7 +346,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
         insert(:channel,
           project: project,
           name: "edit-me",
-          sink_url: "https://old.example.com"
+          destination_url: "https://old.example.com"
         )
 
       {:ok, view, _html} =
@@ -367,7 +367,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
         insert(:channel,
           project: project,
           name: "old-name",
-          sink_url: "https://old.example.com"
+          destination_url: "https://old.example.com"
         )
 
       {:ok, view, _html} =
@@ -377,7 +377,10 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       view
       |> form("##{form_id}",
-        channel: %{name: "updated-name", sink_url: "https://new.example.com"}
+        channel: %{
+          name: "updated-name",
+          destination_url: "https://new.example.com"
+        }
       )
       |> render_submit()
 
@@ -413,7 +416,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
   describe "edit channel with existing auth methods" do
     @tag role: :editor
-    test "pre-selects existing source and sink auth methods", %{
+    test "pre-selects existing client and destination auth methods", %{
       conn: conn,
       project: project,
       user: user
@@ -426,13 +429,13 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       insert(:channel_auth_method,
         channel: channel,
-        role: :source,
+        role: :client,
         webhook_auth_method: wam
       )
 
       insert(:channel_auth_method,
         channel: channel,
-        role: :sink,
+        role: :destination,
         webhook_auth_method: nil,
         project_credential: pc
       )
@@ -442,8 +445,8 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       assert has_element?(view, "label", wam.name)
       assert has_element?(view, "label", credential.name)
-      assert has_element?(view, "#source_auth_#{wam.id}[value='true']")
-      assert has_element?(view, "#sink_auth_#{pc.id}[value='true']")
+      assert has_element?(view, "#client_auth_#{wam.id}[value='true']")
+      assert has_element?(view, "#destination_auth_#{pc.id}[value='true']")
     end
 
     @tag role: :editor
@@ -461,13 +464,13 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       insert(:channel_auth_method,
         channel: channel,
-        role: :source,
+        role: :client,
         webhook_auth_method: wam1
       )
 
       insert(:channel_auth_method,
         channel: channel,
-        role: :sink,
+        role: :destination,
         webhook_auth_method: nil,
         project_credential: pc
       )
@@ -475,13 +478,13 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Remove wam1, keep pc (sink), add wam2 as a new source
+      # Remove wam1, keep pc (destination), add wam2 as a new client
       view
       |> form("#channel-form-#{channel.id}",
         channel: %{
           name: channel.name,
-          source_auth_methods: %{wam1.id => "false", wam2.id => "true"},
-          sink_auth_methods: %{pc.id => "true"}
+          client_auth_methods: %{wam1.id => "false", wam2.id => "true"},
+          destination_auth_methods: %{pc.id => "true"}
         }
       )
       |> render_change()
@@ -493,16 +496,17 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       updated =
         Channels.get_channel!(channel.id, include: [:channel_auth_methods])
 
-      source_cams =
-        Enum.filter(updated.channel_auth_methods, &(&1.role == :source))
+      client_cams =
+        Enum.filter(updated.channel_auth_methods, &(&1.role == :client))
 
-      sink_cams = Enum.filter(updated.channel_auth_methods, &(&1.role == :sink))
+      destination_cams =
+        Enum.filter(updated.channel_auth_methods, &(&1.role == :destination))
 
-      assert length(source_cams) == 1
-      assert hd(source_cams).webhook_auth_method_id == wam2.id
+      assert length(client_cams) == 1
+      assert hd(client_cams).webhook_auth_method_id == wam2.id
 
-      assert length(sink_cams) == 1
-      assert hd(sink_cams).project_credential_id == pc.id
+      assert length(destination_cams) == 1
+      assert hd(destination_cams).project_credential_id == pc.id
     end
   end
 

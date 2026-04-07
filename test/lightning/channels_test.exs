@@ -239,7 +239,7 @@ defmodule Lightning.ChannelsTest do
                Channels.create_channel(
                  %{
                    name: "my-channel",
-                   destination_url: "https://example.com/sink",
+                   destination_url: "https://example.com/destination",
                    project_id: project.id
                  },
                  actor: user
@@ -274,7 +274,7 @@ defmodule Lightning.ChannelsTest do
       assert {:error, changeset} =
                Channels.create_channel(
                  %{
-                   name: "bad-sink",
+                   name: "bad-destination",
                    destination_url: "not a url",
                    project_id: project.id
                  },
@@ -290,7 +290,7 @@ defmodule Lightning.ChannelsTest do
       assert {:error, changeset} =
                Channels.create_channel(
                  %{
-                   name: "ftp-sink",
+                   name: "ftp-destination",
                    destination_url: "ftp://example.com",
                    project_id: project.id
                  },
@@ -307,7 +307,7 @@ defmodule Lightning.ChannelsTest do
       assert {:ok, _} =
                Channels.create_channel(
                  %{
-                   name: "http-sink",
+                   name: "http-destination",
                    destination_url: "http://example.com/path",
                    project_id: project.id
                  },
@@ -317,7 +317,7 @@ defmodule Lightning.ChannelsTest do
       assert {:ok, _} =
                Channels.create_channel(
                  %{
-                   name: "https-sink",
+                   name: "https-destination",
                    destination_url: "https://example.com/path",
                    project_id: project.id
                  },
@@ -548,16 +548,19 @@ defmodule Lightning.ChannelsTest do
 
       assert length(changed) == 1
 
-      assert hd(changed).changes == %{
+      pc_old_id = pc_old.id
+      pc_new_id = pc_new.id
+
+      assert %{
                before: %{
                  "role" => "destination",
-                 "project_credential_id" => pc_old.id
+                 "project_credential_id" => ^pc_old_id
                },
                after: %{
                  "role" => "destination",
-                 "project_credential_id" => pc_new.id
+                 "project_credential_id" => ^pc_new_id
                }
-             }
+             } = hd(changed).changes
 
       # TODO: Remove this refutation once the old two-event pattern is fully
       # gone — at that point added/removed won't fire for swaps and this
@@ -986,11 +989,15 @@ defmodule Lightning.ChannelsTest do
       assert channel_id == channel.id
     end
 
-    test "preloads :channel_events with only :sink_response and :error types",
+    test "preloads :channel_events with only :destination_response and :error types",
          %{project: project, channel: channel, snapshot: snapshot} do
       request = insert_request(channel, snapshot)
 
-      insert_event(request, type: :sink_response, request_path: "/outbound")
+      insert_event(request,
+        type: :destination_response,
+        request_path: "/outbound"
+      )
+
       insert_event(request, type: :error, error_message: "timeout")
 
       page = Channels.list_channel_requests(project, SearchParams.new(%{}))
@@ -1001,15 +1008,15 @@ defmodule Lightning.ChannelsTest do
 
       assert Enum.all?(
                entry.channel_events,
-               &(&1.type in [:sink_response, :error])
+               &(&1.type in [:destination_response, :error])
              )
 
-      sink_event =
-        Enum.find(entry.channel_events, &(&1.type == :sink_response))
+      destination_event =
+        Enum.find(entry.channel_events, &(&1.type == :destination_response))
 
       error_event = Enum.find(entry.channel_events, &(&1.type == :error))
 
-      assert %{request_path: "/outbound"} = sink_event
+      assert %{request_path: "/outbound"} = destination_event
       assert %{error_message: "timeout"} = error_event
     end
 
@@ -1122,13 +1129,13 @@ defmodule Lightning.ChannelsTest do
       old_event =
         insert(:channel_event,
           channel_request: old_request,
-          type: :sink_response
+          type: :destination_response
         )
 
       recent_event =
         insert(:channel_event,
           channel_request: recent_request,
-          type: :sink_response
+          type: :destination_response
         )
 
       assert :ok = Channels.delete_expired_requests(project.id, 7)
@@ -1223,7 +1230,7 @@ defmodule Lightning.ChannelsTest do
       event =
         insert(:channel_event,
           channel_request: request,
-          type: :sink_response
+          type: :destination_response
         )
 
       assert :ok =
@@ -1298,9 +1305,9 @@ defmodule Lightning.ChannelsTest do
       assert channel.destination_credential.id == pc.id
     end
 
-    # TODO: Remove the sink_url refutation once the rename is fully landed —
-    # at that point the old field name won't exist anywhere and this negative
-    # assertion adds no value.
+    # TODO: Remove the sink_url refutation once the rename migration has
+    # been run everywhere — at that point the old column won't exist and
+    # this negative assertion adds no value.
     test "audit 'created' event diff contains 'destination_url' not 'sink_url'",
          %{user: user} do
       project = insert(:project)
@@ -1368,7 +1375,7 @@ defmodule Lightning.ChannelsTest do
       event =
         insert(:channel_event,
           channel_request: request,
-          type: :sink_response
+          type: :destination_response
         )
 
       assert {:ok, %Channel{}} =

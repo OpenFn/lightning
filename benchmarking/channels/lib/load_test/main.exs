@@ -32,7 +32,7 @@ defmodule LoadTest do
     {:ok, _} = LoadTest.Metrics.start_link()
 
     # Pre-flight: verify mock sink is reachable
-    LoadTest.Setup.preflight_sink!(opts)
+    LoadTest.Setup.preflight_destination!(opts)
 
     direct? = opts[:scenario] == "direct_sink"
 

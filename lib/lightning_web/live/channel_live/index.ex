@@ -138,7 +138,11 @@ defmodule LightningWeb.ChannelLive.Index do
       socket
       |> assign(
         page_title: "New Channel",
-        selected_channel: %Lightning.Channels.Channel{channel_auth_methods: []}
+        selected_channel: %Lightning.Channels.Channel{
+          channel_auth_methods: [],
+          client_auth_methods: [],
+          destination_auth_method: nil
+        }
       )
     else
       socket
@@ -149,7 +153,14 @@ defmodule LightningWeb.ChannelLive.Index do
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     if socket.assigns.can_edit_channel do
-      channel = Channels.get_channel!(id, include: [:channel_auth_methods])
+      channel =
+        Channels.get_channel!(id,
+          include: [
+            :channel_auth_methods,
+            :client_auth_methods,
+            :destination_auth_method
+          ]
+        )
 
       socket
       |> assign(
@@ -319,7 +330,7 @@ defmodule LightningWeb.ChannelLive.Index do
                   class="h-4 w-4 shrink-0 text-gray-400"
                 />
                 <span class="wrap-break-word max-w-[20rem] translate-y-px">
-                  {channel.sink_url}
+                  {channel.destination_url}
                 </span>
               </div>
               <Common.wrapper_tooltip

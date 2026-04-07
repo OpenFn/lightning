@@ -53,7 +53,7 @@ defmodule LoadTest.Setup do
 
   def ensure_channel!(node, opts) do
     channel_name = opts[:channel]
-    sink_url = opts[:sink]
+    destination_url = opts[:sink]
 
     IO.write("Looking up channel '#{channel_name}'... ")
 
@@ -64,7 +64,7 @@ defmodule LoadTest.Setup do
       nil ->
         IO.puts("not found, creating")
         project = ensure_project!(node)
-        create_channel!(node, channel_name, sink_url, project.id)
+        create_channel!(node, channel_name, destination_url, project.id)
 
       %{enabled: false} = channel ->
         IO.puts("found (disabled), enabling")
@@ -76,26 +76,30 @@ defmodule LoadTest.Setup do
     end
   end
 
-  def preflight_sink!(opts) do
-    sink_url = opts[:sink]
-    IO.write("Checking mock sink at #{sink_url}... ")
+  def preflight_destination!(opts) do
+    destination_url = opts[:sink]
+    IO.write("Checking mock destination at #{destination_url}... ")
 
-    request = Finch.build(:get, sink_url)
+    request = Finch.build(:get, destination_url)
 
     case Finch.request(request, LoadTest.Finch, receive_timeout: 5_000) do
       {:ok, %Finch.Response{status: status}} when status < 500 ->
         IO.puts("ok (status #{status})")
 
       {:ok, %Finch.Response{status: status}} ->
-        IO.puts(:stderr, "\nwarning: Mock sink returned #{status}")
+        IO.puts(:stderr, "\nwarning: Mock destination returned #{status}")
 
       {:error, reason} ->
-        IO.puts(:stderr, "\nerror: Could not reach mock sink at #{sink_url}")
+        IO.puts(
+          :stderr,
+          "\nerror: Could not reach mock destination at #{destination_url}"
+        )
+
         IO.puts(:stderr, "  Reason: #{inspect(reason)}")
 
         IO.puts(:stderr, """
 
-        Start the mock sink first:
+        Start the mock destination first:
           elixir benchmarking/channels/mock_sink.exs
         """)
 
@@ -236,11 +240,15 @@ defmodule LoadTest.Setup do
     end
   end
 
-  defp create_channel!(node, name, sink_url, project_id) do
+  defp create_channel!(node, name, destination_url, project_id) do
     IO.write("  Creating channel '#{name}'... ")
 
     case rpc!(node, Lightning.Channels, :create_channel, [
-           %{name: name, sink_url: sink_url, project_id: project_id}
+           %{
+             name: name,
+             destination_url: destination_url,
+             project_id: project_id
+           }
          ]) do
       {:ok, channel} ->
         IO.puts("ok (id: #{short_id(channel.id)})")

@@ -195,7 +195,7 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
 
   defp source_event_path(channel_request) do
     channel_request.channel_events
-    |> Enum.find(&(&1.type == :sink_response))
+    |> Enum.find(&(&1.type == :destination_response))
     |> case do
       nil -> nil
       event -> event.request_path
