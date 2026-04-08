@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- AI-generated workflows can now be saved when the workflow name collides with
+  an existing workflow or when jobs have duplicate names
+  [#4607](https://github.com/OpenFn/lightning/issues/4607)
+
 ## [2.16.1] - 2026-04-07
 
 ## [2.16.1-pre1] - 2026-04-04
