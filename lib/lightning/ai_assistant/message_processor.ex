@@ -131,11 +131,32 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           ChatMessage.t()
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp dispatch_message_processing(session, message) do
-    if job_chat?(session, message) do
-      process_job_message(session, message)
+    if global_chat?(session) do
+      process_global_message(session, message)
     else
-      process_workflow_message(session, message)
+      if job_chat?(session, message) do
+        process_job_message(session, message)
+      else
+        process_workflow_message(session, message)
+      end
     end
+  end
+
+  @spec global_chat?(AiAssistant.ChatSession.t()) :: boolean()
+  defp global_chat?(session) do
+    get_in(session.meta, ["message_options", "use_global_assistant"]) == true
+  end
+
+  @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp process_global_message(session, message) do
+    workflow_yaml = message.code
+    page = get_in(session.meta, ["message_options", "page"])
+
+    AiAssistant.query_global_stream(session, message.content,
+      workflow_yaml: workflow_yaml,
+      page: page
+    )
   end
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()

@@ -39,6 +39,8 @@ and this project adheres to
   snapshots are also cleaned up after expired requests are removed.
   [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - AI assistant responses now stream in real-time
+- Add experimental global AI assistant option for users with experimental
+  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
   [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
