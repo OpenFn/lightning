@@ -6,7 +6,7 @@ orbs:
 # Shared configuration
 defaults:
   elixir_version: &elixir_version "1.18.3-otp-27"
-  nodejs_version: &nodejs_version "22.12.0"
+  nodejs_version: &nodejs_version "24.14.0"
   docker_elixir: &docker_elixir
     - image: elixir:1.18.3-otp-27
   docker_elixir_postgres: &docker_elixir_postgres
