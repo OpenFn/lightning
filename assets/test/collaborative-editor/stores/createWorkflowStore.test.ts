@@ -1357,6 +1357,54 @@ describe('WorkflowStore - importWorkflow', () => {
     expect(names).toEqual(['Transform', 'Transform 2', 'Transform 3']);
   });
 
+  test('skips suffixes that collide with existing job names', async () => {
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow({
+      id: 'wf-1',
+      name: 'My Workflow',
+      jobs: [
+        {
+          id: 'j1',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        {
+          id: 'j2',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        {
+          id: 'j3',
+          name: 'Transform 2',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      ],
+      triggers: [],
+      edges: [],
+      positions: null,
+    });
+
+    const jobsArray = ydoc.getArray('jobs');
+    const names = Array.from({ length: jobsArray.length }, (_, i) =>
+      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    );
+
+    // "Transform 2" is taken, so the duplicate skips to "Transform 3"
+    expect(names).toEqual(['Transform', 'Transform 3', 'Transform 2']);
+  });
+
   test('leaves unique job names unchanged', async () => {
     mockChannel.push = createMockChannelPushOk({
       workflow: { name: 'My Workflow' },

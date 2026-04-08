@@ -1545,21 +1545,32 @@ export const createWorkflowStore = () => {
    *
    * If multiple jobs share the same name, appends " 2", " 3", etc.
    * to make each name unique. The first occurrence keeps its original name.
+   * Skips suffixes that collide with existing names in the workflow.
    */
   const deduplicateJobNames = (
     workflowState: YAMLWorkflowState
   ): YAMLWorkflowState => {
-    const nameCount = new Map<string, number>();
+    const allOriginalNames = new Set(workflowState.jobs.map(j => j.name));
+    const usedNames = new Set<string>();
     let hasDuplicates = false;
 
     const jobs = workflowState.jobs.map(job => {
-      const count = (nameCount.get(job.name) ?? 0) + 1;
-      nameCount.set(job.name, count);
-      if (count > 1) {
-        hasDuplicates = true;
-        return { ...job, name: `${job.name} ${count}` };
+      if (!usedNames.has(job.name)) {
+        usedNames.add(job.name);
+        return job;
       }
-      return job;
+
+      hasDuplicates = true;
+      let counter = 2;
+      while (
+        usedNames.has(`${job.name} ${counter}`) ||
+        allOriginalNames.has(`${job.name} ${counter}`)
+      ) {
+        counter++;
+      }
+      const newName = `${job.name} ${counter}`;
+      usedNames.add(newName);
+      return { ...job, name: newName };
     });
 
     if (hasDuplicates) {
