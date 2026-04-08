@@ -21,8 +21,10 @@ and this project adheres to
 
 - Bumped Node.js from 22.12.0 to 24.14.0 and ws-worker from 1.23.1 to 1.23.3
   (includes ESM resolve hook for Node 24 compatibility)
+  [#4603](https://github.com/OpenFn/lightning/pull/4603)
 - Made dev and test database names configurable via `DEV_DATABASE_NAME` and
   `TEST_DATABASE_NAME` environment variables
+  [#4603](https://github.com/OpenFn/lightning/pull/4603)
 
 ### Fixed
 
