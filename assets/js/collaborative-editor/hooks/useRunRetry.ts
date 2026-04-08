@@ -394,6 +394,7 @@ export function useRunRetry({
         // No callback - stay on the current page and track the run in the URL
         updateSearchParams({ run: result.data.run_id });
         setIsSubmitting(false);
+        isRetryingRef.current = false;
       }
     } catch (error) {
       logger.error('Failed to retry run:', error);

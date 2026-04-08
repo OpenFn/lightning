@@ -19,6 +19,7 @@ import {
   useHistoryError,
   useHistoryLoading,
   useRunSteps,
+  useSelectedRunId,
 } from '../../hooks/useHistory';
 import {
   useIsNewWorkflow,
@@ -57,9 +58,11 @@ export function CollaborativeWorkflowDiagram({
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Read selected run ID from URL - single source of truth
-  // useURLState is reactive, so component re-renders when URL changes
-  const selectedRunId = params['run'] ?? null;
+  // Read selected run ID from URL, falling back to the history store's active run.
+  // The fallback prevents losing the run when LiveView push_patch strips
+  // client-only URL params.
+  const activeRunId = useSelectedRunId();
+  const selectedRunId = params['run'] ?? activeRunId;
 
   const handleToggleHistory = useCallback(() => {
     setHistoryPanelCollapsed(!historyCollapsed);
@@ -76,9 +79,18 @@ export function CollaborativeWorkflowDiagram({
     { enabled: !isNewWorkflow }
   );
 
+  // Restore the URL run param if it was stripped (e.g. by LiveView push_patch)
+  // but the history store still has an active run
+  const runParam = params['run'] ?? null;
+  useEffect(() => {
+    if (!runParam && activeRunId) {
+      updateSearchParams({ run: activeRunId });
+    }
+  }, [runParam, activeRunId, updateSearchParams]);
+
   // Follow the run to receive real-time step updates via run:${runId} channel
   // This is essential for highlighting steps as they execute in real-time
-  useFollowRun(selectedRunId);
+  const { clearRun } = useFollowRun(selectedRunId);
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
@@ -109,9 +121,12 @@ export function CollaborativeWorkflowDiagram({
   );
 
   // Clear URL parameter when deselecting run
+  // Also close the run viewer in the history store so the restore effect
+  // (which watches activeRunId) does not immediately re-add the URL param.
   const handleDeselectRun = useCallback(() => {
+    clearRun();
     updateSearchParams({ run: null });
-  }, [updateSearchParams]);
+  }, [clearRun, updateSearchParams]);
 
   // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request
