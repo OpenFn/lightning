@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-21B520C1.js"></script>
+    <script defer src="dist/sidebar_items-8765BB23.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -158,6 +158,16 @@ language descriptions</li></ol><h2 id="module-configuration" class="section-head
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#global_chat_stream/2" data-no-tooltip="" translate="no">global_chat_stream(content, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Queries the Apollo global chat endpoint with SSE streaming.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#job_chat/2" data-no-tooltip="" translate="no">job_chat(content, opts \\ [])</a>
 
       </div>
@@ -290,6 +300,39 @@ provide more targeted and relevant assistance.</p>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="global_chat_stream/2">
+
+    <span id="global_chat_stream/1"></span>
+
+  <div class="detail-header">
+    <a href="#global_chat_stream/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">global_chat_stream(content, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L230" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> global_chat_stream(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:opts/0">opts</a>()) :: <a href="https://hexdocs.pm/tesla/1.15.3/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+
+      </div>
+
+<p>Queries the Apollo global chat endpoint with SSE streaming.</p><p>The global chat endpoint unifies job and workflow assistance behind
+an internal router that uses the <code class="inline">page</code> field to determine context.
+Streaming events (text chunks, changes, status) are emitted as SSE,
+followed by a final <code class="inline">complete</code> event with the full response payload.</p><h2 id="global_chat_stream/2-parameters" class="section-heading"><a href="#global_chat_stream/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:workflow_yaml</code> - Full workflow YAML including job bodies (optional)</li><li><code class="inline">:page</code> - Current page URL for routing (optional)</li><li><code class="inline">:history</code> - Previous conversation messages (default: [])</li></ul></li></ul>
+  </section>
+</section>
 <section class="detail" id="job_chat/2">
 
     <span id="job_chat/1"></span>
