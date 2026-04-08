@@ -136,7 +136,7 @@ export function useRunRetry({
   // Retry state tracking via HistoryStore (WebSocket updates)
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
   // This hook only reads the current run state from HistoryStore
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null; // 'run' param is run ID
   const currentRun = useActiveRun(); // Real-time from WebSocket
 
@@ -293,9 +293,9 @@ export function useRunRetry({
         onRunSubmitted(response.data.run_id, response.data.dataclip);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // Fallback: navigate away if no callback (for standalone mode)
-        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
-        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+        // No callback - stay on the current page and track the run in the URL
+        updateSearchParams({ run: response.data.run_id });
+        setIsSubmitting(false);
       }
     } catch (error) {
       logger.error('Failed to submit run:', error);
@@ -391,9 +391,9 @@ export function useRunRetry({
         onRunSubmitted(result.data.run_id);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // Fallback: navigate to new run (component will unmount)
-        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
-        window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
+        // No callback - stay on the current page and track the run in the URL
+        updateSearchParams({ run: result.data.run_id });
+        setIsSubmitting(false);
       }
     } catch (error) {
       logger.error('Failed to retry run:', error);
