@@ -1280,3 +1280,157 @@ describe('WorkflowStore - AI Workflow Apply Coordination', () => {
     ).resolves.not.toThrow();
   });
 });
+
+describe('WorkflowStore - importWorkflow', () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockChannel: MockPhoenixChannel;
+  let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+  beforeEach(() => {
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    ydoc.getArray('jobs');
+    ydoc.getMap('workflow');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    mockChannel = createMockPhoenixChannel('workflow:test');
+
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+    store.connect(ydoc, mockProvider);
+  });
+
+  test('deduplicates job names when multiple jobs share the same name', async () => {
+    // Mock validate_workflow_name to return unchanged name
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow({
+      id: 'wf-1',
+      name: 'My Workflow',
+      jobs: [
+        {
+          id: 'j1',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        {
+          id: 'j2',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        {
+          id: 'j3',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      ],
+      triggers: [],
+      edges: [],
+      positions: null,
+    });
+
+    const jobsArray = ydoc.getArray('jobs');
+    const names = Array.from({ length: jobsArray.length }, (_, i) =>
+      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    );
+
+    expect(names).toEqual(['Transform', 'Transform 2', 'Transform 3']);
+  });
+
+  test('leaves unique job names unchanged', async () => {
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow({
+      id: 'wf-1',
+      name: 'My Workflow',
+      jobs: [
+        {
+          id: 'j1',
+          name: 'Fetch Data',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        {
+          id: 'j2',
+          name: 'Transform',
+          adaptor: '@openfn/language-http@latest',
+          body: 'fn(s => s)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      ],
+      triggers: [],
+      edges: [],
+      positions: null,
+    });
+
+    const jobsArray = ydoc.getArray('jobs');
+    const names = Array.from({ length: jobsArray.length }, (_, i) =>
+      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    );
+
+    expect(names).toEqual(['Fetch Data', 'Transform']);
+  });
+
+  test('validates workflow name via channel', async () => {
+    // Server returns deduplicated name
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow 1' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow({
+      id: 'wf-1',
+      name: 'My Workflow',
+      jobs: [],
+      triggers: [],
+      edges: [],
+      positions: null,
+    });
+
+    const workflowMap = ydoc.getMap('workflow');
+    expect(workflowMap.get('name')).toBe('My Workflow 1');
+  });
+
+  test('proceeds with original name when validation fails', async () => {
+    mockChannel.push = createMockChannelPushError(
+      'server_error',
+      {}
+    ) as typeof mockChannel.push;
+
+    await store.importWorkflow({
+      id: 'wf-1',
+      name: 'My Workflow',
+      jobs: [],
+      triggers: [],
+      edges: [],
+      positions: null,
+    });
+
+    const workflowMap = ydoc.getMap('workflow');
+    expect(workflowMap.get('name')).toBe('My Workflow');
+  });
+});
