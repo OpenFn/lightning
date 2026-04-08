@@ -20,6 +20,7 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
+import type { WorkflowState as YAMLWorkflowState } from '../../../js/yaml/types';
 import {
   createMockChannelPushOk,
   createMockChannelPushError,
@@ -1287,6 +1288,34 @@ describe('WorkflowStore - importWorkflow', () => {
   let mockChannel: MockPhoenixChannel;
   let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
 
+  const makeJob = (id: string, name: string) => ({
+    id,
+    name,
+    adaptor: '@openfn/language-http@latest',
+    body: 'fn(s => s)',
+    project_credential_id: null,
+    keychain_credential_id: null,
+  });
+
+  const makeWorkflowState = (
+    overrides: Partial<YAMLWorkflowState> = {}
+  ): YAMLWorkflowState => ({
+    id: 'wf-1',
+    name: 'My Workflow',
+    jobs: [],
+    triggers: [],
+    edges: [],
+    positions: null,
+    ...overrides,
+  });
+
+  const getJobNames = () => {
+    const jobsArray = ydoc.getArray('jobs');
+    return Array.from({ length: jobsArray.length }, (_, i) =>
+      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    );
+  };
+
   beforeEach(() => {
     store = createWorkflowStore();
     ydoc = new Y.Doc() as Session.WorkflowDoc;
@@ -1310,51 +1339,21 @@ describe('WorkflowStore - importWorkflow', () => {
   });
 
   test('deduplicates job names when multiple jobs share the same name', async () => {
-    // Mock validate_workflow_name to return unchanged name
     mockChannel.push = createMockChannelPushOk({
       workflow: { name: 'My Workflow' },
     }) as typeof mockChannel.push;
 
-    await store.importWorkflow({
-      id: 'wf-1',
-      name: 'My Workflow',
-      jobs: [
-        {
-          id: 'j1',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-        {
-          id: 'j2',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-        {
-          id: 'j3',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-      ],
-      triggers: [],
-      edges: [],
-      positions: null,
-    });
-
-    const jobsArray = ydoc.getArray('jobs');
-    const names = Array.from({ length: jobsArray.length }, (_, i) =>
-      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [
+          makeJob('j1', 'Transform'),
+          makeJob('j2', 'Transform'),
+          makeJob('j3', 'Transform'),
+        ],
+      })
     );
 
-    expect(names).toEqual(['Transform', 'Transform 2', 'Transform 3']);
+    expect(getJobNames()).toEqual(['Transform', 'Transform 2', 'Transform 3']);
   });
 
   test('skips suffixes that collide with existing job names', async () => {
@@ -1362,47 +1361,18 @@ describe('WorkflowStore - importWorkflow', () => {
       workflow: { name: 'My Workflow' },
     }) as typeof mockChannel.push;
 
-    await store.importWorkflow({
-      id: 'wf-1',
-      name: 'My Workflow',
-      jobs: [
-        {
-          id: 'j1',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-        {
-          id: 'j2',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-        {
-          id: 'j3',
-          name: 'Transform 2',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-      ],
-      triggers: [],
-      edges: [],
-      positions: null,
-    });
-
-    const jobsArray = ydoc.getArray('jobs');
-    const names = Array.from({ length: jobsArray.length }, (_, i) =>
-      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [
+          makeJob('j1', 'Transform'),
+          makeJob('j2', 'Transform'),
+          makeJob('j3', 'Transform 2'),
+        ],
+      })
     );
 
     // "Transform 2" is taken, so the duplicate skips to "Transform 3"
-    expect(names).toEqual(['Transform', 'Transform 3', 'Transform 2']);
+    expect(getJobNames()).toEqual(['Transform', 'Transform 3', 'Transform 2']);
   });
 
   test('leaves unique job names unchanged', async () => {
@@ -1410,38 +1380,13 @@ describe('WorkflowStore - importWorkflow', () => {
       workflow: { name: 'My Workflow' },
     }) as typeof mockChannel.push;
 
-    await store.importWorkflow({
-      id: 'wf-1',
-      name: 'My Workflow',
-      jobs: [
-        {
-          id: 'j1',
-          name: 'Fetch Data',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-        {
-          id: 'j2',
-          name: 'Transform',
-          adaptor: '@openfn/language-http@latest',
-          body: 'fn(s => s)',
-          project_credential_id: null,
-          keychain_credential_id: null,
-        },
-      ],
-      triggers: [],
-      edges: [],
-      positions: null,
-    });
-
-    const jobsArray = ydoc.getArray('jobs');
-    const names = Array.from({ length: jobsArray.length }, (_, i) =>
-      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [makeJob('j1', 'Fetch Data'), makeJob('j2', 'Transform')],
+      })
     );
 
-    expect(names).toEqual(['Fetch Data', 'Transform']);
+    expect(getJobNames()).toEqual(['Fetch Data', 'Transform']);
   });
 
   test('validates workflow name via channel', async () => {
@@ -1450,17 +1395,9 @@ describe('WorkflowStore - importWorkflow', () => {
       workflow: { name: 'My Workflow 1' },
     }) as typeof mockChannel.push;
 
-    await store.importWorkflow({
-      id: 'wf-1',
-      name: 'My Workflow',
-      jobs: [],
-      triggers: [],
-      edges: [],
-      positions: null,
-    });
+    await store.importWorkflow(makeWorkflowState());
 
-    const workflowMap = ydoc.getMap('workflow');
-    expect(workflowMap.get('name')).toBe('My Workflow 1');
+    expect(ydoc.getMap('workflow').get('name')).toBe('My Workflow 1');
   });
 
   test('proceeds with original name when validation fails', async () => {
@@ -1469,16 +1406,8 @@ describe('WorkflowStore - importWorkflow', () => {
       {}
     ) as typeof mockChannel.push;
 
-    await store.importWorkflow({
-      id: 'wf-1',
-      name: 'My Workflow',
-      jobs: [],
-      triggers: [],
-      edges: [],
-      positions: null,
-    });
+    await store.importWorkflow(makeWorkflowState());
 
-    const workflowMap = ydoc.getMap('workflow');
-    expect(workflowMap.get('name')).toBe('My Workflow');
+    expect(ydoc.getMap('workflow').get('name')).toBe('My Workflow');
   });
 });

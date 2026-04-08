@@ -393,9 +393,14 @@ export function WorkflowEditor({
    */
   const handleImport = useCallback(
     (workflowState: YAMLWorkflowState) => {
-      void workflowStore.importWorkflow(workflowState).then(() => {
-        flowEvents.dispatch('fit-view');
-      });
+      void workflowStore
+        .importWorkflow(workflowState)
+        .then(() => {
+          flowEvents.dispatch('fit-view');
+        })
+        .catch((error: unknown) => {
+          console.error('Failed to import workflow:', error);
+        });
     },
     [workflowStore]
   );
