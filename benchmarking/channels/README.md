@@ -39,7 +39,7 @@ report results.
 ```
 benchmarking/channels/
 ├── load_test.exs              # Entry point (~20 lines): Mix.install, loads modules, calls main()
-├── mock_destination.exs              # Standalone mock HTTP destination server
+├── mock_destination.exs       # Standalone mock HTTP destination server
 ├── run_all.sh                 # Runs all 7 scenarios in sequence
 ├── lib/
 │   ├── load_test/
