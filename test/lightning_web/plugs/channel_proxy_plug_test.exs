@@ -866,10 +866,9 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         )
 
       # The handler redacts authorization headers before persisting
-      headers = Jason.decode!(event.request_headers)
-
+      # Headers are native jsonb arrays, no JSON decoding needed
       auth_header =
-        Enum.find(headers, fn [k, _v] -> k == "authorization" end)
+        Enum.find(event.request_headers, fn [k, _v] -> k == "authorization" end)
 
       assert auth_header == ["authorization", "[REDACTED]"]
     end

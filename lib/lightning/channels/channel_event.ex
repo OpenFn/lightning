@@ -23,15 +23,20 @@ defmodule Lightning.Channels.ChannelEvent do
           type: :destination_response | :error,
           request_method: String.t() | nil,
           request_path: String.t() | nil,
-          request_headers: String.t() | nil,
+          request_query_string: String.t() | nil,
+          request_headers: list() | nil,
           request_body_preview: String.t() | nil,
           request_body_hash: String.t() | nil,
+          request_body_size: integer() | nil,
           response_status: integer() | nil,
-          response_headers: String.t() | nil,
+          response_headers: list() | nil,
           response_body_preview: String.t() | nil,
           response_body_hash: String.t() | nil,
+          response_body_size: integer() | nil,
           latency_ms: integer() | nil,
           ttfb_ms: integer() | nil,
+          request_send_us: integer() | nil,
+          response_duration_us: integer() | nil,
           error_message: String.t() | nil,
           inserted_at: DateTime.t()
         }
@@ -41,17 +46,22 @@ defmodule Lightning.Channels.ChannelEvent do
 
     field :request_method, :string
     field :request_path, :string
-    field :request_headers, :string
+    field :request_query_string, :string
+    field :request_headers, {:array, {:array, :string}}
     field :request_body_preview, :string
     field :request_body_hash, :string
+    field :request_body_size, :integer
 
     field :response_status, :integer
-    field :response_headers, :string
+    field :response_headers, {:array, {:array, :string}}
     field :response_body_preview, :string
     field :response_body_hash, :string
+    field :response_body_size, :integer
 
     field :latency_ms, :integer
     field :ttfb_ms, :integer
+    field :request_send_us, :integer
+    field :response_duration_us, :integer
     field :error_message, :string
 
     belongs_to :channel_request, ChannelRequest
@@ -61,22 +71,31 @@ defmodule Lightning.Channels.ChannelEvent do
 
   def changeset(event, attrs) do
     event
-    |> cast(attrs, [
-      :channel_request_id,
-      :type,
-      :request_method,
-      :request_path,
-      :request_headers,
-      :request_body_preview,
-      :request_body_hash,
-      :response_status,
-      :response_headers,
-      :response_body_preview,
-      :response_body_hash,
-      :latency_ms,
-      :ttfb_ms,
-      :error_message
-    ])
+    |> cast(
+      attrs,
+      [
+        :channel_request_id,
+        :type,
+        :request_method,
+        :request_path,
+        :request_query_string,
+        :request_headers,
+        :request_body_preview,
+        :request_body_hash,
+        :request_body_size,
+        :response_status,
+        :response_headers,
+        :response_body_preview,
+        :response_body_hash,
+        :response_body_size,
+        :latency_ms,
+        :ttfb_ms,
+        :request_send_us,
+        :response_duration_us,
+        :error_message
+      ],
+      empty_values: []
+    )
     |> validate_required([:channel_request_id, :type])
     |> assoc_constraint(:channel_request)
   end

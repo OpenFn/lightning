@@ -122,7 +122,11 @@ defmodule Lightning.Channels.HandlerTest do
     end
 
     test "creates ChannelEvent with correct fields", %{state: state} do
-      result = finished_result(status: 200, duration_us: 50_000)
+      result =
+        finished_result(
+          status: 200,
+          timing: %{total_us: 50_000, send_us: 2_000, recv_us: 1_000}
+        )
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
@@ -449,9 +453,7 @@ defmodule Lightning.Channels.HandlerTest do
       hash: "abc123",
       size: 100,
       body: nil,
-      preview: "test body",
-      duration_us: 1000,
-      time_to_first_byte_us: 500
+      preview: "test body"
     }
 
     %{
@@ -464,7 +466,12 @@ defmodule Lightning.Channels.HandlerTest do
         Keyword.get(overrides, :upstream_url, "http://localhost:4999"),
       method: Keyword.get(overrides, :method, "GET"),
       status: Keyword.get(overrides, :status, 200),
-      duration_us: Keyword.get(overrides, :duration_us, 10_000)
+      timing:
+        Keyword.get(overrides, :timing, %{
+          total_us: 10_000,
+          send_us: 2_000,
+          recv_us: 1_000
+        })
     }
   end
 
