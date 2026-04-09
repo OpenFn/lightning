@@ -284,6 +284,111 @@ defmodule Lightning.Channels.ChannelRequestsTest do
     end
   end
 
+  # ---------------------------------------------------------------
+  # Phase 1a contract tests — client auth method tracking on requests
+  # ---------------------------------------------------------------
+  #
+  # These tests define the target interface after:
+  # - D3: client_webhook_auth_method_id and client_auth_type on channel_requests
+  #
+  # They will not compile/pass until Phase 1b implements the changes.
+
+  describe "ChannelRequest changeset — auth method fields" do
+    test "accepts client_webhook_auth_method_id and client_auth_type" do
+      channel = insert(:channel)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+      auth_method = insert(:webhook_auth_method, project: channel.project)
+
+      attrs = %{
+        channel_id: channel.id,
+        channel_snapshot_id: snapshot.id,
+        request_id: "req-auth-test",
+        state: :success,
+        started_at: DateTime.utc_now(),
+        client_webhook_auth_method_id: auth_method.id,
+        client_auth_type: "api"
+      }
+
+      changeset = ChannelRequest.changeset(%ChannelRequest{}, attrs)
+      assert changeset.valid?
+
+      {:ok, request} = Repo.insert(changeset)
+      assert request.client_webhook_auth_method_id == auth_method.id
+      assert request.client_auth_type == "api"
+    end
+
+    test "auth method fields are nullable" do
+      channel = insert(:channel)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      attrs = %{
+        channel_id: channel.id,
+        channel_snapshot_id: snapshot.id,
+        request_id: "req-no-auth",
+        state: :success,
+        started_at: DateTime.utc_now()
+      }
+
+      {:ok, request} =
+        ChannelRequest.changeset(%ChannelRequest{}, attrs) |> Repo.insert()
+
+      assert request.client_webhook_auth_method_id == nil
+      assert request.client_auth_type == nil
+    end
+
+    test "belongs_to client_webhook_auth_method loads correctly" do
+      channel = insert(:channel)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+      auth_method = insert(:webhook_auth_method, project: channel.project)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          client_webhook_auth_method_id: auth_method.id,
+          client_auth_type: "basic"
+        )
+
+      loaded =
+        ChannelRequest
+        |> Repo.get!(request.id)
+        |> Repo.preload(:client_webhook_auth_method)
+
+      assert loaded.client_webhook_auth_method.id == auth_method.id
+      assert loaded.client_auth_type == "basic"
+    end
+  end
+
+  describe "client_webhook_auth_method_id nilification on delete" do
+    test "FK is nilified when auth method is deleted, client_auth_type survives" do
+      channel = insert(:channel)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+      auth_method = insert(:webhook_auth_method, project: channel.project)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          client_webhook_auth_method_id: auth_method.id,
+          client_auth_type: "api"
+        )
+
+      # Verify FK is set
+      assert Repo.get!(ChannelRequest, request.id).client_webhook_auth_method_id ==
+               auth_method.id
+
+      # Delete the auth method
+      Repo.delete!(auth_method)
+
+      # FK should be nilified by on_delete: :nilify_all
+      reloaded = Repo.get!(ChannelRequest, request.id)
+      assert reloaded.client_webhook_auth_method_id == nil
+
+      # client_auth_type is a denormalized snapshot — it survives deletion
+      assert reloaded.client_auth_type == "api"
+    end
+  end
+
   describe "delete_channel/2 with requests" do
     test "removes requests before deleting channel" do
       user = insert(:user)
