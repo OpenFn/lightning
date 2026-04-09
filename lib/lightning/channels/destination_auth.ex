@@ -1,4 +1,4 @@
-defmodule Lightning.Channels.SinkAuth do
+defmodule Lightning.Channels.DestinationAuth do
   @moduledoc """
   Maps a credential's schema type and body to an outbound HTTP Authorization header.
 
@@ -11,15 +11,6 @@ defmodule Lightning.Channels.SinkAuth do
   Schemas not in this list are rejected at config time. If an unsupported schema
   somehow reaches runtime, `build_auth_header/2` returns an error.
   """
-
-  @supported_schemas ~w(http dhis2 oauth)
-
-  @doc """
-  Returns the list of credential schema types that can be used for sink auth.
-  Used for config-time validation.
-  """
-  @spec supported_schemas() :: [String.t()]
-  def supported_schemas, do: @supported_schemas
 
   @doc """
   Given a credential schema name and decrypted body map, returns the

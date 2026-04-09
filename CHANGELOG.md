@@ -19,6 +19,13 @@ and this project adheres to
 
 ### Changed
 
+- Renamed channel terminology from Source/Sink to Client/Destination across
+  schemas, UI, and API. Channels now enforce a single destination credential
+  (was previously unbounded) via a dropdown instead of checkboxes.
+  [#4581](https://github.com/OpenFn/lightning/issues/4581)
+  [#4582](https://github.com/OpenFn/lightning/issues/4582)
+  [#4583](https://github.com/OpenFn/lightning/issues/4583)
+
 ### Fixed
 
 ## [2.16.1] - 2026-04-07

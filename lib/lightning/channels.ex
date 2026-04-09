@@ -1,7 +1,7 @@
 defmodule Lightning.Channels do
   @moduledoc """
   Context for managing Channels — HTTP proxy configurations that forward
-  requests from a source to a sink.
+  requests from a client to a destination.
   """
 
   import Ecto.Query
@@ -10,7 +10,6 @@ defmodule Lightning.Channels do
   alias Lightning.Accounts.User
   alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
@@ -102,7 +101,7 @@ defmodule Lightning.Channels do
       ) do
     events_query =
       from(e in ChannelEvent,
-        where: e.type in [:sink_response, :error],
+        where: e.type in [:destination_response, :error],
         order_by: [e.channel_request_id, e.inserted_at]
       )
 
@@ -123,50 +122,66 @@ defmodule Lightning.Channels do
   end
 
   @doc """
-  Gets a single channel by ID. Returns nil if not found.
+  Gets a single channel by ID. Returns `nil` if not found.
+
+  ## Options
+
+    * `:include` - list of associations to preload (default: `[]`)
   """
-  def get_channel(id) do
-    Repo.get(Channel, id)
+  def get_channel(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one()
+  end
+
+  @doc """
+  Gets a single channel by ID. Raises `Ecto.NoResultsError` if not found.
+
+  Accepts the same options as `get_channel/2`.
+  """
+  def get_channel!(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one!()
+  end
+
+  defp channel_query(id, opts) do
+    preloads = Keyword.get(opts, :include, [])
+
+    from(c in Channel, where: c.id == ^id)
+    |> preload(^preloads)
   end
 
   @doc """
   Gets a channel by ID with all auth methods preloaded.
 
-  Preloads source auth methods (with webhook_auth_method) and sink auth
-  methods (with project_credential → credential). Returns nil if not found.
+  Preloads client auth methods (with webhook_auth_method) and destination auth
+  method (with project_credential → credential). Returns nil if not found.
 
-  Used by ChannelProxyPlug for source authentication and sink credential resolution.
+  Used by ChannelProxyPlug for client authentication and destination credential resolution.
   """
   def get_channel_with_auth(id) do
     from(c in Channel,
       where: c.id == ^id,
-      left_join: src in assoc(c, :source_auth_methods),
-      left_join: wam in assoc(src, :webhook_auth_method),
-      left_join: snk in assoc(c, :sink_auth_methods),
-      left_join: pc in assoc(snk, :project_credential),
+      left_join: cli in assoc(c, :client_auth_methods),
+      left_join: wam in assoc(cli, :webhook_auth_method),
+      left_join: dest in assoc(c, :destination_auth_method),
+      left_join: pc in assoc(dest, :project_credential),
       left_join: cred in assoc(pc, :credential),
       preload: [
-        source_auth_methods: {src, webhook_auth_method: wam},
-        sink_auth_methods: {snk, project_credential: {pc, credential: cred}}
+        client_auth_methods: {cli, webhook_auth_method: wam},
+        client_webhook_auth_methods: wam,
+        destination_auth_method:
+          {dest, project_credential: {pc, credential: cred}}
       ]
     )
     |> Repo.one()
   end
 
   @doc """
-  Gets a single channel. Raises if not found.
-  """
-  def get_channel!(id, opts \\ []) do
-    preloads = Keyword.get(opts, :include, [])
-    Repo.get!(Channel, id) |> Repo.preload(preloads)
-  end
-
-  @doc """
   Gets a channel by ID scoped to a project. Returns `nil` if the channel
   does not exist or belongs to a different project.
   """
-  def get_channel_for_project(project_id, channel_id) do
-    Repo.get_by(Channel, id: channel_id, project_id: project_id)
+  def get_channel_for_project(project_id, channel_id, opts \\ []) do
+    channel_query(channel_id, opts)
+    |> where([c], c.project_id == ^project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -182,7 +197,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: channel} ->
       Audit.event("created", channel.id, actor, changeset)
     end)
-    |> maybe_audit_auth_method_changes(changeset, actor)
+    |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -203,7 +218,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: updated} ->
       Audit.event("updated", updated.id, actor, changeset)
     end)
-    |> maybe_audit_auth_method_changes(changeset, actor)
+    |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -238,88 +253,6 @@ defmodule Lightning.Channels do
     end
   end
 
-  # Emits one "auth_method_added" or "auth_method_removed" audit step per
-  # association change. No-op when the changeset has no auth method changes
-  # (e.g. the toggle handler, which passes no "channel_auth_methods" key).
-  defp maybe_audit_auth_method_changes(multi, changeset, actor) do
-    auth_changes =
-      Ecto.Changeset.get_change(changeset, :channel_auth_methods, [])
-
-    inserted = Enum.filter(auth_changes, &(&1.action == :insert))
-    deleted = Enum.filter(auth_changes, &(&1.action == :delete))
-
-    multi
-    |> add_auth_method_added_audits(inserted, actor)
-    |> add_auth_method_removed_audits(deleted, actor)
-  end
-
-  defp add_auth_method_added_audits(multi, inserted, actor) do
-    inserted
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {cs, idx}, acc ->
-      role = Ecto.Changeset.get_field(cs, :role)
-      fields = auth_method_fields_for(cs, role)
-
-      Multi.insert(
-        acc,
-        :"audit_auth_method_added_#{idx}",
-        fn %{channel: channel} ->
-          Audit.event("auth_method_added", channel.id, actor, %{
-            before: nil,
-            after: fields
-          })
-        end
-      )
-    end)
-  end
-
-  defp add_auth_method_removed_audits(multi, deleted, actor) do
-    deleted
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {cs, idx}, acc ->
-      role = cs.data.role
-      fields = auth_method_fields_for(cs, role)
-
-      Multi.insert(
-        acc,
-        :"audit_auth_method_removed_#{idx}",
-        fn %{channel: channel} ->
-          Audit.event("auth_method_removed", channel.id, actor, %{
-            before: fields,
-            after: nil
-          })
-        end
-      )
-    end)
-  end
-
-  defp auth_method_fields_for(cs, :source) do
-    %{
-      role: "source",
-      webhook_auth_method_id:
-        Ecto.Changeset.get_field(cs, :webhook_auth_method_id)
-    }
-  end
-
-  defp auth_method_fields_for(cs, :sink) do
-    %{
-      role: "sink",
-      project_credential_id: Ecto.Changeset.get_field(cs, :project_credential_id)
-    }
-  end
-
-  @doc """
-  Returns all ChannelAuthMethod records for a channel, preloading
-  their associated webhook_auth_method and project_credential (with credential).
-  """
-  def list_channel_auth_methods(%Channel{} = channel) do
-    from(cam in ChannelAuthMethod,
-      where: cam.channel_id == ^channel.id,
-      preload: [:webhook_auth_method, project_credential: :credential]
-    )
-    |> Repo.all()
-  end
-
   @doc """
   Get or create a snapshot for the channel's current lock_version.
 
@@ -342,7 +275,7 @@ defmodule Lightning.Channels do
           channel_id: channel.id,
           lock_version: channel.lock_version,
           name: channel.name,
-          sink_url: channel.sink_url,
+          destination_url: channel.destination_url,
           enabled: channel.enabled
         }
 
