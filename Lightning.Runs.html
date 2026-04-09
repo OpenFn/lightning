@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-30E33C95.js"></script>
+    <script defer src="dist/sidebar_items-8DB3F9A4.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -148,6 +148,29 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#cancel_available_for_work_orders/3" data-no-tooltip="" translate="no">cancel_available_for_work_orders(work_order_ids, project_id, limit \\ 100)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Atomically cancels up to <code class="inline">limit</code> available runs belonging to the given
+work order IDs, scoped to the given project. Returns the result of
+<a href="#update_runs/2"><code class="inline">update_runs/2</code></a> which handles work order state updates and event
+broadcasting.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#cancel_run/1" data-no-tooltip="" translate="no">cancel_run(run)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Cancels an available run, transitioning it to <code class="inline">:cancelled</code> state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#complete_run/2" data-no-tooltip="" translate="no">complete_run(run, params)</a>
 
       </div>
@@ -207,6 +230,16 @@ Lightning
       </div>
 
         <div class="summary-synopsis"><p>Returns only the dataclip request as a string</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_for_project/2" data-no-tooltip="" translate="no">get_for_project(id, project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get a run by id, scoped to a specific project.</p></div>
 
     </div>
 
@@ -370,7 +403,7 @@ Lightning
       <h1 class="signature" translate="no">append_run_log(run, params, scrubber \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L264" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L273" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -394,7 +427,7 @@ Lightning
       <h1 class="signature" translate="no">append_run_logs_batch(run, log_entries, scrubber \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L296" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L305" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -407,6 +440,74 @@ Lightning
 for the first validation error encountered.</p>
   </section>
 </section>
+<section class="detail" id="cancel_available_for_work_orders/3">
+
+    <span id="cancel_available_for_work_orders/2"></span>
+
+  <div class="detail-header">
+    <a href="#cancel_available_for_work_orders/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cancel_available_for_work_orders(work_order_ids, project_id, limit \\ 100)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L487" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cancel_available_for_work_orders(
+  [<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()],
+  <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Atomically cancels up to <code class="inline">limit</code> available runs belonging to the given
+work order IDs, scoped to the given project. Returns the result of
+<a href="#update_runs/2"><code class="inline">update_runs/2</code></a> which handles work order state updates and event
+broadcasting.</p>
+  </section>
+</section>
+<section class="detail" id="cancel_run/1">
+
+  <div class="detail-header">
+    <a href="#cancel_run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cancel_run(run)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L447" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cancel_run(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()) ::
+  {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, :not_available | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Cancels an available run, transitioning it to <code class="inline">:cancelled</code> state.</p><p>The run must be in <code class="inline">:available</code> state. The state guard is enforced
+atomically in the UPDATE query (not just in-memory), so a concurrent
+claim by a worker cannot be overwritten.</p><p>Returns <code class="inline">{:error, :not_available}</code> if the run is not in <code class="inline">:available</code> state.</p>
+  </section>
+</section>
 <section class="detail" id="complete_run/2">
 
   <div class="detail-header">
@@ -417,7 +518,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">complete_run(run, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L194" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L203" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -448,7 +549,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L380" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L389" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -501,7 +602,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L65" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L57" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -516,7 +617,7 @@ for the first validation error encountered.</p>
 
       </div>
 
-<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="2779962634-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2779962634-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="2779962634-2">]</span><span class="p" data-group-id="2779962634-1">)</span></code></pre>
+<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="9911954326-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9911954326-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="9911954326-2">]</span><span class="p" data-group-id="9911954326-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -529,7 +630,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get_credential(run, id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L181" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L190" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -558,7 +659,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get_dataclip_body(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L115" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L124" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -580,7 +681,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get_dataclip_request(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L134" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -590,6 +691,36 @@ for the first validation error encountered.</p>
   <section class="docstring">
 
 <p>Returns only the dataclip request as a string</p>
+  </section>
+</section>
+<section class="detail" id="get_for_project/2">
+
+  <div class="detail-header">
+    <a href="#get_for_project/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_for_project(id, project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L70" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_for_project(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | nil</pre>
+
+      </div>
+
+<p>Get a run by id, scoped to a specific project.</p><p>Joins through <code class="inline">work_order -&gt; workflow</code> to verify the run belongs to the
+given project. Returns <code class="inline">nil</code> if the run doesn't exist or belongs to a
+different project.</p>
   </section>
 </section>
 <section class="detail" id="get_for_worker/1">
@@ -602,7 +733,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get_for_worker(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L83" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -630,7 +761,7 @@ for the first validation error encountered.</p>
       <h1 class="signature" translate="no">get_input(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L143" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L152" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -663,7 +794,7 @@ for more details.</p>
       <h1 class="signature" translate="no">get_log_lines(run, order \\ :asc)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L466" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L549" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -685,7 +816,7 @@ for more details.</p>
       <h1 class="signature" translate="no">get_project_id_for_run(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L460" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L543" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -713,7 +844,7 @@ for more details.</p>
       <h1 class="signature" translate="no">get_run_options(workflow_id, project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L99" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L108" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -744,7 +875,7 @@ for more details.</p>
       <h1 class="signature" translate="no">mark_run_lost(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L386" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L395" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -772,7 +903,7 @@ for more details.</p>
       <h1 class="signature" translate="no">mark_steps_lost(steps_query)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L428" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L511" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -800,7 +931,7 @@ for more details.</p>
       <h1 class="signature" translate="no">runs_for_project_query(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L446" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L529" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -828,7 +959,7 @@ for more details.</p>
       <h1 class="signature" translate="no">runs_for_user_query(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L455" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L538" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -858,7 +989,7 @@ for more details.</p>
       <h1 class="signature" translate="no">start_run(run, params \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L188" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L197" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -880,7 +1011,7 @@ for more details.</p>
       <h1 class="signature" translate="no">start_step(run, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L374" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L383" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -909,7 +1040,7 @@ for more details.</p>
       <h1 class="signature" translate="no">subscribe(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L439" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L522" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -931,7 +1062,7 @@ for more details.</p>
       <h1 class="signature" translate="no">update_run(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L200" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L209" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -960,7 +1091,7 @@ for more details.</p>
       <h1 class="signature" translate="no">update_runs(update_query, updates)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L224" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L233" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -982,7 +1113,7 @@ for more details.</p>
       <h1 class="signature" translate="no">wipe_dataclips(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L167" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L176" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

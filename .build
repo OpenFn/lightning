@@ -221,6 +221,7 @@ Lightning.VersionControl.ProjectRepoConnection.html
 Lightning.VersionControl.html
 Lightning.WebhookAuthMethods.html
 Lightning.WorkOrder.html
+Lightning.WorkOrders.CancelManyWorkOrdersJob.html
 Lightning.WorkOrders.ExportAudit.html
 Lightning.WorkOrders.ExportWorker.html
 Lightning.WorkOrders.Manual.html
@@ -376,6 +377,7 @@ LightningWeb.ReAuthenticateLive.New.html
 LightningWeb.RouteHelpers.html
 LightningWeb.Router.html
 LightningWeb.RunChannel.html
+LightningWeb.RunLive.CancelHelper.html
 LightningWeb.RunLive.ExportConfirmationModal.html
 LightningWeb.RunLive.Index.html
 LightningWeb.RunLive.RerunJobComponent.html
@@ -442,8 +444,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-28FFF65B.js
-dist/sidebar_items-30E33C95.js
+dist/search_data-8A191332.js
+dist/sidebar_items-8DB3F9A4.js
 index.html
 provisioning.html
 readme.html
