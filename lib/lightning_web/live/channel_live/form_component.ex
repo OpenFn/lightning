@@ -20,17 +20,14 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     pcs = Projects.list_project_credentials(project)
 
     current_client_ids =
-      channel.channel_auth_methods
-      |> Enum.filter(&(&1.role == :client))
+      channel.client_auth_methods
       |> Enum.map(& &1.webhook_auth_method_id)
 
     client_selections =
       Map.new(wams, fn wam -> {wam.id, wam.id in current_client_ids} end)
 
     destination_credential_id =
-      channel.channel_auth_methods
-      |> Enum.find(&(&1.role == :destination))
-      |> case do
+      case channel.destination_auth_method do
         nil -> nil
         cam -> cam.project_credential_id
       end
@@ -235,7 +232,9 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
   defp save_channel(socket, :new, params) do
     params =
-      build_auth_params(params, [], %{"project_id" => socket.assigns.project.id})
+      build_auth_params(params, [], nil, %{
+        "project_id" => socket.assigns.project.id
+      })
 
     case Channels.create_channel(params, actor: socket.assigns.current_user) do
       {:ok, _channel} ->
@@ -250,8 +249,14 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   end
 
   defp save_channel(socket, :edit, params) do
-    current = socket.assigns.channel.channel_auth_methods
-    params = build_auth_params(params, current)
+    channel = socket.assigns.channel
+
+    params =
+      build_auth_params(
+        params,
+        channel.client_auth_methods,
+        channel.destination_auth_method
+      )
 
     case Channels.update_channel(
            socket.assigns.channel,
@@ -269,15 +274,20 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     end
   end
 
-  defp build_auth_params(params, current_auth_methods, extra \\ %{}) do
+  defp build_auth_params(
+         params,
+         current_clients,
+         current_destination,
+         extra \\ %{}
+       ) do
     built =
       Map.merge(extra, %{
         "client_auth_methods" =>
-          build_client_auth_params(params, current_auth_methods)
+          build_client_auth_params(params, current_clients)
       })
 
     built =
-      case build_destination_auth_param(params, current_auth_methods) do
+      case build_destination_auth_param(params, current_destination) do
         nil -> built
         :clear -> Map.put(built, "destination_auth_method", nil)
         dest -> Map.put(built, "destination_auth_method", dest)
@@ -292,12 +302,12 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     end)
   end
 
-  defp build_client_auth_params(params, current_auth_methods) do
+  defp build_client_auth_params(params, current_clients) do
     params
     |> Map.get("client_auth_methods", %{})
     |> Enum.reduce([], fn {k, v}, acc ->
       existing =
-        Enum.find(current_auth_methods, &(&1.webhook_auth_method_id == k))
+        Enum.find(current_clients, &(&1.webhook_auth_method_id == k))
 
       case {existing, v} do
         {%{}, "true"} -> [%{id: existing.id} | acc]
@@ -308,16 +318,14 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     end)
   end
 
-  defp build_destination_auth_param(params, current_auth_methods) do
+  defp build_destination_auth_param(params, current_destination) do
     selected_id =
       case Map.get(params, "destination_credential_id", "") do
         "" -> nil
         id -> id
       end
 
-    existing = Enum.find(current_auth_methods, &(&1.role == :destination))
-
-    case {existing, selected_id} do
+    case {current_destination, selected_id} do
       {nil, nil} -> nil
       {%{}, nil} -> :clear
       {%{id: id, project_credential_id: pc_id}, pc_id} -> %{id: id}

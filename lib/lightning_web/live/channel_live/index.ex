@@ -156,7 +156,6 @@ defmodule LightningWeb.ChannelLive.Index do
       channel =
         Channels.get_channel!(id,
           include: [
-            :channel_auth_methods,
             :client_auth_methods,
             :destination_auth_method
           ]
