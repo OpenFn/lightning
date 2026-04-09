@@ -627,7 +627,7 @@ defmodule LightningWeb.RunLive.Components do
                 class="text-base font-semibold leading-6 text-gray-900"
                 id={"#{@id}-title"}
               >
-                Cancel Work Orders
+                Cancel Pending Runs
               </h3>
               <div class="mt-2">
                 <p class="text-sm text-gray-500">

@@ -60,6 +60,23 @@ defmodule Lightning.Runs do
   end
 
   @doc """
+  Get a run by id, scoped to a specific project.
+
+  Joins through `work_order -> workflow` to verify the run belongs to the
+  given project. Returns `nil` if the run doesn't exist or belongs to a
+  different project.
+  """
+  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t()) :: Run.t() | nil
+  def get_for_project(id, project_id) do
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: r.id == ^id and w.project_id == ^project_id
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Get a run by id, preloading the snapshot and its credential.
   """
   @spec get_for_worker(Ecto.UUID.t()) :: Run.t() | nil

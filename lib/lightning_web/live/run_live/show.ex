@@ -8,9 +8,9 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Runs
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
+  alias LightningWeb.RunLive.CancelHelper
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -367,32 +367,29 @@ defmodule LightningWeb.RunLive.Show do
   @impl true
   def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
     if socket.assigns.can_run_workflow do
-      case Runs.get(run_id) do
-        nil ->
+      case CancelHelper.cancel_run(run_id, socket.assigns.project.id) do
+        {:ok, _run} ->
+          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+
+        {:error, :not_found} ->
           {:noreply, put_flash(socket, :error, "Run not found.")}
 
-        run ->
-          case Runs.cancel_run(run) do
-            {:ok, _run} ->
-              {:noreply, put_flash(socket, :info, "Run cancelled.")}
+        {:error, :not_available} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Run could not be cancelled — it has already been " <>
+               "claimed by a worker."
+           )}
 
-            {:error, :not_available} ->
-              {:noreply,
-               put_flash(
-                 socket,
-                 :info,
-                 "Run could not be cancelled — it has already been " <>
-                   "claimed by a worker."
-               )}
-
-            {:error, _} ->
-              {:noreply,
-               put_flash(
-                 socket,
-                 :error,
-                 "An error occurred while cancelling."
-               )}
-          end
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
       end
     else
       {:noreply,
