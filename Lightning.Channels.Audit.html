@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -111,7 +111,9 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Audit trail for channel CRUD operations.</p>
+<p>Audit trail for channel CRUD and auth method changes.</p><p>Provides <a href="#event/5"><code class="inline">event/5</code></a> (via <a href="Lightning.Auditing.Audit.html"><code class="inline">Lightning.Auditing.Audit</code></a>) for basic CRUD events,
+plus <a href="#audit_auth_method_changes/3"><code class="inline">audit_auth_method_changes/3</code></a> which derives fine-grained audit events
+for client and destination auth method additions, removals, and swaps.</p>
     </section>
 
 </div>
@@ -127,6 +129,16 @@ Lightning
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#audit_auth_method_changes/3" data-no-tooltip="" translate="no">audit_auth_method_changes(multi, changeset, actor)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Appends audit events for auth method changes to the given Multi.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -176,6 +188,30 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="audit_auth_method_changes/3">
+
+  <div class="detail-header">
+    <a href="#audit_auth_method_changes/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">audit_auth_method_changes(multi, changeset, actor)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Appends audit events for auth method changes to the given Multi.</p><p>Inspects the changeset for changes to <code class="inline">:client_auth_methods</code> and
+<code class="inline">:destination_auth_method</code>, emitting the appropriate added/removed/changed
+events. No-op when no auth method changes are present.</p>
+  </section>
+</section>
 <section class="detail" id="base_query/0">
 
   <div class="detail-header">
@@ -186,7 +222,7 @@ Lightning
       <h1 class="signature" translate="no">base_query()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L5" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L9" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -212,7 +248,7 @@ Lightning
       <h1 class="signature" translate="no">event(event, item_id, actor, changes \\ %{}, metadata \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L5" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L9" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -234,7 +270,7 @@ Lightning
       <h1 class="signature" translate="no">save(changes)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L5" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L9" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -256,7 +292,7 @@ Lightning
       <h1 class="signature" translate="no">update_changes(changes)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L5" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L9" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

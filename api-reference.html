@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -456,7 +456,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p></d
   </div>
 
     <div class="summary-synopsis"><p>Context for managing Channels — HTTP proxy configurations that forward
-requests from a source to a sink.</p></div>
+requests from a client to a destination.</p></div>
 
 </div>
 <div class="summary-row">
@@ -465,7 +465,7 @@ requests from a source to a sink.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Audit trail for channel CRUD operations.</p></div>
+    <div class="summary-synopsis"><p>Audit trail for channel CRUD and auth method changes.</p></div>
 
 </div>
 <div class="summary-row">
@@ -475,7 +475,7 @@ requests from a source to a sink.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Schema for a Channel — an HTTP proxy configuration that forwards
-requests from a source endpoint to a sink URL.</p></div>
+requests from a client endpoint to a destination URL.</p></div>
 
 </div>
 <div class="summary-row">
@@ -519,6 +519,15 @@ channel's configuration, created when a request is proxied.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Channels.DestinationAuth.html" translate="no">Lightning.Channels.DestinationAuth</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Maps a credential's schema type and body to an outbound HTTP Authorization header.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Channels.Handler.html" translate="no">Lightning.Channels.Handler</a>
 
   </div>
@@ -533,15 +542,6 @@ channel's configuration, created when a request is proxied.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Parses and validates search/filter parameters for ChannelRequest queries.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Channels.SinkAuth.html" translate="no">Lightning.Channels.SinkAuth</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Maps a credential's schema type and body to an outbound HTTP Authorization header.</p></div>
 
 </div>
 <div class="summary-row">

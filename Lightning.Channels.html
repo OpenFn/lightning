@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,7 +112,7 @@ Lightning
 
     <section id="moduledoc">
 <p>Context for managing Channels — HTTP proxy configurations that forward
-requests from a source to a sink.</p>
+requests from a client to a destination.</p>
     </section>
 
 </div>
@@ -172,11 +172,11 @@ given project. Channel events are cascade-deleted by the database FK.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_channel/1" data-no-tooltip="" translate="no">get_channel(id)</a>
+        <a href="#get_channel/2" data-no-tooltip="" translate="no">get_channel(id, opts \\ [])</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Gets a single channel by ID. Returns nil if not found.</p></div>
+        <div class="summary-synopsis"><p>Gets a single channel by ID. Returns <code class="inline">nil</code> if not found.</p></div>
 
     </div>
 
@@ -186,13 +186,13 @@ given project. Channel events are cascade-deleted by the database FK.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Gets a single channel. Raises if not found.</p></div>
+        <div class="summary-synopsis"><p>Gets a single channel by ID. Raises <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if not found.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_channel_for_project/2" data-no-tooltip="" translate="no">get_channel_for_project(project_id, channel_id)</a>
+        <a href="#get_channel_for_project/3" data-no-tooltip="" translate="no">get_channel_for_project(project_id, channel_id, opts \\ [])</a>
 
       </div>
 
@@ -228,17 +228,6 @@ does not exist or belongs to a different project.</p></div>
       </div>
 
         <div class="summary-synopsis"><p>Get or create a snapshot for the channel's current lock_version.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#list_channel_auth_methods/1" data-no-tooltip="" translate="no">list_channel_auth_methods(channel)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns all ChannelAuthMethod records for a channel, preloading
-their associated webhook_auth_method and project_credential (with credential).</p></div>
 
     </div>
 
@@ -306,7 +295,7 @@ their associated webhook_auth_method and project_credential (with credential).</
       <h1 class="signature" translate="no">create_channel(attrs, list)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L177" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L192" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -335,7 +324,7 @@ their associated webhook_auth_method and project_credential (with credential).</
       <h1 class="signature" translate="no">delete_channel(channel, list)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L224" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L239" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -369,7 +358,7 @@ events cascade automatically, and channel snapshots cascade via
       <h1 class="signature" translate="no">delete_channel_requests_for_project(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L411" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L344" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -398,7 +387,7 @@ on <code class="inline">channel_requests.channel_id</code> before channels are c
       <h1 class="signature" translate="no">delete_expired_requests(project_id, period_days)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L383" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L316" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -418,17 +407,19 @@ given project. Channel events are cascade-deleted by the database FK.</p><p>Afte
 referenced by any request and are not the current version.</p>
   </section>
 </section>
-<section class="detail" id="get_channel/1">
+<section class="detail" id="get_channel/2">
+
+    <span id="get_channel/1"></span>
 
   <div class="detail-header">
-    <a href="#get_channel/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#get_channel/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_channel(id)</h1>
+      <h1 class="signature" translate="no">get_channel(id, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L128" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L131" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -437,7 +428,7 @@ referenced by any request and are not the current version.</p>
 
   <section class="docstring">
 
-<p>Gets a single channel by ID. Returns nil if not found.</p>
+<p>Gets a single channel by ID. Returns <code class="inline">nil</code> if not found.</p><h2 id="get_channel/2-options" class="section-heading"><a href="#get_channel/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:include</code> - list of associations to preload (default: <code class="inline">[]</code>)</li></ul>
   </section>
 </section>
 <section class="detail" id="get_channel!/2">
@@ -452,7 +443,7 @@ referenced by any request and are not the current version.</p>
       <h1 class="signature" translate="no">get_channel!(id, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L140" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -461,20 +452,22 @@ referenced by any request and are not the current version.</p>
 
   <section class="docstring">
 
-<p>Gets a single channel. Raises if not found.</p>
+<p>Gets a single channel by ID. Raises <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if not found.</p><p>Accepts the same options as <a href="#get_channel/2"><code class="inline">get_channel/2</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="get_channel_for_project/2">
+<section class="detail" id="get_channel_for_project/3">
+
+    <span id="get_channel_for_project/2"></span>
 
   <div class="detail-header">
-    <a href="#get_channel_for_project/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#get_channel_for_project/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_channel_for_project(project_id, channel_id)</h1>
+      <h1 class="signature" translate="no">get_channel_for_project(project_id, channel_id, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L168" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L181" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -497,7 +490,7 @@ does not exist or belongs to a different project.</p>
       <h1 class="signature" translate="no">get_channel_stats_for_project(project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L69" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L68" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -520,7 +513,7 @@ database round-trip.</p>
       <h1 class="signature" translate="no">get_channel_with_auth(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L140" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L159" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -529,8 +522,8 @@ database round-trip.</p>
 
   <section class="docstring">
 
-<p>Gets a channel by ID with all auth methods preloaded.</p><p>Preloads source auth methods (with webhook_auth_method) and sink auth
-methods (with project_credential → credential). Returns nil if not found.</p><p>Used by ChannelProxyPlug for source authentication and sink credential resolution.</p>
+<p>Gets a channel by ID with all auth methods preloaded.</p><p>Preloads client auth methods (with webhook_auth_method) and destination auth
+method (with project_credential → credential). Returns nil if not found.</p><p>Used by ChannelProxyPlug for client authentication and destination credential resolution.</p>
   </section>
 </section>
 <section class="detail" id="get_or_create_current_snapshot/1">
@@ -543,7 +536,7 @@ methods (with project_credential → credential). Returns nil if not found.</p><
       <h1 class="signature" translate="no">get_or_create_current_snapshot(channel)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L332" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L265" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -555,29 +548,6 @@ methods (with project_credential → credential). Returns nil if not found.</p><
 <p>Get or create a snapshot for the channel's current lock_version.</p><p>Returns an existing snapshot if one matches, or creates a minimal one from
 the current channel config. Handles concurrent creation race via
 ON CONFLICT DO NOTHING + re-fetch.</p><p>Full snapshot lifecycle management is in #4406.</p>
-  </section>
-</section>
-<section class="detail" id="list_channel_auth_methods/1">
-
-  <div class="detail-header">
-    <a href="#list_channel_auth_methods/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">list_channel_auth_methods(channel)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L315" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Returns all ChannelAuthMethod records for a channel, preloading
-their associated webhook_auth_method and project_credential (with credential).</p>
   </section>
 </section>
 <section class="detail" id="list_channel_requests/3">
@@ -592,7 +562,7 @@ their associated webhook_auth_method and project_credential (with credential).</
       <h1 class="signature" translate="no">list_channel_requests(project, search_params, params \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L97" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -625,7 +595,7 @@ filter</li><li><code class="inline">params</code> — Scrivener page params map,
       <h1 class="signature" translate="no">list_channels_for_project(project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L26" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -647,7 +617,7 @@ filter</li><li><code class="inline">params</code> — Scrivener page params map,
       <h1 class="signature" translate="no">list_channels_for_project_with_stats(project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L43" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -669,7 +639,7 @@ filter</li><li><code class="inline">params</code> — Scrivener page params map,
       <h1 class="signature" translate="no">update_channel(channel, attrs, list)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L198" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L213" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

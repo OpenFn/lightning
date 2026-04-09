@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,10 +112,10 @@ Lightning
 
     <section id="moduledoc">
 <p>Schema for a ChannelEvent — a detailed log entry recording HTTP
-request/response data for a channel request.</p><h2 id="module-event-types" class="section-heading"><a href="#module-event-types" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Event Types</span></h2><ul><li><code class="inline">:sink_response</code> — emitted by <code class="inline">Handler.persist_completion/2</code> on successful
-upstream proxy completion. Carries all fields (request/response details,
-latency, ttfb).</li><li><code class="inline">:error</code> — emitted by <code class="inline">Handler.persist_completion/2</code> on upstream proxy
-error, or by <code class="inline">ChannelProxyPlug.record_credential_error/2</code> when sink
+request/response data for a channel request.</p><h2 id="module-event-types" class="section-heading"><a href="#module-event-types" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Event Types</span></h2><ul><li><code class="inline">:destination_response</code> — emitted by <code class="inline">Handler.persist_completion/2</code> on
+successful upstream proxy completion. Carries all fields
+(request/response details, latency, ttfb).</li><li><code class="inline">:error</code> — emitted by <code class="inline">Handler.persist_completion/2</code> on upstream proxy
+error, or by <code class="inline">ChannelProxyPlug.record_credential_error/2</code> when destination
 credential resolution fails before proxying. Carries request fields and
 <code class="inline">error_message</code>; response fields may be nil.</li></ul>
     </section>
@@ -209,7 +209,7 @@ credential resolution fails before proxying. Carries request fields and
   response_headers: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   response_status: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   ttfb_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
-  type: :sink_response | :error
+  type: :destination_response | :error
 }</pre>
 
       </div>

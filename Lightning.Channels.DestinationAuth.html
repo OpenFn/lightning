@@ -8,11 +8,11 @@
     <meta name="project" content="Lightning v2.16.1">
 
 
-    <title>Lightning.Channels.SinkAuth — Lightning v2.16.1</title>
+    <title>Lightning.Channels.DestinationAuth — Lightning v2.16.1</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.Channels.SinkAuth</span> 
+      <span translate="no">Lightning.Channels.DestinationAuth</span> 
       <small class="app-vsn" translate="no">(Lightning v2.16.1)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/sink_auth.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/destination_auth.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -140,17 +140,6 @@ Authorization header value to set on the outbound request.</p></div>
 
     </div>
 
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#supported_schemas/0" data-no-tooltip="" translate="no">supported_schemas()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns the list of credential schema types that can be used for sink auth.
-Used for config-time validation.</p></div>
-
-    </div>
-
 </div>
 
   </section>
@@ -175,7 +164,7 @@ Used for config-time validation.</p></div>
       <h1 class="signature" translate="no">build_auth_header(schema, body)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/sink_auth.ex#L36" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/destination_auth.ex#L27" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -194,35 +183,6 @@ Used for config-time validation.</p></div>
 
 <p>Given a credential schema name and decrypted body map, returns the
 Authorization header value to set on the outbound request.</p><p>Returns:</p><ul><li><code class="inline">{:ok, header_value}</code> — e.g., <code class="inline">&quot;Bearer tok123&quot;</code> or <code class="inline">&quot;Basic dTpw&quot;</code></li><li><code class="inline">{:error, :no_auth_fields}</code> — credential body missing required auth fields</li><li><code class="inline">{:error, {:unsupported_schema, schema}}</code> — schema not in supported list</li></ul>
-  </section>
-</section>
-<section class="detail" id="supported_schemas/0">
-
-  <div class="detail-header">
-    <a href="#supported_schemas/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">supported_schemas()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/sink_auth.ex#L22" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> supported_schemas() :: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]</pre>
-
-      </div>
-
-<p>Returns the list of credential schema types that can be used for sink auth.
-Used for config-time validation.</p>
   </section>
 </section>
 

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8765BB23.js"></script>
+    <script defer src="dist/sidebar_items-30E33C95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,7 +112,7 @@ Lightning
 
     <section id="moduledoc">
 <p>Schema for a Channel — an HTTP proxy configuration that forwards
-requests from a source endpoint to a sink URL.</p>
+requests from a client endpoint to a destination URL.</p>
     </section>
 
 </div>
@@ -175,7 +175,7 @@ requests from a source endpoint to a sink URL.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L11" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L12" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -191,6 +191,11 @@ requests from a source endpoint to a sink URL.</p>
   channel_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   channel_requests: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   channel_snapshots: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  client_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  client_webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  destination_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  destination_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  destination_url: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   inserted_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
@@ -198,9 +203,6 @@ requests from a source endpoint to a sink URL.</p>
   name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  sink_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  sink_url: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  source_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()
 }</pre>
 
@@ -232,7 +234,7 @@ requests from a source endpoint to a sink URL.</p>
       <h1 class="signature" translate="no">changeset(channel, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L51" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
