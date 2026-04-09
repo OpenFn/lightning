@@ -509,7 +509,8 @@ defmodule Lightning.WorkOrders do
   For small batches, cancels synchronously via atomic UPDATE. Returns
   `{:ok, count}` where count is the number of runs cancelled.
   """
-  @spec cancel_many([WorkOrder.t()], keyword()) :: {:ok, non_neg_integer()}
+  @spec cancel_many([WorkOrder.t()], keyword()) ::
+          {:ok, non_neg_integer()} | {:error, any()}
   def cancel_many([], _opts), do: {:ok, 0}
 
   def cancel_many([%WorkOrder{} | _rest] = work_orders, opts) do
