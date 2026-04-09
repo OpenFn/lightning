@@ -80,11 +80,18 @@ export function CollaborativeWorkflowDiagram({
   );
 
   // Restore the URL run param if it was stripped (e.g. by LiveView push_patch)
-  // but the history store still has an active run
+  // but the history store still has an active run.
+  // The ref ensures we only attempt one restore per activeRunId to avoid loops
+  // if LiveView repeatedly strips the param.
   const runParam = params['run'] ?? null;
+  const restoredRunRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!runParam && activeRunId) {
+    if (!runParam && activeRunId && restoredRunRef.current !== activeRunId) {
+      restoredRunRef.current = activeRunId;
       updateSearchParams({ run: activeRunId });
+    }
+    if (runParam) {
+      restoredRunRef.current = null;
     }
   }, [runParam, activeRunId, updateSearchParams]);
 

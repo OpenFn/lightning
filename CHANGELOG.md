@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Remove the redirect to "History" when running a run from the canvas. (Stay
+  there to see the run.)
+  [#4198](https://github.com/OpenFn/lightning/issues/4198)
+
 ### Fixed
 
 ## [2.16.1] - 2026-04-07

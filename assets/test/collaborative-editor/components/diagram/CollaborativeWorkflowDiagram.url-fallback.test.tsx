@@ -237,4 +237,31 @@ describe('CollaborativeWorkflowDiagram - URL fallback for run param', () => {
       expect.objectContaining({ run: expect.any(String) })
     );
   });
+
+  test('only attempts one restore per activeRunId to prevent loops', async () => {
+    // Simulate: LiveView keeps stripping the run param on every push_patch.
+    // The component should restore the URL once but not keep retrying.
+    mockActiveRunId = 'run-loop';
+
+    const wrapper = createWrapper();
+    const { rerender } = render(<CollaborativeWorkflowDiagram />, { wrapper });
+
+    // First render: should restore the param
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        run: 'run-loop',
+      });
+    });
+
+    urlState.mockFns.updateSearchParams.mockClear();
+
+    // Simulate LiveView stripping the param again (re-render with no run param)
+    // mockActiveRunId is still 'run-loop', runParam is still absent
+    rerender(<CollaborativeWorkflowDiagram />);
+
+    // Should NOT attempt a second restore for the same activeRunId
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+      expect.objectContaining({ run: 'run-loop' })
+    );
+  });
 });
