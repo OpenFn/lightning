@@ -531,7 +531,7 @@ defmodule Lightning.WorkOrders do
   may be large.
   """
   @spec cancel_many_async([WorkOrder.t()], keyword()) ::
-          {:ok, Oban.Job.t()}
+          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
   def cancel_many_async([%WorkOrder{} | _rest] = work_orders, opts) do
     project_id = Keyword.fetch!(opts, :project_id)
     work_order_ids = Enum.map(work_orders, & &1.id)

@@ -637,7 +637,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
           workflows: []
         )
 
-      assert html =~ "Cancel Work Orders"
+      assert html =~ "Cancel Pending Runs"
       assert html =~ "Cancel up to 3 selected"
       refute html =~ "Cancel up to 10 matching"
     end
