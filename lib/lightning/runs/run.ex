@@ -202,6 +202,9 @@ defmodule Lightning.Run do
       {:available, :claimed} ->
         changeset
 
+      {:available, :cancelled} ->
+        changeset
+
       {:available, to} ->
         changeset
         |> add_error(

@@ -531,6 +531,27 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
+  @doc """
+  Returns work orders matching the search params that have cancellable
+  (available) runs. Unlike retry, does not filter on wiped dataclips since
+  cancellation doesn't need the dataclip.
+  """
+  def search_workorders_for_cancel(%Project{id: project_id}, search_params) do
+    project_id
+    |> base_query()
+    |> search_workorders_query(search_params)
+    |> where(
+      [wo],
+      exists(
+        from(r in Lightning.Run,
+          where: r.work_order_id == parent_as(:workorder).id,
+          where: r.state == :available
+        )
+      )
+    )
+    |> Repo.all()
+  end
+
   def search_workorders_for_export_query(%Project{id: project_id}, search_params) do
     project_id
     |> base_query()

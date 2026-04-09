@@ -4,6 +4,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   import Phoenix.LiveViewTest
 
   alias Lightning.Workflows
+  alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias LightningWeb.RunLive.Index
 
@@ -620,6 +621,60 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       ~s{a[href='#{~p"/projects/#{project}/runs/#{run}?#{%{step: step.id}}"}']}
     )
     |> Enum.any?()
+  end
+
+  describe "bulk_cancel_modal/1" do
+    test "shows cancel selected button when not all selected" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: false,
+          selected_count: 3,
+          page_number: 1,
+          pages: 2,
+          total_entries: 10,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel Pending Runs"
+      assert html =~ "Cancel up to 3 selected"
+      refute html =~ "Cancel up to 10 matching"
+    end
+
+    test "shows both cancel selected and cancel all matching when all selected on multi-page" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: true,
+          selected_count: 5,
+          page_number: 1,
+          pages: 3,
+          total_entries: 25,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel up to 5 selected"
+      assert html =~ "Cancel up to 25 matching"
+    end
+
+    test "shows only cancel selected when all selected but single page" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: true,
+          selected_count: 5,
+          page_number: 1,
+          pages: 1,
+          total_entries: 5,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel up to 5 selected"
+      refute html =~ "Cancel up to 5 matching"
+    end
   end
 
   describe "bulk_rerun_modal/1" do
