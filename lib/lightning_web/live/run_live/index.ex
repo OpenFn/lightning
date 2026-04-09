@@ -615,6 +615,14 @@ defmodule LightningWeb.RunLive.Index do
              "Work order could not be cancelled" <>
                " — it is no longer pending."
            )}
+
+        {:error, _reason} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
       end
     else
       {:noreply,
