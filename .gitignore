@@ -81,6 +81,7 @@ priv/openfn
 .dev.env
 .dev.override.env
 .test.override.env
+.envrc
 
 worktrees
 .docker-cache
