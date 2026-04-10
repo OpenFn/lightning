@@ -123,7 +123,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       insert(:channel_error_event,
         channel_request: request,
         error_message: "econnrefused",
-        latency_ms: 100
+        latency_us: 100_000
       )
 
       {:ok, view, _html} = live(conn, detail_path(project, request))
@@ -157,79 +157,135 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders three-segment bar when all timing fields present", %{
-      conn: conn,
-      project: project
-    } do
-      {request, _channel, _snapshot} = create_channel_request(project)
+    test "renders full nested timeline with all Finch phases, overhead, and reused connection",
+         %{conn: conn, project: project} do
+      # --- Full phases with overhead ---
+      {req1, _ch1, _snap1} = create_channel_request(project)
 
+      # inner_sum = 2+15+5+158+65 = 245ms, latency = 260ms => 15ms overhead
       insert(:channel_event,
-        channel_request: request,
-        request_send_us: 5000,
-        ttfb_ms: 280,
-        response_duration_us: 65000,
-        latency_ms: 350
+        channel_request: req1,
+        queue_us: 2_000,
+        connect_us: 15_000,
+        request_send_us: 5_000,
+        ttfb_us: 180_000,
+        response_duration_us: 65_000,
+        latency_us: 260_000
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      {:ok, view1, _html} = live(conn, detail_path(project, req1))
+      html1 = render(view1)
 
-      assert html =~ "timing-section"
-      assert html =~ "350"
-      assert html =~ "280"
+      # Timing section present with bookend labels
+      assert html1 =~ ~s(id="timing-section")
+      assert html1 =~ "0 ms"
+      assert html1 =~ "260 ms"
+
+      # Phase segment title attributes (tooltip text)
+      assert html1 =~ ~s(title="Queue: 2 ms")
+      assert html1 =~ ~s(title="Connect: 15 ms")
+      assert html1 =~ ~s(title="Send: 5 ms")
+      assert html1 =~ ~s(title="Processing: 158 ms")
+      assert html1 =~ ~s(title="Recv: 65 ms")
+
+      # TTFB marker and legend with overhead swatch
+      assert html1 =~ "TTFB: 180 ms"
+      assert html1 =~ "Proxy overhead"
+
+      # --- Reused connection ---
+      {req2, _ch2, _snap2} = create_channel_request(project)
+
+      insert(:channel_event,
+        channel_request: req2,
+        reused_connection: true,
+        queue_us: 1_000,
+        connect_us: 0,
+        request_send_us: 4_000,
+        ttfb_us: 120_000,
+        response_duration_us: 30_000,
+        latency_us: 155_000
+      )
+
+      {:ok, view2, _html} = live(conn, detail_path(project, req2))
+      html2 = render(view2)
+
+      assert html2 =~ ~s(id="timing-section")
+      assert html2 =~ "(reused)"
+
+      # --- Processing segment from nil queue/connect ---
+      {req3, _ch3, _snap3} = create_channel_request(project)
+
+      # wait = ttfb - 0 - 0 - send = 200k - 10k = 190k
+      insert(:channel_event,
+        channel_request: req3,
+        queue_us: nil,
+        connect_us: nil,
+        request_send_us: 10_000,
+        ttfb_us: 200_000,
+        response_duration_us: 50_000,
+        latency_us: 260_000
+      )
+
+      {:ok, view3, _html} = live(conn, detail_path(project, req3))
+      html3 = render(view3)
+
+      assert html3 =~ ~s(title="Processing: 190 ms")
     end
 
-    test "falls back gracefully when timing fields are partially nil", %{
-      conn: conn,
-      project: project
-    } do
-      # Two-segment fallback: per-direction durations nil, TTFB + latency present
+    test "degrades gracefully through partial and minimal tiers",
+         %{conn: conn, project: project} do
+      # Partial tier: TTFB + latency only => TTFB/Download segments
       {req1, _ch1, _snap1} = create_channel_request(project)
 
       insert(:channel_event,
         channel_request: req1,
         request_send_us: nil,
         response_duration_us: nil,
-        ttfb_ms: 280,
-        latency_ms: 350
+        ttfb_us: 280_000,
+        latency_us: 350_000
       )
 
       {:ok, view1, _html} = live(conn, detail_path(project, req1))
       html1 = render(view1)
-      assert html1 =~ "350"
-      assert html1 =~ "280"
 
-      # Single bar fallback: only latency_ms
+      assert html1 =~ ~s(title="TTFB: 280 ms")
+      assert html1 =~ ~s(title="Download: 70 ms")
+      assert html1 =~ "350 ms"
+      refute html1 =~ "Proxy overhead"
+
+      # Minimal tier: only latency_us => single Total bar
       {req2, _ch2, _snap2} = create_channel_request(project)
 
       insert(:channel_event,
         channel_request: req2,
         request_send_us: nil,
         response_duration_us: nil,
-        ttfb_ms: nil,
-        latency_ms: 420
+        ttfb_us: nil,
+        latency_us: 420_000
       )
 
       {:ok, view2, _html} = live(conn, detail_path(project, req2))
       html2 = render(view2)
-      assert html2 =~ "420"
+
+      assert html2 =~ ~s(title="Total: 420 ms")
+      assert html2 =~ "420 ms"
     end
 
     test "shows single bar for transport errors, hidden for credential errors",
          %{conn: conn, project: project} do
-      # Transport error: timing section visible with single bar
       {req_transport, _ch1, _snap1} =
         create_channel_request(project, state: :timeout)
 
       insert(:channel_error_event,
         channel_request: req_transport,
         error_message: "response_timeout",
-        latency_ms: 30000
+        latency_us: 30_000_000
       )
 
       {:ok, view1, _html} = live(conn, detail_path(project, req_transport))
       html1 = render(view1)
-      assert html1 =~ "30000" or html1 =~ "30,000"
+      assert html1 =~ ~s(id="timing-section")
+      assert html1 =~ ~s(title="Total: 30000 ms")
 
       # Credential error: timing section hidden entirely
       {req_cred, _ch2, _snap2} =
