@@ -53,9 +53,19 @@ defmodule Lightning.Collections do
   end
 
   @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :not_found}
+          {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
   def get_collection(name) do
-    case Repo.get_by(Collection, name: name) do
+    case Repo.all(from c in Collection, where: c.name == ^name) do
+      [] -> {:error, :not_found}
+      [collection] -> {:ok, collection}
+      [_ | _] -> {:error, :conflict}
+    end
+  end
+
+  @spec get_collection(Ecto.UUID.t(), String.t()) ::
+          {:ok, Collection.t()} | {:error, :not_found}
+  def get_collection(project_id, name) do
+    case Repo.get_by(Collection, project_id: project_id, name: name) do
       nil -> {:error, :not_found}
       collection -> {:ok, collection}
     end

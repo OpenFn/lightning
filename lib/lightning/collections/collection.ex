@@ -40,7 +40,7 @@ defmodule Lightning.Collections.Collection do
     |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
       message: "Collection name must be URL safe"
     )
-    |> unique_constraint([:name],
+    |> unique_constraint([:project_id, :name],
       message: "A collection with this name already exists"
     )
   end
@@ -50,7 +50,7 @@ defmodule Lightning.Collections.Collection do
     |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
       message: "Collection name must be URL safe"
     )
-    |> unique_constraint([:name],
+    |> unique_constraint([:project_id, :name],
       message: "A collection with this name already exists"
     )
   end
