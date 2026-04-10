@@ -448,7 +448,7 @@ defmodule Lightning.ChannelsTest do
         insert(:channel_event,
           channel_request: request,
           request_path: "/test",
-          latency_ms: 100
+          latency_us: 100_000
         )
 
       result = Channels.get_channel_request_for_project(project.id, request.id)

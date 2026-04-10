@@ -58,8 +58,8 @@ defmodule Lightning.Factories.ChannelFactories do
           response_body_preview: ~s({"status":"ok"}),
           response_body_hash: "def456abc123",
           response_body_size: 15,
-          latency_ms: 350,
-          ttfb_ms: 280,
+          latency_us: 350_000,
+          ttfb_us: 280_000,
           request_send_us: 5000,
           response_duration_us: 65000
         }

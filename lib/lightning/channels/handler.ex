@@ -118,10 +118,13 @@ defmodule Lightning.Channels.Handler do
       response_body_preview: get_in(result, [:response_observation, :preview]),
       response_body_hash: get_in(result, [:response_observation, :hash]),
       response_body_size: get_in(result, [:response_observation, :size]),
-      latency_ms: div(result.timing.total_us, 1000),
-      ttfb_ms: state |> Map.get(:ttfb_us) |> maybe_div(1000),
+      latency_us: result.timing.total_us,
+      ttfb_us: Map.get(state, :ttfb_us),
       request_send_us: get_in(result, [:timing, :send_us]),
       response_duration_us: get_in(result, [:timing, :recv_us]),
+      queue_us: get_in(result, [:timing, :queue_us]),
+      connect_us: get_in(result, [:timing, :connect_us]),
+      reused_connection: get_in(result, [:timing, :reused_connection]),
       error_message: if(result.error, do: classify_error(result.error))
     }
 
@@ -199,7 +202,4 @@ defmodule Lightning.Channels.Handler do
        do: Atom.to_string(reason)
 
   defp classify_error(error), do: inspect(error)
-
-  defp maybe_div(nil, _), do: nil
-  defp maybe_div(us, divisor), do: div(us, divisor)
 end

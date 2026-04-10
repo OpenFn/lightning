@@ -136,8 +136,8 @@ defmodule Lightning.Channels.HandlerTest do
       assert event.request_method == state.request_method
       assert event.request_path == "/test/path"
       assert event.response_status == 200
-      assert event.latency_ms == 50
-      assert event.ttfb_ms == 10
+      assert event.latency_us == 50_000
+      assert event.ttfb_us == 10_000
       assert event.error_message == nil
     end
 
@@ -278,13 +278,13 @@ defmodule Lightning.Channels.HandlerTest do
       %{state: state}
     end
 
-    test "uses timing.total_us for latency_ms", %{state: state} do
+    test "uses timing.total_us for latency_us", %{state: state} do
       result = philter_result(timing: %{total_us: 50_000, send_us: 2_000})
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
       event = Repo.one!(ChannelEvent)
-      assert event.latency_ms == 50
+      assert event.latency_us == 50_000
     end
 
     test "persists request_send_us from timing.send_us", %{state: state} do
@@ -352,7 +352,7 @@ defmodule Lightning.Channels.HandlerTest do
       event = Repo.one!(ChannelEvent)
       assert event.request_send_us == nil
       assert event.response_duration_us == nil
-      assert event.latency_ms == 50
+      assert event.latency_us == 50_000
     end
   end
 

@@ -33,10 +33,13 @@ defmodule Lightning.Channels.ChannelEvent do
           response_body_preview: String.t() | nil,
           response_body_hash: String.t() | nil,
           response_body_size: integer() | nil,
-          latency_ms: integer() | nil,
-          ttfb_ms: integer() | nil,
+          latency_us: integer() | nil,
+          ttfb_us: integer() | nil,
           request_send_us: integer() | nil,
           response_duration_us: integer() | nil,
+          queue_us: integer() | nil,
+          connect_us: integer() | nil,
+          reused_connection: boolean() | nil,
           error_message: String.t() | nil,
           inserted_at: DateTime.t()
         }
@@ -58,10 +61,13 @@ defmodule Lightning.Channels.ChannelEvent do
     field :response_body_hash, :string
     field :response_body_size, :integer
 
-    field :latency_ms, :integer
-    field :ttfb_ms, :integer
+    field :latency_us, :integer
+    field :ttfb_us, :integer
     field :request_send_us, :integer
     field :response_duration_us, :integer
+    field :queue_us, :integer
+    field :connect_us, :integer
+    field :reused_connection, :boolean
     field :error_message, :string
 
     belongs_to :channel_request, ChannelRequest
@@ -88,10 +94,13 @@ defmodule Lightning.Channels.ChannelEvent do
         :response_body_preview,
         :response_body_hash,
         :response_body_size,
-        :latency_ms,
-        :ttfb_ms,
+        :latency_us,
+        :ttfb_us,
         :request_send_us,
         :response_duration_us,
+        :queue_us,
+        :connect_us,
+        :reused_connection,
         :error_message
       ],
       empty_values: []
