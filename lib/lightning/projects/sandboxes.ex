@@ -566,6 +566,30 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> clone_collections_from_parent(parent)
+  end
+
+  defp clone_collections_from_parent(sandbox, parent) do
+    parent_collections = Lightning.Collections.list_project_collections(parent)
+    current_time = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    rows =
+      Enum.map(parent_collections, fn c ->
+        %{
+          id: Ecto.UUID.generate(),
+          name: c.name,
+          project_id: sandbox.id,
+          byte_size_sum: 0,
+          inserted_at: current_time,
+          updated_at: current_time
+        }
+      end)
+
+    Repo.insert_all(Lightning.Collections.Collection, rows,
+      on_conflict: :nothing
+    )
+
+    sandbox
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do

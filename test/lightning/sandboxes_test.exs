@@ -547,6 +547,69 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "collections provisioning" do
+    test "clones empty collection records from parent into sandbox" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      insert(:collection,
+        project: parent,
+        name: "col-b",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_collections =
+        Lightning.Collections.list_project_collections(sandbox)
+
+      assert Enum.map(sandbox_collections, & &1.name) |> Enum.sort() == [
+               "col-a",
+               "col-b"
+             ]
+
+      # Items are not copied
+      Enum.each(sandbox_collections, fn col ->
+        assert Lightning.Collections.get_all(
+                 col,
+                 %{cursor: nil, limit: 100},
+                 nil
+               ) ==
+                 []
+      end)
+    end
+
+    test "provisioning a parent with no collections creates no sandbox collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      assert Lightning.Collections.list_project_collections(sandbox) == []
+    end
+
+    test "re-provisioning is idempotent (on_conflict: :nothing)" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      {:ok, sandbox_1} = Sandboxes.provision(parent, actor, %{name: "sandbox-1"})
+      {:ok, sandbox_2} = Sandboxes.provision(parent, actor, %{name: "sandbox-2"})
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_1)) ==
+               1
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_2)) ==
+               1
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
