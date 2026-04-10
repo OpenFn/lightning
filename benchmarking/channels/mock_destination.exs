@@ -143,21 +143,33 @@ defmodule MockDestination.Body do
   """
 
   def generate(body_size) when body_size <= 1024 do
+    # Build the envelope once with an empty padding to measure overhead.
+    envelope =
+      Jason.encode!(%{
+        ok: true,
+        server: "mock_destination",
+        timestamp: DateTime.to_iso8601(DateTime.utc_now()),
+        padding: ""
+      })
+
+    overhead = byte_size(envelope)
+    padding_len = max(body_size - overhead, 0)
+
     json =
       Jason.encode!(%{
         ok: true,
         server: "mock_destination",
         timestamp: DateTime.to_iso8601(DateTime.utc_now()),
-        padding: String.duplicate("x", max(body_size - 80, 0))
+        padding: String.duplicate("x", padding_len)
       })
 
-    # Trim or pad to reach the target size exactly.
-    byte_size = byte_size(json)
+    # Fine-tune to the exact target size.
+    actual = byte_size(json)
 
     cond do
-      byte_size == body_size -> json
-      byte_size > body_size -> binary_part(json, 0, body_size)
-      true -> json <> String.duplicate(" ", body_size - byte_size)
+      actual == body_size -> json
+      actual > body_size -> binary_part(json, 0, body_size)
+      true -> json <> String.duplicate(" ", body_size - actual)
     end
   end
 
