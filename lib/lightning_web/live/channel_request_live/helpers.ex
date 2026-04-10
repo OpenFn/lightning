@@ -1,11 +1,13 @@
 defmodule LightningWeb.ChannelRequestLive.Helpers do
   @moduledoc """
-  Error humanization for channel request detail page.
+  Shared helper functions for the channel request detail page.
 
-  Provides `humanize_error/1` to convert classified error codes into
-  human-readable descriptions, and `error_category/1` to classify errors
-  as `:transport` or `:credential`.
+  Pure functions only — no templates. Provides error humanization,
+  formatting utilities, and data extraction used across multiple
+  component modules.
   """
+
+  # --- Error humanization ---
 
   @transport_errors %{
     "nxdomain" =>
@@ -79,4 +81,77 @@ defmodule LightningWeb.ChannelRequestLive.Helpers do
         nil
     end
   end
+
+  # --- Data extraction ---
+
+  @doc """
+  Extracts the primary event from a channel request's events list.
+  Prefers `:destination_response`, falls back to `:error`.
+  """
+  def primary_event(channel_request) do
+    channel_request.channel_events
+    |> Enum.find(&(&1.type == :destination_response)) ||
+      Enum.find(channel_request.channel_events, &(&1.type == :error))
+  end
+
+  # --- Formatting ---
+
+  def format_auth_type(nil), do: "None"
+  def format_auth_type("api"), do: "API key"
+  def format_auth_type("basic"), do: "Basic auth"
+  def format_auth_type(type), do: type
+
+  def format_bytes(nil), do: "—"
+
+  def format_bytes(bytes) when bytes < 1024,
+    do: "#{bytes} B"
+
+  def format_bytes(bytes) when bytes < 1_048_576,
+    do: "#{Float.round(bytes / 1024, 1)} KB"
+
+  def format_bytes(bytes),
+    do: "#{Float.round(bytes / 1_048_576, 1)} MB"
+
+  def format_us(nil), do: "—"
+
+  def format_us(us) when is_number(us) do
+    ms = us / 1000
+
+    if ms == Float.round(ms),
+      do: trunc(ms) |> to_string(),
+      else: Float.round(ms, 1) |> to_string()
+  end
+
+  # --- Content type utilities ---
+
+  def extract_content_type(nil), do: nil
+
+  def extract_content_type(headers) do
+    headers
+    |> Enum.find(fn [name, _] -> String.downcase(name) == "content-type" end)
+    |> case do
+      [_, value] -> value
+      nil -> nil
+    end
+  end
+
+  def text_content_type?(ct) do
+    String.contains?(ct, "text/") or
+      String.contains?(ct, "json") or
+      String.contains?(ct, "xml") or
+      String.contains?(ct, "javascript") or
+      String.contains?(ct, "html")
+  end
+
+  def format_content_type_label(ct) when is_binary(ct) do
+    cond do
+      String.contains?(ct, "json") -> "JSON"
+      String.contains?(ct, "xml") -> "XML"
+      String.contains?(ct, "html") -> "HTML"
+      String.contains?(ct, "text/") -> "TEXT"
+      true -> ct
+    end
+  end
+
+  def format_content_type_label(_), do: nil
 end
