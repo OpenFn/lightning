@@ -33,46 +33,58 @@ defmodule LightningWeb.CollectionsController do
   end
 
   def dispatch(conn, %{"path" => path}) do
-    case {api_version(conn), conn.method, path} do
-      # V1
-      {:v1, "GET", [name]} ->
+    case api_version(conn) do
+      :v1 -> dispatch_v1(conn, conn.method, path)
+      :v2 -> dispatch_v2(conn, conn.method, path)
+    end
+  end
+
+  defp dispatch_v1(conn, method, path) do
+    case {method, path} do
+      {"GET", [name]} ->
         stream(conn, name)
 
-      {:v1, "GET", [name, key]} ->
+      {"GET", [name, key]} ->
         get(conn, name, key)
 
-      {:v1, "PUT", [name, key]} ->
+      {"PUT", [name, key]} ->
         put(conn, name, key, conn.body_params)
 
-      {:v1, "POST", [name]} ->
+      {"POST", [name]} ->
         put_all(conn, name, conn.body_params)
 
-      {:v1, "DELETE", [name, key]} ->
+      {"DELETE", [name, key]} ->
         delete(conn, name, key)
 
-      {:v1, "DELETE", [name]} ->
+      {"DELETE", [name]} ->
         delete_all(conn, name, Map.merge(conn.body_params, conn.query_params))
 
-      # V2
-      {:v2, "GET", [project_id, name]} ->
-        stream(conn, project_id, name)
+      _ ->
+        send_resp(conn, 404, "Not found")
+    end
+  end
 
-      {:v2, "GET", [project_id, name, key]} ->
-        get(conn, project_id, name, key)
+  defp dispatch_v2(conn, method, path) do
+    case {method, path} do
+      {"GET", [pid, name]} ->
+        stream(conn, pid, name)
 
-      {:v2, "PUT", [project_id, name, key]} ->
-        put(conn, project_id, name, key, conn.body_params)
+      {"GET", [pid, name, key]} ->
+        get(conn, pid, name, key)
 
-      {:v2, "POST", [project_id, name]} ->
-        put_all(conn, project_id, name, conn.body_params)
+      {"PUT", [pid, name, key]} ->
+        put(conn, pid, name, key, conn.body_params)
 
-      {:v2, "DELETE", [project_id, name, key]} ->
-        delete(conn, project_id, name, key)
+      {"POST", [pid, name]} ->
+        put_all(conn, pid, name, conn.body_params)
 
-      {:v2, "DELETE", [project_id, name]} ->
+      {"DELETE", [pid, name, key]} ->
+        delete(conn, pid, name, key)
+
+      {"DELETE", [pid, name]} ->
         delete_all(
           conn,
-          project_id,
+          pid,
           name,
           Map.merge(conn.body_params, conn.query_params)
         )
