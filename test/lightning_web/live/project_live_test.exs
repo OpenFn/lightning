@@ -844,11 +844,10 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
-      # Current project shown in breadcrumb project picker button
+      # Current project shown in breadcrumb project picker button (React mount point)
       assert view
              |> element(
-               "#breadcrumb-project-picker-trigger",
-               ~r/project-1/
+               "#breadcrumb-project-picker-trigger[data-label='project-1']"
              )
              |> has_element?()
 

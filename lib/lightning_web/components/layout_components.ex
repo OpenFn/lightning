@@ -286,8 +286,8 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker label={@project.name} />
-        <.breadcrumb_items items={[{"History", ~p"/projects/\#{@project}/history"}]} />
+        <.breadcrumb_project_picker project={@project} />
+        <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
         </.breadcrumb>
@@ -331,27 +331,36 @@ defmodule LightningWeb.LayoutComponents do
 
   @doc """
   Renders a project picker button styled as a breadcrumb element.
+
+  Mounts the shared React `ProjectPickerButton` component via the
+  `ReactComponent` hook, so the same component is used in both standard
+  LiveView pages and the collaborative editor.
   """
-  attr :label, :string, required: true
+  attr :project, Lightning.Projects.Project, required: true
 
   def breadcrumb_project_picker(assigns) do
+    alias Lightning.Projects
+    alias Lightning.Projects.Project
+
+    project = Projects.preload_ancestors(assigns.project)
+
+    assigns =
+      assigns
+      |> assign(:label, Project.display_name(project))
+      |> assign(:is_sandbox, to_string(Project.sandbox?(project)))
+      |> assign(:color, project.color)
+
     ~H"""
     <li class="mr-3">
-      <div class="flex items-center">
-        <button
-          id="breadcrumb-project-picker-trigger"
-          type="button"
-          phx-click={JS.dispatch("open-project-picker", to: "body")}
-          class={[
-            "flex items-center gap-2 px-2.5 py-1.5",
-            "text-sm font-medium text-gray-700",
-            "bg-white border border-gray-300 rounded-md",
-            "hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
-          ]}
-        >
-          <.icon name="hero-folder" class="h-4 w-4 text-gray-500" />
-          {@label}
-        </button>
+      <div
+        id="breadcrumb-project-picker-trigger"
+        phx-hook="ReactComponent"
+        data-react-name="ProjectPickerButton"
+        data-react-file={~p"/assets/js/project-picker/ProjectPickerButton.js"}
+        data-label={@label}
+        data-is-sandbox={@is_sandbox}
+        data-color={@color}
+      >
       </div>
     </li>
     """
@@ -383,6 +392,50 @@ defmodule LightningWeb.LayoutComponents do
         <% end %>
       </div>
     </li>
+    """
+  end
+
+  @doc """
+  Renders the global project picker React component.
+
+  This is the single source of truth for the Cmd+P project picker modal,
+  used by both the `live` and `settings` layouts.
+  """
+  def global_project_picker(assigns) do
+    all_projects =
+      if assigns[:current_user] do
+        Lightning.Projects.get_project_tree_for_user(assigns.current_user)
+      else
+        []
+      end
+
+    assigns = assign(assigns, :picker_projects, all_projects)
+
+    ~H"""
+    <%= if assigns[:current_user] do %>
+      <div
+        id="global-project-picker"
+        phx-hook="ReactComponent"
+        data-react-name="ProjectPicker"
+        data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
+        data-projects={
+          Jason.encode!(
+            Enum.map(@picker_projects, fn p ->
+              %{
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                parent_id: p.parent_id
+              }
+            end)
+          )
+        }
+        data-current-project-id={
+          if assigns[:project], do: assigns[:project].id, else: nil
+        }
+      >
+      </div>
+    <% end %>
     """
   end
 

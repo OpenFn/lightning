@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Project picker now shows sandbox hierarchy with parent project name (e.g.
+  `root:sandbox`), sandbox accent color, and nested tree view. Sandbox theming
+  removed from sidebar/navbar.
+  [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Bump `@openfn/ws-worker` from
   [`1.23.1` to `1.23.4`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.4/packages/ws-worker/CHANGELOG.md?plain=1#L3-L26)
 - Renamed channel terminology from Source/Sink to Client/Destination across

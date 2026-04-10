@@ -112,6 +112,7 @@ config :esbuild,
          js/panel/panels/WorkflowRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/project-picker/ProjectPicker.tsx
+         js/project-picker/ProjectPickerButton.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js

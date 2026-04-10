@@ -61,14 +61,61 @@ defmodule LightningWeb.LayoutComponentsTest do
   end
 
   describe "breadcrumb_project_picker/1" do
-    test "renders project picker button with label" do
+    test "renders ReactComponent mount point for a root project" do
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-project",
+        parent_id: nil,
+        parent: %Ecto.Association.NotLoaded{
+          __field__: :parent,
+          __owner__: Lightning.Projects.Project,
+          __cardinality__: :one
+        }
+      }
+
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{label: "My Project"})
+        |> render_component(%{project: project})
 
       assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ "My Project"
-      assert html =~ "open-project-picker"
+      assert html =~ ~s(data-react-name="ProjectPickerButton")
+      assert html =~ ~s(data-label="my-project")
+      assert html =~ ~s(data-is-sandbox="false")
+    end
+
+    test "renders ReactComponent mount point with sandbox data" do
+      parent = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "parent-project"
+      }
+
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-sandbox",
+        parent_id: parent.id,
+        parent: parent,
+        color: "#E33D63"
+      }
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: project})
+
+      assert html =~ "breadcrumb-project-picker-trigger"
+      assert html =~ ~s(data-react-name="ProjectPickerButton")
+      assert html =~ ~s(data-label="parent-project/my-sandbox")
+      assert html =~ ~s(data-is-sandbox="true")
+      assert html =~ ~s(data-color="#E33D63")
+    end
+  end
+
+  describe "global_project_picker/1" do
+    test "renders nothing when no current_user" do
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{})
+
+      refute html =~ "global-project-picker"
     end
   end
 

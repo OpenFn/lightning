@@ -384,17 +384,6 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
-  def handle_info({:preview_theme, preview_style}, socket) do
-    original_theme =
-      socket.assigns[:original_theme_style] || socket.assigns.theme_style
-
-    {:noreply,
-     socket
-     |> assign(:theme_style, preview_style || original_theme)
-     |> assign(:original_theme_style, original_theme)}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
@@ -409,7 +398,7 @@ defmodule LightningWeb.SandboxLive.Index do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_project_picker project={@project} />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
               </LayoutComponents.breadcrumb>

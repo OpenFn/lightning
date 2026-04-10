@@ -6,7 +6,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
-  alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
   require Logger
@@ -23,23 +22,15 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(initial_params(assigns), parent_id)
       |> Map.put(:action, :validate)
 
-    initial_color = Changeset.get_field(changeset, :color)
-
-    if should_preview_theme?(initial_color, nil) do
-      send_theme_preview(assigns.parent, initial_color)
-    end
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:last_preview_color, initial_color)
      |> assign(:changeset, changeset)
      |> assign(:name, Changeset.get_field(changeset, :name))}
   end
 
   @impl true
   def handle_event("close_modal", _params, socket) do
-    reset_theme_preview()
     {:noreply, push_navigate(socket, to: return_path(socket))}
   end
 
@@ -57,18 +48,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(params, parent_id)
       |> Map.put(:action, :validate)
 
-    new_color = params["color"]
-    last_color = socket.assigns[:last_preview_color]
-
-    if should_preview_theme?(new_color, last_color) do
-      send_theme_preview(assigns.parent, new_color)
-    end
-
     {:noreply,
      socket
      |> assign(:changeset, changeset)
-     |> assign(:name, Changeset.get_field(changeset, :name))
-     |> assign(:last_preview_color, new_color)}
+     |> assign(:name, Changeset.get_field(changeset, :name))}
   end
 
   @impl true
@@ -347,40 +330,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       name: params["name"],
       color: params["color"]
     }
-  end
-
-  defp generate_theme_preview(%Project{id: parent_id}, color)
-       when is_binary(parent_id) and is_binary(color) and color != "" do
-    temp_project = %Project{
-      id: Ecto.UUID.generate(),
-      color: String.trim(color),
-      parent_id: parent_id
-    }
-
-    case ProjectTheme.inline_primary_scale(temp_project) do
-      nil ->
-        nil
-
-      scale ->
-        [scale, ProjectTheme.inline_sidebar_vars()]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(" ")
-    end
-  end
-
-  defp generate_theme_preview(_parent, _color), do: nil
-
-  defp should_preview_theme?(new_color, last_color) do
-    is_binary(new_color) and new_color != last_color
-  end
-
-  defp send_theme_preview(parent, color) do
-    theme = generate_theme_preview(parent, color)
-    send(self(), {:preview_theme, theme})
-  end
-
-  defp reset_theme_preview do
-    send(self(), {:preview_theme, nil})
   end
 
   defp get_random_color do

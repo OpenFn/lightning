@@ -5,10 +5,24 @@ import { cn } from '../utils/cn';
 export interface Project {
   id: string;
   name: string;
+  color?: string | null;
+  parent_id?: string | null;
+}
+
+/** Flattened item for keyboard navigation and rendering. */
+interface PickerItem {
+  type: 'project' | 'sandbox';
+  id: string;
+  /** Display label — just the project's own name. */
+  label: string;
+  /** Full path (parent:child:...) used for search matching. */
+  searchLabel: string;
+  depth: number;
+  color?: string | null | undefined;
 }
 
 interface ProjectPickerProps {
-  'data-projects': string; // JSON-encoded array of {id, name}
+  'data-projects': string;
   'data-current-project-id'?: string;
 }
 
@@ -17,6 +31,9 @@ interface ProjectPickerProps {
  *
  * Mounted via ReactComponent hook in LiveView layouts.
  * Opens with Cmd/Ctrl+P keyboard shortcut.
+ *
+ * Projects are listed at the top level. Sandboxes belonging to each project
+ * are nested underneath their parent as indented children.
  */
 export function ProjectPicker(props: ProjectPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,7 +42,6 @@ export function ProjectPicker(props: ProjectPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Detect macOS for keyboard shortcut display
   const isMac = useMemo(
     () =>
       typeof navigator !== 'undefined' &&
@@ -34,10 +50,10 @@ export function ProjectPicker(props: ProjectPickerProps) {
   );
 
   const projects = useMemo<Project[]>(() => {
-    const projectsJson = props['data-projects'];
-    if (!projectsJson) return [];
+    const json = props['data-projects'];
+    if (!json) return [];
     try {
-      return JSON.parse(projectsJson) as Project[];
+      return JSON.parse(json) as Project[];
     } catch {
       return [];
     }
@@ -45,19 +61,97 @@ export function ProjectPicker(props: ProjectPickerProps) {
 
   const currentProjectId = props['data-current-project-id'];
 
-  const filteredProjects = useMemo(() => {
-    if (!searchTerm) return projects;
+  /**
+   * Build a display label for a project by walking up the parent chain.
+   * e.g. "root:child:grandchild"
+   */
+  const buildLabel = useCallback(
+    (project: Project, projectMap: Map<string, Project>): string => {
+      const parts: string[] = [project.name];
+      let current = project;
+      while (current.parent_id) {
+        const parent = projectMap.get(current.parent_id);
+        if (!parent) break;
+        parts.unshift(parent.name);
+        current = parent;
+      }
+      return parts.join('/');
+    },
+    []
+  );
+
+  /**
+   * Build a flat list of picker items from the project tree,
+   * filtered by search term. Children are nested after their parent.
+   */
+  const items = useMemo<PickerItem[]>(() => {
     const lower = searchTerm.toLowerCase();
-    return projects.filter(p => p.name.toLowerCase().includes(lower));
-  }, [projects, searchTerm]);
+    const projectMap = new Map(projects.map(p => [p.id, p]));
+
+    // Group children by parent_id
+    const childrenOf = new Map<string | null, Project[]>();
+    for (const p of projects) {
+      const parentId = p.parent_id ?? null;
+      if (!childrenOf.has(parentId)) {
+        childrenOf.set(parentId, []);
+      }
+      childrenOf.get(parentId)!.push(p);
+    }
+
+    const result: PickerItem[] = [];
+
+    // Recursively build the tree in display order
+    const walk = (parentId: string | null, depth: number) => {
+      const children = childrenOf.get(parentId) || [];
+      for (const project of children) {
+        const searchLabel = buildLabel(project, projectMap);
+        const isSandbox = project.parent_id != null;
+        const matches =
+          !searchTerm || searchLabel.toLowerCase().includes(lower);
+
+        // Check if any descendant matches
+        const hasMatchingDescendant = (id: string): boolean => {
+          const desc = childrenOf.get(id) || [];
+          return desc.some(
+            d =>
+              buildLabel(d, projectMap).toLowerCase().includes(lower) ||
+              hasMatchingDescendant(d.id)
+          );
+        };
+
+        if (matches || hasMatchingDescendant(project.id)) {
+          result.push({
+            type: isSandbox ? 'sandbox' : 'project',
+            id: project.id,
+            label: project.name,
+            searchLabel,
+            depth,
+            color: project.color,
+          });
+          walk(project.id, depth + 1);
+        }
+      }
+    };
+
+    walk(null, 0);
+    return result;
+  }, [projects, searchTerm, buildLabel]);
+
+  // "View all" is always index 0; items start at index 1
+  const totalItems = items.length + 1;
 
   const openPicker = useCallback(() => {
     setIsOpen(true);
     setSearchTerm('');
-    // Start with first project selected (index 1), not "View all" (index 0)
-    setHighlightedIndex(projects.length > 0 ? 1 : 0);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [projects.length]);
+    setHighlightedIndex(items.length > 0 ? 1 : 0);
+  }, [items.length]);
+
+  // Focus input after open (separate effect to avoid stale ref)
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
 
   const closePicker = useCallback(() => {
     setIsOpen(false);
@@ -80,7 +174,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, openPicker, closePicker]);
 
-  // Global Escape key handler (capture phase to prevent propagation)
+  // Global Escape key handler (capture phase)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -98,20 +192,18 @@ export function ProjectPicker(props: ProjectPickerProps) {
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, [isOpen, closePicker]);
 
-  // Keep highlighted index in bounds (0 = "View all", 1+ = projects)
+  // Keep highlighted index in bounds
   useEffect(() => {
-    const maxIndex = filteredProjects.length; // 0 is "View all", so max is length not length-1
-    if (highlightedIndex > maxIndex) {
-      setHighlightedIndex(Math.max(0, maxIndex));
+    if (highlightedIndex >= totalItems) {
+      setHighlightedIndex(Math.max(0, totalItems - 1));
     }
-  }, [filteredProjects.length, highlightedIndex]);
+  }, [totalItems, highlightedIndex]);
 
   // Scroll highlighted item into view
   useEffect(() => {
     if (!isOpen) return;
     const list = listRef.current;
     if (!list) return;
-    // Query by data-index to avoid separator element throwing off indexing
     const highlighted = list.querySelector(
       `[data-index="${highlightedIndex}"]`
     ) as HTMLElement;
@@ -120,8 +212,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
     }
   }, [isOpen, highlightedIndex]);
 
-  // Listen for custom event to open picker (from breadcrumb click)
-  // Phoenix JS.dispatch sends to body
+  // Listen for custom event from breadcrumb click
   useEffect(() => {
     const handleOpen = () => openPicker();
     document.body.addEventListener('open-project-picker', handleOpen);
@@ -129,8 +220,21 @@ export function ProjectPicker(props: ProjectPickerProps) {
       document.body.removeEventListener('open-project-picker', handleOpen);
   }, [openPicker]);
 
-  // Total items = "View all projects" + filtered projects
-  const totalItems = filteredProjects.length + 1;
+  const navigateToProjectsList = () => {
+    window.location.href = '/projects';
+  };
+
+  const navigateToProject = (projectId: string) => {
+    const match = window.location.pathname.match(/^\/projects\/[^/]+\/(.*)/);
+    let rest = match?.[1] || 'w';
+
+    // Workflow paths contain project-specific IDs — keep only the section
+    if (rest.startsWith('w/')) {
+      rest = 'w';
+    }
+
+    window.location.href = `/projects/${projectId}/${rest}${window.location.search}${window.location.hash}`;
+  };
 
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -148,25 +252,17 @@ export function ProjectPicker(props: ProjectPickerProps) {
           if (highlightedIndex === 0) {
             navigateToProjectsList();
           } else {
-            const project = filteredProjects[highlightedIndex - 1];
-            if (project) {
-              navigateToProject(project.id);
+            const item = items[highlightedIndex - 1];
+            if (item) {
+              navigateToProject(item.id);
             }
           }
           break;
         }
       }
     },
-    [filteredProjects, highlightedIndex, totalItems]
+    [items, highlightedIndex, totalItems]
   );
-
-  const navigateToProjectsList = () => {
-    window.location.href = '/projects';
-  };
-
-  const navigateToProject = (projectId: string) => {
-    window.location.href = `/projects/${projectId}/w`;
-  };
 
   if (!isOpen) return null;
 
@@ -175,7 +271,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
       {/* Backdrop */}
       <div className="modal-backdrop" />
 
-      {/* Modal content - click outside closes */}
+      {/* Modal content */}
       <div
         className="fixed inset-0 flex items-start justify-center pt-[15vh]"
         onClick={closePicker}
@@ -214,7 +310,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
             id="project-picker-options"
             role="listbox"
           >
-            {/* View all projects option */}
+            {/* View all projects */}
             <li
               data-index={0}
               className={cn(
@@ -229,7 +325,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
             >
               <span
                 className={cn(
-                  'hero-rectangle-stack h-5 w-5 mr-3 shrink-0',
+                  'hero-rectangle-stack h-5 w-5 mr-2 shrink-0',
                   highlightedIndex === 0
                     ? 'text-white/70'
                     : 'text-gray-400 group-hover:text-white/70'
@@ -247,46 +343,70 @@ export function ProjectPicker(props: ProjectPickerProps) {
             </li>
 
             {/* Separator */}
-            {filteredProjects.length > 0 && (
+            {items.length > 0 && (
               <li className="border-t border-gray-200 my-2" role="separator" />
             )}
 
-            {/* Project list */}
-            {filteredProjects.map((project, index) => {
-              const isSelected = project.id === currentProjectId;
-              const itemIndex = index + 1; // +1 because 0 is "View all"
+            {/* Project and sandbox list */}
+            {items.map((item, index) => {
+              const itemIndex = index + 1;
               const isHighlighted = itemIndex === highlightedIndex;
+              const isSelected = item.id === currentProjectId;
+              const isSandbox = item.depth > 0;
+              const indentPx = item.depth * 10;
 
               return (
                 <li
-                  key={project.id}
+                  key={item.id}
                   data-index={itemIndex}
                   className={cn(
-                    'group relative cursor-pointer select-none px-4 py-3 flex items-center',
+                    'group relative cursor-pointer select-none py-3 pr-4 flex items-center',
                     isHighlighted
                       ? 'bg-primary-600 text-white'
                       : 'text-gray-900 hover:bg-primary-600 hover:text-white'
                   )}
+                  style={{ paddingLeft: `${16 + indentPx}px` }}
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => navigateToProject(project.id)}
+                  onClick={() => navigateToProject(item.id)}
                   onMouseEnter={() => setHighlightedIndex(itemIndex)}
                 >
-                  <span
-                    className={cn(
-                      'hero-folder h-5 w-5 mr-3 shrink-0',
-                      isHighlighted
-                        ? 'text-white/70'
-                        : 'text-gray-400 group-hover:text-white/70'
-                    )}
-                  />
+                  {isSandbox ? (
+                    <>
+                      <span
+                        className={cn(
+                          'hero-arrow-turn-down-right h-4 w-4 mr-2 shrink-0',
+                          isHighlighted
+                            ? 'text-white/50'
+                            : 'text-gray-300 group-hover:text-white/50'
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'hero-beaker h-5 w-5 mr-2 shrink-0',
+                          isHighlighted
+                            ? 'text-white/70'
+                            : 'text-gray-400 group-hover:text-white/70'
+                        )}
+                      />
+                    </>
+                  ) : (
+                    <span
+                      className={cn(
+                        'hero-folder h-5 w-5 mr-2 shrink-0',
+                        isHighlighted
+                          ? 'text-white/70'
+                          : 'text-gray-400 group-hover:text-white/70'
+                      )}
+                    />
+                  )}
                   <span
                     className={cn(
                       'truncate flex-grow',
                       isSelected && 'font-semibold'
                     )}
                   >
-                    {project.name}
+                    {item.label}
                   </span>
                   {isSelected && (
                     <span
@@ -301,7 +421,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
                 </li>
               );
             })}
-            {filteredProjects.length === 0 && (
+            {items.length === 0 && (
               <li className="px-4 py-8 text-center text-gray-500">
                 No projects found
               </li>

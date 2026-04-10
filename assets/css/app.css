@@ -443,17 +443,10 @@
       opacity: 1;
     }
 
-    .project-picker-text,
-    .project-picker-chevron {
-      display: block;
-    }
-
-    #project-picker-wrapper,
     #user-menu-wrapper {
       display: block;
     }
 
-    #project-picker-trigger,
     #user-menu-trigger {
       width: 100%;
     }
@@ -498,9 +491,7 @@
       display: flex;
     }
 
-    .user-menu-chevron,
-    .project-picker-text,
-    .project-picker-chevron {
+    .user-menu-chevron {
       display: block;
     }
 
@@ -556,8 +547,6 @@
       gap: 0;
     }
 
-    .project-picker-text,
-    .project-picker-chevron,
     .user-menu-text,
     .user-menu-chevron {
       display: none;
@@ -609,7 +598,6 @@
     }
 
     /* Wrappers stay block, elements handle centering internally */
-    #project-picker-wrapper,
     #user-menu-wrapper {
       display: block;
     }
