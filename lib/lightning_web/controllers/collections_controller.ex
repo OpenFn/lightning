@@ -25,6 +25,63 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
+  defp api_version(conn) do
+    case get_req_header(conn, "x-api-version") do
+      ["2"] -> :v2
+      _ -> :v1
+    end
+  end
+
+  def dispatch(conn, %{"path" => path}) do
+    case {api_version(conn), conn.method, path} do
+      # V1
+      {:v1, "GET", [name]} ->
+        stream(conn, name)
+
+      {:v1, "GET", [name, key]} ->
+        get(conn, name, key)
+
+      {:v1, "PUT", [name, key]} ->
+        put(conn, name, key, conn.body_params)
+
+      {:v1, "POST", [name]} ->
+        put_all(conn, name, conn.body_params)
+
+      {:v1, "DELETE", [name, key]} ->
+        delete(conn, name, key)
+
+      {:v1, "DELETE", [name]} ->
+        delete_all(conn, name, Map.merge(conn.body_params, conn.query_params))
+
+      # V2
+      {:v2, "GET", [project_id, name]} ->
+        stream(conn, project_id, name)
+
+      {:v2, "GET", [project_id, name, key]} ->
+        get(conn, project_id, name, key)
+
+      {:v2, "PUT", [project_id, name, key]} ->
+        put(conn, project_id, name, key, conn.body_params)
+
+      {:v2, "POST", [project_id, name]} ->
+        put_all(conn, project_id, name, conn.body_params)
+
+      {:v2, "DELETE", [project_id, name, key]} ->
+        delete(conn, project_id, name, key)
+
+      {:v2, "DELETE", [project_id, name]} ->
+        delete_all(
+          conn,
+          project_id,
+          name,
+          Map.merge(conn.body_params, conn.query_params)
+        )
+
+      _ ->
+        send_resp(conn, 404, "Not found")
+    end
+  end
+
   defp authorize(conn, collection) do
     subject = conn.assigns[:subject] || conn.assigns[:current_user]
 
@@ -36,8 +93,18 @@ defmodule LightningWeb.CollectionsController do
     )
   end
 
-  def put(conn, %{"name" => col_name, "key" => key, "value" => value}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  defp resolve_collection(name) do
+    Collections.get_collection(name)
+  end
+
+  defp resolve_collection(project_id, name) do
+    Collections.get_collection(project_id, name)
+  end
+
+  # V1 actions
+
+  def put(conn, name, key, %{"value" => value}) do
+    with {:ok, collection} <- resolve_collection(name),
          :ok <- authorize(conn, collection),
          :ok <- Collections.put(collection, key, value) do
       json(conn, %{upserted: 1, error: nil})
@@ -50,8 +117,8 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def put_all(conn, %{"name" => col_name, "items" => items}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  def put_all(conn, name, %{"items" => items}) do
+    with {:ok, collection} <- resolve_collection(name),
          :ok <- authorize(conn, collection),
          {:ok, count} <- Collections.put_all(collection, items) do
       json(conn, %{upserted: count, error: nil})
@@ -66,21 +133,18 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def get(conn, %{"name" => col_name, "key" => key}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  def get(conn, name, key) do
+    with {:ok, collection} <- resolve_collection(name),
          :ok <- authorize(conn, collection) do
       case Collections.get(collection, key) do
-        nil ->
-          resp(conn, :no_content, "")
-
-        item ->
-          json(conn, item)
+        nil -> resp(conn, :no_content, "")
+        item -> json(conn, item)
       end
     end
   end
 
-  def delete(conn, %{"name" => col_name, "key" => key}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  def delete(conn, name, key) do
+    with {:ok, collection} <- resolve_collection(name),
          :ok <- authorize(conn, collection) do
       case Collections.delete(collection, key) do
         :ok ->
@@ -92,19 +156,109 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def delete_all(conn, %{"name" => col_name} = params) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  def delete_all(conn, name, params) do
+    with {:ok, collection} <- resolve_collection(name),
          :ok <- authorize(conn, collection) do
       key_param = params["key"]
-
       {:ok, n} = Collections.delete_all(collection, key_param)
-
       json(conn, %{key: key_param, deleted: n, error: nil})
     end
   end
 
-  def download(conn, %{"name" => col_name}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+  def stream(conn, name) do
+    with {:ok, collection, filters} <- validate_query(conn, name) do
+      key_pattern = conn.query_params["key"]
+      items_stream = stream_all_in_chunks(collection, filters, key_pattern)
+      response_limit = Map.fetch!(filters, :limit)
+
+      case stream_chunked(conn, items_stream, response_limit) do
+        {:error, conn} -> conn
+        {:ok, conn} -> conn
+      end
+    end
+  end
+
+  # V2 actions
+
+  def put(conn, project_id, name, key, %{"value" => value}) do
+    with {:ok, collection} <- resolve_collection(project_id, name),
+         :ok <- authorize(conn, collection),
+         :ok <- Collections.put(collection, key, value) do
+      json(conn, %{upserted: 1, error: nil})
+    else
+      {:error, %Ecto.Changeset{}} ->
+        json(conn, %{upserted: 0, error: "Format error"})
+
+      error ->
+        maybe_handle_limit_error(conn, error)
+    end
+  end
+
+  def put_all(conn, project_id, name, %{"items" => items}) do
+    with {:ok, collection} <- resolve_collection(project_id, name),
+         :ok <- authorize(conn, collection),
+         {:ok, count} <- Collections.put_all(collection, items) do
+      json(conn, %{upserted: count, error: nil})
+    else
+      {:error, :duplicate_key} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{upserted: 0, error: "Duplicate key found"})
+
+      error ->
+        maybe_handle_limit_error(conn, error)
+    end
+  end
+
+  def get(conn, project_id, name, key) do
+    with {:ok, collection} <- resolve_collection(project_id, name),
+         :ok <- authorize(conn, collection) do
+      case Collections.get(collection, key) do
+        nil -> resp(conn, :no_content, "")
+        item -> json(conn, item)
+      end
+    end
+  end
+
+  def delete(conn, project_id, name, key) do
+    with {:ok, collection} <- resolve_collection(project_id, name),
+         :ok <- authorize(conn, collection) do
+      case Collections.delete(collection, key) do
+        :ok ->
+          json(conn, %{key: key, deleted: 1, error: nil})
+
+        {:error, :not_found} ->
+          json(conn, %{key: key, deleted: 0, error: "Item Not Found"})
+      end
+    end
+  end
+
+  def delete_all(conn, project_id, name, params) do
+    with {:ok, collection} <- resolve_collection(project_id, name),
+         :ok <- authorize(conn, collection) do
+      key_param = params["key"]
+      {:ok, n} = Collections.delete_all(collection, key_param)
+      json(conn, %{key: key_param, deleted: n, error: nil})
+    end
+  end
+
+  def stream(conn, project_id, name) do
+    with {:ok, collection, filters} <- validate_query(conn, project_id, name) do
+      key_pattern = conn.query_params["key"]
+      items_stream = stream_all_in_chunks(collection, filters, key_pattern)
+      response_limit = Map.fetch!(filters, :limit)
+
+      case stream_chunked(conn, items_stream, response_limit) do
+        {:error, conn} -> conn
+        {:ok, conn} -> conn
+      end
+    end
+  end
+
+  # Download (browser pipeline, v2 only)
+
+  def download(conn, %{"project_id" => project_id, "name" => col_name}) do
+    with {:ok, collection} <- resolve_collection(project_id, col_name),
          :ok <- authorize(conn, collection) do
       items_stream =
         stream_all_in_chunks(
@@ -120,20 +274,6 @@ defmodule LightningWeb.CollectionsController do
         ~s(attachment; filename="#{col_name}.json")
       )
       |> stream_as_json_array(items_stream)
-    end
-  end
-
-  def stream(conn, %{"name" => col_name} = params) do
-    with {:ok, collection, filters} <- validate_query(conn, col_name) do
-      key_pattern = Map.get(params, "key")
-
-      items_stream = stream_all_in_chunks(collection, filters, key_pattern)
-      response_limit = Map.fetch!(filters, :limit)
-
-      case stream_chunked(conn, items_stream, response_limit) do
-        {:error, conn} -> conn
-        {:ok, conn} -> conn
-      end
     end
   end
 
@@ -204,16 +344,29 @@ defmodule LightningWeb.CollectionsController do
   end
 
   defp validate_query(conn, col_name) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
+    with {:ok, collection} <- resolve_collection(col_name),
          :ok <- authorize(conn, collection),
-         query_params <-
-           Enum.into(conn.query_params, %{
-             "cursor" => nil,
-             "limit" => "#{@default_stream_limit}"
-           }),
-         {:ok, filters} <- validate_query_params(query_params) do
+         {:ok, filters} <- parse_query_params(conn.query_params) do
       {:ok, collection, filters}
     end
+  end
+
+  defp validate_query(conn, project_id, col_name) do
+    with {:ok, collection} <- resolve_collection(project_id, col_name),
+         :ok <- authorize(conn, collection),
+         {:ok, filters} <- parse_query_params(conn.query_params) do
+      {:ok, collection, filters}
+    end
+  end
+
+  defp parse_query_params(query_params) do
+    query_params =
+      Enum.into(query_params, %{
+        "cursor" => nil,
+        "limit" => "#{@default_stream_limit}"
+      })
+
+    validate_query_params(query_params)
   end
 
   defp validate_query_params(

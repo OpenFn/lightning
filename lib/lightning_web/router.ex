@@ -114,13 +114,7 @@ defmodule LightningWeb.Router do
   ## Collections
   scope "/collections", LightningWeb do
     pipe_through [:authenticated_api]
-
-    get "/:name", CollectionsController, :stream
-    get "/:name/:key", CollectionsController, :get
-    put "/:name/:key", CollectionsController, :put
-    post "/:name", CollectionsController, :put_all
-    delete "/:name/:key", CollectionsController, :delete
-    delete "/:name", CollectionsController, :delete_all
+    match :*, "/*path", CollectionsController, :dispatch
   end
 
   ## Authentication routes
@@ -145,7 +139,11 @@ defmodule LightningWeb.Router do
     post "/users/two-factor", UserTOTPController, :create
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
-    get "/download/collections/:name", CollectionsController, :download
+
+    get "/download/collections/:project_id/:name",
+        CollectionsController,
+        :download
+
     get "/dataclip/body/:id", DataclipController, :show
 
     get "/projects/:project_id/jobs/:job_id/dataclips",

@@ -996,7 +996,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
-  describe "GET /download/collections/:name" do
+  describe "GET /download/collections/:project_id/:name" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
@@ -1022,7 +1022,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         value: ~s({"name": "Bob"})
       )
 
-      response = get(conn, ~p"/download/collections/#{collection.name}")
+      response =
+        get(conn, ~p"/download/collections/#{project.id}/#{collection.name}")
 
       assert response.status == 200
 
@@ -1049,7 +1050,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     } do
       collection = insert(:collection, project: project)
 
-      response = get(conn, ~p"/download/collections/#{collection.name}")
+      response =
+        get(conn, ~p"/download/collections/#{project.id}/#{collection.name}")
 
       assert response.status == 200
       assert Jason.decode!(response.resp_body) == []
@@ -1059,13 +1061,20 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       other_project = insert(:project)
       collection = insert(:collection, project: other_project)
 
-      response = get(conn, ~p"/download/collections/#{collection.name}")
+      response =
+        get(
+          conn,
+          ~p"/download/collections/#{other_project.id}/#{collection.name}"
+        )
 
       assert response.status == 401
     end
 
-    test "returns 404 for non-existent collection", %{conn: conn} do
-      response = get(conn, ~p"/download/collections/non-existent")
+    test "returns 404 for non-existent collection", %{
+      conn: conn,
+      project: project
+    } do
+      response = get(conn, ~p"/download/collections/#{project.id}/non-existent")
 
       assert response.status == 404
     end
