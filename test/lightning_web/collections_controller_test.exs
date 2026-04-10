@@ -1071,6 +1071,50 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
+  describe "v1 conflict — same collection name in multiple projects" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      project_1 = insert(:project, project_users: [%{user: user}])
+      project_2 = insert(:project, project_users: [%{user: user}])
+      name = "shared-collection"
+      insert(:collection, name: name, project: project_1)
+      insert(:collection, name: name, project: project_2)
+      token = Lightning.Accounts.generate_api_token(user)
+      conn = assign_bearer(conn, token)
+      {:ok, conn: conn, name: name}
+    end
+
+    test "GET /:name returns 409", %{conn: conn, name: name} do
+      conn = get(conn, ~p"/collections/#{name}")
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+
+    test "GET /:name/:key returns 409", %{conn: conn, name: name} do
+      conn = get(conn, ~p"/collections/#{name}/some-key")
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+
+    test "PUT /:name/:key returns 409", %{conn: conn, name: name} do
+      conn = put(conn, ~p"/collections/#{name}/some-key", value: "val")
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+
+    test "POST /:name returns 409", %{conn: conn, name: name} do
+      conn = post(conn, ~p"/collections/#{name}", items: [])
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+
+    test "DELETE /:name/:key returns 409", %{conn: conn, name: name} do
+      conn = delete(conn, ~p"/collections/#{name}/some-key")
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+
+    test "DELETE /:name returns 409", %{conn: conn, name: name} do
+      conn = delete(conn, ~p"/collections/#{name}")
+      assert json_response(conn, 409)["error"] =~ "Use API v2"
+    end
+  end
+
   defp encode_decode(item) do
     item
     |> Jason.encode!()
