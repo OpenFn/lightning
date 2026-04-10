@@ -1124,6 +1124,203 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
+  describe "v2 API" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: [%{key: "foo", value: "bar"}]
+        )
+
+      token = Lightning.Accounts.generate_api_token(user)
+      conn = assign_bearer(conn, token) |> put_req_header("x-api-version", "2")
+      {:ok, conn: conn, project: project, collection: collection}
+    end
+
+    test "GET /:project_id/:name/:key returns the item", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      item = hd(collection.items)
+
+      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+
+      assert json_response(conn, 200) == %{
+               "key" => item.key,
+               "value" => item.value,
+               "created" => DateTime.to_iso8601(item.inserted_at),
+               "updated" => DateTime.to_iso8601(item.updated_at)
+             }
+    end
+
+    test "GET /:project_id/:name/:key returns 204 when item not found", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn =
+        get(conn, ~p"/collections/#{project.id}/#{collection.name}/nonexistent")
+
+      assert response(conn, 204) == ""
+    end
+
+    test "GET /:project_id/:name/:key returns 404 when collection not found", %{
+      conn: conn,
+      project: project
+    } do
+      conn = get(conn, ~p"/collections/#{project.id}/nonexistent-collection/foo")
+      assert json_response(conn, 404)
+    end
+
+    test "GET /:project_id/:name streams items", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}")
+      body = json_response(conn, 200)
+      assert length(body["items"]) == 1
+      assert hd(body["items"])["key"] == "foo"
+    end
+
+    test "PUT /:project_id/:name/:key upserts an item", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn =
+        put(conn, ~p"/collections/#{project.id}/#{collection.name}/new-key",
+          value: "new-val"
+        )
+
+      assert json_response(conn, 200) == %{"upserted" => 1, "error" => nil}
+    end
+
+    test "POST /:project_id/:name upserts multiple items", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn =
+        post(conn, ~p"/collections/#{project.id}/#{collection.name}",
+          items: [%{key: "a", value: "1"}, %{key: "b", value: "2"}]
+        )
+
+      assert json_response(conn, 200) == %{"upserted" => 2, "error" => nil}
+    end
+
+    test "DELETE /:project_id/:name/:key deletes an item", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn = delete(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+
+      assert json_response(conn, 200) == %{
+               "key" => "foo",
+               "deleted" => 1,
+               "error" => nil
+             }
+    end
+
+    test "DELETE /:project_id/:name deletes all items", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn = delete(conn, ~p"/collections/#{project.id}/#{collection.name}")
+      assert json_response(conn, 200)["deleted"] == 1
+    end
+
+    test "returns 401 when user does not have access to the project", %{
+      conn: conn
+    } do
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      conn =
+        get(
+          conn,
+          ~p"/collections/#{other_project.id}/#{other_collection.name}/foo"
+        )
+
+      assert json_response(conn, 401)
+    end
+
+    test "resolves correctly by project_id when same name exists in multiple projects",
+         %{
+           conn: conn,
+           project: project,
+           collection: collection
+         } do
+      other_project = insert(:project, project_users: [])
+      insert(:collection, name: collection.name, project: other_project)
+
+      # v2 should resolve to the correct project's collection
+      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+      assert json_response(conn, 200)["key"] == "foo"
+    end
+
+    test "with a valid run token, can access own project's collection", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      workflow = insert(:simple_workflow, project: project)
+
+      workorder =
+        insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: workorder.dataclip,
+          starting_trigger: hd(workflow.triggers)
+        )
+
+      token = Lightning.Workers.generate_run_token(run)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{project.id}/#{collection.name}/foo")
+
+      assert json_response(conn, 200)["key"] == "foo"
+    end
+
+    test "with a run token, cannot access a different project's collection", %{
+      conn: conn
+    } do
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      workflow = insert(:simple_workflow)
+
+      workorder =
+        insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: workorder.dataclip,
+          starting_trigger: hd(workflow.triggers)
+        )
+
+      token = Lightning.Workers.generate_run_token(run)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{other_project.id}/#{other_collection.name}/foo")
+
+      assert json_response(conn, 401)
+    end
+  end
+
   defp encode_decode(item) do
     item
     |> Jason.encode!()
