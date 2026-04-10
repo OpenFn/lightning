@@ -441,4 +441,30 @@ defmodule Lightning.Channels do
 
     {total, nil}
   end
+
+  @doc """
+  Returns a channel request with preloads, scoped to the given project.
+
+  Returns `nil` if the request doesn't exist, belongs to a different project,
+  or the ID is not a valid UUID.
+
+  Preloads: `channel_events`, `channel`, `channel_snapshot`.
+  """
+  @spec get_channel_request_for_project(Ecto.UUID.t(), String.t()) ::
+          ChannelRequest.t() | nil
+  def get_channel_request_for_project(project_id, request_id) do
+    case Ecto.UUID.cast(request_id) do
+      {:ok, uuid} ->
+        from(cr in ChannelRequest,
+          join: c in Channel,
+          on: cr.channel_id == c.id,
+          where: cr.id == ^uuid and c.project_id == ^project_id,
+          preload: [:channel_events, :channel, :channel_snapshot]
+        )
+        |> Repo.one()
+
+      :error ->
+        nil
+    end
+  end
 end

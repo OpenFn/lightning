@@ -151,9 +151,13 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
             <%= for entry <- @page.entries do %>
               <.tr id={"request-#{entry.id}"}>
                 <.td>
-                  <span class="link-uuid" title={entry.request_id}>
+                  <.link
+                    navigate={~p"/projects/#{@project}/history/channels/#{entry.id}"}
+                    class="link font-mono"
+                    title={entry.request_id}
+                  >
                     {display_short_uuid(entry.request_id)}
-                  </span>
+                  </.link>
                 </.td>
                 <.td class="text-sm text-gray-700">
                   {source_event_path(entry)}

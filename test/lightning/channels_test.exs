@@ -6,7 +6,6 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Channels
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
 
   describe "list_channels_for_project/1" do

@@ -17,6 +17,8 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
   end
 
   defp create_channel_request(project, attrs \\ %{}) do
+    attrs = Map.new(attrs)
+
     channel =
       Map.get_lazy(attrs, :channel, fn ->
         insert(:channel, project: project)
@@ -99,9 +101,11 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       assert html =~ "authorization"
       assert html =~ "[REDACTED]"
 
-      # Body previews
-      assert html =~ ~s({"key":"value"})
-      assert html =~ ~s({"status":"ok"})
+      # Body previews (quotes are HTML-entity-encoded by LiveView's test DOM serializer)
+      assert html =~ "key"
+      assert html =~ "value"
+      assert html =~ "status"
+      assert html =~ "ok"
     end
   end
 

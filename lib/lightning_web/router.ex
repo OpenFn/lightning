@@ -241,6 +241,7 @@ defmodule LightningWeb.Router do
 
         live "/history", RunLive.Index, :index
         live "/history/channels", RunLive.Index, :channel_logs
+        live "/history/channels/:id", ChannelRequestLive.Show, :show
         live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
