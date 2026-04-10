@@ -806,12 +806,51 @@ defmodule LightningWeb.SandboxLive.Index do
 
     case result do
       {:ok, _updated_target} = success ->
+        sync_collections(source, target)
         maybe_commit_to_github(target, "Merged sandbox #{source.name}")
         success
 
       error ->
         error
     end
+  end
+
+  defp sync_collections(sandbox, parent) do
+    sandbox_collections = Lightning.Collections.list_project_collections(sandbox)
+    parent_collections = Lightning.Collections.list_project_collections(parent)
+
+    sandbox_names = MapSet.new(sandbox_collections, & &1.name)
+    parent_names = MapSet.new(parent_collections, & &1.name)
+
+    to_create = MapSet.difference(sandbox_names, parent_names)
+
+    if not Enum.empty?(to_create) do
+      current_time = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      rows =
+        Enum.map(to_create, fn name ->
+          %{
+            id: Ecto.UUID.generate(),
+            name: name,
+            project_id: parent.id,
+            byte_size_sum: 0,
+            inserted_at: current_time,
+            updated_at: current_time
+          }
+        end)
+
+      Repo.insert_all(Lightning.Collections.Collection, rows,
+        on_conflict: :nothing
+      )
+    end
+
+    to_delete =
+      parent_collections
+      |> Enum.filter(
+        &(&1.name in MapSet.difference(parent_names, sandbox_names))
+      )
+
+    Enum.each(to_delete, &Lightning.Collections.delete_collection(&1.id))
   end
 
   defp maybe_commit_to_github(project, commit_message) do
