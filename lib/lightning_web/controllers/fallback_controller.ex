@@ -28,6 +28,15 @@ defmodule LightningWeb.FallbackController do
     |> render(:"401")
   end
 
+  def call(conn, {:error, :conflict}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{
+      error:
+        "Multiple collections found with this name. Use API v2 with a project_id."
+    })
+  end
+
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)
