@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+- Support collections in sandboxes. Collection names are now scoped per project,
+  empty collections are cloned into a sandbox on provision, and collection names
+  (not data) are synchronised when a sandbox is merged back into its parent.
+  Adds a v2 collections API at `/collections/:project_id/:name` selected via the
+  `x-api-version: 2` header. V1 continues to work and returns 409 when a name is
+  ambiguous across projects.
+  [#3548](https://github.com/OpenFn/lightning/issues/3548)
+
 ### Changed
 
 - Bump `@openfn/ws-worker` from
