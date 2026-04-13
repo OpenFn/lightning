@@ -3,7 +3,7 @@
  *
  * Verifies CollectionPreviewViewer behaviour:
  * - Truncates string values > 140 chars in the displayed JSON with …
- * - Passes the original untruncated JSON as copyContent to JsonViewer
+ * - Passes the original untruncated JSON as copyContent to CodeViewer
  * - Handles nested objects and arrays recursively
  * - Non-string values (numbers, booleans, null) pass through unchanged
  * - Renders as-is when json is not valid JSON

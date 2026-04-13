@@ -1,7 +1,7 @@
 /**
- * JsonViewer Tests
+ * CodeViewer Tests
  *
- * Verifies JsonViewer behaviour:
+ * Verifies CodeViewer behaviour:
  * - Renders Monaco with the provided content string
  * - Copy button copies `content` when no `copyContent` prop is given
  * - Copy button copies `copyContent` when provided (not the displayed content)
@@ -13,7 +13,7 @@ import { act, render, screen } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { JsonViewer } from '../../../js/react/components/JsonViewer';
+import { CodeViewer } from '../../../js/react/components/CodeViewer';
 
 // Mock @monaco-editor/react so tests don't load the full 8MB package.
 vi.mock('@monaco-editor/react', () => ({
@@ -24,7 +24,7 @@ vi.mock('@monaco-editor/react', () => ({
 }));
 
 // Mock the #/monaco module which wraps @monaco-editor/react with resize
-// observer and theme logic — JsonViewer imports MonacoEditor from here.
+// observer and theme logic — CodeViewer imports MonacoEditor from here.
 vi.mock('../../../js/monaco', () => ({
   MonacoEditor: ({ value }: { value?: string }) => (
     <div data-testid="monaco-editor">{value}</div>
@@ -44,7 +44,7 @@ function createMockClipboard() {
 // TESTS
 // =============================================================================
 
-describe('JsonViewer', () => {
+describe('CodeViewer', () => {
   let mockClipboard: { writeText: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe('JsonViewer', () => {
   describe('rendering', () => {
     test('renders Monaco editor with the provided content', () => {
       const content = '{"key": "value"}';
-      render(<JsonViewer content={content} />);
+      render(<CodeViewer content={content} />);
 
       const editor = screen.getByTestId('monaco-editor');
       expect(editor).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('JsonViewer', () => {
     });
 
     test('renders copy button when content is non-empty and not an error', () => {
-      render(<JsonViewer content='{"ok": true}' />);
+      render(<CodeViewer content='{"ok": true}' />);
 
       expect(
         screen.getByRole('button', { name: 'Copy to clipboard' })
@@ -85,7 +85,7 @@ describe('JsonViewer', () => {
     });
 
     test('does not render copy button when content is empty string', () => {
-      render(<JsonViewer content="" />);
+      render(<CodeViewer content="" />);
 
       expect(
         screen.queryByRole('button', { name: /copy/i })
@@ -93,7 +93,7 @@ describe('JsonViewer', () => {
     });
 
     test('does not render copy button when content is the error sentinel', () => {
-      render(<JsonViewer content="Failed to load content" />);
+      render(<CodeViewer content="Failed to load content" />);
 
       expect(
         screen.queryByRole('button', { name: /copy/i })
@@ -108,7 +108,7 @@ describe('JsonViewer', () => {
   describe('copy behaviour', () => {
     test('copies content to clipboard when no copyContent prop is given', async () => {
       const content = '{"hello": "world"}';
-      render(<JsonViewer content={content} />);
+      render(<CodeViewer content={content} />);
 
       const button = screen.getByRole('button', {
         name: 'Copy to clipboard',
@@ -128,7 +128,7 @@ describe('JsonViewer', () => {
       const displayContent = '{"short": "display"}';
       const originalContent = '{"full": "original long content"}';
       render(
-        <JsonViewer content={displayContent} copyContent={originalContent} />
+        <CodeViewer content={displayContent} copyContent={originalContent} />
       );
 
       const button = screen.getByRole('button', {
@@ -151,7 +151,7 @@ describe('JsonViewer', () => {
 
   describe('copy button state', () => {
     test('button shows checkmark after click and reverts after 2s', async () => {
-      render(<JsonViewer content='{"x": 1}' />);
+      render(<CodeViewer content='{"x": 1}' />);
 
       const button = screen.getByRole('button', {
         name: 'Copy to clipboard',

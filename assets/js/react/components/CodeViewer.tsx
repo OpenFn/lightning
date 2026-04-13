@@ -2,13 +2,13 @@ import { useState } from 'react';
 
 import { MonacoEditor } from '#/monaco';
 
-interface JsonViewerProps {
+interface CodeViewerProps {
   content: string;
   /** Content to copy. Defaults to `content` when omitted. */
   copyContent?: string;
 }
 
-export const JsonViewer = ({ content, copyContent }: JsonViewerProps) => {
+export const CodeViewer = ({ content, copyContent }: CodeViewerProps) => {
   const [copied, setCopied] = useState(false);
   const textToCopy = copyContent ?? content;
 

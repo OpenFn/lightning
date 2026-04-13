@@ -1,4 +1,4 @@
-import { JsonViewer } from './JsonViewer';
+import { CodeViewer } from './CodeViewer';
 
 const MAX_STRING_LENGTH = 140;
 
@@ -31,5 +31,5 @@ export const CollectionPreviewViewer = ({ json }: { json: string }) => {
     // use as-is if not valid JSON
   }
 
-  return <JsonViewer content={displayContent} copyContent={json} />;
+  return <CodeViewer content={displayContent} copyContent={json} />;
 };

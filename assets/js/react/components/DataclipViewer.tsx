@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { JsonViewer } from './JsonViewer';
+import { CodeViewer } from './CodeViewer';
 
 async function fetchDataclipContent(dataclipId: string) {
   try {
@@ -31,5 +31,5 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
     })();
   }, [dataclipId]);
 
-  return <JsonViewer content={content} />;
+  return <CodeViewer content={content} />;
 };
