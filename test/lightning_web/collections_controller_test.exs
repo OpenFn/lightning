@@ -1130,6 +1130,22 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 200)["items"] == []
     end
+
+    test "returns 400 when multiple x-api-version headers are sent", %{
+      conn: conn,
+      collection: collection
+    } do
+      # Bypass Plug.Conn.put_req_header/3 (which replaces) to simulate a
+      # client that sends the header twice.
+      conn =
+        update_in(conn.req_headers, fn headers ->
+          headers ++ [{"x-api-version", "1"}, {"x-api-version", "2"}]
+        end)
+
+      conn = get(conn, ~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
+    end
   end
 
   describe "unsupported paths and methods" do
