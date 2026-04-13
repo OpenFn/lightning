@@ -113,7 +113,7 @@ defmodule LightningWeb.Router do
 
   ## Collections
   scope "/collections", LightningWeb do
-    pipe_through [:authenticated_api]
+    pipe_through [:authenticated_api, LightningWeb.Plugs.ApiVersion]
     match :*, "/*path", CollectionsController, :dispatch
   end
 

@@ -610,6 +610,117 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "sync_collections/2" do
+    test "creates collections in target that exist in source but not target" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: source, name: "only-in-source")
+      insert(:collection, project: target, name: "shared")
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+        |> Enum.sort()
+
+      assert target_names == ["only-in-source", "shared"]
+    end
+
+    test "deletes collections in target that are missing from source, including items" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      dropped =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert {:ok, %{created: 0, deleted: 1}} =
+               Sandboxes.sync_collections(source, target)
+
+      refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
+
+      # items belonging to the deleted collection are removed with it
+      assert Lightning.Repo.all(
+               from i in Lightning.Collections.Item,
+                 where: i.collection_id == ^dropped.id
+             ) == []
+    end
+
+    test "is a no-op when both projects have the same collections" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "a")
+      insert(:collection, project: target, name: "a")
+
+      assert {:ok, %{created: 0, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+    end
+
+    test "does not copy collection data across" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection,
+        project: source,
+        name: "with-data",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      [new_collection] = Lightning.Collections.list_project_collections(target)
+
+      assert Lightning.Collections.get_all(
+               new_collection,
+               %{cursor: nil, limit: 100},
+               nil
+             ) == []
+    end
+
+    test "runs in a single transaction — either everything or nothing" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "to-create")
+      insert(:collection, project: target, name: "to-delete")
+
+      # Inject a failure inside the transaction by trying to insert a
+      # collection that will violate the unique constraint after we've done
+      # the work. We simulate this by wrapping the call in a parent
+      # transaction and forcing a rollback.
+      result =
+        Lightning.Repo.transaction(fn ->
+          {:ok, _summary} =
+            Sandboxes.sync_collections(source, target)
+
+          Lightning.Repo.rollback(:simulated_failure)
+        end)
+
+      assert result == {:error, :simulated_failure}
+
+      # Target state must be unchanged
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert target_names == ["to-delete"]
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{

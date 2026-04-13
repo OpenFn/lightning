@@ -36,6 +36,8 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Collections
+  alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
@@ -570,26 +572,79 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp clone_collections_from_parent(sandbox, parent) do
-    parent_collections = Lightning.Collections.list_project_collections(parent)
-    current_time = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    rows =
-      Enum.map(parent_collections, fn c ->
-        %{
-          id: Ecto.UUID.generate(),
-          name: c.name,
-          project_id: sandbox.id,
-          byte_size_sum: 0,
-          inserted_at: current_time,
-          updated_at: current_time
-        }
-      end)
-
-    Repo.insert_all(Lightning.Collections.Collection, rows,
-      on_conflict: :nothing
-    )
-
+    parent_names = parent |> Collections.list_project_collections() |> names()
+    insert_empty_collections(sandbox.id, parent_names)
     sandbox
+  end
+
+  @doc """
+  Synchronises collection names from a sandbox to its merge target.
+
+  After a successful merge, this brings the target's set of collections in
+  line with the sandbox's:
+
+    * Collections present in the sandbox but missing from the target are
+      created (empty) in the target.
+    * Collections present in the target but missing from the sandbox are
+      deleted from the target, along with all their items.
+
+  **Collection data is never copied or merged.** Only the set of collection
+  names is synchronised, mirroring the sandbox-is-for-configuration model.
+
+  The create and delete operations run in a single transaction; a failure
+  leaves the target's collections unchanged.
+  """
+  @spec sync_collections(Project.t(), Project.t()) ::
+          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
+          | {:error, term()}
+  def sync_collections(%Project{} = source, %Project{} = target) do
+    source_names = source |> Collections.list_project_collections() |> names()
+
+    target_collections = Collections.list_project_collections(target)
+    target_names = names(target_collections)
+
+    to_create = MapSet.difference(source_names, target_names)
+
+    to_delete_ids =
+      for c <- target_collections,
+          c.name in MapSet.difference(target_names, source_names),
+          do: c.id
+
+    Repo.transaction(fn ->
+      {created, _} = insert_empty_collections(target.id, to_create)
+      {deleted, _} = delete_collections(to_delete_ids)
+      %{created: created, deleted: deleted}
+    end)
+  end
+
+  defp names(collections), do: MapSet.new(collections, & &1.name)
+
+  defp insert_empty_collections(project_id, names) do
+    if Enum.empty?(names) do
+      {0, nil}
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      rows =
+        Enum.map(names, fn name ->
+          %{
+            id: Ecto.UUID.generate(),
+            name: name,
+            project_id: project_id,
+            byte_size_sum: 0,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      Repo.insert_all(Collection, rows, on_conflict: :nothing)
+    end
+  end
+
+  defp delete_collections([]), do: {0, nil}
+
+  defp delete_collections(ids) do
+    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do

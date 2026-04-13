@@ -75,7 +75,7 @@ defmodule Lightning.CollectionsTest do
       assert {:error,
               %{
                 errors: [
-                  project_id:
+                  name:
                     {"A collection with this name already exists",
                      [
                        constraint: :unique,

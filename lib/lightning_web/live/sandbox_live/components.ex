@@ -382,8 +382,7 @@ defmodule LightningWeb.SandboxLive.Components do
           >
             <:message>
               Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.
-              Collection names will be synchronized: new collections in the sandbox will be created (empty) in the target,
-              and collections deleted in the sandbox will be permanently removed from the target along with all their data.
+              Collection names will be synced: new collections are added (empty) to the target, and collections missing from the sandbox are removed from the target. Collection data is never merged.
             </:message>
           </Common.alert>
 

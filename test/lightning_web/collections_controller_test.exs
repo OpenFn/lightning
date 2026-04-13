@@ -1080,6 +1080,81 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
+  describe "api version header" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+      token = Lightning.Accounts.generate_api_token(user)
+      conn = assign_bearer(conn, token)
+      {:ok, conn: conn, project: project, collection: collection}
+    end
+
+    test "returns 400 for an unsupported version", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn =
+        conn
+        |> put_req_header("x-api-version", "99")
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
+    end
+
+    test "returns 400 for a garbage version value", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn =
+        conn
+        |> put_req_header("x-api-version", "not-a-version")
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
+    end
+
+    test "treats no header as v1", %{conn: conn, collection: collection} do
+      conn = get(conn, ~p"/collections/#{collection.name}")
+      assert json_response(conn, 200)["items"] == []
+    end
+
+    test "treats an explicit v1 header as v1", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn =
+        conn
+        |> put_req_header("x-api-version", "1")
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 200)["items"] == []
+    end
+  end
+
+  describe "malformed request bodies" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+      token = Lightning.Accounts.generate_api_token(user)
+      conn = assign_bearer(conn, token)
+      {:ok, conn: conn, project: project, collection: collection}
+    end
+
+    test "PUT with no value returns 422", %{conn: conn, collection: collection} do
+      conn = put(conn, ~p"/collections/#{collection.name}/some-key", %{})
+
+      assert json_response(conn, 422)["error"] =~ "Missing required field: value"
+    end
+
+    test "POST with no items returns 422", %{conn: conn, collection: collection} do
+      conn = post(conn, ~p"/collections/#{collection.name}", %{})
+
+      assert json_response(conn, 422)["error"] =~ "Missing required field: items"
+    end
+  end
+
   describe "v1 conflict — same collection name in multiple projects" do
     setup %{conn: conn} do
       user = insert(:user)
