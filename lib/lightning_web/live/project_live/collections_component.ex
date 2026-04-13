@@ -249,7 +249,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         can_create_collection={@can_create_collection}
       >
         <:actions :let={collection}>
-          <div class="text-right">
+          <div class="text-right flex">
             <.button
               id={"preview-collection-#{collection.id}-button"}
               phx-click="preview_collection"
