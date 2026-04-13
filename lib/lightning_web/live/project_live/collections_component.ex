@@ -8,10 +8,17 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Helpers
+  alias LightningWeb.Components.Viewers
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, action: nil, collection: nil, collections: [])}
+    {:ok,
+     assign(socket,
+       action: nil,
+       collection: nil,
+       collections: [],
+       preview_json: nil
+     )}
   end
 
   @impl true
@@ -69,6 +76,37 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
       {:noreply, assign(socket, collection: collection, action: :delete)}
     end
+  end
+
+  def handle_event(
+        "preview_collection",
+        %{"collection" => collection_name},
+        socket
+      ) do
+    {:ok, collection} = Collections.get_collection(collection_name)
+
+    preview_json =
+      case Collections.get_all(collection, limit: 1, cursor: nil) do
+        [] ->
+          nil
+
+        [item | _] ->
+          item_map = %{
+            key: item.key,
+            value: item.value,
+            created: item.inserted_at,
+            updated: item.updated_at
+          }
+
+          Jason.encode!([item_map], pretty: true)
+      end
+
+    {:noreply,
+     assign(socket,
+       collection: collection,
+       preview_json: preview_json,
+       action: :preview
+     )}
   end
 
   def handle_event("reset_action", _, socket) do
@@ -197,6 +235,13 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         collection={@collection}
         myself={@myself}
       />
+      <.collection_preview_modal
+        :if={@action == :preview}
+        id={"preview-collection-#{@collection.id}-modal"}
+        collection={@collection}
+        preview_json={@preview_json}
+        myself={@myself}
+      />
 
       <LightningWeb.Components.DataTables.collections_table
         id="collections-table"
@@ -205,6 +250,16 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       >
         <:actions :let={collection}>
           <div class="text-right">
+            <.button
+              id={"preview-collection-#{collection.id}-button"}
+              phx-click="preview_collection"
+              phx-value-collection={collection.name}
+              phx-target={@myself}
+              class="table-action"
+              title="Preview collection"
+            >
+              <.icon name="hero-eye" class="h-4 w-4" />
+            </.button>
             <a
               id={"download-collection-#{collection.id}-button"}
               href={~p"/download/collections/#{collection.name}"}
@@ -318,6 +373,61 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           </.button>
         </.modal_footer>
       </.form>
+    </.modal>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :collection, Collection, required: true
+  attr :preview_json, :string
+  attr :myself, :any, required: true
+
+  defp collection_preview_modal(assigns) do
+    ~H"""
+    <.modal id={@id} show={true} width="max-w-3xl">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Collection Preview: {@collection.name}
+          </span>
+          <button
+            phx-click="reset_action"
+            phx-target={@myself}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <:subtitle>
+        <p class="text-sm text-gray-500">
+          Showing first record. We recommend
+          <.link
+            href="https://docs.openfn.org/documentation/collections-cli"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link"
+          >
+            using the CLI
+          </.link>
+          to manage collections.
+        </p>
+      </:subtitle>
+      <div class="h-96 rounded-md overflow-hidden">
+        <%= if @preview_json do %>
+          <Viewers.collection_preview_viewer
+            id={"preview-#{@collection.id}"}
+            json={@preview_json}
+          />
+        <% else %>
+          <div class="flex items-center justify-center h-full text-gray-400 text-sm">
+            This collection is empty.
+          </div>
+        <% end %>
+      </div>
     </.modal>
     """
   end
