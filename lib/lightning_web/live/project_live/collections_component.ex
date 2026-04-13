@@ -83,30 +83,34 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"collection" => collection_name},
         socket
       ) do
-    {:ok, collection} = Collections.get_collection(collection_name)
+    with {:ok, collection} <- Collections.get_collection(collection_name),
+         true <- collection.project_id == socket.assigns.project.id do
+      preview_json =
+        case Collections.get_all(collection, limit: 1, cursor: nil) do
+          [] ->
+            nil
 
-    preview_json =
-      case Collections.get_all(collection, limit: 1, cursor: nil) do
-        [] ->
-          nil
+          [item | _] ->
+            item_map = %{
+              key: item.key,
+              value: item.value,
+              created: item.inserted_at,
+              updated: item.updated_at
+            }
 
-        [item | _] ->
-          item_map = %{
-            key: item.key,
-            value: item.value,
-            created: item.inserted_at,
-            updated: item.updated_at
-          }
+            Jason.encode!([item_map], pretty: true)
+        end
 
-          Jason.encode!([item_map], pretty: true)
-      end
-
-    {:noreply,
-     assign(socket,
-       collection: collection,
-       preview_json: preview_json,
-       action: :preview
-     )}
+      {:noreply,
+       assign(socket,
+         collection: collection,
+         preview_json: preview_json,
+         action: :preview
+       )}
+    else
+      _ ->
+        {:noreply, put_flash(socket, :error, "Collection not found")}
+    end
   end
 
   def handle_event("reset_action", _, socket) do
