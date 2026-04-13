@@ -1132,6 +1132,52 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
+  describe "unsupported paths and methods" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+      token = Lightning.Accounts.generate_api_token(user)
+      conn = assign_bearer(conn, token)
+      {:ok, conn: conn, project: project, collection: collection}
+    end
+
+    test "v1 returns 404 for unsupported HTTP methods", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn = patch(conn, ~p"/collections/#{collection.name}")
+      assert response(conn, 404) == "Not found"
+    end
+
+    test "v1 returns 404 for unknown path shapes", %{conn: conn} do
+      conn = get(conn, "/collections/a/b/c/d")
+      assert response(conn, 404) == "Not found"
+    end
+
+    test "v2 returns 404 for unsupported HTTP methods", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      conn =
+        conn
+        |> put_req_header("x-api-version", "2")
+        |> patch(~p"/collections/#{project.id}/#{collection.name}")
+
+      assert response(conn, 404) == "Not found"
+    end
+
+    test "v2 returns 404 for unknown path shapes", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("x-api-version", "2")
+        |> get("/collections/a/b/c/d/e")
+
+      assert response(conn, 404) == "Not found"
+    end
+  end
+
   describe "malformed request bodies" do
     setup %{conn: conn} do
       user = insert(:user)
