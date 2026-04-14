@@ -114,7 +114,7 @@ defmodule LightningWeb.Router do
   ## Collections
   scope "/collections" do
     pipe_through [:authenticated_api]
-    forward "/", LightningWeb.Collections.Router
+    forward "/", LightningWeb.Plugs.CollectionsRouter
   end
 
   ## Authentication routes
