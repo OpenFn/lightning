@@ -1163,12 +1163,12 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       collection: collection
     } do
       conn = patch(conn, ~p"/collections/#{collection.name}")
-      assert response(conn, 404) == "Not found"
+      assert json_response(conn, 404)["error"] == "Not Found"
     end
 
     test "v1 returns 404 for unknown path shapes", %{conn: conn} do
       conn = get(conn, "/collections/a/b/c/d")
-      assert response(conn, 404) == "Not found"
+      assert json_response(conn, 404)["error"] == "Not Found"
     end
 
     test "v2 returns 404 for unsupported HTTP methods", %{
@@ -1181,7 +1181,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put_req_header("x-api-version", "2")
         |> patch(~p"/collections/#{project.id}/#{collection.name}")
 
-      assert response(conn, 404) == "Not found"
+      assert json_response(conn, 404)["error"] == "Not Found"
     end
 
     test "v2 returns 404 for unknown path shapes", %{conn: conn} do
@@ -1190,7 +1190,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put_req_header("x-api-version", "2")
         |> get("/collections/a/b/c/d/e")
 
-      assert response(conn, 404) == "Not found"
+      assert json_response(conn, 404)["error"] == "Not Found"
     end
   end
 
