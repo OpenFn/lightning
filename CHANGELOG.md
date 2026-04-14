@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Collection preview modal in project settings — click the eye icon on any
+  collection row to see the first record as formatted JSON.
+  [#4528](https://github.com/OpenFn/lightning/issues/4528)
+
 ### Changed
 
 - Bump `@openfn/ws-worker` from
