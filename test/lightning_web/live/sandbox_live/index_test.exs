@@ -1601,6 +1601,33 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert length(parent_collections) == 1
       assert hd(parent_collections).name == "shared"
     end
+
+    test "merge fails with flash error when collection sync fails", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.Sandboxes, :merge, fn _src,
+                                                            _tgt,
+                                                            _actor,
+                                                            _opts ->
+        {:error, "Failed to sync collections: :boom"}
+      end)
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      html = render(view)
+      assert html =~ "Failed to sync collections"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
   end
 
   describe "Merge modal authorization" do
