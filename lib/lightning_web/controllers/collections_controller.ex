@@ -26,7 +26,7 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
-  @spec put(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec put(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def put(conn, %{"key" => key, "value" => value} = params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection),
@@ -43,7 +43,7 @@ defmodule LightningWeb.CollectionsController do
 
   def put(conn, _params), do: missing_body(conn, "value")
 
-  @spec put_all(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec put_all(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def put_all(conn, %{"items" => items} = params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection),
@@ -62,7 +62,7 @@ defmodule LightningWeb.CollectionsController do
 
   def put_all(conn, _params), do: missing_body(conn, "items")
 
-  @spec get(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec get(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def get(conn, %{"key" => key} = params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection) do
@@ -73,7 +73,7 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def delete(conn, %{"key" => key} = params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection) do
@@ -87,7 +87,7 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec delete_all(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec delete_all(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def delete_all(conn, params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection) do
@@ -97,7 +97,7 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec stream(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec stream(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
   def stream(conn, params) do
     with {:ok, collection} <- resolve(params),
          :ok <- authorize(conn, collection),
