@@ -592,7 +592,7 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Lightning.Collections.list_project_collections(sandbox) == []
     end
 
-    test "re-provisioning is idempotent (on_conflict: :nothing)" do
+    test "each sandbox gets its own copy of parent collections" do
       actor = insert(:user)
       parent = insert(:project)
       ensure_member!(parent, actor, :owner)

@@ -11,6 +11,8 @@ defmodule LightningWeb.SandboxLive.Index do
   alias Lightning.VersionControl
   alias LightningWeb.SandboxLive.Components
 
+  require Logger
+
   defmodule MergeWorkflow do
     defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
   end
@@ -807,7 +809,16 @@ defmodule LightningWeb.SandboxLive.Index do
 
     case result do
       {:ok, _updated_target} = success ->
-        Sandboxes.sync_collections(source, target)
+        case Sandboxes.sync_collections(source, target) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "Failed to sync collections from sandbox #{source.id} to #{target.id}: #{inspect(reason)}"
+            )
+        end
+
         maybe_commit_to_github(target, "Merged sandbox #{source.name}")
         success
 

@@ -637,7 +637,7 @@ defmodule Lightning.Projects.Sandboxes do
           }
         end)
 
-      Repo.insert_all(Collection, rows, on_conflict: :nothing)
+      Repo.insert_all(Collection, rows)
     end
   end
 
