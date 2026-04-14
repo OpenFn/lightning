@@ -40,11 +40,11 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
-  alias Lightning.Projects.MergeProjects
-  alias Lightning.Projects.Provisioner
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
   alias Lightning.Workflows
