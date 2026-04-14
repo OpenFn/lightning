@@ -7,6 +7,7 @@ defmodule Lightning.Repo.Migrations.ScopeCollectionNameUniquenessToProject do
   end
 
   def down do
-    raise "Cannot reverse: duplicate collection names may exist across projects"
+    drop_if_exists unique_index(:collections, [:project_id, :name])
+    create unique_index(:collections, [:name])
   end
 end
