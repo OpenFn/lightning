@@ -637,7 +637,9 @@ defmodule Lightning.Projects.Sandboxes do
           }
         end)
 
-      Repo.insert_all(Collection, rows)
+      # on_conflict: :nothing handles the rare case where two concurrent
+      # merges into the same target both try to create the same collection.
+      Repo.insert_all(Collection, rows, on_conflict: :nothing)
     end
   end
 
