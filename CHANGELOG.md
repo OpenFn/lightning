@@ -20,7 +20,7 @@ and this project adheres to
 ### Changed
 
 - Bump `@openfn/ws-worker` from
-  [`1.23.1` to `1.23.4`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.4/packages/ws-worker/CHANGELOG.md?plain=1#L3-L26)
+  [`1.23.1` to `1.23.5`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.5/packages/ws-worker/CHANGELOG.md?plain=1#L3-L35)
 - Renamed channel terminology from Source/Sink to Client/Destination across
   schemas, UI, and API. Channels now enforce a single destination credential
   (was previously unbounded) via a dropdown instead of checkboxes.
