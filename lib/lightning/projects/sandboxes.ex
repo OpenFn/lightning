@@ -18,6 +18,7 @@ defmodule Lightning.Projects.Sandboxes do
   ## Operations
 
   * `provision/3` - Create a new sandbox from a parent project
+  * `merge/4` - Merge a sandbox into its target (workflows + collections)
   * `update_sandbox/3` - Update sandbox name, color, or environment
   * `delete_sandbox/2` - Delete a sandbox and all its descendants
 
@@ -39,6 +40,8 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Projects.MergeProjects
+  alias Lightning.Projects.Provisioner
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -120,6 +123,42 @@ defmodule Lightning.Projects.Sandboxes do
       create_sandbox_from_parent(parent, actor, attrs)
     else
       {:error, :unauthorized}
+    end
+  end
+
+  @doc """
+  Merges a sandbox into its target project.
+
+  Applies the sandbox's workflow configuration to the target via the
+  provisioner, then synchronises collection names. Collection data is
+  never copied.
+
+  ## Parameters
+  * `source` - The sandbox project being merged
+  * `target` - The project receiving the merge
+  * `actor` - The user performing the merge
+  * `opts` - Merge options (`:selected_workflow_ids`, `:deleted_target_workflow_ids`)
+
+  ## Returns
+  * `{:ok, updated_target}` - Merge and collection sync succeeded
+  * `{:error, reason}` - Workflow merge or collection sync failed
+  """
+  @spec merge(Project.t(), Project.t(), User.t(), map()) ::
+          {:ok, Project.t()} | {:error, term()}
+  def merge(
+        %Project{} = source,
+        %Project{} = target,
+        %User{} = actor,
+        opts \\ %{}
+      ) do
+    merge_doc = MergeProjects.merge_project(source, target, opts)
+
+    with {:ok, updated_target} <-
+           Provisioner.import_document(target, actor, merge_doc,
+             allow_stale: true
+           ),
+         {:ok, _} <- sync_collections(source, target) do
+      {:ok, updated_target}
     end
   end
 

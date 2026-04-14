@@ -798,25 +798,10 @@ defmodule LightningWeb.SandboxLive.Index do
         %{}
       end
 
-    result =
-      source
-      |> MergeProjects.merge_project(target, opts)
-      |> then(
-        &Lightning.Projects.Provisioner.import_document(target, actor, &1,
-          allow_stale: true
-        )
-      )
-
-    case result do
+    case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->
-        case Sandboxes.sync_collections(source, target) do
-          {:ok, _} ->
-            maybe_commit_to_github(target, "Merged sandbox #{source.name}")
-            success
-
-          {:error, reason} ->
-            {:error, "Failed to sync collections: #{inspect(reason)}"}
-        end
+        maybe_commit_to_github(target, "Merged sandbox #{source.name}")
+        success
 
       error ->
         error
