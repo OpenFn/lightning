@@ -605,9 +605,11 @@ defmodule Lightning.Projects.Sandboxes do
 
     to_create = MapSet.difference(source_names, target_names)
 
+    names_to_delete = MapSet.difference(target_names, source_names)
+
     to_delete_ids =
       for c <- target_collections,
-          c.name in MapSet.difference(target_names, source_names),
+          c.name in names_to_delete,
           do: c.id
 
     Repo.transaction(fn ->

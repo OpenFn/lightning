@@ -1429,6 +1429,36 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       assert json_response(conn, 200)["key"] == "foo"
     end
 
+    test "with a valid run token, can write to own project's collection", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
+      workflow = insert(:simple_workflow, project: project)
+
+      workorder =
+        insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: workorder.dataclip,
+          starting_trigger: hd(workflow.triggers)
+        )
+
+      token = Lightning.Workers.generate_run_token(run)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> put(
+          ~p"/collections/#{project.id}/#{collection.name}/new-key",
+          value: "new-val"
+        )
+
+      assert json_response(conn, 200) == %{"upserted" => 1, "error" => nil}
+    end
+
     test "with a run token, cannot access a different project's collection", %{
       conn: conn
     } do

@@ -45,7 +45,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
+      project_id = socket.assigns.project.id
+      {:ok, collection} = Collections.get_collection(project_id, collection_name)
 
       changeset =
         Collection.form_changeset(collection, %{raw_name: collection.name})
@@ -65,7 +66,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
+      project_id = socket.assigns.project.id
+      {:ok, collection} = Collections.get_collection(project_id, collection_name)
 
       {:noreply, assign(socket, collection: collection, action: :delete)}
     end

@@ -811,16 +811,12 @@ defmodule LightningWeb.SandboxLive.Index do
       {:ok, _updated_target} = success ->
         case Sandboxes.sync_collections(source, target) do
           {:ok, _} ->
-            :ok
+            maybe_commit_to_github(target, "Merged sandbox #{source.name}")
+            success
 
           {:error, reason} ->
-            Logger.warning(
-              "Failed to sync collections from sandbox #{source.id} to #{target.id}: #{inspect(reason)}"
-            )
+            {:error, "Failed to sync collections: #{inspect(reason)}"}
         end
-
-        maybe_commit_to_github(target, "Merged sandbox #{source.name}")
-        success
 
       error ->
         error
@@ -900,5 +896,6 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp format_merge_error(%{text: text}), do: text
+  defp format_merge_error(reason) when is_binary(reason), do: reason
   defp format_merge_error(reason), do: "Failed to merge: #{inspect(reason)}"
 end
