@@ -36,6 +36,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
 - Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
   `true` or `if_available` this would result in TLS-related failures when trying
   to send emails. This is now fixed for a limited number of use cases (see
