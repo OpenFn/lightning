@@ -690,7 +690,7 @@ defmodule Lightning.Projects.SandboxesTest do
              ) == []
     end
 
-    test "runs in a single transaction — either everything or nothing" do
+    test "runs in a single transaction -- either everything or nothing" do
       source = insert(:project)
       target = insert(:project)
 
@@ -718,6 +718,54 @@ defmodule Lightning.Projects.SandboxesTest do
         |> Enum.map(& &1.name)
 
       assert target_names == ["to-delete"]
+    end
+  end
+
+  describe "merge/4" do
+    test "imports the merge document and syncs collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      insert(:collection, project: sandbox, name: "new-col")
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_names =
+        parent
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "new-col" in parent_names
+    end
+
+    test "defaults opts to empty map" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      # Calling with 3 args exercises the \\ %{} default
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
     end
   end
 
