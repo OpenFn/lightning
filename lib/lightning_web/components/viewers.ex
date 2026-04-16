@@ -211,6 +211,18 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, required: true
+  attr :json, :string, required: true
+
+  # react imports
+  jsx("assets/js/react/components/CollectionPreviewViewer.tsx")
+
+  def collection_preview_viewer(assigns) do
+    ~H"""
+    <.CollectionPreviewViewer id={@id} json={@json} />
+    """
+  end
+
+  attr :id, :string, required: true
 
   attr :run_state, :any, required: true
 

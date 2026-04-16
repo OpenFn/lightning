@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Collection preview modal in project settings — click the eye icon on any
+  collection row to see the first record as formatted JSON.
+  [#4528](https://github.com/OpenFn/lightning/issues/4528)
 - Allow users to cancel available runs (runs for work orders in pending state)
   [#1622](https://github.com/OpenFn/lightning/issues/1622)
 - Add experimental global AI assistant option for users with experimental
@@ -33,12 +36,18 @@ and this project adheres to
   [#4581](https://github.com/OpenFn/lightning/issues/4581)
   [#4582](https://github.com/OpenFn/lightning/issues/4582)
   [#4583](https://github.com/OpenFn/lightning/issues/4583)
+- Remove the redirect to "History" when running a run from the canvas. (Stay
+  there to see the run.)
+  [#4198](https://github.com/OpenFn/lightning/issues/4198)
 
 ### Fixed
 
 - Non-map state coming back from the worker would cause a lost run, every time.
   Rather than losing these runs that return non-map x's, we now wrap them like
   so `{"value": x}`
+- AI-generated workflows can now be saved when the workflow name collides with
+  an existing workflow or when jobs have duplicate names
+  [#4607](https://github.com/OpenFn/lightning/issues/4607)
 - Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
   `true` or `if_available` this would result in TLS-related failures when trying
   to send emails. This is now fixed for a limited number of use cases (see
