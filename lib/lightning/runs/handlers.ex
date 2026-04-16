@@ -473,10 +473,13 @@ defmodule Lightning.Runs.Handlers do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
-        body: output_dataclip |> Jason.decode!(),
+        body: output_dataclip |> Jason.decode!() |> ensure_map(),
         type: :step_result
       })
       |> Repo.insert()
     end
+
+    defp ensure_map(%{} = map), do: map
+    defp ensure_map(value), do: %{"value" => value}
   end
 end

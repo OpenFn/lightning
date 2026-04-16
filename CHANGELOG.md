@@ -42,6 +42,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
 - AI-generated workflows can now be saved when the workflow name collides with
   an existing workflow or when jobs have duplicate names
   [#4607](https://github.com/OpenFn/lightning/issues/4607)
