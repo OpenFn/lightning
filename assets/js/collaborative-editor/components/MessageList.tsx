@@ -773,7 +773,7 @@ export function MessageList({
                 <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
               </div>
               <span className="text-xs text-gray-400 italic">
-                {streamingStatus || 'Generating response...'}
+                {streamingStatus || 'Thinking...'}
               </span>
             </div>
           </div>
