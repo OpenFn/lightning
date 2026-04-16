@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8DB3F9A4.js"></script>
+    <script defer src="dist/sidebar_items-F6F25F48.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -133,6 +133,24 @@ class will help with scrolling.</p></section>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#CollectionPreviewViewer/1" data-no-tooltip="" translate="no">CollectionPreviewViewer(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#collection_preview_viewer/1" data-no-tooltip="" translate="no">collection_preview_viewer(assigns)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#DataclipViewer/1" data-no-tooltip="" translate="no">DataclipViewer(assigns)</a>
 
       </div>
@@ -193,6 +211,50 @@ class will help with scrolling.</p></section>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="CollectionPreviewViewer/1">
+
+  <div class="detail-header">
+    <a href="#CollectionPreviewViewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">CollectionPreviewViewer(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L217" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<h2 id="CollectionPreviewViewer/1-attributes" class="section-heading"><a href="#CollectionPreviewViewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">json</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="collection_preview_viewer/1">
+
+  <div class="detail-header">
+    <a href="#collection_preview_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">collection_preview_viewer(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L219" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="DataclipViewer/1">
 
   <div class="detail-header">
@@ -259,8 +321,8 @@ class will help with scrolling.</p></section>
 <p>Renders out a log line stream</p><p>Internally it uses the <code class="inline">LogLineHighlight</code> hook to highlight the log line
 with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading"><a href="#log_viewer/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="4131092180-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="4131092180-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="4131092180-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="4131092180-2">}</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="0134591816-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="0134591816-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="0134591816-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="0134591816-2">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading"><a href="#log_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">logs_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">selected_step_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) - for checking log filter preference. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
@@ -274,7 +336,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
       <h1 class="signature" translate="no">step_dataclip_viewer(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L232" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L244" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -296,7 +358,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
       <h1 class="signature" translate="no">wiped_dataclip_viewer(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L294" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L306" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
