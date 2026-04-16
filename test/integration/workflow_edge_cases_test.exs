@@ -47,7 +47,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   # ---------------------------------------------------------------------------
 
   @tag :integration
-  @tag timeout: 30_000
+  @tag timeout: 10_000
   test "job that returns 42 completes successfully", %{uri: uri} do
     job_body = """
     fn(state => {
@@ -64,6 +64,25 @@ defmodule Lightning.WorkflowEdgeCasesTest do
 
     assert %{"value" => 42} =
              select_dataclip_body(result.step.output_dataclip_id)
+  end
+
+  @tag :integration
+  @tag timeout: 10_000
+  test "job that uses too much memory very quickly is properly killed", %{
+    uri: uri
+  } do
+    job_body = """
+    fn(state => {
+      const arr = [];
+      while (true) { arr.push(new Array(1e6).fill('x')); }
+      return state;
+    });
+    """
+
+    result = run_single_step_workflow(uri, %{"x" => 1}, job_body)
+
+    assert result.run.state == :killed
+    assert result.run.error_type == "OOMError"
   end
 
   # ---------------------------------------------------------------------------
