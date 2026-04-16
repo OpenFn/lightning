@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.2-pre] - 2026-04-16
+
+### Added
+
 - Collection preview modal in project settings — click the eye icon on any
   collection row to see the first record as formatted JSON.
   [#4528](https://github.com/OpenFn/lightning/issues/4528)
