@@ -39,6 +39,9 @@ and this project adheres to
 
 ### Fixed
 
+- AI-generated workflows can now be saved when the workflow name collides with
+  an existing workflow or when jobs have duplicate names
+  [#4607](https://github.com/OpenFn/lightning/issues/4607)
 - Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
   `true` or `if_available` this would result in TLS-related failures when trying
   to send emails. This is now fixed for a limited number of use cases (see

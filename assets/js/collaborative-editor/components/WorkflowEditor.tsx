@@ -393,19 +393,13 @@ export function WorkflowEditor({
    */
   const handleImport = useCallback(
     (workflowState: YAMLWorkflowState) => {
-      // Validate workflow name asynchronously, but proceed with import regardless
-      workflowStore
-        .validateWorkflowName(workflowState)
-        .then(validatedState => {
-          void workflowStore.importWorkflow(validatedState);
+      void workflowStore
+        .importWorkflow(workflowState)
+        .then(() => {
           flowEvents.dispatch('fit-view');
-          return;
         })
         .catch((error: unknown) => {
-          // If validation fails, import with original state
-          // Server will handle any name conflicts on save
-          console.warn('Workflow name validation failed, proceeding:', error);
-          workflowStore.importWorkflow(workflowState);
+          console.error('Failed to import workflow:', error);
         });
     },
     [workflowStore]
