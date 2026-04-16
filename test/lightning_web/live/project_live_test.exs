@@ -6797,6 +6797,110 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute has_element?(view, "#preview-collection-#{collection.id}-modal")
     end
+
+    test "all project members can preview a collection", %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{"collection" => collection.name})
+
+        assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+      end
+    end
+
+    test "cannot preview a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("preview_collection", %{
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "You are not authorized to perform this action"
+    end
+
+    test "cannot edit a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "edit",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "You are not authorized to perform this action"
+    end
+
+    test "cannot delete a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "delete",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "You are not authorized to perform this action"
+    end
   end
 
   defp find_selected_option(html, selector) do

@@ -8,6 +8,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Helpers
+  alias Lightning.Policies.Permissions
   alias LightningWeb.Components.Viewers
 
   @impl true
@@ -17,13 +18,20 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
        action: nil,
        collection: nil,
        collections: [],
-       preview_json: nil
+       preview_json: nil,
+       current_user: nil
      )}
   end
 
   @impl true
   def update(
-        %{can_create_collection: _, collections: _, return_to: _, project: _} =
+        %{
+          can_create_collection: _,
+          collections: _,
+          return_to: _,
+          project: _,
+          current_user: _
+        } =
           assigns,
         socket
       ) do
@@ -51,9 +59,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "edit", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
-
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <- Collections.get_collection(collection_name),
+         :ok <- can_access_collection(socket, collection) do
       changeset =
         Collection.form_changeset(collection, %{raw_name: collection.name})
 
@@ -71,9 +79,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "delete", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
-
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <- Collections.get_collection(collection_name),
+         :ok <- can_access_collection(socket, collection) do
       {:noreply, assign(socket, collection: collection, action: :delete)}
     end
   end
@@ -84,7 +92,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with {:ok, collection} <- Collections.get_collection(collection_name),
-         true <- collection.project_id == socket.assigns.project.id do
+         :ok <- can_access_collection(socket, collection) do
       preview_json =
         case Collections.get_all(collection, limit: 1, cursor: nil) do
           [] ->
@@ -107,9 +115,6 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
          preview_json: preview_json,
          action: :preview
        )}
-    else
-      _ ->
-        {:noreply, put_flash(socket, :error, "Collection not found")}
     end
   end
 
@@ -117,9 +122,15 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     {:noreply, assign(socket, action: nil)}
   end
 
-  def handle_event("delete_collection", %{"collection" => collection_id}, socket) do
-    with :ok <- can_create_collection(socket) do
-      case Collections.delete_collection(collection_id) do
+  def handle_event(
+        "delete_collection",
+        %{"collection" => collection_name},
+        socket
+      ) do
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <- Collections.get_collection(collection_name),
+         :ok <- can_access_collection(socket, collection) do
+      case Collections.delete_collection(collection.id) do
         {:ok, _collection} ->
           {:noreply,
            socket
@@ -199,6 +210,25 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
        socket
        |> put_flash(:error, "You are not authorized to perform this action")
        |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp can_access_collection(socket, collection) do
+    Permissions.can(
+      Lightning.Policies.Collections,
+      :access_collection,
+      socket.assigns.current_user,
+      collection
+    )
+    |> case do
+      :ok ->
+        :ok
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action")
+         |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -388,7 +418,12 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   defp collection_preview_modal(assigns) do
     ~H"""
-    <.modal id={@id} show={true} width="max-w-3xl">
+    <.modal
+      id={@id}
+      show={true}
+      width="max-w-3xl"
+      on_close={JS.push("reset_action", target: @myself)}
+    >
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
@@ -474,7 +509,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           id={"#{@id}_confirm_button"}
           type="button"
           phx-click="delete_collection"
-          phx-value-collection={@collection.id}
+          phx-value-collection={@collection.name}
           phx-target={@myself}
           theme="danger"
           phx-disable-with="Deleting..."

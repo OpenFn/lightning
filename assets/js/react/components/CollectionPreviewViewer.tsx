@@ -1,6 +1,7 @@
 import { CodeViewer } from './CodeViewer';
 
 const MAX_STRING_LENGTH = 140;
+const MAX_PARSE_DEPTH = 5;
 
 function truncateStrings(value: unknown): unknown {
   if (typeof value === 'string') {
@@ -19,21 +20,22 @@ function truncateStrings(value: unknown): unknown {
   return value;
 }
 
-function parseValues(data: unknown): unknown {
+function parseValues(data: unknown, depth = 0): unknown {
+  if (depth >= MAX_PARSE_DEPTH) return data;
   if (Array.isArray(data)) {
-    return data.map(parseValues);
+    return data.map(item => parseValues(item, depth + 1));
   }
   if (data !== null && typeof data === 'object') {
     const obj = data as Record<string, unknown>;
     const entries = Object.entries(obj).map(([k, v]): [string, unknown] => {
       if (k === 'value' && typeof v === 'string') {
         try {
-          return [k, parseValues(JSON.parse(v))];
+          return [k, parseValues(JSON.parse(v), depth + 1)];
         } catch {
           return [k, v];
         }
       }
-      return [k, parseValues(v)];
+      return [k, parseValues(v, depth + 1)];
     });
 
     // Put "key" first so the display reads naturally
