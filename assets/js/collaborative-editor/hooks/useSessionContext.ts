@@ -306,6 +306,22 @@ export const useHasReadAIDisclaimer = (): boolean => {
 };
 
 /**
+ * Hook to check if the user has experimental features enabled
+ */
+export const useExperimentalFeaturesEnabled = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectExperimentalFeaturesEnabled = sessionContextStore.withSelector(
+    state => state.experimentalFeaturesEnabled
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectExperimentalFeaturesEnabled
+  );
+};
+
+/**
  * Hook to get setHasReadAIDisclaimer action
  * Returns function to update AI disclaimer read status (local state only)
  */

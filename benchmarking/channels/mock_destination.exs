@@ -1,22 +1,22 @@
-# benchmarking/channels/mock_sink.exs
+# benchmarking/channels/mock_destination.exs
 #
-# A standalone HTTP sink server for testing the channel proxy.
+# A standalone HTTP destination server for testing the channel proxy.
 # Accepts all requests on any path and responds according to the
 # configured mode. Useful for integration tests, load tests, and
 # manual exploration of the proxy pipeline.
 #
 # Usage:
-#   elixir benchmarking/channels/mock_sink.exs [options]
+#   elixir benchmarking/channels/mock_destination.exs [options]
 #
 # Examples:
-#   elixir benchmarking/channels/mock_sink.exs
-#   elixir benchmarking/channels/mock_sink.exs --port 9000 --status 201
-#   elixir benchmarking/channels/mock_sink.exs --mode auth
-#   elixir benchmarking/channels/mock_sink.exs --mode mixed
+#   elixir benchmarking/channels/mock_destination.exs
+#   elixir benchmarking/channels/mock_destination.exs --port 9000 --status 201
+#   elixir benchmarking/channels/mock_destination.exs --mode auth
+#   elixir benchmarking/channels/mock_destination.exs --mode mixed
 
 Mix.install([:bandit, :plug, :jason])
 
-defmodule MockSink.Config do
+defmodule MockDestination.Config do
   @moduledoc """
   Parses CLI arguments into a configuration map and prints help text.
   """
@@ -29,9 +29,9 @@ defmodule MockSink.Config do
   }
 
   @help """
-  Usage: elixir benchmarking/channels/mock_sink.exs [options]
+  Usage: elixir benchmarking/channels/mock_destination.exs [options]
 
-  A configurable HTTP sink server for testing the channel proxy.
+  A configurable HTTP destination server for testing the channel proxy.
 
   Options:
     --port PORT          Listen port (default: 4001)
@@ -113,7 +113,7 @@ defmodule MockSink.Config do
   defp validate!(config) when is_map(config), do: config
 end
 
-defmodule MockSink.Logger do
+defmodule MockDestination.Logger do
   @moduledoc """
   Simple request logging to stdout.
   """
@@ -135,7 +135,7 @@ defmodule MockSink.Logger do
   end
 end
 
-defmodule MockSink.Body do
+defmodule MockDestination.Body do
   @moduledoc """
   Generates response bodies of the configured size.
   Small payloads (<= 1024 bytes) get a JSON envelope; larger ones are
@@ -146,7 +146,7 @@ defmodule MockSink.Body do
     json =
       Jason.encode!(%{
         ok: true,
-        server: "mock_sink",
+        server: "mock_destination",
         timestamp: DateTime.to_iso8601(DateTime.utc_now()),
         padding: String.duplicate("x", max(body_size - 80, 0))
       })
@@ -166,7 +166,7 @@ defmodule MockSink.Body do
   end
 end
 
-defmodule MockSink.Router do
+defmodule MockDestination.Router do
   @moduledoc """
   Plug router that handles all incoming requests according to the
   configured mode. Config is injected via `conn.private[:mock_config]`.
@@ -216,7 +216,7 @@ defmodule MockSink.Router do
 
     elapsed = System.monotonic_time(:millisecond) - start
 
-    MockSink.Logger.log_request(conn, status, elapsed)
+    MockDestination.Logger.log_request(conn, status, elapsed)
 
     conn
     |> Plug.Conn.put_resp_content_type(content_type)
@@ -254,7 +254,7 @@ defmodule MockSink.Router do
   defp handle_mode(_conn, %{mode: "fixed"} = config) do
     delay = Map.get(config, :delay, 0)
     if delay > 0, do: Process.sleep(delay)
-    body = MockSink.Body.generate(config.body_size)
+    body = MockDestination.Body.generate(config.body_size)
     {config.status, body, content_type(config.body_size)}
   end
 
@@ -273,7 +273,7 @@ defmodule MockSink.Router do
         {401, body, "application/json"}
 
       ["Bearer test-api-key"] ->
-        body = MockSink.Body.generate(config.body_size)
+        body = MockDestination.Body.generate(config.body_size)
         {200, body, content_type(config.body_size)}
 
       [_invalid] ->
@@ -298,12 +298,12 @@ defmodule MockSink.Router do
       # 10% — slow 200 (2 second delay)
       roll > 0.8 ->
         Process.sleep(2000)
-        body = MockSink.Body.generate(config.body_size)
+        body = MockDestination.Body.generate(config.body_size)
         {200, body, content_type(config.body_size)}
 
       # 80% — fast 200
       true ->
-        body = MockSink.Body.generate(config.body_size)
+        body = MockDestination.Body.generate(config.body_size)
         {200, body, content_type(config.body_size)}
     end
   end
@@ -312,18 +312,18 @@ defmodule MockSink.Router do
   defp content_type(_body_size), do: "application/octet-stream"
 end
 
-defmodule MockSink do
+defmodule MockDestination do
   @moduledoc """
   Entry point. Parses CLI args, prints a banner, and starts Bandit.
   """
 
   def main(args) do
-    config = MockSink.Config.parse(args)
+    config = MockDestination.Config.parse(args)
 
     IO.puts("""
 
     ===================================================
-      MockSink starting on port #{config.port}
+      MockDestination starting on port #{config.port}
       Mode:      #{config.mode}
       Status:    #{config.status}
       Body size: #{config.body_size} bytes
@@ -332,7 +332,7 @@ defmodule MockSink do
 
     {:ok, _} =
       Bandit.start_link(
-        plug: {MockSink.Router, config},
+        plug: {MockDestination.Router, config},
         port: config.port,
         thousand_island_options: [
           num_acceptors: 10
@@ -344,4 +344,4 @@ defmodule MockSink do
   end
 end
 
-MockSink.main(System.argv())
+MockDestination.main(System.argv())

@@ -242,6 +242,8 @@ defmodule LightningWeb.WorkflowChannel do
         workflow_template: render_workflow_template(workflow_template),
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
+        experimental_features_enabled:
+          Lightning.Accounts.experimental_features_enabled?(user),
         limits: render_limits(project.id),
         workflow: fresh_workflow || %{}
       }

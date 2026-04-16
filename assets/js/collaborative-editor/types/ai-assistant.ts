@@ -216,6 +216,9 @@ export interface MessageOptions {
 
   code?: string;
   errors?: string;
+
+  use_global_assistant?: boolean;
+  page?: string;
 }
 
 /**

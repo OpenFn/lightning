@@ -193,21 +193,18 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
     {:noreply, socket}
   end
 
-  defp source_event_path(channel_request) do
-    channel_request.channel_events
-    |> Enum.find(&(&1.type == :sink_response))
-    |> case do
-      nil -> nil
-      event -> event.request_path
-    end
-  end
+  defp source_event_path(channel_request),
+    do: get_event_field(channel_request, :destination_response, :request_path)
 
-  defp error_event_message(channel_request) do
+  defp error_event_message(channel_request),
+    do: get_event_field(channel_request, :error, :error_message)
+
+  defp get_event_field(channel_request, event_type, field) do
     channel_request.channel_events
-    |> Enum.find(&(&1.type == :error))
+    |> Enum.find(&(&1.type == event_type))
     |> case do
       nil -> nil
-      event -> event.error_message
+      event -> Map.get(event, field)
     end
   end
 

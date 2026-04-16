@@ -138,7 +138,11 @@ defmodule LightningWeb.ChannelLive.Index do
       socket
       |> assign(
         page_title: "New Channel",
-        selected_channel: %Lightning.Channels.Channel{channel_auth_methods: []}
+        selected_channel: %Lightning.Channels.Channel{
+          channel_auth_methods: [],
+          client_auth_methods: [],
+          destination_auth_method: nil
+        }
       )
     else
       socket
@@ -149,7 +153,13 @@ defmodule LightningWeb.ChannelLive.Index do
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     if socket.assigns.can_edit_channel do
-      channel = Channels.get_channel!(id, include: [:channel_auth_methods])
+      channel =
+        Channels.get_channel!(id,
+          include: [
+            :client_auth_methods,
+            :destination_auth_method
+          ]
+        )
 
       socket
       |> assign(
@@ -169,7 +179,7 @@ defmodule LightningWeb.ChannelLive.Index do
         %{"channel_state" => enabled?, "value_key" => channel_id},
         socket
       ) do
-    with :ok <- check_can_edit_channel(socket),
+    with :ok <- authorize_action(socket, :edit_channel),
          {:ok, channel} <- fetch_project_channel(socket, channel_id) do
       case Channels.update_channel(channel, %{enabled: enabled?},
              actor: socket.assigns.current_user
@@ -190,7 +200,7 @@ defmodule LightningWeb.ChannelLive.Index do
 
   @impl true
   def handle_event("delete_channel", %{"id" => id}, socket) do
-    with :ok <- check_can_delete_channel(socket),
+    with :ok <- authorize_action(socket, :delete_channel),
          {:ok, channel} <- fetch_project_channel(socket, id) do
       case Channels.delete_channel(channel, actor: socket.assigns.current_user) do
         {:ok, _} ->
@@ -211,18 +221,14 @@ defmodule LightningWeb.ChannelLive.Index do
     end
   end
 
-  defp check_can_edit_channel(socket) do
-    if socket.assigns.can_edit_channel do
-      :ok
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action.")
-      |> noreply()
-    end
-  end
+  @action_assigns %{
+    edit_channel: :can_edit_channel,
+    delete_channel: :can_delete_channel
+  }
 
-  defp check_can_delete_channel(socket) do
-    if socket.assigns.can_delete_channel do
+  defp authorize_action(socket, action)
+       when action in [:edit_channel, :delete_channel] do
+    if socket.assigns[@action_assigns[action]] do
       :ok
     else
       socket
@@ -319,7 +325,7 @@ defmodule LightningWeb.ChannelLive.Index do
                   class="h-4 w-4 shrink-0 text-gray-400"
                 />
                 <span class="wrap-break-word max-w-[20rem] translate-y-px">
-                  {channel.sink_url}
+                  {channel.destination_url}
                 </span>
               </div>
               <Common.wrapper_tooltip

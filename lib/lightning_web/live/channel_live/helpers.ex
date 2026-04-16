@@ -4,10 +4,6 @@ defmodule LightningWeb.ChannelLive.Helpers do
   """
   use Phoenix.Component
 
-  def channel_proxy_path(channel_id) do
-    "/channels/#{channel_id}"
-  end
-
   def channel_proxy_url(channel_id) do
     "#{LightningWeb.Endpoint.url()}/channels/#{channel_id}"
   end

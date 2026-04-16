@@ -105,6 +105,7 @@ config :esbuild,
          js/storybook.js
          js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
+         js/react/components/CollectionPreviewViewer.tsx
          js/job-editor/JobEditor.tsx
          js/workflow-editor/WorkflowEditor.tsx
          js/workflow-store/WorkflowStore.tsx

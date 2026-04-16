@@ -273,6 +273,14 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert lock_version == workflow.lock_version
     end
 
+    test "includes experimental_features_enabled field", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+      assert %{experimental_features_enabled: enabled} = response
+      assert is_boolean(enabled)
+    end
+
     test "returns config with require_email_verification false when flag disabled",
          %{socket: socket} do
       Mox.stub(Lightning.MockConfig, :check_flag?, fn

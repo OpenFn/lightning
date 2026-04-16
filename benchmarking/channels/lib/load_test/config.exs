@@ -5,11 +5,11 @@
 defmodule LoadTest.Config do
   @moduledoc false
 
-  @scenarios ~w(happy_path ramp_up saturation large_payload large_response mixed_methods slow_sink direct_sink)
+  @scenarios ~w(happy_path ramp_up saturation large_payload large_response mixed_methods slow_destination direct_destination)
 
   @defaults %{
     target: "http://localhost:4000",
-    sink: "http://localhost:4001",
+    destination: "http://localhost:4001",
     node: nil,
     cookie: nil,
     channel: "load-test",
@@ -29,7 +29,7 @@ defmodule LoadTest.Config do
 
   Options:
     --target URL         Lightning base URL (default: http://localhost:4000)
-    --sink URL           Mock sink URL for channel creation (default: http://localhost:4001)
+    --destination URL    Mock destination URL for channel creation (default: http://localhost:4001)
     --node NODE          Lightning node name (default: lightning@hostname)
     --cookie COOKIE      Erlang cookie (can also use --cookie flag on elixir command)
     --channel NAME       Channel name to find/create (default: load-test)
@@ -38,7 +38,7 @@ defmodule LoadTest.Config do
     --duration SECS      Test duration in seconds (default: 30)
     --payload-size BYTES  Request body size (default: 1024)
     --response-size BYTES Response body size override via query param (default: none)
-    --delay MS            Sink response delay via query param (default: none; slow_sink: 2000)
+    --delay MS            Destination response delay via query param (default: none; slow_destination: 2000)
     --csv PATH            Optional CSV output file for results
     --charts              Generate gnuplot charts (PNG files in /tmp or next to --csv)
     --help                Show this help
@@ -48,13 +48,13 @@ defmodule LoadTest.Config do
     ramp_up         Ramp from 1 to --concurrency VUs over --duration seconds
     saturation      Ramp through concurrency levels, report per-step (find throughput ceiling)
     large_payload   POST with --payload-size bodies (default 1MB), check memory stays flat
-    large_response  GET requests; mock sink returns large bodies. Reports memory
+    large_response  GET requests; mock destination returns large bodies. Reports memory
     mixed_methods   Rotate through GET, POST, PUT, PATCH, DELETE
-    slow_sink       Sink with --delay ms (default 2000); measures TTFB and latency
-    direct_sink     Hit mock sink directly (no Lightning), baseline measurement
+    slow_destination  Destination with --delay ms (default 2000); measures TTFB and latency
+    direct_destination  Hit mock destination directly (no Lightning), baseline measurement
 
   Note: Most scenarios require a named node (--sname) to connect to Lightning.
-  The direct_sink scenario does not require --sname or a running Lightning instance.
+  The direct_destination scenario does not require --sname or a running Lightning instance.
   The --cookie flag on the elixir command sets the Erlang cookie. The
   script also accepts --cookie in its own args as a convenience.
   """
@@ -83,8 +83,8 @@ defmodule LoadTest.Config do
   defp parse_args(["--target", value | rest], acc),
     do: parse_args(rest, %{acc | target: String.trim_trailing(value, "/")})
 
-  defp parse_args(["--sink", value | rest], acc),
-    do: parse_args(rest, %{acc | sink: String.trim_trailing(value, "/")})
+  defp parse_args(["--destination", value | rest], acc),
+    do: parse_args(rest, %{acc | destination: String.trim_trailing(value, "/")})
 
   defp parse_args(["--node", value | rest], acc),
     do: parse_args(rest, %{acc | node: value})
@@ -167,7 +167,9 @@ defmodule LoadTest.Config do
     %{config | response_size: 1_048_576}
   end
 
-  defp apply_defaults_for_scenario(%{scenario: "slow_sink", delay: nil} = config) do
+  defp apply_defaults_for_scenario(
+         %{scenario: "slow_destination", delay: nil} = config
+       ) do
     %{config | delay: 2_000}
   end
 
@@ -176,7 +178,7 @@ defmodule LoadTest.Config do
   defp validate!(config) do
     config = apply_defaults_for_scenario(config)
 
-    if config.scenario == "direct_sink" or Node.alive?() do
+    if config.scenario == "direct_destination" or Node.alive?() do
       config
     else
       IO.puts(:stderr, """

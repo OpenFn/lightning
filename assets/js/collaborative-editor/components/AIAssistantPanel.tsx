@@ -62,6 +62,12 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
+  /** Show the experimental global assistant toggle */
+  showGlobalAssistantOption?: boolean;
+  /** Whether the global assistant checkbox is currently checked */
+  isGlobalAssistantActive?: boolean;
+  /** Callback when global assistant checkbox changes */
+  onGlobalAssistantChange?: (active: boolean) => void;
 }
 
 interface MessageOptions {
@@ -69,6 +75,7 @@ interface MessageOptions {
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;
+  use_global_assistant?: boolean;
 }
 
 /**
@@ -103,6 +110,9 @@ export function AIAssistantPanel({
   onAcceptDisclaimer,
   connectionState = 'connected',
   aiLimit = null,
+  showGlobalAssistantOption = false,
+  isGlobalAssistantActive = false,
+  onGlobalAssistantChange,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -267,12 +277,18 @@ export function AIAssistantPanel({
                   <span
                     className={cn(
                       'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                      page === 'job_code'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
+                      isGlobalAssistantActive
+                        ? 'bg-amber-100 text-amber-800'
+                        : page === 'job_code'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-purple-100 text-purple-800'
                     )}
                   >
-                    {page === 'job_code' ? 'Job' : 'Workflow'}
+                    {isGlobalAssistantActive
+                      ? 'Global (experimental)'
+                      : page === 'job_code'
+                        ? 'Job'
+                        : 'Workflow'}
                   </span>
                 )}
               </div>
@@ -433,6 +449,8 @@ export function AIAssistantPanel({
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
         showJobControls={page === 'job_code'}
+        showGlobalAssistantOption={showGlobalAssistantOption}
+        onGlobalAssistantChange={onGlobalAssistantChange}
         storageKey={storageKey}
         enableAutoFocus={
           isOpen &&

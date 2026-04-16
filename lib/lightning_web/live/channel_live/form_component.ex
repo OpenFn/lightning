@@ -19,21 +19,18 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     wams = WebhookAuthMethods.list_for_project(project)
     pcs = Projects.list_project_credentials(project)
 
-    current_source_ids =
-      channel.channel_auth_methods
-      |> Enum.filter(&(&1.role == :source))
+    current_client_ids =
+      channel.client_auth_methods
       |> Enum.map(& &1.webhook_auth_method_id)
 
-    current_sink_ids =
-      channel.channel_auth_methods
-      |> Enum.filter(&(&1.role == :sink))
-      |> Enum.map(& &1.project_credential_id)
+    client_selections =
+      Map.new(wams, fn wam -> {wam.id, wam.id in current_client_ids} end)
 
-    source_selections =
-      Map.new(wams, fn wam -> {wam.id, wam.id in current_source_ids} end)
-
-    sink_selections =
-      Map.new(pcs, fn pc -> {pc.id, pc.id in current_sink_ids} end)
+    destination_credential_id =
+      case channel.destination_auth_method do
+        nil -> nil
+        cam -> cam.project_credential_id
+      end
 
     {:ok,
      socket
@@ -42,8 +39,8 @@ defmodule LightningWeb.ChannelLive.FormComponent do
        changeset: changeset,
        webhook_auth_methods: wams,
        project_credentials: pcs,
-       source_selections: source_selections,
-       sink_selections: sink_selections
+       client_selections: client_selections,
+       destination_credential_id: destination_credential_id
      )}
   end
 
@@ -54,23 +51,23 @@ defmodule LightningWeb.ChannelLive.FormComponent do
       |> Channel.changeset(params)
       |> Map.put(:action, :validate)
 
-    source_selections =
+    client_selections =
       merge_selections(
-        socket.assigns.source_selections,
-        Map.get(params, "source_auth_methods", %{})
+        socket.assigns.client_selections,
+        Map.get(params, "client_auth_methods", %{})
       )
 
-    sink_selections =
-      merge_selections(
-        socket.assigns.sink_selections,
-        Map.get(params, "sink_auth_methods", %{})
-      )
+    destination_credential_id =
+      case Map.get(params, "destination_credential_id", "") do
+        "" -> nil
+        id -> id
+      end
 
     {:noreply,
      assign(socket,
        changeset: changeset,
-       source_selections: source_selections,
-       sink_selections: sink_selections
+       client_selections: client_selections,
+       destination_credential_id: destination_credential_id
      )}
   end
 
@@ -135,65 +132,85 @@ defmodule LightningWeb.ChannelLive.FormComponent do
           <div class="space-y-6 bg-white">
             <.input field={f[:name]} label="Name" type="text" phx-debounce="300" />
 
-            <.input
-              field={f[:sink_url]}
-              label="Sink URL"
-              type="text"
-              phx-debounce="300"
-            />
+            <div>
+              <.input
+                field={f[:destination_url]}
+                label="Destination URL"
+                type="text"
+                placeholder="https://"
+                phx-debounce="300"
+              />
+              <p class="mt-1 text-xs text-gray-500">
+                The service OpenFn will forward requests to
+              </p>
+            </div>
+
+            <div>
+              <div class="flex items-baseline gap-2 mb-2">
+                <p class="text-sm/6 font-medium text-slate-800">
+                  Destination Credential
+                </p>
+                <.link
+                  href={~p"/projects/#{@project}/settings#credentials"}
+                  target="_blank"
+                  class="text-xs link"
+                >
+                  Add New
+                </.link>
+              </div>
+              <p class="mb-2 text-xs text-gray-500">
+                How OpenFn authenticates with the destination service
+              </p>
+              <select
+                name={"#{f.name}[destination_credential_id]"}
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 sm:text-sm"
+              >
+                <option value="">None</option>
+                <option
+                  :for={pc <- @project_credentials}
+                  value={pc.id}
+                  selected={@destination_credential_id == pc.id}
+                >
+                  {pc.credential.name}
+                </option>
+              </select>
+            </div>
 
             <.input field={f[:enabled]} label="Enabled" type="toggle" />
 
             <div>
               <div class="flex items-baseline gap-2 mb-2">
                 <p class="text-sm/6 font-medium text-slate-800">
-                  Source Authentication Methods
+                  Client Credentials
                 </p>
                 <.link
-                  navigate={~p"/projects/#{@project}/settings#webhook_security"}
+                  href={~p"/projects/#{@project}/settings#webhook_security"}
+                  target="_blank"
                   class="text-xs link"
                 >
-                  Create a new one in project settings.
+                  Add New
                 </.link>
               </div>
+              <p class="mb-2 text-xs text-gray-500">
+                Credentials that you can use to access this channel
+              </p>
+              <p
+                :if={@webhook_auth_methods == []}
+                class="italic text-xs text-gray-400"
+              >
+                No webhook auth methods available.
+              </p>
               <div
                 :if={@webhook_auth_methods != []}
                 class="grid grid-cols-2 gap-x-4 gap-y-2"
               >
                 <.input
                   :for={wam <- @webhook_auth_methods}
-                  id={"source_auth_#{wam.id}"}
-                  name={"#{f.name}[source_auth_methods][#{wam.id}]"}
+                  id={"client_auth_#{wam.id}"}
+                  name={"#{f.name}[client_auth_methods][#{wam.id}]"}
                   type="checkbox"
-                  value={Map.get(@source_selections, wam.id, false)}
+                  value={Map.get(@client_selections, wam.id, false)}
                   label={wam.name}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-baseline gap-2 mb-2">
-                <p class="text-sm/6 font-medium text-slate-800">
-                  Sink Credentials
-                </p>
-                <.link
-                  navigate={~p"/projects/#{@project}/settings#credentials"}
-                  class="text-xs link"
-                >
-                  Create a new one in project settings.
-                </.link>
-              </div>
-              <div
-                :if={@project_credentials != []}
-                class="grid grid-cols-2 gap-x-4 gap-y-2"
-              >
-                <.input
-                  :for={pc <- @project_credentials}
-                  id={"sink_auth_#{pc.id}"}
-                  name={"#{f.name}[sink_auth_methods][#{pc.id}]"}
-                  type="checkbox"
-                  value={Map.get(@sink_selections, pc.id, false)}
-                  label={pc.credential.name}
                 />
               </div>
             </div>
@@ -215,9 +232,8 @@ defmodule LightningWeb.ChannelLive.FormComponent do
 
   defp save_channel(socket, :new, params) do
     params =
-      Map.merge(params, %{
-        "project_id" => socket.assigns.project.id,
-        "channel_auth_methods" => build_auth_method_params(params, [])
+      build_auth_params(params, [], nil, %{
+        "project_id" => socket.assigns.project.id
       })
 
     case Channels.create_channel(params, actor: socket.assigns.current_user) do
@@ -233,14 +249,13 @@ defmodule LightningWeb.ChannelLive.FormComponent do
   end
 
   defp save_channel(socket, :edit, params) do
+    channel = socket.assigns.channel
+
     params =
-      Map.put(
+      build_auth_params(
         params,
-        "channel_auth_methods",
-        build_auth_method_params(
-          params,
-          socket.assigns.channel.channel_auth_methods
-        )
+        channel.client_auth_methods,
+        channel.destination_auth_method
       )
 
     case Channels.update_channel(
@@ -259,38 +274,62 @@ defmodule LightningWeb.ChannelLive.FormComponent do
     end
   end
 
+  defp build_auth_params(
+         params,
+         current_clients,
+         current_destination,
+         extra \\ %{}
+       ) do
+    built =
+      Map.merge(extra, %{
+        "client_auth_methods" =>
+          build_client_auth_params(params, current_clients)
+      })
+
+    built =
+      case build_destination_auth_param(params, current_destination) do
+        nil -> built
+        :clear -> Map.put(built, "destination_auth_method", nil)
+        dest -> Map.put(built, "destination_auth_method", dest)
+      end
+
+    Map.merge(params, built)
+  end
+
   defp merge_selections(current, submitted) do
     Map.new(current, fn {k, _v} ->
       {k, Map.get(submitted, k, "false") == "true"}
     end)
   end
 
-  defp build_auth_method_params(params, current_auth_methods) do
-    build_auth_method_list(params, :source, current_auth_methods) ++
-      build_auth_method_list(params, :sink, current_auth_methods)
-  end
-
-  defp build_auth_method_list(params, role, current_auth_methods) do
-    id_field = auth_method_id_field(role)
-
+  defp build_client_auth_params(params, current_clients) do
     params
-    |> Map.get(auth_method_param_key(role), %{})
+    |> Map.get("client_auth_methods", %{})
     |> Enum.reduce([], fn {k, v}, acc ->
-      existing_record =
-        Enum.find(current_auth_methods, &(Map.get(&1, id_field) == k))
+      existing =
+        Enum.find(current_clients, &(&1.webhook_auth_method_id == k))
 
-      case {existing_record, v} do
-        {%{}, "true"} -> [%{id: existing_record.id} | acc]
-        {nil, "true"} -> [%{id_field => k, role: to_string(role)} | acc]
-        {%{}, _} -> [%{id: existing_record.id, delete: true} | acc]
+      case {existing, v} do
+        {%{}, "true"} -> [%{id: existing.id} | acc]
+        {nil, "true"} -> [%{webhook_auth_method_id: k} | acc]
+        {%{}, _} -> [%{id: existing.id, delete: true} | acc]
         {nil, _} -> acc
       end
     end)
   end
 
-  defp auth_method_id_field(:source), do: :webhook_auth_method_id
-  defp auth_method_id_field(:sink), do: :project_credential_id
+  defp build_destination_auth_param(params, current_destination) do
+    selected_id =
+      case Map.get(params, "destination_credential_id", "") do
+        "" -> nil
+        id -> id
+      end
 
-  defp auth_method_param_key(:source), do: "source_auth_methods"
-  defp auth_method_param_key(:sink), do: "sink_auth_methods"
+    case {current_destination, selected_id} do
+      {nil, nil} -> nil
+      {%{}, nil} -> :clear
+      {%{id: id, project_credential_id: pc_id}, pc_id} -> %{id: id}
+      {_, _} -> %{project_credential_id: selected_id}
+    end
+  end
 end

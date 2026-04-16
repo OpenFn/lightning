@@ -588,6 +588,130 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  # BULK CANCEL
+  attr :id, :string, required: true
+  attr :page_number, :integer, required: true
+  attr :pages, :integer, required: true
+  attr :total_entries, :integer, required: true
+  attr :all_selected?, :boolean, required: true
+  attr :selected_count, :integer, required: true
+  attr :filters, SearchParams, required: true
+  attr :workflows, :list, required: true
+
+  def bulk_cancel_modal(assigns) do
+    ~H"""
+    <div
+      class="relative z-10 hidden"
+      aria-labelledby={"#{@id}-title"}
+      id={@id}
+      role="dialog"
+      aria-modal="true"
+      phx-remove={hide_modal(@id)}
+    >
+      <div id={"#{@id}-bg"} class="modal-backdrop" />
+
+      <div
+        aria-labelledby={"#{@id}-title"}
+        class="fixed inset-0 z-10 overflow-y-auto"
+      >
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <.focus_wrap
+            id={"#{@id}-container"}
+            phx-window-keydown={hide_modal(@id)}
+            phx-key="escape"
+            phx-click-away={hide_modal(@id)}
+            class="hidden relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+          >
+            <div id={"#{@id}-content"} class="mt-3 text-center sm:mt-5">
+              <h3
+                class="text-base font-semibold leading-6 text-gray-900"
+                id={"#{@id}-title"}
+              >
+                Cancel Pending Runs
+              </h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                  This will cancel pending runs for the selected work orders.
+                  Any runs that have already been claimed by a worker will be skipped.
+                </p>
+              </div>
+            </div>
+            <div
+              :if={@all_selected? and @total_entries > 1 and @pages > 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
+              <.button
+                type="button"
+                theme="primary"
+                id="cancel-selected"
+                phx-click="bulk-cancel"
+                phx-value-type="selected"
+                phx-disable-with="Cancelling..."
+                class="sm:col-start-1"
+              >
+                Cancel up to {@selected_count} selected
+              </.button>
+              <.button
+                type="button"
+                theme="primary"
+                id="cancel-all-matching"
+                phx-click="bulk-cancel"
+                phx-value-type="all"
+                phx-disable-with="Cancelling..."
+                class="w-full sm:col-start-2"
+              >
+                Cancel up to {@total_entries} matching
+              </.button>
+              <div class="relative col-start-1 col-end-3">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-white px-2 text-sm text-gray-500">
+                    OR
+                  </span>
+                </div>
+              </div>
+              <.button
+                type="button"
+                theme="secondary"
+                class="w-full sm:col-start-1 sm:col-end-3"
+                phx-click={hide_modal(@id)}
+              >
+                Go back
+              </.button>
+            </div>
+            <div
+              :if={!@all_selected? or @total_entries == 1 or @pages == 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
+              <.button
+                type="button"
+                theme="primary"
+                id="cancel-selected"
+                phx-click="bulk-cancel"
+                phx-value-type="selected"
+                phx-disable-with="Cancelling..."
+                class="inline-flex w-full justify-center sm:col-start-2"
+              >
+                Cancel up to {@selected_count} selected
+              </.button>
+              <.button
+                type="button"
+                theme="secondary"
+                class="w-full sm:col-start-1"
+                phx-click={hide_modal(@id)}
+              >
+                Go back
+              </.button>
+            </div>
+          </.focus_wrap>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   # BULK RERUN
   attr :id, :string, required: true
   attr :page_number, :integer, required: true
@@ -690,7 +814,7 @@ defmodule LightningWeb.RunLive.Components do
                 class="w-full sm:col-start-1 sm:col-end-3"
                 phx-click={hide_modal(@id)}
               >
-                Cancel
+                Go back
               </.button>
             </div>
             <div

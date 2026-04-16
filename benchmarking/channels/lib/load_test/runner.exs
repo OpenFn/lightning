@@ -1,6 +1,6 @@
 # benchmarking/channels/lib/load_test/runner.exs
 #
-# Executes test scenarios: steady-state, ramp-up, and direct sink.
+# Executes test scenarios: steady-state, ramp-up, and direct destination.
 
 defmodule LoadTest.Runner do
   @moduledoc false
@@ -212,8 +212,8 @@ defmodule LoadTest.Runner do
   defp pick_method("saturation"), do: :post
   defp pick_method("large_payload"), do: :post
   defp pick_method("large_response"), do: :get
-  defp pick_method("slow_sink"), do: :post
-  defp pick_method("direct_sink"), do: :post
+  defp pick_method("slow_destination"), do: :post
+  defp pick_method("direct_destination"), do: :post
 
   defp pick_method("mixed_methods") do
     Enum.random(@methods)

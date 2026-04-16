@@ -915,6 +915,14 @@ export class AIChannelRegistry {
       }
     }
 
+    // Global assistant flags (applicable to both session types)
+    if ('use_global_assistant' in context && context.use_global_assistant) {
+      params['use_global_assistant'] = true;
+    }
+    if ('page' in context && context.page) {
+      params['page'] = context.page as string;
+    }
+
     return params;
   }
 }
