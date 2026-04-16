@@ -125,6 +125,7 @@ export function SessionList({
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
+              autoComplete="off"
               className={cn(
                 'w-full h-[34px] pl-9 pr-3 text-sm',
                 'bg-gray-50 border border-gray-200 rounded-lg',

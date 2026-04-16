@@ -239,6 +239,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           value={webhookUrl}
                           readOnly
                           disabled
+                          autoComplete="off"
                           className="block w-full flex-1 rounded-l-lg
                             text-slate-900 disabled:bg-gray-50
                             disabled:text-gray-500 border border-r-0
@@ -582,6 +583,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               disabled={isReadOnly}
+                              autoComplete="off"
                               placeholder="localhost:9092, broker2:9092"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
@@ -626,6 +628,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               disabled={isReadOnly}
+                              autoComplete="off"
                               placeholder="topic1, topic2, topic3"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
@@ -769,6 +772,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                       }
                                       onBlur={field.handleBlur}
                                       disabled={isReadOnly}
+                                      autoComplete="off"
                                       className={`
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
@@ -811,6 +815,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                       }
                                       onBlur={field.handleBlur}
                                       disabled={isReadOnly}
+                                      autoComplete="off"
                                       className={`
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
@@ -928,6 +933,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   }
                                   onBlur={field.handleBlur}
                                   disabled={isReadOnly}
+                                  autoComplete="off"
                                   className={`
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${

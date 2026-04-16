@@ -140,6 +140,7 @@ export function VersionPicker({
           role="combobox"
           aria-expanded={isOpen}
           aria-controls="version-listbox"
+          autoComplete="off"
         />
         <button
           type="button"
