@@ -1,4 +1,4 @@
-defmodule Lightning.RedTeamTest do
+defmodule Lightning.WorkflowEdgeCasesTest do
   @moduledoc """
   Integration tests for "lost run" scenarios — single-step workflows where
   the job code exercises edge cases around run completion and state handling.
