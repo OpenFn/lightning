@@ -385,80 +385,145 @@
         <.table id="work-orders-table" page={@page} url={@pagination_path}>
           <:header>
             <.tr>
-              <.th>
-                <.form
-                  :let={f}
-                  for={
-                    %{
-                      "all_selections" =>
-                        if(@page.entries == [],
-                          do: false,
-                          else:
-                            all_selected?(
-                              @selected_work_orders,
-                              @page.entries
-                            )
-                        )
+              <.th class="!pr-1">
+                <div class="relative">
+                  <.form
+                    :let={f}
+                    for={
+                      %{
+                        "all_selections" =>
+                          if(@page.entries == [],
+                            do: false,
+                            else:
+                              all_selected?(
+                                @selected_work_orders,
+                                @page.entries
+                              )
+                          )
+                      }
                     }
-                  }
-                  phx-change="toggle_all_selections"
-                >
-                  <.input
-                    type="checkbox"
-                    field={f[:all_selections]}
-                    id="select_all"
-                    phx-hook="CheckboxIndeterminate"
-                    disabled={@page.entries == []}
-                    class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"} #{if @page.entries == [], do: "opacity-50 cursor-not-allowed"}"}
-                  />
-                </.form>
-              </.th>
-              <.th :if={none_selected?(@selected_work_orders)}>
-                ID
-              </.th>
-              <.th :if={!none_selected?(@selected_work_orders)} colspan={2}>
-                <div class="-my-2">
-                  <.button
-                    size="sm"
-                    type="button"
-                    theme="secondary"
-                    id="bulk-rerun-from-start-job-modal-trigger"
-                    class="!py-1"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-start-modal")
-                    }
+                    phx-change="toggle_all_selections"
                   >
-                    Retry
-                  </.button>
-                  <.button
-                    :if={
-                      selected_workflow_count(@selected_work_orders) ==
-                        1
-                    }
-                    size="sm"
-                    class="ml-1 !py-1"
-                    id="bulk-rerun-from-job-modal-trigger"
-                    type="button"
-                    theme="secondary"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-job-modal")
-                    }
+                    <.input
+                      type="checkbox"
+                      field={f[:all_selections]}
+                      id="select_all"
+                      phx-hook="CheckboxIndeterminate"
+                      disabled={@page.entries == []}
+                      class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"} #{if @page.entries == [], do: "opacity-50 cursor-not-allowed"}"}
+                    />
+                  </.form>
+                  <div
+                    :if={!none_selected?(@selected_work_orders)}
+                    class="absolute left-full top-1/2 -translate-y-1/2 ml-3 flex items-center gap-1 bg-gray-50 whitespace-nowrap"
                   >
-                    Retry from
-                  </.button>
+                    <%= if :cancel in @available_actions do %>
+                      <.button
+                        size="sm"
+                        type="button"
+                        theme="secondary"
+                        id="bulk-cancel-modal-trigger"
+                        class="!py-1"
+                        phx-click={show_modal("bulk-cancel-modal")}
+                      >
+                        Cancel
+                      </.button>
+                    <% else %>
+                      <span
+                        phx-hook="Tooltip"
+                        id="bulk-cancel-disabled-tooltip"
+                        aria-label="Cancel is only available when all selected work orders are pending"
+                      >
+                        <.button
+                          size="sm"
+                          type="button"
+                          theme="secondary"
+                          class="!py-1"
+                          disabled
+                        >
+                          Cancel
+                        </.button>
+                      </span>
+                    <% end %>
+                    <%= if :retry in @available_actions do %>
+                      <.button
+                        size="sm"
+                        type="button"
+                        theme="secondary"
+                        id="bulk-rerun-from-start-job-modal-trigger"
+                        class="!py-1"
+                        phx-click={
+                          with :ok <-
+                                 validate_bulk_rerun(
+                                   @selected_work_orders,
+                                   @project
+                                 ),
+                               do: show_modal("bulk-rerun-from-start-modal")
+                        }
+                      >
+                        Retry
+                      </.button>
+                    <% else %>
+                      <span
+                        phx-hook="Tooltip"
+                        id="bulk-retry-disabled-tooltip"
+                        aria-label="Retry is only available when all selected work orders have finished running"
+                      >
+                        <.button
+                          size="sm"
+                          type="button"
+                          theme="secondary"
+                          class="!py-1"
+                          disabled
+                        >
+                          Retry
+                        </.button>
+                      </span>
+                    <% end %>
+                    <%= if selected_workflow_count(@selected_work_orders) == 1 do %>
+                      <%= if :retry in @available_actions do %>
+                        <.button
+                          size="sm"
+                          type="button"
+                          theme="secondary"
+                          id="bulk-rerun-from-job-modal-trigger"
+                          class="!py-1"
+                          phx-click={
+                            with :ok <-
+                                   validate_bulk_rerun(
+                                     @selected_work_orders,
+                                     @project
+                                   ),
+                                 do: show_modal("bulk-rerun-from-job-modal")
+                          }
+                        >
+                          Retry from
+                        </.button>
+                      <% else %>
+                        <span
+                          phx-hook="Tooltip"
+                          id="bulk-retry-from-disabled-tooltip"
+                          aria-label="Retry from is only available when all selected work orders have finished running"
+                        >
+                          <.button
+                            size="sm"
+                            type="button"
+                            theme="secondary"
+                            class="!py-1"
+                            disabled
+                          >
+                            Retry from
+                          </.button>
+                        </span>
+                      <% end %>
+                    <% end %>
+                  </div>
                 </div>
               </.th>
-              <.th :if={none_selected?(@selected_work_orders)}>
+              <.th>
+                ID
+              </.th>
+              <.th>
                 Workflow
               </.th>
               <.th>
@@ -543,6 +608,17 @@
     </div>
 
     <div class="bg-gray-100 dark:bg-gray-700 relative flex">
+      <Components.bulk_cancel_modal
+        id="bulk-cancel-modal"
+        page_number={@page.page_number}
+        pages={@page.total_pages}
+        total_entries={@page.total_entries}
+        all_selected?={all_selected?(@selected_work_orders, @page.entries)}
+        selected_count={Enum.count(@selected_work_orders)}
+        filters={SearchParams.new(@filters)}
+        workflows={@workflows}
+      />
+
       <Components.bulk_rerun_modal
         id="bulk-rerun-from-start-modal"
         page_number={@page.page_number}

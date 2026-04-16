@@ -128,7 +128,7 @@ defmodule Lightning.Channels.HandlerTest do
 
       event = Repo.one!(ChannelEvent)
       assert event.channel_request_id == state.channel_request.id
-      assert event.type == :sink_response
+      assert event.type == :destination_response
       assert event.request_method == state.request_method
       assert event.request_path == "/test/path"
       assert event.response_status == 200
