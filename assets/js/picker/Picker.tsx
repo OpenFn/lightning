@@ -260,7 +260,6 @@ export function Picker(props: PickerProps) {
               role="combobox"
               aria-controls="picker-options"
               aria-expanded="true"
-              autoComplete="off"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-400 ring-1 ring-gray-300">
               <span>{isMac ? '⌘' : 'Ctrl'}</span>

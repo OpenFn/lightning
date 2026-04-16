@@ -422,7 +422,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   field={f[:client_id]}
                   label="Client ID"
                   required="true"
-                  autocomplete="new-password"
                 />
               </div>
             </div>

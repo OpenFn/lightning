@@ -618,7 +618,6 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={@class}
-        autocomplete={@autocomplete}
         value={@value}
         placeholder={@placeholder}
         {@rest}

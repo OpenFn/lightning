@@ -78,7 +78,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         field={@form_field}
         label={@title}
         required={@required}
-        autocomplete={if @type == "password", do: "new-password", else: "off"}
+        autocomplete={if @type == "password", do: "new-password"}
         checked={@type == "checkbox" and @form_field.value == true}
       />
     </div>
