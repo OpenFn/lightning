@@ -20,11 +20,16 @@ and this project adheres to
 - Collection preview modal in project settings — click the eye icon on any
   collection row to see the first record as formatted JSON.
   [#4528](https://github.com/OpenFn/lightning/issues/4528)
+- Allow users to cancel available runs (runs for work orders in pending state)
+  [#1622](https://github.com/OpenFn/lightning/issues/1622)
+- Add experimental global AI assistant option for users with experimental
+  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
 
 ### Changed
 
 - Bump `@openfn/ws-worker` from
-  [`1.23.1` to `1.23.4`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.4/packages/ws-worker/CHANGELOG.md?plain=1#L3-L26)
+  [`1.23.1` to `1.23.6`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.6/packages/ws-worker/CHANGELOG.md?plain=1#L3-L41)
 - Renamed channel terminology from Source/Sink to Client/Destination across
   schemas, UI, and API. Channels now enforce a single destination credential
   (was previously unbounded) via a dropdown instead of checkboxes.
@@ -58,13 +63,8 @@ and this project adheres to
   snapshots are also cleaned up after expired requests are removed.
   [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - AI assistant responses now stream in real-time
-- Add experimental global AI assistant option for users with experimental
-  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
-  [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
-- Allow users to cancel available runs (runs for work orders in pending state)
-  [#1622](https://github.com/OpenFn/lightning/issues/1622)
 
 ### Changed
 
