@@ -42,6 +42,9 @@ and this project adheres to
 
 ### Fixed
 
+- Flickering/disappearing visualization on
+  [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
+  [PR#4628](https://github.com/OpenFn/lightning/pull/4628)
 - AI-generated workflows can now be saved when the workflow name collides with
   an existing workflow or when jobs have duplicate names
   [#4607](https://github.com/OpenFn/lightning/issues/4607)
