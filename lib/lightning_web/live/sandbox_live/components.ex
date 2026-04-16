@@ -167,7 +167,6 @@ defmodule LightningWeb.SandboxLive.Components do
             field={@confirm_form[:name]}
             label="Sandbox name"
             placeholder={@sandbox.name}
-            autocomplete="off"
             required
           />
 

@@ -224,7 +224,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                 field={f[:raw_name]}
                 label="Name"
                 required
-                autocomplete="off"
                 placeholder="My Sandbox"
                 phx-debounce="300"
               />

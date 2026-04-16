@@ -111,6 +111,64 @@ defmodule LightningWeb.Components.NewInputsTest do
     end
   end
 
+  # ---- autocomplete defaults --------------------------------------------------
+
+  describe "autocomplete defaults" do
+    test "input/1 renders autocomplete='off' by default" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "text"
+        })
+
+      assert html =~ ~s(autocomplete="off")
+    end
+
+    test "input/1 allows explicit autocomplete override" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "text",
+          autocomplete: "email"
+        })
+
+      # The override value is rendered via {@rest} after the static default.
+      # Browsers use the last attribute value, so autocomplete="email" wins.
+      assert html =~ ~s(autocomplete="email")
+    end
+
+    test "input/1 password type renders autocomplete='off' by default" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "password"
+        })
+
+      assert html =~ ~s(autocomplete="off")
+    end
+
+    test "input/1 password type allows explicit autocomplete override" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "password",
+          autocomplete: "current-password"
+        })
+
+      # The override value is rendered via {@rest} after the static default.
+      # Browsers use the last attribute value, so autocomplete="current-password" wins.
+      assert html =~ ~s(autocomplete="current-password")
+    end
+  end
+
   # ---- old_error/1 (CoreComponents) -----------------------------------------
 
   describe "old_error/1 used_input? gating" do
