@@ -149,7 +149,7 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
@@ -449,10 +449,17 @@ export function ManualRunPanel({
     25 // RUN_PANEL priority
   );
 
+  // Close the run panel and clear the URL param so the URL→state sync
+  // in WorkflowEditor doesn't immediately reopen it.
+  const closeAfterRun = useCallback(() => {
+    updateSearchParams({ panel: null });
+    onClose();
+  }, [updateSearchParams, onClose]);
+
   // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
   useRunRetryShortcuts({
-    onRun: () => void handleRun(),
-    onRetry: () => void handleRetry(),
+    onRun: () => void handleRun().then(ok => ok && closeAfterRun()),
+    onRetry: () => void handleRetry().then(ok => ok && closeAfterRun()),
     canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
@@ -634,10 +641,10 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
-                void handleRun().then(ok => ok && onClose());
+                void handleRun().then(ok => ok && closeAfterRun());
               }}
               onRetry={() => {
-                void handleRetry().then(ok => ok && onClose());
+                void handleRetry().then(ok => ok && closeAfterRun());
               }}
               buttonText={{
                 run: 'Run',
