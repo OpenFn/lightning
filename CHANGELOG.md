@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Collection preview modal in project settings — click the eye icon on any
+  collection row to see the first record as formatted JSON.
+  [#4528](https://github.com/OpenFn/lightning/issues/4528)
 - Allow users to cancel available runs (runs for work orders in pending state)
   [#1622](https://github.com/OpenFn/lightning/issues/1622)
 - Add experimental global AI assistant option for users with experimental
