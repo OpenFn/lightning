@@ -69,7 +69,6 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
             type="text"
             field={kafka_config[:username]}
             label="Username"
-            autocomplete="off"
             disabled={@disabled}
           />
         </div>
@@ -81,6 +80,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
             label="Password"
             disabled={@disabled}
             value={password}
+            autocomplete="new-password"
           />
         </div>
 

@@ -27,7 +27,12 @@
             <div class="grid grid-flow-row gap-4 auto-rows-max">
               <div>
                 <.label for={:password}>New password</.label>
-                <.input type="password" field={f[:password]} required />
+                <.input
+                  type="password"
+                  field={f[:password]}
+                  required
+                  autocomplete="new-password"
+                />
               </div>
 
               <div>
@@ -38,6 +43,7 @@
                   type="password"
                   field={f[:password_confirmation]}
                   required
+                  autocomplete="new-password"
                 />
               </div>
 

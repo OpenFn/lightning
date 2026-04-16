@@ -288,7 +288,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </div>
         <% end %>
 
-        <.input type="password" field={f[:password]} label="Password" />
+        <.input
+          type="password"
+          field={f[:password]}
+          label="Password"
+          autocomplete="new-password"
+        />
         <div class="relative">
           <div class="absolute inset-0 flex items-center" aria-hidden="true">
             <div class="w-full border-t border-gray-300"></div>
@@ -474,7 +479,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       </div>
     <% else %>
       <.label for={:password}>Password</.label>
-      <.input type="password" field={@form[:password]} required="true" />
+      <.input
+        type="password"
+        field={@form[:password]}
+        required="true"
+        autocomplete="new-password"
+      />
 
       <div class="hidden sm:block" aria-hidden="true">
         <div class="py-1"></div>
@@ -525,6 +535,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           }
           class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
           disabled="disabled"
+          autocomplete="new-password"
         />
 
         <button
@@ -570,6 +581,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             )
           }
           disabled="disabled"
+          autocomplete="off"
         />
 
         <button
