@@ -3,6 +3,7 @@ import { cn } from '../../utils/cn';
 
 const STATE_ICONS = {
   pending: 'hero-ellipsis-horizontal-circle-solid',
+  running: 'hero-arrow-path-solid animate-spin',
   success: 'hero-check-circle-solid',
   fail: 'hero-x-circle-solid',
   crash: 'hero-x-circle-solid',
@@ -15,6 +16,7 @@ const STATE_ICONS = {
 
 const STATE_COLORS = {
   pending: 'text-gray-400',
+  running: 'text-blue-500',
   success: 'text-green-500',
   fail: 'text-red-500',
   crash: 'text-orange-800',

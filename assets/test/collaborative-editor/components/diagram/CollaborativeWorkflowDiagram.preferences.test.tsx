@@ -143,6 +143,8 @@ function createWrapper(
       requestRunSteps: vi.fn(() => Promise.resolve(null)),
       subscribeToRunSteps: vi.fn(),
       unsubscribeFromRunSteps: vi.fn(),
+      _viewRun: vi.fn(),
+      _closeRunViewer: vi.fn(),
     } as any,
     uiStore: {} as any,
   };
