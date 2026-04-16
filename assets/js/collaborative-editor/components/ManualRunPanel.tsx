@@ -634,10 +634,10 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
-                void handleRun();
+                void handleRun().then(ok => ok && onClose());
               }}
               onRetry={() => {
-                void handleRetry();
+                void handleRetry().then(ok => ok && onClose());
               }}
               buttonText={{
                 run: 'Run',
