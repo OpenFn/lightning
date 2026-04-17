@@ -7,7 +7,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
-  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
@@ -689,13 +688,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp parent_admin?(project, %{user: %User{} = user}),
     do: Sandboxes.parent_admin?(project, user)
-
-  defp parent_admin?(project, %{user_id: user_id}) do
-    case Accounts.get_user(user_id) do
-      %User{} = user -> Sandboxes.parent_admin?(project, user)
-      nil -> false
-    end
-  end
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)

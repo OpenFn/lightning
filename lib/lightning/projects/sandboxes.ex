@@ -232,10 +232,8 @@ defmodule Lightning.Projects.Sandboxes do
   defp ancestors(%Project{parent_id: nil}), do: []
 
   defp ancestors(%Project{parent_id: parent_id}) do
-    case Lightning.Projects.get_project(parent_id) do
-      nil -> []
-      %Project{} = parent -> [parent | ancestors(parent)]
-    end
+    parent = Lightning.Projects.get_project!(parent_id)
+    [parent | ancestors(parent)]
   end
 
   @doc """
