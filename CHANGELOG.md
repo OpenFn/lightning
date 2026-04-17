@@ -22,7 +22,7 @@ and this project adheres to
 ### Fixed
 
 - Bump `@openfn/ws-worker` from
-  [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.7/packages/ws-worker/CHANGELOG.md?plain=1#L3-L7)
+  [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.8/packages/ws-worker/CHANGELOG.md?plain=1#L3-L16)
 
 ## [2.16.2-pre] - 2026-04-16
 
