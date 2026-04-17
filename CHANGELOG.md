@@ -28,17 +28,46 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
 - Bump `@openfn/ws-worker` from
-  [`1.23.1` to `1.23.5`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.5/packages/ws-worker/CHANGELOG.md?plain=1#L3-L35)
+  [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.8/packages/ws-worker/CHANGELOG.md?plain=1#L3-L16)
+
+## [2.16.2-pre] - 2026-04-16
+
+### Added
+
+- Collection preview modal in project settings — click the eye icon on any
+  collection row to see the first record as formatted JSON.
+  [#4528](https://github.com/OpenFn/lightning/issues/4528)
+- Allow users to cancel available runs (runs for work orders in pending state)
+  [#1622](https://github.com/OpenFn/lightning/issues/1622)
+- Add experimental global AI assistant option for users with experimental
+  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+
+### Changed
+
+- Bump `@openfn/ws-worker` from
+  [`1.23.1` to `1.23.6`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.6/packages/ws-worker/CHANGELOG.md?plain=1#L3-L41)
 - Renamed channel terminology from Source/Sink to Client/Destination across
   schemas, UI, and API. Channels now enforce a single destination credential
   (was previously unbounded) via a dropdown instead of checkboxes.
   [#4581](https://github.com/OpenFn/lightning/issues/4581)
   [#4582](https://github.com/OpenFn/lightning/issues/4582)
   [#4583](https://github.com/OpenFn/lightning/issues/4583)
+- Remove the redirect to "History" when running a run from the canvas. (Stay
+  there to see the run.)
+  [#4198](https://github.com/OpenFn/lightning/issues/4198)
 
 ### Fixed
 
+- Flickering/disappearing visualization on
+  [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
+  [PR#4628](https://github.com/OpenFn/lightning/pull/4628)
+- AI-generated workflows can now be saved when the workflow name collides with
+  an existing workflow or when jobs have duplicate names
+  [#4607](https://github.com/OpenFn/lightning/issues/4607)
 - Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
   `true` or `if_available` this would result in TLS-related failures when trying
   to send emails. This is now fixed for a limited number of use cases (see
@@ -63,13 +92,8 @@ and this project adheres to
   snapshots are also cleaned up after expired requests are removed.
   [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - AI assistant responses now stream in real-time
-- Add experimental global AI assistant option for users with experimental
-  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
-  [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
-- Allow users to cancel available runs (runs for work orders in pending state)
-  [#1622](https://github.com/OpenFn/lightning/issues/1622)
 
 ### Changed
 
