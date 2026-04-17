@@ -6,6 +6,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   import LightningWeb.LayoutComponents
 
+  alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
   alias Lightning.Helpers
@@ -17,6 +18,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
+
+  import LightningWeb.Components.SandboxSettingsBanner
 
   require Logger
 
@@ -33,6 +36,10 @@ defmodule LightningWeb.ProjectLive.Settings do
     if connected?(socket) do
       VersionControl.subscribe(current_user)
     end
+
+    project = Lightning.Repo.preload(project, :parent)
+    sandbox? = Project.sandbox?(project)
+    parent_project = if sandbox?, do: project.parent
 
     project_user = Projects.get_project_user(project, current_user)
 
@@ -126,6 +133,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
        name: project.name,
+       parent_project: parent_project,
+       project: project,
        project_changeset:
          Project.form_changeset(project, %{raw_name: project.name}),
        project_files: project_files,
@@ -133,6 +142,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_user: project_user,
        project_users: [],
        projects: projects,
+       sandbox?: sandbox?,
        selected_credential_type: nil,
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,
@@ -463,7 +473,9 @@ defmodule LightningWeb.ProjectLive.Settings do
     if user_removable?(
          project_user,
          assigns.current_user,
-         assigns.can_remove_project_user
+         assigns.can_remove_project_user,
+         assigns.project,
+         assigns.sandbox?
        ) do
       Projects.delete_project_user!(project_user)
 
@@ -637,7 +649,13 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
-  defp remove_user_tooltip(project_user, current_user, can_remove_project_user) do
+  defp remove_user_tooltip(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     cond do
       !can_remove_project_user ->
         "You do not have permission to remove a user"
@@ -648,14 +666,34 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_user.role == :owner ->
         "You cannot remove an owner"
 
+      sandbox? and parent_admin?(project, project_user) ->
+        "Cannot remove a user who is admin or owner on the parent project"
+
       true ->
         ""
     end
   end
 
-  defp user_removable?(project_user, current_user, can_remove_project_user) do
+  defp user_removable?(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
+  end
+
+  defp parent_admin?(project, %{user: %User{} = user}),
+    do: Lightning.Projects.Sandboxes.parent_admin?(project, user)
+
+  defp parent_admin?(project, %{user_id: user_id}) do
+    case Lightning.Accounts.get_user(user_id) do
+      %User{} = user -> Lightning.Projects.Sandboxes.parent_admin?(project, user)
+      nil -> false
+    end
   end
 
   defp user_has_valid_oauth_token(user) do
