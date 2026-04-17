@@ -17,10 +17,10 @@ When `$ARGUMENTS` contains a plan path:
 - Read the plan at `$ARGUMENTS` completely and check for any existing checkmarks (- [x])
 - **Identify the agent assignment** for each phase (marked as `**Implementation Agent**: ...`)
 - Read the original ticket and all files mentioned in the plan
-- **Read files fully** - never use limit/offset parameters, you need complete context
+- Read files fully (no limit/offset).
 - Think deeply about how the pieces fit together
 - Create a todo list to track your progress across all phases
-- **CRITICAL**: You will coordinate implementation, spawning a FRESH specialized agent for each phase
+- You coordinate implementation; spawn a fresh specialized agent for each phase.
 
 If `$ARGUMENTS` is empty, ask for one.
 
@@ -93,11 +93,7 @@ When implementing phases, use these specialized agents based on the work type:
    - Prevents context overflow on complex implementations
    - Each agent focuses solely on their phase
 
-4. **After each phase completes**:
-   - Read the updated plan to see what was checked off
-   - Review any issues or notes from the agent
-   - Perform or coordinate manual verification if needed
-   - Move to the next phase with a new fresh agent
+4. **Between phases**: verify the previous phase's work (check the plan, review agent output, coordinate manual verification), then move on with a new fresh agent.
 
 ## Your Role as Coordinator
 
@@ -108,7 +104,7 @@ As the main agent running this command, you are the **coordinator**, not the imp
 - You handle issues and communicate with the user
 - You coordinate manual verification between phases
 
-**You do NOT implement the phases yourself** - you delegate to fresh specialized agents.
+Delegate phase implementation to fresh specialized agents rather than implementing directly.
 
 ## Implementation Philosophy
 
@@ -155,7 +151,7 @@ When an agent reports something isn't working as expected:
 - Present the mismatch clearly to the user
 - Get guidance before spawning a new agent with updated instructions
 
-**Key insight**: If an agent is stuck, don't try to fix it yourself - either:
+If an agent is stuck, don't try to fix it yourself - either:
 1. Guide the user to help resolve the issue, then spawn a new agent
 2. Spawn a debugging/research agent to understand the issue
 3. Update the plan and spawn a new implementation agent

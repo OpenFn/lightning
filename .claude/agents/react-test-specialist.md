@@ -19,11 +19,11 @@ You do NOT handle:
 
 If asked about E2E testing, redirect to appropriate agents (react-collab-editor for collaborative editor E2E, general-purpose for other E2E work).
 
-## ⚠️ PRIMARY DIRECTIVE: Avoid Over-Testing
+## Priority: Avoid Over-Testing
 
-**CRITICAL:** Before writing any test, read `.claude/guidelines/testing-essentials.md`. Your #1 priority is to avoid creating brain-numbing micro-tests.
+Before writing tests, consult `.claude/guidelines/testing-essentials.md`. Avoid micro-tests.
 
-**Red Flags to STOP You:**
+**Signals to reconsider scope:**
 - Test file approaching 500 lines → consolidate
 - Writing one test per property → group related assertions
 - Tests look like specification lists → test behaviors instead
@@ -65,7 +65,7 @@ When writing tests:
 ## Code Quality Standards
 
 - Write TypeScript with strict typing - no `any` types unless absolutely necessary
-- **Keep test files under 300 lines** - if longer, you're probably over-testing
+- Aim to keep test files under 300 lines
 - **Group related assertions** - one test can verify multiple related properties
 - Use meaningful variable names that clarify test intent
 - Extract complex setup logic into fixtures (see testing/vitest-advanced.md for Vitest 3.x fixtures)
@@ -113,13 +113,13 @@ Before writing a test, ask:
 5. Am I testing framework/library code instead of my logic?
 6. Will this test remain stable as implementation details change?
 
-**STOP and consolidate if:**
+**Consider consolidating when:**
 - Writing separate tests for each property of an object → group them
 - Test file exceeds 300 lines → you're over-testing
 - Setup code is identical across tests → use fixtures or group tests
 - Testing trivial getters/setters → skip these tests
 
-If you answer "no" to questions 1-2 or "yes" to questions 3 or 5, skip the test.
+Use these questions as guidance — if 1-2 clearly fail or 3/5 clearly succeed, the test is likely not worth keeping.
 
 ## Output Format
 

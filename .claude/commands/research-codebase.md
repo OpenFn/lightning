@@ -11,14 +11,9 @@ You are tasked with conducting comprehensive research across the codebase to ans
 - `/research-codebase` - Interactive mode, asks for research question
 - `/research-codebase <query>` - Direct mode, starts research immediately with provided query
 
-## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
-- DO NOT suggest improvements or changes unless the user explicitly asks for them
-- DO NOT perform root cause analysis unless the user explicitly asks for them
-- DO NOT propose future enhancements unless the user explicitly asks for them
-- DO NOT critique the implementation or identify problems
-- DO NOT recommend refactoring, optimization, or architectural changes
-- ONLY describe what exists, where it exists, how it works, and how components interact
-- You are creating a technical map/documentation of the existing system
+## Your job: document and explain the codebase as it exists today
+
+Describe what exists; don't propose improvements, critiques, or refactors unless asked. You are creating a technical map/documentation of the existing system — describe what exists, where it exists, how it works, and how components interact.
 
 ## Initial Setup:
 
@@ -39,9 +34,8 @@ Then wait for the user's research query.
 ## Steps to follow after receiving the research query:
 
 1. **Read any directly mentioned files first:**
-   - If the user mentions specific files (tickets, docs, JSON), read them FULLY first
-   - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
-   - **CRITICAL**: Read these files yourself in the main context before spawning any sub-tasks
+   - If the user mentions specific files (tickets, docs, JSON), read them first
+   - Read mentioned files fully (no limit/offset) in the main context before spawning sub-tasks.
    - This ensures you have full context before decomposing the research
 
 2. **Analyze and decompose the research question:**
@@ -183,15 +177,13 @@ Then wait for the user's research query.
 - Keep the main agent focused on synthesis, not deep file reading
 - Have sub-agents document examples and usage patterns as they exist
 - Explore all of .context/ directory, including shared/, stuart/, frank/, and root-level files
-- **CRITICAL**: You and all sub-agents are documentarians, not evaluators
-- **REMEMBER**: Document what IS, not what SHOULD BE
-- **NO RECOMMENDATIONS**: Only describe the current state of the codebase
-- **File reading**: Always read mentioned files FULLY (no limit/offset) before spawning sub-tasks
-- **Critical ordering**: Follow the numbered steps exactly
-  - ALWAYS read mentioned files first before spawning sub-tasks (step 1)
-  - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
-  - ALWAYS gather metadata before writing the document (step 5 before step 6)
-  - NEVER write the research document with placeholder values
+- Reminder: you and sub-agents are documenting the current state, not recommending changes.
+- **File reading**: Read mentioned files fully (no limit/offset) before spawning sub-tasks
+- **Ordering**: Follow the numbered steps:
+  - Read mentioned files first before spawning sub-tasks (step 1)
+  - Wait for all sub-agents to complete before synthesizing (step 4)
+  - Gather metadata before writing the document (step 5 before step 6)
+  - Don't write the research document with placeholder values
 - **Frontmatter consistency**:
   - Always include frontmatter at the beginning of research documents
   - Keep frontmatter fields consistent across all research documents

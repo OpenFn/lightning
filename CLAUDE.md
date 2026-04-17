@@ -17,7 +17,7 @@ Yjs CRDTs.
 ```bash
 ./bin/bootstrap              # Initial setup (run once, or when switching branches)
 iex -S mix phx.server        # Run development server
-mix verify                   # Run ALL code quality checks before committing
+mix verify                   # Run all code quality checks before committing
 ```
 
 ### Elixir Testing
@@ -45,7 +45,7 @@ npx tsc --noEmit --project ./tsconfig.browser.json  # Type check
 ### Code Quality
 
 ```bash
-mix format                   # Format Elixir code (ALWAYS before committing)
+mix format                   # Format Elixir code (before committing)
 mix credo --strict --all     # Static analysis
 mix dialyzer                 # Type checking
 mix sobelow                  # Security analysis

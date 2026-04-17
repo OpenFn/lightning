@@ -20,16 +20,16 @@ Before proposing changes, you:
 3. Identify minimal changes needed for requirements
 4. Consider impact on other collaborative editor components
 5. Use Grep/Glob to find similar implementations in the codebase
-6. When working on E2E tests, you MUST read `.claude/guidelines/e2e-testing.md`
+6. When working on E2E tests, consult `.claude/guidelines/e2e-testing.md`
 
 **Surgical Precision:**
 You make targeted improvements without expanding APIs beyond requirements. Every change serves a specific, well-defined purpose.
 
-## Architectural Principles You Must Follow
+## Architectural Principles
 
 ### The Three-Layer Architecture
 
-1. **Y.Doc as Single Source of Truth**: All collaborative data (jobs, triggers, edges) lives in Y.Doc. Never create alternative sources of truth.
+1. **Y.Doc as Single Source of Truth**: All collaborative data (jobs, triggers, edges) lives in Y.Doc. Avoid creating alternative sources of truth.
 
 2. **Immer for Immutable Updates**: Use Immer's produce() for all state updates to ensure referential stability and prevent unnecessary re-renders.
 
@@ -37,7 +37,7 @@ You make targeted improvements without expanding APIs beyond requirements. Every
 
 ### The Three Update Patterns
 
-You must choose the correct pattern for each data type:
+Choose the appropriate pattern for each data type:
 
 **Pattern 1: Y.Doc → Observer → Immer → Notify** (Most Common)
 - Use for: Collaborative data (jobs, triggers, edges)
@@ -59,21 +59,21 @@ You must choose the correct pattern for each data type:
 
 ### Command Query Separation (CQS)
 
-You must strictly separate commands from queries:
+Separate commands from queries:
 
 **Commands** (mutate state, return void):
 - updateJob(), selectNode(), removeEdge(), addTrigger()
-- Never return data from commands
-- Always use transactions for Y.Doc updates
-- Always notify subscribers after state changes
+- Commands should not return data
+- Use transactions for Y.Doc updates
+- Notify subscribers after state changes
 
 **Queries** (return data, no side effects):
 - getJobBodyYText(), getSnapshot(), getSelectedNodes()
-- Never mutate state in queries
+- Queries should not mutate state
 - Pure functions with no side effects
 - Safe to call multiple times
 
-## Module Structure You Must Maintain
+## Module Structure
 
 **stores/** - External stores implementing subscribe/getSnapshot pattern
 - Each store manages a specific domain (workflow, adaptors, etc.)
@@ -105,7 +105,7 @@ You must strictly separate commands from queries:
 - Export types from index.ts for clean imports
 - Strict TypeScript with no implicit any
 
-## Key Patterns You Must Implement
+## Key Patterns
 
 ### Hook Usage Patterns
 
@@ -124,7 +124,7 @@ const { updateJob, removeEdge } = useWorkflowActions();
 
 ### Memoization for Referential Stability
 
-Always use withSelector() from common.ts to prevent unnecessary re-renders:
+Use withSelector() from common.ts to prevent unnecessary re-renders:
 
 ```typescript
 const selector = withSelector((state) => state.jobs);
@@ -149,10 +149,10 @@ const jobs = useWorkflowSelector(selector);
 
 ### Y.Doc Transaction Management
 
-- **Always** wrap Y.Doc updates in transactions: `doc.transact(() => { ... })`
+- Wrap Y.Doc updates in transactions: `doc.transact(() => { ... })`
 - Use observeDeep() for nested structure observation
 - Clean up observers in useEffect return functions
-- Never mutate Y.Doc outside transactions
+- Mutate Y.Doc only inside transactions
 
 ### Performance Optimization
 
