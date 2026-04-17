@@ -2,7 +2,7 @@
 
 ## Overview
 
-These guidelines ensure maintainable, readable tests that focus on behavior rather than exhaustive coverage. **The #1 priority is avoiding brain-numbing micro-tests.**
+These guidelines ensure maintainable, readable tests that focus on behavior rather than exhaustive coverage. A key priority is avoiding micro-tests.
 
 **Testing Philosophy:**
 - Write tests that focus on behavior, not implementation details
@@ -11,17 +11,17 @@ These guidelines ensure maintainable, readable tests that focus on behavior rath
 - Test from the user's perspective when possible
 - **Group related assertions - avoid micro-testing individual properties**
 
-## ⚠️ AVOIDING OVER-TESTING: The #1 Priority
+## Avoiding Over-Testing
 
 **The Problem:** It's easy to write tests that are so granular they become exhausting to read and maintain. A 700-line test file with dozens of micro-tests testing individual properties is worse than a 200-line file with well-organized behavioral tests.
 
 ### Red Flags You're Over-Testing
 
-🚫 **Test file is > 500 lines** - Time to consolidate
-🚫 **One test per property/assertion** - Group related assertions
-🚫 **Repeating setup code extensively** - Extract helpers or use fixtures
-🚫 **Tests that just verify framework behavior** - Focus on your logic
-🚫 **Tests reading like a spec sheet** - Test behaviors, not structure
+- **Test file is > 500 lines** - Time to consolidate
+- **One test per property/assertion** - Group related assertions
+- **Repeating setup code extensively** - Extract helpers or use fixtures
+- **Tests that just verify framework behavior** - Focus on your logic
+- **Tests reading like a spec sheet** - Test behaviors, not structure
 
 ### The Fix: Group Related Assertions
 
@@ -205,7 +205,7 @@ end
 - Simple module: **< 200 lines**
 - Complex store/context: **< 300 lines**
 - Integration/supervisor tests: **< 400 lines**
-- **Red flag:** > 500 lines means you're over-testing
+- Consider splitting test files above 500 lines.
 
 If you hit these limits, you're probably:
 1. Testing framework features instead of your logic
@@ -674,23 +674,9 @@ Maintain these minimum coverage targets:
 - Utility functions: 80%+ coverage
 - Type definitions: Not required
 
-## Summary Checklist
+## Summary
 
-Before submitting tests, verify:
-
-- [ ] **File is under target size** (< 200-400 lines depending on complexity)
-- [ ] **Related assertions are grouped** - not one test per property
-- [ ] Tests follow AAA (Arrange-Act-Assert) pattern
-- [ ] Test names are descriptive and complete sentences
-- [ ] Tests are independent and can run in any order
-- [ ] Async operations use proper await/waitFor patterns
-- [ ] No arbitrary timeouts (use waitFor instead)
-- [ ] Common setup extracted to beforeEach or factories
-- [ ] Mocks are cleaned up after each test
-- [ ] Tests focus on behavior, not implementation
-- [ ] Edge cases and error conditions are tested
-- [ ] Tests run fast (< 100ms for unit tests)
-- [ ] describe blocks group related tests logically
+Good tests focus on behavior over implementation, group related assertions rather than splitting one-per-property, and stay within the file-size targets above. Async operations should use `waitFor` rather than arbitrary timeouts, and common setup belongs in `beforeEach` or factory helpers.
 
 ## Additional Resources
 
@@ -701,4 +687,4 @@ For specific patterns, see:
 
 ---
 
-**Remember:** Good tests are readable, maintainable, and give you confidence to refactor. A 200-line test file with grouped assertions is better than a 700-line file with micro-tests.
+Good tests are readable, maintainable, and give you confidence to refactor. A 200-line test file with grouped assertions is better than a 700-line file with micro-tests.

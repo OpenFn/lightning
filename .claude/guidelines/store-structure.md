@@ -223,7 +223,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 ## Shared Utilities
 
 ### common.ts
-`createWithSelector(getSnapshot)` — Memoized selector factory. Caches last result + last state; only re-runs selector when state reference changes. Every store MUST use this.
+`createWithSelector(getSnapshot)` — Memoized selector factory. Caches last result + last state; only re-runs selector when state reference changes. Every store uses this.
 
 ### devtools.ts
 `wrapStoreWithDevTools(config)` — Redux DevTools integration. Serializes state excluding circular references (`ydoc`, `provider`, `rawAwareness`, `userCache`). No-op in production. Used internally by all stores.

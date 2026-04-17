@@ -33,7 +33,7 @@ This document captures UI/UX patterns and design conventions for the Lightning c
 
 ## Disabled Button States
 
-**Critical Rule:** Tailwind's `hover:` classes continue to apply even when `disabled` is true. For every `hover:` class, add a corresponding `disabled:hover:` class that matches the disabled state appearance.
+Tailwind's `hover:` classes continue to apply even when `disabled` is true. For every `hover:` class, add a corresponding `disabled:hover:` class that matches the disabled state appearance.
 
 ### Pattern Examples
 

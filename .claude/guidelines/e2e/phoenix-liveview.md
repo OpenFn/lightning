@@ -35,7 +35,7 @@ Page ready for interaction
 
 ### Waiting for LiveView Connection
 
-**Always wait for connection before interacting with LiveView elements.**
+Wait for the LiveView connection before interacting with elements on the page.
 
 ```typescript
 import { LiveViewPage } from '../pages/base';
@@ -677,7 +677,7 @@ test('fix flaky test', async ({ page }) => {
 
 ### ✅ DO
 
-- **Always wait for connection** using `waitForConnected()`
+- **Wait for connection** using `waitForConnected()`
 - **Use web-first assertions** that auto-retry
 - **Wait for networkidle** after navigation to new LiveView
 - **Wait for socket to settle** before critical assertions

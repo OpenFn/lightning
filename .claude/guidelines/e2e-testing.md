@@ -388,7 +388,7 @@ See `.claude/guidelines/e2e/page-objects.md` for comprehensive POM patterns.
 
 ### Before Modifying POMs: Read First!
 
-**Critical Rule**: Before adding or modifying any POM method, ALWAYS read the entire POM file first to understand what already exists.
+Before adding a POM method, read the existing POM file to check for similar functionality.
 
 ```typescript
 // ❌ BAD: Adding method without checking what exists
@@ -409,11 +409,7 @@ test('refactor login', async ({ page }) => {
 });
 ```
 
-**Before adding POM methods, verify**:
-- [ ] Read the entire POM file
-- [ ] Understand all existing methods
-- [ ] Check if functionality already exists
-- [ ] Confirm new method is genuinely needed
+Before adding a POM method, check the existing file for similar functionality to avoid duplication.
 
 See "Before Creating or Modifying POMs" in `.claude/guidelines/e2e/page-objects.md` for detailed guidance.
 
@@ -596,7 +592,7 @@ DEBUG=pw:api           # Verbose API logs
 
 ## Related Guidelines
 
-Depending on what task you are performing, you MUST read at least one of the following guideline documents:
+Depending on the task, consult the relevant guideline:
 
 - **Modern Playwright patterns**: `.claude/guidelines/e2e/playwright-patterns.md`
   - Auto-waiting and web-first assertions
@@ -767,7 +763,7 @@ use: {
 
 ---
 
-**Remember**: E2E tests provide confidence in complete user workflows. Keep
+E2E tests provide confidence in complete user workflows. Keep
 them focused on business-critical paths, maintain them with Page Object Models,
 and ensure they're fast and stable through proper isolation and waiting
 strategies.

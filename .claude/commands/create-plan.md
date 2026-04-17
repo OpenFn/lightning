@@ -46,9 +46,7 @@ Then wait for the user's input.
    - Research documents
    - Related implementation plans
    - Any JSON/data files mentioned
-   - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
-   - **CRITICAL**: DO NOT spawn sub-tasks before reading these files yourself in the main context
-   - **NEVER** read files partially - if a file is mentioned, read it completely
+   - Read mentioned files fully (no limit/offset) in the main context before spawning sub-tasks.
 
 2. **Spawn initial research tasks to gather context**:
    Before asking the user any questions, use specialized agents to research in parallel:
@@ -177,7 +175,7 @@ After structure approval:
      - **react-collab-editor**: Collaborative editor components
      - **react-test-specialist**: React testing with Vitest
      - **general-purpose**: Mixed or coordination work
-   - **CRITICAL**: Each phase will use a FRESH agent instance to avoid context window issues
+   - Each phase uses a fresh agent instance to avoid context window issues.
    - The agent assignment tells the implementation coordinator which agent to spawn for that phase
 
 2. **Write the plan** to `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
@@ -338,16 +336,11 @@ After structure approval:
    - Include "what we're NOT doing"
 
 5. **Track Progress**:
-   - Use TodoWrite to track planning tasks
-   - Update todos as you complete research
-   - Mark planning tasks complete when done
+   - For non-trivial plans, consider tracking progress with TodoWrite.
 
 6. **No Open Questions in Final Plan**:
-   - If you encounter open questions during planning, STOP
-   - Research or ask for clarification immediately
-   - Do NOT write the plan with unresolved questions
-   - The implementation plan must be complete and actionable
-   - Every decision must be made before finalizing the plan
+   - Resolve open questions before finalizing; don't write the plan with unresolved questions.
+   - The implementation plan must be complete and actionable.
 
 ## Success Criteria Guidelines
 
@@ -415,10 +408,7 @@ When spawning research sub-tasks:
    - Which directories to focus on
    - What information to extract
    - Expected output format
-4. **Be EXTREMELY specific about directories**:
-   - If the issue mentions frontend work, specify the relevant frontend directory (e.g., `assets/`)
-   - If it mentions backend work, specify the relevant backend directory (e.g., `lib/`)
-   - Never use generic terms without specifying the exact path
+4. **Be specific about directories** — name the exact path (e.g., `assets/`, `lib/`):
    - Include the full path context in your prompts
 5. **Specify read-only tools** to use
 6. **Request specific file:line references** in responses

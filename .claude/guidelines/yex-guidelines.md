@@ -15,9 +15,9 @@ This document provides comprehensive guidelines for working with Yex, the Elixir
 
 ## Critical Warning: VM Deadlock Risk
 
-### ⚠️ THE MOST IMPORTANT RULE ⚠️
+### Retrieve objects before transactions
 
-**ALWAYS retrieve Yex objects (maps, arrays, text) BEFORE starting a transaction.**
+Retrieve Yex objects (maps, arrays, text) before starting a transaction.
 
 Calling `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2` **inside a transaction will hang the BEAM VM**.
 
@@ -89,9 +89,7 @@ end
 
 ### Critical: You Cannot Create Map/Array/Text Directly
 
-**⚠️ FUNDAMENTAL API CONSTRAINT ⚠️**
-
-Yex.Map, Yex.Array, and Yex.Text **cannot be created directly**. They can ONLY be obtained through `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, and `Yex.Doc.get_text/2`.
+Yex.Map, Yex.Array, and Yex.Text **cannot be created directly**. They can only be obtained through `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, and `Yex.Doc.get_text/2`.
 
 ```elixir
 # ❌ WRONG - These functions DO NOT EXIST
@@ -452,7 +450,7 @@ Yex.Doc.demonitor_update(sub_ref)
 
 ## Common Gotchas
 
-### 0. Cannot Create Map/Array/Text Directly (MOST COMMON ERROR)
+### 0. Cannot Create Map/Array/Text Directly
 
 **Problem:** Attempting to call `Yex.Map.new()`, `Yex.Array.new()`, or `Yex.Text.new()` will fail because these functions don't exist.
 
@@ -834,17 +832,9 @@ end
 
 ---
 
-## Summary of Critical Rules
+## Summary
 
-1. ⚠️ **NEVER try to create Map/Array/Text directly** - Use `Yex.Doc.get_map/get_array/get_text` or Prelim types
-2. ⚠️ **ALWAYS get Yex objects BEFORE transactions** - This is critical to avoid VM deadlocks
-3. ✅ Use `fetch/2` or `fetch!/2` - Not deprecated `get/2`
-4. ✅ Convert atoms to strings - Except booleans
-5. ✅ Handle nil text fields - Use `|| ""`
-6. ✅ Extract Text with `to_string/1` - Y.Text doesn't auto-convert
-7. ✅ Unsubscribe in terminate - Prevent memory leaks
-8. ✅ No nested transactions - Single transaction only
-9. ✅ Use MapPrelim/ArrayPrelim - For nested structures in arrays
+The two rules that prevent VM-level failures: get Yex objects before starting a transaction (deadlock risk), and don't try to construct Map/Array/Text directly — use `Yex.Doc.get_*` or Prelim types. Beyond those, prefer `fetch/2` over deprecated `get/2`, convert non-boolean atoms to strings, extract `Yex.Text` with `to_string/1`, and unsubscribe from `monitor_update` in `terminate/2`.
 
 ---
 
@@ -864,4 +854,4 @@ If you encounter issues or have questions:
 1. Check this guide first
 2. Review the code references provided
 3. Look at test files for working examples
-4. Remember: **Get objects BEFORE transactions!**
+4. Get objects before transactions

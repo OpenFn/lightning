@@ -49,13 +49,9 @@ Component POMs
 
 ### The Read-First Rule
 
-**CRITICAL**: Before adding any new method to a POM, you MUST:
+Before adding a new method to a POM, read the existing POM file and check for similar functionality.
 
-1. **Read the entire existing POM file**
-   ```typescript
-   // ✅ ALWAYS DO THIS FIRST
-   // Read: assets/test/e2e/pages/login.page.ts
-   ```
+1. **Read the existing POM file** (e.g., `assets/test/e2e/pages/login.page.ts`)
 
 2. **Check for existing similar functionality**
    - Does a method already do what you need?
@@ -116,15 +112,9 @@ await loginPage.loginIfNeeded(email, password);
 - Can compose existing methods (e.g., `goto()` + `loginIfNeeded()`)
 - Existing method does what you need with minor adjustments
 
-### Research Checklist
+### Before adding a new method
 
-Before creating any POM method:
-- [ ] Read entire POM file top to bottom
-- [ ] List all existing methods and their purposes
-- [ ] Check if any existing method achieves the goal
-- [ ] Check if composing existing methods works
-- [ ] Verify the new method adds unique value
-- [ ] Follow existing patterns and naming conventions
+Check whether existing methods can be reused or composed before adding a new one, and follow existing patterns and naming conventions.
 
 ## Base Classes
 
@@ -983,6 +973,6 @@ class WorkflowEditPage extends LiveViewPage {
 
 ---
 
-**Remember**: Page Object Models encapsulate UI structure and interactions.
+Page Object Models encapsulate UI structure and interactions.
 Keep POMs focused on "how" to interact with the page, while tests focus on
 "what" to test. Well-designed POMs make tests readable and maintainable.
