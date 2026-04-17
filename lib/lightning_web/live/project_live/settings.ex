@@ -17,7 +17,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
@@ -469,8 +468,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
       ) do
-    project_user =
-      Projects.get_project_user!(project_user_id) |> Repo.preload(:user)
+    project_user = Projects.get_project_user!(project_user_id, include: :user)
 
     if user_removable?(
          project_user,

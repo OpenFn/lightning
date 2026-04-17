@@ -319,7 +319,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_user!(id), do: Repo.get!(ProjectUser, id)
+  def get_project_user!(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+    ProjectUser |> Repo.get!(id) |> Repo.preload(include)
+  end
 
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
