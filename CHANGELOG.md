@@ -24,6 +24,13 @@ and this project adheres to
   `x-api-version: 2` header. V1 continues to work and returns 409 when a name is
   ambiguous across projects.
   [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Sandbox-aware Project Settings page. Each tab shows a banner explaining how
+  changes will (or will not) flow on merge: Local (sandbox-only), Editable
+  (syncs on merge), or Inherited (read-only, managed in the parent). The Sandbox
+  Identity panel links back to the parent project, the MFA toggle is read-only,
+  webhook security is unavailable in V1, and parent project admins cannot be
+  removed from a sandbox.
+  [#3398](https://github.com/OpenFn/lightning/issues/3398)
 
 ### Changed
 
