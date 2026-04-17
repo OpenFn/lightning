@@ -62,9 +62,20 @@
         <span class="inline-block align-middle">History Exports</span>
       </:tab>
       <:panel hash="project" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-project"
+          variant={:local}
+        />
         <.section_header
-          title="Project setup"
-          subtitle="Projects are isolated workspaces that contain workflows, accessible to certain users."
+          title={if @sandbox?, do: "Sandbox setup", else: "Project setup"}
+          subtitle={
+            if @sandbox?,
+              do:
+                "Sandboxes are isolated copies of a project for safe experimentation.",
+              else:
+                "Projects are isolated workspaces that contain workflows, accessible to certain users."
+          }
           permissions_message="basic settings, but you can export a copy."
           can_perform_action={@can_edit_project}
         />
@@ -72,10 +83,22 @@
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
               <h6 class="font-medium text-black">
-                Project Identity
+                {if @sandbox?, do: "Sandbox Identity", else: "Project Identity"}
               </h6>
               <small class="block my-1 text-xs text-gray-600">
-                This metadata helps you identify the types of workflows managed in this project and the people that have access.
+                <%= if @sandbox? do %>
+                  Identifies this sandbox within the parent project.
+                  <span :if={@parent_project}>
+                    Parent project: <.link
+                      navigate={~p"/projects/#{@parent_project.id}/settings"}
+                      class="font-medium text-indigo-600 hover:text-indigo-900"
+                    >
+                      {@parent_project.name}
+                    </.link>.
+                  </span>
+                <% else %>
+                  This metadata helps you identify the types of workflows managed in this project and the people that have access.
+                <% end %>
               </small>
             </div>
             <.form
@@ -233,7 +256,7 @@
               Export project
             </.button_link>
           </div>
-          <%= if @can_delete_project do %>
+          <%= if @can_delete_project and not @sandbox? do %>
             <div class="bg-white p-4 rounded-md space-y-4">
               <div>
                 <h6 class="font-medium text-black">The danger zone</h6>
@@ -268,6 +291,11 @@
         </div>
       </:panel>
       <:panel hash="credentials" class="space-y-4 block">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-credentials"
+          variant={:editable}
+        />
         <.section_header
           title="Project credentials"
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
@@ -315,6 +343,11 @@
         />
       </:panel>
       <:panel hash="collections" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-collections"
+          variant={:editable}
+        />
         <.live_component
           module={LightningWeb.ProjectLive.CollectionsComponent}
           id="collections"
@@ -325,171 +358,198 @@
         />
       </:panel>
       <:panel hash="webhook_security" class="space-y-4">
-        <.section_header
-          title="Webhook security"
-          subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
-          permissions_message="webhook auth methods."
-          can_perform_action={@can_write_webhook_auth_method}
-          action_button_text="New auth method"
-          action_button_click={
-            JS.push("show_modal", value: %{target: "new_webhook_auth_method"})
-          }
-          action_button_disabled={!@can_write_webhook_auth_method}
-          action_button_id="add_new_auth_method"
-        />
-        <.modal
-          :if={
-            @active_modal in [
-              :new_webhook_auth_method,
-              :edit_webhook_auth_method
-            ]
-          }
-          id="webhook_auth_method_modal"
-          width="min-w-1/3 max-w-xl"
-          on_close={JS.push("close_active_modal")}
-          show={true}
-        >
-          <.live_component
-            :if={@active_modal == :new_webhook_auth_method}
-            module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-            id="new_auth_method"
-            action={:new}
-            current_user={@current_user}
-            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-            trigger={nil}
-            on_close={JS.push("close_active_modal")}
-            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+        <%= if @sandbox? do %>
+          <.section_header
+            title="Webhook security"
+            subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
+            permissions_message="webhook auth methods."
+            can_perform_action={false}
           />
-          <.live_component
-            :if={@active_modal == :edit_webhook_auth_method}
-            module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-            id={"edit_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
-            action={:edit}
-            current_user={@current_user}
-            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-            trigger={nil}
-            on_close={JS.push("close_active_modal")}
-            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+          <div class="bg-white p-4 rounded-md">
+            <p class="text-sm text-gray-700">
+              Webhook security is not available in sandboxes for now. Manage these methods in the parent project <.link
+                :if={@parent_project}
+                navigate={
+                  ~p"/projects/#{@parent_project.id}/settings#webhook_security"
+                }
+                class="font-medium text-indigo-600 hover:text-indigo-900"
+              >
+                ({@parent_project.name})
+              </.link>.
+            </p>
+          </div>
+        <% else %>
+          <.section_header
+            title="Webhook security"
+            subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
+            permissions_message="webhook auth methods."
+            can_perform_action={@can_write_webhook_auth_method}
+            action_button_text="New auth method"
+            action_button_click={
+              JS.push("show_modal", value: %{target: "new_webhook_auth_method"})
+            }
+            action_button_disabled={!@can_write_webhook_auth_method}
+            action_button_id="add_new_auth_method"
           />
-        </.modal>
-        <.live_component
-          :if={@active_modal == :delete_webhook_auth_method}
-          module={LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal}
-          id={"delete_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
-          current_user={@current_user}
-          webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-          on_close={JS.push("close_active_modal")}
-          return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-        />
-        <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
-          :if={@active_modal == :linked_triggers_for_webhook_auth_method}
-          id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
-          webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-          on_close={JS.push("close_active_modal")}
-        />
-        <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
-          auth_methods={@webhook_auth_methods}
-          current_user={@current_user}
-          return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-          class="p-2"
-        >
-          <:empty_state>
-            <.empty_state
-              icon="hero-plus-circle"
-              message="No auth methods found."
-              button_text="Create a new auth method"
-              button_id="open-create-auth-method-modal"
-              button_click={
-                JS.push("show_modal",
-                  value: %{target: "new_webhook_auth_method"}
-                )
-              }
-              button_disabled={!@can_write_webhook_auth_method}
+          <.modal
+            :if={
+              @active_modal in [
+                :new_webhook_auth_method,
+                :edit_webhook_auth_method
+              ]
+            }
+            id="webhook_auth_method_modal"
+            width="min-w-1/3 max-w-xl"
+            on_close={JS.push("close_active_modal")}
+            show={true}
+          >
+            <.live_component
+              :if={@active_modal == :new_webhook_auth_method}
+              module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+              id="new_auth_method"
+              action={:new}
+              current_user={@current_user}
+              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+              trigger={nil}
+              on_close={JS.push("close_active_modal")}
+              return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
             />
-          </:empty_state>
-          <:linked_triggers :let={auth_method}>
-            <span class="relative font-normal">
-              <a
-                :if={auth_method.triggers != []}
-                id={"display_linked_triggers_link_#{auth_method.id}"}
-                href="#"
-                class="text-indigo-600 hover:text-indigo-900"
-                phx-click={
+            <.live_component
+              :if={@active_modal == :edit_webhook_auth_method}
+              module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+              id={"edit_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+              action={:edit}
+              current_user={@current_user}
+              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+              trigger={nil}
+              on_close={JS.push("close_active_modal")}
+              return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+            />
+          </.modal>
+          <.live_component
+            :if={@active_modal == :delete_webhook_auth_method}
+            module={LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal}
+            id={"delete_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+            current_user={@current_user}
+            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+            on_close={JS.push("close_active_modal")}
+            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+          />
+          <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
+            :if={@active_modal == :linked_triggers_for_webhook_auth_method}
+            id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
+            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+            on_close={JS.push("close_active_modal")}
+          />
+          <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
+            auth_methods={@webhook_auth_methods}
+            current_user={@current_user}
+            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+            class="p-2"
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No auth methods found."
+                button_text="Create a new auth method"
+                button_id="open-create-auth-method-modal"
+                button_click={
                   JS.push("show_modal",
-                    value: %{
-                      target: "linked_triggers_for_webhook_auth_method",
-                      id: auth_method.id
-                    }
+                    value: %{target: "new_webhook_auth_method"}
                   )
                 }
-              >
-                {Enum.count(auth_method.triggers)}
-              </a>
-              <span
-                :if={auth_method.triggers == []}
-                class="italic font-normal text-gray-300"
-              >
-                No associated triggers...
+                button_disabled={!@can_write_webhook_auth_method}
+              />
+            </:empty_state>
+            <:linked_triggers :let={auth_method}>
+              <span class="relative font-normal">
+                <a
+                  :if={auth_method.triggers != []}
+                  id={"display_linked_triggers_link_#{auth_method.id}"}
+                  href="#"
+                  class="text-indigo-600 hover:text-indigo-900"
+                  phx-click={
+                    JS.push("show_modal",
+                      value: %{
+                        target: "linked_triggers_for_webhook_auth_method",
+                        id: auth_method.id
+                      }
+                    )
+                  }
+                >
+                  {Enum.count(auth_method.triggers)}
+                </a>
+                <span
+                  :if={auth_method.triggers == []}
+                  class="italic font-normal text-gray-300"
+                >
+                  No associated triggers...
+                </span>
               </span>
-            </span>
-          </:linked_triggers>
-          <:action :let={auth_method}>
-            <%= if @can_write_webhook_auth_method do %>
-              <a
-                id={"edit_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="table-action"
-                phx-click={
-                  JS.push("show_modal",
-                    value: %{
-                      target: "edit_webhook_auth_method",
-                      id: auth_method.id
-                    }
-                  )
-                }
-              >
-                View
-              </a>
-            <% else %>
-              <a
-                id={"edit_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="table-action cursor-not-allowed"
-              >
-                Edit
-              </a>
-            <% end %>
-          </:action>
-          <:action :let={auth_method}>
-            <%= if @can_write_webhook_auth_method do %>
-              <a
-                id={"delete_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="table-action"
-                phx-click={
-                  JS.push("show_modal",
-                    value: %{
-                      target: "delete_webhook_auth_method",
-                      id: auth_method.id
-                    }
-                  )
-                }
-              >
-                Delete
-              </a>
-            <% else %>
-              <a
-                id={"delete_auth_method_link_#{auth_method.id}"}
-                href="#"
-                class="table-action cursor-not-allowed"
-              >
-                Delete
-              </a>
-            <% end %>
-          </:action>
-        </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+            </:linked_triggers>
+            <:action :let={auth_method}>
+              <%= if @can_write_webhook_auth_method do %>
+                <a
+                  id={"edit_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="table-action"
+                  phx-click={
+                    JS.push("show_modal",
+                      value: %{
+                        target: "edit_webhook_auth_method",
+                        id: auth_method.id
+                      }
+                    )
+                  }
+                >
+                  View
+                </a>
+              <% else %>
+                <a
+                  id={"edit_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="table-action cursor-not-allowed"
+                >
+                  Edit
+                </a>
+              <% end %>
+            </:action>
+            <:action :let={auth_method}>
+              <%= if @can_write_webhook_auth_method do %>
+                <a
+                  id={"delete_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="table-action"
+                  phx-click={
+                    JS.push("show_modal",
+                      value: %{
+                        target: "delete_webhook_auth_method",
+                        id: auth_method.id
+                      }
+                    )
+                  }
+                >
+                  Delete
+                </a>
+              <% else %>
+                <a
+                  id={"delete_auth_method_link_#{auth_method.id}"}
+                  href="#"
+                  class="table-action cursor-not-allowed"
+                >
+                  Delete
+                </a>
+              <% end %>
+            </:action>
+          </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+        <% end %>
       </:panel>
       <:panel hash="collaboration" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-collaboration"
+          variant={:local}
+        />
         <.section_header
           title="Project collaboration"
           subtitle="View collaborators and manage alert settings for this project."
@@ -547,14 +607,18 @@
                   remove_user_tooltip(
                     project_user,
                     @current_user,
-                    @can_remove_project_user
+                    @can_remove_project_user,
+                    @project,
+                    @sandbox?
                   )
                 }
                 disabled={
                   !user_removable?(
                     project_user,
                     @current_user,
-                    @can_remove_project_user
+                    @can_remove_project_user,
+                    @project,
+                    @sandbox?
                   )
                 }
               >
@@ -580,7 +644,9 @@
               user_removable?(
                 project_user,
                 @current_user,
-                @can_remove_project_user
+                @can_remove_project_user,
+                @project,
+                @sandbox?
               )
             }
             id={"remove_#{project_user.id}_modal"}
@@ -589,11 +655,17 @@
         <% end %>
       </:panel>
       <:panel hash="security" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-security"
+          variant={:inherited}
+          parent_project={@parent_project}
+        />
         <.section_header
           title="Project security"
           subtitle="View and manage security settings for this project."
           permissions_message="multi-factor authentication settings."
-          can_perform_action={@can_edit_project}
+          can_perform_action={@can_edit_project and not @sandbox?}
         />
         <div>
           <%= if assigns[:mfa_banner] do %>
@@ -628,10 +700,10 @@
               <button
                 id="toggle-mfa-switch"
                 type="button"
-                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project or @sandbox?, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
                 role="switch"
-                disabled={!@can_require_mfa}
-                phx-click="toggle-mfa"
+                disabled={!@can_require_mfa or @sandbox?}
+                phx-click={unless @sandbox?, do: "toggle-mfa"}
                 aria-checked={@project.requires_mfa}
                 aria-labelledby="require-mfa-label"
                 aria-describedby="require-mfa-description"
@@ -658,6 +730,11 @@
         </div>
       </:panel>
       <:panel hash="vcs" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-vcs"
+          variant={:local}
+        />
         <.section_header
           title="Version control"
           subtitle="View or modify external version control settings for this project."
@@ -757,6 +834,11 @@
         </div>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-data-storage"
+          variant={:local}
+        />
         <.section_header
           title="Data storage"
           subtitle="View or modify data storage settings for this project."
@@ -945,6 +1027,11 @@
         </div>
       </:panel>
       <:panel hash="history-exports" class="space-y-4">
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-history-exports"
+          variant={:local}
+        />
         <.section_header
           title="History exports"
           subtitle="View export status and download work order history for this project."
