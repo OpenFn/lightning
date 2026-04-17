@@ -1080,120 +1080,6 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
-  describe "api version header" do
-    setup %{conn: conn} do
-      user = insert(:user)
-      project = insert(:project, project_users: [%{user: user}])
-      collection = insert(:collection, project: project)
-      token = Lightning.Accounts.generate_api_token(user)
-      conn = assign_bearer(conn, token)
-      {:ok, conn: conn, project: project, collection: collection}
-    end
-
-    test "returns 400 for an unsupported version", %{
-      conn: conn,
-      collection: collection
-    } do
-      conn =
-        conn
-        |> put_req_header("x-api-version", "99")
-        |> get(~p"/collections/#{collection.name}")
-
-      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
-    end
-
-    test "returns 400 for a garbage version value", %{
-      conn: conn,
-      collection: collection
-    } do
-      conn =
-        conn
-        |> put_req_header("x-api-version", "not-a-version")
-        |> get(~p"/collections/#{collection.name}")
-
-      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
-    end
-
-    test "treats no header as v1", %{conn: conn, collection: collection} do
-      conn = get(conn, ~p"/collections/#{collection.name}")
-      assert json_response(conn, 200)["items"] == []
-    end
-
-    test "treats an explicit v1 header as v1", %{
-      conn: conn,
-      collection: collection
-    } do
-      conn =
-        conn
-        |> put_req_header("x-api-version", "1")
-        |> get(~p"/collections/#{collection.name}")
-
-      assert json_response(conn, 200)["items"] == []
-    end
-
-    test "returns 400 when multiple x-api-version headers are sent", %{
-      conn: conn,
-      collection: collection
-    } do
-      # Bypass Plug.Conn.put_req_header/3 (which replaces) to simulate a
-      # client that sends the header twice.
-      conn =
-        update_in(conn.req_headers, fn headers ->
-          headers ++ [{"x-api-version", "1"}, {"x-api-version", "2"}]
-        end)
-
-      conn = get(conn, ~p"/collections/#{collection.name}")
-
-      assert json_response(conn, 400)["error"] =~ "Unsupported API version"
-    end
-  end
-
-  describe "unsupported paths and methods" do
-    setup %{conn: conn} do
-      user = insert(:user)
-      project = insert(:project, project_users: [%{user: user}])
-      collection = insert(:collection, project: project)
-      token = Lightning.Accounts.generate_api_token(user)
-      conn = assign_bearer(conn, token)
-      {:ok, conn: conn, project: project, collection: collection}
-    end
-
-    test "v1 returns 404 for unsupported HTTP methods", %{
-      conn: conn,
-      collection: collection
-    } do
-      conn = patch(conn, ~p"/collections/#{collection.name}")
-      assert json_response(conn, 404)["error"] == "Not Found"
-    end
-
-    test "v1 returns 404 for unknown path shapes", %{conn: conn} do
-      conn = get(conn, "/collections/a/b/c/d")
-      assert json_response(conn, 404)["error"] == "Not Found"
-    end
-
-    test "v2 returns 404 for unsupported HTTP methods", %{
-      conn: conn,
-      project: project,
-      collection: collection
-    } do
-      conn =
-        conn
-        |> put_req_header("x-api-version", "2")
-        |> patch(~p"/collections/#{project.id}/#{collection.name}")
-
-      assert json_response(conn, 404)["error"] == "Not Found"
-    end
-
-    test "v2 returns 404 for unknown path shapes", %{conn: conn} do
-      conn =
-        conn
-        |> put_req_header("x-api-version", "2")
-        |> get("/collections/a/b/c/d/e")
-
-      assert json_response(conn, 404)["error"] == "Not Found"
-    end
-  end
-
   describe "malformed request bodies" do
     setup %{conn: conn} do
       user = insert(:user)
@@ -1217,7 +1103,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
-  describe "v1 conflict — same collection name in multiple projects" do
+  describe "ambiguous name without ?project_id" do
     setup %{conn: conn} do
       user = insert(:user)
       project_1 = insert(:project, project_users: [%{user: user}])
@@ -1232,36 +1118,36 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
     test "GET /:name returns 409", %{conn: conn, name: name} do
       conn = get(conn, ~p"/collections/#{name}")
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
 
     test "GET /:name/:key returns 409", %{conn: conn, name: name} do
       conn = get(conn, ~p"/collections/#{name}/some-key")
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
 
     test "PUT /:name/:key returns 409", %{conn: conn, name: name} do
       conn = put(conn, ~p"/collections/#{name}/some-key", value: "val")
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
 
     test "POST /:name returns 409", %{conn: conn, name: name} do
       conn = post(conn, ~p"/collections/#{name}", items: [])
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
 
     test "DELETE /:name/:key returns 409", %{conn: conn, name: name} do
       conn = delete(conn, ~p"/collections/#{name}/some-key")
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
 
     test "DELETE /:name returns 409", %{conn: conn, name: name} do
       conn = delete(conn, ~p"/collections/#{name}")
-      assert json_response(conn, 409)["error"] =~ "Use API v2"
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
   end
 
-  describe "v2 API" do
+  describe "?project_id=<uuid> query param" do
     setup %{conn: conn} do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
@@ -1273,18 +1159,22 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         )
 
       token = Lightning.Accounts.generate_api_token(user)
-      conn = assign_bearer(conn, token) |> put_req_header("x-api-version", "2")
+      conn = assign_bearer(conn, token)
       {:ok, conn: conn, project: project, collection: collection}
     end
 
-    test "GET /:project_id/:name/:key returns the item", %{
+    test "GET /:name/:key returns the item", %{
       conn: conn,
       project: project,
       collection: collection
     } do
       item = hd(collection.items)
 
-      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+      conn =
+        get(
+          conn,
+          ~p"/collections/#{collection.name}/foo?project_id=#{project.id}"
+        )
 
       assert json_response(conn, 200) == %{
                "key" => item.key,
@@ -1294,68 +1184,86 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              }
     end
 
-    test "GET /:project_id/:name/:key returns 204 when item not found", %{
+    test "GET /:name/:key returns 204 when item not found", %{
       conn: conn,
       project: project,
       collection: collection
     } do
       conn =
-        get(conn, ~p"/collections/#{project.id}/#{collection.name}/nonexistent")
+        get(
+          conn,
+          ~p"/collections/#{collection.name}/nonexistent?project_id=#{project.id}"
+        )
 
       assert response(conn, 204) == ""
     end
 
-    test "GET /:project_id/:name/:key returns 404 when collection not found", %{
+    test "GET /:name/:key returns 404 when collection not found", %{
       conn: conn,
       project: project
     } do
-      conn = get(conn, ~p"/collections/#{project.id}/nonexistent-collection/foo")
+      conn =
+        get(
+          conn,
+          ~p"/collections/nonexistent-collection/foo?project_id=#{project.id}"
+        )
+
       assert json_response(conn, 404)
     end
 
-    test "GET /:project_id/:name streams items", %{
+    test "GET /:name streams items scoped by project", %{
       conn: conn,
       project: project,
       collection: collection
     } do
-      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}")
+      conn =
+        get(conn, ~p"/collections/#{collection.name}?project_id=#{project.id}")
+
       body = json_response(conn, 200)
       assert length(body["items"]) == 1
       assert hd(body["items"])["key"] == "foo"
     end
 
-    test "PUT /:project_id/:name/:key upserts an item", %{
+    test "PUT /:name/:key upserts an item", %{
       conn: conn,
       project: project,
       collection: collection
     } do
       conn =
-        put(conn, ~p"/collections/#{project.id}/#{collection.name}/new-key",
+        put(
+          conn,
+          ~p"/collections/#{collection.name}/new-key?project_id=#{project.id}",
           value: "new-val"
         )
 
       assert json_response(conn, 200) == %{"upserted" => 1, "error" => nil}
     end
 
-    test "POST /:project_id/:name upserts multiple items", %{
+    test "POST /:name upserts multiple items", %{
       conn: conn,
       project: project,
       collection: collection
     } do
       conn =
-        post(conn, ~p"/collections/#{project.id}/#{collection.name}",
+        post(
+          conn,
+          ~p"/collections/#{collection.name}?project_id=#{project.id}",
           items: [%{key: "a", value: "1"}, %{key: "b", value: "2"}]
         )
 
       assert json_response(conn, 200) == %{"upserted" => 2, "error" => nil}
     end
 
-    test "DELETE /:project_id/:name/:key deletes an item", %{
+    test "DELETE /:name/:key deletes an item", %{
       conn: conn,
       project: project,
       collection: collection
     } do
-      conn = delete(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+      conn =
+        delete(
+          conn,
+          ~p"/collections/#{collection.name}/foo?project_id=#{project.id}"
+        )
 
       assert json_response(conn, 200) == %{
                "key" => "foo",
@@ -1364,12 +1272,17 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              }
     end
 
-    test "DELETE /:project_id/:name deletes all items", %{
+    test "DELETE /:name deletes all items", %{
       conn: conn,
       project: project,
       collection: collection
     } do
-      conn = delete(conn, ~p"/collections/#{project.id}/#{collection.name}")
+      conn =
+        delete(
+          conn,
+          ~p"/collections/#{collection.name}?project_id=#{project.id}"
+        )
+
       assert json_response(conn, 200)["deleted"] == 1
     end
 
@@ -1382,24 +1295,37 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn =
         get(
           conn,
-          ~p"/collections/#{other_project.id}/#{other_collection.name}/foo"
+          ~p"/collections/#{other_collection.name}/foo?project_id=#{other_project.id}"
         )
 
       assert json_response(conn, 401)
     end
 
-    test "resolves correctly by project_id when same name exists in multiple projects",
-         %{
-           conn: conn,
-           project: project,
-           collection: collection
-         } do
+    test "resolves correctly when same name exists in multiple projects", %{
+      conn: conn,
+      project: project,
+      collection: collection
+    } do
       other_project = insert(:project, project_users: [])
       insert(:collection, name: collection.name, project: other_project)
 
-      # v2 should resolve to the correct project's collection
-      conn = get(conn, ~p"/collections/#{project.id}/#{collection.name}/foo")
+      conn =
+        get(
+          conn,
+          ~p"/collections/#{collection.name}/foo?project_id=#{project.id}"
+        )
+
       assert json_response(conn, 200)["key"] == "foo"
+    end
+
+    test "returns 400 when project_id is not a valid UUID", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn =
+        get(conn, ~p"/collections/#{collection.name}?project_id=not-a-uuid")
+
+      assert response(conn, 400)
     end
 
     test "with a valid run token, can access own project's collection", %{
@@ -1424,7 +1350,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn =
         conn
         |> assign_bearer(token)
-        |> get(~p"/collections/#{project.id}/#{collection.name}/foo")
+        |> get(~p"/collections/#{collection.name}/foo?project_id=#{project.id}")
 
       assert json_response(conn, 200)["key"] == "foo"
     end
@@ -1452,7 +1378,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         conn
         |> assign_bearer(token)
         |> put(
-          ~p"/collections/#{project.id}/#{collection.name}/new-key",
+          ~p"/collections/#{collection.name}/new-key?project_id=#{project.id}",
           value: "new-val"
         )
 
@@ -1482,7 +1408,9 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn =
         conn
         |> assign_bearer(token)
-        |> get(~p"/collections/#{other_project.id}/#{other_collection.name}/foo")
+        |> get(
+          ~p"/collections/#{other_collection.name}/foo?project_id=#{other_project.id}"
+        )
 
       assert json_response(conn, 401)
     end

@@ -33,7 +33,8 @@ defmodule LightningWeb.FallbackController do
     |> put_status(:conflict)
     |> json(%{
       error:
-        "Multiple collections found with this name. Use API v2 with a project_id."
+        "Multiple collections found with this name. " <>
+          "Add ?project_id=<uuid> to disambiguate."
     })
   end
 

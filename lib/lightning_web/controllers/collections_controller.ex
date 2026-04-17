@@ -2,7 +2,6 @@ defmodule LightningWeb.CollectionsController do
   use LightningWeb, :controller
 
   alias Lightning.Collections
-  alias Lightning.Collections.Collection
   alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
 
@@ -26,9 +25,11 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
-  @spec put(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def put(conn, %{"key" => key, "value" => value} = params) do
-    with {:ok, collection} <- resolve(params),
+  # Scope param, consumed by resolve/2 before filter parsing runs.
+  @scope_params ["project_id"]
+
+  def put(conn, %{"name" => name, "key" => key, "value" => value}) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection),
          :ok <- Collections.put(collection, key, value) do
       json(conn, %{upserted: 1, error: nil})
@@ -41,11 +42,10 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def put(conn, _params), do: missing_body(conn, "value")
+  def put(conn, %{"name" => _, "key" => _}), do: missing_body(conn, "value")
 
-  @spec put_all(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def put_all(conn, %{"items" => items} = params) do
-    with {:ok, collection} <- resolve(params),
+  def put_all(conn, %{"name" => name, "items" => items}) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection),
          {:ok, count} <- Collections.put_all(collection, items) do
       json(conn, %{upserted: count, error: nil})
@@ -60,11 +60,10 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def put_all(conn, _params), do: missing_body(conn, "items")
+  def put_all(conn, %{"name" => _}), do: missing_body(conn, "items")
 
-  @spec get(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def get(conn, %{"key" => key} = params) do
-    with {:ok, collection} <- resolve(params),
+  def get(conn, %{"name" => name, "key" => key}) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection) do
       case Collections.get(collection, key) do
         nil -> resp(conn, :no_content, "")
@@ -73,9 +72,8 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def delete(conn, %{"key" => key} = params) do
-    with {:ok, collection} <- resolve(params),
+  def delete(conn, %{"name" => name, "key" => key}) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection) do
       case Collections.delete(collection, key) do
         :ok ->
@@ -87,9 +85,8 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec delete_all(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def delete_all(conn, params) do
-    with {:ok, collection} <- resolve(params),
+  def delete_all(conn, %{"name" => name} = params) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection) do
       key_param = params["key"]
       {:ok, n} = Collections.delete_all(collection, key_param)
@@ -97,11 +94,11 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @spec stream(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
-  def stream(conn, params) do
-    with {:ok, collection} <- resolve(params),
+  def stream(conn, %{"name" => name}) do
+    with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection),
-         {:ok, filters} <- parse_query_params(conn.query_params) do
+         {:ok, filters} <-
+           parse_query_params(Map.drop(conn.query_params, @scope_params)) do
       key_pattern = conn.query_params["key"]
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
       response_limit = Map.fetch!(filters, :limit)
@@ -116,9 +113,9 @@ defmodule LightningWeb.CollectionsController do
   @doc """
   Browser-pipeline download for a project-scoped collection.
 
-  Always v2 since the UI links to project-scoped download URLs.
+  The UI always knows which project a collection belongs to, so the download
+  URL carries the project_id directly in the path.
   """
-  @spec download(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def download(conn, %{"project_id" => project_id, "name" => name}) do
     with {:ok, collection} <- Collections.get_collection(project_id, name),
          :ok <- authorize(conn, collection) do
@@ -139,15 +136,22 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  # Resolves a collection by project + name when project_id is present, or by
-  # name alone otherwise. Any `{:error, reason}` is rendered by the fallback
-  # controller (404 for `:not_found`, 409 for `:conflict`).
-  @spec resolve(map()) :: {:ok, Collection.t()} | {:error, atom()}
-  defp resolve(%{"project_id" => project_id, "name" => name}),
-    do: Collections.get_collection(project_id, name)
+  # Resolves a collection by project + name when `?project_id=<uuid>` is
+  # supplied, or by name alone otherwise. Returns
+  # `{:error, :not_found | :conflict | :bad_request}` which the fallback
+  # controller renders as 404 / 409 / 400.
+  defp resolve(conn, name) do
+    case Map.get(conn.query_params, "project_id") do
+      nil ->
+        Collections.get_collection(name)
 
-  defp resolve(%{"name" => name}),
-    do: Collections.get_collection(name)
+      project_id ->
+        case Ecto.UUID.cast(project_id) do
+          {:ok, uuid} -> Collections.get_collection(uuid, name)
+          :error -> {:error, :bad_request}
+        end
+    end
+  end
 
   defp authorize(conn, collection) do
     subject = conn.assigns[:subject] || conn.assigns[:current_user]

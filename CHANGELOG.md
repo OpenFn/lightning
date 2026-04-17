@@ -19,10 +19,11 @@ and this project adheres to
 
 - Support collections in sandboxes. Collection names are now scoped per project,
   empty collections are cloned into a sandbox on provision, and collection names
-  (not data) are synchronised when a sandbox is merged back into its parent.
-  Adds a v2 collections API at `/collections/:project_id/:name` selected via the
-  `x-api-version: 2` header. V1 continues to work and returns 409 when a name is
-  ambiguous across projects.
+  (not data) are synchronised when a sandbox is merged back into its parent. The
+  collections API accepts an optional `?project_id=<uuid>` query param to scope
+  a request to a specific project. When the query param is omitted and the name
+  is ambiguous across projects, the API returns 409 with guidance to add
+  `?project_id=`. Existing unscoped calls keep working for unambiguous names.
   [#3548](https://github.com/OpenFn/lightning/issues/3548)
 
 ### Changed

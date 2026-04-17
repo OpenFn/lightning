@@ -112,9 +112,15 @@ defmodule LightningWeb.Router do
   end
 
   ## Collections
-  scope "/collections" do
+  scope "/collections", LightningWeb do
     pipe_through [:authenticated_api]
-    forward "/", LightningWeb.Plugs.CollectionsRouter
+
+    get "/:name", CollectionsController, :stream
+    get "/:name/:key", CollectionsController, :get
+    put "/:name/:key", CollectionsController, :put
+    post "/:name", CollectionsController, :put_all
+    delete "/:name/:key", CollectionsController, :delete
+    delete "/:name", CollectionsController, :delete_all
   end
 
   ## Authentication routes
