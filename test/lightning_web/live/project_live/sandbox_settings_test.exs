@@ -185,6 +185,19 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
 
       refute Sandboxes.parent_admin?(project, user)
     end
+
+    test "returns false when parent_id points to a deleted project" do
+      # Race condition: in-memory sandbox struct has a parent_id that
+      # was nilified in the database after we loaded the struct (because
+      # the parent project was deleted). The function should treat the
+      # missing ancestor as no ancestor, not crash.
+      user = insert(:user)
+      sandbox = insert(:project)
+      stale_parent_id = Ecto.UUID.generate()
+      stale_sandbox = %{sandbox | parent_id: stale_parent_id}
+
+      refute Sandboxes.parent_admin?(stale_sandbox, user)
+    end
   end
 
   describe "delete_project_user! parent admin protection" do
