@@ -210,6 +210,35 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
+  Returns `true` when `user` has an `:admin` or `:owner` role on any ancestor
+  of `project`, walking the parent chain.
+
+  Used to enforce the parent-admin floor rule: a user who is admin/owner on
+  any ancestor project cannot be removed from, or downgraded within, a
+  sandbox descended from that project.
+  """
+  @spec parent_admin?(Project.t(), User.t()) :: boolean()
+  def parent_admin?(%Project{} = project, %User{} = user) do
+    project
+    |> ancestors()
+    |> Enum.any?(fn ancestor ->
+      Lightning.Projects.get_project_user_role(user, ancestor) in [
+        :admin,
+        :owner
+      ]
+    end)
+  end
+
+  defp ancestors(%Project{parent_id: nil}), do: []
+
+  defp ancestors(%Project{parent_id: parent_id}) do
+    case Lightning.Projects.get_project(parent_id) do
+      nil -> []
+      %Project{} = parent -> [parent | ancestors(parent)]
+    end
+  end
+
+  @doc """
   Deletes a sandbox and all its descendant projects.
 
   **Warning**: This permanently removes the sandbox and any nested sandboxes
