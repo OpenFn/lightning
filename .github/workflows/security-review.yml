@@ -32,9 +32,7 @@ jobs:
             Read that file first, then follow its instructions exactly.
             Review only the changes introduced by this PR.
             Post your findings as a structured review comment.
-          claude_args: |
-            --max-turns 50
-            --model claude-opus-4-6
+          claude_args: --max-turns 50 --model claude-opus-4-7
 
       - name: Post status comment if Claude did not comment
         if: always()

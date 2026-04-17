@@ -26,12 +26,22 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           use_sticky_comment: true
           prompt: |
-            Use the Skill tool to invoke the "review" skill to review this pull request.
-            Review only the changes introduced by this PR.
-            Post your findings as a structured comment.
-          claude_args: |
-            --max-turns 50
-            --model claude-opus-4-6
+            Review the changes introduced by this PR. Follow these steps:
+
+            1. Use `gh pr diff` or read the changed files to understand what changed.
+            2. For each changed file, check for:
+               - Correctness: logic errors, edge cases, off-by-ones
+               - Security: injection risks, auth bypasses, exposed secrets
+               - Elixir/Phoenix patterns: proper use of changesets, Ecto queries scoped by project, policy checks via Bodyguard
+               - React/TypeScript patterns: correct hook usage, prop types, no unnecessary re-renders
+               - Test coverage: are the changes tested?
+            3. Check CLAUDE.md for project-specific conventions.
+            4. Post a structured review comment with sections:
+               - **Summary** of what the PR does
+               - **Issues** (if any): numbered list with file:line references
+               - **Suggestions** (optional): non-blocking improvements
+               - **Verdict**: APPROVE / REQUEST CHANGES / COMMENT
+          claude_args: --max-turns 50 --model claude-opus-4-7
 
       - name: Post status comment if Claude did not comment
         if: always()
