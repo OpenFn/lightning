@@ -141,7 +141,7 @@ If you were part of the implementation:
 
 ## Important Guidelines
 
-1. **Be thorough but practical** - Focus on what matters
+1. **Report all deviations from the plan.** Flag severity where useful, but don't pre-filter — the reader triages what matters
 2. **Run all automated checks** - Don't skip verification commands
 3. **Document everything** - Both successes and issues
 4. **Think critically** - Question if the implementation truly solves the problem
@@ -168,4 +168,4 @@ Recommended workflow:
 
 The validation works best after commits are made, as it can analyze the git history to understand what was implemented.
 
-Remember: Good validation catches issues before they reach production. Be constructive but thorough in identifying gaps or improvements.
+Good validation catches issues before they reach production. Thoroughness beats diplomacy here — report every gap or deviation you find and let the reader triage severity.
