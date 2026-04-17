@@ -26,7 +26,8 @@ and this project adheres to
   When a run is claimed by a worker, there's no stopping it. From the platform's
   perspective, the parent work order should be moved from `:pending` to
   `:running`, even though there's an underlying technical difference between the
-  run states `:claimed` and `:started`
+  run states `:claimed` and `:started`. As a result, the "Cancel" button on the
+  history view disappears once a run has been claimed.
 
 ### Fixed
 
