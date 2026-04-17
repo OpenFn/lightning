@@ -19,6 +19,15 @@ and this project adheres to
 
 ### Changed
 
+- When a run is `:claimed` by a worker, set its parent work order to `:running`
+  rather than leaving it in `:pending`.
+  [PR#4637](https://github.com/OpenFn/lightning/pull/4637)
+
+  When a run is claimed by a worker, there's no stopping it. From the platform's
+  perspective, the parent work order should be moved from `:pending` to
+  `:running`, even though there's an underlying technical difference between the
+  run states `:claimed` and `:started`
+
 ### Fixed
 
 - Bump `@openfn/ws-worker` from
