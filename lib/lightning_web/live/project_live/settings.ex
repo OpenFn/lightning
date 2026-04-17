@@ -4,8 +4,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
@@ -15,11 +17,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
-
-  import LightningWeb.Components.SandboxSettingsBanner
 
   require Logger
 
@@ -687,11 +688,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp parent_admin?(project, %{user: %User{} = user}),
-    do: Lightning.Projects.Sandboxes.parent_admin?(project, user)
+    do: Sandboxes.parent_admin?(project, user)
 
   defp parent_admin?(project, %{user_id: user_id}) do
-    case Lightning.Accounts.get_user(user_id) do
-      %User{} = user -> Lightning.Projects.Sandboxes.parent_admin?(project, user)
+    case Accounts.get_user(user_id) do
+      %User{} = user -> Sandboxes.parent_admin?(project, user)
       nil -> false
     end
   end
