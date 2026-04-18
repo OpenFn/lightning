@@ -216,11 +216,6 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     end
   end
 
-  # Looks up a collection by name within the current project. A missing
-  # collection (including one that exists only in a different project) is
-  # surfaced to the caller as a flashed `{:noreply, socket}` so the same
-  # "not authorized" UX is served whether the collection is absent or
-  # belongs to a project the user cannot see.
   defp fetch_project_collection(socket, collection_name) do
     case Collections.get_collection(
            socket.assigns.project.id,
