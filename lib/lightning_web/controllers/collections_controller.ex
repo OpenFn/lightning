@@ -117,7 +117,8 @@ defmodule LightningWeb.CollectionsController do
   URL carries the project_id directly in the path.
   """
   def download(conn, %{"project_id" => project_id, "name" => name}) do
-    with {:ok, collection} <- Collections.get_collection(project_id, name),
+    with {:ok, uuid} <- cast_uuid(project_id),
+         {:ok, collection} <- Collections.get_collection(uuid, name),
          :ok <- authorize(conn, collection) do
       items_stream =
         stream_all_in_chunks(
@@ -146,10 +147,16 @@ defmodule LightningWeb.CollectionsController do
         Collections.get_collection(name)
 
       project_id ->
-        case Ecto.UUID.cast(project_id) do
-          {:ok, uuid} -> Collections.get_collection(uuid, name)
-          :error -> {:error, :bad_request}
+        with {:ok, uuid} <- cast_uuid(project_id) do
+          Collections.get_collection(uuid, name)
         end
+    end
+  end
+
+  defp cast_uuid(project_id) do
+    case Ecto.UUID.cast(project_id) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, :bad_request}
     end
   end
 

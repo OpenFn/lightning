@@ -227,7 +227,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       {:error, :not_found} ->
         {:noreply,
          socket
-         |> put_flash(:error, "You are not authorized to perform this action")
+         |> put_flash(:error, "Collection not found")
          |> push_navigate(to: socket.assigns.return_to)}
     end
   end

@@ -1078,6 +1078,12 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert response.status == 404
     end
+
+    test "returns 400 when project_id is not a valid UUID", %{conn: conn} do
+      response = get(conn, ~p"/download/collections/not-a-uuid/anything")
+
+      assert response.status == 400
+    end
   end
 
   describe "malformed request bodies" do
@@ -1413,6 +1419,63 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         )
 
       assert json_response(conn, 401)
+    end
+
+    test "with a run token, cannot write to a different project's collection",
+         %{conn: conn} do
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      workflow = insert(:simple_workflow)
+
+      workorder =
+        insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: workorder.dataclip,
+          starting_trigger: hd(workflow.triggers)
+        )
+
+      token = Lightning.Workers.generate_run_token(run)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> put(
+          ~p"/collections/#{other_collection.name}/k?project_id=#{other_project.id}",
+          value: "v"
+        )
+
+      assert json_response(conn, 401)
+    end
+
+    test "with a run token, bare ambiguous name returns 409 before authorization",
+         %{conn: conn, project: project, collection: collection} do
+      other_project = insert(:project)
+      insert(:collection, name: collection.name, project: other_project)
+
+      workflow = insert(:simple_workflow, project: project)
+
+      workorder =
+        insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: workorder.dataclip,
+          starting_trigger: hd(workflow.triggers)
+        )
+
+      token = Lightning.Workers.generate_run_token(run)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}/foo")
+
+      assert json_response(conn, 409)["error"] =~ "Add ?project_id="
     end
   end
 

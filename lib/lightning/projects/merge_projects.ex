@@ -20,6 +20,19 @@ defmodule Lightning.Projects.MergeProjects do
   Workflows that don't match are marked for deletion (target) or creation
   (source).
 
+  This is a **pure transformation**: it returns a merge document and does not
+  touch the database. Scope is deliberately narrow — the document describes
+  workflow structure (workflows, jobs, triggers, edges) and nothing else.
+  Credentials, collections, dataclips, webhook auth methods, version history,
+  audit trail, and other project-scoped resources are not part of the merge
+  document and are not reasoned about here.
+
+  For sandbox merges, use `Lightning.Projects.Sandboxes.merge/4`, which
+  composes this function with `Provisioner.import_document/4` and any
+  additional sandbox-specific steps (e.g. collection name sync) inside a
+  single transaction. Pairing this function directly with `import_document`
+  will apply the workflow changes but silently skip those extra steps.
+
   ## Parameters
     * `source_project` - The project with modifications to merge
     * `target_project` - The target project to merge changes onto

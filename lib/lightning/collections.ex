@@ -52,6 +52,15 @@ defmodule Lightning.Collections do
     Repo.all(query)
   end
 
+  @doc """
+  Looks up a collection by name across all projects.
+
+  Collection names are unique per project, so the same name can legitimately
+  exist in multiple projects (e.g. a parent and its sandbox). Returns
+  `{:error, :conflict}` when that happens, signalling that the caller should
+  disambiguate by project — for the collections API this is surfaced as a
+  409 with guidance to add `?project_id=<uuid>`.
+  """
   @spec get_collection(String.t()) ::
           {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
   def get_collection(name) do
@@ -62,6 +71,12 @@ defmodule Lightning.Collections do
     end
   end
 
+  @doc """
+  Looks up a collection scoped to a specific project.
+
+  Unambiguous by construction: there is at most one collection with a given
+  name in a project.
+  """
   @spec get_collection(Ecto.UUID.t(), String.t()) ::
           {:ok, Collection.t()} | {:error, :not_found}
   def get_collection(project_id, name) do

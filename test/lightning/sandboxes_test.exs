@@ -1,21 +1,28 @@
 defmodule Lightning.Projects.SandboxesTest do
   use Lightning.DataCase, async: true
+  use Mimic
 
   import Ecto.Query
   import Lightning.Factories
-  alias Lightning.Repo
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Repo
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Edge
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
+
+  setup_all do
+    Mimic.copy(Lightning.Collections)
+    Mimic.copy(Lightning.Projects.Provisioner)
+    :ok
+  end
 
   defp ensure_member!(%Project{} = project, %User{} = user, role) do
     insert(:project_user, %{project: project, user: user, role: role})
@@ -668,6 +675,37 @@ defmodule Lightning.Projects.SandboxesTest do
                Sandboxes.sync_collections(source, target)
     end
 
+    test "fires the collection-delete hook with the combined byte size" do
+      Mox.verify_on_exit!()
+
+      source = insert(:project)
+      %{id: target_id} = target = insert(:project)
+
+      insert(:collection, project: source, name: "keep")
+      insert(:collection, project: target, name: "keep")
+
+      insert(:collection,
+        project: target,
+        name: "drop-a",
+        byte_size_sum: 120
+      )
+
+      insert(:collection,
+        project: target,
+        name: "drop-b",
+        byte_size_sum: 45
+      )
+
+      Mox.expect(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_delete,
+        fn ^target_id, 165 -> :ok end
+      )
+
+      assert {:ok, %{created: 0, deleted: 2}} =
+               Sandboxes.sync_collections(source, target)
+    end
+
     test "does not copy collection data across" do
       source = insert(:project)
       target = insert(:project)
@@ -766,6 +804,43 @@ defmodule Lightning.Projects.SandboxesTest do
 
       # Calling with 3 args exercises the \\ %{} default
       assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+    end
+
+    test "rolls back DB changes from import_document when collection sync fails" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      marker_name = "atomicity-marker-#{System.unique_integer([:positive])}"
+
+      # Provisioner inserts an observable marker row and returns success.
+      # If the outer transaction rolls back, the marker row must not persist.
+      Mimic.stub(Lightning.Projects.Provisioner, :import_document, fn target,
+                                                                      _actor,
+                                                                      _doc,
+                                                                      _opts ->
+        %Project{name: marker_name}
+        |> Ecto.Changeset.change()
+        |> Repo.insert!()
+
+        {:ok, target}
+      end)
+
+      Mimic.stub(Lightning.Collections, :list_project_collections, fn _ ->
+        raise "simulated sync failure"
+      end)
+
+      assert_raise RuntimeError, ~r/simulated sync failure/, fn ->
+        Sandboxes.merge(sandbox, parent, actor)
+      end
+
+      refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
     end
   end
 
