@@ -235,6 +235,25 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "error" => "some limit error message"
              }
     end
+
+    test "returns 'Format error' when the value fails validation", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+      token = Lightning.Accounts.generate_api_token(user)
+
+      oversized = String.duplicate("x", 1_000_001)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> put(~p"/collections/#{collection.name}/key", value: oversized)
+
+      assert json_response(conn, 200) == %{
+               "upserted" => 0,
+               "error" => "Format error"
+             }
+    end
   end
 
   describe "POST /collections/:name" do
@@ -397,6 +416,24 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "key" => "foo",
                "deleted" => 1,
                "error" => nil
+             }
+    end
+
+    test "returns 'Item Not Found' when deleting a missing key", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> delete(~p"/collections/#{collection.name}/missing-key")
+
+      assert json_response(conn, 200) == %{
+               "key" => "missing-key",
+               "deleted" => 0,
+               "error" => "Item Not Found"
              }
     end
 
