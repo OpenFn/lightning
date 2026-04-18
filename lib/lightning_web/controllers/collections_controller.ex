@@ -25,9 +25,6 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
-  # Scope param, consumed by resolve/2 before filter parsing runs.
-  @scope_params ["project_id"]
-
   def put(conn, %{"name" => name, "key" => key, "value" => value}) do
     with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection),
@@ -98,7 +95,7 @@ defmodule LightningWeb.CollectionsController do
     with {:ok, collection} <- resolve(conn, name),
          :ok <- authorize(conn, collection),
          {:ok, filters} <-
-           parse_query_params(Map.drop(conn.query_params, @scope_params)) do
+           parse_query_params(Map.drop(conn.query_params, ["project_id"])) do
       key_pattern = conn.query_params["key"]
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
       response_limit = Map.fetch!(filters, :limit)
@@ -110,12 +107,6 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @doc """
-  Browser-pipeline download for a project-scoped collection.
-
-  The UI always knows which project a collection belongs to, so the download
-  URL carries the project_id directly in the path.
-  """
   def download(conn, %{"project_id" => project_id, "name" => name}) do
     with {:ok, uuid} <- cast_uuid(project_id),
          {:ok, collection} <- Collections.get_collection(uuid, name),
@@ -137,10 +128,6 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  # Resolves a collection by project + name when `?project_id=<uuid>` is
-  # supplied, or by name alone otherwise. Returns
-  # `{:error, :not_found | :conflict | :bad_request}` which the fallback
-  # controller renders as 404 / 409 / 400.
   defp resolve(conn, name) do
     case Map.get(conn.query_params, "project_id") do
       nil ->

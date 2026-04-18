@@ -578,7 +578,6 @@ defmodule Lightning.Projects.SandboxesTest do
                "col-b"
              ]
 
-      # Items are not copied
       Enum.each(sandbox_collections, fn col ->
         assert Lightning.Collections.get_all(
                  col,
@@ -657,7 +656,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
 
-      # items belonging to the deleted collection are removed with it
       assert Lightning.Repo.all(
                from i in Lightning.Collections.Item,
                  where: i.collection_id == ^dropped.id
@@ -735,10 +733,6 @@ defmodule Lightning.Projects.SandboxesTest do
       insert(:collection, project: source, name: "to-create")
       insert(:collection, project: target, name: "to-delete")
 
-      # Inject a failure inside the transaction by trying to insert a
-      # collection that will violate the unique constraint after we've done
-      # the work. We simulate this by wrapping the call in a parent
-      # transaction and forcing a rollback.
       result =
         Lightning.Repo.transaction(fn ->
           {:ok, _summary} =
@@ -749,7 +743,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert result == {:error, :simulated_failure}
 
-      # Target state must be unchanged
       target_names =
         target
         |> Lightning.Collections.list_project_collections()
@@ -802,7 +795,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       insert(:simple_workflow, project: sandbox)
 
-      # Calling with 3 args exercises the \\ %{} default
       assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
     end
 
@@ -819,8 +811,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       marker_name = "atomicity-marker-#{System.unique_integer([:positive])}"
 
-      # Provisioner inserts an observable marker row and returns success.
-      # If the outer transaction rolls back, the marker row must not persist.
       Mimic.stub(Lightning.Projects.Provisioner, :import_document, fn target,
                                                                       _actor,
                                                                       _doc,

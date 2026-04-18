@@ -130,15 +130,11 @@ defmodule Lightning.Projects.Sandboxes do
   @doc """
   Merges a sandbox into its target project.
 
-  Applies the sandbox's workflow configuration to the target via the
-  provisioner, then synchronises collection names. Collection data is
-  never copied.
+  Imports the sandbox's workflow configuration into the target via the
+  provisioner and synchronises collection names. Runs inside a single
+  transaction. Collection data is never copied.
 
-  The workflow import and collection sync run inside a single transaction,
-  so a failure in either step leaves the target unchanged.
-
-  Callers are responsible for authorising the merge (e.g. checking
-  `:merge_sandbox` on the target) before calling this function.
+  Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
 
   ## Parameters
   * `source` - The sandbox project being merged
@@ -147,7 +143,7 @@ defmodule Lightning.Projects.Sandboxes do
   * `opts` - Merge options (`:selected_workflow_ids`, `:deleted_target_workflow_ids`)
 
   ## Returns
-  * `{:ok, updated_target}` - Merge and collection sync succeeded
+  * `{:ok, updated_target}` - Merge succeeded
   * `{:error, reason}` - Workflow merge or collection sync failed
   """
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
@@ -628,23 +624,12 @@ defmodule Lightning.Projects.Sandboxes do
   @doc """
   Synchronises collection names from a sandbox to its merge target.
 
-  After a successful merge, this brings the target's set of collections in
-  line with the sandbox's:
+  Names only in the source are created empty in the target; names only in
+  the target are deleted along with their items. Collection data is never
+  copied. The combined byte-size of deleted collections is reported via
+  `CollectionHook.handle_delete/2` for usage accounting.
 
-    * Collections present in the sandbox but missing from the target are
-      created (empty) in the target.
-    * Collections present in the target but missing from the sandbox are
-      deleted from the target, along with all their items. The combined
-      byte-size of deleted collections is reported via
-      `CollectionHook.handle_delete/2` so downstream usage accounting stays
-      consistent with `Collections.delete_collection/1` and the provisioner's
-      own collection-deletion path.
-
-  **Collection data is never copied or merged.** Only the set of collection
-  names is synchronised, mirroring the sandbox-is-for-configuration model.
-
-  The create and delete operations run in a single transaction; a failure
-  leaves the target's collections unchanged.
+  Runs inside a single transaction.
   """
   @spec sync_collections(Project.t(), Project.t()) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
@@ -699,9 +684,7 @@ defmodule Lightning.Projects.Sandboxes do
           }
         end)
 
-      # on_conflict: :nothing guards against concurrent merges into the
-      # same target trying to create the same collection. It is a no-op
-      # on the provision path since the sandbox project_id is brand new.
+      # Concurrent merges may race to create the same collection.
       Repo.insert_all(Collection, rows, on_conflict: :nothing)
     end
   end

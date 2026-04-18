@@ -55,11 +55,8 @@ defmodule Lightning.Collections do
   @doc """
   Looks up a collection by name across all projects.
 
-  Collection names are unique per project, so the same name can legitimately
-  exist in multiple projects (e.g. a parent and its sandbox). Returns
-  `{:error, :conflict}` when that happens, signalling that the caller should
-  disambiguate by project — for the collections API this is surfaced as a
-  409 with guidance to add `?project_id=<uuid>`.
+  Returns `{:error, :conflict}` when the name exists in more than one
+  project; the caller should then retry with `get_collection/2`.
   """
   @spec get_collection(String.t()) ::
           {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
