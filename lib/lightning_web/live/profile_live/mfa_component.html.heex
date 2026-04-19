@@ -1,275 +1,282 @@
-<div class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
-  <div class="px-4 py-6 sm:p-8">
-    <div class="flex items-center justify-between mb-5">
-      <span class="flex flex-grow flex-col">
-        <span
-          class="text-xl font-medium leading-6 text-gray-900"
-          id={"#{@id}-label"}
-        >
-          Enable multi-factor authentication
-        </span>
-        <span class="text-sm text-gray-500" id={"#{@id}-description"}>
-          This adds an additional layer of security to your account by requiring more than just a password to sign in.
-        </span>
-      </span>
-      <button
-        id="toggle-mfa-switch"
-        type="button"
-        class={"#{if @show, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ml-5"}
-        role="switch"
-        phx-click={toggle_btn_event(assigns)}
-        phx-target={@myself}
-        aria-checked={@show}
-        aria-labelledby={"#{@id}-label"}
-        aria-describedby={"#{@id}-description"}
-      >
-        <span
-          aria-hidden="true"
-          class={"#{if @show, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-        >
-        </span>
-      </button>
+<div class="bg-white p-4 rounded-md space-y-4">
+  <div class="flex items-start justify-between">
+    <div>
+      <h6 class="font-medium text-black" id={"#{@id}-label"}>
+        Multi-factor authentication
+      </h6>
+      <small class="block my-1 text-xs text-gray-600" id={"#{@id}-description"}>
+        Add an extra layer of security by requiring a code in addition to your password at sign-in.
+      </small>
     </div>
-    <div :if={@current_totp || @editing_totp} class="relative">
-      <div class="absolute inset-0 flex items-center" aria-hidden="true">
-        <div class="w-full border-t border-gray-300"></div>
-      </div>
-    </div>
+    <.input
+      id="toggle-mfa-switch"
+      type="toggle"
+      name="mfa_enabled"
+      value={@show}
+      on_click={toggle_btn_event(assigns)}
+      on_click_target={@myself}
+    />
+  </div>
+  <div
+    :if={@current_totp || @editing_totp}
+    class="border-t border-gray-200"
+    aria-hidden="true"
+  >
+  </div>
 
-    <div :if={@current_totp && is_nil(@editing_totp)} class="">
-      <div class="py-5 text-sm">
-        You have configured an authentication app to get two-factor authentication codes.
-        <a
-          id="setup_another_totp_device"
-          href="#"
-          phx-click="show-mfa-options"
-          phx-target={@myself}
-          class="link font-medium"
+  <div :if={@current_totp && is_nil(@editing_totp)} class="text-sm text-gray-600">
+    You have configured an authentication app to get two-factor authentication codes.
+    <a
+      id="setup_another_totp_device"
+      href="#"
+      phx-click="show-mfa-options"
+      phx-target={@myself}
+      class="link font-medium"
+    >
+      Setup another device instead
+    </a>
+  </div>
+  <div
+    :if={@user.mfa_enabled}
+    id="disable-mfa-modal"
+    class="relative z-10 hidden"
+    aria-labelledby="disable-mfa-moda-title"
+    role="dialog"
+    aria-modal="true"
+    phx-remove={hide_modal("disable-mfa-modal")}
+  >
+    <div id="disable-mfa-modal-bg" class="modal-backdrop" />
+
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <.focus_wrap
+          id="disable-mfa-modal-container"
+          phx-window-keydown={hide_modal("disable-mfa-modal")}
+          phx-key="escape"
+          phx-click-away={hide_modal("disable-mfa-modal")}
+          phx-remove={hide_modal("disable-mfa-modal")}
+          class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
         >
-          Setup another device instead
-        </a>
+          <div class="sm:flex sm:items-start">
+            <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+              <.icon
+                name="hero-exclamation-triangle"
+                class="h-6 w-6 text-red-600"
+              />
+            </div>
+            <div
+              id="disable-mfa-modal-content"
+              class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left"
+            >
+              <h3
+                class="text-base font-semibold leading-6 text-gray-900"
+                id="disable-mfa-modal-title"
+              >
+                Disable MFA
+              </h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                  Are you sure you want to disable MFA from your account? This will make your account less secure.
+                  Should an attacker get hold of your password, there will be nothing preventing them from accessing your account
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
+            <.button
+              id="disable_mfa_button"
+              type="button"
+              phx-click="disable_mfa"
+              phx-target={@myself}
+              phx-disable-with="Disabling..."
+              theme="danger"
+            >
+              Disable
+            </.button>
+            <.button
+              phx-click={hide_modal("disable-mfa-modal")}
+              type="button"
+              theme="secondary"
+            >
+              Cancel
+            </.button>
+          </div>
+        </.focus_wrap>
       </div>
     </div>
+  </div>
+
+  <div :if={@editing_totp} class="space-y-4">
+    <p class="text-sm text-gray-600">
+      Authenticator apps (1Password, Authy, Google Authenticator) generate
+      one-time codes used as a second factor when you sign in.
+    </p>
+    <div class="space-y-2">
+      <h6 class="text-sm font-medium text-gray-900">Scan the QR code</h6>
+      <small class="block text-xs text-gray-600">
+        Use an authenticator app to scan the code below.
+      </small>
+      <div>
+        {generate_qrcode(@qrcode_uri)}
+      </div>
+      <small class="block text-xs text-gray-600">
+        Can't scan? Use
+        <a href="#" class="link" phx-click={show_modal("mfa-secret-modal")}>
+          this secret key
+        </a>
+        to configure your authenticator app manually.
+      </small>
+    </div>
+    <.form
+      :let={f}
+      id="set_totp_form"
+      for={@totp_changeset}
+      phx-submit="save_totp"
+      phx-target={@myself}
+      class="space-y-4"
+    >
+      <div class={[
+        "space-y-2 group",
+        totp_error?(@totp_changeset) && "is-invalid"
+      ]}>
+        <label
+          for="totp-code-box-0"
+          class="block text-sm font-medium leading-6 text-slate-800"
+        >
+          Verify the code from the app
+        </label>
+        <div
+          id="totp-code-input"
+          phx-hook="OtpInput"
+          phx-update="ignore"
+          data-hidden-target="#totp-code-hidden"
+          data-validate-event="validate_totp"
+          data-autofocus="true"
+        >
+          <div class="flex gap-2">
+            <input
+              :for={i <- 0..5}
+              id={"totp-code-box-#{i}"}
+              data-otp-box
+              data-index={i}
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete={if i == 0, do: "one-time-code", else: "off"}
+              maxlength="1"
+              class="block w-12 h-14 text-center text-2xl font-mono rounded-md border-0 ring-1 ring-inset ring-slate-300 text-slate-900 focus:ring-2 focus:ring-inset focus:ring-primary-600 focus:outline-none group-[.is-invalid]:ring-red-400 group-[.is-invalid]:focus:ring-red-500"
+            />
+          </div>
+          <input
+            type="text"
+            name={f[:code].name}
+            id="totp-code-hidden"
+            value={Phoenix.HTML.Form.normalize_value("text", f[:code].value)}
+            class="sr-only"
+            tabindex="-1"
+            aria-hidden="true"
+          />
+        </div>
+        <p
+          :if={totp_error?(@totp_changeset)}
+          class="text-xs text-red-600"
+          role="alert"
+        >
+          That code didn't match. Try again with the latest one from your app.
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <.button type="submit" theme="primary" disabled={!@totp_changeset.valid?}>
+          Enable MFA
+        </.button>
+        <.button
+          theme="secondary"
+          phx-click="hide-mfa-options"
+          phx-target={@myself}
+        >
+          Cancel
+        </.button>
+      </div>
+    </.form>
     <div
-      :if={@user.mfa_enabled}
-      id="disable-mfa-modal"
+      id="mfa-secret-modal"
       class="relative z-10 hidden"
-      aria-labelledby="disable-mfa-moda-title"
+      aria-labelledby="mfa-secret-modal-title"
       role="dialog"
       aria-modal="true"
-      phx-remove={hide_modal("disable-mfa-modal")}
+      phx-remove={hide_modal("mfa-secret-modal")}
     >
-      <div id="disable-mfa-modal-bg" class="modal-backdrop" />
+      <div id="mfa-secret-modal-bg" class="modal-backdrop" />
 
       <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
           <.focus_wrap
-            id="disable-mfa-modal-container"
-            phx-window-keydown={hide_modal("disable-mfa-modal")}
+            id="mfa-secret-modal-container"
+            phx-window-keydown={hide_modal("mfa-secret-modal")}
             phx-key="escape"
-            phx-click-away={hide_modal("disable-mfa-modal")}
-            phx-remove={hide_modal("disable-mfa-modal")}
+            phx-click-away={hide_modal("mfa-secret-modal")}
             class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
           >
+            <div class="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
+              <button
+                type="button"
+                phx-click={hide_modal("mfa-secret-modal")}
+                class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                <span class="sr-only">Close</span>
+                <svg
+                  class="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
             <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <.icon
-                  name="hero-exclamation-triangle"
-                  class="h-6 w-6 text-red-600"
-                />
-              </div>
               <div
-                id="disable-mfa-modal-content"
                 class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left"
+                id="mfa-secret-modal-content"
               >
                 <h3
                   class="text-base font-semibold leading-6 text-gray-900"
-                  id="disable-mfa-modal-title"
+                  id="mfa-secret-modal-title"
                 >
-                  Disable MFA
+                  Your two-factor secret
                 </h3>
                 <div class="mt-2">
                   <p class="text-sm text-gray-500">
-                    Are you sure you want to disable MFA from your account? This will make your account less secure.
-                    Should an attacker get hold of your password, there will be nothing preventing them from accessing your account
+                    <code>
+                      {Base.encode32(@editing_totp.secret, padding: false)}
+                    </code>
                   </p>
                 </div>
               </div>
-            </div>
-            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
-              <.button
-                id="disable_mfa_button"
-                type="button"
-                phx-click="disable_mfa"
-                phx-target={@myself}
-                phx-disable-with="Disabling..."
-                theme="danger"
-              >
-                Disable
-              </.button>
-              <.button
-                phx-click={hide_modal("disable-mfa-modal")}
-                type="button"
-                theme="secondary"
-              >
-                Cancel
-              </.button>
             </div>
           </.focus_wrap>
         </div>
       </div>
     </div>
+  </div>
 
-    <div :if={@editing_totp} class="py-5">
-      <div>
-        <h3 class="text-base font-semibold leading-6 text-gray-900">
-          Authenticator app
-        </h3>
-        <p class="mt-2 max-w-4xl text-sm text-gray-500">
-          Authenticator apps and browser extensions like 1Password, Authy etc. generate one-time passwords
-          that are used as a second factor to verify your identity when prompted during sign-in.
-        </p>
-      </div>
-      <div>
-        <h3 class="text-base font-semibold leading-6 text-gray-900">
-          Scan the QR code
-        </h3>
-        <p class="mt-2 max-w-4xl text-sm text-gray-500">
-          Use an authenticator app or browser extension to scan.
-        </p>
-        <div>
-          {generate_qrcode(@qrcode_uri)}
-        </div>
-        <p class="mt-2 max-w-4xl text-sm text-gray-500">
-          Unable to scan? You can use
-          <a href="#" class="link" phx-click={show_modal("mfa-secret-modal")}>
-            this secret key
-          </a>
-          to manually configure your authenticator app.
-        </p>
-        <.form
-          :let={f}
-          id="set_totp_form"
-          for={@totp_changeset}
-          phx-submit="save_totp"
-          phx-target={@myself}
-          class="mt-2"
-        >
-          <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-            <div class="sm:col-span-4">
-              <.input
-                type="text"
-                field={f[:code]}
-                autocomplete="off"
-                placeholder="XXXXXX"
-                label="Verify the code from the app"
-              />
-            </div>
-
-            <div class="col-span-6">
-              <span>
-                <.button
-                  theme="secondary"
-                  phx-click="hide-mfa-options"
-                  phx-target={@myself}
-                >
-                  Cancel
-                </.button>
-              </span>
-              <span>
-                <.button type="submit" theme="primary">
-                  Save
-                </.button>
-              </span>
-            </div>
-          </div>
-        </.form>
-      </div>
-      <div
-        id="mfa-secret-modal"
-        class="relative z-10 hidden"
-        aria-labelledby="mfa-secret-modal-title"
-        role="dialog"
-        aria-modal="true"
-        phx-remove={hide_modal("mfa-secret-modal")}
-      >
-        <div id="mfa-secret-modal-bg" class="modal-backdrop" />
-
-        <div class="fixed inset-0 z-10 overflow-y-auto">
-          <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <.focus_wrap
-              id="mfa-secret-modal-container"
-              phx-window-keydown={hide_modal("mfa-secret-modal")}
-              phx-key="escape"
-              phx-click-away={hide_modal("mfa-secret-modal")}
-              class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
-            >
-              <div class="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
-                <button
-                  type="button"
-                  phx-click={hide_modal("mfa-secret-modal")}
-                  class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                  <span class="sr-only">Close</span>
-                  <svg
-                    class="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div class="sm:flex sm:items-start">
-                <div
-                  class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left"
-                  id="mfa-secret-modal-content"
-                >
-                  <h3
-                    class="text-base font-semibold leading-6 text-gray-900"
-                    id="mfa-secret-modal-title"
-                  >
-                    Your two-factor secret
-                  </h3>
-                  <div class="mt-2">
-                    <p class="text-sm text-gray-500">
-                      <code>
-                        {Base.encode32(@editing_totp.secret, padding: false)}
-                      </code>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </.focus_wrap>
-          </div>
-        </div>
-      </div>
+  <div :if={@user.mfa_enabled} class="flex items-start justify-between">
+    <div>
+      <h6 class="text-sm font-medium text-gray-900">Recovery codes</h6>
+      <small class="block my-1 text-xs text-gray-600">
+        Use recovery codes to access your account if you lose the device that generates your authentication codes.
+      </small>
     </div>
-
-    <div
-      :if={@user.mfa_enabled}
-      class="flex items-start justify-between my-5 mb-5"
-    >
-      <div class="">
-        <h3 class="font-medium leading-6 text-gray-900 pb-1">
-          Recovery codes
-        </h3>
-        <p class="text-sm text-gray-500">
-          Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
-        </p>
-      </div>
-      <.button theme="secondary" class="ml-5">
-        <a href={~p"/profile/auth/backup_codes"} class="w-full">
-          View
-        </a>
-      </.button>
-    </div>
+    <.button theme="secondary">
+      <a href={~p"/profile/auth/backup_codes"} class="w-full">
+        View
+      </a>
+    </.button>
   </div>
 </div>

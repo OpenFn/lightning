@@ -12,17 +12,62 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <div class="grid grid-cols-1 gap-x-8 gap-y-8 md:grid-cols-3">
-      <.user_info current_user={@current_user} />
-      <.action_cards
-        page_title={@page_title}
-        current_user={@current_user}
-        live_action={@live_action}
-        user_deletion_modal={assigns[:user_deletion_modal]}
-        delete_user_url={
-          Routes.profile_edit_path(@socket, :delete, @current_user)
+    <div class="max-w-3xl space-y-4">
+      <.live_component
+        :if={@live_action == :delete}
+        module={
+          @user_deletion_modal || LightningWeb.Components.UserDeletionModal
         }
+        id={@current_user.id}
+        user={@current_user}
+        logout={true}
+        return_to={~p"/profile"}
       />
+      <.live_component
+        module={LightningWeb.ProfileLive.FormComponent}
+        id={@current_user.id}
+        section={:all}
+        title={@page_title}
+        action={@live_action}
+        user={@current_user}
+        return_to={~p"/profile"}
+      />
+      <.live_component
+        module={LightningWeb.ProfileLive.MfaComponent}
+        id={"#{@current_user.id}_mfa_section"}
+        user={@current_user}
+      />
+      <.live_component
+        module={LightningWeb.ProfileLive.GithubComponent}
+        id={"#{@current_user.id}_github_section"}
+        user={@current_user}
+      />
+      <.live_component
+        module={LightningWeb.ProfileLive.ExperimentalFeaturesComponent}
+        id="experimental-features"
+        user={@current_user}
+      />
+      <%= if assigns[:gdpr_preferences] do %>
+        <.live_component
+          module={@gdpr_preferences.component}
+          id={@gdpr_preferences.id}
+          current_user={@current_user}
+        />
+      <% end %>
+      <div class="bg-white p-4 rounded-md space-y-4 border border-red-200 mt-8">
+        <div>
+          <h6 class="font-medium text-red-700">Danger zone</h6>
+          <small class="block my-1 text-xs text-gray-600">
+            Deleting your account is irreversible. All projects you own and any data you created will be permanently removed.
+          </small>
+        </div>
+        <.button_link
+          theme="danger"
+          navigate={Routes.profile_edit_path(@socket, :delete, @current_user)}
+        >
+          Delete my account
+        </.button_link>
+      </div>
     </div>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

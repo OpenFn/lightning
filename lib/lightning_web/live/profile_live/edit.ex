@@ -4,8 +4,6 @@ defmodule LightningWeb.ProfileLive.Edit do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.ProfileLive.Components
-
   alias Lightning.VersionControl
 
   on_mount {LightningWeb.Hooks, :assign_projects}
@@ -16,7 +14,10 @@ defmodule LightningWeb.ProfileLive.Edit do
       VersionControl.subscribe(socket.assigns.current_user)
     end
 
-    {:ok, socket |> assign(:active_menu_item, :profile)}
+    {:ok,
+     socket
+     |> assign(:active_menu_item, :profile)
+     |> assign(:gdpr_preferences, Lightning.Config.gdpr_preferences())}
   end
 
   @impl true

@@ -25,6 +25,7 @@ import {
   OpenProjectPickerViaCtrlP,
 } from './KeyHandlers';
 import LogLineHighlight from './LogLineHighlight';
+import { OtpInput } from './OtpInput';
 import type { PhoenixHook } from './PhoenixHook';
 import {
   TabbedContainer,
@@ -53,6 +54,7 @@ export {
   OpenProjectPickerViaCtrlP,
   FileDropzone,
   CredentialSelector,
+  OtpInput,
 };
 
 export { ReactComponent, HeexReactComponent } from '#/react/hooks';

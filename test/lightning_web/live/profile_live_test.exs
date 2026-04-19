@@ -58,11 +58,11 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "update basic information", %{conn: conn, user: user} do
-      {:ok, profile_live, _html} =
+      {:ok, profile_live, html} =
         live(conn, ~p"/profile", on_error: :raise)
 
-      assert profile_live
-             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+      assert html =~ ~s(value="#{user.first_name}")
+      assert html =~ ~s(value="#{user.last_name}")
 
       assert profile_live
              |> form("#basic-info-form", user: %{first_name: ""})
@@ -96,11 +96,11 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert html =~ "User information updated successfully"
 
-      refute profile_live
-             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+      refute html =~ ~s(value="#{user.first_name}")
+      refute html =~ ~s(value="#{user.last_name}")
 
-      assert profile_live
-             |> has_element?("h2", "Kylian Mbappe")
+      assert html =~ ~s(value="Kylian")
+      assert html =~ ~s(value="Mbappe")
     end
 
     test "save password", %{conn: conn} do
@@ -290,14 +290,16 @@ defmodule LightningWeb.ProfileLiveTest do
       refute html =~ "Scan the QR code"
 
       # show QR code
-      qr_html = view |> element("#toggle-mfa-switch") |> render_click()
+      qr_html =
+        view |> element("#toggle-control-toggle-mfa-switch") |> render_click()
+
       assert qr_html =~ "Scan the QR code"
 
       # QR code SVG should not contain XML declaration (not valid HTML5)
       refute qr_html =~ "<?xml"
 
       # hide QR code
-      view |> element("#toggle-mfa-switch") |> render_click()
+      view |> element("#toggle-control-toggle-mfa-switch") |> render_click()
 
       refute render(view) =~ "Scan the QR code"
     end
@@ -313,7 +315,9 @@ defmodule LightningWeb.ProfileLiveTest do
 
       refute view |> form("#set_totp_form") |> has_element?()
 
-      assert view |> element("#toggle-mfa-switch") |> render_click() =~
+      assert view
+             |> element("#toggle-control-toggle-mfa-switch")
+             |> render_click() =~
                "Scan the QR code"
 
       assert view |> form("#set_totp_form") |> has_element?()
@@ -656,7 +660,7 @@ defmodule LightningWeb.ProfileLiveTest do
     } do
       {:ok, _view, html} = live(conn, ~p"/profile", on_error: :raise)
 
-      assert html =~ "Experimental Features"
+      assert html =~ "Experimental features"
       assert html =~ "Enable access to new features and improvements"
     end
 
@@ -676,7 +680,7 @@ defmodule LightningWeb.ProfileLiveTest do
         |> log_in_user(user_with_prefs)
         |> live(~p"/profile", on_error: :raise)
 
-      assert html =~ "Experimental Features"
+      assert html =~ "Experimental features"
     end
 
     test "toggles experimental features on via form change", %{

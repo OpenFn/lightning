@@ -41,7 +41,7 @@ defmodule LightningWeb.BackupCodesLiveTest do
     user: user
   } do
     {:ok, _view, html} = live(conn, ~p"/profile/auth/backup_codes")
-    assert html =~ "Recovery codes"
+    assert html =~ "Backup codes"
 
     for backup_code <- user.backup_codes do
       assert html =~ backup_code.code

@@ -1,45 +1,42 @@
-<div>
+<div class="space-y-4">
   <.form
     :let={f}
+    :if={@section in [:all, :basic]}
     as={:user}
     for={@user_info_changeset}
     id="basic-info-form"
     phx-target={@myself}
     phx-change="validate_basic_info"
     phx-submit="update_basic_info"
-    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white p-4 rounded-md space-y-4"
   >
-    <div class="text-xl mb-8">Change basic information</div>
-    <div class="space-y-6">
-      <div class="space-y-4">
-        <.input
-          type="text"
-          field={f[:first_name]}
-          label="First name"
-          required="true"
-        />
-      </div>
-      <div class="space-y-4">
-        <.input
-          type="text"
-          field={f[:last_name]}
-          label="Last name"
-          required="true"
-        />
-      </div>
-      <div class="space-y-4">
-        <.input
-          type="select"
-          field={f[:contact_preference]}
-          label="Contact preference"
-          required="true"
-          tooltip="How often would you like to hear from us about your OpenFn account? Choose 'Anytime' to stay in up to date with all information, or 'Critical' if you prefer to be notified only about issues affecting your projects and account status."
-          options={enum_options(Lightning.Accounts.User, :contact_preference)}
-        />
-      </div>
+    <div>
+      <h6 class="font-medium text-black">Basic information</h6>
+      <small class="block my-1 text-xs text-gray-600">
+        Your name and contact preference.
+      </small>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-4"></div>
+    <div class="space-y-4">
+      <.input
+        type="text"
+        field={f[:first_name]}
+        label="First name"
+        required="true"
+      />
+      <.input
+        type="text"
+        field={f[:last_name]}
+        label="Last name"
+        required="true"
+      />
+      <.input
+        type="select"
+        field={f[:contact_preference]}
+        label="Contact preference"
+        required="true"
+        tooltip="How often would you like to hear from us about your OpenFn account? Choose 'Anytime' to stay in up to date with all information, or 'Critical' if you prefer to be notified only about issues affecting your projects and account status."
+        options={enum_options(Lightning.Accounts.User, :contact_preference)}
+      />
     </div>
     <.button
       theme="primary"
@@ -52,39 +49,39 @@
       Save
     </.button>
   </.form>
+
   <.form
     :let={f}
+    :if={@section in [:all, :email]}
     as={:user}
     for={@email_changeset}
     phx-change="validate_email"
     phx-submit="change_email"
     phx-target={@myself}
     id="email-form"
-    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white p-4 rounded-md space-y-4"
   >
-    <div class="text-xl mb-8">Change email</div>
-    <div class="space-y-6">
-      <div class="space-y-4">
-        <.input
-          type="text"
-          field={f[:email]}
-          label="New email address"
-          required="true"
-          phx-debounce="blur"
-        />
-      </div>
-      <div class="space-y-4">
-        <.input
-          type="password"
-          field={f[:current_password]}
-          label="Enter password to confirm"
-          required="true"
-          phx-debounce="blur"
-        />
-      </div>
+    <div>
+      <h6 class="font-medium text-black">Change email</h6>
+      <small class="block my-1 text-xs text-gray-600">
+        We'll send a confirmation to your new address before applying the change.
+      </small>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-4"></div>
+    <div class="space-y-4">
+      <.input
+        type="text"
+        field={f[:email]}
+        label="New email address"
+        required="true"
+        phx-debounce="blur"
+      />
+      <.input
+        type="password"
+        field={f[:current_password]}
+        label="Enter password to confirm"
+        required="true"
+        phx-debounce="blur"
+      />
     </div>
     <.button
       type="submit"
@@ -98,42 +95,39 @@
 
   <.form
     :let={f}
+    :if={@section in [:all, :password]}
     for={@password_changeset}
     phx-change="validate_password"
     phx-submit="save_password"
     phx-target={@myself}
     id="password-form"
-    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white p-4 rounded-md space-y-4"
   >
-    <div class="text-xl mb-8">Change password</div>
-    <div class="space-y-6">
-      <div class="space-y-4">
-        <.input
-          type="password"
-          field={f[:password]}
-          label="New password"
-          required="true"
-        />
-      </div>
-      <div class="space-y-4">
-        <.input
-          type="password"
-          field={f[:password_confirmation]}
-          label="Confirm new password"
-          required="true"
-        />
-      </div>
-      <div class="space-y-4">
-        <.input
-          type="password"
-          field={f[:current_password]}
-          label="Current password"
-          required="true"
-        />
-      </div>
+    <div>
+      <h6 class="font-medium text-black">Change password</h6>
+      <small class="block my-1 text-xs text-gray-600">
+        Use a strong password and confirm your current one to apply the change.
+      </small>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-4"></div>
+    <div class="space-y-4">
+      <.input
+        type="password"
+        field={f[:password]}
+        label="New password"
+        required="true"
+      />
+      <.input
+        type="password"
+        field={f[:password_confirmation]}
+        label="Confirm new password"
+        required="true"
+      />
+      <.input
+        type="password"
+        field={f[:current_password]}
+        label="Current password"
+        required="true"
+      />
     </div>
     <.button
       type="submit"

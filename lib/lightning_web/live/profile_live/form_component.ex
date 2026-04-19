@@ -9,12 +9,13 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   require Logger
 
   @impl true
-  def update(%{user: user, action: action}, socket) do
+  def update(%{user: user, action: action} = assigns, socket) do
     {:ok,
      socket
      |> assign(
        user: user,
        action: action,
+       section: Map.get(assigns, :section, :all),
        email_changeset: Accounts.validate_change_user_email(user),
        password_changeset: Accounts.change_user_password(user),
        user_info_changeset: Accounts.change_user_info(user)

@@ -11,13 +11,11 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       show: user.mfa_enabled,
-       current_totp: Accounts.get_user_totp(user),
-       editing_totp: nil,
-       totp_changeset: nil,
-       qrcode_uri: nil
-     )}
+     |> assign_new(:show, fn -> user.mfa_enabled end)
+     |> assign_new(:current_totp, fn -> Accounts.get_user_totp(user) end)
+     |> assign_new(:editing_totp, fn -> nil end)
+     |> assign_new(:totp_changeset, fn -> nil end)
+     |> assign_new(:qrcode_uri, fn -> nil end)}
   end
 
   @impl true
@@ -50,19 +48,17 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
     {:noreply, assign(socket, editing_totp: nil, show: assigns.user.mfa_enabled)}
   end
 
+  def handle_event("validate_totp", %{"code" => code}, socket) do
+    changeset =
+      socket.assigns.editing_totp
+      |> Accounts.UserTOTP.changeset(%{"code" => code})
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, totp_changeset: changeset)}
+  end
+
   def handle_event("save_totp", %{"user_totp" => params}, socket) do
-    editing_totp = socket.assigns.editing_totp
-
-    case Accounts.upsert_user_totp(editing_totp, params) do
-      {:ok, _totp} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "MFA Setup")
-         |> maybe_redirect_to_backup_codes()}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, totp_changeset: changeset)}
-    end
+    do_save_totp(socket, params)
   end
 
   def handle_event("disable_mfa", _params, socket) do
@@ -83,6 +79,24 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
            "Oops! Could not disable 2FA from your account. Please try again later"
          )
          |> push_navigate(to: ~p"/profile")}
+    end
+  end
+
+  defp do_save_totp(socket, params) do
+    editing_totp = socket.assigns.editing_totp
+
+    case Accounts.upsert_user_totp(editing_totp, params) do
+      {:ok, _totp} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "MFA Setup")
+         |> maybe_redirect_to_backup_codes()}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(totp_changeset: Map.put(changeset, :action, :insert))
+         |> push_event("otp:clear", %{id: "totp-code-input"})}
     end
   end
 
@@ -112,6 +126,20 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
   defp strip_xml_declaration(svg) do
     String.replace(svg, ~r/<\?xml[^?]*\?>\s*/i, "")
   end
+
+  defp totp_error?(nil), do: false
+
+  defp totp_error?(%Ecto.Changeset{action: action, errors: errors})
+       when action in [:validate, :insert] do
+    has_invalid? = Enum.any?(errors, &match?({:code, {"invalid code", _}}, &1))
+
+    has_format? =
+      Enum.any?(errors, &match?({:code, {_, [validation: :format]}}, &1))
+
+    has_invalid? and not has_format?
+  end
+
+  defp totp_error?(_), do: false
 
   defp toggle_btn_event(%{user: user, show: show}) do
     cond do
