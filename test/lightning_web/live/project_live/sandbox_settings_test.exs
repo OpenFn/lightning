@@ -56,7 +56,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       parent: parent
     } do
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      refute html =~ "Webhook security is not available in sandboxes"
+      refute html =~ "Webhook authentication is managed in the parent project"
     end
   end
 
@@ -85,7 +85,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       end
 
       assert html =~
-               "Changes you make here only apply to this sandbox and won&#39;t sync"
+               "Changes you make here only apply to this sandbox and do not sync"
     end
 
     test "shows Inherited banner on security tab", %{
@@ -106,7 +106,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
 
       assert html =~ "Sandbox Identity"
       assert html =~ "Sandbox setup"
-      assert html =~ "Parent project:"
+      assert html =~ "Identifies this sandbox within its parent:"
       assert html =~ "parent-project"
     end
 
@@ -121,7 +121,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
          %{conn: conn, sandbox: sandbox} do
       {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
 
-      assert html =~ "Webhook security is not available in sandboxes for now"
+      assert html =~ "Webhook authentication is managed in the parent project"
     end
 
     test "MFA toggle is disabled in sandbox", %{conn: conn, sandbox: sandbox} do
@@ -131,6 +131,13 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       assert html =~ ~s(id="toggle-mfa-switch")
       assert html =~ ~s(disabled)
       assert html =~ "cursor-not-allowed"
+    end
+
+    test "does not show the role permissions message on webhook_security or security tabs",
+         %{conn: conn, sandbox: sandbox} do
+      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
+
+      refute html =~ "Role based permissions: You cannot modify"
     end
   end
 

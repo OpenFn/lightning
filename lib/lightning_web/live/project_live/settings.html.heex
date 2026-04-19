@@ -62,11 +62,6 @@
         <span class="inline-block align-middle">History Exports</span>
       </:tab>
       <:panel hash="project" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-project"
-          variant={:local}
-        />
         <.section_header
           title={if @sandbox?, do: "Sandbox setup", else: "Project setup"}
           subtitle={
@@ -79,6 +74,11 @@
           permissions_message="basic settings, but you can export a copy."
           can_perform_action={@can_edit_project}
         />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-project"
+          variant={:local}
+        />
         <div class="space-y-4">
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
@@ -87,15 +87,13 @@
               </h6>
               <small class="block my-1 text-xs text-gray-600">
                 <%= if @sandbox? do %>
-                  Identifies this sandbox within the parent project.
-                  <span :if={@parent_project}>
-                    Parent project: <.link
-                      navigate={~p"/projects/#{@parent_project.id}/settings"}
-                      class="font-medium text-indigo-600 hover:text-indigo-900"
-                    >
-                      {@parent_project.name}
-                    </.link>.
-                  </span>
+                  Identifies this sandbox within its parent: <.link
+                    :if={@parent_project}
+                    navigate={~p"/projects/#{@parent_project.id}/settings"}
+                    class="font-medium text-indigo-600 hover:text-indigo-900"
+                  >
+                    {@parent_project.name}
+                  </.link>.
                 <% else %>
                   This metadata helps you identify the types of workflows managed in this project and the people that have access.
                 <% end %>
@@ -291,11 +289,6 @@
         </div>
       </:panel>
       <:panel hash="credentials" class="space-y-4 block">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-credentials"
-          variant={:editable}
-        />
         <.section_header
           title="Project credentials"
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
@@ -332,6 +325,11 @@
             </Components.Credentials.new_credential_menu_button>
           </:action_button>
         </.section_header>
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-credentials"
+          variant={:editable}
+        />
 
         <Components.Credentials.credentials_index_live_component
           current_user={@current_user}
@@ -343,17 +341,13 @@
         />
       </:panel>
       <:panel hash="collections" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-collections"
-          variant={:editable}
-        />
         <.live_component
           module={LightningWeb.ProjectLive.CollectionsComponent}
           id="collections"
           project={@project}
           collections={@collections}
           can_create_collection={@can_create_collection}
+          sandbox?={@sandbox?}
           return_to={~p"/projects/#{@project.id}/settings#collections"}
         />
       </:panel>
@@ -362,21 +356,26 @@
           <.section_header
             title="Webhook security"
             subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
-            permissions_message="webhook auth methods."
-            can_perform_action={false}
           />
-          <div class="bg-white p-4 rounded-md">
-            <p class="text-sm text-gray-700">
-              Webhook security is not available in sandboxes for now. Manage these methods in the parent project <.link
-                :if={@parent_project}
-                navigate={
-                  ~p"/projects/#{@parent_project.id}/settings#webhook_security"
-                }
-                class="font-medium text-indigo-600 hover:text-indigo-900"
-              >
-                ({@parent_project.name})
-              </.link>.
-            </p>
+          <div
+            id="webhook-security-sandbox-notice"
+            class="bg-white p-4 rounded-md"
+          >
+            <h6 class="font-medium text-black">
+              Webhook authentication is managed in the parent project
+            </h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Methods are shared with this sandbox and enforced on its webhook triggers, but can only be created, edited, or deleted from the parent.
+            </small>
+            <.link
+              :if={@parent_project}
+              navigate={
+                ~p"/projects/#{@parent_project.id}/settings#webhook_security"
+              }
+              class="mt-2 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-900"
+            >
+              Manage them in the parent project ({@parent_project.name})
+            </.link>
           </div>
         <% else %>
           <.section_header
@@ -545,11 +544,6 @@
         <% end %>
       </:panel>
       <:panel hash="collaboration" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-collaboration"
-          variant={:local}
-        />
         <.section_header
           title="Project collaboration"
           subtitle="View collaborators and manage alert settings for this project."
@@ -568,6 +562,11 @@
             )
           }
           action_button_id="show_collaborators_modal_button"
+        />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-collaboration"
+          variant={:local}
         />
         <.support_access_toggle
           can_edit_project={@can_edit_project}
@@ -655,17 +654,19 @@
         <% end %>
       </:panel>
       <:panel hash="security" class="space-y-4">
+        <.section_header
+          title="Project security"
+          subtitle="View and manage security settings for this project."
+          permissions_message={
+            unless @sandbox?, do: "multi-factor authentication settings."
+          }
+          can_perform_action={@can_edit_project}
+        />
         <.sandbox_settings_banner
           :if={@sandbox?}
           id="sandbox-banner-security"
           variant={:inherited}
           parent_project={@parent_project}
-        />
-        <.section_header
-          title="Project security"
-          subtitle="View and manage security settings for this project."
-          permissions_message="multi-factor authentication settings."
-          can_perform_action={@can_edit_project and not @sandbox?}
         />
         <div>
           <%= if assigns[:mfa_banner] do %>
@@ -730,16 +731,16 @@
         </div>
       </:panel>
       <:panel hash="vcs" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-vcs"
-          variant={:local}
-        />
         <.section_header
           title="Version control"
           subtitle="View or modify external version control settings for this project."
           permissions_message={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
           can_perform_action={@can_install_github}
+        />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-vcs"
+          variant={:local}
         />
         <div>
           <%= if assigns[:github_banner] do %>
@@ -834,16 +835,16 @@
         </div>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-data-storage"
-          variant={:local}
-        />
         <.section_header
           title="Data storage"
           subtitle="View or modify data storage settings for this project."
           permissions_message="data storage settings."
           can_perform_action={@can_edit_data_retention}
+        />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-data-storage"
+          variant={:local}
         />
         <div class="bg-white p-4 rounded-md">
           <.form
@@ -1027,16 +1028,16 @@
         </div>
       </:panel>
       <:panel hash="history-exports" class="space-y-4">
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-history-exports"
-          variant={:local}
-        />
         <.section_header
           title="History exports"
           subtitle="View export status and download work order history for this project."
           permissions_message="history exports."
           can_perform_action={true}
+        />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-history-exports"
+          variant={:local}
         />
         <LightningWeb.Components.DataTables.history_exports_table
           id="project_users_table"

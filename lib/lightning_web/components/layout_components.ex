@@ -388,7 +388,7 @@ defmodule LightningWeb.LayoutComponents do
 
   attr :title, :string, required: true
   attr :subtitle, :string, required: true
-  attr :permissions_message, :string, required: true
+  attr :permissions_message, :string, default: nil
   attr :can_perform_action, :boolean, default: true
   attr :action_button_text, :string, default: nil
   attr :action_button_click, :any, default: nil
@@ -409,7 +409,7 @@ defmodule LightningWeb.LayoutComponents do
         <small class="block my-1 text-xs text-gray-600">
           {@subtitle}
         </small>
-        <%= if !@can_perform_action do %>
+        <%= if !@can_perform_action and @permissions_message do %>
           <.permissions_message section={@permissions_message} />
         <% end %>
       </div>

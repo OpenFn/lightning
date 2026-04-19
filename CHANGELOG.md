@@ -28,8 +28,8 @@ and this project adheres to
   changes will (or will not) flow on merge: Local (sandbox-only), Editable
   (syncs on merge), or Inherited (read-only, managed in the parent). The Sandbox
   Identity panel links back to the parent project, the MFA toggle is read-only,
-  webhook security is unavailable in V1, and parent project admins cannot be
-  removed from a sandbox.
+  webhook authentication methods are managed from the parent project, and parent
+  project admins cannot be removed from a sandbox.
   [#3398](https://github.com/OpenFn/lightning/issues/3398)
 
 ### Changed

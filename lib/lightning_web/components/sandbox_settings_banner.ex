@@ -29,9 +29,9 @@ defmodule LightningWeb.Components.SandboxSettingsBanner do
 
   def sandbox_settings_banner(%{variant: :local} = assigns) do
     ~H"""
-    <Common.alert id={@id} type="info">
+    <Common.alert id={@id} type="info" class="border border-blue-200">
       <:message>
-        Changes you make here only apply to this sandbox and won't sync to the parent project on merge.
+        Changes you make here only apply to this sandbox and do not sync to the parent project on merge.
       </:message>
     </Common.alert>
     """
@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.SandboxSettingsBanner do
 
   def sandbox_settings_banner(%{variant: :editable} = assigns) do
     ~H"""
-    <Common.alert id={@id} type="success">
+    <Common.alert id={@id} type="success" class="border border-green-200">
       <:message>
         Changes you make here will sync to the parent project on merge.
       </:message>
@@ -49,10 +49,10 @@ defmodule LightningWeb.Components.SandboxSettingsBanner do
 
   def sandbox_settings_banner(%{variant: :inherited} = assigns) do
     ~H"""
-    <Common.alert id={@id} type="warning">
+    <Common.alert id={@id} type="warning" class="border border-yellow-200">
       <:message>
         These settings are inherited from the parent project
-        <.parent_link :if={@parent_project} project={@parent_project} />and can't be changed here.
+        <.parent_link :if={@parent_project} project={@parent_project} />and cannot be changed here.
       </:message>
     </Common.alert>
     """
