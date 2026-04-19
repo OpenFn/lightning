@@ -186,7 +186,7 @@ defmodule LightningWeb.LayoutComponents do
       <div class="flex-auto bg-secondary-100 relative">
         <section
           id="inner_content"
-          class="overflow-y-auto [scrollbar-gutter:stable] absolute top-0 bottom-0 left-0 right-0"
+          class="overflow-y-auto [scrollbar-gutter:stable_both-edges] absolute top-0 bottom-0 left-0 right-0"
         >
           {render_slot(@inner_block)}
         </section>
