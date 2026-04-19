@@ -37,10 +37,6 @@
         <.icon name="hero-circle-stack" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Collections</span>
       </:tab>
-      <:tab hash="webhook_security">
-        <.icon name="hero-lock-closed" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Webhook Security</span>
-      </:tab>
       <:tab hash="collaboration">
         <.icon name="hero-users" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Collaboration</span>
@@ -51,15 +47,15 @@
       </:tab>
       <:tab hash="vcs">
         <.icon name="hero-arrow-path" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Sync to GitHub</span>
+        <span class="inline-block align-middle">GitHub sync</span>
       </:tab>
       <:tab hash="data-storage">
         <.icon name="hero-square-3-stack-3d" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Data Storage</span>
+        <span class="inline-block align-middle">Data storage</span>
       </:tab>
       <:tab hash="history-exports">
         <.icon name="hero-folder-arrow-down" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">History Exports</span>
+        <span class="inline-block align-middle">Exports</span>
       </:tab>
       <:panel hash="project" class="space-y-4">
         <.section_header
@@ -83,7 +79,7 @@
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
               <h6 class="font-medium text-black">
-                {if @sandbox?, do: "Sandbox Identity", else: "Project Identity"}
+                {if @sandbox?, do: "Sandbox identity", else: "Project identity"}
               </h6>
               <small class="block my-1 text-xs text-gray-600">
                 <%= if @sandbox? do %>
@@ -169,7 +165,7 @@
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
               <h6 class="font-medium text-black">
-                Concurrency Override
+                Concurrency override
               </h6>
               <div class="@container">
                 <div class="@sm:max-w-xl">
@@ -212,7 +208,7 @@
                   }
                   id="heads-up-description"
                   type="warning"
-                  header="Heads Up!"
+                  header="Heads up"
                   class="mt-2"
                 >
                   <:message>
@@ -241,13 +237,13 @@
 
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
-              <h6 class="font-medium text-black">Export your Project</h6>
-              <p class="block my-1 text-xs text-gray-600">
+              <h6 class="font-medium text-black">Export your project</h6>
+              <small class="block my-1 text-xs text-gray-600">
                 Export your project as code, to save this version or edit your project locally.
-              </p>
+              </small>
             </div>
             <.button_link
-              theme="primary"
+              theme="secondary"
               href={~p"/download/yaml?id=#{@project.id}"}
               target="_blank"
             >
@@ -255,11 +251,11 @@
             </.button_link>
           </div>
           <%= if @can_delete_project and not @sandbox? do %>
-            <div class="bg-white p-4 rounded-md space-y-4">
+            <div class="bg-white p-4 rounded-md space-y-4 border border-red-200 mt-8">
               <div>
-                <h6 class="font-medium text-black">The danger zone</h6>
+                <h6 class="font-medium text-red-700">Danger zone</h6>
                 <small class="block my-1 text-xs text-gray-600">
-                  Deleting your project is irreversible
+                  Deleting your project is irreversible. All workflows, runs, and history will be permanently removed.
                 </small>
               </div>
               <.button_link
@@ -291,40 +287,10 @@
       <:panel hash="credentials" class="space-y-4 block">
         <.section_header
           title="Project credentials"
-          subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
+          subtitle="Manage OAuth 2.0 clients and credentials accessible to this project."
           permissions_message="available credentials."
           can_perform_action={@can_create_project_credential}
-        >
-          <:action_button>
-            <Components.Credentials.new_credential_menu_button
-              id="project-credential-options-menu-button"
-              disabled={!@can_create_project_credential}
-            >
-              <:option
-                id="new-credential-option-menu-item"
-                target="new_credential"
-                disabled={!@can_create_project_credential}
-              >
-                Credential
-              </:option>
-              <:option
-                id="new-keychain-credential-option-menu-item"
-                target="new_keychain_credential"
-                disabled={!@can_create_keychain_credential}
-              >
-                Keychain
-              </:option>
-              <:option
-                id="new-oauth-client-option-menu-item"
-                target="new_oauth_client"
-                disabled={!@can_create_project_credential}
-                badge="Advanced"
-              >
-                OAuth Client
-              </:option>
-            </Components.Credentials.new_credential_menu_button>
-          </:action_button>
-        </.section_header>
+        />
         <.sandbox_settings_banner
           :if={@sandbox?}
           id="sandbox-banner-credentials"
@@ -351,205 +317,13 @@
           return_to={~p"/projects/#{@project.id}/settings#collections"}
         />
       </:panel>
-      <:panel hash="webhook_security" class="space-y-4">
-        <%= if @sandbox? do %>
-          <.section_header
-            title="Webhook security"
-            subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
-          />
-          <div
-            id="webhook-security-sandbox-notice"
-            class="bg-white p-4 rounded-md"
-          >
-            <h6 class="font-medium text-black">
-              Webhook authentication is managed in the parent project
-            </h6>
-            <small class="block my-1 text-xs text-gray-600">
-              Methods are shared with this sandbox and enforced on its webhook triggers, but can only be created, edited, or deleted from the parent.
-            </small>
-            <.link
-              :if={@parent_project}
-              navigate={
-                ~p"/projects/#{@parent_project.id}/settings#webhook_security"
-              }
-              class="mt-2 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-900"
-            >
-              Manage them in the parent project ({@parent_project.name})
-            </.link>
-          </div>
-        <% else %>
-          <.section_header
-            title="Webhook security"
-            subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
-            permissions_message="webhook auth methods."
-            can_perform_action={@can_write_webhook_auth_method}
-            action_button_text="New auth method"
-            action_button_click={
-              JS.push("show_modal", value: %{target: "new_webhook_auth_method"})
-            }
-            action_button_disabled={!@can_write_webhook_auth_method}
-            action_button_id="add_new_auth_method"
-          />
-          <.modal
-            :if={
-              @active_modal in [
-                :new_webhook_auth_method,
-                :edit_webhook_auth_method
-              ]
-            }
-            id="webhook_auth_method_modal"
-            width="min-w-1/3 max-w-xl"
-            on_close={JS.push("close_active_modal")}
-            show={true}
-          >
-            <.live_component
-              :if={@active_modal == :new_webhook_auth_method}
-              module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-              id="new_auth_method"
-              action={:new}
-              current_user={@current_user}
-              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-              trigger={nil}
-              on_close={JS.push("close_active_modal")}
-              return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-            />
-            <.live_component
-              :if={@active_modal == :edit_webhook_auth_method}
-              module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-              id={"edit_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
-              action={:edit}
-              current_user={@current_user}
-              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-              trigger={nil}
-              on_close={JS.push("close_active_modal")}
-              return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-            />
-          </.modal>
-          <.live_component
-            :if={@active_modal == :delete_webhook_auth_method}
-            module={LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal}
-            id={"delete_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
-            current_user={@current_user}
-            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-            on_close={JS.push("close_active_modal")}
-            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-          />
-          <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
-            :if={@active_modal == :linked_triggers_for_webhook_auth_method}
-            id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
-            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
-            on_close={JS.push("close_active_modal")}
-          />
-          <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
-            auth_methods={@webhook_auth_methods}
-            current_user={@current_user}
-            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-            class="p-2"
-          >
-            <:empty_state>
-              <.empty_state
-                icon="hero-plus-circle"
-                message="No auth methods found."
-                button_text="Create a new auth method"
-                button_id="open-create-auth-method-modal"
-                button_click={
-                  JS.push("show_modal",
-                    value: %{target: "new_webhook_auth_method"}
-                  )
-                }
-                button_disabled={!@can_write_webhook_auth_method}
-              />
-            </:empty_state>
-            <:linked_triggers :let={auth_method}>
-              <span class="relative font-normal">
-                <a
-                  :if={auth_method.triggers != []}
-                  id={"display_linked_triggers_link_#{auth_method.id}"}
-                  href="#"
-                  class="text-indigo-600 hover:text-indigo-900"
-                  phx-click={
-                    JS.push("show_modal",
-                      value: %{
-                        target: "linked_triggers_for_webhook_auth_method",
-                        id: auth_method.id
-                      }
-                    )
-                  }
-                >
-                  {Enum.count(auth_method.triggers)}
-                </a>
-                <span
-                  :if={auth_method.triggers == []}
-                  class="italic font-normal text-gray-300"
-                >
-                  No associated triggers...
-                </span>
-              </span>
-            </:linked_triggers>
-            <:action :let={auth_method}>
-              <%= if @can_write_webhook_auth_method do %>
-                <a
-                  id={"edit_auth_method_link_#{auth_method.id}"}
-                  href="#"
-                  class="table-action"
-                  phx-click={
-                    JS.push("show_modal",
-                      value: %{
-                        target: "edit_webhook_auth_method",
-                        id: auth_method.id
-                      }
-                    )
-                  }
-                >
-                  View
-                </a>
-              <% else %>
-                <a
-                  id={"edit_auth_method_link_#{auth_method.id}"}
-                  href="#"
-                  class="table-action cursor-not-allowed"
-                >
-                  Edit
-                </a>
-              <% end %>
-            </:action>
-            <:action :let={auth_method}>
-              <%= if @can_write_webhook_auth_method do %>
-                <a
-                  id={"delete_auth_method_link_#{auth_method.id}"}
-                  href="#"
-                  class="table-action"
-                  phx-click={
-                    JS.push("show_modal",
-                      value: %{
-                        target: "delete_webhook_auth_method",
-                        id: auth_method.id
-                      }
-                    )
-                  }
-                >
-                  Delete
-                </a>
-              <% else %>
-                <a
-                  id={"delete_auth_method_link_#{auth_method.id}"}
-                  href="#"
-                  class="table-action cursor-not-allowed"
-                >
-                  Delete
-                </a>
-              <% end %>
-            </:action>
-          </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
-        <% end %>
-      </:panel>
       <:panel hash="collaboration" class="space-y-4">
         <.section_header
           title="Project collaboration"
           subtitle="View collaborators and manage alert settings for this project."
           permissions_message="collaboration settings, but you can change your notification preferences."
           can_perform_action={@can_edit_project}
-          action_button_text="Add Collaborator(s)"
+          action_button_text="Add collaborator"
           action_button_click="toggle_collaborators_modal"
           action_button_disabled={
             !@can_add_project_user ||
@@ -622,7 +396,7 @@
                 }
               >
                 <.icon name="hero-minus-circle" class="w-5 h-5" />
-                Remove Collaborator
+                Remove collaborator
               </.button>
             </div>
           </:actions>
@@ -655,20 +429,26 @@
       </:panel>
       <:panel hash="security" class="space-y-4">
         <.section_header
-          title="Project security"
-          subtitle="View and manage security settings for this project."
-          permissions_message={
-            unless @sandbox?, do: "multi-factor authentication settings."
-          }
+          title="Security"
+          subtitle="Manage authentication for this project."
           can_perform_action={@can_edit_project}
         />
-        <.sandbox_settings_banner
-          :if={@sandbox?}
-          id="sandbox-banner-security"
-          variant={:inherited}
-          parent_project={@parent_project}
-        />
-        <div>
+
+        <div class="bg-white p-4 rounded-md space-y-4">
+          <div>
+            <h6 class="font-medium text-black">Multi-factor authentication</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Requiring MFA adds an additional layer of security by requiring
+              users to enable MFA on their accounts before they can access
+              this project.
+            </small>
+          </div>
+          <.sandbox_settings_banner
+            :if={@sandbox?}
+            id="sandbox-banner-security"
+            variant={:inherited}
+            parent_project={@parent_project}
+          />
           <%= if assigns[:mfa_banner] do %>
             {Phoenix.LiveView.TagEngine.component(
               @mfa_banner.function,
@@ -676,63 +456,231 @@
               {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
             )}
           <% end %>
-        </div>
-        <div class="bg-white p-4 rounded-md space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="flex flex-grow flex-col">
-              <span
-                class="text-sm font-medium leading-6 text-gray-900"
-                id="mfa-label"
-              >
-                Multi-Factor Authentication
-              </span>
-              <span class="text-sm text-gray-500" id="mfa-description">
-                Requiring multi-factor authentication (MFA) adds an
-                additional layer of security by requiring users to enable
-                MFA on their accounts before they are allowed access this
-                project.
+          <div class="flex items-center gap-3">
+            <.input
+              id="toggle-mfa-switch"
+              type="toggle"
+              name="requires_mfa"
+              value={@project.requires_mfa}
+              disabled={!@can_require_mfa or @sandbox?}
+              on_click={unless @sandbox?, do: "toggle-mfa"}
+              tooltip={
+                if !@can_edit_project,
+                  do: "You do not have permission to perform this action"
+              }
+            />
+            <span class="text-sm" id="require-mfa-label">
+              <span class="font-medium text-gray-900">Require MFA?</span>
+              <span class="text-gray-500">
+                <%= if @project.requires_mfa do %>
+                  (currently required for this project)
+                <% else %>
+                  (currently optional for this project)
+                <% end %>
               </span>
             </span>
           </div>
-          <div>
-            <h6 class="font-medium text-black"></h6>
-            <p class="block text-xs text-gray-600"></p>
-            <div class="flex items-center">
-              <button
-                id="toggle-mfa-switch"
-                type="button"
-                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project or @sandbox?, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-                role="switch"
-                disabled={!@can_require_mfa or @sandbox?}
-                phx-click={unless @sandbox?, do: "toggle-mfa"}
-                aria-checked={@project.requires_mfa}
-                aria-labelledby="require-mfa-label"
-                aria-describedby="require-mfa-description"
-                {if !@can_edit_project, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": "You do not have permission to perform this action"], else: []}
-              >
-                <span
-                  aria-hidden="true"
-                  class={"#{if @project.requires_mfa, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-                >
-                </span>
-              </button>
-              <span class="ml-3 text-sm" id="require-mfa-label">
-                <span class="font-medium text-gray-900">Require MFA?</span>
-                <span class="text-gray-500">
-                  <%= if @project.requires_mfa do %>
-                    (currently required for this project)
-                  <% else %>
-                    (currently optional for this project)
-                  <% end %>
-                </span>
-              </span>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <h6 class="font-medium text-black">Webhook authentication</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Authentication methods used with webhook triggers in workflows.
+              </small>
             </div>
+            <.button
+              :if={not @sandbox?}
+              id="add_new_auth_method"
+              type="button"
+              theme="primary"
+              size="lg"
+              disabled={!@can_write_webhook_auth_method}
+              phx-click={
+                JS.push("show_modal",
+                  value: %{target: "new_webhook_auth_method"}
+                )
+              }
+            >
+              New auth method
+            </.button>
           </div>
+
+          <%= if @sandbox? do %>
+            <div
+              id="webhook-security-sandbox-notice"
+              class="bg-white p-4 rounded-md text-sm text-gray-700"
+            >
+              <p>
+                Methods are shared with this sandbox and enforced on its webhook triggers, but can only be created, edited, or deleted from the parent.
+              </p>
+              <.link
+                :if={@parent_project}
+                navigate={~p"/projects/#{@parent_project.id}/settings#security"}
+                class="mt-2 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-900"
+              >
+                Manage them in the parent project ({@parent_project.name})
+              </.link>
+            </div>
+          <% else %>
+            <.modal
+              :if={
+                @active_modal in [
+                  :new_webhook_auth_method,
+                  :edit_webhook_auth_method
+                ]
+              }
+              id="webhook_auth_method_modal"
+              width="min-w-1/3 max-w-xl"
+              on_close={JS.push("close_active_modal")}
+              show={true}
+            >
+              <.live_component
+                :if={@active_modal == :new_webhook_auth_method}
+                module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+                id="new_auth_method"
+                action={:new}
+                current_user={@current_user}
+                webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+                trigger={nil}
+                on_close={JS.push("close_active_modal")}
+                return_to={~p"/projects/#{@project.id}/settings#security"}
+              />
+              <.live_component
+                :if={@active_modal == :edit_webhook_auth_method}
+                module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+                id={"edit_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+                action={:edit}
+                current_user={@current_user}
+                webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+                trigger={nil}
+                on_close={JS.push("close_active_modal")}
+                return_to={~p"/projects/#{@project.id}/settings#security"}
+              />
+            </.modal>
+            <.live_component
+              :if={@active_modal == :delete_webhook_auth_method}
+              module={LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal}
+              id={"delete_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+              current_user={@current_user}
+              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+              on_close={JS.push("close_active_modal")}
+              return_to={~p"/projects/#{@project.id}/settings#security"}
+            />
+            <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
+              :if={@active_modal == :linked_triggers_for_webhook_auth_method}
+              id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
+              webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+              on_close={JS.push("close_active_modal")}
+            />
+            <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
+              auth_methods={@webhook_auth_methods}
+              current_user={@current_user}
+              return_to={~p"/projects/#{@project.id}/settings#security"}
+              class="p-2"
+            >
+              <:empty_state>
+                <.empty_state
+                  icon="hero-plus-circle"
+                  message="No auth methods found."
+                  button_text="Create a new auth method"
+                  button_id="open-create-auth-method-modal"
+                  button_click={
+                    JS.push("show_modal",
+                      value: %{target: "new_webhook_auth_method"}
+                    )
+                  }
+                  button_disabled={!@can_write_webhook_auth_method}
+                />
+              </:empty_state>
+              <:linked_triggers :let={auth_method}>
+                <span class="relative font-normal">
+                  <a
+                    :if={auth_method.triggers != []}
+                    id={"display_linked_triggers_link_#{auth_method.id}"}
+                    href="#"
+                    class="text-indigo-600 hover:text-indigo-900"
+                    phx-click={
+                      JS.push("show_modal",
+                        value: %{
+                          target: "linked_triggers_for_webhook_auth_method",
+                          id: auth_method.id
+                        }
+                      )
+                    }
+                  >
+                    {Enum.count(auth_method.triggers)}
+                  </a>
+                  <span
+                    :if={auth_method.triggers == []}
+                    class="italic font-normal text-gray-300"
+                  >
+                    No associated triggers...
+                  </span>
+                </span>
+              </:linked_triggers>
+              <:action :let={auth_method}>
+                <%= if @can_write_webhook_auth_method do %>
+                  <a
+                    id={"edit_auth_method_link_#{auth_method.id}"}
+                    href="#"
+                    class="table-action"
+                    phx-click={
+                      JS.push("show_modal",
+                        value: %{
+                          target: "edit_webhook_auth_method",
+                          id: auth_method.id
+                        }
+                      )
+                    }
+                  >
+                    View
+                  </a>
+                <% else %>
+                  <a
+                    id={"edit_auth_method_link_#{auth_method.id}"}
+                    href="#"
+                    class="table-action cursor-not-allowed"
+                  >
+                    Edit
+                  </a>
+                <% end %>
+              </:action>
+              <:action :let={auth_method}>
+                <%= if @can_write_webhook_auth_method do %>
+                  <a
+                    id={"delete_auth_method_link_#{auth_method.id}"}
+                    href="#"
+                    class="table-action"
+                    phx-click={
+                      JS.push("show_modal",
+                        value: %{
+                          target: "delete_webhook_auth_method",
+                          id: auth_method.id
+                        }
+                      )
+                    }
+                  >
+                    Delete
+                  </a>
+                <% else %>
+                  <a
+                    id={"delete_auth_method_link_#{auth_method.id}"}
+                    href="#"
+                    class="table-action cursor-not-allowed"
+                  >
+                    Delete
+                  </a>
+                <% end %>
+              </:action>
+            </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+          <% end %>
         </div>
       </:panel>
       <:panel hash="vcs" class="space-y-4">
         <.section_header
-          title="Version control"
+          title="GitHub sync"
           subtitle="View or modify external version control settings for this project."
           permissions_message={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
           can_perform_action={@can_install_github}
@@ -792,36 +740,34 @@
               />
               <div
                 :if={!user_has_valid_oauth_token(@current_user)}
-                class="bg-white p-4 rounded-md"
+                class="bg-white p-4 rounded-md space-y-4"
               >
-                <h6 class="font-medium text-black">
-                  Connect your OpenFn account to GitHub
-                </h6>
-                <small class="block mt-1 text-xs text-gray-600">
-                  To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
-                  Please click the button below to get started.
-                </small>
-                <div class="mt-6">
-                  <GithubComponents.connect_to_github_link
-                    id="connect-github-link"
-                    user={@current_user}
-                    disabled={is_map(assigns[:github_banner])}
-                  />
+                <div>
+                  <h6 class="font-medium text-black">
+                    Connect your OpenFn account to GitHub
+                  </h6>
+                  <small class="block my-1 text-xs text-gray-600">
+                    To create a new GitHub version control connection you must first connect your OpenFn account to GitHub.
+                    Please click the button below to get started.
+                  </small>
                 </div>
+                <GithubComponents.connect_to_github_link
+                  id="connect-github-link"
+                  user={@current_user}
+                  disabled={is_map(assigns[:github_banner])}
+                />
               </div>
             </div>
           <% end %>
         <% else %>
-          <div class="bg-white p-4 rounded-md">
-            <h6 class="font-medium text-black">
-              Sync to GitHub
-            </h6>
-            <small class="block mt-1 text-xs text-gray-600">
-              Version Control is not configured for this Lightning instance. Contact the superuser for more information.
+          <div class="bg-white p-4 rounded-md space-y-2">
+            <h6 class="font-medium text-black">GitHub sync not configured</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Version control is not configured for this OpenFn instance. Contact the superuser for more information.
             </small>
           </div>
         <% end %>
-        <div class="mt-2">
+        <small class="block text-xs text-gray-600">
           Need to learn more about GitHub Sync?
           See
           <.link
@@ -832,7 +778,7 @@
             portability docs
           </.link>
           for full documentation on associated GitHub actions and automated workflows.
-        </div>
+        </small>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">
         <.section_header
@@ -846,190 +792,179 @@
           id="sandbox-banner-data-storage"
           variant={:local}
         />
-        <div class="bg-white p-4 rounded-md">
-          <.form
-            :let={f}
-            for={@project_changeset}
-            id="retention-settings-form"
-            phx-change="validate"
-            phx-submit="save_retention_settings"
-          >
-            <div class="space-y-6">
-              <div>
-                <div class="text-black text-sm">
-                  <div class="font-medium">
-                    History Retention Period
-                  </div>
-                  <div class="block mt-1 mb-3">
-                    Select how long your run history is stored in OpenFn before being removed from the servers.
-                    <a
-                      target="_blank"
-                      href="https://docs.openfn.org/documentation/manage-projects/retention-periods"
-                      class="link ml-1"
-                    >
-                      Learn more
-                    </a>
-                    <br /> This includes all Work Orders, Runs, and Logs.
-                  </div>
-                </div>
-
-                <div class="flex gap-4 items-center">
-                  <.input
-                    type="select"
-                    prompt="Select Period"
-                    options={
-                      Enum.map(@data_retention_periods, fn days ->
-                        {"#{days} Days", days}
-                      end)
-                    }
-                    disabled={
-                      !@can_edit_data_retention ||
-                        Enum.count(@data_retention_periods) == 1
-                    }
-                    field={f[:history_retention_period]}
-                    class="border-gray-300 focus:ring-indigo-600"
-                  />
-                  <div class="text-xs">
-                    <%= case assigns[:data_retention_limit_message] do %>
-                      <% %{function: func} when is_function(func) -> %>
-                        {Phoenix.LiveView.TagEngine.component(
-                          @data_retention_limit_message.function,
-                          @data_retention_limit_message.attrs,
-                          {__ENV__.module, __ENV__.function, __ENV__.file,
-                           __ENV__.line}
-                        )}
-                      <% %{text: text} when is_binary(text) -> %>
-                        <span>{text}</span>
-                      <% _other -> %>
-                        <span></span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-              <div class="inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-gray-300"></div>
-              </div>
-              <div>
-                <div class="text-black text-sm">
-                  <div class="font-medium">
-                    Input/Output Data Storage Policy
-                  </div>
-                  <div class="block mt-1 mb-3">
-                    Should OpenFn store input/output data for workflow runs?
-                    <a
-                      target="_blank"
-                      href="https://docs.openfn.org/documentation/manage-projects/io-data-storage"
-                      class="link ml-1"
-                    >
-                      Learn more
-                    </a>
-                  </div>
-                </div>
-
-                <div class="space-y-2">
-                  <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
-                  <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
-                  <%= for {value, text} <- [
-                  {:retain_all, "Retain input/output data for all workflow runs"},
-                  {:erase_all, "Never retain input/output data (zero-persistence)"}
-                  ] do %>
-                    <div class="relative flex items-start">
-                      <div class="flex h-6 items-center">
-                        <.input
-                          type="radio"
-                          id={value}
-                          disabled={!@can_edit_data_retention}
-                          field={f[:retention_policy]}
-                          checked={checked?(@project_changeset, value)}
-                          value={value}
-                          class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                        />
-                      </div>
-                      <div class="ml-3 leading-6">
-                        <label for={value} class="text-sm text-neutral-950">
-                          {text}
-                        </label>
-                      </div>
-                    </div>
-                  <% end %>
-                </div>
-                <Common.alert
-                  :if={not checked?(@project_changeset, :retain_all)}
-                  id="heads-up-description"
-                  type="warning"
-                  header="Heads Up!"
-                  class="mt-2"
+        <.form
+          :let={f}
+          for={@project_changeset}
+          id="retention-settings-form"
+          phx-change="validate"
+          phx-submit="save_retention_settings"
+          class="space-y-4"
+        >
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div>
+              <h6 class="font-medium text-black">History retention period</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Select how long your run history is stored in OpenFn before being removed from the servers.
+                <a
+                  target="_blank"
+                  href="https://docs.openfn.org/documentation/manage-projects/retention-periods"
+                  class="link ml-1"
                 >
-                  <:message>
-                    <p>
-                      When enabled, you will no longer be able to retry workflow runs as no data will be stored.
-                    </p>
-                  </:message>
-                </Common.alert>
-              </div>
-              <div class="inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-gray-300"></div>
-              </div>
-              <div>
-                <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-black/30"}"}>
-                  <div class="font-medium">
-                    Input/Output Data Retention Period
-                  </div>
-                  <div class="block mt-1 mb-3">
-                    Select how long input/output data is stored. Once input/output data is removed for a given run, you will no longer
-                    be able to retry that run.
-                  </div>
-                </div>
-
-                <div class="flex space-y-2">
-                  <.input
-                    type="select"
-                    prompt="Select Period"
-                    options={
-                      Enum.map(@data_retention_periods, fn days ->
-                        {"#{days} Days", days}
-                      end)
-                    }
-                    disabled={
-                      !@can_edit_data_retention or
-                        to_string(f[:history_retention_period].value) == "" or
-                        checked?(@project_changeset, :erase_all)
-                    }
-                    field={f[:dataclip_retention_period]}
-                    class="border-gray-300 ocus:ring-indigo-600"
-                  />
-                </div>
-              </div>
-              <div class="mt-4">
-                <.button
-                  type="button"
-                  disabled={!@can_edit_data_retention}
-                  theme="secondary"
-                  class="mr-1"
-                  phx-click="cancel-retention-change"
-                >
-                  Cancel
-                </.button>
-                <.button
-                  id="input-output-retention-period-submit-btn"
-                  type="submit"
-                  theme="primary"
-                  disabled={
-                    not @project_changeset.valid? or
-                      not @can_edit_data_retention
-                  }
-                  phx-disable-with="Saving"
-                >
-                  Save
-                </.button>
+                  Learn more
+                </a>
+                <br /> This includes all work orders, runs, and logs.
+              </small>
+            </div>
+            <div class="flex gap-4 items-center">
+              <.input
+                type="select"
+                prompt="Select a period"
+                options={
+                  Enum.map(@data_retention_periods, fn days ->
+                    {"#{days} days", days}
+                  end)
+                }
+                disabled={
+                  !@can_edit_data_retention ||
+                    Enum.count(@data_retention_periods) == 1
+                }
+                field={f[:history_retention_period]}
+                class="border-gray-300 focus:ring-indigo-600"
+              />
+              <div class="text-xs">
+                <%= case assigns[:data_retention_limit_message] do %>
+                  <% %{function: func} when is_function(func) -> %>
+                    {Phoenix.LiveView.TagEngine.component(
+                      @data_retention_limit_message.function,
+                      @data_retention_limit_message.attrs,
+                      {__ENV__.module, __ENV__.function, __ENV__.file,
+                       __ENV__.line}
+                    )}
+                  <% %{text: text} when is_binary(text) -> %>
+                    <span>{text}</span>
+                  <% _other -> %>
+                    <span></span>
+                <% end %>
               </div>
             </div>
-          </.form>
-        </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div>
+              <h6 class="font-medium text-black">
+                Input/output data storage policy
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Should OpenFn store input/output data for workflow runs?
+                <a
+                  target="_blank"
+                  href="https://docs.openfn.org/documentation/manage-projects/io-data-storage"
+                  class="link ml-1"
+                >
+                  Learn more
+                </a>
+              </small>
+            </div>
+            <div class="space-y-2">
+              <%= for {value, text} <- [
+              {:retain_all, "Retain input/output data for all workflow runs"},
+              {:erase_all, "Never retain input/output data (zero-persistence)"}
+              ] do %>
+                <div class="relative flex items-start">
+                  <div class="flex h-6 items-center">
+                    <.input
+                      type="radio"
+                      id={value}
+                      disabled={!@can_edit_data_retention}
+                      field={f[:retention_policy]}
+                      checked={checked?(@project_changeset, value)}
+                      value={value}
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                  </div>
+                  <div class="ml-3 leading-6">
+                    <label for={value} class="text-sm text-neutral-950">
+                      {text}
+                    </label>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+            <Common.alert
+              :if={not checked?(@project_changeset, :retain_all)}
+              id="heads-up-description"
+              type="warning"
+              header="Heads up"
+              class="mt-2"
+            >
+              <:message>
+                <p>
+                  When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                </p>
+              </:message>
+            </Common.alert>
+          </div>
+
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div class={
+              if to_string(f[:history_retention_period].value) == "" or
+                   checked?(@project_changeset, :erase_all),
+                 do: "text-black/30"
+            }>
+              <h6 class="font-medium text-black">
+                Input/output data retention period
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Select how long input/output data is stored. Once input/output data is removed for a given run, you will no longer be able to retry that run.
+              </small>
+            </div>
+            <div>
+              <.input
+                type="select"
+                prompt="Select a period"
+                options={
+                  Enum.map(@data_retention_periods, fn days ->
+                    {"#{days} days", days}
+                  end)
+                }
+                disabled={
+                  !@can_edit_data_retention or
+                    to_string(f[:history_retention_period].value) == "" or
+                    checked?(@project_changeset, :erase_all)
+                }
+                field={f[:dataclip_retention_period]}
+                class="border-gray-300 focus:ring-indigo-600"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <.button
+              id="input-output-retention-period-submit-btn"
+              type="submit"
+              theme="primary"
+              disabled={
+                not @project_changeset.valid? or
+                  not @can_edit_data_retention
+              }
+              phx-disable-with="Saving"
+            >
+              Save
+            </.button>
+            <.button
+              type="button"
+              disabled={!@can_edit_data_retention}
+              theme="secondary"
+              phx-click="cancel-retention-change"
+            >
+              Cancel
+            </.button>
+          </div>
+        </.form>
       </:panel>
       <:panel hash="history-exports" class="space-y-4">
         <.section_header
-          title="History exports"
+          title="Exports"
           subtitle="View export status and download work order history for this project."
           permissions_message="history exports."
           can_perform_action={true}

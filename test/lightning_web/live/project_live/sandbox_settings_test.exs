@@ -36,18 +36,18 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       refute html =~ "sandbox-banner-"
     end
 
-    test "shows 'Project Identity' header on project tab", %{
+    test "shows 'Project identity' header on project tab", %{
       conn: conn,
       parent: parent
     } do
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      assert html =~ "Project Identity"
-      refute html =~ "Sandbox Identity"
+      assert html =~ "Project identity"
+      refute html =~ "Sandbox identity"
     end
 
     test "shows the danger zone delete button", %{conn: conn, parent: parent} do
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      assert html =~ "The danger zone"
+      assert html =~ "Danger zone"
       assert html =~ "Delete project"
     end
 
@@ -56,7 +56,9 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       parent: parent
     } do
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      refute html =~ "Webhook authentication is managed in the parent project"
+
+      refute html =~
+               "Methods are shared with this sandbox and enforced on its webhook triggers"
     end
   end
 
@@ -98,13 +100,13 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       assert html =~ "These settings are inherited from the parent project"
     end
 
-    test "shows 'Sandbox Identity' header instead of 'Project Identity'", %{
+    test "shows 'Sandbox identity' header instead of 'Project identity'", %{
       conn: conn,
       sandbox: sandbox
     } do
       {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
 
-      assert html =~ "Sandbox Identity"
+      assert html =~ "Sandbox identity"
       assert html =~ "Sandbox setup"
       assert html =~ "Identifies this sandbox within its parent:"
       assert html =~ "parent-project"
@@ -113,7 +115,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
     test "hides the danger zone delete button", %{conn: conn, sandbox: sandbox} do
       {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
 
-      refute html =~ "The danger zone"
+      refute html =~ "Danger zone"
       refute html =~ "Delete project"
     end
 
@@ -121,7 +123,8 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
          %{conn: conn, sandbox: sandbox} do
       {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
 
-      assert html =~ "Webhook authentication is managed in the parent project"
+      assert html =~
+               "Methods are shared with this sandbox and enforced on its webhook triggers"
     end
 
     test "MFA toggle is disabled in sandbox", %{conn: conn, sandbox: sandbox} do

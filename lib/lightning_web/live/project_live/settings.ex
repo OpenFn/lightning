@@ -708,8 +708,14 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def support_access_toggle(assigns) do
     ~H"""
-    <div class="flex flex-row items-center mb-4">
-      <div :if={@can_edit_project} class="flex flex-row">
+    <div :if={@can_edit_project} class="bg-white p-4 rounded-md space-y-4">
+      <div>
+        <h6 class="font-medium text-black">Support access</h6>
+        <small class="block my-1 text-xs text-gray-600">
+          Grant designated support users editor access to this project.
+        </small>
+      </div>
+      <div class="flex flex-row items-center">
         <div>
           <.input
             type="toggle"

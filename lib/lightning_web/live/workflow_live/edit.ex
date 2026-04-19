@@ -1060,9 +1060,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <div
       id={"version-switcher-toggle-wrapper-#{@id}"}
-      phx-click="switch-version"
-      phx-value-type="toggle"
-      class="flex items-center justify-between mr-1 text-sm z-50 cursor-pointer"
+      class="flex items-center justify-between mr-1 text-sm z-50"
       {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version, the job has been deleted from the workflow."], else: []}
     >
       <span class="flex flex-grow flex-col">
@@ -1070,46 +1068,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {@label}
         </span>
       </span>
-      <button
+      <.input
         id={"version-switcher-toggle-#{@id}"}
-        phx-click="switch-version"
-        phx-value-type="toggle"
-        data-version={@version}
-        type="button"
+        type="toggle"
+        name={"version-switcher-#{@id}"}
+        value={@version == "latest"}
         disabled={@disabled}
-        class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-        role="switch"
-        aria-checked="false"
-      >
-        <span class={"pointer-events-none relative inline-block h-5 w-5 translate-x-0 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out #{if @version == "latest", do: "translate-x-5", else: "translate-x-0"}"}>
-          <span
-            class={"absolute inset-0 flex h-full w-full items-center justify-center transition-opacity #{if @version == "latest", do: "opacity-0 duration-100 ease-out", else: "opacity-100 duration-200 ease-in"}"}
-            aria-hidden="true"
-          >
-            <svg class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 12 12">
-              <path
-                d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </span>
-          <span
-            class={"absolute inset-0 flex h-full w-full items-center justify-center transition-opacity #{if @version == "latest", do: "opacity-100 duration-200 ease-in", else: "opacity-0 duration-100 ease-out"}"}
-            aria-hidden="true"
-          >
-            <svg
-              class="h-3 w-3 text-indigo-600"
-              fill="currentColor"
-              viewBox="0 0 12 12"
-            >
-              <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
-            </svg>
-          </span>
-        </span>
-      </button>
+        data-version={@version}
+        on_click={JS.push("switch-version", value: %{type: "toggle"})}
+      />
     </div>
     """
   end

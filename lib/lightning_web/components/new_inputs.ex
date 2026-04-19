@@ -415,7 +415,9 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :tooltip, :any, default: nil
 
-  attr :on_click, :string, default: nil
+  attr :on_click, :any, default: nil
+
+  attr :on_click_target, :any, default: nil
 
   attr :value_key, :any, default: nil
 
@@ -875,13 +877,7 @@ defmodule LightningWeb.Components.NewInputs do
       <div
         id={"toggle-control-#{@id}"}
         class="flex items-center gap-3"
-        {if @on_click, do: ["phx-click": JS.push(@on_click,
-          value: %{
-            _target: @name,
-            "#{@name}": !@checked,
-            value_key: to_string(@value_key)
-          }
-        )], else: []}
+        {if @on_click, do: ["phx-click": toggle_click(@on_click, @name, @checked, @value_key, @on_click_target)], else: []}
       >
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="hidden" name={@name} value="false" />
@@ -1237,5 +1233,21 @@ defmodule LightningWeb.Components.NewInputs do
       {render_slot(@inner_block)}
     </p>
     """
+  end
+
+  defp toggle_click(%JS{} = command, _name, _checked, _value_key, _target) do
+    command
+  end
+
+  defp toggle_click(event, name, checked, value_key, target)
+       when is_binary(event) do
+    JS.push(event,
+      value: %{
+        _target: name,
+        "#{name}": !checked,
+        value_key: to_string(value_key)
+      },
+      target: target
+    )
   end
 end

@@ -994,7 +994,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         refute html =~ credential_name
 
-        view |> element("#new-credential-option-menu-item") |> render_click()
+        view |> element("#new-credential-button") |> render_click()
 
         view |> select_credential_type("http")
         view |> click_continue()
@@ -1045,10 +1045,10 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ credential_name
 
       # button is not disabled
-      refute view |> element("#new-credential-option-menu-item") |> render() =~
-               "disabled"
+      refute view |> element("#new-credential-button") |> render() =~
+               ~r/\sdisabled(\s|>|=")/
 
-      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> element("#new-credential-button") |> render_click()
 
       view |> select_credential_type("http")
       view |> click_continue()
@@ -1091,8 +1091,8 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       # button appears disabled
-      assert view |> element("#new-credential-option-menu-item") |> render() =~
-               "cursor-not-allowed"
+      assert view |> element("#new-credential-button") |> render() =~
+               "disabled"
 
       # send event anyway
       view
@@ -1121,7 +1121,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       # open modal
-      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> element("#new-credential-button") |> render_click()
 
       assert has_element?(view, "#new-credential-modal")
 
@@ -1151,8 +1151,8 @@ defmodule LightningWeb.ProjectLiveTest do
       # Verify the new keychain credential option is in the page
       assert has_element?(
                view,
-               "#new-keychain-credential-option-menu-item",
-               "Keychain"
+               "#new-keychain-credential-button",
+               "New keychain"
              )
     end
 
@@ -1174,7 +1174,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> element("#new-credential-button") |> render_click()
       assert has_element?(view, "#new-credential-modal")
 
       for type <- excluded_types do
@@ -1221,7 +1221,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      assert html =~ "Keychain Credentials"
+      assert html =~ "Keychain credentials"
       # Should see the keychain credential for this project
       assert html =~ keychain_credential.name
       assert html =~ keychain_credential.path
@@ -1295,7 +1295,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      assert html =~ "Keychain Credentials"
+      assert html =~ "Keychain credentials"
       assert html =~ keychain_credential.name
       # Verify the actions dropdown is not present for viewers
       refute html =~
@@ -1392,7 +1392,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      assert html =~ "Keychain Credentials"
+      assert html =~ "Keychain credentials"
       assert html =~ keychain_credential.name
 
       # Verify the actions dropdown is not present for editors (only owners/admins)
@@ -1484,7 +1484,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # Open create keychain credential modal
       html =
         view
-        |> element("#new-keychain-credential-option-menu-item")
+        |> element("#new-keychain-credential-button")
         |> render_click()
 
       # Verify modal opened and form is present (testing from_collab_editor: false path)
@@ -1590,7 +1590,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Open create keychain credential modal
       view
-      |> element("#new-keychain-credential-option-menu-item")
+      |> element("#new-keychain-credential-button")
       |> render_click()
 
       # Submit empty form (covers validation error path)
@@ -1624,8 +1624,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Button appears disabled for viewers
       assert view
-             |> element("#new-keychain-credential-option-menu-item")
-             |> render() =~ "cursor-not-allowed"
+             |> element("#new-keychain-credential-button")
+             |> render() =~ "disabled"
 
       # Send event anyway (bypassing UI)
       view
@@ -1978,7 +1978,7 @@ defmodule LightningWeb.ProjectLiveTest do
           live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         assert has_element?(view, "#security-tab")
-        assert html =~ "Multi-Factor Authentication"
+        assert html =~ "Multi-factor authentication"
       end)
     end
 
@@ -1998,7 +1998,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> element("#toggle-mfa-switch")
+             |> element("#toggle-control-toggle-mfa-switch")
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
@@ -2020,12 +2020,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ "Project settings"
 
-        toggle_button = element(view, "#toggle-mfa-switch")
+        toggle_container = element(view, "#toggle-container-toggle-mfa-switch")
 
-        assert render(toggle_button) =~
+        assert render(toggle_container) =~
                  "You do not have permission to perform this action"
 
-        assert render_click(toggle_button) =~
+        assert render_click(element(view, "#toggle-control-toggle-mfa-switch")) =~
                  "You are not authorized to perform this action."
       end)
     end
@@ -2130,7 +2130,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute has_element?(view, "#toggle-mfa-switch[disabled]")
 
       assert view
-             |> element("#toggle-mfa-switch")
+             |> element("#toggle-control-toggle-mfa-switch")
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
@@ -2740,7 +2740,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Input/output data storage policy"
     end
 
     @tag role: :admin
@@ -2751,7 +2751,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Input/output data storage policy"
       assert html =~ "Should OpenFn store input/output data for workflow runs?"
 
       # retain_all is the default
@@ -2905,7 +2905,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Input/output data storage policy"
       assert html =~ "You cannot modify this project&#39;s data storage"
 
       html =
@@ -2931,7 +2931,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#data-storage"
         )
 
-      assert html =~ "Input/Output Data Storage Policy"
+      assert html =~ "Input/output data storage policy"
       assert html =~ "You cannot modify this project&#39;s data storage"
 
       html =
@@ -2947,7 +2947,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
-    test "project admin can change the Input/Output Data Storage Policy", %{
+    test "project admin can change the Input/output data storage policy", %{
       conn: conn,
       project: project
     } do
@@ -2985,7 +2985,7 @@ defmodule LightningWeb.ProjectLiveTest do
             |> render_submit()
 
           assert html =~ "Project updated successfully"
-          assert html =~ "Input/Output Data Storage Policy"
+          assert html =~ "Input/output data storage policy"
 
           assert policy ==
                    project.id
@@ -3040,11 +3040,11 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render()
 
       for option <- expected_options do
-        assert html =~ "#{option} Days</option>"
+        assert html =~ "#{option} days</option>"
       end
 
       for option <- other_options do
-        refute html =~ "#{option} Days</option>"
+        refute html =~ "#{option} days</option>"
       end
     end
 
@@ -3151,7 +3151,7 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       # 7 Days has been selected for the dataclip period
-      assert render(selected_dataclip_option) =~ "7 Days"
+      assert render(selected_dataclip_option) =~ "7 days"
 
       # now let's set the retention policy to erase_all
       view
@@ -4111,7 +4111,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         assert html =~
-                 "Version Control is not configured for this Lightning instance"
+                 "Version control is not configured for this OpenFn instance"
       end
     end
 
@@ -4129,7 +4129,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         refute html =~
-                 "Version Control is not configured for this Lightning instance"
+                 "Version control is not configured for this OpenFn instance"
 
         refute html =~ "Connect your OpenFn account to GitHub"
         refute has_element?(view, "#connect-github-link")
@@ -4145,7 +4145,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         refute html =~
-                 "Version Control is not configured for this Lightning instance"
+                 "Version control is not configured for this OpenFn instance"
 
         assert html =~ "Connect your OpenFn account to GitHub"
         assert has_element?(view, "#connect-github-link")
@@ -4168,7 +4168,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         refute html =~
-                 "Version Control is not configured for this Lightning instance"
+                 "Version control is not configured for this OpenFn instance"
 
         refute html =~ "Create/update GitHub installations"
       end
@@ -4185,7 +4185,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         refute html =~
-                 "Version Control is not configured for this Lightning instance"
+                 "Version control is not configured for this OpenFn instance"
 
         refute html =~ "Connect your OpenFn account to GitHub"
         assert html =~ "Create/update GitHub installations"

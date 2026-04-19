@@ -1126,7 +1126,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> has_element?("div", job_1.name)
 
-      view |> element("#version-switcher-toggle-#{job_1.id}") |> render_click()
+      view
+      |> element("#toggle-control-version-switcher-toggle-#{job_1.id}")
+      |> render_click()
 
       job_2 = List.last(run_2.snapshot.jobs)
 
