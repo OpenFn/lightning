@@ -4,7 +4,7 @@ defmodule LightningWeb.CredentialLiveHelpers do
 
   def open_create_credential_modal(view) do
     view
-    |> element("#new-credential-option-menu-item")
+    |> element("#new-credential-button")
     |> render_click()
   end
 

@@ -357,7 +357,7 @@ defmodule LightningWeb.Components.Credentials do
     ~H"""
     <Common.simple_dropdown id={@id}>
       <:button>
-        Add new
+        New
       </:button>
       <:options>
         <.menu_button_option

@@ -24,7 +24,7 @@ defmodule LightningWeb.Components.DataTables do
     ~H"""
     <div id={"#{@id}-table-container"}>
       <div :if={@display_table_title} class="pb-1 leading-loose">
-        <h6 class="font-normal text-black">{@title}</h6>
+        <h6 class="font-medium text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@credentials) do %>
         {render_slot(@empty_state)}
@@ -76,8 +76,11 @@ defmodule LightningWeb.Components.DataTables do
                 </.td>
                 <.td class="wrap-break-word max-w-[25rem]">
                   <%= for project_name <- credential.project_names do %>
-                    <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                      {project_name}
+                    <span
+                      class="inline-flex items-center max-w-[12rem] rounded-md bg-primary-50 px-2 py-0.5 my-0.5 mr-1 text-xs font-medium ring-1 ring-inset ring-gray-500/10"
+                      title={project_name}
+                    >
+                      <span class="truncate">{project_name}</span>
                     </span>
                   <% end %>
                 </.td>
@@ -96,12 +99,13 @@ defmodule LightningWeb.Components.DataTables do
                 <.td class="text-left">
                   <span
                     id={"#{credential.id}-environments-tooltip"}
-                    class="text-base cursor-default text-gray-700"
+                    class="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-500/10 cursor-default"
                     phx-hook="Tooltip"
                     aria-label={
                       Enum.join(credential.environment_names || ["main"], ", ")
                     }
                   >
+                    <.icon name="hero-globe-alt-mini" class="h-3.5 w-3.5" />
                     {length(credential.environment_names || [1])}
                   </span>
                 </.td>
@@ -135,7 +139,7 @@ defmodule LightningWeb.Components.DataTables do
     ~H"""
     <div id={"#{@id}-table-container"}>
       <div :if={@display_table_title} class="pb-1 leading-loose">
-        <h6 class="font-normal text-black">{@title}</h6>
+        <h6 class="font-medium text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@keychain_credentials) do %>
         {render_slot(@empty_state)}
@@ -197,6 +201,7 @@ defmodule LightningWeb.Components.DataTables do
   attr :id, :string, required: true
   attr :clients, :list, required: true
   attr :title, :string, required: true
+  attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
 
   slot :actions,
@@ -208,8 +213,8 @@ defmodule LightningWeb.Components.DataTables do
   def oauth_clients_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div class="leading-loose pb-2">
-        <h6 class="font-normal text-black">{@title}</h6>
+      <div :if={@display_table_title} class="leading-loose pb-2">
+        <h6 class="font-medium text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@clients) do %>
         {render_slot(@empty_state)}
@@ -222,7 +227,7 @@ defmodule LightningWeb.Components.DataTables do
                 Owner
               </.th>
               <.th>
-                Projects With Access
+                Projects with access
               </.th>
               <.th>Authorization URL</.th>
               <.th>
@@ -241,8 +246,11 @@ defmodule LightningWeb.Components.DataTables do
                 </.td>
                 <.td class="wrap-break-word max-w-[20rem]">
                   <%= for project_name <- client.project_names do %>
-                    <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                      {project_name}
+                    <span
+                      class="inline-flex items-center max-w-[12rem] rounded-md bg-primary-50 px-2 py-0.5 my-0.5 mr-1 text-xs font-medium ring-1 ring-inset ring-gray-500/10"
+                      title={project_name}
+                    >
+                      <span class="truncate">{project_name}</span>
                     </span>
                   <% end %>
                 </.td>
