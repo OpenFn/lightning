@@ -705,7 +705,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             />
             <span class="text-sm text-gray-700">
               Use new <code>openfn.yaml</code> format
-              instead of <code>openfn-{@project_id}-config.json</code>
             </span>
           </label>
           <p class="mt-1 ml-6 text-xs text-gray-500">
