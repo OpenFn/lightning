@@ -19,6 +19,20 @@ and this project adheres to
 
 ### Changed
 
+- When a run is `:claimed` by a worker, set its parent work order to `:running`
+  rather than leaving it in `:pending`.
+  [#4635](https://github.com/OpenFn/lightning/issues/4635)
+
+  When a run is claimed by a worker, there's no stopping it. From the platform's
+  perspective, the parent work order should be moved from `:pending` to
+  `:running`, even though there's an underlying technical difference between the
+  run states `:claimed` and `:started`. As a result, the "Cancel" button on the
+  history view disappears once a run has been claimed.
+
+  This shift is also visible to external consumers: the `/api/workorders`
+  endpoint and workflow channel subscribers will now report `running` where they
+  previously reported `pending` for work orders whose run has been claimed.
+
 ### Fixed
 
 - Bump `@openfn/ws-worker` from
