@@ -850,3 +850,267 @@ describe('useRunRetry - handleRetry', () => {
     });
   });
 });
+
+describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    urlState.reset();
+    mockActiveRun = null;
+    global.fetch = vi.fn();
+  });
+
+  test('handleRun updates URL param and does not redirect via window.location', async () => {
+    const mockResponse = { data: { run_id: 'run-new-456' } };
+    vi.mocked(dataclipApi.submitManualRun).mockResolvedValue(
+      mockResponse as any
+    );
+
+    const options = createMockOptions({
+      selectedTab: 'empty',
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    const originalHref = window.location.href;
+
+    await act(async () => {
+      await result.current.handleRun();
+    });
+
+    // Canvas flow: should update URL param, not redirect
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-new-456',
+    });
+    // Should not have changed window.location.href (no redirect)
+    expect(window.location.href).toBe(originalHref);
+    // Should reset isSubmitting
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  test('handleRetry updates URL param and does not redirect via window.location', async () => {
+    const step = createMockStep({ id: 'step-123', job_id: 'job-789' });
+    const run = createMockRun({ id: 'run-123', steps: [step] });
+
+    act(() => {
+      setMockActiveRun(run);
+    });
+
+    urlState.setParam('run', 'run-123');
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { run_id: 'run-retried-789' } }),
+    } as Response);
+
+    const options = createMockOptions({
+      runContext: { type: 'job', id: 'job-789' },
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    const originalHref = window.location.href;
+
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    // Canvas flow: should update URL param, not redirect
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-retried-789',
+    });
+    expect(window.location.href).toBe(originalHref);
+    // Should reset isSubmitting
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  test('handleRetry resets isRetryingRef so it can be called again after success', async () => {
+    // Regression test for the bug where isRetryingRef was never reset in the
+    // canvas flow (no onRunSubmitted), causing subsequent retries to silently fail.
+    const step = createMockStep({ id: 'step-123', job_id: 'job-789' });
+    const run = createMockRun({ id: 'run-123', steps: [step] });
+
+    act(() => {
+      setMockActiveRun(run);
+    });
+
+    urlState.setParam('run', 'run-123');
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { run_id: 'run-retry-1' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { run_id: 'run-retry-2' } }),
+      } as Response);
+
+    const options = createMockOptions({
+      runContext: { type: 'job', id: 'job-789' },
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    // First retry
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-retry-1',
+    });
+
+    // Second retry - should work because isRetryingRef was reset
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-retry-2',
+    });
+
+    // fetch should have been called twice (both retries went through)
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('handleRun does not set pendingRunId in canvas flow', async () => {
+    const mockResponse = { data: { run_id: 'run-new-456' } };
+    vi.mocked(dataclipApi.submitManualRun).mockResolvedValue(
+      mockResponse as any
+    );
+
+    const options = createMockOptions({
+      selectedTab: 'empty',
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.handleRun();
+    });
+
+    // isSubmitting should be false immediately (not waiting for WebSocket)
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  test('handleRetry does not set pendingRunId in canvas flow', async () => {
+    const step = createMockStep({ id: 'step-123', job_id: 'job-789' });
+    const run = createMockRun({ id: 'run-123', steps: [step] });
+
+    act(() => {
+      setMockActiveRun(run);
+    });
+
+    urlState.setParam('run', 'run-123');
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { run_id: 'run-retried-789' } }),
+    } as Response);
+
+    const options = createMockOptions({
+      runContext: { type: 'job', id: 'job-789' },
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    // isSubmitting should be false immediately (not waiting for WebSocket)
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  test('handleRun with onRunSubmitted sets pendingRunId (IDE flow comparison)', async () => {
+    const mockResponse = { data: { run_id: 'run-new-456' } };
+    vi.mocked(dataclipApi.submitManualRun).mockResolvedValue(
+      mockResponse as any
+    );
+
+    const onRunSubmitted = vi.fn();
+    const options = createMockOptions({
+      selectedTab: 'empty',
+      onRunSubmitted,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.handleRun();
+    });
+
+    // With onRunSubmitted, isSubmitting stays true until WebSocket connects
+    expect(result.current.isSubmitting).toBe(true);
+    expect(onRunSubmitted).toHaveBeenCalledWith('run-new-456', undefined);
+    // URL should NOT have been updated (IDE handles its own URL)
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
+      run: 'run-new-456',
+    });
+  });
+
+  test('handleRetry on error resets isRetryingRef so next retry works', async () => {
+    const step = createMockStep({ id: 'step-123', job_id: 'job-789' });
+    const run = createMockRun({ id: 'run-123', steps: [step] });
+
+    act(() => {
+      setMockActiveRun(run);
+    });
+
+    urlState.setParam('run', 'run-123');
+
+    // First retry fails
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Server error' }),
+    } as Response);
+    // Second retry succeeds
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { run_id: 'run-retried-success' } }),
+    } as Response);
+
+    const options = createMockOptions({
+      runContext: { type: 'job', id: 'job-789' },
+      onRunSubmitted: undefined,
+    });
+
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(),
+    });
+
+    // First retry - should fail
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    expect(result.current.isSubmitting).toBe(false);
+
+    // Second retry - should succeed (isRetryingRef was reset on error)
+    await act(async () => {
+      await result.current.handleRetry();
+    });
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-retried-success',
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
