@@ -11,6 +11,7 @@ defmodule Lightning.VersionControl do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
@@ -18,7 +19,6 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Projects.Project
   alias Lightning.Workflows.Workflow
 
   require Logger
