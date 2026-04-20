@@ -625,7 +625,7 @@ defmodule Lightning.VersionControl do
   defp config_json(repo_connection) do
     Jason.encode!(
       %{
-        endpoint: "https://2daf-154-160-0-161.ngrok-free.app",
+        endpoint: LightningWeb.Endpoint.url(),
         statePath: "openfn-#{repo_connection.project_id}-state.json",
         specPath: "openfn-#{repo_connection.project_id}-spec.yaml"
       },
@@ -642,7 +642,7 @@ defmodule Lightning.VersionControl do
     """
     project:
       uuid: #{project.id}
-      endpoint: https://2daf-154-160-0-161.ngrok-free.app
+      endpoint: #{LightningWeb.Endpoint.url()}
       alias: #{project.env}
       inserted_at: #{inserted_at}
       updated_at: #{updated_at}
