@@ -162,7 +162,7 @@ Lightning
       <h1 class="signature" translate="no">state_for(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/query.ex#L40" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/query.ex#L45" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -179,8 +179,9 @@ Lightning
 
 <p>Query to calculate the current state of a workorder.</p><p>It takes a run, as the state is updated after each run is changed.</p><p>The logic is as follows:</p><ul><li>All <em>other</em> Runs that are not in a finished state are considered first.</li><li>The current Run is unioned onto the unfinished runs with a null
 ordinality.</li><li>The runs are ordered by state in the following order
-<code class="inline">started &gt; available &gt; claimed &gt; null</code></li><li>The run states are then mapped to the workorder state enum, so <code class="inline">available</code>
-and <code class="inline">claimed</code> are both mapped to <code class="inline">pending</code> and <code class="inline">started</code> is mapped to <code class="inline">running</code></li></ul><blockquote><p>The <code class="inline">null</code> ordinality ensures that the current run is always last in the
+<code class="inline">started &gt; claimed &gt; available &gt; null</code></li><li>The run states are then mapped to the workorder state enum: <code class="inline">available</code>
+is mapped to <code class="inline">pending</code> (the only run state Lightning can still cancel
+atomically), while <code class="inline">claimed</code> and <code class="inline">started</code> are both mapped to <code class="inline">running</code>.</li></ul><blockquote><p>The <code class="inline">null</code> ordinality ensures that the current run is always last in the
 ordering.</p></blockquote>
   </section>
 </section>
