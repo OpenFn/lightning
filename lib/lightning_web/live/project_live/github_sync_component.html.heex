@@ -145,17 +145,22 @@
         </.input>
       </div>
       <div class="mt-4">
+        <.sync_order_radio form={f} />
+      </div>
+      <div :if={f[:sync_direction].value == :deploy} class="mt-4">
         <.input
           type="text"
           field={f[:config_path]}
-          label={"Path to config #{if f[:sync_direction].value == :deploy, do: "(required)", else: "(optional)"}"}
+          label="Path to config (required)"
           placeholder={"./openfn-#{@project.id}-config.json"}
           class="placeholder:italic placeholder:text-slate-400"
         />
       </div>
-      <div class="mt-4">
-        <.sync_order_radio form={f} />
-      </div>
+      <.config_format_toggle
+        :if={f[:sync_direction].value != :deploy}
+        form={f}
+        project_id={@project.id}
+      />
       <%= if f[:branch].value do %>
         <.accept_checkbox
           project={@project}

@@ -684,6 +684,45 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   attr :form, :map, required: true
+  attr :project_id, :string, required: true
+
+  defp config_format_toggle(assigns) do
+    ~H"""
+    <div class="mt-4">
+      <details class="group">
+        <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none list-none flex items-center gap-1">
+          <.icon
+            name="hero-chevron-right-mini"
+            class="h-4 w-4 transition-transform group-open:rotate-90"
+          /> Advanced: use new YAML config format
+        </summary>
+        <div class="mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <.input
+              type="checkbox"
+              field={@form[:use_yaml_config]}
+              hidden_input={false}
+            />
+            <span class="text-sm text-gray-700">
+              Use new <code>openfn.yaml</code> format
+              instead of <code>openfn-{@project_id}-config.json</code>
+            </span>
+          </label>
+          <p class="mt-1 ml-6 text-xs text-gray-500">
+            Only enable this if you want to use the new <code>openfn.yaml</code>
+            format instead of the legacy JSON config.
+          </p>
+        </div>
+      </details>
+    </div>
+    """
+  end
+
+  defp use_yaml_config?(form) do
+    form[:use_yaml_config].value in [true, "true"]
+  end
+
+  attr :form, :map, required: true
 
   defp sync_order_radio(assigns) do
     ~H"""
@@ -738,9 +777,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 Import from GitHub (overwrite this project)
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                If you already have <code>config.json</code>
-                and <code>project.yaml</code>
-                files tracked on GitHub and you want to <b>overwrite</b>
+                If you already have an <code>openfn.yaml</code>
+                (or legacy <code>config.json</code>)
+                tracked on GitHub and you want to <b>overwrite</b>
                 this project on OpenFn, you can choose this advanced option.
               </p>
             </div>
@@ -794,9 +833,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             <li>
               <.icon name="hero-document-plus" class="h-4 w-4" />
               <code>
-                ./openfn-{@project.id}-config.json -> {@form[
-                  :branch
-                ].value}
+                {config_filename(@form, @project.id)} -> {@form[:branch].value}
               </code>
             </li>
           <% end %>
@@ -805,5 +842,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       </span>
     </div>
     """
+  end
+
+  defp config_filename(form, project_id) do
+    if use_yaml_config?(form) do
+      ProjectRepoConnection.openfn_yaml()
+    else
+      "openfn-#{project_id}-config.json"
+    end
   end
 end

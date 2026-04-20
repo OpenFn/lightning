@@ -651,8 +651,7 @@ defmodule Lightning.VersionControlTest do
     end
 
     defp path_to_config(repo_connection) do
-      repo_connection
-      |> ProjectRepoConnection.config_path()
+      ProjectRepoConnection.openfn_yaml()
       |> Path.relative_to(".")
     end
   end

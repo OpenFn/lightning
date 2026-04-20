@@ -2937,8 +2937,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
 
     defp path_to_config(repo_connection) do
-      repo_connection
-      |> Lightning.VersionControl.ProjectRepoConnection.config_path()
+      Lightning.VersionControl.ProjectRepoConnection.openfn_yaml()
       |> Path.relative_to(".")
     end
   end

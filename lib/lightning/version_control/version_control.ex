@@ -19,6 +19,7 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Workflow
+  alias Lightning.Projects.Project
 
   require Logger
 
@@ -572,8 +573,15 @@ defmodule Lightning.VersionControl do
 
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
+      content =
+        if repo_connection.use_yaml_config do
+          openfn_yaml(repo_connection)
+        else
+          config_json(repo_connection)
+        end
+
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
-        content: config_json(repo_connection)
+        content: content
       })
     else
       {:ok, nil}
@@ -617,12 +625,39 @@ defmodule Lightning.VersionControl do
   defp config_json(repo_connection) do
     Jason.encode!(
       %{
-        endpoint: LightningWeb.Endpoint.url(),
+        endpoint: "https://2daf-154-160-0-161.ngrok-free.app",
         statePath: "openfn-#{repo_connection.project_id}-state.json",
         specPath: "openfn-#{repo_connection.project_id}-spec.yaml"
       },
       pretty: true
     )
+  end
+
+  defp openfn_yaml(repo_connection) do
+    project = Repo.get!(Project, repo_connection.project_id)
+
+    inserted_at = DateTime.to_iso8601(project.inserted_at)
+    updated_at = DateTime.to_iso8601(project.updated_at)
+
+    """
+    project:
+      uuid: #{project.id}
+      endpoint: https://2daf-154-160-0-161.ngrok-free.app
+      alias: #{project.env}
+      inserted_at: #{inserted_at}
+      updated_at: #{updated_at}
+      id: #{project.name}
+      name: #{project.name}
+    workspace:
+      credentials: credentials.yaml
+      dirs:
+        projects: .projects
+        workflows: workflows
+      formats:
+        openfn: yaml
+        project: yaml
+        workflow: yaml
+    """
   end
 
   defp pull_yml_target_path do
