@@ -617,7 +617,7 @@ defmodule Lightning.VersionControlTest do
                VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates GH workflow dispatch event", %{
+    test "creates GH workflow dispatch event using JSON config (default)", %{
       commit_message: commit_message,
       repo_connection: repo_connection,
       snapshots: [snapshot, other_snapshot]
@@ -644,6 +644,39 @@ defmodule Lightning.VersionControlTest do
       assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
+    test "creates GH workflow dispatch event using YAML config (use_yaml_config: true)",
+         %{
+           commit_message: commit_message,
+           repo_connection: repo_connection,
+           snapshots: [snapshot, other_snapshot]
+         } do
+      yaml_connection =
+        repo_connection
+        |> Ecto.Changeset.change(use_yaml_config: true)
+        |> Lightning.Repo.update!()
+
+      expect_create_installation_token(yaml_connection.github_installation_id)
+      expect_get_repo(yaml_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        yaml_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: yaml_connection.project_id,
+            apiSecretName: api_secret_name(yaml_connection),
+            branch: yaml_connection.branch,
+            pathToConfig: path_to_config(yaml_connection),
+            commitMessage: commit_message,
+            snapshots: "#{other_snapshot.id} #{snapshot.id}"
+          }
+        }
+      )
+
+      assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
+    end
+
     defp api_secret_name(%{project_id: project_id}) do
       project_id
       |> String.replace("-", "_")
@@ -651,7 +684,7 @@ defmodule Lightning.VersionControlTest do
     end
 
     defp path_to_config(repo_connection) do
-      ProjectRepoConnection.openfn_yaml()
+      ProjectRepoConnection.config_path(repo_connection)
       |> Path.relative_to(".")
     end
   end

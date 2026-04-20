@@ -2907,6 +2907,72 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{parent.id}/w")
     end
 
+    test "commits to GitHub using YAML config when use_yaml_config is true",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox,
+           snapshot: snapshot
+         } do
+      repo_connection =
+        insert(:project_repo_connection,
+          project: parent,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234",
+          use_yaml_config: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "pre-merge commit",
+            snapshots: "#{snapshot.id}"
+          }
+        }
+      )
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: parent.id,
+            apiSecretName: api_secret_name(parent),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: "Merged sandbox #{sandbox.name}"
+          }
+        }
+      )
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
     test "does not commit to GitHub when project has no GitHub sync configured",
          %{
            conn: conn,
@@ -2937,7 +3003,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
 
     defp path_to_config(repo_connection) do
-      Lightning.VersionControl.ProjectRepoConnection.openfn_yaml()
+      Lightning.VersionControl.ProjectRepoConnection.config_path(repo_connection)
       |> Path.relative_to(".")
     end
   end
