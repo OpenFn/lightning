@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.16.2-pre1] - 2026-04-20
+
+### Changed
+
 - When a run is `:claimed` by a worker, set its parent work order to `:running`
   rather than leaving it in `:pending`.
   [#4635](https://github.com/OpenFn/lightning/issues/4635)
