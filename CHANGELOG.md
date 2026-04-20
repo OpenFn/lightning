@@ -29,6 +29,10 @@ and this project adheres to
   run states `:claimed` and `:started`. As a result, the "Cancel" button on the
   history view disappears once a run has been claimed.
 
+  This shift is also visible to external consumers: the `/api/workorders`
+  endpoint and workflow channel subscribers will now report `running` where they
+  previously reported `pending` for work orders whose run has been claimed.
+
 ### Fixed
 
 - Bump `@openfn/ws-worker` from
