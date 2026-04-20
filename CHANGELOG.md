@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add support for sync v2 protocol
+  [#4523](https://github.com/OpenFn/lightning/issues/4523)
+
 ### Changed
 
 ### Fixed
