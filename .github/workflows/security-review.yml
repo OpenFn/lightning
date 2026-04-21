@@ -24,56 +24,135 @@ jobs:
         continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          use_sticky_comment: true
           prompt: |
             You are performing a security review on this PR using the
             instructions defined in .claude/agents/security-reviewer.md.
 
             Read that file first, then follow its instructions exactly.
             Review only the changes introduced by this PR.
-            Post your findings as a structured review comment.
+
+            Produce your findings as your final response — a structured
+            review following the output format in the agent file. Do not
+            attempt to post comments yourself; the workflow will publish
+            your final response.
           claude_args: --max-turns 50 --model claude-opus-4-7
 
-      - name: Post status comment if Claude did not comment
-        if: always()
+      - name: Post Claude's review as sticky PR comment
+        if: always() && steps.claude-review.outputs.execution_file != ''
+        id: post-review
         uses: actions/github-script@v7
+        env:
+          EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
         with:
           script: |
+            const fs = require('fs');
+            const file = process.env.EXECUTION_FILE;
+
+            if (!file || !fs.existsSync(file)) {
+              core.warning('Claude execution file not found: ' + file);
+              core.setOutput('posted', 'false');
+              return;
+            }
+
+            let messages;
+            try {
+              messages = JSON.parse(fs.readFileSync(file, 'utf8'));
+            } catch (e) {
+              core.warning('Failed to parse Claude execution file: ' + e.message);
+              core.setOutput('posted', 'false');
+              return;
+            }
+
+            const resultMsg = [...messages].reverse().find(m => m.type === 'result');
+            const text = (resultMsg && typeof resultMsg.result === 'string')
+              ? resultMsg.result.trim()
+              : '';
+
+            if (!text || !text.includes('Security Review')) {
+              core.warning('No Security Review content found in Claude output.');
+              core.setOutput('posted', 'false');
+              return;
+            }
+
+            const marker = '<!-- security-review-sticky -->';
+            const body = marker + '\n' + text;
+
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
-            const outcome = '${{ steps.claude-review.outcome }}';
-            // Claude posts its own sticky comment when successful; only intervene if it didn't.
-            const hasClaudeComment = comments.some(c =>
-              c.body && c.body.includes('Security Review') && c.user.type === 'Bot'
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body && c.body.includes(marker)
             );
-            if (!hasClaudeComment) {
-              const isFailure = outcome === 'failure' || outcome === 'cancelled';
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: isFailure
-                  ? [
-                      '## Security Review',
-                      '',
-                      '⚠️ **Automated security review did not complete.**',
-                      '',
-                      'Claude hit the max-turns limit or encountered an error before posting findings.',
-                      'A manual review of S0 (project-scoped data access), S1 (authorization policies),',
-                      'and S2 (audit trail coverage) is recommended for this PR.',
-                      '',
-                      'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for details.',
-                    ].join('\n')
-                  : [
-                      '## Security Review',
-                      '',
-                      '⚠️ The review completed but no findings comment was posted.',
-                      '',
-                      'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for the raw Claude output.',
-                    ].join('\n'),
+                body,
+              });
+            }
+            core.setOutput('posted', 'true');
+
+      - name: Post status comment if review was not posted
+        if: always() && steps.post-review.outputs.posted != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- security-review-sticky -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body && c.body.includes(marker)
+            );
+
+            const outcome = '${{ steps.claude-review.outcome }}';
+            const isFailure = outcome === 'failure' || outcome === 'cancelled';
+            const body = marker + '\n' + (isFailure
+              ? [
+                  '## Security Review',
+                  '',
+                  '⚠️ **Automated security review did not complete.**',
+                  '',
+                  'Claude hit the max-turns limit or encountered an error before producing findings.',
+                  'A manual review of S0 (project-scoped data access), S1 (authorization policies),',
+                  'and S2 (audit trail coverage) is recommended for this PR.',
+                  '',
+                  'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for details.',
+                ].join('\n')
+              : [
+                  '## Security Review',
+                  '',
+                  '⚠️ The review completed but no findings could be extracted from Claude\'s output.',
+                  '',
+                  'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for the raw Claude output.',
+                ].join('\n'));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
               });
             }
 
