@@ -41,6 +41,8 @@ defmodule Lightning.Run do
              :final_dataclip_id
            ]}
 
+  @active_states [:available, :claimed, :started]
+
   @final_states [
     :success,
     :failed,
@@ -55,6 +57,13 @@ defmodule Lightning.Run do
   Returns the list of final states for a run.
   """
   def final_states, do: @final_states
+
+  @doc """
+  Returns the list of active (in-progress) states for a run.
+
+  These are all non-final states: available, claimed, and started.
+  """
+  def active_states, do: @active_states
 
   @doc """
   Returns the list of failure states for a run.
@@ -98,15 +107,7 @@ defmodule Lightning.Run do
     embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
-      values:
-        Enum.concat(
-          [
-            :available,
-            :claimed,
-            :started
-          ],
-          @final_states
-        ),
+      values: Enum.concat(@active_states, @final_states),
       default: :available
 
     field :error_type, :string
