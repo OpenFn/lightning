@@ -45,77 +45,6 @@ Component POMs
   └── JobFormPage (components/job-form.page.ts)
 ```
 
-## Before Creating or Modifying POMs
-
-### The Read-First Rule
-
-Before adding a new method to a POM, read the existing POM file and check for similar functionality.
-
-1. **Read the existing POM file** (e.g., `assets/test/e2e/pages/login.page.ts`)
-
-2. **Check for existing similar functionality**
-   - Does a method already do what you need?
-   - Can an existing method be used with different parameters?
-   - Is there a pattern you should follow from existing methods?
-
-3. **Only add new methods if**:
-   - No existing method provides the functionality
-   - Existing methods cannot be easily composed
-   - The new method adds genuine value
-
-### Example: Avoiding Duplication
-
-**❌ BAD: Creating redundant method without checking**
-```typescript
-// Task: "Add login functionality to LoginPage"
-// Agent creates this WITHOUT reading existing file:
-
-async navigateAndLogin(email: string, password: string): Promise<void> {
-  await this.page.goto("/");
-
-  const loginForm = this.page.locator("#login form");
-  if (await loginForm.isVisible()) {
-    await this.page.locator('input[name="user[email]"]').fill(email);
-    await this.page.locator('input[name="user[password]"]').fill(password);
-    await this.page.getByRole("button", { name: "Log in" }).click();
-  }
-
-  await this.page.waitForLoadState("networkidle");
-}
-
-// Problem: This duplicates functionality that already exists!
-```
-
-**✅ GOOD: Using existing methods**
-```typescript
-// After reading login.page.ts, agent discovers:
-// - login() - performs login when on login page
-// - loginIfNeeded() - performs login only if form visible
-
-// In test code:
-await page.goto("/");
-const loginPage = new LoginPage(page);
-await loginPage.loginIfNeeded(email, password);
-
-// Reuses existing, tested functionality!
-```
-
-### When to Add vs. When to Reuse
-
-**Add a new method when**:
-- Functionality doesn't exist at all
-- Existing methods cannot achieve the goal
-- New method provides a significantly different workflow
-
-**Reuse existing methods when**:
-- Similar functionality exists
-- Can compose existing methods (e.g., `goto()` + `loginIfNeeded()`)
-- Existing method does what you need with minor adjustments
-
-### Before adding a new method
-
-Check whether existing methods can be reused or composed before adding a new one, and follow existing patterns and naming conventions.
-
 ## Base Classes
 
 ### LiveViewPage Base Class
@@ -136,7 +65,8 @@ export abstract class LiveViewPage {
   constructor(protected page: Page) {}
 
   /**
-   * Wait for Phoenix LiveView connection
+   * Wait for Phoenix LiveView connection.
+   * See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the canonical implementation and rationale.
    */
   async waitForConnected(): Promise<void> {
     const locator = this.page.locator(this.baseSelectors.phoenixMain);
@@ -456,163 +386,6 @@ test('configure job', async ({ page }) => {
 });
 ```
 
-## Locator Strategies
-
-### Initialize Locators in Constructor
-
-**❌ BAD: Create locators in methods**
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  async clickSaveButton() {
-    // Creates new locator every time
-    await this.page.getByRole('button', { name: 'Save' }).click();
-  }
-}
-```
-
-**✅ GOOD: Initialize in constructor or as properties**
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  readonly saveButton: Locator;
-
-  constructor(page: Page) {
-    super(page);
-    // Locator created once
-    this.saveButton = page.getByRole('button', { name: 'Save' });
-  }
-
-  async clickSaveButton() {
-    await this.saveButton.click();
-  }
-}
-```
-
-### Selector Organization
-
-Store selectors in `protected selectors` object:
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  protected selectors = {
-    // Group related selectors
-    topBar: {
-      container: '[data-testid="top-bar"]',
-      saveButton: 'button:has-text("Save")',
-      runButton: '[data-testid="run-workflow-btn"]',
-    },
-    form: {
-      nameInput: 'input[name="workflow[name]"]',
-      descriptionTextarea: 'textarea[name="workflow[description]"]',
-    },
-    diagram: {
-      canvas: '[data-testid="workflow-canvas"]',
-      nodes: '.react-flow__node',
-    },
-  };
-
-  async clickSaveButton(): Promise<void> {
-    const topBar = this.page.locator(this.selectors.topBar.container);
-    const saveButton = topBar.locator(this.selectors.topBar.saveButton);
-    await saveButton.click();
-  }
-}
-```
-
-## Method Patterns
-
-### Action Methods
-
-Methods that perform user actions:
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Action methods should:
-   * - Be async
-   * - Return Promise<void>
-   * - Use descriptive verb names
-   * - Handle waiting internally
-   */
-
-  async clickSaveWorkflow(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Save' }).click();
-  }
-
-  async setWorkflowName(name: string): Promise<void> {
-    const input = this.page.getByLabel('Workflow name');
-    await input.fill(name);
-  }
-
-  async selectWorkflowType(typeText: string): Promise<void> {
-    const label = this.page.locator('label').filter({ hasText: typeText });
-    await label.click();
-  }
-}
-```
-
-### Assertion Methods
-
-Methods that verify state:
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Assertion methods should:
-   * - Start with 'verify' or 'expect'
-   * - Be async
-   * - Contain assertions internally
-   */
-
-  async verifyWorkflowSaved(): Promise<void> {
-    await this.expectFlashMessage('Workflow saved successfully');
-    await expect(this.unsavedChangesIndicator()).not.toBeVisible();
-  }
-
-  async verifyUnsavedChanges(): Promise<void> {
-    await expect(this.unsavedChangesIndicator()).toBeVisible();
-  }
-}
-```
-
-### Locator Getters
-
-Return locators for flexible assertions:
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Getter methods should:
-   * - Return Locator
-   * - Not be async
-   * - Allow tests to perform custom assertions
-   */
-
-  unsavedChangesIndicator(): Locator {
-    return this.page.locator('.unsaved-indicator');
-  }
-
-  get workflowNameInput(): Locator {
-    return this.page.getByLabel('Workflow name');
-  }
-
-  getJobNode(jobName: string): Locator {
-    return this.page.locator('.job-node').filter({ hasText: jobName });
-  }
-}
-```
-
-**Usage:**
-```typescript
-test('verify state', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  // Custom assertions on returned locators
-  await expect(workflowEdit.workflowNameInput).toHaveValue('ETL Pipeline');
-  await expect(workflowEdit.unsavedChangesIndicator()).toBeVisible();
-  await expect(workflowEdit.getJobNode('Job 1')).toHaveClass('selected');
-});
-```
-
 ## Composition Patterns
 
 ### Component Composition
@@ -685,107 +458,18 @@ test('configure multiple jobs', async ({ page }) => {
 });
 ```
 
-## Handling Dynamic Content
+## LiveView-Specific Waiting in POMs
 
-### Dynamic Selectors
-
-```typescript
-class WorkflowsPage extends LiveViewPage {
-  /**
-   * Navigate to workflow by name (dynamic)
-   */
-  async navigateToWorkflow(workflowName: string): Promise<void> {
-    await this.page
-      .getByRole('link', { name: workflowName })
-      .click();
-  }
-
-  /**
-   * Get workflow card by name
-   */
-  getWorkflowCard(workflowName: string): Locator {
-    return this.page
-      .locator('.workflow-card')
-      .filter({ hasText: workflowName });
-  }
-
-  /**
-   * Verify workflow is visible
-   */
-  async verifyWorkflowVisible(workflowName: string): Promise<void> {
-    await expect(this.getWorkflowCard(workflowName)).toBeVisible();
-  }
-}
-```
-
-### Indexed Elements
-
-```typescript
-class WorkflowDiagramPage extends LiveViewPage {
-  /**
-   * Get job node by index
-   */
-  getJobNodeByIndex(index: number): Locator {
-    return this.page.locator('.job-node').nth(index);
-  }
-
-  /**
-   * Click job node by index
-   */
-  async clickJobNodeByIndex(index: number): Promise<void> {
-    const node = this.getJobNodeByIndex(index);
-    await expect(node).toBeVisible();
-    await node.click();
-  }
-}
-```
-
-## Waiting Strategies
-
-### Built-in Waiting
-
-POM methods should handle waiting internally:
+Lightning page objects should override `goto` to include the LiveView connect wait. See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the full set of LiveView wait primitives.
 
 ```typescript
 class WorkflowEditPage extends LiveViewPage {
-  /**
-   * ✅ GOOD: Handles waiting internally
-   */
-  async clickSaveWorkflow(): Promise<void> {
-    const saveButton = this.page.getByRole('button', { name: 'Save' });
-    // Playwright auto-waits for button to be actionable
-    await saveButton.click();
-    // Wait for save confirmation
-    await this.expectFlashMessage('Workflow saved');
-  }
-
-  /**
-   * ❌ BAD: Requires caller to wait
-   */
-  async clickSaveWorkflowBad(): Promise<void> {
-    // Caller must ensure button is ready
-    await this.page.click('text=Save');
-    // No confirmation - caller must check
-  }
-}
-```
-
-### LiveView-Specific Waiting
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Override goto to include LiveView wait
-   */
   async goto(workflowId: string): Promise<void> {
     await this.page.goto(`/w/${workflowId}`);
     await this.waitForConnected();
     await this.page.waitForLoadState('networkidle');
   }
 
-  /**
-   * Wait for specific LiveView updates
-   */
   async waitForWorkflowSaved(): Promise<void> {
     await this.waitForSocketSettled();
     await this.expectFlashMessage('Workflow saved');
@@ -896,83 +580,3 @@ export * from './job-form.page';
 export * from './job-inspector.page';
 ```
 
-## Best Practices
-
-### ✅ DO
-
-- **Extend LiveViewPage** for Phoenix LiveView pages
-- **Initialize locators in constructor** for performance
-- **Use semantic locators** (role, label, text) over CSS
-- **Handle waiting internally** in POM methods
-- **Return Locator** for flexible assertions
-- **Compose components** for reusable UI elements
-- **Use factory methods** for parameterized components
-- **Provide high-level methods** that match user actions
-- **Include JSDoc comments** for public methods
-- **Group related selectors** in selector objects
-
-### ❌ DON'T
-
-- **Don't put assertions in actions** - separate action and verify methods
-- **Don't use CSS selectors** when semantic locators work
-- **Don't create locators in methods** - initialize once
-- **Don't make tests do the waiting** - POMs should handle it
-- **Don't mix concerns** - keep page-specific logic in POMs
-- **Don't return promises from getters** - use getters for locators only
-- **Don't hardcode test data** - use parameters
-- **Don't test in POMs** - POMs enable testing, don't contain tests
-- **Don't extend when you can compose** - prefer composition
-- **Don't forget to export** from index files
-
-## Common Patterns
-
-### Navigation Pattern
-
-```typescript
-class ProjectsPage extends LiveViewPage {
-  async navigateToProject(projectName: string): Promise<void> {
-    await this.page.getByRole('link', { name: projectName }).click();
-    await this.waitForConnected();
-  }
-}
-```
-
-### Form Fill Pattern
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  async fillWorkflowForm(data: {
-    name: string;
-    description?: string;
-  }): Promise<void> {
-    await this.page.getByLabel('Name').fill(data.name);
-
-    if (data.description) {
-      await this.page.getByLabel('Description').fill(data.description);
-    }
-  }
-}
-```
-
-### Verification Pattern
-
-```typescript
-class WorkflowEditPage extends LiveViewPage {
-  async verifyWorkflowState(expected: {
-    saved: boolean;
-    nodeCount: number;
-  }): Promise<void> {
-    if (expected.saved) {
-      await expect(this.unsavedChangesIndicator()).not.toBeVisible();
-    }
-
-    await this.diagram.verifyNodeCount(expected.nodeCount);
-  }
-}
-```
-
----
-
-Page Object Models encapsulate UI structure and interactions.
-Keep POMs focused on "how" to interact with the page, while tests focus on
-"what" to test. Well-designed POMs make tests readable and maintainable.

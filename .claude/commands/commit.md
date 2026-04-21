@@ -27,15 +27,8 @@ You are tasked with creating git commits for the changes made during this sessio
    - Confirm the plan with the user before executing — list files and commit messages, then ask to proceed.
 
 4. **Execute upon confirmation:**
-   - Use `git add` with specific files (never use `-A` or `.`)
    - Create commits with your planned messages
    - Optionally show the result with `git log --oneline -n [number]`.
 
 ## Important:
 - **NEVER add co-author information or Claude attribution** — write commit messages as if the user wrote them.
-
-## Remember:
-- You have the full context of what was done in this session
-- Group related changes together
-- Keep commits focused and atomic when possible
-- The user trusts your judgment - they asked you to commit

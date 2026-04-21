@@ -278,21 +278,6 @@ Command → produce(state, draft => ...) → notify() [+ optional localStorage w
 
 ---
 
-## When to Create a New Store
-
-**Create a NEW store when:**
-1. New domain of data with independent lifecycle
-2. Different data source pattern (new Y.Doc structure, new channel event stream)
-3. Mixing unrelated responsibilities into an existing store (5+ unrelated concerns)
-4. High-frequency updates would cause unnecessary re-renders in unrelated UI
-
-**DON'T create a new store when:**
-1. Data is closely related to an existing store's domain
-2. It's component-local UI state (`useState`)
-3. It's derived/computed from existing state (use selectors)
-
----
-
 ## Store Creation Checklist
 
 ```typescript

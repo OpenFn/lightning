@@ -398,9 +398,9 @@ test('filters credentials by project', () => {
 });
 ```
 
-## Mock Factories for Lightning
+## Channel Mocks
 
-### Phoenix Channel Mock
+Canonical `createMockPhoenixChannel` helper for Lightning collaborative-editor tests. Other test guidelines cross-reference this implementation.
 
 ```typescript
 // __helpers__/phoenixMocks.ts
@@ -519,34 +519,6 @@ test('complete collaborative editing flow', async () => {
 });
 ```
 
-## Performance Testing
-
-### Testing Large Document Performance
-
-**✅ DO: Test performance with large workflows**
-
-```typescript
-test('handles large workflow with many jobs', () => {
-  const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-  const jobs = ydoc.getArray('jobs');
-
-  // Add 1000 jobs
-  const manyJobs = Array.from({ length: 1000 }, (_, i) => ({
-    id: `job${i}`,
-    name: `Job ${i}`,
-    body: 'console.log("test");',
-  }));
-
-  const startTime = performance.now();
-  jobs.push(manyJobs);
-  const endTime = performance.now();
-
-  expect(jobs.length).toBe(1000);
-  expect(endTime - startTime).toBeLessThan(100); // Should be fast
-});
-```
-
 ## Debugging Helpers
 
 ### Logging Yjs Updates
@@ -574,78 +546,3 @@ test('debug yjs updates', () => {
 });
 ```
 
-## Common Pitfalls
-
-### 1. Not Waiting for Async Channel Operations
-
-**❌ DON'T:**
-```typescript
-test('bad async test', () => {
-  store.requestAdaptors(); // Async operation
-  expect(store.getSnapshot().adaptors).toHaveLength(3); // Fails - too early
-});
-```
-
-**✅ DO:**
-```typescript
-test('good async test', async () => {
-  store.requestAdaptors();
-  await waitFor(() => {
-    expect(store.getSnapshot().adaptors).toHaveLength(3);
-  });
-});
-```
-
-### 2. Forgetting to Clean Up Subscriptions
-
-**❌ DON'T:**
-```typescript
-test('memory leak', () => {
-  const store = createSessionStore();
-  store.subscribe(() => {
-    // Handler never unsubscribed
-  });
-  // Store persists with active subscription
-});
-```
-
-**✅ DO:**
-```typescript
-test('proper cleanup', () => {
-  const store = createSessionStore();
-  const unsubscribe = store.subscribe(() => {});
-
-  // Test logic
-
-  unsubscribe();
-});
-```
-
-### 3. Not Wrapping Channel Events in act()
-
-**❌ DON'T:**
-```typescript
-test('channel event without act', async () => {
-  mockChannel.emit('session_context', { user: mockUser });
-  // React warning: "update not wrapped in act()"
-});
-```
-
-**✅ DO:**
-```typescript
-test('channel event with act', async () => {
-  act(() => {
-    mockChannel.emit('session_context', { user: mockUser });
-  });
-
-  await waitFor(() => {
-    expect(result.current.user).toEqual(mockUser);
-  });
-});
-```
-
-## Additional Resources
-
-- [Yjs Documentation](https://docs.yjs.dev/)
-- [Phoenix Channels Guide](https://hexdocs.pm/phoenix/channels.html)
-- [Y-Phoenix-Channel](https://github.com/satoren/y-phoenix-channel)

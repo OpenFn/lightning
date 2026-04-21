@@ -40,37 +40,16 @@ Then wait for the user's research query.
 
 2. **Analyze and decompose the research question:**
    - Break down the user's query into composable research areas
-   - Take time to ultrathink about the underlying patterns, connections, and architectural implications the user might be seeking
    - Identify specific components, patterns, or concepts to investigate
    - Create a research plan using TodoWrite to track all subtasks
    - Consider which directories, files, or architectural patterns are relevant
 
 3. **Spawn parallel sub-agent tasks for comprehensive research:**
-   - Create multiple Task agents to research different aspects concurrently
-   - We now have specialized agents that know how to do specific research tasks:
-
-   **For codebase research:**
-   - Use the **codebase-locator** agent to find WHERE files and components live
-   - Use the **codebase-analyzer** agent to understand HOW specific code works (without critiquing it)
-   - Use the **codebase-pattern-finder** agent to find examples of existing patterns (without evaluating them)
-
-   **IMPORTANT**: All agents are documentarians, not critics. They will describe what exists without suggesting improvements or identifying issues.
-
-   **For context directory:**
-   - Use the **context-locator** agent to discover what documents exist about the topic
-   - Use the **context-analyzer** agent to extract key insights from specific documents (only the most relevant ones)
-
-   **For web research (only if user explicitly asks):**
-   - Use the **web-search-researcher** agent for external documentation and resources
-   - IF you use web-research agents, instruct them to return LINKS with their findings, and please INCLUDE those links in your final report
-
-   The key is to use these agents intelligently:
-   - Start with locator agents to find what exists
-   - Then use analyzer agents on the most promising findings to document how they work
-   - Run multiple agents in parallel when they're searching for different things
-   - Each agent knows its job - just tell it what you're looking for
-   - Don't write detailed prompts about HOW to search - the agents already know
-   - Remind agents they are documenting, not evaluating or improving
+   - Create multiple Task agents to research different aspects concurrently.
+   - See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical agent roster. For research, the relevant agents are typically **codebase-locator**, **codebase-analyzer**, **codebase-pattern-finder**, **context-locator**, **context-analyzer**, and (only when the user explicitly asks for external research) **web-search-researcher**.
+   - All agents are documentarians, not critics: they describe what exists without suggesting improvements.
+   - For web-research agents, instruct them to return LINKS with their findings and INCLUDE those links in your final report.
+   - Start with locator agents to find what exists; then run analyzer agents on the most promising findings. Run multiple agents in parallel when they're searching for different things.
 
 4. **Wait for all sub-agents to complete and synthesize findings:**
    - IMPORTANT: Wait for ALL sub-agent tasks to complete before proceeding
@@ -165,19 +144,14 @@ Then wait for the user's research query.
    - Continue updating the document
 
 ## Important notes:
+- For Lightning-specific commands referenced in research reports (e.g., `mix verify`, `mix test`), see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands).
 - Always use parallel Task agents to maximize efficiency and minimize context usage
 - Always run fresh codebase research - never rely solely on existing research documents
 - The .context/ directory provides historical context to supplement live findings
 - Focus on finding concrete file paths and line numbers for developer reference
-- Research documents should be self-contained with all necessary context
 - Each sub-agent prompt should be specific and focused on read-only documentation operations
-- Document cross-component connections and how systems interact
-- Include temporal context (when the research was conducted)
 - Link to GitHub when possible for permanent references
-- Keep the main agent focused on synthesis, not deep file reading
-- Have sub-agents document examples and usage patterns as they exist
-- Explore all of .context/ directory, including shared/, stuart/, frank/, and root-level files
-- Reminder: you and sub-agents are documenting the current state, not recommending changes.
+- Explore all of .context/ directory, including shared/, stuart/, frank/, and root-level files (see `.claude/agents/context-locator.md` for the `.context/` layout)
 - **File reading**: Read mentioned files fully (no limit/offset) before spawning sub-tasks
 - **Ordering**: Follow the numbered steps:
   - Read mentioned files first before spawning sub-tasks (step 1)
