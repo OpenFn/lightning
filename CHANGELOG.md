@@ -28,6 +28,9 @@ and this project adheres to
 
 ### Changed
 
+- Worker plan payload now includes `project_id` so workers can scope callbacks
+  (e.g. the collections API) to the project that owns the run.
+
 ### Fixed
 
 ## [2.16.2] - 2026-04-20
