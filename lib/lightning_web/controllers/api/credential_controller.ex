@@ -25,6 +25,7 @@ defmodule LightningWeb.API.CredentialController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias LightningWeb.API.Helpers
 
   action_fallback LightningWeb.FallbackController
 
@@ -61,7 +62,8 @@ defmodule LightningWeb.API.CredentialController do
   def index(conn, %{"project_id" => project_id}) do
     current_user = conn.assigns.current_resource
 
-    with project when not is_nil(project) <- Projects.get_project(project_id),
+    with :ok <- Helpers.validate_uuid(project_id),
+         project when not is_nil(project) <- Projects.get_project(project_id),
          :ok <-
            ProjectUsers
            |> Permissions.can(
@@ -166,15 +168,15 @@ defmodule LightningWeb.API.CredentialController do
   def delete(conn, %{"id" => id}) do
     current_user = conn.assigns.current_resource
 
-    with :ok <- validate_uuid(id),
+    with :ok <- Helpers.validate_uuid(id),
          credential when not is_nil(credential) <-
            Credentials.get_credential(id),
          :ok <- validate_credential_ownership(credential, current_user),
          {:ok, _} <- Credentials.delete_credential(credential) do
       send_resp(conn, :no_content, "")
     else
-      {:error, :invalid_uuid} ->
-        {:error, :not_found}
+      {:error, :bad_request} ->
+        {:error, :bad_request}
 
       nil ->
         {:error, :not_found}
@@ -184,13 +186,6 @@ defmodule LightningWeb.API.CredentialController do
 
       error ->
         error
-    end
-  end
-
-  defp validate_uuid(id) do
-    case Ecto.UUID.dump(to_string(id)) do
-      {:ok, _bin} -> :ok
-      :error -> {:error, :invalid_uuid}
     end
   end
 

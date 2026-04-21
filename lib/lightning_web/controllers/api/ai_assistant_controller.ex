@@ -9,6 +9,7 @@ defmodule LightningWeb.API.AiAssistantController do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Workflows
+  alias LightningWeb.API.Helpers
   alias LightningWeb.Channels.AiAssistantJSON
 
   action_fallback LightningWeb.FallbackController
@@ -75,7 +76,9 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp get_resource("job_code", %{"job_id" => job_id}) do
-    {:ok, job_id}
+    with :ok <- Helpers.validate_uuid(job_id) do
+      {:ok, job_id}
+    end
   end
 
   defp get_resource("job_code", _params) do
@@ -83,9 +86,11 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp get_resource("workflow_template", %{"project_id" => project_id}) do
-    case Projects.get_project(project_id) do
-      nil -> {:error, :not_found}
-      project -> {:ok, project}
+    with :ok <- Helpers.validate_uuid(project_id) do
+      case Projects.get_project(project_id) do
+        nil -> {:error, :not_found}
+        project -> {:ok, project}
+      end
     end
   end
 

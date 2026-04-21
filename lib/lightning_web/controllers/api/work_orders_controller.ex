@@ -25,6 +25,7 @@ defmodule LightningWeb.API.WorkOrdersController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
+  alias LightningWeb.API.Helpers
 
   action_fallback LightningWeb.FallbackController
 
@@ -72,7 +73,8 @@ defmodule LightningWeb.API.WorkOrdersController do
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    with :ok <-
+    with :ok <- Helpers.validate_uuid(project_id),
+         :ok <-
            Invocation.Query.validate_datetime_params(params, [
              "inserted_after",
              "inserted_before",
@@ -140,7 +142,8 @@ defmodule LightningWeb.API.WorkOrdersController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with work_order <-
+    with :ok <- Helpers.validate_uuid(id),
+         work_order <-
            WorkOrders.get(id, include: [workflow: :project, runs: []]),
          :ok <-
            ProjectUsers

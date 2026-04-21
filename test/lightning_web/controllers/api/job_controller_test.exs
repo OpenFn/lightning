@@ -89,6 +89,20 @@ defmodule LightningWeb.API.JobControllerTest do
                "type" => "jobs"
              }
     end
+
+    test "returns 400 for malformed id", %{conn: conn} do
+      conn = get(conn, ~p"/api/jobs/not-a-uuid")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+  end
+
+  describe "index with invalid project_id" do
+    setup [:assign_bearer_for_api]
+
+    test "returns 400 for malformed project_id", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/not-a-uuid/jobs")
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
   end
 
   defp create_job(%{project: project}) do

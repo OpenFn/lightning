@@ -44,6 +44,7 @@ defmodule LightningWeb.API.WorkflowsController do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.API.Helpers
   alias LightningWeb.ChangesetJSON
 
   action_fallback LightningWeb.FallbackController
@@ -451,10 +452,10 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp validate_uuid(project_id) do
-    case Ecto.UUID.dump(to_string(project_id)) do
-      {:ok, _bin} -> :ok
-      :error -> {:error, :invalid_id, project_id}
+  defp validate_uuid(id) do
+    case Helpers.validate_uuid(id) do
+      :ok -> :ok
+      {:error, :bad_request} -> {:error, :invalid_id, id}
     end
   end
 
