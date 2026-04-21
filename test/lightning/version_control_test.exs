@@ -865,6 +865,123 @@ defmodule Lightning.VersionControlTest do
     end
   end
 
+  describe "config file blob content" do
+    setup do
+      Mox.verify_on_exit!()
+
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo = "someaccount/somerepo"
+      branch = "somebranch"
+      installation_id = "1234"
+
+      base_params = %{
+        "project_id" => project.id,
+        "repo" => repo,
+        "branch" => branch,
+        "github_installation_id" => installation_id,
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      expected_repo = %{"full_name" => repo, "default_branch" => "main"}
+
+      {:ok,
+       project: project,
+       user: user,
+       repo: repo,
+       branch: branch,
+       installation_id: installation_id,
+       base_params: base_params,
+       expected_repo: expected_repo}
+    end
+
+    defp setup_github_mocks(repo, expected_repo) do
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_blob(repo)
+      expect_get_commit(repo, expected_repo["default_branch"])
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, expected_repo["default_branch"])
+      expect_create_blob(repo)
+    end
+
+    test "pushes JSON config blob when sync_version is false (default)", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      setup_github_mocks(repo, expected_repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+        body = Jason.decode!(env.body)
+
+        assert body["content"] =~
+                 "\"statePath\": \"openfn-#{project.id}-state.json\""
+
+        assert body["content"] =~
+                 "\"specPath\": \"openfn-#{project.id}-spec.yaml\""
+
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+      end)
+
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_get_commit(repo, branch)
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, branch)
+      expect_get_public_key(repo)
+      expect_create_repo_secret(repo, secret_name)
+      expect_create_installation_token(installation_id)
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+
+      assert {:ok, _} =
+               VersionControl.create_github_connection(base_params, user)
+    end
+
+    test "pushes YAML config blob when sync_version is true", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      setup_github_mocks(repo, expected_repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+        body = Jason.decode!(env.body)
+        assert body["content"] =~ "project:"
+        assert body["content"] =~ "uuid: #{project.id}"
+        assert body["content"] =~ LightningWeb.Endpoint.url()
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+      end)
+
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_get_commit(repo, branch)
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, branch)
+      expect_get_public_key(repo)
+      expect_create_repo_secret(repo, secret_name)
+      expect_create_installation_token(installation_id)
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+
+      params = Map.put(base_params, "sync_version", "true")
+      assert {:ok, _} = VersionControl.create_github_connection(params, user)
+    end
+  end
+
   defp user_with_valid_github_oauth do
     active_token = %{
       "access_token" => "access-token",
