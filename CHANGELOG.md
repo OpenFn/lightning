@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add support for sync v2 protocol
+  [#4523](https://github.com/OpenFn/lightning/issues/4523)
 - Support collections in sandboxes. Collection names are now scoped per project,
   empty collections are cloned into a sandbox on provision, and collection names
   (not data) are synchronised when a sandbox is merged back into its parent. The
