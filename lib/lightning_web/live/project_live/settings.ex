@@ -4,8 +4,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
+  alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
   alias Lightning.Helpers
@@ -14,6 +16,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
@@ -33,6 +36,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     if connected?(socket) do
       VersionControl.subscribe(current_user)
     end
+
+    project = Lightning.Repo.preload(project, :parent)
+    sandbox? = Project.sandbox?(project)
+    parent_project = if sandbox?, do: project.parent
+    root_project = if sandbox?, do: Projects.root_of(project)
 
     project_user = Projects.get_project_user(project, current_user)
 
@@ -126,6 +134,9 @@ defmodule LightningWeb.ProjectLive.Settings do
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
        name: project.name,
+       parent_project: parent_project,
+       root_project: root_project,
+       project: project,
        project_changeset:
          Project.form_changeset(project, %{raw_name: project.name}),
        project_files: project_files,
@@ -133,6 +144,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_user: project_user,
        project_users: [],
        projects: projects,
+       sandbox?: sandbox?,
        selected_credential_type: nil,
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,
@@ -179,13 +191,39 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp apply_action(socket, :delete, %{"project_id" => id}) do
-    if socket.assigns.can_delete_project do
-      socket |> assign(:page_title, "Project settings")
-    else
-      socket
-      |> put_flash(:error, "You are not authorize to perform this action")
-      |> push_patch(to: ~p"/projects/#{id}/settings")
+    cond do
+      not socket.assigns.can_delete_project ->
+        socket
+        |> put_flash(:error, "You are not authorize to perform this action")
+        |> push_patch(to: ~p"/projects/#{id}/settings")
+
+      socket.assigns.sandbox? ->
+        socket
+        |> assign(:page_title, "Project settings")
+        |> assign(
+          :confirm_delete_changeset,
+          sandbox_confirm_changeset(socket.assigns.project)
+        )
+        |> assign(:confirm_delete_input, "")
+
+      true ->
+        assign(socket, :page_title, "Project settings")
     end
+  end
+
+  defp sandbox_confirm_changeset(sandbox, params \\ %{}) do
+    types = %{name: :string}
+
+    {%{name: ""}, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
+    |> Ecto.Changeset.validate_required([:name])
+    |> Ecto.Changeset.validate_change(:name, fn :name, value ->
+      if value == sandbox.name do
+        []
+      else
+        [name: "does not match the sandbox name"]
+      end
+    end)
   end
 
   @impl true
@@ -338,6 +376,75 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> noreply()
   end
 
+  def handle_event("close-delete-modal", _params, socket) do
+    socket
+    |> push_navigate(to: ~p"/projects/#{socket.assigns.project.id}/settings")
+    |> noreply()
+  end
+
+  def handle_event("confirm-delete-validate", params, socket) do
+    confirm_params = params["confirm"] || %{}
+
+    changeset =
+      sandbox_confirm_changeset(socket.assigns.project, confirm_params)
+      |> Map.put(:action, :validate)
+
+    socket
+    |> assign(:confirm_delete_changeset, changeset)
+    |> assign(:confirm_delete_input, String.trim(confirm_params["name"] || ""))
+    |> noreply()
+  end
+
+  def handle_event("confirm-delete", params, socket) do
+    confirm_params = params["confirm"] || %{}
+
+    changeset =
+      sandbox_confirm_changeset(socket.assigns.project, confirm_params)
+      |> Map.put(:action, :validate)
+
+    if changeset.valid? do
+      case Lightning.Projects.Sandboxes.delete_sandbox(
+             socket.assigns.project,
+             socket.assigns.current_user
+           ) do
+        {:ok, deleted} ->
+          socket
+          |> put_flash(
+            :info,
+            "Sandbox #{deleted.name} and all its associated descendants deleted"
+          )
+          |> push_navigate(to: ~p"/projects/#{socket.assigns.root_project.id}/w")
+          |> noreply()
+
+        {:error, :unauthorized} ->
+          socket
+          |> put_flash(
+            :error,
+            "You don't have permission to delete this sandbox"
+          )
+          |> push_navigate(
+            to: ~p"/projects/#{socket.assigns.project.id}/settings"
+          )
+          |> noreply()
+
+        {:error, _reason} ->
+          socket
+          |> put_flash(
+            :error,
+            "Could not delete sandbox. Please try again later."
+          )
+          |> push_navigate(
+            to: ~p"/projects/#{socket.assigns.project.id}/settings"
+          )
+          |> noreply()
+      end
+    else
+      socket
+      |> assign(:confirm_delete_changeset, changeset)
+      |> noreply()
+    end
+  end
+
   def handle_event(
         "show_modal",
         %{"target" => "new_webhook_auth_method"},
@@ -458,12 +565,14 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
       ) do
-    project_user = Projects.get_project_user!(project_user_id)
+    project_user = Projects.get_project_user!(project_user_id, include: :user)
 
     if user_removable?(
          project_user,
          assigns.current_user,
-         assigns.can_remove_project_user
+         assigns.can_remove_project_user,
+         assigns.project,
+         assigns.sandbox?
        ) do
       Projects.delete_project_user!(project_user)
 
@@ -637,7 +746,13 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
-  defp remove_user_tooltip(project_user, current_user, can_remove_project_user) do
+  defp remove_user_tooltip(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     cond do
       !can_remove_project_user ->
         "You do not have permission to remove a user"
@@ -648,15 +763,28 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_user.role == :owner ->
         "You cannot remove an owner"
 
+      sandbox? and parent_admin?(project, project_user) ->
+        "Cannot remove a user who is admin or owner on the parent project"
+
       true ->
         ""
     end
   end
 
-  defp user_removable?(project_user, current_user, can_remove_project_user) do
+  defp user_removable?(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
   end
+
+  defp parent_admin?(project, %{user: %User{} = user}),
+    do: Sandboxes.parent_admin?(project, user)
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)

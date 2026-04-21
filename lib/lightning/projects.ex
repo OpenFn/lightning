@@ -319,7 +319,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_user!(id), do: Repo.get!(ProjectUser, id)
+  def get_project_user!(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+    ProjectUser |> Repo.get!(id) |> Repo.preload(include)
+  end
 
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
@@ -573,6 +576,15 @@ defmodule Lightning.Projects do
     project_user =
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
+
+    if Project.sandbox?(project_user.project) and
+         Lightning.Projects.Sandboxes.parent_admin?(
+           project_user.project,
+           project_user.user
+         ) do
+      raise ArgumentError,
+            "Cannot remove a parent project admin from a sandbox"
+    end
 
     Repo.transaction(fn ->
       from(pc in Lightning.Projects.ProjectCredential,

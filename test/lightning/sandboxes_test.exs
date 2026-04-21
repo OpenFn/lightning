@@ -834,6 +834,118 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  # These tests document that the merge pipeline does not propagate
+  # project-level Local or Inherited fields from sandbox to parent. They
+  # guard against future changes to MergeProjects or Provisioner that
+  # could accidentally start syncing these fields.
+  describe "merge/4 does not propagate Local/Inherited fields" do
+    setup do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          description: "parent description",
+          requires_mfa: false,
+          concurrency: 5,
+          retention_policy: :retain_all,
+          history_retention_period: 30,
+          dataclip_retention_period: 30
+        )
+
+      ensure_member!(parent, actor, :owner)
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox",
+          description: "sandbox description",
+          parent: parent,
+          requires_mfa: true,
+          concurrency: 1,
+          retention_policy: :erase_all,
+          history_retention_period: 7,
+          dataclip_retention_period: nil,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+      {:ok, actor: actor, parent: parent, sandbox: sandbox}
+    end
+
+    test "requires_mfa stays at parent's value", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      assert Repo.reload(parent).requires_mfa == false
+    end
+
+    test "concurrency stays at parent's value", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      assert Repo.reload(parent).concurrency == 5
+    end
+
+    test "retention settings stay at parent's values", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      reloaded = Repo.reload(parent)
+      assert reloaded.retention_policy == :retain_all
+      assert reloaded.history_retention_period == 30
+      assert reloaded.dataclip_retention_period == 30
+    end
+
+    test "name and description stay at parent's values", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      reloaded = Repo.reload(parent)
+      assert reloaded.name == "parent"
+      assert reloaded.description == "parent description"
+    end
+
+    test "collaborators are not synced from sandbox to parent", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_only_user = insert(:user)
+
+      insert(:project_user,
+        project: sandbox,
+        user: sandbox_only_user,
+        role: :editor
+      )
+
+      parent_user_ids_before =
+        parent.id
+        |> Lightning.Projects.get_project_users!()
+        |> Enum.map(& &1.user_id)
+
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_user_ids_after =
+        parent.id
+        |> Lightning.Projects.get_project_users!()
+        |> Enum.map(& &1.user_id)
+
+      refute sandbox_only_user.id in parent_user_ids_after
+
+      assert Enum.sort(parent_user_ids_before) ==
+               Enum.sort(parent_user_ids_after)
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
