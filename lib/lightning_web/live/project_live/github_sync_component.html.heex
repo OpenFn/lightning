@@ -237,6 +237,15 @@
           </span>
         </span>
 
+        <span>
+          Sync version:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            {if @project_repo_connection.sync_version,
+              do: "v2 (new)",
+              else: "v1 (legacy)"}
+          </span>
+        </span>
+
         <div class="pt-2">
           <.button
             id="initiate-sync-button"
