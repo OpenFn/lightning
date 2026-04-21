@@ -689,30 +689,35 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp config_format_toggle(assigns) do
     ~H"""
     <div class="mt-4">
-      <details class="group">
-        <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none list-none flex items-center gap-1">
-          <.icon
-            name="hero-chevron-right-mini"
-            class="h-4 w-4 transition-transform group-open:rotate-90"
-          /> Advanced: use new YAML config format
-        </summary>
-        <div class="mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200">
-          <label class="flex items-center gap-3 cursor-pointer">
-            <.input
-              type="checkbox"
-              field={@form[:sync_version]}
-              hidden_input={false}
-            />
-            <span class="text-sm text-gray-700">
-              Use new <code>openfn.yaml</code> format
-            </span>
-          </label>
-          <p class="mt-1 ml-6 text-xs text-gray-500">
-            Only enable this if you want to use the new <code>openfn.yaml</code>
-            format instead of the legacy JSON config.
-          </p>
-        </div>
-      </details>
+      <button
+        type="button"
+        class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none flex items-center gap-1"
+        phx-click={
+          JS.toggle(to: "#sync-version-content")
+          |> JS.toggle_class("rotate-90", to: "#sync-version-chevron")
+        }
+      >
+        <.icon
+          id="sync-version-chevron"
+          name="hero-chevron-right-mini"
+          class="h-4 w-4 transition-transform"
+        /> Advanced: use new YAML config format
+      </button>
+      <div
+        id="sync-version-content"
+        class="hidden mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200"
+      >
+        <label class="flex items-center gap-3 cursor-pointer">
+          <.input type="checkbox" field={@form[:sync_version]} hidden_input={false} />
+          <span class="text-sm text-gray-700">
+            Use new <code>openfn.yaml</code> format
+          </span>
+        </label>
+        <p class="mt-1 ml-6 text-xs text-gray-500">
+          Only enable this if you want to use the new <code>openfn.yaml</code>
+          format instead of the legacy JSON config.
+        </p>
+      </div>
     </div>
     """
   end
