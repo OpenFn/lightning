@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-304D3879.js"></script>
+    <script defer src="dist/sidebar_items-70D49C48.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -113,7 +113,11 @@ Lightning
     <section id="moduledoc">
 <p>API controller for project management.</p><p>Provides read access to projects for authenticated users and API tokens.
 Users can list projects they have access to and retrieve individual project details.</p><h2 id="module-query-parameters-index" class="section-heading"><a href="#module-query-parameters-index" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Query Parameters (index)</span></h2><ul><li><code class="inline">page</code> - Page number (default: 1)</li><li><code class="inline">page_size</code> - Number of items per page (default: 10)</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects?</span><span class="n">page</span><span class="o">=</span><span class="mi">1</span><span class="o">&amp;</span><span class="n">page_size</span><span class="o">=</span><span class="mi">20</span><span class="w">
-</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre>
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre><h2 id="module-sample-curl-requests" class="section-heading"><a href="#module-sample-curl-requests" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Sample curl requests</span></h2><p>List all projects:</p><pre><code class="makeup bash" translate="no"><span class="">curl http://localhost:4000/api/projects \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre><p>Get a single project:</p><pre><code class="makeup bash" translate="no"><span class="">curl http://localhost:4000/api/projects/$PROJECT_ID \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre>
     </section>
 
 </div>
@@ -174,7 +178,7 @@ Users can list projects they have access to and retrieve individual project deta
       <h1 class="signature" translate="no">index(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L63" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -204,7 +208,7 @@ has access to.</p><h2 id="index/2-parameters" class="section-heading"><a href="#
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L96" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

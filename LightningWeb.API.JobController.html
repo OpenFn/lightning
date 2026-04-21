@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-304D3879.js"></script>
+    <script defer src="dist/sidebar_items-70D49C48.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -115,7 +115,15 @@ Lightning
 units that process data using OpenFn adaptors. Jobs belong to workflows and
 inherit access controls from their parent project.</p><h2 id="module-query-parameters-index" class="section-heading"><a href="#module-query-parameters-index" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Query Parameters (index)</span></h2><ul><li><code class="inline">page</code> - Page number (default: 1)</li><li><code class="inline">page_size</code> - Number of items per page (default: 10)</li><li><code class="inline">project_id</code> - Filter jobs by project UUID (optional)</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="w">
 </span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs?</span><span class="n">project_id</span><span class="o">=</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="n">...</span><span class="o">&amp;</span><span class="n">page</span><span class="o">=</span><span class="mi">1</span><span class="o">&amp;</span><span class="n">page_size</span><span class="o">=</span><span class="mi">20</span><span class="w">
-</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre>
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre><h2 id="module-sample-curl-requests" class="section-heading"><a href="#module-sample-curl-requests" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Sample curl requests</span></h2><p>List all jobs:</p><pre><code class="makeup bash" translate="no"><span class="">curl http://localhost:4000/api/jobs \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre><p>Get a single job:</p><pre><code class="makeup bash" translate="no"><span class="">curl http://localhost:4000/api/jobs/$JOB_ID \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre><p>Filter by project:</p><pre><code class="makeup bash" translate="no"><span class="">curl &quot;http://localhost:4000/api/jobs?project_id=$PROJECT_ID&quot; \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre><p>Nested route — jobs for a specific project:</p><pre><code class="makeup bash" translate="no"><span class="">curl http://localhost:4000/api/projects/$PROJECT_ID/jobs \
+</span><span class="">  -H &quot;Authorization: Bearer $TOKEN&quot;
+</span></code></pre>
     </section>
 
 </div>
@@ -176,7 +184,7 @@ inherit access controls from their parent project.</p><h2 id="module-query-param
       <h1 class="signature" translate="no">index(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L64" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L94" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -210,7 +218,7 @@ inherit access controls from their parent project.</p><h2 id="module-query-param
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L147" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

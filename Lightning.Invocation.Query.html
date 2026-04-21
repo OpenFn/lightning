@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-304D3879.js"></script>
+    <script defer src="dist/sidebar_items-70D49C48.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -291,6 +291,26 @@ to access a previous run's state</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#validate_run_state_param/1" data-no-tooltip="" translate="no">validate_run_state_param(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validates the <code class="inline">state</code> query parameter against known run states.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#validate_state_param/1" data-no-tooltip="" translate="no">validate_state_param(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validates the <code class="inline">state</code> query parameter against known work order states.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#wipe_dataclips/1" data-no-tooltip="" translate="no">wipe_dataclips(query \\ Dataclip)</a>
 
       </div>
@@ -331,7 +351,7 @@ to access a previous run's state</p></div>
       <h1 class="signature" translate="no">any_step()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L204" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L242" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -354,7 +374,7 @@ step is all the information we need. As in, &quot;Does this job have any steps?&
       <h1 class="signature" translate="no">dataclip_with_body()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L237" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L275" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -377,7 +397,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_log_lines(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L388" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L481" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -461,7 +481,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_work_orders(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L305" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L343" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -489,7 +509,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_work_orders_by_date(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L293" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L331" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -517,7 +537,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_n_for_job(job_id, limit)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L277" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -539,7 +559,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_step_for_job(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L192" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L230" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -567,7 +587,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_successful_step_for_job(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L228" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L266" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -596,7 +616,7 @@ to access a previous run's state</p>
       <h1 class="signature" translate="no">log_lines_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L367" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L460" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -654,7 +674,7 @@ to access a previous run's state</p>
       <h1 class="signature" translate="no">select_as_input_text(query)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L259" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L297" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -678,7 +698,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">steps_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L177" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L215" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -706,7 +726,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">steps_with_reason(query, exit_reason)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L219" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L257" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -752,6 +772,62 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
 <p>Validate datetime parameters for filtering</p>
   </section>
 </section>
+<section class="detail" id="validate_run_state_param/1">
+
+  <div class="detail-header">
+    <a href="#validate_run_state_param/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate_run_state_param(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L165" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> validate_run_state_param(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}</pre>
+
+      </div>
+
+<p>Validates the <code class="inline">state</code> query parameter against known run states.</p><p>Returns <code class="inline">:ok</code> or <code class="inline">{:error, message}</code>.</p>
+  </section>
+</section>
+<section class="detail" id="validate_state_param/1">
+
+  <div class="detail-header">
+    <a href="#validate_state_param/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate_state_param(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L399" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> validate_state_param(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}</pre>
+
+      </div>
+
+<p>Validates the <code class="inline">state</code> query parameter against known work order states.</p><p>Returns <code class="inline">:ok</code> or <code class="inline">{:error, message}</code>.</p>
+  </section>
+</section>
 <section class="detail" id="wipe_dataclips/1">
 
     <span id="wipe_dataclips/0"></span>
@@ -764,7 +840,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">wipe_dataclips(query \\ Dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L278" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L316" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
