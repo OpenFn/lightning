@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Changed
 
+- bumped local worker to 1.24.0
+
 ### Fixed
 
 ## [2.16.2] - 2026-04-20
