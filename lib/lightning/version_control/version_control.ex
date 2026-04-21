@@ -636,27 +636,10 @@ defmodule Lightning.VersionControl do
   defp openfn_yaml(repo_connection) do
     project = Repo.get!(Project, repo_connection.project_id)
 
-    inserted_at = DateTime.to_iso8601(project.inserted_at)
-    updated_at = DateTime.to_iso8601(project.updated_at)
-
     """
     project:
       uuid: #{project.id}
       endpoint: #{LightningWeb.Endpoint.url()}
-      alias: #{project.env}
-      inserted_at: #{inserted_at}
-      updated_at: #{updated_at}
-      id: #{project.name}
-      name: #{project.name}
-    workspace:
-      credentials: credentials.yaml
-      dirs:
-        projects: .projects
-        workflows: workflows
-      formats:
-        openfn: yaml
-        project: yaml
-        workflow: yaml
     """
   end
 
