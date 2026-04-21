@@ -82,21 +82,20 @@ findings.**
 
 ### Pass case — everything is PASS or N/A
 
-Output exactly these two lines and nothing else:
+Give one sentence per check explaining *why* it passes (what you checked and
+what you found), or why it is N/A. No headings, no bullets, no findings list.
 
 ```
 ## Security Review ✅
 
-S0 · S1 · S2 — no issues found.
+- **S0 (project scoping):** {one sentence — what you verified, e.g. "New
+  `runs_for/1` query joins through work_order → workflow and filters on
+  `project_id`, matching the existing pattern."}
+- **S1 (authorization):** {one sentence — or "N/A, no new web-layer actions."}
+- **S2 (audit trail):** {one sentence — or "N/A, no config-resource writes."}
 ```
 
-If some checks are N/A, you may clarify in one short line, e.g.:
-
-```
-## Security Review ✅
-
-S0 PASS · S1 N/A · S2 N/A — no issues found.
-```
+Keep each sentence under ~25 words. Do not add a summary line below.
 
 ### Fail case — at least one FAIL
 
