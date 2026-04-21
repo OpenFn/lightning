@@ -1482,6 +1482,154 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
+  describe "collection sync on merge" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "sandbox",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, root: root, sandbox: sandbox}
+    end
+
+    defp mock_provisioner_ok(target) do
+      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _src,
+                                                                        _tgt,
+                                                                        _opts ->
+        "merged_yaml"
+      end)
+
+      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _tgt,
+                                                                        _actor,
+                                                                        _yaml,
+                                                                        _opts ->
+        {:ok, target}
+      end)
+
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn source, _actor ->
+        {:ok, source}
+      end)
+    end
+
+    test "new collections in sandbox are created in parent on merge", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      insert(:collection, project: sandbox, name: "new-col")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "new-col" in parent_names
+    end
+
+    test "collections deleted from sandbox are removed from parent on merge", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      # Parent has a collection, sandbox does not
+      insert(:collection, project: root, name: "to-delete")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      refute "to-delete" in parent_names
+    end
+
+    test "collections present in both are unchanged after merge", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      insert(:collection, project: root, name: "shared")
+      insert(:collection, project: sandbox, name: "shared")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_collections = Lightning.Collections.list_project_collections(root)
+      assert length(parent_collections) == 1
+      assert hd(parent_collections).name == "shared"
+    end
+
+    test "merge fails with flash error when collection sync fails", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.Sandboxes, :merge, fn _src,
+                                                            _tgt,
+                                                            _actor,
+                                                            _opts ->
+        {:error, "Failed to sync collections: :boom"}
+      end)
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      html = render(view)
+      assert html =~ "Failed to sync collections"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+  end
+
   describe "Merge modal authorization" do
     setup :register_and_log_in_user
 

@@ -20,6 +20,14 @@ defmodule Lightning.Projects.MergeProjects do
   Workflows that don't match are marked for deletion (target) or creation
   (source).
 
+  Pure transformation — returns a merge document without touching the
+  database. Scope is workflow structure only; credentials, collections, and
+  other project-scoped resources are not part of the document.
+
+  For sandbox merges use `Lightning.Projects.Sandboxes.merge/4`, which
+  composes this with `Provisioner.import_document/4` and sandbox-specific
+  steps (e.g. collection name sync) inside a single transaction.
+
   ## Parameters
     * `source_project` - The project with modifications to merge
     * `target_project` - The target project to merge changes onto

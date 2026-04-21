@@ -1,21 +1,28 @@
 defmodule Lightning.Projects.SandboxesTest do
   use Lightning.DataCase, async: true
+  use Mimic
 
   import Ecto.Query
   import Lightning.Factories
-  alias Lightning.Repo
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Repo
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Edge
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
+
+  setup_all do
+    Mimic.copy(Lightning.Collections)
+    Mimic.copy(Lightning.Projects.Provisioner)
+    :ok
+  end
 
   defp ensure_member!(%Project{} = project, %User{} = user, role) do
     insert(:project_user, %{project: project, user: user, role: role})
@@ -544,6 +551,286 @@ defmodule Lightning.Projects.SandboxesTest do
         |> Repo.one!()
 
       assert sandbox_version.hash == parent_version.hash
+    end
+  end
+
+  describe "collections provisioning" do
+    test "clones empty collection records from parent into sandbox" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      insert(:collection,
+        project: parent,
+        name: "col-b",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_collections =
+        Lightning.Collections.list_project_collections(sandbox)
+
+      assert Enum.map(sandbox_collections, & &1.name) |> Enum.sort() == [
+               "col-a",
+               "col-b"
+             ]
+
+      Enum.each(sandbox_collections, fn col ->
+        assert Lightning.Collections.get_all(
+                 col,
+                 %{cursor: nil, limit: 100},
+                 nil
+               ) ==
+                 []
+      end)
+    end
+
+    test "provisioning a parent with no collections creates no sandbox collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      assert Lightning.Collections.list_project_collections(sandbox) == []
+    end
+
+    test "each sandbox gets its own copy of parent collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      {:ok, sandbox_1} = Sandboxes.provision(parent, actor, %{name: "sandbox-1"})
+      {:ok, sandbox_2} = Sandboxes.provision(parent, actor, %{name: "sandbox-2"})
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_1)) ==
+               1
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_2)) ==
+               1
+    end
+  end
+
+  describe "sync_collections/2" do
+    test "creates collections in target that exist in source but not target" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: source, name: "only-in-source")
+      insert(:collection, project: target, name: "shared")
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+        |> Enum.sort()
+
+      assert target_names == ["only-in-source", "shared"]
+    end
+
+    test "deletes collections in target that are missing from source, including items" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      dropped =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert {:ok, %{created: 0, deleted: 1}} =
+               Sandboxes.sync_collections(source, target)
+
+      refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
+
+      assert Lightning.Repo.all(
+               from i in Lightning.Collections.Item,
+                 where: i.collection_id == ^dropped.id
+             ) == []
+    end
+
+    test "is a no-op when both projects have the same collections" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "a")
+      insert(:collection, project: target, name: "a")
+
+      assert {:ok, %{created: 0, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+    end
+
+    test "fires the collection-delete hook with the combined byte size" do
+      Mox.verify_on_exit!()
+
+      source = insert(:project)
+      %{id: target_id} = target = insert(:project)
+
+      insert(:collection, project: source, name: "keep")
+      insert(:collection, project: target, name: "keep")
+
+      insert(:collection,
+        project: target,
+        name: "drop-a",
+        byte_size_sum: 120
+      )
+
+      insert(:collection,
+        project: target,
+        name: "drop-b",
+        byte_size_sum: 45
+      )
+
+      Mox.expect(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_delete,
+        fn ^target_id, 165 -> :ok end
+      )
+
+      assert {:ok, %{created: 0, deleted: 2}} =
+               Sandboxes.sync_collections(source, target)
+    end
+
+    test "does not copy collection data across" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection,
+        project: source,
+        name: "with-data",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      [new_collection] = Lightning.Collections.list_project_collections(target)
+
+      assert Lightning.Collections.get_all(
+               new_collection,
+               %{cursor: nil, limit: 100},
+               nil
+             ) == []
+    end
+
+    test "runs in a single transaction -- either everything or nothing" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "to-create")
+      insert(:collection, project: target, name: "to-delete")
+
+      result =
+        Lightning.Repo.transaction(fn ->
+          {:ok, _summary} =
+            Sandboxes.sync_collections(source, target)
+
+          Lightning.Repo.rollback(:simulated_failure)
+        end)
+
+      assert result == {:error, :simulated_failure}
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert target_names == ["to-delete"]
+    end
+  end
+
+  describe "merge/4" do
+    test "imports the merge document and syncs collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      insert(:collection, project: sandbox, name: "new-col")
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_names =
+        parent
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "new-col" in parent_names
+    end
+
+    test "defaults opts to empty map" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+    end
+
+    test "rolls back DB changes from import_document when collection sync fails" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      marker_name = "atomicity-marker-#{System.unique_integer([:positive])}"
+
+      Mimic.stub(Lightning.Projects.Provisioner, :import_document, fn target,
+                                                                      _actor,
+                                                                      _doc,
+                                                                      _opts ->
+        %Project{name: marker_name}
+        |> Ecto.Changeset.change()
+        |> Repo.insert!()
+
+        {:ok, target}
+      end)
+
+      Mimic.stub(Lightning.Collections, :list_project_collections, fn _ ->
+        raise "simulated sync failure"
+      end)
+
+      assert_raise RuntimeError, ~r/simulated sync failure/, fn ->
+        Sandboxes.merge(sandbox, parent, actor)
+      end
+
+      refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
     end
   end
 

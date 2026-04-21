@@ -18,6 +18,7 @@ defmodule Lightning.Projects.Sandboxes do
   ## Operations
 
   * `provision/3` - Create a new sandbox from a parent project
+  * `merge/4` - Merge a sandbox into its target (workflows + collections)
   * `update_sandbox/3` - Update sandbox name, color, or environment
   * `delete_sandbox/2` - Delete a sandbox and all its descendants
 
@@ -36,12 +37,17 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Collections
+  alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
+  alias Lightning.Services.CollectionHook
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -119,6 +125,46 @@ defmodule Lightning.Projects.Sandboxes do
     else
       {:error, :unauthorized}
     end
+  end
+
+  @doc """
+  Merges a sandbox into its target project.
+
+  Imports the sandbox's workflow configuration into the target via the
+  provisioner and synchronises collection names. Runs inside a single
+  transaction. Collection data is never copied.
+
+  Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
+
+  ## Parameters
+  * `source` - The sandbox project being merged
+  * `target` - The project receiving the merge
+  * `actor` - The user performing the merge
+  * `opts` - Merge options (`:selected_workflow_ids`, `:deleted_target_workflow_ids`)
+
+  ## Returns
+  * `{:ok, updated_target}` - Merge succeeded
+  * `{:error, reason}` - Workflow merge or collection sync failed
+  """
+  @spec merge(Project.t(), Project.t(), User.t(), map()) ::
+          {:ok, Project.t()} | {:error, term()}
+  def merge(
+        %Project{} = source,
+        %Project{} = target,
+        %User{} = actor,
+        opts \\ %{}
+      ) do
+    merge_doc = MergeProjects.merge_project(source, target, opts)
+
+    Repo.transact(fn ->
+      with {:ok, updated_target} <-
+             Provisioner.import_document(target, actor, merge_doc,
+               allow_stale: true
+             ),
+           {:ok, _} <- sync_collections(source, target) do
+        {:ok, updated_target}
+      end
+    end)
   end
 
   @doc """
@@ -566,6 +612,87 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> clone_collections_from_parent(parent)
+  end
+
+  defp clone_collections_from_parent(sandbox, parent) do
+    parent_names = parent |> Collections.list_project_collections() |> names()
+    insert_empty_collections(sandbox.id, parent_names)
+    sandbox
+  end
+
+  @doc """
+  Synchronises collection names from a sandbox to its merge target.
+
+  Names only in the source are created empty in the target; names only in
+  the target are deleted along with their items. Collection data is never
+  copied. The combined byte-size of deleted collections is reported via
+  `CollectionHook.handle_delete/2` for usage accounting.
+
+  Runs inside a single transaction.
+  """
+  @spec sync_collections(Project.t(), Project.t()) ::
+          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
+          | {:error, term()}
+  def sync_collections(%Project{} = source, %Project{} = target) do
+    source_names = source |> Collections.list_project_collections() |> names()
+
+    target_collections = Collections.list_project_collections(target)
+    target_names = names(target_collections)
+
+    to_create = MapSet.difference(source_names, target_names)
+
+    names_to_delete = MapSet.difference(target_names, source_names)
+
+    collections_to_delete =
+      Enum.filter(target_collections, &(&1.name in names_to_delete))
+
+    to_delete_ids = Enum.map(collections_to_delete, & &1.id)
+
+    deleted_byte_size =
+      Enum.reduce(collections_to_delete, 0, &(&1.byte_size_sum + &2))
+
+    Repo.transaction(fn ->
+      {created, _} = insert_empty_collections(target.id, to_create)
+      {deleted, _} = delete_collections(to_delete_ids)
+
+      if deleted_byte_size > 0 do
+        :ok = CollectionHook.handle_delete(target.id, deleted_byte_size)
+      end
+
+      %{created: created, deleted: deleted}
+    end)
+  end
+
+  defp names(collections), do: MapSet.new(collections, & &1.name)
+
+  defp insert_empty_collections(project_id, names) do
+    if Enum.empty?(names) do
+      {0, nil}
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      rows =
+        Enum.map(names, fn name ->
+          %{
+            id: Ecto.UUID.generate(),
+            name: name,
+            project_id: project_id,
+            byte_size_sum: 0,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      # Concurrent merges may race to create the same collection.
+      Repo.insert_all(Collection, rows, on_conflict: :nothing)
+    end
+  end
+
+  defp delete_collections([]), do: {0, nil}
+
+  defp delete_collections(ids) do
+    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do

@@ -37,7 +37,17 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.WorkflowVersions
 
   @doc """
-  Import a project.
+  Import a project document into the database.
+
+  Upserts the project and the associations carried in the document
+  (workflows, project credentials, collections) inside a single transaction,
+  then fires audit, version-bump, and snapshot side effects.
+
+  Generic pipeline shared by YAML provisioning, CLI deploys, GitHub syncs,
+  and sandbox merges. It only acts on what the document contains —
+  sandbox-specific behaviours (credential cloning, dataclip copying,
+  collection name sync) are composed around this call in
+  `Lightning.Projects.Sandboxes`.
 
   ## Options
     * `:allow_stale` - If true, allows stale operations during import (useful for

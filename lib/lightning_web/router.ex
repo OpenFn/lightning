@@ -145,7 +145,11 @@ defmodule LightningWeb.Router do
     post "/users/two-factor", UserTOTPController, :create
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
-    get "/download/collections/:name", CollectionsController, :download
+
+    get "/download/collections/:project_id/:name",
+        CollectionsController,
+        :download
+
     get "/dataclip/body/:id", DataclipController, :show
 
     get "/projects/:project_id/jobs/:job_id/dataclips",
