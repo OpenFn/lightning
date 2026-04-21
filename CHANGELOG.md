@@ -25,6 +25,15 @@ and this project adheres to
   is ambiguous across projects, the API returns 409 with guidance to add
   `?project_id=`. Existing unscoped calls keep working for unambiguous names.
   [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Sandbox-aware Project Settings page. Each tab shows a banner explaining how
+  changes will (or will not) flow on merge: Local (sandbox-only), Editable
+  (syncs on merge), or Inherited (read-only, managed in the parent). The Sandbox
+  Identity panel links back to the parent project, the MFA toggle is read-only,
+  webhook authentication methods are managed from the parent project, and parent
+  project admins cannot be removed from a sandbox. The danger zone inside a
+  sandbox now deletes the sandbox through `Sandboxes.delete_sandbox/2` (matching
+  the Sandboxes page behaviour).
+  [#3398](https://github.com/OpenFn/lightning/issues/3398)
 
 ### Changed
 
