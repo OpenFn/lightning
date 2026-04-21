@@ -850,7 +850,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp config_filename(form, project_id) do
     if sync_version?(form) do
-      ProjectRepoConnection.openfn_yaml()
+      ProjectRepoConnection.path_to_openfn_yaml()
     else
       "openfn-#{project_id}-config.json"
     end

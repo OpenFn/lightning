@@ -575,7 +575,7 @@ defmodule Lightning.VersionControl do
     if is_nil(repo_connection.config_path) do
       content =
         if repo_connection.sync_version do
-          openfn_yaml(repo_connection)
+          path_to_openfn_yaml(repo_connection)
         else
           config_json(repo_connection)
         end
@@ -633,12 +633,12 @@ defmodule Lightning.VersionControl do
     )
   end
 
-  defp openfn_yaml(repo_connection) do
-    project = Repo.get!(Project, repo_connection.project_id)
+  defp path_to_openfn_yaml(repo_connection) do
+    project_id = repo_connection.project_id
 
     """
     project:
-      uuid: #{project.id}
+      uuid: #{project_id}
       endpoint: #{LightningWeb.Endpoint.url()}
     """
   end

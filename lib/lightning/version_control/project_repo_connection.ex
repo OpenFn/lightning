@@ -127,13 +127,13 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   def config_path(repo_connection) do
     repo_connection.config_path ||
       if repo_connection.sync_version do
-        openfn_yaml()
+        path_to_openfn_yaml()
       else
         "./openfn-#{repo_connection.project_id}-config.json"
       end
   end
 
-  def openfn_yaml do
+  def path_to_openfn_yaml do
     "openfn.yaml"
   end
 end
