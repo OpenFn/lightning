@@ -30,8 +30,8 @@ defmodule LightningWeb.AdaptorIconController do
         cache_key = "#{adaptor}-#{shape}"
 
         case Cache.get("icon", cache_key) do
-          %{data: data, content_type: content_type} ->
-            serve_icon(conn, data, content_type)
+          %{data: data} ->
+            serve_icon(conn, data)
 
           nil ->
             fetch_and_serve_icon(conn, adaptor, shape, cache_key)
@@ -72,9 +72,9 @@ defmodule LightningWeb.AdaptorIconController do
     end
   end
 
-  defp serve_icon(conn, data, content_type) do
+  defp serve_icon(conn, data) do
     conn
-    |> put_resp_content_type(content_type)
+    |> put_resp_content_type("image/png")
     |> put_resp_header(
       "cache-control",
       "public, max-age=#{@icon_max_age}"
@@ -98,7 +98,7 @@ defmodule LightningWeb.AdaptorIconController do
           %{data: body, content_type: "image/png"}
         )
 
-        serve_icon(conn, body, "image/png")
+        serve_icon(conn, body)
 
       {:error, {:http, 404}} ->
         send_resp(conn, 404, "Not Found")
