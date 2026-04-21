@@ -17,6 +17,37 @@ defmodule Lightning.CollectionsTest do
       assert {:error, :not_found} =
                Collections.get_collection("nonexistent")
     end
+
+    test "returns a conflict error when the same name exists in multiple projects" do
+      name = "shared-name"
+      insert(:collection, name: name)
+      insert(:collection, name: name)
+
+      assert {:error, :conflict} = Collections.get_collection(name)
+    end
+  end
+
+  describe "get_collection/2" do
+    test "returns the collection for the given project" do
+      name = "shared-name"
+      %{id: project_id_1} = project_1 = insert(:project)
+      %{id: project_id_2} = project_2 = insert(:project)
+      %{id: id_1} = insert(:collection, name: name, project: project_1)
+      %{id: id_2} = insert(:collection, name: name, project: project_2)
+
+      assert {:ok, %Collection{id: ^id_1}} =
+               Collections.get_collection(project_id_1, name)
+
+      assert {:ok, %Collection{id: ^id_2}} =
+               Collections.get_collection(project_id_2, name)
+    end
+
+    test "returns not_found when the collection does not exist in the project" do
+      %{id: project_id} = insert(:project)
+
+      assert {:error, :not_found} =
+               Collections.get_collection(project_id, "nonexistent")
+    end
   end
 
   describe "create_collection/2" do
@@ -48,7 +79,7 @@ defmodule Lightning.CollectionsTest do
                     {"A collection with this name already exists",
                      [
                        constraint: :unique,
-                       constraint_name: "collections_name_index"
+                       constraint_name: "collections_project_id_name_index"
                      ]}
                 ]
               }} =

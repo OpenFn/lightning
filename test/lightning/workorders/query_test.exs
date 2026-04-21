@@ -27,7 +27,7 @@ defmodule Lightning.WorkOrders.QueryTest do
 
       Repo.update(change(first_run, state: :claimed))
 
-      assert Query.state_for(first_run) |> Repo.one() == %{state: "pending"}
+      assert Query.state_for(first_run) |> Repo.one() == %{state: "running"}
 
       Repo.update(change(first_run, state: :started))
 
@@ -56,6 +56,21 @@ defmodule Lightning.WorkOrders.QueryTest do
 
       # Running wins over pending.
       assert %{state: "running"} = Query.state_for(third_run) |> Repo.one()
+    end
+
+    test "a claimed sibling wins over an available run", context do
+      [_claimed_run, available_run] =
+        [:claimed, :available]
+        |> Enum.map(fn state ->
+          insert(:run,
+            work_order: context.work_order,
+            dataclip: context.dataclip,
+            starting_trigger: context.trigger,
+            state: state
+          )
+        end)
+
+      assert %{state: "running"} = Query.state_for(available_run) |> Repo.one()
     end
   end
 end

@@ -6841,7 +6841,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
 
     test "cannot edit a collection belonging to another project", %{
@@ -6870,7 +6870,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
 
     test "cannot delete a collection belonging to another project", %{
@@ -6899,7 +6899,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
   end
 

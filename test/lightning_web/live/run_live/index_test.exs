@@ -1071,6 +1071,48 @@ defmodule LightningWeb.RunLive.IndexTest do
     end
 
     @tag role: :editor
+    test "cancel button disappears when run is claimed while page is live",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true, running: true}
+          )
+        )
+
+      assert has_element?(view, "button#cancel-wo-#{pending_wo.id}")
+
+      run = List.first(pending_wo.runs)
+
+      {:ok, run} =
+        run |> Ecto.Changeset.change(state: :claimed) |> Repo.update()
+
+      {:ok, _wo} = WorkOrders.update_state(run)
+
+      render(view)
+
+      refute has_element?(view, "button#cancel-wo-#{pending_wo.id}")
+    end
+
+    @tag role: :editor
     test "cancel-run with nonexistent run shows error",
          %{conn: conn, project: project} do
       {:ok, view, _html} =
