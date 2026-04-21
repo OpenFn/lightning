@@ -7,6 +7,10 @@ defmodule Lightning.AdaptorIcons do
   `LightningWeb.AdaptorIconController`.
   """
 
+  alias Lightning.AdaptorData
+  alias Lightning.AdaptorData.Cache
+  alias Lightning.AdaptorRegistry
+
   require Logger
 
   @github_base "https://raw.githubusercontent.com/OpenFn/adaptors/main/packages"
@@ -60,7 +64,7 @@ defmodule Lightning.AdaptorIcons do
   """
   @spec refresh_manifest() :: {:ok, map()} | {:error, term()}
   def refresh_manifest do
-    adaptors = Lightning.AdaptorRegistry.all()
+    adaptors = AdaptorRegistry.all()
 
     manifest =
       adaptors
@@ -78,14 +82,14 @@ defmodule Lightning.AdaptorIcons do
 
     json_data = Jason.encode!(manifest)
 
-    case Lightning.AdaptorData.put(
+    case AdaptorData.put(
            "icon_manifest",
            "all",
            json_data,
            "application/json"
          ) do
       {:ok, _entry} ->
-        Lightning.AdaptorData.Cache.broadcast_invalidation([
+        Cache.broadcast_invalidation([
           "icon_manifest"
         ])
 
@@ -118,7 +122,7 @@ defmodule Lightning.AdaptorIcons do
           cache_key = "#{adaptor}-#{shape}"
 
           result =
-            case Lightning.AdaptorData.get("icon", cache_key) do
+            case AdaptorData.get("icon", cache_key) do
               {:ok, _entry} ->
                 :already_cached
 
@@ -130,7 +134,7 @@ defmodule Lightning.AdaptorIcons do
         end)
       end)
 
-    Lightning.AdaptorData.Cache.broadcast_invalidation(["icon"])
+    Cache.broadcast_invalidation(["icon"])
     stats
   end
 
@@ -166,7 +170,7 @@ defmodule Lightning.AdaptorIcons do
   defp default_client, do: Tesla.client([Tesla.Middleware.FollowRedirects])
 
   defp read_local_icon(adaptor, shape) do
-    case Lightning.AdaptorRegistry.local_repo_path() do
+    case AdaptorRegistry.local_repo_path() do
       repo when is_binary(repo) ->
         path =
           Path.join([repo, "packages", adaptor, "assets", "#{shape}.png"])
@@ -203,7 +207,7 @@ defmodule Lightning.AdaptorIcons do
   defp fetch_and_store_icon(client, adaptor, shape, cache_key) do
     case fetch_icon_bytes(adaptor, shape, client) do
       {:ok, body} ->
-        Lightning.AdaptorData.put("icon", cache_key, body, "image/png")
+        AdaptorData.put("icon", cache_key, body, "image/png")
         :ok
 
       {:error, {:http, status}} ->

@@ -21,6 +21,9 @@ defmodule Lightning.MaintenanceVerify do
   coloured line per step.
   """
 
+  alias Lightning.AdaptorData
+  alias Lightning.AdaptorData.Cache
+
   @kinds ~w(registry icon_manifest icon schema)
 
   @doc """
@@ -38,8 +41,8 @@ defmodule Lightning.MaintenanceVerify do
   @spec reset() :: :ok
   def reset do
     Enum.each(@kinds, fn kind ->
-      Lightning.AdaptorData.delete_kind(kind)
-      Lightning.AdaptorData.Cache.invalidate(kind)
+      AdaptorData.delete_kind(kind)
+      Cache.invalidate(kind)
     end)
 
     :ok
@@ -96,7 +99,7 @@ defmodule Lightning.MaintenanceVerify do
 
   defp assert_empty do
     Enum.reduce_while(@kinds, :ok, fn kind, _acc ->
-      case Lightning.AdaptorData.get_all(kind) do
+      case AdaptorData.get_all(kind) do
         [] -> {:cont, :ok}
         rows -> {:halt, {:error, "#{kind} still has #{length(rows)} rows"}}
       end
@@ -120,11 +123,11 @@ defmodule Lightning.MaintenanceVerify do
   end
 
   defp assert_registry do
-    case Lightning.AdaptorData.get("registry", "all") do
+    case AdaptorData.get("registry", "all") do
       {:ok, entry} ->
         case Jason.decode(entry.data) do
           {:ok, list} when is_list(list) and list != [] ->
-            case Lightning.AdaptorData.Cache.get("registry", "all") do
+            case Cache.get("registry", "all") do
               %{data: _} -> :ok
               other -> {:error, "cache missing registry row: #{inspect(other)}"}
             end
@@ -155,12 +158,10 @@ defmodule Lightning.MaintenanceVerify do
 
   defp assert_icons do
     with {:ok, %{data: manifest_json}} <-
-           wrap_not_found(
-             Lightning.AdaptorData.Cache.get("icon_manifest", "all")
-           ),
+           wrap_not_found(Cache.get("icon_manifest", "all")),
          {:ok, manifest} <- Jason.decode(manifest_json),
          true <- map_size(manifest) > 0 || {:error, "manifest is empty"} do
-      icons = Lightning.AdaptorData.get_all("icon")
+      icons = AdaptorData.get_all("icon")
 
       if Enum.empty?(icons) do
         {:error, "no icons were cached (all GitHub fetches errored?)"}
@@ -173,7 +174,7 @@ defmodule Lightning.MaintenanceVerify do
   defp refresh_schemas do
     case Lightning.CredentialSchemas.fetch_and_store() do
       {:ok, count} when is_integer(count) and count > 0 ->
-        Lightning.AdaptorData.Cache.broadcast_invalidation(["schema"])
+        Cache.broadcast_invalidation(["schema"])
         {:ok, "(#{count} schemas)"}
 
       {:ok, 0} ->
@@ -185,7 +186,7 @@ defmodule Lightning.MaintenanceVerify do
   end
 
   defp assert_schemas do
-    schemas = Lightning.AdaptorData.get_all("schema")
+    schemas = AdaptorData.get_all("schema")
 
     if schemas == [] do
       {:error, "no schemas in DB after fetch_and_store"}
@@ -219,9 +220,7 @@ defmodule Lightning.MaintenanceVerify do
 
   defp http_icon do
     with {:ok, %{data: manifest_json}} <-
-           wrap_not_found(
-             Lightning.AdaptorData.Cache.get("icon_manifest", "all")
-           ),
+           wrap_not_found(Cache.get("icon_manifest", "all")),
          {:ok, manifest} <- Jason.decode(manifest_json),
          [{adaptor, _} | _] <- Enum.to_list(manifest) do
       path = "/images/adaptors/#{adaptor}-square.png"

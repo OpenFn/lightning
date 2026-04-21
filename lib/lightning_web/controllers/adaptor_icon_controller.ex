@@ -8,6 +8,10 @@ defmodule LightningWeb.AdaptorIconController do
   """
   use LightningWeb, :controller
 
+  alias Lightning.AdaptorData
+  alias Lightning.AdaptorData.Cache
+  alias Lightning.AdaptorIcons
+
   require Logger
 
   @icon_max_age 604_800
@@ -25,7 +29,7 @@ defmodule LightningWeb.AdaptorIconController do
       {:ok, adaptor, shape} ->
         cache_key = "#{adaptor}-#{shape}"
 
-        case Lightning.AdaptorData.Cache.get("icon", cache_key) do
+        case Cache.get("icon", cache_key) do
           %{data: data, content_type: content_type} ->
             serve_icon(conn, data, content_type)
 
@@ -43,7 +47,7 @@ defmodule LightningWeb.AdaptorIconController do
   """
   def manifest(conn, _params) do
     data =
-      case Lightning.AdaptorData.Cache.get("icon_manifest", "all") do
+      case Cache.get("icon_manifest", "all") do
         %{data: data} -> data
         nil -> "{}"
       end
@@ -79,16 +83,16 @@ defmodule LightningWeb.AdaptorIconController do
   end
 
   defp fetch_and_serve_icon(conn, adaptor, shape, cache_key) do
-    case Lightning.AdaptorIcons.fetch_icon_bytes(adaptor, shape) do
+    case AdaptorIcons.fetch_icon_bytes(adaptor, shape) do
       {:ok, body} ->
-        Lightning.AdaptorData.put(
+        AdaptorData.put(
           "icon",
           cache_key,
           body,
           "image/png"
         )
 
-        Lightning.AdaptorData.Cache.put(
+        Cache.put(
           "icon",
           cache_key,
           %{data: body, content_type: "image/png"}

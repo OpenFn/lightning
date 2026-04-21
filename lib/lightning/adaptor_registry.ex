@@ -18,7 +18,7 @@ defmodule Lightning.AdaptorRegistry do
   **Caching**
 
   In non-local mode, adaptor data is read from the DB-backed ETS cache
-  (see `Lightning.AdaptorData.Cache`). The GenServer is still used for
+  (see `AdaptorData.Cache`). The GenServer is still used for
   local_adaptors_repo mode.
 
   The process uses `:continue` to return before the adaptors have been queried.
@@ -34,6 +34,10 @@ defmodule Lightning.AdaptorRegistry do
   """
 
   use GenServer
+
+  alias Lightning.AdaptorData
+  alias Lightning.AdaptorData.Cache
+
   require Logger
 
   @excluded_adaptors [
@@ -325,7 +329,7 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   defp get_adaptors_from_cache do
-    case Lightning.AdaptorData.Cache.get("registry", "all") do
+    case Cache.get("registry", "all") do
       %{data: data} ->
         Jason.decode!(data, keys: :atoms!)
 
@@ -345,8 +349,8 @@ defmodule Lightning.AdaptorRegistry do
 
       adaptors ->
         data = Jason.encode!(adaptors)
-        Lightning.AdaptorData.put("registry", "all", data)
-        Lightning.AdaptorData.Cache.broadcast_invalidation(["registry"])
+        AdaptorData.put("registry", "all", data)
+        Cache.broadcast_invalidation(["registry"])
         {:ok, length(adaptors)}
     end
   end
