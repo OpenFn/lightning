@@ -700,7 +700,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <label class="flex items-center gap-3 cursor-pointer">
             <.input
               type="checkbox"
-              field={@form[:use_yaml_config]}
+              field={@form[:sync_version]}
               hidden_input={false}
             />
             <span class="text-sm text-gray-700">
@@ -717,8 +717,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     """
   end
 
-  defp use_yaml_config?(form) do
-    form[:use_yaml_config].value in [true, "true"]
+  defp sync_version?(form) do
+    form[:sync_version].value in [true, "true"]
   end
 
   attr :form, :map, required: true
@@ -844,7 +844,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp config_filename(form, project_id) do
-    if use_yaml_config?(form) do
+    if sync_version?(form) do
       ProjectRepoConnection.openfn_yaml()
     else
       "openfn-#{project_id}-config.json"

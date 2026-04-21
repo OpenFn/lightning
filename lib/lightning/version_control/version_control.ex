@@ -574,7 +574,7 @@ defmodule Lightning.VersionControl do
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
       content =
-        if repo_connection.use_yaml_config do
+        if repo_connection.sync_version do
           openfn_yaml(repo_connection)
         else
           config_json(repo_connection)

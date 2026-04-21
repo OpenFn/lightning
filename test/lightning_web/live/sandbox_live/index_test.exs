@@ -2907,7 +2907,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{parent.id}/w")
     end
 
-    test "commits to GitHub using YAML config when use_yaml_config is true",
+    test "commits to GitHub using YAML config when sync_version is true",
          %{
            conn: conn,
            parent: parent,
@@ -2920,7 +2920,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           repo: "someaccount/somerepo",
           branch: "main",
           github_installation_id: "1234",
-          use_yaml_config: true
+          sync_version: true
         )
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")

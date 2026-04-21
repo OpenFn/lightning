@@ -644,7 +644,7 @@ defmodule Lightning.VersionControlTest do
       assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates GH workflow dispatch event using YAML config (use_yaml_config: true)",
+    test "creates GH workflow dispatch event using YAML config (sync_version: true)",
          %{
            commit_message: commit_message,
            repo_connection: repo_connection,
@@ -652,7 +652,7 @@ defmodule Lightning.VersionControlTest do
          } do
       yaml_connection =
         repo_connection
-        |> Ecto.Changeset.change(use_yaml_config: true)
+        |> Ecto.Changeset.change(sync_version: true)
         |> Lightning.Repo.update!()
 
       expect_create_installation_token(yaml_connection.github_installation_id)
