@@ -139,23 +139,80 @@ defmodule Lightning.AdaptorIcons do
   defp tally(acc, :skip), do: Map.update!(acc, :skipped, &(&1 + 1))
   defp tally(acc, :error), do: Map.update!(acc, :errored, &(&1 + 1))
 
-  defp fetch_and_store_icon(client, adaptor, shape, cache_key) do
+  @doc """
+  Fetches the raw PNG bytes for an adaptor icon.
+
+  When the app is in `local_adaptors_repo` mode, tries to read the
+  PNG from `<repo>/packages/<adaptor>/assets/<shape>.png` first. If
+  the file is missing (or we're not in local mode), falls back to
+  fetching from `raw.githubusercontent.com/OpenFn/adaptors`.
+
+  Returns `{:ok, body}` or `{:error, reason}` where reason is either
+  `{:http, status_code}` for a non-200 response or a transport-level
+  error tuple.
+  """
+  @spec fetch_icon_bytes(String.t(), String.t(), Tesla.Client.t() | nil) ::
+          {:ok, binary()} | {:error, {:http, non_neg_integer()} | term()}
+  def fetch_icon_bytes(adaptor, shape, client \\ nil) do
+    case read_local_icon(adaptor, shape) do
+      {:ok, body} ->
+        {:ok, body}
+
+      :not_found ->
+        github_fetch(adaptor, shape, client || default_client())
+    end
+  end
+
+  defp default_client, do: Tesla.client([Tesla.Middleware.FollowRedirects])
+
+  defp read_local_icon(adaptor, shape) do
+    case Lightning.AdaptorRegistry.local_repo_path() do
+      repo when is_binary(repo) ->
+        path =
+          Path.join([repo, "packages", adaptor, "assets", "#{shape}.png"])
+
+        case File.read(path) do
+          {:ok, body} ->
+            Logger.debug("Loaded icon #{adaptor}/#{shape} from local repo")
+            {:ok, body}
+
+          {:error, _reason} ->
+            :not_found
+        end
+
+      _ ->
+        :not_found
+    end
+  end
+
+  defp github_fetch(adaptor, shape, client) do
     url = "#{@github_base}/#{adaptor}/assets/#{shape}.png"
 
     case Tesla.get(client, url) do
       {:ok, %{status: 200, body: body}} ->
+        {:ok, body}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_and_store_icon(client, adaptor, shape, cache_key) do
+    case fetch_icon_bytes(adaptor, shape, client) do
+      {:ok, body} ->
         Lightning.AdaptorData.put("icon", cache_key, body, "image/png")
         :ok
 
-      {:ok, %{status: status}} ->
+      {:error, {:http, status}} ->
         Logger.debug("Icon not found for #{adaptor}/#{shape} (HTTP #{status})")
-
         :skip
 
       {:error, reason} ->
         Logger.warning(
-          "Failed to fetch icon #{adaptor}/#{shape}: " <>
-            "#{inspect(reason)}"
+          "Failed to fetch icon #{adaptor}/#{shape}: #{inspect(reason)}"
         )
 
         :error

@@ -172,23 +172,114 @@ defmodule Lightning.CredentialSchemas do
   end
 
   defp fetch_schema(package_name) do
-    url =
-      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
-
-    case Tesla.get(schema_client(), url) do
-      {:ok, %Tesla.Env{status: 200, body: body}} ->
-        name = String.replace(package_name, "@openfn/language-", "")
+    case read_schema_body(package_name) do
+      {:ok, body} ->
+        name = short_name(package_name)
         {:ok, name, body}
 
-      {:ok, %Tesla.Env{}} ->
+      :skipped ->
         :skipped
 
-      {:error, _reason} ->
+      :error ->
         :error
     end
   end
 
   defp fetch_package_list do
+    case local_package_list() do
+      {:ok, packages} ->
+        {:ok, packages}
+
+      :not_found ->
+        http_package_list()
+    end
+  end
+
+  defp persist_schema(dir, package_name) do
+    case read_schema_body(package_name) do
+      {:ok, body} ->
+        write_schema(dir, package_name, body)
+        :ok
+
+      :skipped ->
+        :skipped
+
+      :error ->
+        :error
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Source-of-truth helpers: try local adaptors repo first, then jsDelivr.
+  # ---------------------------------------------------------------------------
+
+  defp read_schema_body(package_name) do
+    case local_schema(package_name) do
+      {:ok, body} ->
+        {:ok, body}
+
+      :not_found ->
+        http_schema(package_name)
+    end
+  end
+
+  defp local_schema(package_name) do
+    case Lightning.AdaptorRegistry.local_repo_path() do
+      repo when is_binary(repo) ->
+        path =
+          Path.join([
+            repo,
+            "packages",
+            short_name(package_name),
+            "configuration-schema.json"
+          ])
+
+        case File.read(path) do
+          {:ok, body} ->
+            Logger.debug("Loaded schema #{package_name} from local repo")
+            {:ok, body}
+
+          {:error, _reason} ->
+            :not_found
+        end
+
+      _ ->
+        :not_found
+    end
+  end
+
+  defp http_schema(package_name) do
+    url =
+      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
+
+    case Tesla.get(schema_client(), url) do
+      {:ok, %Tesla.Env{status: 200, body: body}} -> {:ok, body}
+      {:ok, %Tesla.Env{}} -> :skipped
+      {:error, _reason} -> :error
+    end
+  end
+
+  defp local_package_list do
+    case Lightning.AdaptorRegistry.local_repo_path() do
+      repo when is_binary(repo) ->
+        packages_dir = Path.join(repo, "packages")
+
+        case File.ls(packages_dir) do
+          {:ok, dirs} ->
+            packages = Enum.map(dirs, &("@openfn/language-" <> &1))
+            Logger.debug("Using #{length(packages)} packages from local repo")
+            {:ok, packages}
+
+          {:error, _reason} ->
+            :not_found
+        end
+
+      _ ->
+        :not_found
+    end
+  end
+
+  defp http_package_list do
     case Tesla.get(npm_client(), "/-/user/openfn/package") do
       {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
         {:ok, Map.keys(body)}
@@ -204,28 +295,11 @@ defmodule Lightning.CredentialSchemas do
     end
   end
 
-  defp persist_schema(dir, package_name) do
-    url =
-      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
-
-    case Tesla.get(schema_client(), url) do
-      {:ok, %Tesla.Env{status: 200, body: body}} ->
-        write_schema(dir, package_name, body)
-        :ok
-
-      {:ok, %Tesla.Env{}} ->
-        :skipped
-
-      {:error, _reason} ->
-        :error
-    end
-  end
+  defp short_name(package_name),
+    do: String.replace(package_name, "@openfn/language-", "")
 
   defp write_schema(dir, package_name, data) do
-    filename =
-      String.replace(package_name, "@openfn/language-", "") <> ".json"
-
-    path = Path.join(dir, filename)
+    path = Path.join(dir, short_name(package_name) <> ".json")
     File.write!(path, data)
   end
 end

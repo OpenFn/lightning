@@ -1,16 +1,15 @@
 defmodule LightningWeb.AdaptorIconController do
   @moduledoc """
-  Serves adaptor icons and the icon manifest from the DB/ETS cache.
+  Serves adaptor icons and the icon manifest from the DB/Cachex cache.
 
-  Icons are fetched from GitHub on first request, then cached in DB + ETS.
-  Subsequent requests are served directly from ETS with appropriate
-  cache-control headers.
+  On cache miss, delegates to `Lightning.AdaptorIcons.fetch_icon_bytes/2`,
+  which reads from the local adaptors repo when `LOCAL_ADAPTORS` mode is
+  on and otherwise fetches from `raw.githubusercontent.com/OpenFn/adaptors`.
   """
   use LightningWeb, :controller
 
   require Logger
 
-  @github_base "https://raw.githubusercontent.com/OpenFn/adaptors/main/packages"
   @icon_max_age 604_800
   @manifest_max_age 300
 
@@ -80,10 +79,8 @@ defmodule LightningWeb.AdaptorIconController do
   end
 
   defp fetch_and_serve_icon(conn, adaptor, shape, cache_key) do
-    url = "#{@github_base}/#{adaptor}/assets/#{shape}.png"
-
-    case Tesla.get(build_client(), url) do
-      {:ok, %{status: 200, body: body}} ->
+    case Lightning.AdaptorIcons.fetch_icon_bytes(adaptor, shape) do
+      {:ok, body} ->
         Lightning.AdaptorData.put(
           "icon",
           cache_key,
@@ -99,12 +96,12 @@ defmodule LightningWeb.AdaptorIconController do
 
         serve_icon(conn, body, "image/png")
 
-      {:ok, %{status: 404}} ->
+      {:error, {:http, 404}} ->
         send_resp(conn, 404, "Not Found")
 
-      {:ok, %{status: status}} ->
+      {:error, {:http, status}} ->
         Logger.warning(
-          "GitHub returned #{status} fetching icon for #{adaptor}/#{shape}"
+          "Upstream returned #{status} fetching icon for #{adaptor}/#{shape}"
         )
 
         send_resp(conn, 502, "Bad Gateway")
@@ -117,9 +114,5 @@ defmodule LightningWeb.AdaptorIconController do
 
         send_resp(conn, 502, "Bad Gateway")
     end
-  end
-
-  defp build_client do
-    Tesla.client([Tesla.Middleware.FollowRedirects])
   end
 end

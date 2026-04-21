@@ -431,4 +431,14 @@ defmodule Lightning.AdaptorRegistry do
 
     if config[:local_adaptors_repo], do: true, else: false
   end
+
+  @doc """
+  Returns the absolute path to the local adaptors repo when configured,
+  otherwise `nil`. Callers should prefer `local_adaptors_enabled?/0`
+  when they only need a boolean check.
+  """
+  @spec local_repo_path() :: String.t() | nil
+  def local_repo_path do
+    Lightning.Config.adaptor_registry()[:local_adaptors_repo]
+  end
 end

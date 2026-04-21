@@ -136,4 +136,116 @@ defmodule Lightning.CredentialSchemasTest do
       refute File.exists?(Path.join(schemas_path, "salesforce.json"))
     end
   end
+
+  describe "fetch_and_store/0 with local adaptors repo" do
+    setup do
+      repo_dir =
+        Path.join(
+          System.tmp_dir!(),
+          "schemas_local_test_#{System.unique_integer([:positive])}"
+        )
+
+      File.mkdir_p!(repo_dir)
+
+      previous_config =
+        Application.get_env(:lightning, Lightning.AdaptorRegistry)
+
+      Application.put_env(
+        :lightning,
+        Lightning.AdaptorRegistry,
+        Keyword.put(previous_config || [], :local_adaptors_repo, repo_dir)
+      )
+
+      stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: repo_dir]
+      end)
+
+      on_exit(fn ->
+        Application.put_env(
+          :lightning,
+          Lightning.AdaptorRegistry,
+          previous_config || []
+        )
+
+        File.rm_rf(repo_dir)
+      end)
+
+      %{repo_dir: repo_dir}
+    end
+
+    test "reads schema JSON from local repo without hitting the network", %{
+      repo_dir: repo_dir
+    } do
+      http_body = ~s({"from":"local","fields":[]})
+
+      for pkg <- ["http", "salesforce"] do
+        dir = Path.join([repo_dir, "packages", pkg])
+        File.mkdir_p!(dir)
+        File.write!(Path.join(dir, "configuration-schema.json"), http_body)
+      end
+
+      # No Tesla stub — must not hit the network at all
+      assert {:ok, 2} = Lightning.CredentialSchemas.fetch_and_store()
+
+      schemas = Lightning.AdaptorData.get_all("schema")
+      assert Enum.map(schemas, & &1.key) |> Enum.sort() == ["http", "salesforce"]
+      assert Enum.all?(schemas, &(&1.data == http_body))
+    end
+
+    test "falls back to jsDelivr for packages without a local schema", %{
+      repo_dir: repo_dir
+    } do
+      # Only language-http has a local schema file
+      http_dir = Path.join([repo_dir, "packages", "http"])
+      File.mkdir_p!(http_dir)
+
+      File.write!(
+        Path.join(http_dir, "configuration-schema.json"),
+        ~s({"source":"local"})
+      )
+
+      # language-salesforce package dir exists but no schema file → fallback
+      File.mkdir_p!(Path.join([repo_dir, "packages", "salesforce"]))
+
+      # Tesla stub serves only the fallback call
+      stub(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        cond do
+          String.contains?(env.url, "language-salesforce") ->
+            {:ok, %Tesla.Env{status: 200, body: ~s({"source":"jsdelivr"})}}
+
+          true ->
+            {:ok, %Tesla.Env{status: 404, body: ""}}
+        end
+      end)
+
+      assert {:ok, 2} = Lightning.CredentialSchemas.fetch_and_store()
+
+      schemas =
+        Lightning.AdaptorData.get_all("schema")
+        |> Map.new(fn s -> {s.key, s.data} end)
+
+      assert schemas["http"] == ~s({"source":"local"})
+      assert schemas["salesforce"] == ~s({"source":"jsdelivr"})
+    end
+
+    test "skips excluded adaptors even when they exist in the local repo", %{
+      repo_dir: repo_dir
+    } do
+      # "common" is in @default_excluded_adaptors
+      for pkg <- ["http", "common", "devtools"] do
+        dir = Path.join([repo_dir, "packages", pkg])
+        File.mkdir_p!(dir)
+        File.write!(Path.join(dir, "configuration-schema.json"), ~s({}))
+      end
+
+      assert {:ok, 1} = Lightning.CredentialSchemas.fetch_and_store()
+
+      keys =
+        Lightning.AdaptorData.get_all("schema")
+        |> Enum.map(& &1.key)
+        |> Enum.sort()
+
+      assert keys == ["http"]
+    end
+  end
 end

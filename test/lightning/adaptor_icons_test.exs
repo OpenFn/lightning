@@ -42,6 +42,100 @@ defmodule Lightning.AdaptorIconsTest do
     end
   end
 
+  describe "fetch_icon_bytes/2 local-first" do
+    setup do
+      repo_dir =
+        Path.join(
+          System.tmp_dir!(),
+          "icons_local_test_#{System.unique_integer([:positive])}"
+        )
+
+      File.mkdir_p!(repo_dir)
+
+      previous_config =
+        Application.get_env(:lightning, Lightning.AdaptorRegistry)
+
+      Application.put_env(
+        :lightning,
+        Lightning.AdaptorRegistry,
+        Keyword.put(previous_config || [], :local_adaptors_repo, repo_dir)
+      )
+
+      stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: repo_dir]
+      end)
+
+      on_exit(fn ->
+        Application.put_env(
+          :lightning,
+          Lightning.AdaptorRegistry,
+          previous_config || []
+        )
+
+        File.rm_rf(repo_dir)
+      end)
+
+      %{repo_dir: repo_dir}
+    end
+
+    test "reads PNG from local repo when the file exists", %{repo_dir: repo_dir} do
+      png = <<137, 80, 78, 71, 0, 1, 2, 3>>
+      assets_dir = Path.join([repo_dir, "packages", "localadaptor", "assets"])
+      File.mkdir_p!(assets_dir)
+      File.write!(Path.join(assets_dir, "square.png"), png)
+
+      # No Tesla mock needed — must NOT make an HTTP call
+      assert {:ok, ^png} =
+               Lightning.AdaptorIcons.fetch_icon_bytes("localadaptor", "square")
+    end
+
+    test "falls back to GitHub when local file is missing", %{
+      repo_dir: _repo_dir
+    } do
+      png = <<1, 2, 3, 4>>
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url =~ "raw.githubusercontent.com/OpenFn/adaptors"
+        {:ok, %Tesla.Env{status: 200, body: png}}
+      end)
+
+      assert {:ok, ^png} =
+               Lightning.AdaptorIcons.fetch_icon_bytes("remoteadaptor", "square")
+    end
+  end
+
+  describe "fetch_icon_bytes/2 non-local mode" do
+    test "always hits GitHub" do
+      png = <<5, 6, 7>>
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url =~ "raw.githubusercontent.com/OpenFn/adaptors"
+        {:ok, %Tesla.Env{status: 200, body: png}}
+      end)
+
+      assert {:ok, ^png} =
+               Lightning.AdaptorIcons.fetch_icon_bytes("anything", "square")
+    end
+
+    test "returns {:http, status} on non-200" do
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 404, body: ""}}
+      end)
+
+      assert {:error, {:http, 404}} =
+               Lightning.AdaptorIcons.fetch_icon_bytes("missing", "square")
+    end
+
+    test "propagates transport errors" do
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} =
+               Lightning.AdaptorIcons.fetch_icon_bytes("unreachable", "square")
+    end
+  end
+
   describe "prefetch_icons/1" do
     test "skips icons already in DB" do
       Lightning.AdaptorData.put(
