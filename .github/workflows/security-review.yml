@@ -37,7 +37,7 @@ jobs:
 
       - name: Post fallback comment on failure
         if: steps.claude-review.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             // Check if there's already a sticky comment from Claude
