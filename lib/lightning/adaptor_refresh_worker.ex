@@ -76,11 +76,7 @@ defmodule Lightning.AdaptorRefreshWorker do
   end
 
   defp safe_call(fun) do
-    case fun.() do
-      :ok -> {:ok, :done}
-      {:ok, _} = ok -> ok
-      {:error, _} = error -> error
-    end
+    fun.()
   rescue
     error ->
       Logger.error("Adaptor refresh error: #{Exception.message(error)}")
