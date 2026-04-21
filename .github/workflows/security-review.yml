@@ -7,7 +7,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
   id-token: write
 
 jobs:
@@ -25,139 +24,45 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            You are performing a security review on this PR using the
-            instructions defined in .claude/agents/security-reviewer.md.
-
-            Read that file first, then follow its instructions exactly.
-            Review only the changes introduced by this PR.
-
-            Produce your findings as your final response — a structured
-            review following the output format in the agent file. Do not
-            attempt to post comments yourself; the workflow will publish
-            your final response.
+            Perform a security review on this PR using the instructions in
+            .claude/agents/security-reviewer.md. Read that file first, then
+            follow its instructions exactly. Review only the changes in this
+            PR. Produce your findings as your final response using the output
+            format from the agent file. Do not try to post comments yourself.
           claude_args: --max-turns 50 --model claude-opus-4-7
 
-      - name: Post Claude's review as sticky PR comment
-        if: always() && steps.claude-review.outputs.execution_file != ''
-        id: post-review
+      - name: Post review as sticky PR comment
+        if: always()
         uses: actions/github-script@v7
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
         with:
           script: |
             const fs = require('fs');
+            const marker = '<!-- security-review -->';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            let text = '';
             const file = process.env.EXECUTION_FILE;
-
-            if (!file || !fs.existsSync(file)) {
-              core.warning('Claude execution file not found: ' + file);
-              core.setOutput('posted', 'false');
-              return;
+            if (file && fs.existsSync(file)) {
+              const messages = JSON.parse(fs.readFileSync(file, 'utf8'));
+              const result = [...messages].reverse().find(m => m.type === 'result');
+              text = (result?.result || '').trim();
             }
 
-            let messages;
-            try {
-              messages = JSON.parse(fs.readFileSync(file, 'utf8'));
-            } catch (e) {
-              core.warning('Failed to parse Claude execution file: ' + e.message);
-              core.setOutput('posted', 'false');
-              return;
-            }
-
-            const resultMsg = [...messages].reverse().find(m => m.type === 'result');
-            const text = (resultMsg && typeof resultMsg.result === 'string')
-              ? resultMsg.result.trim()
-              : '';
-
-            if (!text || !text.includes('Security Review')) {
-              core.warning('No Security Review content found in Claude output.');
-              core.setOutput('posted', 'false');
-              return;
-            }
-
-            const marker = '<!-- security-review-sticky -->';
-            const body = marker + '\n' + text;
+            const body = `${marker}\n${text || `## Security Review\n\n⚠️ Review did not complete. See the [workflow run](${runUrl}).`}`;
 
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
-            const existing = comments.find(c =>
-              c.user.type === 'Bot' && c.body && c.body.includes(marker)
-            );
-
+            const existing = comments.find(c => c.body?.includes(marker));
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
             if (existing) {
-              await github.rest.issues.updateComment({
-                comment_id: existing.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body,
-              });
+              await github.rest.issues.updateComment({ ...params, comment_id: existing.id });
             } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body,
-              });
-            }
-            core.setOutput('posted', 'true');
-
-      - name: Post status comment if review was not posted
-        if: always() && steps.post-review.outputs.posted != 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const marker = '<!-- security-review-sticky -->';
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const existing = comments.find(c =>
-              c.user.type === 'Bot' && c.body && c.body.includes(marker)
-            );
-
-            const outcome = '${{ steps.claude-review.outcome }}';
-            const isFailure = outcome === 'failure' || outcome === 'cancelled';
-            const body = marker + '\n' + (isFailure
-              ? [
-                  '## Security Review',
-                  '',
-                  '⚠️ **Automated security review did not complete.**',
-                  '',
-                  'Claude hit the max-turns limit or encountered an error before producing findings.',
-                  'A manual review of S0 (project-scoped data access), S1 (authorization policies),',
-                  'and S2 (audit trail coverage) is recommended for this PR.',
-                  '',
-                  'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for details.',
-                ].join('\n')
-              : [
-                  '## Security Review',
-                  '',
-                  '⚠️ The review completed but no findings could be extracted from Claude\'s output.',
-                  '',
-                  'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for the raw Claude output.',
-                ].join('\n'));
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                comment_id: existing.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body,
-              });
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number });
             }
 
-      - name: Fail the check if review failed
-        if: steps.claude-review.outcome == 'failure'
-        run: |
-          echo "::error::Security review did not complete successfully. See PR comments for details."
-          exit 1
+            if (!text) core.setFailed('Security review did not produce findings.');
