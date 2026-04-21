@@ -104,7 +104,8 @@ defmodule Lightning.CredentialSchemas do
   Fetches credential schemas from npm/jsDelivr and stores them in the
   database via `Lightning.AdaptorData`.
 
-  Used by the `AdaptorRefreshWorker` for DB-backed storage.
+  Used by the `AdaptorRefreshWorker` and the Maintenance LiveView for
+  DB-backed storage.
 
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
@@ -155,19 +156,31 @@ defmodule Lightning.CredentialSchemas do
       {:error, error}
   end
 
+  defp schema_client do
+    Tesla.client([
+      Tesla.Middleware.FollowRedirects,
+      {Tesla.Middleware.Timeout, timeout: 15_000}
+    ])
+  end
+
+  defp npm_client do
+    Tesla.client([
+      {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
+      Tesla.Middleware.JSON,
+      {Tesla.Middleware.Timeout, timeout: 15_000}
+    ])
+  end
+
   defp fetch_schema(package_name) do
     url =
       "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
 
-    case HTTPoison.get(url, [],
-           hackney: [pool: :default],
-           recv_timeout: 15_000
-         ) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+    case Tesla.get(schema_client(), url) do
+      {:ok, %Tesla.Env{status: 200, body: body}} ->
         name = String.replace(package_name, "@openfn/language-", "")
         {:ok, name, body}
 
-      {:ok, %HTTPoison.Response{}} ->
+      {:ok, %Tesla.Env{}} ->
         :skipped
 
       {:error, _reason} ->
@@ -176,20 +189,17 @@ defmodule Lightning.CredentialSchemas do
   end
 
   defp fetch_package_list do
-    case HTTPoison.get(
-           "https://registry.npmjs.org/-/user/openfn/package",
-           [],
-           hackney: [pool: :default],
-           recv_timeout: 15_000
-         ) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        packages = body |> Jason.decode!() |> Map.keys()
-        {:ok, packages}
+    case Tesla.get(npm_client(), "/-/user/openfn/package") do
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
+        {:ok, Map.keys(body)}
 
-      {:ok, %HTTPoison.Response{status_code: status}} ->
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_binary(body) ->
+        {:ok, body |> Jason.decode!() |> Map.keys()}
+
+      {:ok, %Tesla.Env{status: status}} ->
         {:error, "NPM returned #{status}"}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         {:error, reason}
     end
   end
@@ -198,15 +208,12 @@ defmodule Lightning.CredentialSchemas do
     url =
       "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
 
-    case HTTPoison.get(url, [],
-           hackney: [pool: :default],
-           recv_timeout: 15_000
-         ) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+    case Tesla.get(schema_client(), url) do
+      {:ok, %Tesla.Env{status: 200, body: body}} ->
         write_schema(dir, package_name, body)
         :ok
 
-      {:ok, %HTTPoison.Response{status_code: _status}} ->
+      {:ok, %Tesla.Env{}} ->
         :skipped
 
       {:error, _reason} ->

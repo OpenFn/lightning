@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   end
 
   def run(args) do
-    HTTPoison.start()
+    Mix.Task.run("app.start")
 
     excluded = Lightning.CredentialSchemas.parse_excluded(args)
 

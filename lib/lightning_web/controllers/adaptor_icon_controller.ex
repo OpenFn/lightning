@@ -91,9 +91,10 @@ defmodule LightningWeb.AdaptorIconController do
           "image/png"
         )
 
-        :ets.insert(
-          Lightning.AdaptorData.Cache,
-          {{"icon", cache_key}, %{data: body, content_type: "image/png"}}
+        Lightning.AdaptorData.Cache.put(
+          "icon",
+          cache_key,
+          %{data: body, content_type: "image/png"}
         )
 
         serve_icon(conn, body, "image/png")

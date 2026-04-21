@@ -1,90 +1,75 @@
 defmodule Lightning.AdaptorData.Cache do
   @moduledoc """
-  ETS-backed read-through cache for adaptor data.
+  Cachex-backed read-through cache for adaptor data.
 
-  Read path: ETS -> DB -> nil
-  Write path: DB -> broadcast invalidate -> all nodes clear ETS
-  Next read on any node: ETS miss -> DB hit -> ETS populated
+  Read path: Cachex -> DB -> nil
+  Write path: DB -> broadcast invalidate -> all nodes clear Cachex
+  Next read on any node: cache miss -> DB hit -> Cachex populated
   """
 
-  @table __MODULE__
+  @cache :adaptor_data
 
-  @doc "Create the ETS table. Called from Application.start/2."
-  def init do
-    if :ets.whereis(@table) == :undefined do
-      :ets.new(@table, [
-        :set,
-        :public,
-        :named_table,
-        read_concurrency: true
-      ])
-    end
-
-    :ok
-  end
-
-  @doc "Get a cached value. Falls back to DB on miss, populates ETS."
+  @doc "Get a cached value. Falls back to DB on miss, populates cache."
   def get(kind, key) do
-    cache_key = {kind, key}
-
-    case :ets.lookup(@table, cache_key) do
-      [{^cache_key, value}] ->
-        value
-
-      [] ->
+    case Cachex.get!(@cache, {kind, key}) do
+      nil ->
         case Lightning.AdaptorData.get(kind, key) do
           {:error, :not_found} ->
             nil
 
           {:ok, entry} ->
             value = %{data: entry.data, content_type: entry.content_type}
-            :ets.insert(@table, {cache_key, value})
+            Cachex.put!(@cache, {kind, key}, value)
             value
         end
+
+      value ->
+        value
     end
   end
 
   @doc "Get all entries of a kind. Falls back to DB on miss."
   def get_all(kind) do
-    cache_key = {kind, :__all__}
+    case Cachex.get!(@cache, {kind, :__all__}) do
+      nil ->
+        case Lightning.AdaptorData.get_all(kind) do
+          [] ->
+            []
 
-    case :ets.lookup(@table, cache_key) do
-      [{^cache_key, entries}] ->
-        entries
+          entries ->
+            values =
+              Enum.map(entries, fn e ->
+                %{key: e.key, data: e.data, content_type: e.content_type}
+              end)
 
-      [] ->
-        entries = Lightning.AdaptorData.get_all(kind)
-
-        if entries != [] do
-          values =
-            Enum.map(entries, fn e ->
-              %{key: e.key, data: e.data, content_type: e.content_type}
-            end)
-
-          :ets.insert(@table, {cache_key, values})
-          values
-        else
-          []
+            Cachex.put!(@cache, {kind, :__all__}, values)
+            values
         end
+
+      cached ->
+        cached
     end
+  end
+
+  @doc "Put a value directly into the cache (does not touch the DB)."
+  def put(kind, key, value) do
+    Cachex.put!(@cache, {kind, key}, value)
+    :ok
   end
 
   @doc "Invalidate all cached entries for a kind."
   def invalidate(kind) do
-    # Delete the :__all__ key
-    :ets.delete(@table, {kind, :__all__})
-
-    # Delete individual keys for this kind
-    :ets.select_delete(@table, [
-      {{{kind, :_}, :_}, [], [true]}
-    ])
+    @cache
+    |> Cachex.keys!()
+    |> Enum.filter(&match?({^kind, _}, &1))
+    |> Enum.each(&Cachex.del!(@cache, &1))
 
     :ok
   end
 
   @doc "Invalidate all cached entries."
   def invalidate_all do
-    :ets.delete_all_objects(@table)
+    Cachex.clear!(@cache)
     :ok
   end
 

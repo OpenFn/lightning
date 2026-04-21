@@ -18,20 +18,19 @@ defmodule Lightning.AdaptorData.CacheTest do
       assert Cache.get(kind, "missing") == nil
     end
 
-    test "falls back to DB on cache miss and populates ETS" do
+    test "falls back to DB on cache miss and populates cache" do
       kind = unique_kind()
       {:ok, _entry} = AdaptorData.put(kind, "key1", "some data", "text/plain")
 
-      # First call: ETS miss, DB hit, populates ETS
+      # First call: cache miss, DB hit, populates cache
       result = Cache.get(kind, "key1")
       assert %{data: "some data", content_type: "text/plain"} = result
 
-      # Second call: ETS hit (verify by checking ETS directly)
-      assert [{_key, ^result}] =
-               :ets.lookup(Cache, {kind, "key1"})
+      # Second call: cache hit (verify by reading Cachex directly)
+      assert Cachex.get!(:adaptor_data, {kind, "key1"}) == result
     end
 
-    test "returns cached value from ETS on subsequent calls" do
+    test "returns cached value on subsequent calls" do
       kind = unique_kind()
       {:ok, _entry} = AdaptorData.put(kind, "key2", ~s({"a":1}))
 
@@ -53,7 +52,7 @@ defmodule Lightning.AdaptorData.CacheTest do
       assert Cache.get_all(kind) == []
     end
 
-    test "falls back to DB and populates ETS with mapped entries" do
+    test "falls back to DB and populates cache with mapped entries" do
       kind = unique_kind()
       {:ok, _} = AdaptorData.put(kind, "a", "data_a", "text/plain")
       {:ok, _} = AdaptorData.put(kind, "b", "data_b", "application/json")
@@ -65,8 +64,8 @@ defmodule Lightning.AdaptorData.CacheTest do
                %{key: "b", data: "data_b", content_type: "application/json"}
              ] = result
 
-      # Verify ETS was populated with the :__all__ key
-      assert [{_key, ^result}] = :ets.lookup(Cache, {kind, :__all__})
+      # Verify Cachex was populated with the :__all__ key
+      assert Cachex.get!(:adaptor_data, {kind, :__all__}) == result
     end
 
     test "returns cached list on subsequent calls" do

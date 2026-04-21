@@ -17,6 +17,8 @@ defmodule Lightning.AdaptorIcons do
   all icons from GitHub.
 
   Returns `{:ok, manifest}` immediately after the manifest is stored.
+  Use `refresh_sync/0` when you need to wait for the prefetch to finish
+  (e.g. smoke tests).
   """
   @spec refresh() :: {:ok, map()} | {:error, term()}
   def refresh do
@@ -24,6 +26,25 @@ defmodule Lightning.AdaptorIcons do
       {:ok, manifest} ->
         Task.start(fn -> prefetch_icons(manifest) end)
         {:ok, manifest}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Synchronous version of `refresh/0`. Refreshes the manifest and waits
+  for every icon to finish prefetching before returning.
+
+  Returns `{:ok, %{manifest: manifest, prefetched: count, skipped: count,
+  errored: count}}` or `{:error, reason}` if the manifest step fails.
+  """
+  @spec refresh_sync() :: {:ok, map()} | {:error, term()}
+  def refresh_sync do
+    case refresh_manifest() do
+      {:ok, manifest} ->
+        stats = prefetch_icons(manifest)
+        {:ok, Map.put(stats, :manifest, manifest)}
 
       error ->
         error
@@ -78,29 +99,45 @@ defmodule Lightning.AdaptorIcons do
   @doc """
   Prefetches icon PNGs for all adaptors and shapes. Skips icons that
   are already cached in the DB.
+
+  Returns `%{prefetched: integer, skipped: integer, errored: integer}`.
   """
-  @spec prefetch_icons(map()) :: :ok
+  @spec prefetch_icons(map()) :: %{
+          prefetched: non_neg_integer(),
+          skipped: non_neg_integer(),
+          errored: non_neg_integer()
+        }
   def prefetch_icons(manifest) do
     client = Tesla.client([Tesla.Middleware.FollowRedirects])
 
-    manifest
-    |> Enum.each(fn {adaptor, _sources} ->
-      Enum.each(@shapes, fn shape ->
-        cache_key = "#{adaptor}-#{shape}"
+    initial = %{prefetched: 0, skipped: 0, errored: 0}
 
-        case Lightning.AdaptorData.get("icon", cache_key) do
-          {:ok, _entry} ->
-            :ok
+    stats =
+      Enum.reduce(manifest, initial, fn {adaptor, _sources}, acc ->
+        Enum.reduce(@shapes, acc, fn shape, acc ->
+          cache_key = "#{adaptor}-#{shape}"
 
-          {:error, :not_found} ->
-            fetch_and_store_icon(client, adaptor, shape, cache_key)
-        end
+          result =
+            case Lightning.AdaptorData.get("icon", cache_key) do
+              {:ok, _entry} ->
+                :already_cached
+
+              {:error, :not_found} ->
+                fetch_and_store_icon(client, adaptor, shape, cache_key)
+            end
+
+          tally(acc, result)
+        end)
       end)
-    end)
 
     Lightning.AdaptorData.Cache.broadcast_invalidation(["icon"])
-    :ok
+    stats
   end
+
+  defp tally(acc, :ok), do: Map.update!(acc, :prefetched, &(&1 + 1))
+  defp tally(acc, :already_cached), do: Map.update!(acc, :skipped, &(&1 + 1))
+  defp tally(acc, :skip), do: Map.update!(acc, :skipped, &(&1 + 1))
+  defp tally(acc, :error), do: Map.update!(acc, :errored, &(&1 + 1))
 
   defp fetch_and_store_icon(client, adaptor, shape, cache_key) do
     url = "#{@github_base}/#{adaptor}/assets/#{shape}.png"

@@ -67,7 +67,7 @@ defmodule Lightning.DataCase do
         shared: not tags[:async]
       )
 
-    # Seed the ETS cache directly with minimal adaptor registry data so that
+    # Seed the Cachex cache directly with minimal adaptor registry data so
     # AdaptorRegistry.all() never falls through to a DB query from the
     # GenServer process (which would fail sandbox ownership checks in async tests).
     registry_json =
@@ -106,10 +106,10 @@ defmodule Lightning.DataCase do
         }
       ])
 
-    :ets.insert(
-      Lightning.AdaptorData.Cache,
-      {{"registry", "all"},
-       %{data: registry_json, content_type: "application/json"}}
+    Lightning.AdaptorData.Cache.put(
+      "registry",
+      "all",
+      %{data: registry_json, content_type: "application/json"}
     )
 
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)

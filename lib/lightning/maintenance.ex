@@ -171,19 +171,29 @@ defmodule Lightning.Maintenance do
   end
 
   defp fetch_openfn_packages! do
-    case HTTPoison.get(
-           "https://registry.npmjs.org/-/user/openfn/package",
-           [],
-           hackney: [pool: :default],
-           recv_timeout: 15_000
-         ) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+    client =
+      Tesla.client(
+        [
+          {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
+          Tesla.Middleware.JSON,
+          {Tesla.Middleware.Timeout, timeout: 15_000}
+        ],
+        adapter()
+      )
+
+    case Tesla.get(client, "/-/user/openfn/package") do
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
         body
-        |> Jason.decode!()
-        |> Enum.map(fn {name, _} -> name end)
+        |> Map.keys()
         |> Enum.filter(&Regex.match?(~r/@openfn\/language-\w+/, &1))
 
-      {:ok, %HTTPoison.Response{status_code: status_code}} ->
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_binary(body) ->
+        body
+        |> Jason.decode!()
+        |> Map.keys()
+        |> Enum.filter(&Regex.match?(~r/@openfn\/language-\w+/, &1))
+
+      {:ok, %Tesla.Env{status: status_code}} ->
         raise "Unable to access openfn user packages. status=#{status_code}"
 
       {:error, _} ->
@@ -195,8 +205,17 @@ defmodule Lightning.Maintenance do
     url =
       "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
 
-    case HTTPoison.get(url, [], hackney: [pool: :default], recv_timeout: 15_000) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+    client =
+      Tesla.client(
+        [
+          Tesla.Middleware.FollowRedirects,
+          {Tesla.Middleware.Timeout, timeout: 15_000}
+        ],
+        adapter()
+      )
+
+    case Tesla.get(client, url) do
+      {:ok, %Tesla.Env{status: 200, body: body}} ->
         path =
           Path.join(
             dir,
@@ -205,7 +224,7 @@ defmodule Lightning.Maintenance do
 
         File.write!(path, body)
 
-      {:ok, %HTTPoison.Response{status_code: status_code}} ->
+      {:ok, %Tesla.Env{status: status_code}} ->
         Logger.warning(
           "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
         )

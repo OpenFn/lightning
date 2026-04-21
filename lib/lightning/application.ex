@@ -49,11 +49,20 @@ defmodule Lightning.Application do
        |> Keyword.merge(Application.get_env(:lightning, :adaptor_service, []))}
 
     auth_providers_cache_childspec =
-      {Cachex,
-       name: :auth_providers,
-       warmers: [
-         warmer(module: Lightning.AuthProviders.CacheWarmer)
-       ]}
+      Supervisor.child_spec(
+        {Cachex,
+         name: :auth_providers,
+         warmers: [
+           warmer(module: Lightning.AuthProviders.CacheWarmer)
+         ]},
+        id: :auth_providers_cache
+      )
+
+    adaptor_data_cache_childspec =
+      Supervisor.child_spec(
+        {Cachex, name: :adaptor_data},
+        id: :adaptor_data_cache
+      )
 
     :telemetry.attach_many(
       "oban-errors",
@@ -74,8 +83,6 @@ defmodule Lightning.Application do
     )
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
-
-    Lightning.AdaptorData.Cache.init()
 
     topologies =
       if System.get_env("K8S_HEADLESS_SERVICE") do
@@ -143,6 +150,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        adaptor_data_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
