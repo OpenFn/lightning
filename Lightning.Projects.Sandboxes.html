@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-D726A49F.js"></script>
+    <script defer src="dist/sidebar_items-04E8EC31.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -113,7 +113,7 @@ Lightning
     <section id="moduledoc">
 <p>Manage <strong>sandbox projects</strong> - isolated copies of existing projects for safe experimentation.</p><p>Sandboxes allow developers to test changes, experiment with workflows, and collaborate
 without affecting production projects. They share credentials with their parent but
-maintain separate workflow execution environments.</p><h2 id="module-what-gets-copied-to-a-sandbox" class="section-heading"><a href="#module-what-gets-copied-to-a-sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">What gets copied to a sandbox</span></h2><ul><li><strong>Project settings</strong>: retention policies, concurrency limits, MFA requirements</li><li><strong>Workflow structure</strong>: jobs, triggers (disabled), edges, and node positions</li><li><strong>Credentials</strong>: references to parent credentials (no secrets duplicated)</li><li><strong>Keychain metadata</strong>: cloned for jobs that use them</li><li><strong>Version history</strong>: latest workflow version per workflow</li><li><strong>Optional dataclips</strong>: named clips of specific types can be selectively copied</li></ul><h2 id="module-operations" class="section-heading"><a href="#module-operations" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Operations</span></h2><ul><li><a href="#provision/3"><code class="inline">provision/3</code></a> - Create a new sandbox from a parent project</li><li><a href="#update_sandbox/3"><code class="inline">update_sandbox/3</code></a> - Update sandbox name, color, or environment</li><li><a href="#delete_sandbox/2"><code class="inline">delete_sandbox/2</code></a> - Delete a sandbox and all its descendants</li></ul><h2 id="module-authorization" class="section-heading"><a href="#module-authorization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization</span></h2><ul><li><strong>Provisioning</strong>: Requires <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on the parent project, or superuser</li><li><strong>Merge</strong>: Requires <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on the target project, or superuser</li><li><strong>Updates/Deletion</strong>: Requires <code class="inline">:owner</code> or <code class="inline">:admin</code> role on the sandbox itself,<pre><code class="makeup elixir" translate="no"><span class="w">                  </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:owner</span><span class="err">`</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:admin</span><span class="err">`</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">root</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">superuser</span></code></pre></li></ul><h2 id="module-transaction-safety" class="section-heading"><a href="#module-transaction-safety" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Transaction safety</span></h2><p>All operations are performed within database transactions to ensure consistency.
+maintain separate workflow execution environments.</p><h2 id="module-what-gets-copied-to-a-sandbox" class="section-heading"><a href="#module-what-gets-copied-to-a-sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">What gets copied to a sandbox</span></h2><ul><li><strong>Project settings</strong>: retention policies, concurrency limits, MFA requirements</li><li><strong>Workflow structure</strong>: jobs, triggers (disabled), edges, and node positions</li><li><strong>Credentials</strong>: references to parent credentials (no secrets duplicated)</li><li><strong>Keychain metadata</strong>: cloned for jobs that use them</li><li><strong>Version history</strong>: latest workflow version per workflow</li><li><strong>Optional dataclips</strong>: named clips of specific types can be selectively copied</li></ul><h2 id="module-operations" class="section-heading"><a href="#module-operations" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Operations</span></h2><ul><li><a href="#provision/3"><code class="inline">provision/3</code></a> - Create a new sandbox from a parent project</li><li><a href="#merge/4"><code class="inline">merge/4</code></a> - Merge a sandbox into its target (workflows + collections)</li><li><a href="#update_sandbox/3"><code class="inline">update_sandbox/3</code></a> - Update sandbox name, color, or environment</li><li><a href="#delete_sandbox/2"><code class="inline">delete_sandbox/2</code></a> - Delete a sandbox and all its descendants</li></ul><h2 id="module-authorization" class="section-heading"><a href="#module-authorization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization</span></h2><ul><li><strong>Provisioning</strong>: Requires <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on the parent project, or superuser</li><li><strong>Merge</strong>: Requires <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on the target project, or superuser</li><li><strong>Updates/Deletion</strong>: Requires <code class="inline">:owner</code> or <code class="inline">:admin</code> role on the sandbox itself,<pre><code class="makeup elixir" translate="no"><span class="w">                  </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:owner</span><span class="err">`</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:admin</span><span class="err">`</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">root</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">superuser</span></code></pre></li></ul><h2 id="module-transaction-safety" class="section-heading"><a href="#module-transaction-safety" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Transaction safety</span></h2><p>All operations are performed within database transactions to ensure consistency.
 Failed operations leave no partial state behind.</p>
     </section>
 
@@ -159,11 +159,31 @@ Failed operations leave no partial state behind.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#merge/4" data-no-tooltip="" translate="no">merge(source, target, actor, opts \\ %{})</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Merges a sandbox into its target project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#provision/3" data-no-tooltip="" translate="no">provision(parent, actor, attrs)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Creates a new sandbox project by cloning from a parent project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#sync_collections/2" data-no-tooltip="" translate="no">sync_collections(source, target)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Synchronises collection names from a sandbox to its merge target.</p></div>
 
     </div>
 
@@ -201,7 +221,7 @@ Failed operations leave no partial state behind.</p>
       <h1 class="signature" translate="no">provision_attrs()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L73" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -252,7 +272,7 @@ of types <code class="inline">:global</code>, <code class="inline">:saved_input<
       <h1 class="signature" translate="no">delete_sandbox(sandbox, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L192" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L238" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -273,7 +293,44 @@ of types <code class="inline">:global</code>, <code class="inline">:saved_input<
       </div>
 
 <p>Deletes a sandbox and all its descendant projects.</p><p><strong>Warning</strong>: This permanently removes the sandbox and any nested sandboxes
-within it. This action cannot be undone.</p><h2 id="delete_sandbox/2-parameters" class="section-heading"><a href="#delete_sandbox/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to delete (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the deletion (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li></ul><h2 id="delete_sandbox/2-returns" class="section-heading"><a href="#delete_sandbox/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, deleted_sandbox}</code> - Successfully deleted sandbox and descendants</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, reason}</code> - Database or other deletion error</li></ul><h2 id="delete_sandbox/2-example" class="section-heading"><a href="#delete_sandbox/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="0634308217-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">deleted</span><span class="p" data-group-id="0634308217-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">delete_sandbox</span><span class="p" data-group-id="0634308217-2">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="0634308217-2">)</span></code></pre>
+within it. This action cannot be undone.</p><h2 id="delete_sandbox/2-parameters" class="section-heading"><a href="#delete_sandbox/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to delete (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the deletion (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li></ul><h2 id="delete_sandbox/2-returns" class="section-heading"><a href="#delete_sandbox/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, deleted_sandbox}</code> - Successfully deleted sandbox and descendants</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, reason}</code> - Database or other deletion error</li></ul><h2 id="delete_sandbox/2-example" class="section-heading"><a href="#delete_sandbox/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7381779699-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">deleted</span><span class="p" data-group-id="7381779699-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">delete_sandbox</span><span class="p" data-group-id="7381779699-2">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7381779699-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="merge/4">
+
+    <span id="merge/3"></span>
+
+  <div class="detail-header">
+    <a href="#merge/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">merge(source, target, actor, opts \\ %{})</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L151" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> merge(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) :: {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Merges a sandbox into its target project.</p><p>Imports the sandbox's workflow configuration into the target via the
+provisioner and synchronises collection names. Runs inside a single
+transaction. Collection data is never copied.</p><p>Callers must authorise the merge before calling (e.g. <code class="inline">:merge_sandbox</code>).</p><h2 id="merge/4-parameters" class="section-heading"><a href="#merge/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source</code> - The sandbox project being merged</li><li><code class="inline">target</code> - The project receiving the merge</li><li><code class="inline">actor</code> - The user performing the merge</li><li><code class="inline">opts</code> - Merge options (<code class="inline">:selected_workflow_ids</code>, <code class="inline">:deleted_target_workflow_ids</code>)</li></ul><h2 id="merge/4-returns" class="section-heading"><a href="#merge/4-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_target}</code> - Merge succeeded</li><li><code class="inline">{:error, reason}</code> - Workflow merge or collection sync failed</li></ul>
   </section>
 </section>
 <section class="detail" id="provision/3">
@@ -286,7 +343,7 @@ within it. This action cannot be undone.</p><h2 id="delete_sandbox/2-parameters"
       <h1 class="signature" translate="no">provision(parent, actor, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L116" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -308,11 +365,44 @@ within it. This action cannot be undone.</p><h2 id="delete_sandbox/2-parameters"
       </div>
 
 <p>Creates a new sandbox project by cloning from a parent project.</p><p>The creator becomes the sandbox owner, and all workflow triggers are disabled.
-Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> - Project to clone from</li><li><code class="inline">actor</code> - User creating the sandbox (needs <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on parent)</li><li><code class="inline">attrs</code> - Creation attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a>)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, sandbox_project}</code> - Successfully created sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on parent</li><li><code class="inline">{:error, changeset}</code> - Validation or database error</li></ul><h2 id="provision/3-example" class="section-heading"><a href="#provision/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="8637044200-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">sandbox</span><span class="p" data-group-id="8637044200-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">provision</span><span class="p" data-group-id="8637044200-2">(</span><span class="n">parent_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8637044200-3">%{</span><span class="w">
+Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> - Project to clone from</li><li><code class="inline">actor</code> - User creating the sandbox (needs <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on parent)</li><li><code class="inline">attrs</code> - Creation attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a>)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, sandbox_project}</code> - Successfully created sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on parent</li><li><code class="inline">{:error, changeset}</code> - Validation or database error</li></ul><h2 id="provision/3-example" class="section-heading"><a href="#provision/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1642144481-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">sandbox</span><span class="p" data-group-id="1642144481-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">provision</span><span class="p" data-group-id="1642144481-2">(</span><span class="n">parent_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1642144481-3">%{</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-environment&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#336699&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">collaborators</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8637044200-4">[</span><span class="p" data-group-id="8637044200-5">%{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">other_user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:editor</span><span class="p" data-group-id="8637044200-5">}</span><span class="p" data-group-id="8637044200-4">]</span><span class="w">
-</span><span class="p" data-group-id="8637044200-3">}</span><span class="p" data-group-id="8637044200-2">)</span></code></pre>
+  </span><span class="ss">collaborators</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1642144481-4">[</span><span class="p" data-group-id="1642144481-5">%{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">other_user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:editor</span><span class="p" data-group-id="1642144481-5">}</span><span class="p" data-group-id="1642144481-4">]</span><span class="w">
+</span><span class="p" data-group-id="1642144481-3">}</span><span class="p" data-group-id="1642144481-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="sync_collections/2">
+
+  <div class="detail-header">
+    <a href="#sync_collections/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">sync_collections(source, target)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L637" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> sync_collections(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
+  {:ok, %{created: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), deleted: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}
+  | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Synchronises collection names from a sandbox to its merge target.</p><p>Names only in the source are created empty in the target; names only in
+the target are deleted along with their items. Collection data is never
+copied. The combined byte-size of deleted collections is reported via
+<code class="inline">CollectionHook.handle_delete/2</code> for usage accounting.</p><p>Runs inside a single transaction.</p>
   </section>
 </section>
 <section class="detail" id="update_sandbox/3">
@@ -325,7 +415,7 @@ Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="p
       <h1 class="signature" translate="no">update_sandbox(sandbox, actor, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L193" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

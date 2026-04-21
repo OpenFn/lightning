@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-D726A49F.js"></script>
+    <script defer src="dist/sidebar_items-04E8EC31.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -137,7 +137,7 @@ ahead of time in the case of new records.</p>
 
       </div>
 
-        <div class="summary-synopsis"><p>Import a project.</p></div>
+        <div class="summary-synopsis"><p>Import a project document into the database.</p></div>
 
     </div>
 
@@ -195,7 +195,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">import_document(project, user_or_repo_connection, data, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L66" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -220,7 +220,13 @@ ahead of time in the case of new records.</p>
 
       </div>
 
-<p>Import a project.</p><h2 id="import_document/4-options" class="section-heading"><a href="#import_document/4-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:allow_stale</code> - If true, allows stale operations during import (useful for
+<p>Import a project document into the database.</p><p>Upserts the project and the associations carried in the document
+(workflows, project credentials, collections) inside a single transaction,
+then fires audit, version-bump, and snapshot side effects.</p><p>Generic pipeline shared by YAML provisioning, CLI deploys, GitHub syncs,
+and sandbox merges. It only acts on what the document contains —
+sandbox-specific behaviours (credential cloning, dataclip copying,
+collection name sync) are composed around this call in
+<a href="Lightning.Projects.Sandboxes.html"><code class="inline">Lightning.Projects.Sandboxes</code></a>.</p><h2 id="import_document/4-options" class="section-heading"><a href="#import_document/4-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:allow_stale</code> - If true, allows stale operations during import (useful for
 merge operations where concurrent modifications are expected). Defaults to false.</li></ul>
   </section>
 </section>
@@ -234,7 +240,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">parse_document(project, data)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L241" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L251" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -265,7 +271,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">preload_dependencies(project, snapshots \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L384" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L394" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -296,7 +302,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">validate_extraneous_params(changeset, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L581" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L591" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
