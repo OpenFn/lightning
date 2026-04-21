@@ -122,9 +122,16 @@ defmodule Lightning.Jobs do
   Gets a single job.
 
   Returns `{:ok, job}` if found, `{:error, :not_found}` otherwise.
+
+  ## Options
+
+    * `:include` - list of associations to preload (default: `[]`)
+
   """
-  def get_job(id) do
-    case Repo.get(Job, id) |> Repo.preload([:workflow]) do
+  def get_job(id, opts \\ []) do
+    preloads = Keyword.get(opts, :include, [])
+
+    case Repo.get(Job, id) |> Repo.preload(preloads) do
       nil -> {:error, :not_found}
       job -> {:ok, job}
     end

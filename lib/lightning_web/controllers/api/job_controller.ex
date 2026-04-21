@@ -17,6 +17,36 @@ defmodule LightningWeb.API.JobController do
       GET /api/jobs
       GET /api/jobs?project_id=a1b2c3d4-...&page=1&page_size=20
       GET /api/jobs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+
+  ## Sample curl requests
+
+  List all jobs:
+
+  ```bash
+  curl http://localhost:4000/api/jobs \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Get a single job:
+
+  ```bash
+  curl http://localhost:4000/api/jobs/$JOB_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Filter by project:
+
+  ```bash
+  curl "http://localhost:4000/api/jobs?project_id=$PROJECT_ID" \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Nested route — jobs for a specific project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID/jobs \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
   """
   use LightningWeb, :controller
 
@@ -115,14 +145,13 @@ defmodule LightningWeb.API.JobController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with job <- Jobs.get_job!(id),
-         job_with_project <- Lightning.Repo.preload(job, workflow: :project),
+    with {:ok, job} <- Jobs.get_job(id, include: [workflow: :project]),
          :ok <-
            ProjectUsers
            |> Permissions.can(
              :access_project,
              conn.assigns.current_resource,
-             job_with_project.workflow.project
+             job.workflow.project
            ) do
       render(conn, "show.json", job: job, conn: conn)
     end

@@ -27,6 +27,9 @@ and this project adheres to
   is ambiguous across projects, the API returns 409 with guidance to add
   `?project_id=`. Existing unscoped calls keep working for unambiguous names.
   [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Ability to filter work orders and runs via REST API by UUIDs or status; added
+  example curl requests to REST API docs.
+  [#4552](https://github.com/OpenFn/lightning/issues/4552)
 
 ### Changed
 
