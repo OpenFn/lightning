@@ -55,6 +55,8 @@ defmodule Lightning.Workflows.Trigger do
 
     field :delete, :boolean, virtual: true
     field :has_auth_method, :boolean, virtual: true
+    field :webhook_response_success_code, :integer, virtual: true, default: 200
+    field :webhook_response_error_code, :integer, virtual: true, default: 400
 
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",

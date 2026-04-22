@@ -210,6 +210,7 @@ defmodule LightningWeb.RunChannel do
         reply_with(socket, {:error, changeset})
 
       {:ok, step} ->
+        maybe_broadcast_custom_webhook_response(socket.assigns.run, payload)
         reply_with(socket, {:ok, %{step_id: step.id}})
     end
   end
@@ -306,6 +307,32 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
+  defp maybe_broadcast_custom_webhook_response(run, payload) do
+    case payload["webhook_response"] do
+      nil ->
+        :ok
+
+      webhook_response ->
+        run_with_preloads = Repo.preload(run, work_order: [:trigger])
+        trigger = run_with_preloads.work_order.trigger
+
+        if trigger && trigger.type == :webhook &&
+             trigger.webhook_reply == :custom do
+          topic =
+            "work_order:#{run_with_preloads.work_order.id}:webhook_response"
+
+          status_code = webhook_response["code"] || 200
+          body = webhook_response["body"] || %{}
+
+          Phoenix.PubSub.broadcast(
+            Lightning.PubSub,
+            topic,
+            {:webhook_response, status_code, body}
+          )
+        end
+    end
+  end
+
   defp maybe_broadcast_webhook_response(run, payload) do
     work_order = run.work_order
     trigger = work_order.trigger
@@ -313,10 +340,7 @@ defmodule LightningWeb.RunChannel do
     if trigger && trigger.type == :webhook &&
          trigger.webhook_reply == :after_completion do
       topic = "work_order:#{work_order.id}:webhook_response"
-
-      # TODO - Later allow workflow authors to customize the status code
-      # and body of the reply.
-      status_code = determine_status_code(run.state)
+      status_code = determine_status_code(run.state, trigger)
 
       body = %{
         data: payload["final_state"],
@@ -340,18 +364,11 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
-  # TODO - decide how we should respond... do we use HTTP codes for run states?
-  defp determine_status_code(state) do
-    case state do
-      :success -> 201
-      :failed -> 201
-      :crashed -> 201
-      :exception -> 201
-      :killed -> 201
-      :cancelled -> 201
-      _other -> 201
-    end
-  end
+  defp determine_status_code(:success, trigger),
+    do: trigger.webhook_response_success_code
+
+  defp determine_status_code(_state, trigger),
+    do: trigger.webhook_response_error_code
 
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(samples: samples, basic_auth: basic_auth)
