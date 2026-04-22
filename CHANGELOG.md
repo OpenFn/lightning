@@ -33,6 +33,8 @@ and this project adheres to
 
 ### Changed
 
+- Worker plan payload now includes `project_id` so workers can scope callbacks
+  (e.g. the collections API) to the project that owns the run.
 - bumped local worker to 1.24.0
 
 ### Fixed
