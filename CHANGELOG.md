@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add support for sync v2 protocol
+  [#4523](https://github.com/OpenFn/lightning/issues/4523)
 - Support collections in sandboxes. Collection names are now scoped per project,
   empty collections are cloned into a sandbox on provision, and collection names
   (not data) are synchronised when a sandbox is merged back into its parent. The
@@ -25,11 +27,15 @@ and this project adheres to
   is ambiguous across projects, the API returns 409 with guidance to add
   `?project_id=`. Existing unscoped calls keep working for unambiguous names.
   [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Ability to filter work orders and runs via REST API by UUIDs or status; added
+  example curl requests to REST API docs.
+  [#4552](https://github.com/OpenFn/lightning/issues/4552)
 
 ### Changed
 
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
+- bumped local worker to 1.24.0
 
 ### Fixed
 
