@@ -360,7 +360,7 @@ describe('ManualRunPanel', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -560,7 +560,7 @@ describe('ManualRunPanel', () => {
 
     // Run button should be enabled
     await waitFor(() => {
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -608,7 +608,7 @@ describe('ManualRunPanel', () => {
       ).toBeInTheDocument();
 
       // Should show footer with Run button
-      expect(screen.getByText('Run')).toBeInTheDocument();
+      expect(screen.getByText('Run From Here')).toBeInTheDocument();
     });
 
     test('embedded mode shows only content, no header or footer', async () => {
@@ -635,7 +635,7 @@ describe('ManualRunPanel', () => {
       ).not.toBeInTheDocument();
 
       // Should NOT show footer with Run button
-      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run From Here')).not.toBeInTheDocument();
     });
 
     test('embedded mode with trigger context', async () => {
@@ -735,7 +735,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -751,7 +751,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -802,7 +802,7 @@ describe('ManualRunPanel', () => {
 
       // Run button should still be disabled due to lack of permission
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -840,11 +840,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Verify save was called first, then run
       await waitFor(() => {
@@ -871,10 +871,10 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Save should be called
       await waitFor(() => {
@@ -910,10 +910,10 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Save should be called
       await waitFor(() => {
@@ -954,11 +954,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Verify saveWorkflow was called with { silent: true }
       await waitFor(() => {
@@ -994,11 +994,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button - this will start the save
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Button should show "Processing" while submitting
       // Use helper for CSS Grid layout (invisible spacers render same text)
@@ -1050,7 +1050,7 @@ describe('ManualRunPanel', () => {
 
       // Button should be enabled with selected dataclip
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
 
@@ -1073,7 +1073,7 @@ describe('ManualRunPanel', () => {
 
       // Button should now be disabled
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -1133,7 +1133,7 @@ describe('ManualRunPanel', () => {
       expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
 
       // Run button should still be disabled
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).toBeDisabled();
     });
 
@@ -1178,7 +1178,7 @@ describe('ManualRunPanel', () => {
 
       // Run button should be enabled on Empty tab
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -1248,10 +1248,10 @@ describe('ManualRunPanel', () => {
 
       // Footer should be rendered with Run button
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
 
       // The footer button passes showKeyboardShortcuts=true
@@ -1271,7 +1271,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
 
@@ -1309,11 +1309,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for component to load with retryable state
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Footer button should be rendered
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).toBeInTheDocument();
 
       // showKeyboardShortcuts=true is passed, enabling tooltip for main button
@@ -1336,7 +1336,7 @@ describe('ManualRunPanel', () => {
       });
 
       // Footer should NOT be rendered in embedded mode
-      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run From Here')).not.toBeInTheDocument();
 
       // No tooltip concerns because RunRetryButton is not rendered in footer
     });
@@ -1361,7 +1361,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -1384,7 +1384,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
