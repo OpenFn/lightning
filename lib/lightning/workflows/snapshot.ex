@@ -64,6 +64,9 @@ defmodule Lightning.Workflows.Snapshot do
         values: [:before_start, :after_completion, :custom],
         default: :before_start
 
+      field :webhook_response_success_code, :integer
+      field :webhook_response_error_code, :integer
+
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
         on_replace: :delete
