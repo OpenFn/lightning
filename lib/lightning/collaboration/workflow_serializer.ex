@@ -228,7 +228,10 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "id" => trigger.id,
           "type" => trigger.type |> to_string(),
           "webhook_reply" =>
-            trigger.webhook_reply && to_string(trigger.webhook_reply)
+            trigger.webhook_reply && to_string(trigger.webhook_reply),
+          "webhook_response_success_code" =>
+            trigger.webhook_response_success_code,
+          "webhook_response_error_code" => trigger.webhook_response_error_code
         })
 
       Yex.Array.push(triggers_array, trigger_map)
@@ -274,9 +277,11 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       trigger
       |> Map.take(
-        ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply kafka_configuration)
+        ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply
+           kafka_configuration webhook_response_success_code webhook_response_error_code)
       )
       |> normalize_kafka_configuration()
+      |> normalize_response_codes()
     end)
   end
 
@@ -298,6 +303,19 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   end
 
   defp normalize_kafka_configuration(trigger), do: trigger
+
+  defp normalize_response_codes(trigger) do
+    trigger
+    |> normalize_integer_field("webhook_response_success_code")
+    |> normalize_integer_field("webhook_response_error_code")
+  end
+
+  defp normalize_integer_field(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, value} when is_float(value) -> Map.put(map, key, trunc(value))
+      _ -> map
+    end
+  end
 
   defp extract_positions(positions_map) do
     Yex.Map.to_json(positions_map)

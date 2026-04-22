@@ -55,8 +55,8 @@ defmodule Lightning.Workflows.Trigger do
 
     field :delete, :boolean, virtual: true
     field :has_auth_method, :boolean, virtual: true
-    field :webhook_response_success_code, :integer, virtual: true, default: 200
-    field :webhook_response_error_code, :integer, virtual: true, default: 400
+    field :webhook_response_success_code, :integer
+    field :webhook_response_error_code, :integer
 
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
@@ -106,7 +106,9 @@ defmodule Lightning.Workflows.Trigger do
       :cron_expression,
       :cron_cursor_job_id,
       :has_auth_method,
-      :webhook_reply
+      :webhook_reply,
+      :webhook_response_success_code,
+      :webhook_response_error_code
     ])
   end
 
@@ -143,6 +145,7 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
+        |> maybe_reset_response_codes()
 
       :cron ->
         changeset
@@ -150,6 +153,8 @@ defmodule Lightning.Workflows.Trigger do
         |> validate_cron()
         |> put_change(:kafka_configuration, nil)
         |> put_change(:webhook_reply, nil)
+        |> put_change(:webhook_response_success_code, nil)
+        |> put_change(:webhook_response_error_code, nil)
 
       :kafka ->
         changeset
@@ -157,9 +162,25 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
+        |> put_change(:webhook_response_success_code, nil)
+        |> put_change(:webhook_response_error_code, nil)
 
       nil ->
         changeset
+    end
+  end
+
+  defp maybe_reset_response_codes(changeset) do
+    case fetch_field!(changeset, :webhook_reply) do
+      :after_completion ->
+        changeset
+        |> put_default(:webhook_response_success_code, 200)
+        |> put_default(:webhook_response_error_code, 400)
+
+      _ ->
+        changeset
+        |> put_change(:webhook_response_success_code, nil)
+        |> put_change(:webhook_response_error_code, nil)
     end
   end
 

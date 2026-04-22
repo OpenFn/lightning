@@ -398,6 +398,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   e.target.value as
                                     | 'before_start'
                                     | 'after_completion'
+                                    | 'custom'
                                 )
                               }
                               onBlur={field.handleBlur}
@@ -418,14 +419,17 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 Async (default)
                               </option>
                               <option value="after_completion">Sync</option>
+                              <option value="custom">Custom (from job)</option>
                             </select>
                             <p
                               id={`${field.name}-description`}
                               className="mt-1 text-xs text-slate-500"
                             >
                               {field.state.value === 'after_completion'
-                                ? 'Responds with the final output state after the run completes. (Note that depending on your queue size and the duration of the workflow itself, this could take a long time.)'
-                                : 'Responds immediately with the enqueued work order ID.'}
+                                ? 'Responds with the final output state after the run completes. You can customise the HTTP status codes returned below.'
+                                : field.state.value === 'custom'
+                                  ? 'The job code itself sends the HTTP response using the send() function.'
+                                  : 'Responds immediately with the enqueued work order ID.'}
                             </p>
                             {field.state.meta.errors.map(error => (
                               <p
@@ -437,6 +441,137 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             ))}
                           </div>
                         )}
+                      </form.Field>
+
+                      {/* Conditional response code fields for after_completion */}
+                      <form.Field name="webhook_reply">
+                        {replyField => {
+                          if (replyField.state.value !== 'after_completion') {
+                            return null;
+                          }
+
+                          return (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                              {/* Success Status Code */}
+                              <form.Field
+                                name="webhook_response_success_code"
+                                validators={{
+                                  onChange: createZodValidator(TriggerSchema),
+                                }}
+                              >
+                                {field => (
+                                  <div>
+                                    <label
+                                      htmlFor={field.name}
+                                      className="block text-sm font-medium text-slate-800 mb-1"
+                                    >
+                                      Success status code
+                                    </label>
+                                    <input
+                                      id={field.name}
+                                      type="number"
+                                      min="100"
+                                      max="599"
+                                      value={
+                                        (field.state.value as number | null) ??
+                                        ''
+                                      }
+                                      onChange={e =>
+                                        field.handleChange(
+                                          e.target.value === ''
+                                            ? null
+                                            : parseInt(e.target.value, 10)
+                                        )
+                                      }
+                                      onBlur={field.handleBlur}
+                                      disabled={isReadOnly}
+                                      className={cn(
+                                        'block w-full px-3 py-2',
+                                        'border rounded-md text-sm',
+                                        field.state.meta.errors.length > 0
+                                          ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                          : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500',
+                                        'focus:outline-none focus:ring-1',
+                                        'disabled:opacity-50 disabled:cursor-not-allowed'
+                                      )}
+                                    />
+                                    <p className="mt-1 text-xs text-slate-500">
+                                      HTTP status code returned when the run
+                                      succeeds (default: 200)
+                                    </p>
+                                    {field.state.meta.errors.map(error => (
+                                      <p
+                                        key={error}
+                                        className="mt-1 text-xs text-red-600"
+                                      >
+                                        {error}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </form.Field>
+
+                              {/* Error Status Code */}
+                              <form.Field
+                                name="webhook_response_error_code"
+                                validators={{
+                                  onChange: createZodValidator(TriggerSchema),
+                                }}
+                              >
+                                {field => (
+                                  <div>
+                                    <label
+                                      htmlFor={field.name}
+                                      className="block text-sm font-medium text-slate-800 mb-1"
+                                    >
+                                      Error status code
+                                    </label>
+                                    <input
+                                      id={field.name}
+                                      type="number"
+                                      min="100"
+                                      max="599"
+                                      value={
+                                        (field.state.value as number | null) ??
+                                        ''
+                                      }
+                                      onChange={e =>
+                                        field.handleChange(
+                                          e.target.value === ''
+                                            ? null
+                                            : parseInt(e.target.value, 10)
+                                        )
+                                      }
+                                      onBlur={field.handleBlur}
+                                      disabled={isReadOnly}
+                                      className={cn(
+                                        'block w-full px-3 py-2',
+                                        'border rounded-md text-sm',
+                                        field.state.meta.errors.length > 0
+                                          ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                          : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500',
+                                        'focus:outline-none focus:ring-1',
+                                        'disabled:opacity-50 disabled:cursor-not-allowed'
+                                      )}
+                                    />
+                                    <p className="mt-1 text-xs text-slate-500">
+                                      HTTP status code returned when the run
+                                      fails (default: 400)
+                                    </p>
+                                    {field.state.meta.errors.map(error => (
+                                      <p
+                                        key={error}
+                                        className="mt-1 text-xs text-red-600"
+                                      >
+                                        {error}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </form.Field>
+                            </div>
+                          );
+                        }}
                       </form.Field>
                     </div>
                   </div>

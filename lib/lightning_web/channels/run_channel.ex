@@ -365,10 +365,10 @@ defmodule LightningWeb.RunChannel do
   end
 
   defp determine_status_code(:success, trigger),
-    do: trigger.webhook_response_success_code
+    do: trigger.webhook_response_success_code || 200
 
   defp determine_status_code(_state, trigger),
-    do: trigger.webhook_response_error_code
+    do: trigger.webhook_response_error_code || 400
 
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(samples: samples, basic_auth: basic_auth)

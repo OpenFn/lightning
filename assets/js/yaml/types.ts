@@ -29,6 +29,8 @@ export type StateWebhookTrigger = {
   enabled: boolean;
   type: 'webhook';
   webhook_reply: 'before_start' | 'after_completion' | 'custom' | null;
+  webhook_response_success_code?: number | null;
+  webhook_response_error_code?: number | null;
 };
 
 export type StateKafkaTrigger = {
