@@ -412,31 +412,23 @@ defmodule LightningWeb.LayoutComponents do
     assigns = assign(assigns, :picker_projects, all_projects)
 
     ~H"""
-    <%= if assigns[:current_user] do %>
-      <div
-        id="global-project-picker"
-        phx-hook="ReactComponent"
-        data-react-name="ProjectPicker"
-        data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
-        data-projects={
-          Jason.encode!(
-            Enum.map(@picker_projects, fn p ->
-              %{
-                id: p.id,
-                name: p.name,
-                color: p.color,
-                parent_id: p.parent_id
-              }
-            end)
-          )
-        }
-        data-current-project-id={
-          if assigns[:project], do: assigns[:project].id, else: nil
-        }
-      >
-      </div>
-    <% end %>
+    <div
+      :if={assigns[:current_user]}
+      id="global-project-picker"
+      phx-hook="ReactComponent"
+      data-react-name="ProjectPicker"
+      data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
+      data-projects={encode_picker_projects(@picker_projects)}
+      data-current-project-id={assigns[:project] && assigns[:project].id}
+    >
+    </div>
     """
+  end
+
+  defp encode_picker_projects(projects) do
+    projects
+    |> Enum.map(&Map.take(&1, [:id, :name, :color, :parent_id]))
+    |> Jason.encode!()
   end
 
   attr :title, :string, required: true

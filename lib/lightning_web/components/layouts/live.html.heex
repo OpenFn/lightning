@@ -106,7 +106,8 @@
       />
     </div>
   </div>
-  <%= unless assigns[:is_first_setup] do %>
-    <LayoutComponents.global_project_picker {assigns} />
-  <% end %>
+  <LayoutComponents.global_project_picker
+    :if={!assigns[:is_first_setup]}
+    {assigns}
+  />
 </main>
