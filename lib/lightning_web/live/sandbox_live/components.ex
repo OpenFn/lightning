@@ -170,7 +170,6 @@ defmodule LightningWeb.SandboxLive.Components do
             autocomplete="off"
             required
           />
-          <.errors field={@confirm_form[:name]} />
 
           <.modal_footer>
             <.button
