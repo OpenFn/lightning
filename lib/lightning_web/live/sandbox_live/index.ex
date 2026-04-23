@@ -202,24 +202,19 @@ defmodule LightningWeb.SandboxLive.Index do
 
           target_id = default_target && default_target.value
 
-          diverged_workflows =
-            get_diverged_workflows(
-              sandbox,
-              target_id,
-              socket.assigns.workspace_projects
-            )
-
           target_project =
             Enum.find(
               socket.assigns.workspace_projects,
               fn project -> project.id == target_id end
             )
 
+          {sandbox, target_project} =
+            preload_merge_projects(sandbox, target_project)
+
+          diverged_workflows = get_diverged_workflows(sandbox, target_project)
+
           sandbox_changed_workflows =
-            get_changed_workflows(
-              sandbox,
-              target_project
-            )
+            get_changed_workflows(sandbox, target_project)
 
           source_workflows =
             build_merge_workflow_list(
@@ -294,28 +289,22 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
-    diverged_workflows =
-      get_diverged_workflows(
-        socket.assigns.merge_source_sandbox,
-        target_id,
-        socket.assigns.workspace_projects
-      )
-
     target_project =
       Enum.find(socket.assigns.workspace_projects, fn project ->
         project.id == target_id
       end)
 
-    sandbox_changed_workflows =
-      get_changed_workflows(
-        socket.assigns.merge_source_sandbox,
-        target_project
-      )
+    {sandbox, target_project} =
+      preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
+
+    diverged_workflows = get_diverged_workflows(sandbox, target_project)
+
+    sandbox_changed_workflows = get_changed_workflows(sandbox, target_project)
 
     source_workflows =
       if target_project do
         build_merge_workflow_list(
-          socket.assigns.merge_source_sandbox,
+          sandbox,
           diverged_workflows,
           sandbox_changed_workflows,
           target_project
@@ -810,20 +799,22 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp get_diverged_workflows(source, target_id, workspace_projects) do
-    with true <- !is_nil(target_id),
-         target_project when not is_nil(target_project) <-
-           Enum.find(workspace_projects, &(&1.id == target_id)) do
-      MergeProjects.diverged_workflows(source, target_project)
-    else
-      _ -> []
-    end
+  defp preload_merge_projects(source, nil),
+    do: {Repo.preload(source, :workflows), nil}
+
+  defp preload_merge_projects(source, target),
+    do: {Repo.preload(source, :workflows), Repo.preload(target, :workflows)}
+
+  defp get_diverged_workflows(_source, nil), do: []
+
+  defp get_diverged_workflows(source, target_project) do
+    MergeProjects.diverged_workflows(source, target_project)
   end
 
+  defp get_changed_workflows(_source, nil), do: []
+
   defp get_changed_workflows(source, target_project) do
-    if target_project,
-      do: MergeProjects.diverged_workflows(target_project, source),
-      else: []
+    MergeProjects.diverged_workflows(target_project, source)
   end
 
   defp perform_merge(
