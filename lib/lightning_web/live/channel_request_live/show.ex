@@ -140,11 +140,20 @@ defmodule LightningWeb.ChannelRequestLive.Show do
         </div>
         <div>
           <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Auth
+            Client auth
           </dt>
           <dd class="text-secondary-900 flex items-center gap-1">
             <.icon name="hero-shield-check" class="h-4 w-4 text-secondary-400" />
-            {Helpers.format_auth_type(@channel_request.client_auth_type)}
+            {Helpers.format_client_auth(@channel_request)}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+            Destination auth
+          </dt>
+          <dd class="text-secondary-900 flex items-center gap-1">
+            <.icon name="hero-key" class="h-4 w-4 text-secondary-400" />
+            {Helpers.format_destination_auth(@channel_request)}
           </dd>
         </div>
         <div>

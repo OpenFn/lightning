@@ -1125,6 +1125,100 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
+  describe "destination auth tracking" do
+    test "persists destination_credential_id on successful proxy with destination auth",
+         %{bypass: bypass} do
+      channel =
+        create_destination_auth_channel(bypass, "http", %{
+          "access_token" => "tok-123"
+        })
+
+      project_credential_id =
+        channel
+        |> Lightning.Repo.preload(destination_auth_method: :project_credential)
+        |> get_in([
+          Access.key(:destination_auth_method),
+          Access.key(:project_credential_id)
+        ])
+
+      Bypass.expect_once(bypass, "GET", "/dest-track", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/dest-track")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == project_credential_id
+      refute is_nil(project_credential_id)
+    end
+
+    test "persists destination_credential_id even when credential resolution fails",
+         %{bypass: _bypass} do
+      # Channel with a destination auth method but credential missing auth
+      # fields — destination auth resolution fails, but we still know which
+      # credential was configured.
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "bad-cred", user: user)
+        |> with_body(%{body: %{"baseUrl" => "https://example.com"}})
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://localhost:9999",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == project_credential.id
+      assert request.state == :error
+    end
+
+    test "destination_credential_id is nil when no destination auth configured",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/no-dest-auth", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/no-dest-auth")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == nil
+    end
+  end
+
   describe "collect_timing integration" do
     test "persists per-direction timing after successful proxy", %{
       bypass: bypass,

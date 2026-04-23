@@ -454,7 +454,9 @@ defmodule Lightning.Channels do
   Returns `nil` if the request doesn't exist, belongs to a different project,
   or the ID is not a valid UUID.
 
-  Preloads: `channel_events`, `channel`, `channel_snapshot`.
+  Preloads: `channel_events`, `channel`, `channel_snapshot`,
+  `client_webhook_auth_method`, and `destination_credential` (with its
+  `credential` for display).
   """
   @spec get_channel_request_for_project(Ecto.UUID.t(), String.t()) ::
           ChannelRequest.t() | nil
@@ -465,7 +467,13 @@ defmodule Lightning.Channels do
           join: c in Channel,
           on: cr.channel_id == c.id,
           where: cr.id == ^uuid and c.project_id == ^project_id,
-          preload: [:channel_events, :channel, :channel_snapshot]
+          preload: [
+            :channel_events,
+            :channel,
+            :channel_snapshot,
+            :client_webhook_auth_method,
+            destination_credential: :credential
+          ]
         )
         |> Repo.one()
 

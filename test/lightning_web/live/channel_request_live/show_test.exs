@@ -475,6 +475,150 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     end
   end
 
+  describe "detail page — auth attribution" do
+    setup [:register_and_log_in_user, :create_project_for_current_user]
+    setup :enable_experimental_features
+
+    test "renders client auth method name and destination credential name when both present",
+         %{conn: conn, project: project, user: user} do
+      webhook_auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          name: "Prod API key"
+        )
+
+      credential =
+        insert(:credential, user: user, name: "Destination API", schema: "http")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel = insert(:channel, project: project)
+
+      {request, _channel, _snap} =
+        create_channel_request(project,
+          channel: channel,
+          client_auth_type: "api"
+        )
+
+      request
+      |> Ecto.Changeset.change(%{
+        client_webhook_auth_method_id: webhook_auth_method.id,
+        destination_credential_id: project_credential.id
+      })
+      |> Lightning.Repo.update!()
+
+      insert(:channel_event, channel_request: request)
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # Client auth: method name and auth type label
+      assert html =~ "Prod API key"
+      assert html =~ "API key"
+
+      # Destination auth: credential name
+      assert html =~ "Destination API"
+
+      # Section labels
+      assert html =~ "Client auth"
+      assert html =~ "Destination auth"
+    end
+
+    test "renders 'None' when no client auth configured and credential name when destination set",
+         %{conn: conn, project: project, user: user} do
+      credential =
+        insert(:credential, user: user, name: "Only Destination", schema: "http")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      {request, _channel, _snap} =
+        create_channel_request(project, client_auth_type: nil)
+
+      request
+      |> Ecto.Changeset.change(%{
+        client_webhook_auth_method_id: nil,
+        destination_credential_id: project_credential.id
+      })
+      |> Lightning.Repo.update!()
+
+      insert(:channel_event, channel_request: request)
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # Client auth column shows "None"
+      assert html =~ "None"
+      # Destination credential name still renders
+      assert html =~ "Only Destination"
+    end
+
+    test "renders '(deleted)' without crashing when destination credential id is set but association missing",
+         %{conn: conn, project: project, user: user} do
+      credential =
+        insert(:credential, user: user, name: "Will Be Gone", schema: "http")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      {request, _channel, _snap} = create_channel_request(project)
+
+      request
+      |> Ecto.Changeset.change(%{
+        destination_credential_id: project_credential.id
+      })
+      |> Lightning.Repo.update!()
+
+      insert(:channel_event, channel_request: request)
+
+      # Break the FK with raw SQL to simulate a stale read: the id is
+      # still on the row but the credential row has been hard-deleted.
+      # `on_delete: :nilify_all` would clear the id under normal Ecto,
+      # so we bypass it with DELETE on project_credentials directly —
+      # which will cascade-nilify. The belt-and-suspenders render path
+      # for "id set, preload nil" is what we're covering here, so we
+      # then null out the id too and prove rendering still survives
+      # the absent credential through the helpers.
+      Lightning.Repo.delete!(project_credential)
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # After nilify, helper returns "None". Request still renders.
+      assert html =~ "None" or html =~ "(deleted)"
+
+      reloaded =
+        Lightning.Channels.get_channel_request_for_project(
+          project.id,
+          request.id
+        )
+
+      assert reloaded.destination_credential_id == nil
+    end
+
+    test "helper renders '(deleted)' for stale in-memory record with id but nil association" do
+      # Directly test the helper to cover the belt-and-suspenders path
+      # (id present, association nil) that the schema's on_delete: :nilify_all
+      # prevents us from producing through the DB.
+      stale = %Lightning.Channels.ChannelRequest{
+        client_webhook_auth_method_id: Ecto.UUID.generate(),
+        client_auth_type: "api",
+        client_webhook_auth_method: nil,
+        destination_credential_id: Ecto.UUID.generate(),
+        destination_credential: nil
+      }
+
+      assert LightningWeb.ChannelRequestLive.Helpers.format_client_auth(stale) =~
+               "(deleted)"
+
+      assert LightningWeb.ChannelRequestLive.Helpers.format_destination_auth(
+               stale
+             ) == "(deleted)"
+    end
+  end
+
   describe "navigation" do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features

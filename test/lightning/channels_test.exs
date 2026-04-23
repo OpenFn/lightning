@@ -461,6 +461,17 @@ defmodule Lightning.ChannelsTest do
   describe "get_channel_request_for_project/2" do
     test "returns channel request with preloads when project matches" do
       project = insert(:project)
+      user = insert(:user)
+
+      webhook_auth_method =
+        insert(:webhook_auth_method, project: project, auth_type: :api)
+
+      credential =
+        insert(:credential, user: user, name: "dest-cred", schema: "http")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
       channel = insert(:channel, project: project)
       {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
 
@@ -469,7 +480,10 @@ defmodule Lightning.ChannelsTest do
           channel: channel,
           channel_snapshot: snapshot,
           state: :success,
-          started_at: DateTime.utc_now()
+          started_at: DateTime.utc_now(),
+          client_webhook_auth_method_id: webhook_auth_method.id,
+          client_auth_type: "api",
+          destination_credential_id: project_credential.id
         )
 
       event =
@@ -487,6 +501,11 @@ defmodule Lightning.ChannelsTest do
 
       assert length(result.channel_events) == 1
       assert hd(result.channel_events).id == event.id
+
+      # Client and destination auth tracking are preloaded (no N+1).
+      assert result.client_webhook_auth_method.id == webhook_auth_method.id
+      assert result.destination_credential.id == project_credential.id
+      assert result.destination_credential.credential.name == "dest-cred"
     end
 
     test "returns nil when channel request belongs to a different project" do
