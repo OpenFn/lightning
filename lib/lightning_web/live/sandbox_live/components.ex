@@ -221,7 +221,7 @@ defmodule LightningWeb.SandboxLive.Components do
     >
       <:title>
         <div class="flex items-start justify-between">
-          <span class="font-bold">Merge</span>
+          <span class="font-bold">Merge Sandbox</span>
           <button
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -258,7 +258,7 @@ defmodule LightningWeb.SandboxLive.Components do
             </div>
           </div>
 
-          <p class="text-gray-700">
+          <p class="text-xs text-gray-700">
             This will overwrite the selected workflows in
             <strong>
               {get_selected_target_label(
@@ -266,22 +266,24 @@ defmodule LightningWeb.SandboxLive.Components do
                 @merge_form[:target_id].value
               )}
             </strong>
-            with the versions from <strong>{@sandbox.name}</strong>,
+            with the versions from sandbox <strong>{@sandbox.name}</strong>,
             then delete <strong>{@sandbox.name}</strong>
+            <%= if @descendant_count == 0 do %>
+              .
+            <% end %>
             <%= if @descendant_count == 1 do %>
-              and its child sandbox <strong>{List.first(@descendants).name}</strong>
+              and its child sandbox <strong>{List.first(@descendants).name}.</strong>
             <% end %>
             <%= if @descendant_count > 1 do %>
-              and its {@descendant_count} child sandboxes
-            <% end %>.
-            Any changes in
+              and its {@descendant_count} child sandboxes.
+            <% end %>
+            Any conflicting changes in
             <strong>
               {get_selected_target_label(
                 @target_options,
                 @merge_form[:target_id].value
               )}
             </strong>
-            that conflict with <strong>{@sandbox.name}</strong>
             will be lost.
           </p>
 
@@ -377,11 +379,10 @@ defmodule LightningWeb.SandboxLive.Components do
           <Common.alert
             id="merge-beta-warning"
             type="danger"
-            header="This action cannot be undone"
+            header="After merging this sandbox will be deleted"
           >
             <:message>
-              Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.
-              Collection names will be synced: new collections are added (empty) to the target, and collections missing from the sandbox are removed from the target. Collection data is never merged.
+              This action cannot be undone.
             </:message>
           </Common.alert>
 
