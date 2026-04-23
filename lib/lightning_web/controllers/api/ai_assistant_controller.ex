@@ -98,7 +98,9 @@ defmodule LightningWeb.API.AiAssistantController do
     alias Lightning.Repo
     import Ecto.Query
 
-    case Jobs.get_job(job_id) do
+    case Jobs.get_job(job_id,
+           include: [workflow: [project: :project_users]]
+         ) do
       {:ok, job} ->
         check_job_access(job, user)
 
@@ -125,13 +127,7 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp check_job_access(job, user) do
-    alias Lightning.Repo
-
-    workflow =
-      job.workflow
-      |> Repo.preload(project: [:project_users])
-
-    check_workflow_access(workflow, user)
+    check_workflow_access(job.workflow, user)
   end
 
   defp check_unsaved_job_access(nil, _user) do

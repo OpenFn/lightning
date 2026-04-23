@@ -6,9 +6,12 @@ defmodule LightningWeb.SandboxLive.Index do
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias LightningWeb.SandboxLive.Components
+
+  require Logger
 
   defmodule MergeWorkflow do
     defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
@@ -784,16 +787,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{}
       end
 
-    result =
-      source
-      |> MergeProjects.merge_project(target, opts)
-      |> then(
-        &Lightning.Projects.Provisioner.import_document(target, actor, &1,
-          allow_stale: true
-        )
-      )
-
-    case result do
+    case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->
         maybe_commit_to_github(target, "Merged sandbox #{source.name}")
         success
@@ -876,5 +870,6 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp format_merge_error(%{text: text}), do: text
+  defp format_merge_error(reason) when is_binary(reason), do: reason
   defp format_merge_error(reason), do: "Failed to merge: #{inspect(reason)}"
 end

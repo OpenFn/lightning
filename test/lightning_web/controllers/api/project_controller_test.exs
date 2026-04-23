@@ -80,6 +80,11 @@ defmodule LightningWeb.API.ProjectControllerTest do
   describe "show" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
+    test "returns 404 for non-existent project", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 404)
+    end
+
     test "with token for other project", %{conn: conn} do
       other_project = insert(:project)
       conn = get(conn, ~p"/api/projects/#{other_project.id}")

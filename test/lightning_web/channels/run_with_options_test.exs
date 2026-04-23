@@ -38,6 +38,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",
@@ -87,6 +88,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",

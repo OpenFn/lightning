@@ -60,7 +60,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with :ok <- can_create_collection(socket),
-         {:ok, collection} <- Collections.get_collection(collection_name),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
          :ok <- can_access_collection(socket, collection) do
       changeset =
         Collection.form_changeset(collection, %{raw_name: collection.name})
@@ -80,7 +81,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with :ok <- can_create_collection(socket),
-         {:ok, collection} <- Collections.get_collection(collection_name),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
          :ok <- can_access_collection(socket, collection) do
       {:noreply, assign(socket, collection: collection, action: :delete)}
     end
@@ -91,7 +93,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"collection" => collection_name},
         socket
       ) do
-    with {:ok, collection} <- Collections.get_collection(collection_name),
+    with {:ok, collection} <- fetch_project_collection(socket, collection_name),
          :ok <- can_access_collection(socket, collection) do
       preview_json =
         case Collections.get_all(collection, limit: 1, cursor: nil) do
@@ -128,7 +130,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with :ok <- can_create_collection(socket),
-         {:ok, collection} <- Collections.get_collection(collection_name),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
          :ok <- can_access_collection(socket, collection) do
       case Collections.delete_collection(collection.id) do
         {:ok, _collection} ->
@@ -210,6 +213,22 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
        socket
        |> put_flash(:error, "You are not authorized to perform this action")
        |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp fetch_project_collection(socket, collection_name) do
+    case Collections.get_collection(
+           socket.assigns.project.id,
+           collection_name
+         ) do
+      {:ok, collection} ->
+        {:ok, collection}
+
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Collection not found")
+         |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -296,7 +315,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
             </.button>
             <a
               id={"download-collection-#{collection.id}-button"}
-              href={~p"/download/collections/#{collection.name}"}
+              href={
+                ~p"/download/collections/#{collection.project_id}/#{collection.name}"
+              }
               class="table-action"
             >
               Download
