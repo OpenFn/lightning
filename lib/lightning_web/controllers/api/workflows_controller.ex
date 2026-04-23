@@ -76,6 +76,8 @@ defmodule LightningWeb.API.WorkflowsController do
     -d '{"name":"Updated Name"}'
   ```
   """
+  @moduledoc docout: true
+
   use LightningWeb, :controller
 
   import Lightning.Workflows.WorkflowUsageLimiter,

@@ -48,6 +48,7 @@ defmodule LightningWeb.API.JobController do
     -H "Authorization: Bearer $TOKEN"
   ```
   """
+  @moduledoc docout: true
   use LightningWeb, :controller
 
   alias Lightning.Jobs
