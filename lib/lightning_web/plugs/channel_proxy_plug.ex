@@ -44,6 +44,7 @@ defmodule LightningWeb.ChannelProxyPlug do
       :forward_path,
       :client_identity,
       :auth_header,
+      :destination_credential_id,
       client_auth_types: []
     ]
   end
@@ -93,7 +94,8 @@ defmodule LightningWeb.ChannelProxyPlug do
         forward_path: build_forward_path(rest),
         client_identity: get_client_identity(conn),
         auth_header: auth_header,
-        client_auth_types: client_auth_types
+        client_auth_types: client_auth_types,
+        destination_credential_id: destination_credential_id(channel)
       }
 
       conn
@@ -107,6 +109,14 @@ defmodule LightningWeb.ChannelProxyPlug do
         error_response(conn, :internal_server_error, "Internal Server Error")
     end
   end
+
+  defp destination_credential_id(%{
+         destination_auth_method: %{project_credential_id: id}
+       })
+       when is_binary(id),
+       do: id
+
+  defp destination_credential_id(_channel), do: nil
 
   defp authenticate_client(_conn, %{client_webhook_auth_methods: []}) do
     {:ok, nil}
@@ -153,7 +163,8 @@ defmodule LightningWeb.ChannelProxyPlug do
         started_at: DateTime.utc_now(),
         request_path: req.forward_path,
         client_identity: req.client_identity,
-        query_string: conn.query_string
+        query_string: conn.query_string,
+        destination_credential_id: req.destination_credential_id
       }
       |> put_auth_method(matched_auth)
 
@@ -280,7 +291,8 @@ defmodule LightningWeb.ChannelProxyPlug do
             |> Plug.Conn.get_resp_header("x-request-id")
             |> List.first(),
           forward_path: conn.request_path,
-          client_identity: get_client_identity(conn)
+          client_identity: get_client_identity(conn),
+          destination_credential_id: destination_credential_id(channel)
         }
 
         record_credential_error(conn, req, error_message)
@@ -304,6 +316,7 @@ defmodule LightningWeb.ChannelProxyPlug do
              channel_snapshot_id: req.snapshot.id,
              request_id: req.request_id,
              client_identity: req.client_identity,
+             destination_credential_id: req.destination_credential_id,
              state: :error,
              started_at: now,
              completed_at: now

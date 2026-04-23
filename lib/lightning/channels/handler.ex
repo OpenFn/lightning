@@ -63,6 +63,7 @@ defmodule Lightning.Channels.Handler do
       client_webhook_auth_method_id:
         Map.get(state, :client_webhook_auth_method_id),
       client_auth_type: Map.get(state, :client_auth_type),
+      destination_credential_id: Map.get(state, :destination_credential_id),
       state: :pending,
       started_at: state.started_at
     }
