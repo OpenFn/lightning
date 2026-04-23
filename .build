@@ -296,6 +296,7 @@ LightningWeb.Components.Modal.html
 LightningWeb.Components.NewInputs.html
 LightningWeb.Components.Oauth.html
 LightningWeb.Components.Pills.html
+LightningWeb.Components.SandboxSettingsBanner.html
 LightningWeb.Components.Table.html
 LightningWeb.Components.Viewers.html
 LightningWeb.CredentialLive.CredentialFormComponent.html
@@ -444,8 +445,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-03BCE902.js
-dist/sidebar_items-70D49C48.js
+dist/search_data-D682C1CC.js
+dist/sidebar_items-1E02931B.js
 index.html
 provisioning.html
 readme.html
