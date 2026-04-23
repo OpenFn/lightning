@@ -352,11 +352,18 @@ defmodule LightningWeb.SandboxLive.Components do
                 />
                 <span class="flex-1 text-sm text-gray-800">{wf.name}</span>
                 <span
+                  :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                  class="flex items-center gap-1 text-xs text-green-600"
+                  title="This workflow has been modified in the sandbox"
+                >
+                  Changed
+                </span>
+                <span
                   :if={wf.is_diverged}
                   class="flex items-center gap-1 text-xs text-amber-600"
-                  title="This workflow has been modified in the target since this sandbox was created"
+                  title="This workflow was modified in the target project - this change will be lost"
                 >
-                  Target modified
+                  ⚠️ <strong>Diverged</strong>
                 </span>
                 <span
                   :if={wf.is_new}
@@ -387,7 +394,14 @@ defmodule LightningWeb.SandboxLive.Components do
           </Common.alert>
 
           <.modal_footer>
-            <.button theme="primary" type="submit">
+            <.button
+              theme="primary"
+              type="submit"
+              disabled={MapSet.size(@selected_workflow_ids) == 0}
+              tooltip={
+                MapSet.size(@selected_workflow_ids) == 0 && "No workflows selected"
+              }
+            >
               Merge
             </.button>
             <.button
