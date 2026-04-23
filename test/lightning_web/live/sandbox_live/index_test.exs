@@ -2728,12 +2728,60 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       beta_data = Enum.find(assigns.merge_source_workflows, &(&1.name == "Beta"))
 
-      assert %{is_diverged: true, is_new: false} = alpha_data
-      assert %{is_diverged: false, is_new: true} = beta_data
+      assert %{is_diverged: true, is_new: false, is_changed: true} = alpha_data
+      assert %{is_diverged: false, is_new: true, is_changed: true} = beta_data
 
-      # All workflows selected by default and IDs match
+      # Changed workflows selected by default and IDs match
       assert MapSet.member?(assigns.merge_selected_workflow_ids, alpha_data.id)
       assert MapSet.member?(assigns.merge_selected_workflow_ids, beta_data.id)
+    end
+
+    test "unchanged workflows are not pre-selected by default",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      shared_hash = "cccccc222222"
+
+      parent_wf = insert(:workflow, project: parent, name: "Unchanged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(parent_wf, shared_hash, "app")
+
+      sandbox_wf = insert(:workflow, project: sandbox, name: "Unchanged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(sandbox_wf, shared_hash, "app")
+
+      changed_sandbox_wf = insert(:workflow, project: sandbox, name: "Changed")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          changed_sandbox_wf,
+          "dddddd333333",
+          "app"
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      unchanged_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Unchanged"))
+
+      changed_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Changed"))
+
+      assert %{is_changed: false} = unchanged_data
+      assert %{is_changed: true} = changed_data
+
+      refute MapSet.member?(
+               assigns.merge_selected_workflow_ids,
+               unchanged_data.id
+             )
+
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, changed_data.id)
     end
 
     test "target-only workflows appear in list with is_deleted flag and badge",
@@ -2805,6 +2853,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> render_click()
 
       assert html =~ "Diverged"
+      assert html =~ "Changed"
       assert html =~ "New"
       assert html =~ "Diverged Flow"
       assert html =~ "New Flow"
