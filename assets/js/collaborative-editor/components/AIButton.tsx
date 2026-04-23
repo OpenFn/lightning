@@ -3,7 +3,7 @@ import { cn } from '#/utils/cn';
 import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
 
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface AIButtonProps {
   onClick?: () => void;

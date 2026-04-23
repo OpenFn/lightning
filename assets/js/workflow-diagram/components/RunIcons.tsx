@@ -1,4 +1,4 @@
-import { Tooltip } from '../../collaborative-editor/components/Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 
 const STATE_ICONS = {

@@ -1,7 +1,7 @@
 import { Handle, type NodeProps } from '@xyflow/react';
 import React, { memo } from 'react';
 
-import { Tooltip } from '../../collaborative-editor/components/Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 import { duration } from '../../utils/duration';
 import formatDate from '../../utils/formatDate';

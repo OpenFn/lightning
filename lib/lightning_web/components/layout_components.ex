@@ -355,6 +355,7 @@ defmodule LightningWeb.LayoutComponents do
       <div
         id="breadcrumb-project-picker-trigger"
         phx-hook="ReactComponent"
+        phx-update="ignore"
         data-react-name="ProjectPickerButton"
         data-react-file={~p"/assets/js/project-picker/ProjectPickerButton.js"}
         data-label={@label}
@@ -396,39 +397,104 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   @doc """
-  Renders the global project picker React component.
+  Renders the global project picker: mounts the generic `Picker` React
+  component with project-specific content.
 
-  This is the single source of truth for the Cmd+P project picker modal,
-  used by both the `live` and `settings` layouts.
+  Used by both the `live` and `settings` layouts. Items are pre-computed
+  server-side — including each target URL — so the picker JS has no
+  routing knowledge.
   """
   def global_project_picker(assigns) do
-    all_projects =
+    current_path = assigns[:current_path]
+
+    items =
       if assigns[:current_user] do
-        Lightning.Projects.get_project_tree_for_user(assigns.current_user)
+        assigns.current_user
+        |> Lightning.Projects.get_project_tree_for_user()
+        |> build_project_picker_items(current_path)
       else
         []
       end
 
-    assigns = assign(assigns, :picker_projects, all_projects)
+    assigns =
+      assigns
+      |> assign(:items_json, Jason.encode!(items))
+      |> assign(:current_id, assigns[:project] && assigns[:project].id)
 
     ~H"""
     <div
       :if={assigns[:current_user]}
       id="global-project-picker"
       phx-hook="ReactComponent"
-      data-react-name="ProjectPicker"
-      data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
-      data-projects={encode_picker_projects(@picker_projects)}
-      data-current-project-id={assigns[:project] && assigns[:project].id}
+      phx-update="ignore"
+      data-react-name="Picker"
+      data-react-file={~p"/assets/js/picker/Picker.js"}
+      data-items={@items_json}
+      data-current-id={@current_id}
+      data-placeholder="Search projects..."
+      data-empty-message="No projects found"
+      data-view-all-label="View all projects"
+      data-view-all-href={~p"/projects"}
+      data-open-event="open-project-picker"
     >
     </div>
     """
   end
 
-  defp encode_picker_projects(projects) do
-    projects
-    |> Enum.map(&Map.take(&1, [:id, :name, :color, :parent_id]))
-    |> Jason.encode!()
+  @doc false
+  def build_project_picker_items(projects, current_path) do
+    by_parent = Enum.group_by(projects, & &1.parent_id)
+    walk_project_tree(nil, by_parent, 0, "", current_path, []) |> Enum.reverse()
+  end
+
+  defp walk_project_tree(parent_id, by_parent, depth, parent_label, path, acc) do
+    by_parent
+    |> Map.get(parent_id, [])
+    |> Enum.sort_by(& &1.name)
+    |> Enum.reduce(acc, fn project, acc ->
+      label =
+        if parent_label == "",
+          do: project.name,
+          else: "#{parent_label}/#{project.name}"
+
+      item = %{
+        id: project.id,
+        label: project.name,
+        searchLabel: label,
+        depth: depth,
+        color: project.color,
+        href: project_picker_href(project.id, path)
+      }
+
+      walk_project_tree(project.id, by_parent, depth + 1, label, path, [
+        item | acc
+      ])
+    end)
+  end
+
+  # Computes where a project-switch should land given the current URL.
+  # Detail paths (runs/:id, dataclips/:id) carry project-scoped IDs that
+  # don't exist in the target project, so they alias to the nearest index.
+  # Unknown or non-project paths fall back to the project's workflow list.
+  @doc false
+  def project_picker_href(project_id, current_path) do
+    section =
+      case current_path && String.split(current_path, "/", trim: true) do
+        ["projects", _, "runs" | _] ->
+          "history"
+
+        ["projects", _, "dataclips" | _] ->
+          "history"
+
+        ["projects", _, s | _]
+        when s in ~w(w history channels sandboxes settings jobs) ->
+          s
+
+        _ ->
+          "w"
+      end
+
+    "/projects/#{project_id}/#{section}"
   end
 
   attr :title, :string, required: true

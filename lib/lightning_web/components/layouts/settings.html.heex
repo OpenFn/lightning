@@ -89,5 +89,6 @@
       {@inner_content}
     </div>
   </div>
-  <LayoutComponents.global_project_picker {assigns} />
+  <LayoutComponents.global_project_picker :if={@global_picker == []} {assigns} />
+  {render_slot(@global_picker, assigns)}
 </main>

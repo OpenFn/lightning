@@ -35,7 +35,7 @@ import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 import { TemplateDetailsCard } from './TemplateDetailsCard';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;

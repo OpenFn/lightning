@@ -106,8 +106,8 @@
       />
     </div>
   </div>
-  <LayoutComponents.global_project_picker
-    :if={!assigns[:is_first_setup]}
-    {assigns}
-  />
+  <%= if !assigns[:is_first_setup] do %>
+    <LayoutComponents.global_project_picker :if={@global_picker == []} {assigns} />
+    {render_slot(@global_picker, assigns)}
+  <% end %>
 </main>

@@ -22,7 +22,7 @@ import {
 import { cn } from '#/utils/cn';
 
 import { AdaptorIcon } from './AdaptorIcon';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 import { VersionPicker } from './VersionPicker';
 
 /**

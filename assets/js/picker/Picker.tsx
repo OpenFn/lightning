@@ -2,40 +2,45 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { cn } from '../utils/cn';
 
-export interface Project {
-  id: string;
-  name: string;
-  color?: string | null;
-  parent_id?: string | null;
-}
-
-/** Flattened item for keyboard navigation and rendering. */
-interface PickerItem {
-  type: 'project' | 'sandbox';
-  id: string;
-  /** Display label — just the project's own name. */
-  label: string;
-  /** Full path (parent:child:...) used for search matching. */
-  searchLabel: string;
-  depth: number;
-  color?: string | null | undefined;
-}
-
-interface ProjectPickerProps {
-  'data-projects': string;
-  'data-current-project-id'?: string;
-}
-
 /**
- * Global Project Picker - Command palette style
+ * Generic command-palette picker. Content-agnostic: the server ships a
+ * pre-flattened list of items plus display strings, and this component
+ * renders the modal, handles search, keyboard navigation, and navigation.
  *
- * Mounted via ReactComponent hook in LiveView layouts.
- * Opens with Cmd/Ctrl+P keyboard shortcut.
- *
- * Projects are listed at the top level. Sandboxes belonging to each project
- * are nested underneath their parent as indented children.
+ * Used by the project picker today. The same component will back a billing
+ * account picker (and any future context-scoped picker) — the only thing
+ * that changes is which data the layout feeds in.
  */
-export function ProjectPicker(props: ProjectPickerProps) {
+
+export interface PickerItem {
+  id: string;
+  /** The leaf label shown on the row (e.g. project name). */
+  label: string;
+  /** Full path used for search matching (e.g. "parent/child/leaf"). */
+  searchLabel: string;
+  /** Indent level; 0 for top-level items. */
+  depth: number;
+  /** Optional accent color (sandboxes, account tiers). */
+  color?: string | null;
+  /** Where to navigate when selected. Pre-computed server-side. */
+  href: string;
+}
+
+interface PickerProps {
+  'data-items': string;
+  'data-current-id'?: string;
+  'data-placeholder': string;
+  'data-empty-message': string;
+  'data-view-all-label': string;
+  'data-view-all-href': string;
+  /**
+   * Event name the picker listens for on `document.body` to open.
+   * The matching trigger button dispatches this event.
+   */
+  'data-open-event': string;
+}
+
+export function Picker(props: PickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -49,95 +54,56 @@ export function ProjectPicker(props: ProjectPickerProps) {
     []
   );
 
-  const projects = useMemo<Project[]>(() => {
-    const json = props['data-projects'];
+  const allItems = useMemo<PickerItem[]>(() => {
+    const json = props['data-items'];
     if (!json) return [];
     try {
-      return JSON.parse(json) as Project[];
+      return JSON.parse(json) as PickerItem[];
     } catch {
       return [];
     }
-  }, [props['data-projects']]);
+  }, [props['data-items']]);
 
-  const currentProjectId = props['data-current-project-id'];
+  const currentId = props['data-current-id'];
+  const placeholder = props['data-placeholder'];
+  const emptyMessage = props['data-empty-message'];
+  const viewAllLabel = props['data-view-all-label'];
+  const viewAllHref = props['data-view-all-href'];
+  const openEvent = props['data-open-event'];
 
-  /**
-   * Build a display label for a project by walking up the parent chain.
-   * e.g. "root:child:grandchild"
-   */
-  const buildLabel = useCallback(
-    (project: Project, projectMap: Map<string, Project>): string => {
-      const parts: string[] = [project.name];
-      let current = project;
-      while (current.parent_id) {
-        const parent = projectMap.get(current.parent_id);
-        if (!parent) break;
-        parts.unshift(parent.name);
-        current = parent;
-      }
-      return parts.join('/');
-    },
-    []
-  );
-
-  /**
-   * Build a flat list of picker items from the project tree,
-   * filtered by search term. Children are nested after their parent.
-   */
+  // Filter items by search term. Items are already tree-flattened server-side;
+  // we only need to include matches *and* the ancestors that lead to them so
+  // the indentation still reads correctly.
   const items = useMemo<PickerItem[]>(() => {
+    if (!searchTerm) return allItems;
     const lower = searchTerm.toLowerCase();
-    const projectMap = new Map(projects.map(p => [p.id, p]));
 
-    // Group children by parent_id
-    const childrenOf = new Map<string | null, Project[]>();
-    for (const p of projects) {
-      const parentId = p.parent_id ?? null;
-      if (!childrenOf.has(parentId)) {
-        childrenOf.set(parentId, []);
-      }
-      childrenOf.get(parentId)!.push(p);
-    }
+    // Mark matches and include ancestor chain for each match.
+    const selfMatch = allItems.map(i =>
+      i.searchLabel.toLowerCase().includes(lower)
+    );
+    const include = new Array<boolean>(allItems.length).fill(false);
 
-    const result: PickerItem[] = [];
-
-    // Recursively build the tree in display order
-    const walk = (parentId: string | null, depth: number) => {
-      const children = childrenOf.get(parentId) || [];
-      for (const project of children) {
-        const searchLabel = buildLabel(project, projectMap);
-        const isSandbox = project.parent_id != null;
-        const matches =
-          !searchTerm || searchLabel.toLowerCase().includes(lower);
-
-        // Check if any descendant matches
-        const hasMatchingDescendant = (id: string): boolean => {
-          const desc = childrenOf.get(id) || [];
-          return desc.some(
-            d =>
-              buildLabel(d, projectMap).toLowerCase().includes(lower) ||
-              hasMatchingDescendant(d.id)
-          );
-        };
-
-        if (matches || hasMatchingDescendant(project.id)) {
-          result.push({
-            type: isSandbox ? 'sandbox' : 'project',
-            id: project.id,
-            label: project.name,
-            searchLabel,
-            depth,
-            color: project.color,
-          });
-          walk(project.id, depth + 1);
+    for (let i = 0; i < allItems.length; i++) {
+      if (!selfMatch[i]) continue;
+      include[i] = true;
+      // Walk backwards from this item, marking each shallower ancestor as
+      // needed. Server gives us items in pre-order, so the parent is the
+      // most recent item with a strictly smaller depth.
+      let depth = allItems[i]!.depth;
+      for (let j = i - 1; j >= 0 && depth > 0; j--) {
+        const candidate = allItems[j]!;
+        if (candidate.depth < depth) {
+          include[j] = true;
+          depth = candidate.depth;
         }
       }
-    };
+    }
 
-    walk(null, 0);
-    return result;
-  }, [projects, searchTerm, buildLabel]);
+    return allItems.filter((_, i) => include[i]);
+  }, [allItems, searchTerm]);
 
-  // "View all" is always index 0; items start at index 1
+  // "View all" is always index 0; items start at index 1.
   const totalItems = items.length + 1;
 
   const openPicker = useCallback(() => {
@@ -146,7 +112,6 @@ export function ProjectPicker(props: ProjectPickerProps) {
     setHighlightedIndex(items.length > 0 ? 1 : 0);
   }, [items.length]);
 
-  // Focus input after open (separate effect to avoid stale ref)
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -157,7 +122,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
     setIsOpen(false);
   }, []);
 
-  // Keyboard shortcut: Cmd/Ctrl+P to open
+  // Cmd/Ctrl+P to toggle.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
@@ -174,7 +139,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, openPicker, closePicker]);
 
-  // Global Escape key handler (capture phase)
+  // Escape to close (capture phase so we beat nested handlers).
   useEffect(() => {
     if (!isOpen) return;
 
@@ -192,14 +157,12 @@ export function ProjectPicker(props: ProjectPickerProps) {
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, [isOpen, closePicker]);
 
-  // Keep highlighted index in bounds
   useEffect(() => {
     if (highlightedIndex >= totalItems) {
       setHighlightedIndex(Math.max(0, totalItems - 1));
     }
   }, [totalItems, highlightedIndex]);
 
-  // Scroll highlighted item into view
   useEffect(() => {
     if (!isOpen) return;
     const list = listRef.current;
@@ -212,28 +175,15 @@ export function ProjectPicker(props: ProjectPickerProps) {
     }
   }, [isOpen, highlightedIndex]);
 
-  // Listen for custom event from breadcrumb click
+  // Listen for the configured open event (dispatched by the trigger button).
   useEffect(() => {
     const handleOpen = () => openPicker();
-    document.body.addEventListener('open-project-picker', handleOpen);
-    return () =>
-      document.body.removeEventListener('open-project-picker', handleOpen);
-  }, [openPicker]);
+    document.body.addEventListener(openEvent, handleOpen);
+    return () => document.body.removeEventListener(openEvent, handleOpen);
+  }, [openPicker, openEvent]);
 
-  const navigateToProjectsList = () => {
-    window.location.href = '/projects';
-  };
-
-  const navigateToProject = (projectId: string) => {
-    const match = window.location.pathname.match(/^\/projects\/[^/]+\/(.*)/);
-    let rest = match?.[1] || 'w';
-
-    // Workflow paths contain project-specific IDs — keep only the section
-    if (rest.startsWith('w/')) {
-      rest = 'w';
-    }
-
-    window.location.href = `/projects/${projectId}/${rest}${window.location.search}${window.location.hash}`;
+  const go = (href: string) => {
+    window.location.href = href;
   };
 
   const handleInputKeyDown = useCallback(
@@ -250,28 +200,24 @@ export function ProjectPicker(props: ProjectPickerProps) {
         case 'Enter': {
           e.preventDefault();
           if (highlightedIndex === 0) {
-            navigateToProjectsList();
+            go(viewAllHref);
           } else {
             const item = items[highlightedIndex - 1];
-            if (item) {
-              navigateToProject(item.id);
-            }
+            if (item) go(item.href);
           }
           break;
         }
       }
     },
-    [items, highlightedIndex, totalItems]
+    [items, highlightedIndex, totalItems, viewAllHref]
   );
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[9999]">
-      {/* Backdrop */}
       <div className="modal-backdrop" />
 
-      {/* Modal content */}
       <div
         className="fixed inset-0 flex items-start justify-center pt-[15vh]"
         onClick={closePicker}
@@ -280,20 +226,19 @@ export function ProjectPicker(props: ProjectPickerProps) {
           className="w-full max-w-xl bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
-          {/* Search input */}
           <div className="flex items-center px-4 border-b border-gray-200">
             <span className="hero-magnifying-glass h-5 w-5 text-gray-400 shrink-0" />
             <input
               ref={inputRef}
               type="text"
               spellCheck="false"
-              placeholder="Search projects..."
+              placeholder={placeholder}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={handleInputKeyDown}
               className="w-full border-0 py-4 pl-3 pr-4 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-base"
               role="combobox"
-              aria-controls="project-picker-options"
+              aria-controls="picker-options"
               aria-expanded="true"
               autoComplete="off"
             />
@@ -303,14 +248,12 @@ export function ProjectPicker(props: ProjectPickerProps) {
             </kbd>
           </div>
 
-          {/* Options list */}
           <ul
             ref={listRef}
             className="max-h-80 overflow-y-auto py-2"
-            id="project-picker-options"
+            id="picker-options"
             role="listbox"
           >
-            {/* View all projects */}
             <li
               data-index={0}
               className={cn(
@@ -320,7 +263,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
                   : 'text-gray-900 hover:bg-primary-600 hover:text-white'
               )}
               role="option"
-              onClick={navigateToProjectsList}
+              onClick={() => go(viewAllHref)}
               onMouseEnter={() => setHighlightedIndex(0)}
             >
               <span
@@ -331,7 +274,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
                     : 'text-gray-400 group-hover:text-white/70'
                 )}
               />
-              <span className="flex-grow">View all projects</span>
+              <span className="flex-grow">{viewAllLabel}</span>
               <span
                 className={cn(
                   'hero-arrow-right h-4 w-4 shrink-0',
@@ -342,17 +285,15 @@ export function ProjectPicker(props: ProjectPickerProps) {
               />
             </li>
 
-            {/* Separator */}
             {items.length > 0 && (
               <li className="border-t border-gray-200 my-2" role="separator" />
             )}
 
-            {/* Project and sandbox list */}
             {items.map((item, index) => {
               const itemIndex = index + 1;
               const isHighlighted = itemIndex === highlightedIndex;
-              const isSelected = item.id === currentProjectId;
-              const isSandbox = item.depth > 0;
+              const isSelected = item.id === currentId;
+              const isNested = item.depth > 0;
               const indentPx = item.depth * 10;
 
               return (
@@ -368,10 +309,10 @@ export function ProjectPicker(props: ProjectPickerProps) {
                   style={{ paddingLeft: `${16 + indentPx}px` }}
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => navigateToProject(item.id)}
+                  onClick={() => go(item.href)}
                   onMouseEnter={() => setHighlightedIndex(itemIndex)}
                 >
-                  {isSandbox ? (
+                  {isNested ? (
                     <>
                       <span
                         className={cn(
@@ -423,7 +364,7 @@ export function ProjectPicker(props: ProjectPickerProps) {
             })}
             {items.length === 0 && (
               <li className="px-4 py-8 text-center text-gray-500">
-                No projects found
+                {emptyMessage}
               </li>
             )}
           </ul>

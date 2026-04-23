@@ -19,7 +19,7 @@ import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelector } from '../AdaptorSelector';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { createZodValidator } from '../form/createZodValidator';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 interface JobFormProps {
   job: Workflow.Job;

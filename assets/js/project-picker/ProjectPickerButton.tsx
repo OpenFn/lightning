@@ -1,5 +1,5 @@
 import { cn } from '../utils/cn';
-import { Tooltip } from '../collaborative-editor/components/Tooltip';
+import { Tooltip } from '../components/Tooltip';
 
 interface ProjectPickerButtonProps {
   'data-label': string;
@@ -12,7 +12,7 @@ interface ProjectPickerButtonProps {
  *
  * Mounted via ReactComponent hook in HEEx layouts and used directly
  * in the collaborative editor. Clicking dispatches `open-project-picker`
- * on document.body, which the global ProjectPicker modal listens for.
+ * on document.body, which the global Picker modal listens for.
  */
 export function ProjectPickerButton(props: ProjectPickerButtonProps) {
   const label = props['data-label'] || '';

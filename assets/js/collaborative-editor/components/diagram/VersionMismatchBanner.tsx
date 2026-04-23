@@ -16,7 +16,7 @@
 
 import { cn } from '#/utils/cn';
 
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 interface VersionMismatchBannerProps {
   runVersion: number;

@@ -24,7 +24,7 @@ import createCompletionProvider from '../../editor/magic-completion';
 
 import { LoadingIndicator } from './common/LoadingIndicator';
 import { Cursors } from './Cursors';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 import { loadDTS, type Lib } from '../utils/loadDTS';
 
 export interface MonacoHandle {

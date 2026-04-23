@@ -41,7 +41,13 @@ defmodule LightningWeb.InitAssigns do
        end
      end)
      |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)
-     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)}
+     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)
+     |> attach_hook(:current_path, :handle_params, &assign_current_path/3)}
+  end
+
+  defp assign_current_path(_params, uri, socket) do
+    path = if is_binary(uri), do: URI.parse(uri).path, else: nil
+    {:cont, assign(socket, :current_path, path)}
   end
 
   defp handle_sidebar_toggle("toggle_sidebar", _params, socket) do

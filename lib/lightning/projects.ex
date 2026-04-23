@@ -257,6 +257,8 @@ defmodule Lightning.Projects do
   @doc """
   Preloads the full ancestor chain on a project's `:parent` association,
   so that `Project.display_name/1` can walk to the root.
+
+  Fetches the entire chain in a single recursive CTE query.
   """
   @spec preload_ancestors(Project.t()) :: Project.t()
   def preload_ancestors(%Project{parent_id: nil} = p), do: p
@@ -267,11 +269,36 @@ defmodule Lightning.Projects do
 
   def preload_ancestors(%Project{parent_id: parent_id} = p)
       when is_binary(parent_id) do
-    parent =
-      Repo.get!(Project, parent_id)
-      |> preload_ancestors()
+    ancestors_by_id =
+      parent_id
+      |> list_ancestors()
+      |> Map.new(&{&1.id, &1})
 
-    %{p | parent: parent}
+    %{p | parent: nest_ancestors(parent_id, ancestors_by_id)}
+  end
+
+  defp list_ancestors(start_id) do
+    initial = from(p in Project, where: p.id == ^start_id)
+
+    recursion =
+      from(p in Project,
+        join: a in "ancestors",
+        on: a.parent_id == p.id
+      )
+
+    from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
+    |> recursive_ctes(true)
+    |> with_cte("ancestors", as: ^union_all(initial, ^recursion))
+    |> Repo.all()
+  end
+
+  defp nest_ancestors(nil, _by_id), do: nil
+
+  defp nest_ancestors(id, by_id) do
+    case Map.get(by_id, id) do
+      nil -> nil
+      project -> %{project | parent: nest_ancestors(project.parent_id, by_id)}
+    end
   end
 
   @doc """
