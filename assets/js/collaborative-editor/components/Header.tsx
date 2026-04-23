@@ -1,10 +1,13 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import * as dataclipApi from '../api/dataclips';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import { channelRequest } from '../hooks/useChannel';
+import { StoreContext } from '../contexts/StoreProvider';
+import { notifications } from '../lib/notifications';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
@@ -226,6 +229,8 @@ export function Header({
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
+  const storeContext = useContext(StoreContext);
+  const getLimits = storeContext?.sessionContextStore.getLimits;
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -251,15 +256,42 @@ export function Header({
 
   const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
 
-  const handleRunClick = useCallback(() => {
-    if (firstTriggerId) {
-      // select the first trigger
-      selectNode(firstTriggerId);
-      // switch panel to run
-      updateSearchParams({
-        panel: 'run',
+  const handleRunClick = useCallback(async () => {
+    if (!firstTriggerId || !projectId || !workflowId) return;
+
+    try {
+      await saveWorkflow({ silent: true });
+      const response = await dataclipApi.submitManualRun({
+        workflowId,
+        projectId,
+        triggerId: firstTriggerId,
       });
-      // Canvas context: open run panel with first trigger
+      notifications.success({
+        title: 'Run started',
+        description: 'Saved latest changes and created new work order',
+      });
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({ run: response.data.run_id });
+    } catch (error) {
+      notifications.alert({
+        title: 'Failed to submit run',
+        description:
+          error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    }
+  }, [
+    firstTriggerId,
+    projectId,
+    workflowId,
+    saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  const handleRunWithCustomInputClick = useCallback(() => {
+    if (firstTriggerId) {
+      selectNode(firstTriggerId);
+      updateSearchParams({ panel: 'run' });
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
@@ -398,6 +430,7 @@ export function Header({
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
                 <NewRunButton
                   onClick={handleRunClick}
+                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
                   disabled={!canRun || isRunPanelOpen || isIDEOpen}
                 />
               )}
