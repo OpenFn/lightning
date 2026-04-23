@@ -2126,7 +2126,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         view
         |> render_click("open-merge-modal", %{"id" => sandbox.id})
 
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
       assert html =~ "Test Workflow"
     end
   end
@@ -2513,7 +2513,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       # Assert per-row divergence indicators are present
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
 
       # Assert workflow names are listed in the workflow list
       assert html =~ "Payment Processing"
@@ -2556,7 +2556,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute html =~ "Target project has diverged"
 
       # Matching Workflow appears in the workflow list (not as a diverged workflow)
-      refute html =~ "Target modified"
+      refute html =~ "Diverged"
     end
 
     test "updates diverged workflow list when changing merge target", %{
@@ -2625,7 +2625,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Parent Workflow"
       assert html =~ "Sibling Workflow"
       # Parent Workflow is diverged (different hash in parent), Sibling is new
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
@@ -2804,7 +2804,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> element("#branch-rewire-sandbox-#{sandbox.id} button")
         |> render_click()
 
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
       assert html =~ "New"
       assert html =~ "Diverged Flow"
       assert html =~ "New Flow"
