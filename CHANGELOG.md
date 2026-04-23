@@ -44,7 +44,9 @@ and this project adheres to
 
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
-- bumped local worker to 1.24.0
+- Bumped local worker to 1.24.0
+- Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
+  workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
 
 ### Fixed
 
