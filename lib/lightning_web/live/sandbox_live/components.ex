@@ -385,8 +385,8 @@ defmodule LightningWeb.SandboxLive.Components do
 
           <Common.alert
             id="merge-beta-warning"
-            type="danger"
-            header="After merging this sandbox will be deleted"
+            type="warning"
+            header="This sandbox will be deleted after merging"
           >
             <:message>
               This action cannot be undone.
