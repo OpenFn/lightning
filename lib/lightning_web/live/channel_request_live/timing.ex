@@ -70,8 +70,8 @@ defmodule LightningWeb.ChannelRequestLive.Timing do
       end)
 
     ttfb_pct =
-      if ttfb_us && ttfb_us > 0 && total_us > 0 do
-        Float.round(ttfb_us / total_us * 100, 1)
+      if ttfb_us && ttfb_us > 0 && inner_total > 0 do
+        Float.round(ttfb_us / inner_total * 100, 1)
       else
         nil
       end

@@ -271,6 +271,51 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       assert html2 =~ "420 ms"
     end
 
+    test "positions TTFB marker on the inner-phase scale, not latency",
+         %{conn: conn, project: project} do
+      # inner_total = queue+connect+send+wait+recv
+      #             = 10 + 20 + 5 + (ttfb - 10 - 20 - 5) + recv
+      #             = ttfb + recv
+      # With ttfb=100ms and recv=100ms => inner_total=200ms => 50%
+      # latency_us is deliberately different (250ms) to prove the marker
+      # is scaled against inner_total, not total_us.
+      {req_half, _ch, _snap} = create_channel_request(project)
+
+      insert(:channel_event,
+        channel_request: req_half,
+        queue_us: 10_000,
+        connect_us: 20_000,
+        request_send_us: 5_000,
+        ttfb_us: 100_000,
+        response_duration_us: 100_000,
+        latency_us: 250_000
+      )
+
+      {:ok, view_half, _html} = live(conn, detail_path(project, req_half))
+      html_half = render(view_half)
+
+      assert html_half =~ ~s(style="left: 50.0%")
+
+      # Edge case: ttfb == inner_total => marker at 100%.
+      # inner_total = ttfb + recv, so set recv = 0 (response_duration_us = 0).
+      {req_full, _ch2, _snap2} = create_channel_request(project)
+
+      insert(:channel_event,
+        channel_request: req_full,
+        queue_us: 10_000,
+        connect_us: 20_000,
+        request_send_us: 5_000,
+        ttfb_us: 100_000,
+        response_duration_us: 0,
+        latency_us: 150_000
+      )
+
+      {:ok, view_full, _html} = live(conn, detail_path(project, req_full))
+      html_full = render(view_full)
+
+      assert html_full =~ ~s(style="left: 100.0%")
+    end
+
     test "shows single bar for transport errors, hidden for credential errors",
          %{conn: conn, project: project} do
       {req_transport, _ch1, _snap1} =
