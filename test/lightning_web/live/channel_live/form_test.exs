@@ -156,23 +156,22 @@ defmodule LightningWeb.ChannelLive.FormTest do
       {:ok, view, html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      # Fields appear in this order: Name, Destination URL,
-      # Destination Credential, Enabled, Client Credentials
+      # Fields appear in this order: Name, Enabled, Destination URL,
+      # Destination Credential, Client Credentials
       name_pos = :binary.match(html, "Name") |> elem(0)
+      enabled_pos = :binary.match(html, "Enabled") |> elem(0)
       dest_url_pos = :binary.match(html, "Destination URL") |> elem(0)
 
       dest_cred_pos =
         :binary.match(html, "Destination Credential") |> elem(0)
 
-      enabled_pos = :binary.match(html, "Enabled") |> elem(0)
-
       client_cred_pos =
         :binary.match(html, "Client Credentials") |> elem(0)
 
-      assert name_pos < dest_url_pos
+      assert name_pos < enabled_pos
+      assert enabled_pos < dest_url_pos
       assert dest_url_pos < dest_cred_pos
-      assert dest_cred_pos < enabled_pos
-      assert enabled_pos < client_cred_pos
+      assert dest_cred_pos < client_cred_pos
 
       # Sublabels
       assert html =~ "The service OpenFn will forward requests to"
