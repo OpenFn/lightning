@@ -457,13 +457,17 @@ defmodule LightningWeb.LayoutComponents do
           do: project.name,
           else: "#{parent_label}/#{project.name}"
 
+      %{href: href, same_section: same_section} =
+        project_picker_target(project.id, path)
+
       item = %{
         id: project.id,
         label: project.name,
         searchLabel: label,
         depth: depth,
         color: project.color,
-        href: project_picker_href(project.id, path)
+        href: href,
+        sameSection: same_section
       }
 
       walk_project_tree(project.id, by_parent, depth + 1, label, path, [
@@ -472,29 +476,36 @@ defmodule LightningWeb.LayoutComponents do
     end)
   end
 
-  # Computes where a project-switch should land given the current URL.
-  # Detail paths (runs/:id, dataclips/:id) carry project-scoped IDs that
-  # don't exist in the target project, so they alias to the nearest index.
-  # Unknown or non-project paths fall back to the project's workflow list.
+  # Computes where a project-switch should land given the current URL, and
+  # whether that target is the same section as the source. Detail paths
+  # (runs/:id, dataclips/:id) carry project-scoped IDs that don't exist in
+  # the target, so they alias to the nearest index (same_section: false).
+  # Unknown or non-project paths fall back to the workflow list.
+  #
+  # `same_section` is used by the picker JS to decide whether to preserve
+  # client-only URL state (notably the hash anchor) when navigating.
   @doc false
-  def project_picker_href(project_id, current_path) do
-    section =
+  def project_picker_target(project_id, current_path) do
+    {section, same_section} =
       case current_path && String.split(current_path, "/", trim: true) do
         ["projects", _, "runs" | _] ->
-          "history"
+          {"history", false}
 
         ["projects", _, "dataclips" | _] ->
-          "history"
+          {"history", false}
 
         ["projects", _, s | _]
         when s in ~w(w history channels sandboxes settings jobs) ->
-          s
+          {s, true}
 
         _ ->
-          "w"
+          {"w", false}
       end
 
-    "/projects/#{project_id}/#{section}"
+    %{
+      href: "/projects/#{project_id}/#{section}",
+      same_section: same_section
+    }
   end
 
   attr :title, :string, required: true

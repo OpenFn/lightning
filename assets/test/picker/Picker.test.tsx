@@ -56,6 +56,9 @@ function item(
     depth,
     href: overrides.href ?? `/projects/${id}/w`,
     ...(overrides.color !== undefined ? { color: overrides.color } : {}),
+    ...(overrides.sameSection !== undefined
+      ? { sameSection: overrides.sameSection }
+      : {}),
   };
 }
 
@@ -219,6 +222,75 @@ describe('Picker navigation', () => {
     });
 
     expect(hrefSetter).toHaveBeenCalledWith('/somewhere');
+  });
+
+  test('preserves the current hash when item has sameSection=true', () => {
+    (window as unknown as { location: { hash: string } }).location.hash =
+      '#credentials';
+
+    mountPicker([
+      item('target', 'target', 0, {
+        href: '/projects/target/settings',
+        sameSection: true,
+      }),
+    ]);
+    openPicker();
+
+    const option = screen
+      .getAllByRole('option')
+      .find(o => within(o).queryByText('target'))!;
+    act(() => {
+      option.click();
+    });
+
+    expect(hrefSetter).toHaveBeenCalledWith(
+      '/projects/target/settings#credentials'
+    );
+  });
+
+  test('drops the hash when item has sameSection=false', () => {
+    (window as unknown as { location: { hash: string } }).location.hash =
+      '#some-anchor';
+
+    mountPicker([
+      item('target', 'target', 0, {
+        href: '/projects/target/history',
+        sameSection: false,
+      }),
+    ]);
+    openPicker();
+
+    const option = screen
+      .getAllByRole('option')
+      .find(o => within(o).queryByText('target'))!;
+    act(() => {
+      option.click();
+    });
+
+    expect(hrefSetter).toHaveBeenCalledWith('/projects/target/history');
+  });
+
+  test('does not preserve hash for the view-all row', () => {
+    (window as unknown as { location: { hash: string } }).location.hash =
+      '#credentials';
+
+    render(
+      <Picker
+        {...defaults}
+        data-items={JSON.stringify([])}
+        data-view-all-href="/projects"
+      />
+    );
+    openPicker();
+
+    const viewAll = screen
+      .getAllByRole('option')
+      .find(o => within(o).queryByText('View all projects'))!;
+    act(() => {
+      viewAll.click();
+    });
+
+    expect(hrefSetter).toHaveBeenCalledWith('/projects');
   });
 });
 

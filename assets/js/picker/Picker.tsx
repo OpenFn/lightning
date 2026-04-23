@@ -24,6 +24,12 @@ export interface PickerItem {
   color?: string | null;
   /** Where to navigate when selected. Pre-computed server-side. */
   href: string;
+  /**
+   * True when `href` targets the same section as the current URL. The
+   * picker uses this to decide whether to preserve the current URL's hash
+   * when navigating — it's only meaningful on same-section switches.
+   */
+  sameSection?: boolean;
 }
 
 interface PickerProps {
@@ -182,8 +188,8 @@ export function Picker(props: PickerProps) {
     return () => document.body.removeEventListener(openEvent, handleOpen);
   }, [openPicker, openEvent]);
 
-  const go = (href: string) => {
-    window.location.href = href;
+  const go = (href: string, sameSection = false) => {
+    window.location.href = href + (sameSection ? window.location.hash : '');
   };
 
   const handleInputKeyDown = useCallback(
@@ -203,7 +209,7 @@ export function Picker(props: PickerProps) {
             go(viewAllHref);
           } else {
             const item = items[highlightedIndex - 1];
-            if (item) go(item.href);
+            if (item) go(item.href, item.sameSection);
           }
           break;
         }
@@ -309,7 +315,7 @@ export function Picker(props: PickerProps) {
                   style={{ paddingLeft: `${16 + indentPx}px` }}
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => go(item.href)}
+                  onClick={() => go(item.href, item.sameSection)}
                   onMouseEnter={() => setHighlightedIndex(itemIndex)}
                 >
                   {isNested ? (

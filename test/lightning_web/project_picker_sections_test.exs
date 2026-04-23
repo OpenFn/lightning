@@ -42,56 +42,52 @@ defmodule LightningWeb.ProjectPickerSectionsTest do
     """
   end
 
-  describe "project_picker_href/2" do
-    test "preserves known sections" do
+  describe "project_picker_target/2" do
+    test "preserves known sections and flags same_section: true" do
       for section <- ~w(w history channels sandboxes settings jobs) do
-        assert LayoutComponents.project_picker_href(
+        assert LayoutComponents.project_picker_target(
                  "abc",
                  "/projects/xyz/#{section}"
-               ) ==
-                 "/projects/abc/#{section}"
+               ) == %{href: "/projects/abc/#{section}", same_section: true}
       end
     end
 
-    test "maps runs/:id to history" do
-      assert LayoutComponents.project_picker_href(
+    test "strips workflow IDs but keeps same_section: true" do
+      assert LayoutComponents.project_picker_target("abc", "/projects/xyz/w/123") ==
+               %{href: "/projects/abc/w", same_section: true}
+    end
+
+    test "aliases runs/:id to history with same_section: false" do
+      assert LayoutComponents.project_picker_target(
                "abc",
                "/projects/xyz/runs/123"
-             ) ==
-               "/projects/abc/history"
+             ) == %{href: "/projects/abc/history", same_section: false}
     end
 
-    test "maps dataclips/:id/show to history" do
-      assert LayoutComponents.project_picker_href(
+    test "aliases dataclips/:id/show to history with same_section: false" do
+      assert LayoutComponents.project_picker_target(
                "abc",
                "/projects/xyz/dataclips/123/show"
-             ) ==
-               "/projects/abc/history"
+             ) == %{href: "/projects/abc/history", same_section: false}
     end
 
-    test "strips workflow IDs, preserving the section" do
-      assert LayoutComponents.project_picker_href("abc", "/projects/xyz/w/123") ==
-               "/projects/abc/w"
-    end
-
-    test "falls back to /w for paths outside the project scope" do
+    test "falls back to /w with same_section: false outside the project scope" do
       for path <- [
             "/services/accounts/42",
             "/settings/users",
             "/projects",
             nil
           ] do
-        assert LayoutComponents.project_picker_href("abc", path) ==
-                 "/projects/abc/w"
+        assert LayoutComponents.project_picker_target("abc", path) ==
+                 %{href: "/projects/abc/w", same_section: false}
       end
     end
 
-    test "falls back to /w for an unknown segment" do
-      assert LayoutComponents.project_picker_href(
+    test "falls back to /w with same_section: false for an unknown segment" do
+      assert LayoutComponents.project_picker_target(
                "abc",
                "/projects/xyz/does-not-exist"
-             ) ==
-               "/projects/abc/w"
+             ) == %{href: "/projects/abc/w", same_section: false}
     end
   end
 end

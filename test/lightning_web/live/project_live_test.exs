@@ -854,19 +854,19 @@ defmodule LightningWeb.ProjectLiveTest do
       # Project picker is a React component - check data attributes contain correct projects
       html = render(view)
       assert html =~ project_1.name
-      assert html =~ ~s(data-current-project-id="#{project_1.id}")
+      assert html =~ ~s(data-current-id="#{project_1.id}")
 
-      # Projects data is passed as JSON to React component
-      # User's projects (project_1, project_2) should be in data-projects
+      # Projects data is passed as JSON via data-items on the picker mount
+      # User's projects (project_1, project_2) should be in data-items
       assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-projects
+      # Other user's project (project_3) should NOT be in data-items
       refute html =~ project_3.id
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ ~s(data-current-id="#{project_2.id}")
       assert html =~ project_1.id
       refute html =~ project_3.id
 
