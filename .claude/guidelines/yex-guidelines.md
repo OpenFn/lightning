@@ -7,6 +7,7 @@ This document provides comprehensive guidelines for working with Yex, the Elixir
 - [The Correct Pattern](#the-correct-pattern)
 - [Core Concepts](#core-concepts)
 - [Prelim Types](#prelim-types)
+- [Reading data: handle vs snapshot discipline](#reading-data-handle-vs-snapshot-discipline)
 - [API Reference](#api-reference)
 - [Common Gotchas](#common-gotchas)
 - [Testing Patterns](#testing-patterns)
@@ -253,34 +254,90 @@ Yex.Map.set(map, "numbers", array_prelim)
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:114-127`
 
-### Extracting Data
+## Reading data: handle vs snapshot discipline
+
+Every read from a Y.Doc picks a side of a boundary:
+
+- **Handle discipline** — you keep Yex structs (`%Yex.Map{}`, `%Yex.Array{}`, `%Yex.Text{}`) as live references into the doc. Identity is preserved, writes target the right node, observers still fire.
+- **Snapshot discipline** — you convert to plain Elixir data (`Yex.Array.to_json/1`, `Yex.Map.to_json/1`, `Yex.Text.to_string/1`). From that point on you have a detached copy. No identity, no observation, no write path back.
+
+Pick one per layer. Straddling is where the "sometimes I get a map, sometimes a Yex.Map" confusion comes from — it's never the doc changing under you, it's two call sites in the same layer picking different accessors.
+
+### When to use handle discipline
+
+- Writers and reconcilers — you need to mutate specific nodes
+- Observers and subscribers — identity matters for change detection
+- Reads against a doc that may be missing newer keys (legacy-doc case)
+
+Primary accessors:
 
 ```elixir
-# Extract workflow data from Y.Doc
-workflow_map = Yex.Doc.get_map(doc, "workflow")
-jobs_array = Yex.Doc.get_array(doc, "jobs")
+# Scalar key → Elixir scalar; nested Y type → Yex struct
+{:ok, value} = Yex.Map.fetch(map, "key")
+value = Yex.Map.fetch!(map, "key")  # raises if missing
 
-# Simple values
-id = Yex.Map.fetch!(workflow_map, "id")
-name = Yex.Map.fetch!(workflow_map, "name")
-
-# Convert arrays to lists
-jobs_list = Yex.Array.to_json(jobs_array)  # Returns list of maps
-
-# Process each item
-jobs = Enum.map(jobs_list, fn job ->
-  %{
-    "id" => job["id"],
-    "name" => job["name"],
-    "body" => extract_text_field(job["body"])  # Handle Text type
-  }
-end)
-
-# Helper for extracting text fields
-defp extract_text_field(%Yex.Text{} = text), do: Yex.Text.to_string(text)
-defp extract_text_field(string) when is_binary(string), do: string
-defp extract_text_field(nil), do: ""
+# List of Yex structs; nested types stay live
+items = Yex.Array.to_list(array)
 ```
+
+### When to use snapshot discipline
+
+- Y.Doc → Ecto translation (the serializer's read path)
+- Read-only diffs, comparisons, hashing
+- Anything that ends directly at `|> Repo.insert/1` or `|> broadcast/1`
+
+Primary accessors:
+
+```elixir
+jobs = Yex.Array.to_json(jobs_array)   # list of plain maps
+workflow = Yex.Map.to_json(workflow_map)  # plain map
+text = Yex.Text.to_string(body_text)
+```
+
+After `to_json`, ordinary `Map.get/2` with a default handles missing keys — no sentinel needed.
+
+**Wrinkle:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse through nested Y.Maps and Y.Arrays but **leave `%Yex.Text{}` structs in place**. Text leaves still need `Yex.Text.to_string/1` at the consumer — see Gotcha #4.
+
+### Don't cross disciplines mid-layer
+
+```elixir
+# ❌ Mixed: to_json'd the array, then tries to fetch! on a plain map
+jobs = Yex.Array.to_json(jobs_array)
+id = Yex.Map.fetch!(List.first(jobs), "id")   # FunctionClauseError
+
+# ❌ Mixed the other way: elements are Yex.Map, code assumes plain-map access
+jobs = Yex.Array.to_list(jobs_array)
+id = List.first(jobs)["id"]                   # Yex.Map doesn't answer to ["key"]
+
+# ✅ Snapshot discipline
+jobs = Yex.Array.to_json(jobs_array)
+id = List.first(jobs)["id"]
+
+# ✅ Handle discipline
+jobs = Yex.Array.to_list(jobs_array)
+id = Yex.Map.fetch!(List.first(jobs), "id")
+```
+
+Convert once at the layer boundary; don't re-cross.
+
+### Missing-key handling across legacy docs
+
+A Y.Doc created before a newer field was added won't have that key. The two disciplines deal with this differently:
+
+```elixir
+# Handle discipline — fetch!/2 raises KeyError. Use fetch/2 + match, or fetch!/2 only when you know the key exists.
+concurrency =
+  case Yex.Map.fetch(workflow_map, "concurrency") do
+    {:ok, value} -> value
+    :error -> nil
+  end
+
+# Snapshot discipline — to_json returns plain maps; Map.get/2 handles absence transparently.
+workflow = Yex.Map.to_json(workflow_map)
+concurrency = Map.get(workflow, "concurrency")  # nil if absent
+```
+
+If you see advice to "use the `:not_found` / `:error` sentinel" on a layer that's already `to_json`-ed, the layer is straddling — drop the sentinel or drop the `to_json`, don't do both.
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:172-217`
 
