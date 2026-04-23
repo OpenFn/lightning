@@ -194,8 +194,11 @@ defmodule Lightning.Channels do
 
     Multi.new()
     |> Multi.insert(:channel, changeset)
-    |> Multi.insert(:audit, fn %{channel: channel} ->
-      Audit.event("created", channel.id, actor, changeset)
+    |> Multi.run(:audit, fn _repo, %{channel: channel} ->
+      case Audit.event("created", channel.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
     end)
     |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
@@ -215,8 +218,11 @@ defmodule Lightning.Channels do
 
     Multi.new()
     |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
-    |> Multi.insert(:audit, fn %{channel: updated} ->
-      Audit.event("updated", updated.id, actor, changeset)
+    |> Multi.run(:audit, fn _repo, %{channel: updated} ->
+      case Audit.event("updated", updated.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
     end)
     |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()

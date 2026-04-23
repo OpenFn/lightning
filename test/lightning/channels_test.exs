@@ -242,6 +242,34 @@ defmodule Lightning.ChannelsTest do
       assert audit.actor_id == user.id
     end
 
+    test "returns {:ok, channel} when submitted with no real changes", %{
+      user: user
+    } do
+      channel = insert(:channel)
+
+      # Pass back the current values — empty changes map. Previously this
+      # crashed with FunctionClauseError because Audit.event/4 returned
+      # :no_changes and that was piped into Multi.insert/3.
+      assert {:ok, unchanged} =
+               Channels.update_channel(
+                 channel,
+                 %{name: channel.name, destination_url: channel.destination_url},
+                 actor: user
+               )
+
+      assert unchanged.id == channel.id
+      assert unchanged.lock_version == channel.lock_version
+
+      # No audit row was written for the no-op save
+      assert [] ==
+               Repo.all(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^channel.id and a.item_type == "channel" and
+                       a.event == "updated"
+               )
+    end
+
     test "passing nil for destination_auth_method removes the join record",
          %{user: user} do
       project = insert(:project)
