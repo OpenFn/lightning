@@ -122,6 +122,7 @@ defmodule Lightning.Invocation.Query do
     |> filter_runs_by_project(params["project_id"])
     |> filter_runs_by_workflow(params["workflow_id"])
     |> filter_runs_by_work_order(params["work_order_id"])
+    |> filter_runs_by_state(params["state"])
   end
 
   defp filter_runs_by_project(query, nil), do: query
@@ -141,6 +142,43 @@ defmodule Lightning.Invocation.Query do
   defp filter_runs_by_work_order(query, work_order_id) do
     from([work_order: wo] in query, where: wo.id == ^work_order_id)
   end
+
+  @valid_run_states Lightning.Run.states() |> Enum.map(&to_string/1)
+
+  defp filter_runs_by_state(query, nil), do: query
+
+  defp filter_runs_by_state(query, state) when is_binary(state) do
+    states =
+      state
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.to_existing_atom/1)
+
+    from(r in query, where: r.state in ^states)
+  end
+
+  @doc """
+  Validates the `state` query parameter against known run states.
+
+  Returns `:ok` or `{:error, message}`.
+  """
+  @spec validate_run_state_param(map()) :: :ok | {:error, String.t()}
+  def validate_run_state_param(%{"state" => state}) when is_binary(state) do
+    invalid =
+      state
+      |> String.split(",", trim: true)
+      |> Enum.reject(&(&1 in @valid_run_states))
+
+    case invalid do
+      [] ->
+        :ok
+
+      bad ->
+        {:error,
+         "Invalid state filter: #{inspect(bad)}. Valid states are: #{Enum.join(@valid_run_states, ", ")}"}
+    end
+  end
+
+  def validate_run_state_param(_params), do: :ok
 
   defp filter_by_inserted_after(query, nil), do: query
 
@@ -304,9 +342,27 @@ defmodule Lightning.Invocation.Query do
   @spec filter_work_orders(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
   def filter_work_orders(query, params) do
     query
+    |> filter_work_orders_by_ids(params["id"])
     |> filter_work_orders_by_date(params)
     |> filter_work_orders_by_project(params["project_id"])
     |> filter_work_orders_by_workflow(params["workflow_id"])
+    |> filter_work_orders_by_state(params["state"])
+  end
+
+  defp filter_work_orders_by_ids(query, nil), do: query
+
+  defp filter_work_orders_by_ids(query, ids) when is_list(ids) do
+    from(wo in query, where: wo.id in ^ids)
+  end
+
+  defp filter_work_orders_by_ids(query, id) when is_binary(id) do
+    case String.split(id, ",", trim: true) do
+      [single_id] ->
+        from(wo in query, where: wo.id == ^single_id)
+
+      ids ->
+        from(wo in query, where: wo.id in ^ids)
+    end
   end
 
   defp filter_work_orders_by_project(query, nil), do: query
@@ -320,6 +376,43 @@ defmodule Lightning.Invocation.Query do
   defp filter_work_orders_by_workflow(query, workflow_id) do
     from([workflow: w] in query, where: w.id == ^workflow_id)
   end
+
+  @valid_states Lightning.WorkOrder.states() |> Enum.map(&to_string/1)
+
+  defp filter_work_orders_by_state(query, nil), do: query
+
+  defp filter_work_orders_by_state(query, state) when is_binary(state) do
+    states =
+      state
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.to_existing_atom/1)
+
+    from(wo in query, where: wo.state in ^states)
+  end
+
+  @doc """
+  Validates the `state` query parameter against known work order states.
+
+  Returns `:ok` or `{:error, message}`.
+  """
+  @spec validate_state_param(map()) :: :ok | {:error, String.t()}
+  def validate_state_param(%{"state" => state}) when is_binary(state) do
+    invalid =
+      state
+      |> String.split(",", trim: true)
+      |> Enum.reject(&(&1 in @valid_states))
+
+    case invalid do
+      [] ->
+        :ok
+
+      bad ->
+        {:error,
+         "Invalid state filter: #{inspect(bad)}. Valid states are: #{Enum.join(@valid_states, ", ")}"}
+    end
+  end
+
+  def validate_state_param(_params), do: :ok
 
   defp filter_wo_by_inserted_after(query, nil), do: query
 

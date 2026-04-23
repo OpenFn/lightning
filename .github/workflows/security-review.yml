@@ -2,83 +2,84 @@ name: Security Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review, synchronize]
+    types: [opened, ready_for_review]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
   pull-requests: write
-  issues: write
-  id-token: write
 
 jobs:
   security-review:
-    if: ${{ !github.event.pull_request.draft }}
+    # Run on: non-draft PR open/ready, OR a PR comment starting with "/security-review".
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       startsWith(github.event.comment.body, '/security-review'))
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve checkout ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            echo "ref=refs/pull/${{ github.event.issue.number }}/head" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.ref.outputs.ref }}
 
       - uses: anthropics/claude-code-action@v1
         id: claude-review
         continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          use_sticky_comment: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            You are performing a security review on this PR using the
-            instructions defined in .claude/agents/security-reviewer.md.
-
-            Read that file first, then follow its instructions exactly.
-            Review only the changes introduced by this PR.
-            Post your findings as a structured review comment.
+            Perform a security review on this PR using the instructions in
+            .claude/agents/security-reviewer.md. Read that file first, then
+            follow its instructions exactly. Review only the changes in this
+            PR. Produce your findings as your final response using the output
+            format from the agent file. Do not try to post comments yourself.
           claude_args: --max-turns 50 --model claude-opus-4-7
 
-      - name: Post status comment if Claude did not comment
+      - name: Post review as sticky PR comment
         if: always()
         uses: actions/github-script@v7
+        env:
+          EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
         with:
           script: |
+            const fs = require('fs');
+            const marker = '<!-- security-review -->';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            let text = '';
+            const file = process.env.EXECUTION_FILE;
+            if (file && fs.existsSync(file)) {
+              const messages = JSON.parse(fs.readFileSync(file, 'utf8'));
+              const result = [...messages].reverse().find(m => m.type === 'result');
+              text = (result?.result || '').trim();
+            }
+
+            const body = `${marker}\n${text || `## Security Review\n\n⚠️ Review did not complete. See the [workflow run](${runUrl}).`}`;
+
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
-            const outcome = '${{ steps.claude-review.outcome }}';
-            // Claude posts its own sticky comment when successful; only intervene if it didn't.
-            const hasClaudeComment = comments.some(c =>
-              c.body && c.body.includes('Security Review') && c.user.type === 'Bot'
-            );
-            if (!hasClaudeComment) {
-              const isFailure = outcome === 'failure' || outcome === 'cancelled';
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: isFailure
-                  ? [
-                      '## Security Review',
-                      '',
-                      '⚠️ **Automated security review did not complete.**',
-                      '',
-                      'Claude hit the max-turns limit or encountered an error before posting findings.',
-                      'A manual review of S0 (project-scoped data access), S1 (authorization policies),',
-                      'and S2 (audit trail coverage) is recommended for this PR.',
-                      '',
-                      'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for details.',
-                    ].join('\n')
-                  : [
-                      '## Security Review',
-                      '',
-                      '⚠️ The review completed but no findings comment was posted.',
-                      '',
-                      'See the [workflow run](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for the raw Claude output.',
-                    ].join('\n'),
-              });
+            const existing = comments.find(c => c.body?.includes(marker));
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (existing) {
+              await github.rest.issues.updateComment({ ...params, comment_id: existing.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number });
             }
 
-      - name: Fail the check if review failed
-        if: steps.claude-review.outcome == 'failure'
-        run: |
-          echo "::error::Security review did not complete successfully. See PR comments for details."
-          exit 1
+            if (!text) core.setFailed('Security review did not produce findings.');
