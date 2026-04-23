@@ -8,6 +8,7 @@ defmodule Lightning.Channels.ChannelRequest do
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Workflows.WebhookAuthMethod
 
   @type t :: %__MODULE__{
@@ -18,6 +19,7 @@ defmodule Lightning.Channels.ChannelRequest do
           client_identity: String.t() | nil,
           client_webhook_auth_method_id: Ecto.UUID.t() | nil,
           client_auth_type: String.t() | nil,
+          destination_credential_id: Ecto.UUID.t() | nil,
           state: :pending | :success | :failed | :timeout | :error,
           started_at: DateTime.t(),
           completed_at: DateTime.t() | nil
@@ -37,6 +39,7 @@ defmodule Lightning.Channels.ChannelRequest do
     belongs_to :channel, Channel
     belongs_to :channel_snapshot, ChannelSnapshot
     belongs_to :client_webhook_auth_method, WebhookAuthMethod
+    belongs_to :destination_credential, ProjectCredential
 
     has_many :channel_events, ChannelEvent
   end
@@ -50,6 +53,7 @@ defmodule Lightning.Channels.ChannelRequest do
       :client_identity,
       :client_webhook_auth_method_id,
       :client_auth_type,
+      :destination_credential_id,
       :state,
       :started_at,
       :completed_at
