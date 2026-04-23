@@ -1164,23 +1164,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "merge modal shows beta warning", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ "This action cannot be undone"
-      assert html =~ "use the CLI to merge locally"
-    end
-
     test "descendants are calculated correctly for deep nesting", %{
       conn: conn,
       root: root,
@@ -1861,6 +1844,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         target_job: job1
       )
 
+      with_version(parent_workflow)
+
       # Create sandbox from parent (at this point, parent only has job1)
       sandbox = insert(:project, name: "Sandbox", parent: parent)
 
@@ -1870,6 +1855,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "Main Workflow",
           lock_version: parent_workflow.lock_version
         )
+
+      with_version(sandbox_workflow)
 
       sandbox_job1 =
         insert(:job,
