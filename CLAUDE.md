@@ -10,7 +10,7 @@ move health and survey data between systems. It's built on Elixir/Phoenix with
 PostgreSQL, featuring React components and real-time collaborative editing via
 Yjs CRDTs.
 
-## Common Development Commands
+## Common Commands
 
 ### Setup & Running
 
@@ -104,6 +104,10 @@ Real-time multi-user workflow editing using:
 - **y-phoenix-channel** - Yjs sync over Phoenix Channels
 - **Y_ex** - Elixir Yjs bindings (see `.claude/guidelines/yex-guidelines.md`)
 
+> Y.Doc transactions have non-obvious deadlock hazards on the BEAM. See
+> `.claude/guidelines/yex-guidelines.md §Transaction Deadlock Rules` before
+> writing any server-side Y.Doc code.
+
 **Store Architecture** (see `.claude/guidelines/store-structure.md`):
 - **SessionStore** - Y.Doc, connection state, sync status
 - **WorkflowStore** - Jobs, triggers, edges, positions (Y.Doc backed)
@@ -125,11 +129,7 @@ in development.
 
 ### Elixir/Phoenix
 
-- Pattern matching and guards over conditionals
-- Pipe operator `|>` for chaining
 - Use `{}` brace syntax in HEEx templates
-- Ecto changesets for validation
-- Avoid string table references in queries; use schema modules
 - `warnings_as_errors: true` - code must compile without warnings
 
 ### React/TypeScript
@@ -145,7 +145,7 @@ in development.
 - **Frontend**: Vitest (see `.claude/guidelines/testing-essentials.md`)
 - **E2E**: Playwright (see `.claude/guidelines/e2e-testing.md`)
 - Group related assertions; avoid micro-tests (one assertion per test)
-- Target test file sizes: < 200-400 lines
+- Target test file sizes: < 400 lines (see `.claude/guidelines/testing-essentials.md §Test file length`)
 
 ## Worker System
 
@@ -185,10 +185,22 @@ Run `./bin/bootstrap` to sync dependencies and migrations.
 ### Rambo Errors (Apple Silicon)
 Install Rust: `brew install rust`
 
-### Port Conflicts
-```bash
-lsof -i :4000   # Check what's using the port
-```
+## Available Agents
+
+Canonical roster. Command files (`create-plan.md`, `implement-plan.md`,
+`research-codebase.md`) cross-ref this section rather than repeating it.
+
+- **codebase-locator** - Find WHERE files and components live.
+- **codebase-analyzer** - Document HOW specific code works (no critique).
+- **codebase-pattern-finder** - Surface examples of existing patterns.
+- **context-locator** - Discover `.context/` documents about a topic.
+- **context-analyzer** - Extract key insights from a specific context doc.
+- **web-search-researcher** - External documentation and references (on request).
+- **phoenix-elixir-expert** - Elixir/Phoenix backend, Ecto, LiveView, Channels, OTP, ExUnit.
+- **react-collab-editor** - `assets/js/collaborative-editor/`, Y.Doc sync, Immer/useSyncExternalStore, TanStack Form, @xyflow/react.
+- **react-test-specialist** - React unit tests with Vitest; test quality and de-duplication.
+- **security-reviewer** - Security review of pending changes.
+- **idea-machine** - Brainstorming and framing shorthand.
 
 ## Guidelines Reference
 

@@ -717,68 +717,23 @@ async function waitForValueSync(
 }
 ```
 
-## Troubleshooting
+## Debugging Collaborative Connections
 
-### Flaky Sync Tests
-
-**Symptom**: Tests pass sometimes, fail others
-
-**Solution**: Increase timeouts and add explicit sync waits
-
-```typescript
-// ❌ BAD: Assumes instant sync
-await user1Page.fill('input', 'value');
-await expect(user2Page.locator('input')).toHaveValue('value');
-
-// ✅ GOOD: Explicit timeout for sync
-await user1Page.fill('input', 'value');
-await expect(user2Page.locator('input'))
-  .toHaveValue('value', { timeout: 5000 });
-```
-
-### Context Cleanup Issues
-
-**Symptom**: Tests leak contexts or connections
-
-**Solution**: Always close contexts in `finally` block
-
-```typescript
-test('proper cleanup', async ({ browser }) => {
-  const contexts = [];
-  try {
-    const ctx1 = await browser.newContext();
-    contexts.push(ctx1);
-
-    // Test logic...
-
-  } finally {
-    await Promise.all(contexts.map(ctx => ctx.close()));
-  }
-});
-```
-
-### WebSocket Connection Issues
-
-**Symptom**: Y.Doc never syncs
-
-**Solution**: Verify Phoenix Channel and WebSocket connection
+WebSocket diagnostics for when Y.Doc sync fails — inspect `window.ydoc.synced`, the named `workflowChannel`, and WebSocket close events:
 
 ```typescript
 test('debug connection', async ({ page }) => {
-  // Log WebSocket events
   page.on('websocket', ws => {
     console.log('WebSocket:', ws.url());
     ws.on('close', () => console.log('WebSocket closed'));
   });
 
-  // Log errors
   page.on('pageerror', error => {
     console.error('Page error:', error);
   });
 
   await page.goto('/collab/w/123');
 
-  // Verify connection state
   const connected = await page.evaluate(() => {
     return {
       ydoc: !!window.ydoc,
@@ -791,36 +746,4 @@ test('debug connection', async ({ page }) => {
 });
 ```
 
-## Best Practices
-
-### ✅ DO
-
-- **Use separate browser contexts** for each user
-- **Close contexts in finally block** to prevent leaks
-- **Add generous timeouts** for sync operations (3-5 seconds)
-- **Verify Y.Doc synced state** before interactions
-- **Test offline/online transitions** for robustness
-- **Monitor WebSocket** for debugging sync issues
-- **Test conflict resolution** with network delays
-- **Measure sync latency** for performance baselines
-- **Verify presence updates** for user awareness
-- **Test with realistic network conditions**
-
-### ❌ DON'T
-
-- **Don't assume instant sync** - add explicit waits
-- **Don't forget context cleanup** - use try/finally
-- **Don't test without verifying connection** - check Y.Doc synced
-- **Don't ignore network errors** - handle connection issues
-- **Don't use fixed delays** - use condition-based waits
-- **Don't test collaborative features in isolation** - need multiple users
-- **Don't forget presence scenarios** - test join/leave
-- **Don't skip conflict scenarios** - test concurrent edits
-- **Don't hardcode timing assumptions** - use flexible timeouts
-- **Don't test only happy path** - include network failures
-
----
-
-**Remember**: Collaborative features depend on network timing and eventual
-consistency. Always add generous timeouts, verify sync state, and test with
-multiple users to ensure reliable collaborative editing experiences.
+> For LiveView-level wait patterns, see `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits`.

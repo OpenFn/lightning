@@ -3,17 +3,18 @@
 This document provides comprehensive guidelines for working with Yex, the Elixir wrapper for the Y.js CRDT library, in the Lightning collaborative editing system.
 
 ## Table of Contents
-- [Critical Warning: VM Deadlock Risk](#critical-warning-vm-deadlock-risk)
+- [Transaction Deadlock Rules](#transaction-deadlock-rules)
 - [The Correct Pattern](#the-correct-pattern)
 - [Core Concepts](#core-concepts)
+- [Prelim Types](#prelim-types)
+- [Reading data: handle vs snapshot discipline](#reading-data-handle-vs-snapshot-discipline)
 - [API Reference](#api-reference)
 - [Common Gotchas](#common-gotchas)
-- [Quick Reference](#quick-reference)
 - [Testing Patterns](#testing-patterns)
 
 ---
 
-## Critical Warning: VM Deadlock Risk
+## Transaction Deadlock Rules
 
 ### Retrieve objects before transactions
 
@@ -21,7 +22,7 @@ Retrieve Yex objects (maps, arrays, text) before starting a transaction.
 
 Calling `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2` **inside a transaction will hang the BEAM VM**.
 
-### Why This Happens
+### Why this happens
 
 From `/deps/y_ex/lib/doc.ex:6-8`:
 
@@ -213,144 +214,26 @@ Lightning workflows use a consistent Y.Doc structure:
 
 ## API Reference
 
-### Creating Documents
+For the full library API (map/array/text methods, document options, state encoding, subscriptions) see `deps/y_ex/lib/`. This section covers only Lightning-specific usage patterns; the rules in [Transaction Deadlock Rules](#transaction-deadlock-rules) and [Prelim Types](#prelim-types) apply throughout.
+
+### Getting root collections
+
+Always get these **before** transactions (see deadlock rules above):
 
 ```elixir
-# Basic document
-doc = Yex.Doc.new()
-
-# Document with specific worker process
-doc = Yex.Doc.new(worker_pid)
-
-# Document with options
-doc = Yex.Doc.with_options(%Yex.Doc.Options{
-  client_id: 12345,
-  guid: "unique-id"
-})
-```
-
-### Getting Root Collections
-
-**Always get these BEFORE transactions:**
-
-```elixir
-# Get or create a root-level map
 workflow_map = Yex.Doc.get_map(doc, "workflow")
-
-# Get or create a root-level array
 jobs_array = Yex.Doc.get_array(doc, "jobs")
-
-# Get or create a root-level text
 text = Yex.Doc.get_text(doc, "content")
 ```
 
-**Note:** These functions create the collection if it doesn't exist.
+These functions create the collection if it doesn't exist.
 
-### Working with Maps
+## Prelim Types
 
-```elixir
-# Set a value
-Yex.Map.set(map, "key", "value")
-Yex.Map.set(map, "number", 42)
-Yex.Map.set(map, "nested", %{"foo" => "bar"})
-
-# Get a value (returns {:ok, value} or :error)
-{:ok, value} = Yex.Map.fetch(map, "key")
-
-# Get a value (raises if not found)
-value = Yex.Map.fetch!(map, "key")
-
-# Check if key exists
-Yex.Map.has_key?(map, "key")  # true/false
-
-# Delete a key
-Yex.Map.delete(map, "key")
-
-# Convert to Elixir map
-elixir_map = Yex.Map.to_map(map)     # Preserves Yex types
-json_map = Yex.Map.to_json(map)      # Converts to plain data
-
-# Get size
-count = Yex.Map.size(map)
-```
-
-**Reference:** `deps/y_ex/lib/shared_type/map.ex`
-
-### Working with Arrays
+When inserting complex objects into arrays or maps, use `Prelim` types. `Yex.Map`, `Yex.Array`, and `Yex.Text` cannot be constructed directly — they only come from `Yex.Doc.get_*` — so nested structures are built via `MapPrelim`, `ArrayPrelim`, and `TextPrelim`. On insertion the prelim becomes the real Yex type.
 
 ```elixir
-# Insert at index
-Yex.Array.insert(array, 0, "value")
-
-# Push to end
-Yex.Array.push(array, "value")
-
-# Push to beginning
-Yex.Array.unshift(array, "value")
-
-# Insert multiple items
-Yex.Array.insert_list(array, 0, [1, 2, 3, 4, 5])
-
-# Get element (returns {:ok, value} or :error)
-{:ok, value} = Yex.Array.fetch(array, 0)
-
-# Get element (raises if out of bounds)
-value = Yex.Array.fetch!(array, 0)
-
-# Delete element
-Yex.Array.delete(array, 0)
-
-# Delete range
-Yex.Array.delete_range(array, 0, 5)  # Delete 5 elements starting at 0
-
-# Move element
-Yex.Array.move_to(array, from_index, to_index)
-
-# Get length
-length = Yex.Array.length(array)
-
-# Convert to list
-list = Yex.Array.to_list(array)      # Preserves Yex types
-json_list = Yex.Array.to_json(array) # Converts to plain data
-
-# Arrays are Enumerable
-Enum.each(array, fn item -> ... end)
-Enum.map(array, fn item -> ... end)
-Enum.find(array, fn item -> ... end)
-```
-
-**Reference:** `deps/y_ex/lib/shared_type/array.ex`
-
-### Working with Text
-
-```elixir
-# Get or create text
-text = Yex.Doc.get_text(doc, "body")
-
-# Insert text
-Yex.Text.insert(text, 0, "Hello")
-
-# Insert with formatting
-Yex.Text.insert(text, 0, "Bold", %{"bold" => true})
-
-# Delete text
-Yex.Text.delete(text, 0, 5)  # Delete 5 characters starting at 0
-
-# Get length
-length = Yex.Text.length(text)
-
-# Convert to string
-string = Yex.Text.to_string(text)
-```
-
-**Reference:** `deps/y_ex/lib/shared_type/text.ex`
-
-### Creating Nested Structures
-
-When inserting complex objects into arrays or maps, use `Prelim` types:
-
-```elixir
-# Create a map to insert into an array
+# Map prelim inserted into an array (typical Lightning job insert)
 job_map = Yex.MapPrelim.from(%{
   "id" => "abc123",
   "name" => "My Job",
@@ -360,144 +243,113 @@ job_map = Yex.MapPrelim.from(%{
 
 Yex.Array.push(jobs_array, job_map)
 
-# Create an array to insert into a map
+# Array prelim inserted into a map
 array_prelim = Yex.ArrayPrelim.from([1, 2, 3, 4])
 Yex.Map.set(map, "numbers", array_prelim)
 
-# The prelim types become actual Yex types after insertion
+# After insertion the prelim becomes a real Yex type
 {:ok, job} = Yex.Array.fetch(jobs_array, 0)
-# job["body"] is now a %Yex.Text{} struct
+# job["body"] is a %Yex.Text{} struct
 ```
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:114-127`
 
-### Extracting Data
+## Reading data: handle vs snapshot discipline
+
+Every read from a Y.Doc picks a side of a boundary:
+
+- **Handle discipline** — you keep Yex structs (`%Yex.Map{}`, `%Yex.Array{}`, `%Yex.Text{}`) as live references into the doc. Identity is preserved, writes target the right node, observers still fire.
+- **Snapshot discipline** — you convert to plain Elixir data (`Yex.Array.to_json/1`, `Yex.Map.to_json/1`, `Yex.Text.to_string/1`). From that point on you have a detached copy. No identity, no observation, no write path back.
+
+Pick one per layer. Straddling is where the "sometimes I get a map, sometimes a Yex.Map" confusion comes from — it's never the doc changing under you, it's two call sites in the same layer picking different accessors.
+
+### When to use handle discipline
+
+- Writers and reconcilers — you need to mutate specific nodes
+- Observers and subscribers — identity matters for change detection
+- Reads against a doc that may be missing newer keys (legacy-doc case)
+
+Primary accessors:
 
 ```elixir
-# Extract workflow data from Y.Doc
-workflow_map = Yex.Doc.get_map(doc, "workflow")
-jobs_array = Yex.Doc.get_array(doc, "jobs")
+# Scalar key → Elixir scalar; nested Y type → Yex struct
+{:ok, value} = Yex.Map.fetch(map, "key")
+value = Yex.Map.fetch!(map, "key")  # raises if missing
 
-# Simple values
-id = Yex.Map.fetch!(workflow_map, "id")
-name = Yex.Map.fetch!(workflow_map, "name")
-
-# Convert arrays to lists
-jobs_list = Yex.Array.to_json(jobs_array)  # Returns list of maps
-
-# Process each item
-jobs = Enum.map(jobs_list, fn job ->
-  %{
-    "id" => job["id"],
-    "name" => job["name"],
-    "body" => extract_text_field(job["body"])  # Handle Text type
-  }
-end)
-
-# Helper for extracting text fields
-defp extract_text_field(%Yex.Text{} = text), do: Yex.Text.to_string(text)
-defp extract_text_field(string) when is_binary(string), do: string
-defp extract_text_field(nil), do: ""
+# List of Yex structs; nested types stay live
+items = Yex.Array.to_list(array)
 ```
+
+### When to use snapshot discipline
+
+- Y.Doc → Ecto translation (the serializer's read path)
+- Read-only diffs, comparisons, hashing
+- Anything that ends directly at `|> Repo.insert/1` or `|> broadcast/1`
+
+Primary accessors:
+
+```elixir
+jobs = Yex.Array.to_json(jobs_array)   # list of plain maps
+workflow = Yex.Map.to_json(workflow_map)  # plain map
+text = Yex.Text.to_string(body_text)
+```
+
+After `to_json`, ordinary `Map.get/2` with a default handles missing keys — no sentinel needed.
+
+**Wrinkle:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse through nested Y.Maps and Y.Arrays but **leave `%Yex.Text{}` structs in place**. Text leaves still need `Yex.Text.to_string/1` at the consumer — see Gotcha #4.
+
+### Don't cross disciplines mid-layer
+
+```elixir
+# ❌ Mixed: to_json'd the array, then tries to fetch! on a plain map
+jobs = Yex.Array.to_json(jobs_array)
+id = Yex.Map.fetch!(List.first(jobs), "id")   # FunctionClauseError
+
+# ❌ Mixed the other way: elements are Yex.Map, code assumes plain-map access
+jobs = Yex.Array.to_list(jobs_array)
+id = List.first(jobs)["id"]                   # Yex.Map doesn't answer to ["key"]
+
+# ✅ Snapshot discipline
+jobs = Yex.Array.to_json(jobs_array)
+id = List.first(jobs)["id"]
+
+# ✅ Handle discipline
+jobs = Yex.Array.to_list(jobs_array)
+id = Yex.Map.fetch!(List.first(jobs), "id")
+```
+
+Convert once at the layer boundary; don't re-cross.
+
+### Missing-key handling across legacy docs
+
+A Y.Doc created before a newer field was added won't have that key. The two disciplines deal with this differently:
+
+```elixir
+# Handle discipline — fetch!/2 raises KeyError. Use fetch/2 + match, or fetch!/2 only when you know the key exists.
+concurrency =
+  case Yex.Map.fetch(workflow_map, "concurrency") do
+    {:ok, value} -> value
+    :error -> nil
+  end
+
+# Snapshot discipline — to_json returns plain maps; Map.get/2 handles absence transparently.
+workflow = Yex.Map.to_json(workflow_map)
+concurrency = Map.get(workflow, "concurrency")  # nil if absent
+```
+
+If you see advice to "use the `:not_found` / `:error` sentinel" on a layer that's already `to_json`-ed, the layer is straddling — drop the sentinel or drop the `to_json`, don't do both.
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:172-217`
 
-### Document Updates
+### Subscribing to document updates
 
-```elixir
-# Apply an update from another client
-:ok = Yex.apply_update(doc, binary_update)
-
-# Encode document state as update
-{:ok, state_binary} = Yex.encode_state_as_update(doc)
-# Or use the bang version
-state_binary = Yex.encode_state_as_update!(doc)
-
-# Encode state vector
-{:ok, vector_binary} = Yex.encode_state_vector(doc)
-vector_binary = Yex.encode_state_vector!(doc)
-
-# Encode only the diff
-{:ok, diff} = Yex.encode_state_as_update(doc, other_state_vector)
-```
-
-**Reference:** `deps/y_ex/lib/y_ex.ex`
-
-### Monitoring Changes
-
-```elixir
-# Subscribe to document updates
-{:ok, sub_ref} = Yex.Doc.monitor_update(doc)
-
-# Or with custom metadata
-{:ok, sub_ref} = Yex.Doc.monitor_update(doc, metadata: %{user_id: 123})
-
-# Receive update messages
-receive do
-  {:update_v1, update_binary, origin, metadata} ->
-    # Handle update
-end
-
-# Unsubscribe
-Yex.Doc.demonitor_update(sub_ref)
-```
-
-**Important:** Always unsubscribe in your GenServer's `terminate/2` callback to prevent memory leaks.
-
-**Reference:** `deps/y_ex/lib/doc.ex:184-234`
+For state sync and update propagation APIs (`Yex.apply_update/2`, `Yex.encode_state_as_update/1`, `Yex.Doc.monitor_update/2`, `Yex.Doc.demonitor_update/1`), see `deps/y_ex/lib/y_ex.ex` and `deps/y_ex/lib/doc.ex`. Lightning-specific rule: always unsubscribe in your GenServer's `terminate/2` callback — see Gotcha #2 below.
 
 ---
 
 ## Common Gotchas
 
-### 0. Cannot Create Map/Array/Text Directly
-
-**Problem:** Attempting to call `Yex.Map.new()`, `Yex.Array.new()`, or `Yex.Text.new()` will fail because these functions don't exist.
-
-**Solution:** Use `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2`. For nested structures, use Prelim types.
-
-```elixir
-# ❌ Wrong - These functions don't exist
-map = Yex.Map.new()
-array = Yex.Array.new()
-
-# ✅ Correct - Get from document
-doc = Yex.Doc.new()
-map = Yex.Doc.get_map(doc, "my_map")
-array = Yex.Doc.get_array(doc, "my_array")
-
-# ✅ Correct - For nested structures, use Prelim types
-jobs = Yex.Doc.get_array(doc, "jobs")
-job = Yex.MapPrelim.from(%{
-  "id" => "123",
-  "body" => Yex.TextPrelim.from("code here")
-})
-Yex.Array.push(jobs, job)
-```
-
-**Reference:** `deps/y_ex/lib/doc.ex:113-135`
-
-### 1. VM Deadlock from Getting Objects in Transactions
-
-**Problem:** Calling `get_map/get_array/get_text` inside a transaction hangs the VM.
-
-**Solution:** Always get objects before starting the transaction.
-
-```elixir
-# ✅ Correct
-workflow_map = Yex.Doc.get_map(doc, "workflow")
-Yex.Doc.transaction(doc, fn ->
-  Yex.Map.set(workflow_map, "key", "value")
-end)
-
-# ❌ Wrong - VM DEADLOCK
-Yex.Doc.transaction(doc, fn ->
-  workflow_map = Yex.Doc.get_map(doc, "workflow")  # HANGS HERE
-  Yex.Map.set(workflow_map, "key", "value")
-end)
-```
-
-### 2. Nested Transactions Not Allowed
+### 1. Nested Transactions Not Allowed
 
 **Problem:** Transactions cannot be nested.
 
@@ -520,7 +372,7 @@ Yex.Doc.transaction(doc, fn ->
 end)
 ```
 
-### 3. Forgetting to Unsubscribe from Updates
+### 2. Forgetting to Unsubscribe from Updates
 
 **Problem:** Subscriptions stored in process dictionary will leak memory if not cleaned up.
 
@@ -542,7 +394,7 @@ end
 
 **Reference:** `deps/y_ex/lib/subscription.ex:49-78`
 
-### 4. Converting Atoms to Strings for Yjs Compatibility
+### 3. Converting Atoms to Strings for Yjs Compatibility
 
 **Problem:** Yjs only supports boolean, string, number, and null. Elixir atoms must be converted.
 
@@ -564,7 +416,7 @@ defp to_yjs_variant(value), do: value
 
 **Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:236-240`
 
-### 5. Text Fields Need Special Extraction
+### 4. Text Fields Need Special Extraction
 
 **Problem:** Y.Text fields don't automatically convert to strings.
 
@@ -586,7 +438,7 @@ defp extract_text(nil), do: ""
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:212-217`
 
-### 6. Using Deprecated Functions
+### 5. Using Deprecated Functions
 
 **Problem:** `Yex.Map.get/2` and `Yex.Array.get/2` are deprecated.
 
@@ -603,7 +455,7 @@ value = Yex.Map.fetch!(map, "key")  # Raises if not found
 
 **Reference:** `deps/y_ex/lib/shared_type/map.ex:83-87`
 
-### 7. Nil Values in Job/Edge Fields
+### 6. Nil Values in Job/Edge Fields
 
 **Problem:** Some fields can be nil and need special handling.
 
@@ -620,7 +472,7 @@ job_map = Yex.MapPrelim.from(%{
 
 **Reference:** `lib/lightning/collaboration/workflow_serializer.ex:116-124`
 
-### 8. Finding Array Items by ID
+### 7. Finding Array Items by ID
 
 **Problem:** Arrays don't have a direct "find by ID" method.
 
@@ -639,94 +491,6 @@ end)
 ```
 
 **Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:222-234`
-
----
-
-## Quick Reference
-
-### Before Every Transaction
-
-```elixir
-# 1. Get ALL Yex objects you'll need
-map = Yex.Doc.get_map(doc, "name")
-array = Yex.Doc.get_array(doc, "name")
-text = Yex.Doc.get_text(doc, "name")
-
-# 2. Start transaction
-Yex.Doc.transaction(doc, "operation_name", fn ->
-  # 3. Use pre-retrieved objects
-  Yex.Map.set(map, "key", "value")
-  Yex.Array.push(array, item)
-end)
-```
-
-### Common Operations Cheat Sheet
-
-```elixir
-# Documents
-doc = Yex.Doc.new()
-doc = Yex.Doc.new(worker_pid)
-
-# Root Collections (BEFORE transactions)
-map = Yex.Doc.get_map(doc, "name")
-array = Yex.Doc.get_array(doc, "name")
-text = Yex.Doc.get_text(doc, "name")
-
-# Maps
-Yex.Map.set(map, "key", value)
-{:ok, val} = Yex.Map.fetch(map, "key")
-val = Yex.Map.fetch!(map, "key")
-Yex.Map.delete(map, "key")
-elixir_map = Yex.Map.to_json(map)
-
-# Arrays
-Yex.Array.push(array, value)
-Yex.Array.insert(array, index, value)
-{:ok, val} = Yex.Array.fetch(array, index)
-Yex.Array.delete(array, index)
-list = Yex.Array.to_json(array)
-length = Yex.Array.length(array)
-
-# Text
-Yex.Text.insert(text, index, "string")
-Yex.Text.delete(text, index, length)
-string = Yex.Text.to_string(text)
-
-# Prelim Types (for nested structures)
-Yex.MapPrelim.from(%{"key" => "value"})
-Yex.ArrayPrelim.from([1, 2, 3])
-Yex.TextPrelim.from("text content")
-
-# Transactions
-Yex.Doc.transaction(doc, "name", fn -> ... end)
-
-# Monitoring
-{:ok, ref} = Yex.Doc.monitor_update(doc)
-Yex.Doc.demonitor_update(ref)
-
-# Updates
-Yex.apply_update(doc, binary)
-binary = Yex.encode_state_as_update!(doc)
-```
-
-### Type Conversions
-
-```elixir
-# Atoms → Strings (except booleans)
-"always" = :always |> to_string()
-"webhook" = :webhook |> to_string()
-true = true  # Booleans stay as-is
-
-# Nil → Empty String (for text fields)
-"" = nil || ""
-
-# Y.Text → String
-"text" = Yex.Text.to_string(text)
-
-# Yex → Elixir
-map = Yex.Map.to_json(yex_map)      # Deep conversion
-list = Yex.Array.to_json(yex_array)  # Deep conversion
-```
 
 ---
 

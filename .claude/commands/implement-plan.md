@@ -26,44 +26,7 @@ If `$ARGUMENTS` is empty, ask for one.
 
 ## Available Agent Types
 
-When implementing phases, use these specialized agents based on the work type:
-
-- **phoenix-elixir-expert**:
-  - Elixir/Phoenix backend development
-  - Ecto schemas, migrations, and queries
-  - Phoenix LiveView backend
-  - Phoenix Channels and WebSocket implementations
-  - OTP, GenServers, supervision trees
-  - Performance optimization
-  - Backend testing with ExUnit
-
-- **react-collaborative-architect**:
-  - React/TypeScript frontend development
-  - Collaborative editing features with YJS
-  - Modern React patterns (hooks, context, etc.)
-  - Lightning workflow editor frontend
-  - Testing collaborative features
-
-- **react-collab-editor**:
-  - Collaborative editor in `assets/js/collaborative-editor/`
-  - Y.Doc synchronization and debugging
-  - Immer and useSyncExternalStore patterns
-  - TanStack Form and Zod validation
-  - @xyflow/react diagram components
-  - TypeScript type fixes in editor codebase
-
-- **react-test-specialist**:
-  - React component unit tests with Vitest
-  - Reviewing and improving test quality
-  - Removing redundant tests
-  - Test refactoring for maintainability
-  - Following project test guidelines
-
-- **general-purpose**:
-  - Mixed work spanning frontend and backend
-  - Coordination tasks
-  - Work that doesn't fit specialized categories
-  - Simple changes not requiring specialized expertise
+See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical roster and scopes. Pick the agent whose scope matches the phase's work type.
 
 ## Agent-Based Phase Implementation
 
@@ -133,7 +96,7 @@ If an agent encounters a mismatch:
 ## Verification Approach
 
 Each phase agent is responsible for:
-- Running all automated verification steps in the success criteria
+- Running all automated verification steps in the success criteria (see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands) for the project's quality gates)
 - Fixing any issues before reporting completion
 - Updating checkboxes in the plan file using Edit
 - Reporting what manual verification steps remain
@@ -183,5 +146,3 @@ Manual verification needed: Test the API endpoints with curl.
 
 Now spawning a fresh react-collaborative-architect agent for Phase 3...
 ```
-
-Remember: You're coordinating a solution, not implementing it. Each phase gets a fresh agent with a focused mission. This prevents context overflow and ensures quality.

@@ -103,23 +103,7 @@ After getting initial clarifications:
 
 3. **Spawn parallel sub-tasks for comprehensive research**:
    - Create multiple Task agents to research different aspects concurrently
-   - Use the right agent for each type of research:
-
-   **For deeper investigation:**
-   - **codebase-locator** - To find more specific files (e.g., "find all files that handle [specific component]")
-   - **codebase-analyzer** - To understand implementation details (e.g., "analyze how [system] works")
-   - **codebase-pattern-finder** - To find similar features we can model after
-
-   **For historical context:**
-   - **context-locator** - To find any research, plans, or decisions about this area
-   - **context-analyzer** - To extract key insights from the most relevant documents
-
-   Each agent knows how to:
-   - Find the right files and code patterns
-   - Identify conventions and patterns to follow
-   - Look for integration points and dependencies
-   - Return specific file:line references
-   - Find tests and examples
+   - See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical agent roster.
 
 3. **Wait for ALL sub-tasks to complete** before proceeding
 
@@ -168,17 +152,12 @@ Once aligned on approach:
 After structure approval:
 
 1. **Identify agent assignments for each phase**:
-   - For each implementation phase, determine which specialized agent should handle it
-   - Available agent types (see `implement-plan.md` for full descriptions):
-     - **phoenix-elixir-expert**: Elixir/Phoenix backend work
-     - **react-collaborative-architect**: React/TypeScript frontend with YJS
-     - **react-collab-editor**: Collaborative editor components
-     - **react-test-specialist**: React testing with Vitest
-     - **general-purpose**: Mixed or coordination work
+   - For each implementation phase, determine which specialized agent should handle it. See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical roster.
    - Each phase uses a fresh agent instance to avoid context window issues.
    - The agent assignment tells the implementation coordinator which agent to spawn for that phase
 
 2. **Write the plan** to `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
+   <!-- See `.claude/agents/context-locator.md` for the `.context/` directory layout. -->
    - Format: `YYYY-MM-DD-XXXX-description.md` where:
      - YYYY-MM-DD is today's date
      - XXXX is the ticket number (omit if no ticket)
@@ -237,11 +216,11 @@ After structure approval:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Migration applies cleanly: `make migrate`
-- [ ] Unit tests pass: `make test-component`
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `make lint`
-- [ ] Integration tests pass: `make test-integration`
+- [ ] Migration applies cleanly: `<project migrate command>`
+- [ ] Unit tests pass: `<project test command>`
+- [ ] Type checking passes: `<project typecheck command>`
+- [ ] Linting passes: `<project lint command>`
+- [ ] Integration tests pass: `<project integration test command>`
 
 #### Manual Verification:
 - [ ] Feature works as expected when tested via UI
@@ -310,44 +289,18 @@ After structure approval:
 
 ## Important Guidelines
 
-1. **Be Skeptical**:
-   - Question vague requirements
-   - Identify potential issues early
-   - Ask "why" and "what about"
-   - Don't assume - verify with code
+1. **Read all context files COMPLETELY before planning**. Include specific file paths and line numbers. Automated verification steps should use project-specific commands (e.g., `mix verify`, `npm test`).
 
-2. **Be Interactive**:
-   - Don't write the full plan in one shot
-   - Get buy-in at each major step
-   - Allow course corrections
-   - Work collaboratively
+2. **Track progress** with TodoWrite for non-trivial plans.
 
-3. **Be Thorough**:
-   - Read all context files COMPLETELY before planning
-   - Research actual code patterns using parallel sub-tasks
-   - Include specific file paths and line numbers
-   - Write measurable success criteria with clear automated vs manual distinction
-   - Automated steps should use project-specific commands when available (e.g., `mix verify`, `npm test`)
-
-4. **Be Practical**:
-   - Focus on incremental, testable changes
-   - Consider migration and rollback
-   - Think about edge cases
-   - Include "what we're NOT doing"
-
-5. **Track Progress**:
-   - For non-trivial plans, consider tracking progress with TodoWrite.
-
-6. **No Open Questions in Final Plan**:
-   - Resolve open questions before finalizing; don't write the plan with unresolved questions.
-   - The implementation plan must be complete and actionable.
+3. **No open questions in the final plan**: resolve them before finalizing. The implementation plan must be complete and actionable.
 
 ## Success Criteria Guidelines
 
 **Always separate success criteria into two categories:**
 
 1. **Automated Verification** (can be run by execution agents):
-   - Commands that can be run: `make test`, `npm run lint`, etc.
+   - Shell commands the project provides for tests, linting, type-checking, etc.
    - Specific files that should exist
    - Code compilation/type checking
    - Automated test suites
@@ -363,10 +316,10 @@ After structure approval:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Database migration runs successfully: `make migrate`
-- [ ] All unit tests pass: `go test ./...`
-- [ ] No linting errors: `golangci-lint run`
-- [ ] API endpoint returns 200: `curl localhost:8080/api/new-endpoint`
+- [ ] Database migration runs successfully: `<migrate command>`
+- [ ] All unit tests pass: `<test command>`
+- [ ] No linting errors: `<lint command>`
+- [ ] API endpoint returns 200: `curl localhost:<port>/api/new-endpoint`
 
 #### Manual Verification:
 - [ ] New feature appears correctly in the UI
