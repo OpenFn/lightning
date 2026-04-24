@@ -120,7 +120,7 @@ defmodule LightningWeb.RunChannel do
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        # Broadcast webhook response if after_completion is enabled
+        # Broadcast webhook response for after_completion mode
         maybe_broadcast_webhook_response(run_with_preloads, payload)
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
@@ -210,7 +210,6 @@ defmodule LightningWeb.RunChannel do
         reply_with(socket, {:error, changeset})
 
       {:ok, step} ->
-        maybe_broadcast_custom_webhook_response(socket.assigns.run, payload)
         reply_with(socket, {:ok, %{step_id: step.id}})
     end
   end
@@ -307,32 +306,6 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_custom_webhook_response(run, payload) do
-    case payload["webhook_response"] do
-      nil ->
-        :ok
-
-      webhook_response ->
-        run_with_preloads = Repo.preload(run, work_order: [:trigger])
-        trigger = run_with_preloads.work_order.trigger
-
-        if trigger && trigger.type == :webhook &&
-             trigger.webhook_reply == :custom do
-          topic =
-            "work_order:#{run_with_preloads.work_order.id}:webhook_response"
-
-          status_code = webhook_response["code"] || 200
-          body = webhook_response["body"] || %{}
-
-          Phoenix.PubSub.broadcast(
-            Lightning.PubSub,
-            topic,
-            {:webhook_response, status_code, body}
-          )
-        end
-    end
-  end
-
   defp maybe_broadcast_webhook_response(run, payload) do
     work_order = run.work_order
     trigger = work_order.trigger
@@ -340,21 +313,37 @@ defmodule LightningWeb.RunChannel do
     if trigger && trigger.type == :webhook &&
          trigger.webhook_reply == :after_completion do
       topic = "work_order:#{work_order.id}:webhook_response"
-      status_code = determine_status_code(run.state, trigger)
+      final_state = payload["final_state"]
+      config = trigger.sync_webhook_response_config
 
-      body = %{
-        data: payload["final_state"],
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: run.state,
-          error_type: run.error_type,
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
-      }
+      # _webhookResponse in the final state takes priority over the trigger config.
+      state_override =
+        case final_state do
+          %{"_webhookResponse" => override} when is_map(override) -> override
+          _ -> nil
+        end
+
+      status_code =
+        state_override_code(state_override) ||
+          (config && config.code) ||
+          default_status_code(run.state)
+
+      body =
+        Map.get(state_override || %{}, "body") ||
+          (config && config.body) ||
+          %{
+            data: final_state,
+            meta: %{
+              work_order_id: work_order.id,
+              run_id: run.id,
+              state: run.state,
+              error_type: run.error_type,
+              inserted_at: run.inserted_at,
+              started_at: run.started_at,
+              claimed_at: run.claimed_at,
+              finished_at: run.finished_at
+            }
+          }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
@@ -364,11 +353,16 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
-  defp determine_status_code(:success, trigger),
-    do: trigger.webhook_response_success_code || 200
+  # Normalise the code from _webhookResponse — JSON numbers arrive as floats.
+  defp state_override_code(%{"code" => code}) when is_integer(code), do: code
 
-  defp determine_status_code(_state, trigger),
-    do: trigger.webhook_response_error_code || 400
+  defp state_override_code(%{"code" => code}) when is_float(code),
+    do: trunc(code)
+
+  defp state_override_code(_), do: nil
+
+  defp default_status_code(:success), do: 200
+  defp default_status_code(_), do: 400
 
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(samples: samples, basic_auth: basic_auth)

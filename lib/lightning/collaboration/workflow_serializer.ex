@@ -229,9 +229,17 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "type" => trigger.type |> to_string(),
           "webhook_reply" =>
             trigger.webhook_reply && to_string(trigger.webhook_reply),
-          "webhook_response_success_code" =>
-            trigger.webhook_response_success_code,
-          "webhook_response_error_code" => trigger.webhook_response_error_code
+          "sync_webhook_response_config" =>
+            case trigger.sync_webhook_response_config do
+              nil ->
+                nil
+
+              config ->
+                Yex.MapPrelim.from(%{
+                  "code" => config.code,
+                  "body" => config.body
+                })
+            end
         })
 
       Yex.Array.push(triggers_array, trigger_map)
@@ -278,10 +286,10 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       trigger
       |> Map.take(
         ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply
-           kafka_configuration webhook_response_success_code webhook_response_error_code)
+           kafka_configuration sync_webhook_response_config)
       )
       |> normalize_kafka_configuration()
-      |> normalize_response_codes()
+      |> normalize_sync_webhook_response_config()
     end)
   end
 
@@ -304,18 +312,23 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp normalize_kafka_configuration(trigger), do: trigger
 
-  defp normalize_response_codes(trigger) do
-    trigger
-    |> normalize_integer_field("webhook_response_success_code")
-    |> normalize_integer_field("webhook_response_error_code")
+  # Y.Doc serialises numbers as floats; convert code back to an integer.
+  defp normalize_sync_webhook_response_config(
+         %{"sync_webhook_response_config" => %{} = config} = trigger
+       ) do
+    normalized =
+      case Map.fetch(config, "code") do
+        {:ok, value} when is_float(value) ->
+          Map.put(config, "code", trunc(value))
+
+        _ ->
+          config
+      end
+
+    Map.put(trigger, "sync_webhook_response_config", normalized)
   end
 
-  defp normalize_integer_field(map, key) do
-    case Map.fetch(map, key) do
-      {:ok, value} when is_float(value) -> Map.put(map, key, trunc(value))
-      _ -> map
-    end
-  end
+  defp normalize_sync_webhook_response_config(trigger), do: trigger
 
   defp extract_positions(positions_map) do
     Yex.Map.to_json(positions_map)

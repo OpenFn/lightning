@@ -70,9 +70,11 @@ export namespace Session {
     enabled: boolean;
     cron_expression: string | null;
     has_auth_method: boolean;
-    webhook_reply: 'before_start' | 'after_completion' | 'custom' | null;
-    webhook_response_success_code: number | null;
-    webhook_response_error_code: number | null;
+    webhook_reply: 'before_start' | 'after_completion' | null;
+    sync_webhook_response_config: {
+      code: number | null;
+      body: Record<string, unknown> | null;
+    } | null;
     webhook_auth_methods: Array<{
       id: string;
       name: string;

@@ -16,6 +16,7 @@ defmodule Lightning.Workflows.Trigger do
 
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -25,7 +26,7 @@ defmodule Lightning.Workflows.Trigger do
   @type trigger_type :: :webhook | :cron
 
   @trigger_types [:webhook, :cron, :kafka]
-  @webhook_reply_types [:before_start, :after_completion, :custom]
+  @webhook_reply_types [:before_start, :after_completion]
 
   @derive {Jason.Encoder,
            only: [
@@ -55,14 +56,15 @@ defmodule Lightning.Workflows.Trigger do
 
     field :delete, :boolean, virtual: true
     field :has_auth_method, :boolean, virtual: true
-    field :webhook_response_success_code, :integer
-    field :webhook_response_error_code, :integer
 
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
     embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
+
+    embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
+      on_replace: :update
 
     timestamps()
   end
@@ -77,20 +79,20 @@ defmodule Lightning.Workflows.Trigger do
   (i.e., the HTTP connection is held open waiting for a response).
   """
   @spec synchronous?(t()) :: boolean()
-  def synchronous?(%__MODULE__{webhook_reply: reply})
-      when reply in [:after_completion, :custom],
-      do: true
-
+  def synchronous?(%__MODULE__{webhook_reply: :after_completion}), do: true
   def synchronous?(%__MODULE__{}), do: false
 
   @doc false
   def changeset(trigger, attrs) do
     trigger
     |> cast_changeset(attrs)
-    |> cast_embed(
-      :kafka_configuration,
+    |> cast_embed(:kafka_configuration,
       required: false,
       with: &KafkaConfiguration.changeset/2
+    )
+    |> cast_embed(:sync_webhook_response_config,
+      required: false,
+      with: &SyncWebhookResponseConfig.changeset/2
     )
     |> validate()
   end
@@ -106,9 +108,7 @@ defmodule Lightning.Workflows.Trigger do
       :cron_expression,
       :cron_cursor_job_id,
       :has_auth_method,
-      :webhook_reply,
-      :webhook_response_success_code,
-      :webhook_response_error_code
+      :webhook_reply
     ])
   end
 
@@ -145,7 +145,7 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
-        |> maybe_reset_response_codes()
+        |> maybe_clear_sync_config()
 
       :cron ->
         changeset
@@ -153,8 +153,7 @@ defmodule Lightning.Workflows.Trigger do
         |> validate_cron()
         |> put_change(:kafka_configuration, nil)
         |> put_change(:webhook_reply, nil)
-        |> put_change(:webhook_response_success_code, nil)
-        |> put_change(:webhook_response_error_code, nil)
+        |> put_change(:sync_webhook_response_config, nil)
 
       :kafka ->
         changeset
@@ -162,25 +161,19 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
-        |> put_change(:webhook_response_success_code, nil)
-        |> put_change(:webhook_response_error_code, nil)
+        |> put_change(:sync_webhook_response_config, nil)
 
       nil ->
         changeset
     end
   end
 
-  defp maybe_reset_response_codes(changeset) do
+  # Keep the config when reply mode is after_completion; clear it otherwise
+  # so stale config doesn't persist across mode switches.
+  defp maybe_clear_sync_config(changeset) do
     case fetch_field!(changeset, :webhook_reply) do
-      :after_completion ->
-        changeset
-        |> put_default(:webhook_response_success_code, 200)
-        |> put_default(:webhook_response_error_code, 400)
-
-      _ ->
-        changeset
-        |> put_change(:webhook_response_success_code, nil)
-        |> put_change(:webhook_response_error_code, nil)
+      :after_completion -> changeset
+      _ -> put_change(changeset, :sync_webhook_response_config, nil)
     end
   end
 

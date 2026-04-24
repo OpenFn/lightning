@@ -78,12 +78,8 @@ export class YAMLStateToYDoc {
     if (trigger.type === 'webhook') {
       triggerMap.set('webhook_reply', trigger.webhook_reply ?? null);
       triggerMap.set(
-        'webhook_response_success_code',
-        trigger.webhook_response_success_code ?? null
-      );
-      triggerMap.set(
-        'webhook_response_error_code',
-        trigger.webhook_response_error_code ?? null
+        'sync_webhook_response_config',
+        trigger.sync_webhook_response_config ?? null
       );
     }
 
