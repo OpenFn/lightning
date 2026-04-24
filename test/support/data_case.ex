@@ -67,6 +67,51 @@ defmodule Lightning.DataCase do
         shared: not tags[:async]
       )
 
+    # Seed the Cachex cache directly with minimal adaptor registry data so
+    # AdaptorRegistry.all() never falls through to a DB query from the
+    # GenServer process (which would fail sandbox ownership checks in async tests).
+    registry_json =
+      Jason.encode!([
+        %{
+          name: "@openfn/language-common",
+          repo: "",
+          latest: "1.6.2",
+          versions: [
+            %{version: "1.6.2"},
+            %{version: "1.5.0"},
+            %{version: "1.0.0"}
+          ]
+        },
+        %{
+          name: "@openfn/language-http",
+          repo: "",
+          latest: "7.2.0",
+          versions: [
+            %{version: "7.2.0"},
+            %{version: "2.0.0"},
+            %{version: "1.0.0"}
+          ]
+        },
+        %{
+          name: "@openfn/language-dhis2",
+          repo: "",
+          latest: "3.0.4",
+          versions: [%{version: "3.0.4"}, %{version: "3.0.0"}]
+        },
+        %{
+          name: "@openfn/language-salesforce",
+          repo: "",
+          latest: "4.0.0",
+          versions: [%{version: "4.0.0"}]
+        }
+      ])
+
+    Lightning.AdaptorData.Cache.put(
+      "registry",
+      "all",
+      %{data: registry_json, content_type: "application/json"}
+    )
+
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 end

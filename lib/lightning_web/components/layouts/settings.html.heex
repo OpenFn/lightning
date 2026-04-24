@@ -73,6 +73,13 @@
               <.icon name="hero-circle-stack" class="h-5 w-5 shrink-0" />
               <span class="menu-item-text truncate">Collections</span>
             </Menu.menu_item>
+            <Menu.menu_item
+              to={~p"/settings/maintenance"}
+              active={@active_menu_item == :maintenance}
+            >
+              <.icon name="hero-wrench-screwdriver" class="h-5 w-5 shrink-0" />
+              <span class="menu-item-text truncate">Maintenance</span>
+            </Menu.menu_item>
             <div class="grow"></div>
             <Menu.menu_item to={~p"/projects"}>
               <.icon name="hero-arrow-left" class="h-5 w-5 shrink-0" />

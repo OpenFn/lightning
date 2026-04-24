@@ -49,11 +49,20 @@ defmodule Lightning.Application do
        |> Keyword.merge(Application.get_env(:lightning, :adaptor_service, []))}
 
     auth_providers_cache_childspec =
-      {Cachex,
-       name: :auth_providers,
-       warmers: [
-         warmer(module: Lightning.AuthProviders.CacheWarmer)
-       ]}
+      Supervisor.child_spec(
+        {Cachex,
+         name: :auth_providers,
+         warmers: [
+           warmer(module: Lightning.AuthProviders.CacheWarmer)
+         ]},
+        id: :auth_providers_cache
+      )
+
+    adaptor_data_cache_childspec =
+      Supervisor.child_spec(
+        {Cachex, name: :adaptor_data},
+        id: :adaptor_data_cache
+      )
 
     :telemetry.attach_many(
       "oban-errors",
@@ -141,11 +150,13 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        adaptor_data_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
+        Lightning.AdaptorData.Listener,
         adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
@@ -161,7 +172,21 @@ defmodule Lightning.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    with {:ok, pid} <- Supervisor.start_link(children, opts) do
+      schedule_adaptor_refresh()
+      {:ok, pid}
+    end
+  end
+
+  defp schedule_adaptor_refresh do
+    unless Lightning.AdaptorRegistry.local_adaptors_enabled?() or
+             Lightning.Config.env() == :test do
+      Task.start(fn ->
+        Lightning.AdaptorRefreshWorker.new(%{}, schedule_in: 0)
+        |> then(&Oban.insert(Lightning.Oban, &1))
+      end)
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

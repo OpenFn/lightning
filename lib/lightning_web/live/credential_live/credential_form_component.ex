@@ -1161,20 +1161,23 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     "Environment names organize credential configurations by deployment stage. When workflows run in sandbox projects (e.g., env: 'staging'), they automatically use the matching credential environment. Choose names that align with your project environments: 'production' for live systems, 'staging' for testing, 'development' for local work. Consistent naming ensures the right secrets are used in each environment."
   end
 
-  defp get_type_options(schemas_path) do
+  defp get_type_options do
+    schemas = Lightning.AdaptorData.Cache.get_all("schema")
+
     schemas_options =
-      Path.wildcard("#{schemas_path}/*.json")
-      |> Enum.map(fn p ->
-        name = p |> Path.basename() |> String.replace(".json", "")
+      if schemas != [] do
+        Enum.map(schemas, fn %{key: name} ->
+          image_path =
+            Routes.static_path(
+              LightningWeb.Endpoint,
+              "/images/adaptors/#{name}-square.png"
+            )
 
-        image_path =
-          Routes.static_path(
-            LightningWeb.Endpoint,
-            "/images/adaptors/#{name}-square.png"
-          )
-
-        {name, name, image_path, nil}
-      end)
+          {name, name, image_path, nil}
+        end)
+      else
+        get_type_options_from_filesystem()
+      end
 
     schemas_options
     |> Enum.reject(fn {_, name, _, _} ->
@@ -1188,6 +1191,23 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        ), nil}
     ])
     |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
+  end
+
+  defp get_type_options_from_filesystem do
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    Path.wildcard("#{schemas_path}/*.json")
+    |> Enum.map(fn p ->
+      name = p |> Path.basename() |> String.replace(".json", "")
+
+      image_path =
+        Routes.static_path(
+          LightningWeb.Endpoint,
+          "/images/adaptors/#{name}-square.png"
+        )
+
+      {name, name, image_path, nil}
+    end)
   end
 
   defp list_users do
@@ -1315,9 +1335,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     type_options =
       if action == :new do
-        {:ok, schemas_path} =
-          Application.fetch_env(:lightning, :schemas_path)
-
         keychain_option =
           if socket.assigns[:from_collab_editor] do
             [
@@ -1331,7 +1348,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             []
           end
 
-        get_type_options(schemas_path)
+        get_type_options()
         |> Enum.concat(
           Enum.map(oauth_clients, fn client ->
             {client.name, client.id, "/images/oauth-2.png", "oauth"}

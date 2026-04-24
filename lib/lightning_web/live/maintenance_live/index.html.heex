@@ -1,0 +1,36 @@
+<LayoutComponents.page_content>
+  <:header>
+    <LayoutComponents.header current_user={@current_user}>
+      <:title>Maintenance</:title>
+    </LayoutComponents.header>
+  </:header>
+  <LayoutComponents.centered>
+    <div class="space-y-8">
+      <div class="space-y-4">
+        <.maintenance_action
+          action="refresh_adaptor_registry"
+          title="Refresh Adaptor Registry"
+          description="Re-fetch the list of available adaptors and their versions from your local adaptors repository or npmjs.com"
+          running={MapSet.member?(@running, "refresh_adaptor_registry")}
+          status={Map.get(@refresh_status, "refresh_adaptor_registry")}
+        />
+
+        <.maintenance_action
+          action="install_adaptor_icons"
+          title="Install Adaptor Icons"
+          description="Download adaptor icons from your local adaptors repository or Github.com/OpenFn/adaptors"
+          running={MapSet.member?(@running, "install_adaptor_icons")}
+          status={Map.get(@refresh_status, "install_adaptor_icons")}
+        />
+
+        <.maintenance_action
+          action="install_schemas"
+          title="Install Credential Schemas"
+          description="Download credential configuration schemas from your local adaptors repository or jsDelivr CDN"
+          running={MapSet.member?(@running, "install_schemas")}
+          status={Map.get(@refresh_status, "install_schemas")}
+        />
+      </div>
+    </div>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>
