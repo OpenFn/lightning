@@ -258,32 +258,13 @@ defmodule LightningWeb.SandboxLive.Components do
             </div>
           </div>
 
-          <p class="text-xs text-gray-700">
+          <p class="text-xs text-gray-700" phx-no-format>
             This will overwrite the selected workflows in
-            <strong>
-              {get_selected_target_label(
-                @target_options,
-                @merge_form[:target_id].value
-              )}
-            </strong>
+            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             with the versions from sandbox <strong>{@sandbox.name}</strong>,
-            then delete <strong>{@sandbox.name}</strong>
-            <%= if @descendant_count == 0 do %>
-              .
-            <% end %>
-            <%= if @descendant_count == 1 do %>
-              and its child sandbox <strong>{List.first(@descendants).name}.</strong>
-            <% end %>
-            <%= if @descendant_count > 1 do %>
-              and its {@descendant_count} child sandboxes.
-            <% end %>
+            then delete <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} />
             Any conflicting changes in
-            <strong>
-              {get_selected_target_label(
-                @target_options,
-                @merge_form[:target_id].value
-              )}
-            </strong>
+            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             will be lost.
           </p>
 
@@ -363,7 +344,8 @@ defmodule LightningWeb.SandboxLive.Components do
                   class="flex items-center gap-1 text-xs text-amber-600"
                   title="This workflow was modified in the target project - this change will be lost"
                 >
-                  ⚠️ <strong>Diverged</strong>
+                  <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
+                  <strong>Diverged</strong>
                 </span>
                 <span
                   :if={wf.is_new}
@@ -416,6 +398,23 @@ defmodule LightningWeb.SandboxLive.Components do
       </.form>
     </.modal>
     """
+  end
+
+  # Caller sits in a phx-no-format <p> so no whitespace leaks between
+  # </strong> and this tag; ~H[...] + {" "} preserve the conditional leading
+  # space that heredoc ~H""" would strip.
+  attr :count, :integer, required: true
+  attr :descendants, :list, required: true
+
+  defp descendant_suffix(%{count: 0} = assigns), do: ~H[.]
+
+  defp descendant_suffix(%{count: 1} = assigns) do
+    assigns = assign(assigns, :name, List.first(assigns.descendants).name)
+    ~H[{" "}and its child sandbox <strong>{@name}</strong>.]
+  end
+
+  defp descendant_suffix(assigns) do
+    ~H[{" "}and its {@count} child sandboxes.]
   end
 
   attr :id, :string, required: true
