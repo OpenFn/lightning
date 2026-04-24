@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1E02931B.js"></script>
+    <script defer src="dist/sidebar_items-4AF24319.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -166,6 +166,16 @@ Lightning
 
         <div class="summary-synopsis"><p>Changeset to validate a project deletion request, the user must enter the
 projects name to confirm.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#display_name/1" data-no-tooltip="" translate="no">display_name(project)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a display name for the project.</p></div>
 
     </div>
 
@@ -369,7 +379,7 @@ the URL-safe <code class="inline">:name</code> automatically.</p></div>
       <h1 class="signature" translate="no">deletion_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L244" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L271" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -380,6 +390,35 @@ the URL-safe <code class="inline">:name</code> automatically.</p></div>
 
 <p>Changeset to validate a project deletion request, the user must enter the
 projects name to confirm.</p>
+  </section>
+</section>
+<section class="detail" id="display_name/1">
+
+  <div class="detail-header">
+    <a href="#display_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">display_name(project)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L198" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> display_name(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Returns a display name for the project.</p><p>Walks up the loaded parent chain to build the full path,
+e.g. <code class="inline">&quot;root:child:grandchild&quot;</code>. Stops when parent is nil or not loaded.</p>
   </section>
 </section>
 <section class="detail" id="form_changeset/2">
@@ -437,7 +476,7 @@ the URL-safe <code class="inline">:name</code> automatically.</p>
       <h1 class="signature" translate="no">project_with_users_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L250" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L277" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -459,7 +498,7 @@ the URL-safe <code class="inline">:name</code> automatically.</p>
       <h1 class="signature" translate="no">sandbox?(arg1)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L223" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
