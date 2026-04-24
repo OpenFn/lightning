@@ -110,13 +110,12 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp destination_credential_id(%{
-         destination_auth_method: %{project_credential_id: id}
-       })
-       when is_binary(id),
-       do: id
-
-  defp destination_credential_id(_channel), do: nil
+  defp destination_credential_id(channel) do
+    case channel.destination_auth_method do
+      %{project_credential_id: id} -> id
+      _ -> nil
+    end
+  end
 
   defp authenticate_client(_conn, %{client_webhook_auth_methods: []}) do
     {:ok, nil}

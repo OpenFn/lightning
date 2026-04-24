@@ -139,21 +139,13 @@ defmodule LightningWeb.ChannelRequestLive.Components do
 
   def status_code_display(assigns) do
     color_class =
-      case assigns.status do
-        s when is_integer(s) and s >= 200 and s < 300 ->
-          "text-green-700 bg-green-50"
-
-        s when is_integer(s) and s >= 300 and s < 400 ->
-          "text-blue-700 bg-blue-50"
-
-        s when is_integer(s) and s >= 400 and s < 500 ->
-          "text-amber-700 bg-amber-50"
-
-        s when is_integer(s) and s >= 500 ->
-          "text-red-700 bg-red-50"
-
-        _ ->
-          "text-secondary-400"
+      cond do
+        is_nil(assigns.status) -> "text-secondary-400"
+        assigns.status >= 500 -> "text-red-700 bg-red-50"
+        assigns.status >= 400 -> "text-amber-700 bg-amber-50"
+        assigns.status >= 300 -> "text-blue-700 bg-blue-50"
+        assigns.status >= 200 -> "text-green-700 bg-green-50"
+        true -> "text-secondary-400"
       end
 
     assigns = assign(assigns, color_class: color_class)
