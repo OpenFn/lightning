@@ -96,7 +96,7 @@ defmodule LightningWeb.ChannelRequestLive.Show do
   defp summary_card(assigns) do
     ~H"""
     <div class="bg-white rounded-lg shadow-sm border border-secondary-200 p-6">
-      <div class="flex flex-wrap items-center gap-3 mb-6">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
         <.method_badge method={@event && @event.request_method} />
         <.request_path_display event={@event} />
         <.status_code_display status={@event && @event.response_status} />
@@ -104,22 +104,10 @@ defmodule LightningWeb.ChannelRequestLive.Show do
           state={@channel_request.state}
           error_message={@event && @event.error_message}
         />
-      </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Destination
-          </dt>
-          <dd class="text-secondary-900 break-all font-mono text-xs">
-            {@channel.destination_url}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Channel
-          </dt>
-          <dd>
+        <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span class="flex items-center gap-1.5">
+            <span class="text-secondary-500 uppercase tracking-wide">Channel</span>
             <.link
               navigate={
                 ~p"/projects/#{@channel.project_id}/channels/#{@channel.id}/edit"
@@ -128,75 +116,112 @@ defmodule LightningWeb.ChannelRequestLive.Show do
             >
               {@channel.name}
             </.link>
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Client IP
-          </dt>
-          <dd class="text-secondary-900">
-            {@channel_request.client_identity || "—"}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Client auth
-          </dt>
-          <dd class="text-secondary-900 flex items-center gap-1">
-            <.icon name="hero-shield-check" class="h-4 w-4 text-secondary-400" />
-            {Helpers.format_client_auth(@channel_request)}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Destination auth
-          </dt>
-          <dd class="text-secondary-900 flex items-center gap-1">
-            <.icon name="hero-key" class="h-4 w-4 text-secondary-400" />
-            {Helpers.format_destination_auth(@channel_request)}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Started
-          </dt>
-          <dd>
-            <Common.datetime datetime={@channel_request.started_at} />
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Completed
-          </dt>
-          <dd>
-            <Common.datetime datetime={@channel_request.completed_at} />
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Latency
-          </dt>
-          <dd class="text-secondary-900 font-mono">
-            {if @event && @event.latency_us,
-              do: "#{Helpers.format_us(@event.latency_us)} ms",
-              else: "—"}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
-            Request ID
-          </dt>
-          <dd class="flex items-center gap-1">
-            <span class="text-secondary-900 font-mono text-xs truncate">
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="text-secondary-500 uppercase tracking-wide">Request</span>
+            <span class="text-secondary-900 font-mono">
               {String.slice(@channel_request.id, 0..7)}
             </span>
             <.copy_icon_button
               id="copy-request-id"
               value={@channel_request.id}
               title="Copy request ID"
+              size={3}
             />
-          </dd>
+          </span>
         </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <section>
+          <h4 class="text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-3 pb-1.5 border-b border-secondary-100">
+            Client
+          </h4>
+          <dl class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                IP
+              </dt>
+              <dd class="text-secondary-900">
+                {@channel_request.client_identity || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                Auth
+              </dt>
+              <dd class="text-secondary-900 flex items-start gap-1">
+                <.icon
+                  name="hero-shield-check"
+                  class="h-4 w-4 shrink-0 text-secondary-400 mt-0.5"
+                />
+                {Helpers.format_client_auth(@channel_request)}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section>
+          <h4 class="text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-3 pb-1.5 border-b border-secondary-100">
+            Destination
+          </h4>
+          <dl class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                URL
+              </dt>
+              <dd class="text-secondary-900 break-all font-mono text-xs">
+                {@channel.destination_url}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                Auth
+              </dt>
+              <dd class="text-secondary-900 flex items-start gap-1">
+                <.icon
+                  name="hero-key"
+                  class="h-4 w-4 shrink-0 text-secondary-400 mt-0.5"
+                />
+                {Helpers.format_destination_auth(@channel_request)}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="md:col-span-2">
+          <h4 class="text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-3 pb-1.5 border-b border-secondary-100">
+            Timing
+          </h4>
+          <dl class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                Started
+              </dt>
+              <dd>
+                <Common.datetime datetime={@channel_request.started_at} />
+              </dd>
+            </div>
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                Completed
+              </dt>
+              <dd>
+                <Common.datetime datetime={@channel_request.completed_at} />
+              </dd>
+            </div>
+            <div>
+              <dt class="text-secondary-500 text-xs uppercase tracking-wide mb-1">
+                Latency
+              </dt>
+              <dd class="text-secondary-900 font-mono">
+                {if @event && @event.latency_us,
+                  do: "#{Helpers.format_us(@event.latency_us)} ms",
+                  else: "—"}
+              </dd>
+            </div>
+          </dl>
+        </section>
       </div>
     </div>
     """
