@@ -30,6 +30,12 @@ export interface PickerItem {
    * when navigating — it's only meaningful on same-section switches.
    */
   sameSection?: boolean;
+  /**
+   * Optional hero icon class for the row (e.g. `hero-credit-card`).
+   * When absent, falls back to the project-style default:
+   * `hero-folder` at depth 0 and `hero-beaker` for nested items.
+   */
+  icon?: string;
 }
 
 interface PickerProps {
@@ -309,6 +315,8 @@ export function Picker(props: PickerProps) {
               const isSelected = item.id === currentId;
               const isNested = item.depth > 0;
               const indentPx = item.depth * 10;
+              const itemIcon =
+                item.icon ?? (isNested ? 'hero-beaker' : 'hero-folder');
 
               return (
                 <li
@@ -326,35 +334,24 @@ export function Picker(props: PickerProps) {
                   onClick={() => go(item.href, item.sameSection)}
                   onMouseEnter={() => setHighlightedIndex(itemIndex)}
                 >
-                  {isNested ? (
-                    <>
-                      <span
-                        className={cn(
-                          'hero-arrow-turn-down-right h-4 w-4 mr-2 shrink-0',
-                          isHighlighted
-                            ? 'text-white/50'
-                            : 'text-gray-300 group-hover:text-white/50'
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          'hero-beaker h-5 w-5 mr-2 shrink-0',
-                          isHighlighted
-                            ? 'text-white/70'
-                            : 'text-gray-400 group-hover:text-white/70'
-                        )}
-                      />
-                    </>
-                  ) : (
+                  {isNested && (
                     <span
                       className={cn(
-                        'hero-folder h-5 w-5 mr-2 shrink-0',
+                        'hero-arrow-turn-down-right h-4 w-4 mr-2 shrink-0',
                         isHighlighted
-                          ? 'text-white/70'
-                          : 'text-gray-400 group-hover:text-white/70'
+                          ? 'text-white/50'
+                          : 'text-gray-300 group-hover:text-white/50'
                       )}
                     />
                   )}
+                  <span
+                    className={cn(
+                      `${itemIcon} h-5 w-5 mr-2 shrink-0`,
+                      isHighlighted
+                        ? 'text-white/70'
+                        : 'text-gray-400 group-hover:text-white/70'
+                    )}
+                  />
                   <span
                     className={cn(
                       'truncate flex-grow',
