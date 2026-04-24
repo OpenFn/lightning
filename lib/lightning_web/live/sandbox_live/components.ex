@@ -208,6 +208,13 @@ defmodule LightningWeb.SandboxLive.Components do
       assigns
       |> assign(:merge_form, to_form(assigns.changeset, as: :merge))
       |> assign(:descendant_count, length(assigns.descendants))
+      |> assign(
+        :select_all_state,
+        merge_select_all_state(
+          assigns.selected_workflow_ids,
+          assigns.source_workflows
+        )
+      )
 
     ~H"""
     <.modal
@@ -304,20 +311,27 @@ defmodule LightningWeb.SandboxLive.Components do
           <% end %>
 
           <div class="border border-gray-200 rounded-md overflow-hidden">
-            <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @select_all_state == :empty && "cursor-default",
+              @select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-workflows"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-workflows"
+                disabled={@select_all_state == :empty}
+                checked={@select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @select_all_state == :partial && "indeterminate"
+                ]}
+              />
               <span class="text-sm font-medium text-gray-700">
                 Workflows to merge
               </span>
-              <button
-                type="button"
-                class="text-sm text-indigo-600 hover:text-indigo-500"
-                phx-click="toggle-all-workflows"
-              >
-                {if MapSet.size(@selected_workflow_ids) == length(@source_workflows),
-                  do: "Deselect all",
-                  else: "Select all"}
-              </button>
-            </div>
+            </label>
             <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
               <li
                 :for={wf <- @source_workflows}
@@ -415,6 +429,16 @@ defmodule LightningWeb.SandboxLive.Components do
 
   defp descendant_suffix(assigns) do
     ~H[{" "}and its {@count} child sandboxes.]
+  end
+
+  defp merge_select_all_state(_selected, []), do: :empty
+
+  defp merge_select_all_state(selected, workflows) do
+    case MapSet.size(selected) do
+      0 -> :none
+      n when n == length(workflows) -> :all
+      _ -> :partial
+    end
   end
 
   attr :id, :string, required: true

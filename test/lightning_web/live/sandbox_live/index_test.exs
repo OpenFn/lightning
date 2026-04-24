@@ -2957,6 +2957,44 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert MapSet.size(assigns3.merge_selected_workflow_ids) == 2
     end
 
+    test "select-all checkbox reflects :all, :none, and :partial states", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      wf1 = insert(:workflow, project: sandbox, name: "Flow A")
+      _wf2 = insert(:workflow, project: sandbox, name: "Flow B")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Both workflows start pre-selected (both are :new → :is_changed). :all.
+      html = render(view)
+
+      assert html =~
+               ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+
+      refute html =~
+               ~r/id="merge-select-all-workflows"[^>]*indeterminate[^>]*>/
+
+      # Deselect all. :none.
+      render_click(view, "toggle-all-workflows", %{})
+      html = render(view)
+
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
+
+      # Select just one workflow. :partial.
+      render_click(view, "toggle-workflow", %{"id" => wf1.id})
+      html = render(view)
+
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      assert html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
+    end
+
     test "changing merge target recomputes workflow divergence and new status",
          %{
            conn: conn,
