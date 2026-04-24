@@ -647,7 +647,7 @@ export function ManualRunPanel({
                 void handleRetry().then(ok => ok && closeAfterRun());
               }}
               buttonText={{
-                run: 'Run',
+                run: 'Run From Here',
                 retry: 'Run (Retry)',
                 processing: 'Processing',
               }}

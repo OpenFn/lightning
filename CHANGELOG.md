@@ -88,7 +88,6 @@ and this project adheres to
   [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
-- Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
 - Sandbox deletion (manual or after merge) is now soft. The sandbox and its
@@ -101,6 +100,9 @@ and this project adheres to
   [#4649](https://github.com/OpenFn/lightning/issues/4649)
 - Updated ws-worker from
   [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
+- bumped local worker to 1.24.0
+- Update 'Run' button label to 'Run From Here' in the job inspector panel
+  [#4617](https://github.com/OpenFn/lightning/issues/4617)
 
 ### Fixed
 

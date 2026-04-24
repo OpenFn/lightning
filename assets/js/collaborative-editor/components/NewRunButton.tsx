@@ -8,6 +8,7 @@ interface NewRunButtonProps {
   onClick: () => void;
   disabled?: boolean;
   tooltipSide?: 'top' | 'bottom';
+  text?: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export function NewRunButton({
   onClick,
   disabled: disabledProp,
   tooltipSide = 'bottom',
+  text = 'Run',
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun();
 
@@ -44,7 +46,7 @@ export function NewRunButton({
         <Button variant="primary" onClick={onClick} disabled={isDisabled}>
           <span className="flex items-center gap-1">
             <span className="hero-play h-4 w-4" />
-            Run
+            {text}
           </span>
         </Button>
       </span>
