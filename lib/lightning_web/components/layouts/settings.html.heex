@@ -89,24 +89,7 @@
       {@inner_content}
     </div>
   </div>
-  <%!-- Global project picker (React component) --%>
-  <%= if assigns[:current_user] do %>
-    <div
-      id="global-project-picker"
-      phx-hook="ReactComponent"
-      phx-update="ignore"
-      data-react-name="ProjectPicker"
-      data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
-      data-projects={
-        Jason.encode!(
-          Enum.map(assigns[:projects] || [], fn p ->
-            %{id: p.id, name: p.name}
-          end)
-        )
-      }
-      data-current-project-id={
-        if assigns[:project], do: assigns[:project].id, else: nil
-      }
-    />
-  <% end %>
+  {(assigns[:global_picker] || (&LayoutComponents.global_project_picker/1)).(
+    assigns
+  )}
 </main>

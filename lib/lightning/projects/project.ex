@@ -189,6 +189,33 @@ defmodule Lightning.Projects.Project do
   end
 
   @doc """
+  Returns a display name for the project.
+
+  Walks up the loaded parent chain to build the full path,
+  e.g. `"root:child:grandchild"`. Stops when parent is nil or not loaded.
+  """
+  @spec display_name(t()) :: String.t()
+  def display_name(%__MODULE__{} = project) do
+    names = ancestor_names(project, [])
+
+    case names do
+      [single] -> single
+      names -> Enum.join(names, "/")
+    end
+  end
+
+  defp ancestor_names(
+         %__MODULE__{parent: %__MODULE__{} = parent, name: name},
+         acc
+       ) do
+    ancestor_names(parent, [name | acc])
+  end
+
+  defp ancestor_names(%__MODULE__{name: name}, acc) do
+    [name | acc]
+  end
+
+  @doc """
   Returns `true` if the project is a sandbox (i.e. `parent_id` is a UUID),
   `false` otherwise.
   """

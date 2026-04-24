@@ -39,7 +39,7 @@ import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 /**
  * Save button component - visible in React DevTools

@@ -22,7 +22,7 @@ import { notifications } from '../../lib/notifications';
 import type { Workflow } from '../../types/workflow';
 import { useAppForm } from '../form';
 import { createZodValidator } from '../form/createZodValidator';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { CronFieldBuilder } from './CronFieldBuilder';
 import { WebhookAuthMethodModal } from './WebhookAuthMethodModal';

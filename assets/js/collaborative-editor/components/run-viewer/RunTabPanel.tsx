@@ -8,7 +8,7 @@ import {
 
 import { useActiveRun, useSelectedStepId } from '../../hooks/useHistory';
 import { useProject } from '../../hooks/useSessionContext';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StatePill } from './StatePill';

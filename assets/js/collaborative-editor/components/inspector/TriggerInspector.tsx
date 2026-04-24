@@ -8,7 +8,7 @@ import {
 import type { Workflow } from '../../types/workflow';
 import { NewRunButton } from '../NewRunButton';
 import { Toggle } from '../Toggle';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';

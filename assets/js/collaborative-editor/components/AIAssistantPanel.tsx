@@ -15,7 +15,7 @@ import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;

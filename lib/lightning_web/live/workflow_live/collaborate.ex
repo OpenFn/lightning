@@ -181,12 +181,24 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
       data-project-name={@project.name}
+      data-project-display-name={
+        Lightning.Projects.Project.display_name(
+          Lightning.Projects.preload_ancestors(@project)
+        )
+      }
+      data-project-is-sandbox={
+        to_string(Lightning.Projects.Project.sandbox?(@project))
+      }
       data-project-color={@project.color}
       data-root-project-id={
-        if @project.parent, do: Lightning.Projects.root_of(@project).id, else: nil
+        if Lightning.Projects.Project.sandbox?(@project),
+          do: Lightning.Projects.root_of(@project).id,
+          else: nil
       }
       data-root-project-name={
-        if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
+        if Lightning.Projects.Project.sandbox?(@project),
+          do: Lightning.Projects.root_of(@project).name,
+          else: nil
       }
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}

@@ -14,7 +14,7 @@ import { AlertDialog } from '../AlertDialog';
 import { Button } from '../Button';
 import { NewRunButton } from '../NewRunButton';
 import { ShortcutKeys } from '../ShortcutKeys';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';

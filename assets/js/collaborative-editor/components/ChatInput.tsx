@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface ChatInputProps {
   onSendMessage?:

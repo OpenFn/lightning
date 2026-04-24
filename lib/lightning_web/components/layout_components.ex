@@ -286,8 +286,8 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker label={@project.name} />
-        <.breadcrumb_items items={[{"History", ~p"/projects/\#{@project}/history"}]} />
+        <.breadcrumb_project_picker project={@project} />
+        <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
         </.breadcrumb>
@@ -331,27 +331,40 @@ defmodule LightningWeb.LayoutComponents do
 
   @doc """
   Renders a project picker button styled as a breadcrumb element.
+
+  Mounts the shared React `PickerButton` component via the
+  `ReactComponent` hook, so the same component is used in both standard
+  LiveView pages and the collaborative editor.
   """
-  attr :label, :string, required: true
+  attr :project, Lightning.Projects.Project, required: true
 
   def breadcrumb_project_picker(assigns) do
+    alias Lightning.Projects
+    alias Lightning.Projects.Project
+
+    project = Projects.preload_ancestors(assigns.project)
+
+    assigns =
+      assigns
+      |> assign(:label, Project.display_name(project))
+      |> assign(:is_sandbox, to_string(Project.sandbox?(project)))
+      |> assign(:color, project.color)
+
     ~H"""
     <li class="mr-3">
-      <div class="flex items-center">
-        <button
-          id="breadcrumb-project-picker-trigger"
-          type="button"
-          phx-click={JS.dispatch("open-project-picker", to: "body")}
-          class={[
-            "flex items-center gap-2 px-2.5 py-1.5",
-            "text-sm font-medium text-gray-700",
-            "bg-white border border-gray-300 rounded-md",
-            "hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
-          ]}
-        >
-          <.icon name="hero-folder" class="h-4 w-4 text-gray-500" />
-          {@label}
-        </button>
+      <div
+        id="breadcrumb-project-picker-trigger"
+        phx-hook="ReactComponent"
+        phx-update="ignore"
+        data-react-name="PickerButton"
+        data-react-file={~p"/assets/js/picker/PickerButton.js"}
+        data-label={@label}
+        data-icon="hero-folder"
+        data-accent-icon="hero-beaker"
+        data-open-event="open-project-picker"
+        data-is-sandbox={@is_sandbox}
+        data-color={@color}
+      >
       </div>
     </li>
     """
@@ -384,6 +397,119 @@ defmodule LightningWeb.LayoutComponents do
       </div>
     </li>
     """
+  end
+
+  @doc """
+  Renders the global project picker: mounts the generic `Picker` React
+  component with project-specific content.
+
+  Used by both the `live` and `settings` layouts. Items are pre-computed
+  server-side — including each target URL — so the picker JS has no
+  routing knowledge.
+  """
+  def global_project_picker(assigns) do
+    current_path = assigns[:current_path]
+
+    items =
+      if assigns[:current_user] do
+        assigns.current_user
+        |> Lightning.Projects.get_project_tree_for_user()
+        |> build_project_picker_items(current_path)
+      else
+        []
+      end
+
+    assigns =
+      assigns
+      |> assign(:items_json, Jason.encode!(items))
+      |> assign(:current_id, assigns[:project] && assigns[:project].id)
+
+    ~H"""
+    <div
+      :if={assigns[:current_user]}
+      id="global-project-picker"
+      phx-hook="ReactComponent"
+      phx-update="ignore"
+      data-react-name="Picker"
+      data-react-file={~p"/assets/js/picker/Picker.js"}
+      data-items={@items_json}
+      data-current-id={@current_id}
+      data-placeholder="Search projects..."
+      data-empty-message="No projects found"
+      data-view-all-label="View all projects"
+      data-view-all-href={~p"/projects"}
+      data-open-event="open-project-picker"
+      data-theme={assigns[:side_menu_theme]}
+    >
+    </div>
+    """
+  end
+
+  @doc false
+  def build_project_picker_items(projects, current_path) do
+    by_parent = Enum.group_by(projects, & &1.parent_id)
+    walk_project_tree(nil, by_parent, 0, "", current_path, []) |> Enum.reverse()
+  end
+
+  defp walk_project_tree(parent_id, by_parent, depth, parent_label, path, acc) do
+    by_parent
+    |> Map.get(parent_id, [])
+    |> Enum.sort_by(& &1.name)
+    |> Enum.reduce(acc, fn project, acc ->
+      label =
+        if parent_label == "",
+          do: project.name,
+          else: "#{parent_label}/#{project.name}"
+
+      %{href: href, same_section: same_section} =
+        project_picker_target(project.id, path)
+
+      item = %{
+        id: project.id,
+        label: project.name,
+        searchLabel: label,
+        depth: depth,
+        color: project.color,
+        href: href,
+        sameSection: same_section
+      }
+
+      walk_project_tree(project.id, by_parent, depth + 1, label, path, [
+        item | acc
+      ])
+    end)
+  end
+
+  # Computes where a project-switch should land given the current URL, and
+  # whether that target is the same section as the source. Detail paths
+  # (runs/:id, dataclips/:id) carry project-scoped IDs that don't exist in
+  # the target, so they alias to the nearest index (same_section: false).
+  # Unknown or non-project paths fall back to the workflow list.
+  #
+  # `same_section` is used by the picker JS to decide whether to preserve
+  # client-only URL state (notably the hash anchor) when navigating.
+  @doc false
+  def project_picker_target(project_id, current_path) do
+    {section, same_section} =
+      case current_path && String.split(current_path, "/", trim: true) do
+        ["projects", _, "runs" | _] ->
+          {"history", false}
+
+        ["projects", _, "dataclips" | _] ->
+          {"history", false}
+
+        ["projects", _, s | _]
+        when s in ~w(w history channels sandboxes settings jobs) ->
+          {s, true}
+
+        _ ->
+          {"w", false}
+      end
+
+    %{
+      href: "/projects/#{project_id}/#{section}",
+      same_section: same_section
+    }
   end
 
   attr :title, :string, required: true

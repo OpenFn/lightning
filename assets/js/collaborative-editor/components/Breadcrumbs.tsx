@@ -126,22 +126,3 @@ export function BreadcrumbText({
     </span>
   );
 }
-
-export function BreadcrumbProjectPicker({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick?: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
-    >
-      <span className="hero-folder h-4 w-4 text-gray-500" />
-      {children}
-    </button>
-  );
-}

@@ -42,6 +42,10 @@ and this project adheres to
 
 ### Changed
 
+- Project picker now shows sandbox hierarchy with parent project name (e.g.
+  `root:sandbox`), sandbox accent color, and nested tree view. Sandbox theming
+  removed from sidebar/navbar.
+  [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
 - bumped local worker to 1.24.0

@@ -87,7 +87,9 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert html =~ "data-root-project-id=\"#{root_project.id}\""
       assert html =~ "data-root-project-name=\"#{root_project.name}\""
-      refute html =~ sandbox_a.name
+
+      assert html =~
+               "data-project-display-name=\"#{root_project.name}/#{sandbox_a.name}/#{sandbox_b.name}\""
     end
   end
 

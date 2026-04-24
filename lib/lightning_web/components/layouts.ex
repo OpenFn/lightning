@@ -9,9 +9,10 @@ defmodule LightningWeb.Layouts do
   def root(assigns)
 
   attr :side_menu_theme, :string, default: "primary-theme"
-  attr :theme_style, :string, default: nil
+  attr :global_picker, :any, default: nil
   def live(assigns)
 
   attr :side_menu_theme, :string, default: "sudo-variant"
+  attr :global_picker, :any, default: nil
   def settings(assigns)
 end

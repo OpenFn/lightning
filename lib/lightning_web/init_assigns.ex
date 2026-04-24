@@ -41,7 +41,22 @@ defmodule LightningWeb.InitAssigns do
        end
      end)
      |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)
-     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)}
+     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)
+     |> try_attach_current_path()}
+  end
+
+  # `attach_hook/4` with `:handle_params` requires a LiveView mounted via
+  # the router. Unit tests that exercise `on_mount/4` with a bare socket
+  # will blow up otherwise — skip silently in that case.
+  defp try_attach_current_path(socket) do
+    attach_hook(socket, :current_path, :handle_params, &assign_current_path/3)
+  rescue
+    RuntimeError -> socket
+  end
+
+  defp assign_current_path(_params, uri, socket) do
+    path = if is_binary(uri), do: URI.parse(uri).path, else: nil
+    {:cont, assign(socket, :current_path, path)}
   end
 
   defp handle_sidebar_toggle("toggle_sidebar", _params, socket) do
