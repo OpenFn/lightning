@@ -44,6 +44,13 @@ interface PickerProps {
    * The matching trigger button dispatches this event.
    */
   'data-open-event': string;
+  /**
+   * Optional theme class name; passed through the layout's
+   * `@side_menu_theme` so the picker's accent color follows scope.
+   * Valid values today: `"primary-theme"`, `"secondary-variant"`,
+   * `"sudo-variant"`.
+   */
+  'data-theme'?: string;
 }
 
 export function Picker(props: PickerProps) {
@@ -76,6 +83,7 @@ export function Picker(props: PickerProps) {
   const viewAllLabel = props['data-view-all-label'];
   const viewAllHref = props['data-view-all-href'];
   const openEvent = props['data-open-event'];
+  const theme = props['data-theme'] ?? '';
 
   // Filter items by search term. Items are already tree-flattened server-side;
   // we only need to include matches *and* the ancestors that lead to them so
@@ -221,7 +229,7 @@ export function Picker(props: PickerProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999]">
+    <div className={cn('picker-root fixed inset-0 z-[9999]', theme)}>
       <div className="modal-backdrop" />
 
       <div

@@ -345,6 +345,20 @@
     }
   }
 
+  /* Picker modal accent follows the layout's scope theme so the
+   * highlight color matches the navbar the user was just in. */
+  .picker-root {
+    &.secondary-variant {
+      --color-primary-600: var(--color-blue-600);
+      --color-primary-700: var(--color-blue-700);
+    }
+
+    &.sudo-variant {
+      --color-primary-600: var(--color-slate-600);
+      --color-primary-700: var(--color-slate-700);
+    }
+  }
+
   /* Material Design easing for sidebar transitions */
   #sidebar-panel,
   #sidebar-panel + div > div:first-child {

@@ -436,6 +436,7 @@ defmodule LightningWeb.LayoutComponents do
       data-view-all-label="View all projects"
       data-view-all-href={~p"/projects"}
       data-open-event="open-project-picker"
+      data-theme={assigns[:side_menu_theme]}
     >
     </div>
     """
