@@ -78,7 +78,7 @@ defmodule LightningWeb.LayoutComponentsTest do
         |> render_component(%{project: project})
 
       assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ ~s(data-react-name="ProjectPickerButton")
+      assert html =~ ~s(data-react-name="PickerButton")
       assert html =~ ~s(data-label="my-project")
       assert html =~ ~s(data-is-sandbox="false")
     end
@@ -102,7 +102,7 @@ defmodule LightningWeb.LayoutComponentsTest do
         |> render_component(%{project: project})
 
       assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ ~s(data-react-name="ProjectPickerButton")
+      assert html =~ ~s(data-react-name="PickerButton")
       assert html =~ ~s(data-label="parent-project/my-sandbox")
       assert html =~ ~s(data-is-sandbox="true")
       assert html =~ ~s(data-color="#E33D63")

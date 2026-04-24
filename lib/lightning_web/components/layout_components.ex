@@ -332,7 +332,7 @@ defmodule LightningWeb.LayoutComponents do
   @doc """
   Renders a project picker button styled as a breadcrumb element.
 
-  Mounts the shared React `ProjectPickerButton` component via the
+  Mounts the shared React `PickerButton` component via the
   `ReactComponent` hook, so the same component is used in both standard
   LiveView pages and the collaborative editor.
   """
@@ -356,9 +356,12 @@ defmodule LightningWeb.LayoutComponents do
         id="breadcrumb-project-picker-trigger"
         phx-hook="ReactComponent"
         phx-update="ignore"
-        data-react-name="ProjectPickerButton"
-        data-react-file={~p"/assets/js/project-picker/ProjectPickerButton.js"}
+        data-react-name="PickerButton"
+        data-react-file={~p"/assets/js/picker/PickerButton.js"}
         data-label={@label}
+        data-icon="hero-folder"
+        data-accent-icon="hero-beaker"
+        data-open-event="open-project-picker"
         data-is-sandbox={@is_sandbox}
         data-color={@color}
       >

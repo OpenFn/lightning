@@ -1,32 +1,50 @@
 import { cn } from '../utils/cn';
 import { Tooltip } from '../components/Tooltip';
 
-interface ProjectPickerButtonProps {
+interface PickerButtonProps {
   'data-label': string;
+  /** Hero icon class for the button icon (e.g. `hero-folder`). */
+  'data-icon': string;
+  /**
+   * Event dispatched on `document.body` when the button is clicked. The
+   * matching Picker modal listens for this to open itself.
+   */
+  'data-open-event': string;
+
+  // --- Project-picker-specific opt-in (ignored by other pickers) ---
+  /** When `"true"`, renders in sandbox mode with colored background. */
   'data-is-sandbox'?: string | undefined;
+  /** Accent-icon override used in sandbox mode (e.g. `hero-beaker`). */
+  'data-accent-icon'?: string | undefined;
+  /** Accent background color applied in sandbox mode. */
   'data-color'?: string | undefined;
 }
 
 /**
- * Project picker trigger button.
+ * Generic picker trigger button. Shows a label with an icon; on click
+ * dispatches a configured event that the corresponding Picker modal
+ * listens for.
  *
- * Mounted via ReactComponent hook in HEEx layouts and used directly
- * in the collaborative editor. Clicking dispatches `open-project-picker`
- * on document.body, which the global Picker modal listens for.
+ * The sandbox-specific styling (colored background, beaker icon,
+ * deep-path truncation with tooltip) only activates when
+ * `data-is-sandbox="true"`. Other pickers (e.g. billing) just set
+ * label + icon + open-event and get a plain button.
  */
-export function ProjectPickerButton(props: ProjectPickerButtonProps) {
+export function PickerButton(props: PickerButtonProps) {
   const label = props['data-label'] || '';
+  const icon = props['data-icon'];
+  const openEvent = props['data-open-event'];
   const isSandbox = props['data-is-sandbox'] === 'true';
+  const accentIcon = props['data-accent-icon'] || icon;
   const color = props['data-color'] || null;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    document.body.dispatchEvent(new CustomEvent('open-project-picker'));
+    document.body.dispatchEvent(new CustomEvent(openEvent));
   };
 
   const parts = label.split('/');
   const truncated = isSandbox && parts.length > 2;
-  const showTooltip = truncated;
 
   const button = (
     <button
@@ -43,7 +61,7 @@ export function ProjectPickerButton(props: ProjectPickerButtonProps) {
       <span
         className={cn(
           'h-4 w-4',
-          isSandbox ? 'hero-beaker text-white/80' : 'hero-folder text-gray-500'
+          isSandbox ? `${accentIcon} text-white/80` : `${icon} text-gray-500`
         )}
       />
       <span>
@@ -73,7 +91,7 @@ export function ProjectPickerButton(props: ProjectPickerButtonProps) {
     </button>
   );
 
-  if (showTooltip) {
+  if (truncated) {
     return <Tooltip content={parts.join(' > ')}>{button}</Tooltip>;
   }
 

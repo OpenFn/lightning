@@ -7,7 +7,7 @@ import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
-import { ProjectPickerButton } from '../project-picker/ProjectPickerButton';
+import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -106,9 +106,12 @@ function BreadcrumbContent({
   const breadcrumbElements = useMemo(() => {
     return [
       // Project name as picker trigger
-      <ProjectPickerButton
+      <PickerButton
         key="project-picker"
         data-label={displayName ?? ''}
+        data-icon="hero-folder"
+        data-accent-icon="hero-beaker"
+        data-open-event="open-project-picker"
         data-is-sandbox={isSandbox ? 'true' : 'false'}
         data-color={projectColor ?? undefined}
       />,

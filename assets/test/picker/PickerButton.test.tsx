@@ -2,27 +2,40 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
-import { ProjectPickerButton } from '#/project-picker/ProjectPickerButton';
+import { PickerButton } from '#/picker/PickerButton';
 
-describe('ProjectPickerButton non-sandbox', () => {
+const projectDefaults = {
+  'data-icon': 'hero-folder',
+  'data-accent-icon': 'hero-beaker',
+  'data-open-event': 'open-project-picker',
+};
+
+describe('PickerButton plain mode', () => {
   test('renders the plain label', () => {
-    render(<ProjectPickerButton data-label="ethiopia" />);
+    render(<PickerButton {...projectDefaults} data-label="ethiopia" />);
     expect(
       screen.getByRole('button', { name: /ethiopia/ })
     ).toBeInTheDocument();
   });
 
-  test('does not apply background color styling', () => {
-    render(<ProjectPickerButton data-label="ethiopia" data-color="#abcdef" />);
+  test('does not apply background color styling without is-sandbox', () => {
+    render(
+      <PickerButton
+        {...projectDefaults}
+        data-label="ethiopia"
+        data-color="#abcdef"
+      />
+    );
     const button = screen.getByRole('button');
     expect(button.style.backgroundColor).toBe('');
   });
 });
 
-describe('ProjectPickerButton sandbox', () => {
+describe('PickerButton sandbox mode', () => {
   test('renders parent:child format for a 2-part path', () => {
     render(
-      <ProjectPickerButton
+      <PickerButton
+        {...projectDefaults}
         data-label="ethiopia/feb-red-team"
         data-is-sandbox="true"
       />
@@ -34,45 +47,49 @@ describe('ProjectPickerButton sandbox', () => {
 
   test('truncates deeper paths to ellipsis + last two segments', () => {
     render(
-      <ProjectPickerButton
+      <PickerButton
+        {...projectDefaults}
         data-label="root/mid/deep/leaf"
         data-is-sandbox="true"
       />
     );
     const button = screen.getByRole('button');
-    // Visible text should include the last two parts
     expect(button.textContent).toContain('deep');
     expect(button.textContent).toContain('leaf');
-    // Middle ancestors should not be in the rendered label
     expect(button.textContent).not.toContain('mid');
-    // Ellipsis indicates truncation
     expect(button.textContent).toContain('…');
   });
 
   test('applies the accent color as background', () => {
     render(
-      <ProjectPickerButton
+      <PickerButton
+        {...projectDefaults}
         data-label="root/sandbox"
         data-is-sandbox="true"
         data-color="#E33D63"
       />
     );
     const button = screen.getByRole('button');
-    // React normalizes hex to rgb
     expect(button.style.backgroundColor).toBe('rgb(227, 61, 99)');
   });
 });
 
-describe('ProjectPickerButton click', () => {
-  test('dispatches open-project-picker on document.body', async () => {
+describe('PickerButton click', () => {
+  test('dispatches the configured event on document.body', async () => {
     const user = userEvent.setup();
     const listener = vi.fn();
-    document.body.addEventListener('open-project-picker', listener);
+    document.body.addEventListener('open-billing-account-picker', listener);
 
-    render(<ProjectPickerButton data-label="ethiopia" />);
+    render(
+      <PickerButton
+        data-label="Acme Health"
+        data-icon="hero-building-office"
+        data-open-event="open-billing-account-picker"
+      />
+    );
     await user.click(screen.getByRole('button'));
 
     expect(listener).toHaveBeenCalledTimes(1);
-    document.body.removeEventListener('open-project-picker', listener);
+    document.body.removeEventListener('open-billing-account-picker', listener);
   });
 });
