@@ -72,7 +72,8 @@ export namespace Session {
     has_auth_method: boolean;
     webhook_reply: 'before_start' | 'after_completion' | null;
     sync_webhook_response_config: {
-      code: number | null;
+      success_code: number | null;
+      error_code: number | null;
       body: Record<string, unknown> | null;
     } | null;
     webhook_auth_methods: Array<{

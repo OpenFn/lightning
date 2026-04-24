@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -61,11 +62,12 @@ defmodule Lightning.Workflows.Snapshot do
       field :has_auth_method, :boolean, virtual: true
 
       field :webhook_reply, Ecto.Enum,
-        values: [:before_start, :after_completion, :custom],
+        values: [:before_start, :after_completion],
         default: :before_start
 
-      field :webhook_response_success_code, :integer
-      field :webhook_response_error_code, :integer
+      embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
+        on_replace: :update,
+        primary_key: false
 
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
@@ -127,6 +129,10 @@ defmodule Lightning.Workflows.Snapshot do
     schema
     |> cast(params, @trigger_fields)
     |> validate_required([:id, :inserted_at, :updated_at])
+    |> cast_embed(:sync_webhook_response_config,
+      required: false,
+      with: &SyncWebhookResponseConfig.changeset/2
+    )
   end
 
   defp edge_changeset(schema, params) do
@@ -135,7 +141,12 @@ defmodule Lightning.Workflows.Snapshot do
     |> validate_required([:id, :inserted_at, :updated_at])
   end
 
-  @associations_to_include [:jobs, :triggers, :edges]
+  @associations_to_include [
+    :jobs,
+    :triggers,
+    :edges,
+    :sync_webhook_response_config
+  ]
 
   @spec build(Workflow.t()) :: Ecto.Changeset.t()
   def build(%Workflow{} = workflow) do

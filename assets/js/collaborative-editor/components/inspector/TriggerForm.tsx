@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { MonacoEditor } from '../../../monaco';
+
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import {
   createDefaultTrigger,
@@ -424,7 +426,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               className="mt-1 text-xs text-slate-500"
                             >
                               {field.state.value === 'after_completion'
-                                ? 'Holds the HTTP connection open and responds when the run completes. Jobs can send an early response using setWebhookResponse().'
+                                ? 'Holds the HTTP connection open and responds when the run completes.'
                                 : 'Responds immediately with the enqueued work order ID.'}
                             </p>
                             {field.state.meta.errors.map(error => (
@@ -450,129 +452,197 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <form.Field name="sync_webhook_response_config">
                               {field => {
                                 const config = field.state.value as {
-                                  code: number | null;
+                                  success_code: number | null;
+                                  error_code: number | null;
                                   body: Record<string, unknown> | null;
                                 } | null;
 
+                                const baseConfig = config ?? {
+                                  success_code: null,
+                                  error_code: null,
+                                  body: null,
+                                };
+
+                                const bodyType =
+                                  config?.body != null
+                                    ? 'raw_json'
+                                    : 'final_state';
+
+                                const inputClass = cn(
+                                  'block w-full px-3 py-2',
+                                  'border rounded-md text-sm',
+                                  'border-slate-300',
+                                  'focus:border-indigo-500 focus:ring-indigo-500',
+                                  'focus:outline-none focus:ring-1',
+                                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                                );
+
                                 return (
                                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    {/* Status Code */}
+                                    {/* Status Codes */}
                                     <div>
-                                      <label
-                                        htmlFor={`${field.name}-code`}
-                                        className="block text-sm font-medium text-slate-800 mb-1"
-                                      >
-                                        Status code
+                                      <label className="block text-sm font-medium text-slate-800 mb-2">
+                                        Status codes
                                       </label>
-                                      <input
-                                        id={`${field.name}-code`}
-                                        type="number"
-                                        value={config?.code ?? ''}
-                                        onChange={e => {
-                                          const raw = e.target.value;
-                                          const parsed =
-                                            raw === ''
-                                              ? null
-                                              : parseInt(raw, 10);
-                                          field.handleChange({
-                                            ...(config ?? { body: null }),
-                                            code: parsed,
-                                          });
-                                        }}
-                                        onBlur={field.handleBlur}
-                                        disabled={isReadOnly}
-                                        className={cn(
-                                          'block w-full px-3 py-2',
-                                          'border rounded-md text-sm',
-                                          field.state.meta.errors.length > 0
-                                            ? 'border-red-300 text-red-900 ' +
-                                                'focus:border-red-500 ' +
-                                                'focus:ring-red-500'
-                                            : 'border-slate-300 ' +
-                                                'focus:border-indigo-500 ' +
-                                                'focus:ring-indigo-500',
-                                          'focus:outline-none focus:ring-1',
-                                          'disabled:opacity-50 ' +
-                                            'disabled:cursor-not-allowed'
-                                        )}
-                                      />
-                                      <p className="mt-1 text-xs text-slate-500">
-                                        HTTP status code returned to the caller
-                                        (default: 200 for success, 400
-                                        otherwise).
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label
+                                            htmlFor={`${field.name}-success-code`}
+                                            className="block text-xs text-slate-600 mb-1"
+                                          >
+                                            Success
+                                          </label>
+                                          <input
+                                            id={`${field.name}-success-code`}
+                                            type="number"
+                                            placeholder="201"
+                                            value={config?.success_code ?? ''}
+                                            onChange={e => {
+                                              const raw = e.target.value;
+                                              field.handleChange({
+                                                ...baseConfig,
+                                                success_code:
+                                                  raw === ''
+                                                    ? null
+                                                    : parseInt(raw, 10),
+                                              });
+                                            }}
+                                            onBlur={field.handleBlur}
+                                            disabled={isReadOnly}
+                                            className={inputClass}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label
+                                            htmlFor={`${field.name}-error-code`}
+                                            className="block text-xs text-slate-600 mb-1"
+                                          >
+                                            Error
+                                          </label>
+                                          <input
+                                            id={`${field.name}-error-code`}
+                                            type="number"
+                                            placeholder="201"
+                                            value={config?.error_code ?? ''}
+                                            onChange={e => {
+                                              const raw = e.target.value;
+                                              field.handleChange({
+                                                ...baseConfig,
+                                                error_code:
+                                                  raw === ''
+                                                    ? null
+                                                    : parseInt(raw, 10),
+                                              });
+                                            }}
+                                            onBlur={field.handleBlur}
+                                            disabled={isReadOnly}
+                                            className={inputClass}
+                                          />
+                                        </div>
+                                      </div>
+                                      <p className="mt-2 text-xs text-slate-500">
+                                        Both default to 201 when not set.
                                       </p>
                                     </div>
 
-                                    {/* Response Body (JSON) */}
+                                    {/* Response Body */}
                                     <div>
-                                      <label
-                                        htmlFor={`${field.name}-body`}
-                                        className="block text-sm font-medium text-slate-800 mb-1"
-                                      >
-                                        Response body (JSON)
+                                      <label className="block text-sm font-medium text-slate-800 mb-1">
+                                        Response body
                                       </label>
-                                      <textarea
-                                        id={`${field.name}-body`}
-                                        rows={5}
-                                        defaultValue={
-                                          config?.body != null
-                                            ? JSON.stringify(
-                                                config.body,
-                                                null,
-                                                2
-                                              )
-                                            : ''
-                                        }
-                                        onBlur={e => {
-                                          const raw = e.target.value.trim();
-                                          if (raw === '') {
+                                      <select
+                                        value={bodyType}
+                                        onChange={e => {
+                                          if (
+                                            e.target.value === 'final_state'
+                                          ) {
                                             field.handleChange({
-                                              ...(config ?? { code: null }),
+                                              ...baseConfig,
                                               body: null,
                                             });
-                                            return;
-                                          }
-                                          try {
-                                            const parsed = JSON.parse(
-                                              raw
-                                            ) as Record<string, unknown>;
+                                          } else {
                                             field.handleChange({
-                                              ...(config ?? { code: null }),
-                                              body: parsed,
+                                              ...baseConfig,
+                                              body: config?.body ?? {},
                                             });
-                                          } catch {
-                                            // Invalid JSON — leave previous value
                                           }
                                         }}
                                         disabled={isReadOnly}
-                                        className={cn(
-                                          'block w-full px-3 py-2',
-                                          'border rounded-md text-sm font-mono',
-                                          field.state.meta.errors.length > 0
-                                            ? 'border-red-300 text-red-900 ' +
-                                                'focus:border-red-500 ' +
-                                                'focus:ring-red-500'
-                                            : 'border-slate-300 ' +
-                                                'focus:border-indigo-500 ' +
-                                                'focus:ring-indigo-500',
-                                          'focus:outline-none focus:ring-1',
-                                          'disabled:opacity-50 ' +
-                                            'disabled:cursor-not-allowed'
-                                        )}
-                                      />
+                                        className={cn(inputClass, 'mb-2')}
+                                      >
+                                        <option value="final_state">
+                                          Final state (success only)
+                                        </option>
+                                        <option value="raw_json">
+                                          Custom JSON
+                                        </option>
+                                      </select>
+
+                                      {bodyType === 'raw_json' && (
+                                        <div className="rounded-md overflow-hidden border border-slate-300">
+                                          <MonacoEditor
+                                            language="json"
+                                            height="160px"
+                                            value={
+                                              config?.body != null
+                                                ? JSON.stringify(
+                                                    config.body,
+                                                    null,
+                                                    2
+                                                  )
+                                                : '{}'
+                                            }
+                                            onChange={(
+                                              value: string | undefined
+                                            ) => {
+                                              if (value === undefined) return;
+                                              try {
+                                                const parsed = JSON.parse(
+                                                  value
+                                                ) as Record<string, unknown>;
+                                                field.handleChange({
+                                                  ...baseConfig,
+                                                  body: parsed,
+                                                });
+                                              } catch {
+                                                // Invalid JSON — don't update
+                                              }
+                                            }}
+                                            options={{
+                                              minimap: { enabled: false },
+                                              lineNumbers: 'off',
+                                              scrollBeyondLastLine: false,
+                                              fontSize: 12,
+                                              wordWrap: 'on',
+                                              readOnly: isReadOnly,
+                                              overviewRulerLanes: 0,
+                                              hideCursorInOverviewRuler: true,
+                                              scrollbar: {
+                                                vertical: 'hidden',
+                                                horizontal: 'hidden',
+                                              },
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+
                                       <p className="mt-1 text-xs text-slate-500">
-                                        Optional JSON to return. Defaults to the
-                                        run&apos;s final state.
+                                        {bodyType === 'final_state'
+                                          ? 'The final job state is returned on success. No body is sent on error to avoid exposing error details.'
+                                          : 'This JSON is returned for both success and error runs.'}
                                       </p>
-                                      {field.state.meta.errors.map(error => (
-                                        <p
-                                          key={String(error)}
-                                          className="mt-1 text-xs text-red-600"
-                                        >
-                                          {String(error)}
-                                        </p>
-                                      ))}
                                     </div>
+
+                                    {/* Runtime override note */}
+                                    <p className="text-xs text-slate-500 border-t border-slate-200 pt-3">
+                                      To override both the status code and body
+                                      at runtime, write to{' '}
+                                      <code className="font-mono text-slate-700">
+                                        _webhookResponse
+                                      </code>{' '}
+                                      in the job state. When present, it takes
+                                      full priority over these defaults.
+                                    </p>
                                   </div>
                                 );
                               }}

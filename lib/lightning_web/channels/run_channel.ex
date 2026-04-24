@@ -121,7 +121,10 @@ defmodule LightningWeb.RunChannel do
         |> Lightning.FailureAlerter.alert_on_failure()
 
         # Broadcast webhook response for after_completion mode
-        maybe_broadcast_webhook_response(run_with_preloads, payload)
+        maybe_broadcast_webhook_response(
+          run_with_preloads,
+          payload["final_state"]
+        )
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -306,63 +309,95 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(run, payload) do
-    work_order = run.work_order
-    trigger = work_order.trigger
-
-    if trigger && trigger.type == :webhook &&
-         trigger.webhook_reply == :after_completion do
-      topic = "work_order:#{work_order.id}:webhook_response"
-      final_state = payload["final_state"]
-      config = trigger.sync_webhook_response_config
-
-      # _webhookResponse in the final state takes priority over the trigger config.
-      state_override =
-        case final_state do
-          %{"_webhookResponse" => override} when is_map(override) -> override
-          _ -> nil
-        end
-
-      status_code =
-        state_override_code(state_override) ||
-          (config && config.code) ||
-          default_status_code(run.state)
-
-      body =
-        Map.get(state_override || %{}, "body") ||
-          (config && config.body) ||
-          %{
-            data: final_state,
-            meta: %{
-              work_order_id: work_order.id,
-              run_id: run.id,
-              state: run.state,
-              error_type: run.error_type,
-              inserted_at: run.inserted_at,
-              started_at: run.started_at,
-              claimed_at: run.claimed_at,
-              finished_at: run.finished_at
-            }
-          }
+  defp maybe_broadcast_webhook_response(
+         run,
+         final_state
+       ) do
+    if run.work_order.trigger.webhook_reply == :after_completion do
+      {status_code, body} =
+        determine_webhook_response(
+          run,
+          final_state,
+          run.work_order.trigger.sync_webhook_response_config
+        )
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        topic,
+        "work_order:#{run.work_order_id}:webhook_response",
         {:webhook_response, status_code, body}
       )
     end
   end
 
-  # Normalise the code from _webhookResponse — JSON numbers arrive as floats.
-  defp state_override_code(%{"code" => code}) when is_integer(code), do: code
+  defp determine_webhook_response(run, final_state, config) do
+    (final_state || %{})
+    |> Map.get("_webhookResponse")
+    |> case do
+      resp when is_nil(resp) or resp == %{} ->
+        build_default_response(run, final_state, config)
 
-  defp state_override_code(%{"code" => code}) when is_float(code),
-    do: trunc(code)
+      resp ->
+        build_response_from_state(resp)
+    end
+  end
 
-  defp state_override_code(_), do: nil
+  defp build_default_response(run, final_state, config) do
+    {default_response_status(run.state, config),
+     default_response_body(run.state, final_state, config)}
+  end
 
-  defp default_status_code(:success), do: 200
-  defp default_status_code(_), do: 400
+  defp default_response_status(:success, %{success_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, %{error_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, _config), do: 201
+
+  defp default_response_body(_run_status, _final_state, %{body: body})
+       when is_map(body),
+       do: body
+
+  defp default_response_body(:success, final_state, %{body: nil}),
+    do: final_state
+
+  defp default_response_body(run_status, _final_state, _config) do
+    %{
+      message:
+        "Run completed with status: #{run_status}. As a security policy, OpenFn does not send state data when the run errors out to avoid leaking sensitive information"
+    }
+  end
+
+  defp build_response_from_state(%{"status" => status, "body" => body})
+       when is_map(body) and is_integer(status) do
+    {status, body}
+  end
+
+  defp build_response_from_state(%{"status" => status, "body" => _} = response)
+       when is_float(status) do
+    response
+    |> Map.put("status", trunc(status))
+    |> build_response_from_state()
+  end
+
+  defp build_response_from_state(%{"status" => status}) do
+    malformed_response("status needs to be an integer, got: #{inspect(status)}")
+  end
+
+  defp build_response_from_state(%{"body" => body}) do
+    malformed_response("body needs to be json object, got: #{inspect(body)}")
+  end
+
+  defp build_response_from_state(_webhook_response) do
+    malformed_response("no status or body was defined")
+  end
+
+  defp malformed_response(reason) do
+    {201,
+     %{message: "Run completed, but _webhookResponse was malformed: #{reason}"}}
+  end
 
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(samples: samples, basic_auth: basic_auth)

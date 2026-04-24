@@ -5,9 +5,11 @@ defmodule Lightning.Workflows.Triggers.SyncWebhookResponseConfig do
   When a trigger's `webhook_reply` is `:after_completion`, this config controls
   the HTTP response returned to the caller:
 
-  - `code` — HTTP status code. Falls back to 200 (success) or 400 (any other
-    terminal state) when nil.
-  - `body` — Custom response body. Falls back to the run's final state when nil.
+  - `success_code` — HTTP status code when the run succeeds. Defaults to 201.
+  - `error_code` — HTTP status code for any non-success terminal state
+    (failed, crashed, exception, killed, cancelled). Defaults to 201.
+  - `body` — Custom response body (JSON). Falls back to the run's final state
+    when nil.
   """
 
   use Ecto.Schema
@@ -15,11 +17,12 @@ defmodule Lightning.Workflows.Triggers.SyncWebhookResponseConfig do
 
   @primary_key false
   embedded_schema do
-    field :code, :integer
+    field :success_code, :integer
+    field :error_code, :integer
     field :body, :map
   end
 
   def changeset(config, attrs) do
-    cast(config, attrs, [:code, :body])
+    cast(config, attrs, [:success_code, :error_code, :body])
   end
 end

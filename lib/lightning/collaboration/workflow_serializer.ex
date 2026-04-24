@@ -236,7 +236,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
               config ->
                 Yex.MapPrelim.from(%{
-                  "code" => config.code,
+                  "success_code" => config.success_code,
+                  "error_code" => config.error_code,
                   "body" => config.body
                 })
             end
@@ -312,23 +313,26 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp normalize_kafka_configuration(trigger), do: trigger
 
-  # Y.Doc serialises numbers as floats; convert code back to an integer.
+  # Y.Doc serialises numbers as floats; convert integer codes back.
   defp normalize_sync_webhook_response_config(
          %{"sync_webhook_response_config" => %{} = config} = trigger
        ) do
     normalized =
-      case Map.fetch(config, "code") do
-        {:ok, value} when is_float(value) ->
-          Map.put(config, "code", trunc(value))
-
-        _ ->
-          config
-      end
+      config
+      |> normalize_integer_field("success_code")
+      |> normalize_integer_field("error_code")
 
     Map.put(trigger, "sync_webhook_response_config", normalized)
   end
 
   defp normalize_sync_webhook_response_config(trigger), do: trigger
+
+  defp normalize_integer_field(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, value} when is_float(value) -> Map.put(map, key, trunc(value))
+      _ -> map
+    end
+  end
 
   defp extract_positions(positions_map) do
     Yex.Map.to_json(positions_map)

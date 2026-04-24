@@ -64,7 +64,8 @@ defmodule Lightning.Workflows.Trigger do
     embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
     embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
-      on_replace: :update
+      on_replace: :update,
+      primary_key: false
 
     timestamps()
   end
@@ -168,8 +169,6 @@ defmodule Lightning.Workflows.Trigger do
     end
   end
 
-  # Keep the config when reply mode is after_completion; clear it otherwise
-  # so stale config doesn't persist across mode switches.
   defp maybe_clear_sync_config(changeset) do
     case fetch_field!(changeset, :webhook_reply) do
       :after_completion -> changeset
