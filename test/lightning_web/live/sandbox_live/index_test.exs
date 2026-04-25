@@ -2995,6 +2995,24 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
     end
 
+    test "select-all checkbox is disabled when there are no workflows", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ ~r/id="merge-select-all-workflows"[^>]*disabled/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
+    end
+
     test "changing merge target recomputes workflow divergence and new status",
          %{
            conn: conn,
