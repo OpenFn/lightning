@@ -151,6 +151,25 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  def settings_menu_items_extension(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :extension,
+        Application.get_env(:lightning, :settings_menu_items_extension)
+      )
+
+    ~H"""
+    <%= if @extension do %>
+      {Phoenix.LiveView.TagEngine.component(
+        @extension.component,
+        Map.take(assigns, @extension.assigns_keys),
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      )}
+    <% end %>
+    """
+  end
+
   def menu_items(assigns) do
     assigns =
       assigns
