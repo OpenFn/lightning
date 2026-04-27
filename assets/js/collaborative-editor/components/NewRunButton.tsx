@@ -10,14 +10,14 @@ interface NewRunButtonProps {
   onClick: () => void;
   onRunWithCustomInputClick?: () => void;
   disabled?: boolean;
+  isRunning?: boolean;
   tooltipSide?: 'top' | 'bottom';
 }
 
 /**
  * NewRunButton - Standardized button for opening the manual run panel.
  *
- * Displays a play-circle outline icon with "Run" text.
- * Shows keyboard shortcut tooltip when enabled, error message when disabled.
+ * Displays a play icon with "Run" text. Shows a spinner when isRunning=true.
  * When onRunWithCustomInputClick is provided, renders as a split button with a
  * dropdown containing a "Run with custom input" option.
  *
@@ -31,17 +31,24 @@ export function NewRunButton({
   onClick,
   onRunWithCustomInputClick,
   disabled: disabledProp,
+  isRunning = false,
   tooltipSide = 'bottom',
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun();
 
-  // Disable if parent requests OR if canRun is false
-  const isDisabled = disabledProp || !canRun;
+  // Disable if parent requests, canRun is false, or a run is in progress
+  const isDisabled = disabledProp || !canRun || isRunning;
 
   const tooltip = canRun ? (
     <ShortcutKeys keys={['mod', 'enter']} />
   ) : (
     tooltipMessage
+  );
+
+  const icon = isRunning ? (
+    <span className="hero-arrow-path h-4 w-4 animate-spin" />
+  ) : (
+    <span className="hero-play h-4 w-4" />
   );
 
   if (!onRunWithCustomInputClick) {
@@ -50,7 +57,7 @@ export function NewRunButton({
         <span className="inline-block">
           <Button variant="primary" onClick={onClick} disabled={isDisabled}>
             <span className="flex items-center gap-1">
-              <span className="hero-play h-4 w-4" />
+              {icon}
               Run
             </span>
           </Button>
@@ -75,7 +82,7 @@ export function NewRunButton({
           disabled={isDisabled}
         >
           <span className="flex items-center gap-1">
-            <span className="hero-play h-4 w-4" />
+            {icon}
             Run
           </span>
         </button>

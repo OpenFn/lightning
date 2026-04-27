@@ -1,13 +1,13 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
-import * as dataclipApi from '../api/dataclips';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
-import { channelRequest } from '../hooks/useChannel';
+import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
-import { notifications } from '../lib/notifications';
+import { channelRequest } from '../hooks/useChannel';
+import { useActiveRun } from '../hooks/useHistory';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
@@ -32,6 +32,8 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { notifications } from '../lib/notifications';
+import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
@@ -231,6 +233,9 @@ export function Header({
   const { hasChanges } = useUnsavedChanges();
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const activeRun = useActiveRun();
+  const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -259,6 +264,7 @@ export function Header({
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
 
+    setIsSubmitting(true);
     try {
       await saveWorkflow({ silent: true });
       const response = await dataclipApi.submitManualRun({
@@ -278,6 +284,8 @@ export function Header({
         description:
           error instanceof Error ? error.message : 'An unknown error occurred',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
     firstTriggerId,
@@ -432,6 +440,7 @@ export function Header({
                   onClick={handleRunClick}
                   onRunWithCustomInputClick={handleRunWithCustomInputClick}
                   disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  isRunning={isSubmitting || runIsProcessing}
                 />
               )}
               <SaveButton
