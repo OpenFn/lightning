@@ -953,8 +953,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ great_grandchild.name
-      assert html =~ "will also be closed"
-      assert html =~ "Consider merging it into"
+      assert html =~ "will also be permanently closed"
     end
 
     test "merge modal shows multiple descendants warning with full list", %{
@@ -970,13 +969,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "Child sandboxes will be closed"
-      assert html =~ "2 sandboxes will be permanently closed"
-
-      assert html =~ "grandchild1"
-      assert html =~ "grandchild2"
-
-      assert html =~ "Consider merging child sandboxes into"
+      assert html =~ "child sandboxes will also be permanently closed"
       assert html =~ child1.name
     end
 
@@ -1245,10 +1238,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "sandboxes will be permanently closed"
-      assert html =~ "grandchild1"
-      assert html =~ "grandchild2"
-      assert html =~ "3 sandboxes will be permanently closed"
+      assert html =~ "child sandboxes will also be permanently closed"
     end
 
     test "sibling can be selected as merge target", %{

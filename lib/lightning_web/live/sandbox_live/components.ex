@@ -268,41 +268,6 @@ defmodule LightningWeb.SandboxLive.Components do
             will be lost.
           </p>
 
-          <%= if @descendant_count > 1 do %>
-            <Common.alert
-              id="merge-descendants-alert"
-              type="warning"
-              header="Child sandboxes will be closed"
-            >
-              <:message>
-                <p class="mb-2">
-                  The following {@descendant_count} sandboxes will be permanently closed:
-                </p>
-                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
-                  <li :for={descendant <- @descendants}>
-                    {descendant.name}
-                  </li>
-                </ul>
-                <p>
-                  Consider merging child sandboxes into
-                  <strong>{@sandbox.name}</strong>
-                  first to preserve their work before merging up.
-                </p>
-              </:message>
-            </Common.alert>
-          <% end %>
-
-          <%= if @descendant_count == 1 do %>
-            <Common.alert id="merge-single-descendant-alert" type="warning">
-              <:message>
-                <strong>{List.first(@descendants).name}</strong>
-                will also be closed. Consider merging it into
-                <strong>{@sandbox.name}</strong>
-                first to preserve its work.
-              </:message>
-            </Common.alert>
-          <% end %>
-
           <div class="border border-gray-200 rounded-md overflow-hidden">
             <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
               <span class="text-sm font-medium text-gray-700">
@@ -372,6 +337,13 @@ defmodule LightningWeb.SandboxLive.Components do
           >
             <:message>
               This action cannot be undone.
+              <div :if={@descendant_count == 1} class="mt-2">
+                Child sandbox <strong>{List.first(@descendants).name}</strong>
+                will also be permanently closed.
+              </div>
+              <div :if={@descendant_count > 1} class="mt-2">
+                Its {@descendant_count} child sandboxes will also be permanently closed.
+              </div>
             </:message>
           </Common.alert>
 
