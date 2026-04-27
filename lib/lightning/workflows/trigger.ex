@@ -26,7 +26,7 @@ defmodule Lightning.Workflows.Trigger do
   @type trigger_type :: :webhook | :cron
 
   @trigger_types [:webhook, :cron, :kafka]
-  @webhook_reply_types [:before_start, :after_completion]
+  @webhook_reply_types [:before_start, :after_completion, :custom]
 
   @derive {Jason.Encoder,
            only: [
@@ -80,7 +80,10 @@ defmodule Lightning.Workflows.Trigger do
   (i.e., the HTTP connection is held open waiting for a response).
   """
   @spec synchronous?(t()) :: boolean()
-  def synchronous?(%__MODULE__{webhook_reply: :after_completion}), do: true
+  def synchronous?(%__MODULE__{webhook_reply: reply})
+      when reply in [:after_completion, :custom],
+      do: true
+
   def synchronous?(%__MODULE__{}), do: false
 
   @doc false

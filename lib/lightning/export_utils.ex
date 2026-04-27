@@ -128,11 +128,11 @@ defmodule Lightning.ExportUtils do
     end
   end
 
+  defp maybe_put_webhook_reply(map, nil), do: map
+
   defp maybe_put_webhook_reply(map, reply) when is_atom(reply) do
     Map.put(map, :webhook_reply, Atom.to_string(reply))
   end
-
-  defp maybe_put_webhook_reply(map, _), do: map
 
   defp maybe_put_webhook_response(map, %{} = config) do
     webhook_response =

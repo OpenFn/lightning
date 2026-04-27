@@ -62,7 +62,7 @@ defmodule Lightning.Workflows.Snapshot do
       field :has_auth_method, :boolean, virtual: true
 
       field :webhook_reply, Ecto.Enum,
-        values: [:before_start, :after_completion],
+        values: [:before_start, :after_completion, :custom],
         default: :before_start
 
       embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
