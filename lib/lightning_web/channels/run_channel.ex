@@ -360,7 +360,7 @@ defmodule LightningWeb.RunChannel do
        when is_map(body),
        do: body
 
-  defp default_response_body(:success, final_state, %{body: nil}),
+  defp default_response_body(:success, final_state, _config),
     do: final_state
 
   defp default_response_body(run_status, _final_state, _config) do

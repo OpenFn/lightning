@@ -65,11 +65,11 @@ defmodule LightningWeb.WebhooksController do
         {:ok, work_order} ->
           conn =
             conn
-            |> put_resp_header("x-meta-work_order_id", work_order.id)
+            |> put_resp_header("x-meta-work-order-id", work_order.id)
             |> then(fn conn ->
               case work_order do
                 %{runs: [run]} ->
-                  put_resp_header(conn, "x-meta-run_id", run.id)
+                  put_resp_header(conn, "x-meta-run-id", run.id)
 
                 _ ->
                   conn

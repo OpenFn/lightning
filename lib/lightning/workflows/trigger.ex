@@ -64,8 +64,7 @@ defmodule Lightning.Workflows.Trigger do
     embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
     embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
-      on_replace: :update,
-      primary_key: false
+      on_replace: :update
 
     timestamps()
   end
