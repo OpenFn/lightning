@@ -90,6 +90,7 @@ export function JobInspector({
           >
             <span className="inline-block">
               <Button
+                aria-label="Code"
                 variant="secondary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
                 disabled={isIDEOpen}
@@ -101,6 +102,7 @@ export function JobInspector({
           <Tooltip content={deleteTooltipMessage}>
             <span className="inline-block">
               <Button
+                aria-label="Delete"
                 variant="secondary"
                 onClick={() => setIsDeleteDialogOpen(true)}
                 disabled={!canDelete || !canEdit || isDeleting}
