@@ -355,7 +355,9 @@ describe('Header - Basic Rendering', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -760,7 +762,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
@@ -799,14 +801,14 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be hidden when panel is open
     // We're testing tooltip visibility, not button enabled state
     // The button may be disabled for workflow validation reasons
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 
@@ -840,7 +842,9 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     // Make workflow invalid (empty name)
@@ -850,7 +854,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
 
@@ -867,7 +871,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
     // Error tooltip should still be shown even when panel is open
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
   });
@@ -902,10 +906,12 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
-    let startButton = screen.getByRole('button', { name: /run/i });
+    let startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be present when closed
 
@@ -920,7 +926,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be hidden when open
 
@@ -935,7 +941,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should reappear when closed
   });
@@ -966,13 +972,13 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Default should show tooltip (panel closed by default)
     // We're testing that the prop defaults correctly, not button state
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 });

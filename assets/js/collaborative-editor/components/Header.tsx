@@ -1,10 +1,13 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback } from 'react';
+import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
+import * as dataclipApi from '../api/dataclips';
+import { StoreContext } from '../contexts/StoreProvider';
 import { channelRequest } from '../hooks/useChannel';
+import { useActiveRun } from '../hooks/useHistory';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
@@ -29,6 +32,8 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { notifications } from '../lib/notifications';
+import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
@@ -226,6 +231,11 @@ export function Header({
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
+  const storeContext = useContext(StoreContext);
+  const getLimits = storeContext?.sessionContextStore.getLimits;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const activeRun = useActiveRun();
+  const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -251,15 +261,45 @@ export function Header({
 
   const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
 
-  const handleRunClick = useCallback(() => {
-    if (firstTriggerId) {
-      // select the first trigger
-      selectNode(firstTriggerId);
-      // switch panel to run
-      updateSearchParams({
-        panel: 'run',
+  const handleRunClick = useCallback(async () => {
+    if (!firstTriggerId || !projectId || !workflowId) return;
+
+    setIsSubmitting(true);
+    try {
+      await saveWorkflow({ silent: true });
+      const response = await dataclipApi.submitManualRun({
+        workflowId,
+        projectId,
+        triggerId: firstTriggerId,
       });
-      // Canvas context: open run panel with first trigger
+      notifications.success({
+        title: 'Run started',
+        description: 'Saved latest changes and created new work order',
+      });
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({ run: response.data.run_id });
+    } catch (error) {
+      notifications.alert({
+        title: 'Failed to submit run',
+        description:
+          error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    firstTriggerId,
+    projectId,
+    workflowId,
+    saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  const handleRunWithCustomInputClick = useCallback(() => {
+    if (firstTriggerId) {
+      selectNode(firstTriggerId);
+      updateSearchParams({ panel: 'run' });
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
@@ -398,7 +438,9 @@ export function Header({
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
                 <NewRunButton
                   onClick={handleRunClick}
+                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
                   disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  isRunning={isSubmitting || runIsProcessing}
                 />
               )}
               <SaveButton

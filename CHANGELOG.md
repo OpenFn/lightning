@@ -47,6 +47,9 @@ and this project adheres to
 - bumped local worker to 1.24.0
 - Update 'Run' button label to 'Run From Here' in the job inspector panel
   [#4617](https://github.com/OpenFn/lightning/issues/4617)
+- Split run button in the canvas header. one-click runs instantly, dropdown
+  opens run with custom input.
+  [#4615](https://github.com/OpenFn/lightning/issues/4615)
 
 ### Fixed
 
