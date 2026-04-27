@@ -82,6 +82,21 @@ export const convertWorkflowStateToSpec = (
 
     if (trigger.type === 'webhook') {
       triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
+      const config = trigger.sync_webhook_response_config;
+      if (
+        config &&
+        (config.success_code != null ||
+          config.error_code != null ||
+          config.body != null)
+      ) {
+        triggerDetails.webhook_response = {
+          ...(config.success_code != null && {
+            success_code: config.success_code,
+          }),
+          ...(config.error_code != null && { error_code: config.error_code }),
+          ...(config.body != null && { body: config.body }),
+        };
+      }
     }
 
     // TODO: handle kafka config
@@ -186,6 +201,9 @@ export const convertWorkflowSpecToState = (
         type: 'webhook',
         enabled,
         webhook_reply: specTrigger.webhook_reply,
+        sync_webhook_response_config: parseWebhookResponseConfig(
+          specTrigger.webhook_response
+        ),
       };
     } else {
       trigger = {
@@ -250,6 +268,17 @@ export const convertWorkflowSpecToState = (
 
   return workflowState;
 };
+
+function parseWebhookResponseConfig(
+  config: import('./types').WebhookResponseConfig | null | undefined
+): import('./types').WebhookResponseConfig | null {
+  if (!config) return null;
+  const body =
+    typeof config.body === 'string'
+      ? (JSON.parse(config.body) as Record<string, unknown>)
+      : config.body;
+  return { ...config, body };
+}
 
 export const extractJobCredentials = (jobs: Workflow.Job[]): JobCredentials => {
   const credentials: JobCredentials = {};

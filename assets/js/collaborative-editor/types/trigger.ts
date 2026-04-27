@@ -57,6 +57,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
     ),
   cron_cursor_job_id: z.string().uuid().nullable().default(null),
   kafka_configuration: z.null().default(null),
+  sync_webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 
@@ -111,6 +112,7 @@ const kafkaTriggerSchema = baseTriggerSchema.extend({
   cron_expression: z.null().default(null),
   cron_cursor_job_id: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
+  sync_webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 

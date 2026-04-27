@@ -62,6 +62,15 @@
               "type": ["string", "null"],
               "enum": ["before_start", "after_completion", "custom", null]
             },
+            "webhook_response": {
+              "type": ["object", "null"],
+              "properties": {
+                "success_code": { "type": ["integer", "null"] },
+                "error_code": { "type": ["integer", "null"] },
+                "body": { "type": ["object", "null"] }
+              },
+              "additionalProperties": false
+            },
             "pos": {
               "type": "object",
               "properties": {

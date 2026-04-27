@@ -92,11 +92,18 @@ export type SpecCronTrigger = {
   pos: Position | undefined;
 };
 
+export type WebhookResponseConfig = {
+  success_code?: number | null;
+  error_code?: number | null;
+  body?: Record<string, unknown> | null;
+};
+
 export type SpecWebhookTrigger = {
   id?: string;
   type: 'webhook';
   enabled: boolean;
   webhook_reply: string | null;
+  webhook_response?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 
