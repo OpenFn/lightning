@@ -90,14 +90,31 @@ export function JobInspector({
           >
             <span className="inline-block">
               <Button
-                variant="primary"
+                variant="secondary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
                 disabled={isIDEOpen}
               >
-                Code
+                <span className="hero-arrows-pointing-out"></span>
+                {/* Coderman */}
               </Button>
             </span>
           </Tooltip>
+          <Tooltip content={deleteTooltipMessage}>
+            <span className="inline-block">
+              <Button
+                variant="secondary"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={!canDelete || !canEdit}
+              >
+                <span className="hero-trash"></span>
+                {/* {isDeleting ? 'Deleting...' : 'Delete'} */}
+              </Button>
+            </span>
+          </Tooltip>
+        </>
+      }
+      rightButtons={
+        <>
           <NewRunButton
             onClick={() => onOpenRunPanel({ jobId: job.id })}
             tooltipSide="top"
@@ -105,19 +122,6 @@ export function JobInspector({
             text="Run From Here"
           />
         </>
-      }
-      rightButtons={
-        <Tooltip content={deleteTooltipMessage}>
-          <span className="inline-block">
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={!canDelete || !canEdit}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </span>
-        </Tooltip>
       }
     />
   );
