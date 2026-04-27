@@ -345,6 +345,10 @@ defmodule Lightning.Factories do
     }
   end
 
+  def sync_webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.SyncWebhookResponseConfig{}
+  end
+
   def triggers_kafka_configuration_factory do
     %Lightning.Workflows.Triggers.KafkaConfiguration{
       group_id: "arb_group_id",

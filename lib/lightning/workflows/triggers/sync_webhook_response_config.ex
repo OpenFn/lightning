@@ -15,6 +15,8 @@ defmodule Lightning.Workflows.Triggers.SyncWebhookResponseConfig do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder, only: [:success_code, :error_code, :body]}
+
   @primary_key false
   embedded_schema do
     field :success_code, :integer
