@@ -49,6 +49,11 @@ and this project adheres to
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
 - bumped local worker to 1.24.0
+- Update 'Run' button label to 'Run From Here' in the job inspector panel
+  [#4617](https://github.com/OpenFn/lightning/issues/4617)
+- Split run button in the canvas header. one-click runs instantly, dropdown
+  opens run with custom input.
+  [#4615](https://github.com/OpenFn/lightning/issues/4615)
 
 ### Fixed
 

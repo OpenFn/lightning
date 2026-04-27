@@ -102,6 +102,7 @@ export function JobInspector({
             onClick={() => onOpenRunPanel({ jobId: job.id })}
             tooltipSide="top"
             disabled={isReadOnly}
+            text="Run From Here"
           />
         </>
       }

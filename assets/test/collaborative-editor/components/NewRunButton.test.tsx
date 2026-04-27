@@ -75,6 +75,21 @@ describe('NewRunButton - Disabled Prop', () => {
 
     expect(screen.getByText('Run')).toBeInTheDocument();
   });
+
+  test('button renders with custom text when text prop is provided', () => {
+    const mockOnClick = vi.fn();
+
+    render(
+      <NewRunButton
+        onClick={mockOnClick}
+        disabled={false}
+        text="Run From Here"
+      />
+    );
+
+    expect(screen.getByText('Run From Here')).toBeInTheDocument();
+    expect(screen.queryByText('Run')).not.toBeInTheDocument();
+  });
 });
 
 describe('NewRunButton - Tooltip Positioning', () => {
