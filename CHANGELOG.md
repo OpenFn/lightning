@@ -39,6 +39,15 @@ and this project adheres to
 - Ability to filter work orders and runs via REST API by UUIDs or status; added
   example curl requests to REST API docs.
   [#4552](https://github.com/OpenFn/lightning/issues/4552)
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 
 ### Changed
 
@@ -49,6 +58,10 @@ and this project adheres to
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
 - bumped local worker to 1.24.0
+- Channel timing fields are now stored in microseconds (previously milliseconds)
+  and request and response headers are stored as native jsonb on
+  `channel_events`. Handler adapted to Philter 0.3.0 timing map.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 
 ### Fixed
 
