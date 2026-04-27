@@ -246,9 +246,6 @@ defmodule Lightning.Projects.Sandboxes do
   @doc """
   Deletes a sandbox and all its descendant projects.
 
-  **Warning**: This permanently removes the sandbox and any nested sandboxes
-  within it. This action cannot be undone.
-
   ## Parameters
   * `sandbox` - Sandbox project to delete (or sandbox ID as string)
   * `actor` - User performing the deletion (needs `:owner` or `:admin` role on sandbox)

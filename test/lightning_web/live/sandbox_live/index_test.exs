@@ -953,8 +953,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ great_grandchild.name
-      assert html =~ "will also be closed"
-      assert html =~ "Consider merging it into"
+      assert html =~ "will also be permanently closed"
     end
 
     test "merge modal shows multiple descendants warning with full list", %{
@@ -970,14 +969,67 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "Child sandboxes will be closed"
-      assert html =~ "2 sandboxes will be permanently closed"
-
-      assert html =~ "grandchild1"
-      assert html =~ "grandchild2"
-
-      assert html =~ "Consider merging child sandboxes into"
+      assert html =~ "child sandboxes will also be permanently closed"
       assert html =~ child1.name
+    end
+
+    test "merge sentence: leaf sandbox has no gap before period", %{
+      conn: conn,
+      root: root,
+      child2: child2
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child2.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      refute html =~ ~r{<strong>child2</strong>\s+\.},
+             "visible space between sandbox name and period for leaf sandbox"
+
+      assert html =~ "<strong>child2</strong>."
+
+      refute html =~ "phx-no-format",
+             "formatter directive leaked into rendered HTML"
+    end
+
+    test "merge sentence: single descendant has space and bolded child name",
+         %{conn: conn, root: root, grandchild1: grandchild1, user: user} do
+      _great =
+        insert(:project,
+          name: "great-grandchild",
+          parent: grandchild1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~
+               "<strong>grandchild1</strong> and its child sandbox <strong>great-grandchild</strong>."
+    end
+
+    test "merge sentence: multiple descendants mentions count", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ "<strong>child1</strong> and its 2 child sandboxes."
     end
 
     test "merge modal shows correct dropdown options", %{
@@ -1164,23 +1216,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "merge modal shows beta warning", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ "This action cannot be undone"
-      assert html =~ "use the CLI to merge locally"
-    end
-
     test "descendants are calculated correctly for deep nesting", %{
       conn: conn,
       root: root,
@@ -1203,10 +1238,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "sandboxes will be permanently closed"
-      assert html =~ "grandchild1"
-      assert html =~ "grandchild2"
-      assert html =~ "3 sandboxes will be permanently closed"
+      assert html =~ "child sandboxes will also be permanently closed"
     end
 
     test "sibling can be selected as merge target", %{
@@ -1861,6 +1893,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         target_job: job1
       )
 
+      with_version(parent_workflow)
+
       # Create sandbox from parent (at this point, parent only has job1)
       sandbox = insert(:project, name: "Sandbox", parent: parent)
 
@@ -1870,6 +1904,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "Main Workflow",
           lock_version: parent_workflow.lock_version
         )
+
+      with_version(sandbox_workflow)
 
       sandbox_job1 =
         insert(:job,
@@ -2126,7 +2162,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         view
         |> render_click("open-merge-modal", %{"id" => sandbox.id})
 
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
       assert html =~ "Test Workflow"
     end
   end
@@ -2513,7 +2549,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       # Assert per-row divergence indicators are present
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
 
       # Assert workflow names are listed in the workflow list
       assert html =~ "Payment Processing"
@@ -2556,7 +2592,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute html =~ "Target project has diverged"
 
       # Matching Workflow appears in the workflow list (not as a diverged workflow)
-      refute html =~ "Target modified"
+      refute html =~ "Diverged"
     end
 
     test "updates diverged workflow list when changing merge target", %{
@@ -2625,7 +2661,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Parent Workflow"
       assert html =~ "Sibling Workflow"
       # Parent Workflow is diverged (different hash in parent), Sibling is new
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
@@ -2728,12 +2764,60 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       beta_data = Enum.find(assigns.merge_source_workflows, &(&1.name == "Beta"))
 
-      assert %{is_diverged: true, is_new: false} = alpha_data
-      assert %{is_diverged: false, is_new: true} = beta_data
+      assert %{is_diverged: true, is_new: false, is_changed: true} = alpha_data
+      assert %{is_diverged: false, is_new: true, is_changed: true} = beta_data
 
-      # All workflows selected by default and IDs match
+      # Changed workflows selected by default and IDs match
       assert MapSet.member?(assigns.merge_selected_workflow_ids, alpha_data.id)
       assert MapSet.member?(assigns.merge_selected_workflow_ids, beta_data.id)
+    end
+
+    test "unchanged workflows are not pre-selected by default",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      shared_hash = "cccccc222222"
+
+      parent_wf = insert(:workflow, project: parent, name: "Unchanged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(parent_wf, shared_hash, "app")
+
+      sandbox_wf = insert(:workflow, project: sandbox, name: "Unchanged")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(sandbox_wf, shared_hash, "app")
+
+      changed_sandbox_wf = insert(:workflow, project: sandbox, name: "Changed")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          changed_sandbox_wf,
+          "dddddd333333",
+          "app"
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      unchanged_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Unchanged"))
+
+      changed_data =
+        Enum.find(assigns.merge_source_workflows, &(&1.name == "Changed"))
+
+      assert %{is_changed: false} = unchanged_data
+      assert %{is_changed: true} = changed_data
+
+      refute MapSet.member?(
+               assigns.merge_selected_workflow_ids,
+               unchanged_data.id
+             )
+
+      assert MapSet.member?(assigns.merge_selected_workflow_ids, changed_data.id)
     end
 
     test "target-only workflows appear in list with is_deleted flag and badge",
@@ -2804,7 +2888,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> element("#branch-rewire-sandbox-#{sandbox.id} button")
         |> render_click()
 
-      assert html =~ "Target modified"
+      assert html =~ "Diverged"
+      assert html =~ "Changed"
       assert html =~ "New"
       assert html =~ "Diverged Flow"
       assert html =~ "New Flow"
@@ -2860,6 +2945,62 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assigns3 = :sys.get_state(view.pid).socket.assigns
       assert MapSet.size(assigns3.merge_selected_workflow_ids) == 2
+    end
+
+    test "select-all checkbox reflects :all, :none, and :partial states", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      wf1 = insert(:workflow, project: sandbox, name: "Flow A")
+      _wf2 = insert(:workflow, project: sandbox, name: "Flow B")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Both workflows start pre-selected (both are :new → :is_changed). :all.
+      html = render(view)
+
+      assert html =~
+               ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+
+      refute html =~
+               ~r/id="merge-select-all-workflows"[^>]*indeterminate[^>]*>/
+
+      # Deselect all. :none.
+      render_click(view, "toggle-all-workflows", %{})
+      html = render(view)
+
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
+
+      # Select just one workflow. :partial.
+      render_click(view, "toggle-workflow", %{"id" => wf1.id})
+      html = render(view)
+
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      assert html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
+    end
+
+    test "select-all checkbox is disabled when there are no workflows", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ ~r/id="merge-select-all-workflows"[^>]*disabled/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
+      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
     end
 
     test "changing merge target recomputes workflow divergence and new status",
