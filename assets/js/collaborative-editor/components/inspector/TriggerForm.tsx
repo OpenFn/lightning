@@ -35,6 +35,21 @@ interface TriggerFormProps {
 
 const logger = _logger.ns('TriggerForm').seal();
 
+function hasResponseConfig(
+  config: {
+    success_code: number | null;
+    error_code: number | null;
+    body: Record<string, unknown> | null;
+  } | null
+): boolean {
+  if (!config) return false;
+  return (
+    config.success_code != null ||
+    config.error_code != null ||
+    config.body != null
+  );
+}
+
 /**
  * Pure form component for trigger configuration.
  * Handles trigger type, enabled toggle, and type-specific fields
@@ -429,6 +444,15 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 ? 'Holds the HTTP connection open and responds when the run completes.'
                                 : 'Responds immediately with the enqueued work order ID.'}
                             </p>
+                            {field.state.value === 'after_completion' &&
+                              hasResponseConfig(
+                                trigger.sync_webhook_response_config
+                              ) && (
+                                <p className="mt-1 text-xs text-amber-600">
+                                  Switching to async will clear your response
+                                  configuration.
+                                </p>
+                              )}
                             {field.state.meta.errors.map(error => (
                               <p
                                 key={error}
@@ -634,15 +658,28 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     </div>
 
                                     {/* Runtime override note */}
-                                    <p className="text-xs text-slate-500 border-t border-slate-200 pt-3">
-                                      To override both the status code and body
-                                      at runtime, write to{' '}
-                                      <code className="font-mono text-slate-700">
-                                        _webhookResponse
-                                      </code>{' '}
-                                      in the job state. When present, it takes
-                                      full priority over these defaults.
-                                    </p>
+                                    <div className="border-t border-slate-200 pt-3 space-y-1.5">
+                                      <p className="text-xs text-slate-500">
+                                        To override the response at runtime, set{' '}
+                                        <code className="font-mono text-slate-700">
+                                          _webhookResponse
+                                        </code>{' '}
+                                        in the final job state:
+                                      </p>
+                                      <pre className="text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                                        {`fn(state => ({\n  ...state,\n  _webhookResponse: {\n    status: 200,\n    body: { ack: true, received: state.data.value }\n  }\n}));`}
+                                      </pre>
+                                      <p className="text-xs text-slate-500">
+                                        Both{' '}
+                                        <code className="font-mono">
+                                          status
+                                        </code>{' '}
+                                        and{' '}
+                                        <code className="font-mono">body</code>{' '}
+                                        are required. When present, takes full
+                                        priority over the defaults above.
+                                      </p>
+                                    </div>
                                   </div>
                                 );
                               }}
