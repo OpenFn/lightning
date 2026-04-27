@@ -50,6 +50,8 @@ and this project adheres to
 - Split run button in the canvas header. one-click runs instantly, dropdown
   opens run with custom input.
   [#4615](https://github.com/OpenFn/lightning/issues/4615)
+- Clearer step panel button design with icon-only secondary buttons for Code and
+  Delete. [#4618](https://github.com/OpenFn/lightning/issues/4618)
 
 ### Fixed
 
