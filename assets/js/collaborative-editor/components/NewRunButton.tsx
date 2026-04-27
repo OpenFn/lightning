@@ -12,6 +12,7 @@ interface NewRunButtonProps {
   disabled?: boolean;
   isRunning?: boolean;
   tooltipSide?: 'top' | 'bottom';
+  text?: string;
 }
 
 /**
@@ -33,6 +34,7 @@ export function NewRunButton({
   disabled: disabledProp,
   isRunning = false,
   tooltipSide = 'bottom',
+  text = 'Run',
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun();
 
@@ -83,7 +85,7 @@ export function NewRunButton({
         >
           <span className="flex items-center gap-1">
             {icon}
-            Run
+            {text}
           </span>
         </button>
       </Tooltip>
