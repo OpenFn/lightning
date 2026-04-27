@@ -60,7 +60,7 @@ export function NewRunButton({
           <Button variant="primary" onClick={onClick} disabled={isDisabled}>
             <span className="flex items-center gap-1">
               {icon}
-              Run
+              {text}
             </span>
           </Button>
         </span>
