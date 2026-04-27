@@ -1657,7 +1657,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         |> Lightning.Repo.update!()
 
       # lets crash the run
-      {:ok, _run} =
+      {:ok, _run, _body} =
         Lightning.Runs.complete_run(run, %{
           "error_message" => "Unexpected token (6:9)",
           "error_type" => "CompileError",

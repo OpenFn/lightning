@@ -206,7 +206,7 @@ defmodule LightningWeb.RunLive.ShowTest do
       assert {_attrs, %{"dataclipId" => ^output_dataclip_id}} =
                output_dataclip_viewer
 
-      {:ok, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
+      {:ok, _, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
 
       html =
         view
@@ -259,7 +259,7 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      {:ok, _} =
+      {:ok, _, _} =
         Lightning.Runs.complete_run(run, %{
           state: "success",
           final_dataclip_id: output_dataclip_id

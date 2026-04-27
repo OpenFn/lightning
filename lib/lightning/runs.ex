@@ -199,7 +199,7 @@ defmodule Lightning.Runs do
   end
 
   @spec complete_run(Run.t(), %{optional(any()) => any()}) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
+          {:ok, Run.t(), map() | nil} | {:error, Ecto.Changeset.t(Run.t())}
   def complete_run(run, params) do
     Handlers.CompleteRun.call(run, params)
   end
@@ -403,7 +403,7 @@ defmodule Lightning.Runs do
     result =
       Repo.transaction(fn ->
         case complete_run(run, %{state: "lost", error_type: error_type}) do
-          {:ok, updated_run} ->
+          {:ok, updated_run, _body} ->
             Ecto.assoc(run, :steps)
             |> where([r], is_nil(r.exit_reason))
             |> mark_steps_lost()

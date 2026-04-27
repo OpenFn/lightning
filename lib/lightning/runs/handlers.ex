@@ -88,20 +88,26 @@ defmodule Lightning.Runs.Handlers do
 
     def call(run, params) do
       with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
-        Repo.transact(fn ->
-          with {:ok, run_params} <-
-                 resolve_final_dataclip(complete_run, run.options) do
-            run
-            |> Run.complete(run_params)
-            |> case do
-              %{valid?: false} = changeset ->
-                {:error, changeset}
+        case Repo.transact(fn ->
+               with {:ok, run_params, final_body} <-
+                      resolve_final_dataclip(complete_run, run.options) do
+                 run
+                 |> Run.complete(run_params)
+                 |> case do
+                   %{valid?: false} = changeset ->
+                     {:error, changeset}
 
-              changeset ->
-                Runs.update_run(changeset)
-            end
-          end
-        end)
+                   changeset ->
+                     case Runs.update_run(changeset) do
+                       {:ok, run} -> {:ok, {run, final_body}}
+                       error -> error
+                     end
+                 end
+               end
+             end) do
+          {:ok, {run, final_body}} -> {:ok, run, final_body}
+          {:error, _} = error -> error
+        end
       end
     end
 
@@ -154,10 +160,15 @@ defmodule Lightning.Runs.Handlers do
            _options
          )
          when is_binary(id) do
-      if Repo.exists?(from d in Dataclip, where: d.id == ^id) do
-        {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
-      else
-        {:error, %{errors: %{final_dataclip_id: ["does not exist"]}}}
+      case Repo.one(
+             from d in Dataclip, where: d.id == ^id, select: {d.id, d.body}
+           ) do
+        nil ->
+          {:error, %{errors: %{final_dataclip_id: ["does not exist"]}}}
+
+        {_id, body} ->
+          {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id),
+           body}
       end
     end
 
@@ -170,7 +181,8 @@ defmodule Lightning.Runs.Handlers do
          when is_map(final_state) and is_binary(project_id) do
       case save_final_dataclip(final_state, project_id, options) do
         {:ok, %Dataclip{id: id}} ->
-          {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
+          {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id),
+           final_state}
 
         error ->
           error
@@ -179,7 +191,7 @@ defmodule Lightning.Runs.Handlers do
 
     # Neither provided (e.g., mark_run_lost, or worker didn't send final state).
     defp resolve_final_dataclip(complete_run, _options) do
-      {:ok, to_run_params(complete_run)}
+      {:ok, to_run_params(complete_run), nil}
     end
 
     defp save_final_dataclip(

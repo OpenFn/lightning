@@ -696,7 +696,7 @@ defmodule Lightning.RunsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, run} = Runs.complete_run(run, %{state: "success"})
+      {:ok, run, _body} = Runs.complete_run(run, %{state: "success"})
 
       assert run.state == :success
       assert run.finished_at == Lightning.current_time()
@@ -744,7 +744,7 @@ defmodule Lightning.RunsTest do
         |> Ecto.Changeset.change(state: :claimed)
         |> Repo.update()
 
-      {:ok, run} =
+      {:ok, run, _body} =
         Runs.complete_run(run, %{state: "lost", error_type: "Lost"})
 
       assert run.state == :lost
