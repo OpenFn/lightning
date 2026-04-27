@@ -264,7 +264,7 @@ describe('ManualRunPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Empty')).toBeInTheDocument();
     });
-    expect(screen.getByText('Custom')).toBeInTheDocument();
+    expect(screen.getByText('New')).toBeInTheDocument();
     expect(screen.getByText('Existing')).toBeInTheDocument();
   });
 
@@ -294,8 +294,8 @@ describe('ManualRunPanel', () => {
       onClose: () => {},
     });
 
-    // Click Custom tab
-    await user.click(screen.getByText('Custom'));
+    // Click New tab (custom input)
+    await user.click(screen.getByText('New'));
 
     // Monaco editor should appear
     await waitFor(() => {
@@ -518,8 +518,8 @@ describe('ManualRunPanel', () => {
       onClose: () => {},
     });
 
-    // Switch to Custom tab
-    await user.click(screen.getByText('Custom'));
+    // Switch to New tab (custom input)
+    await user.click(screen.getByText('New'));
 
     // The Monaco editor is mocked, so we can't actually test JSON validation
     // through user interaction. This is acceptable as JSON validation is
@@ -1116,8 +1116,8 @@ describe('ManualRunPanel', () => {
       );
       await user.click(xButton!);
 
-      // Switch to Custom tab
-      await user.click(screen.getByText('Custom'));
+      // Switch to New tab (custom input)
+      await user.click(screen.getByText('New'));
 
       // Switch back to Existing tab
       await user.click(screen.getByText('Existing'));

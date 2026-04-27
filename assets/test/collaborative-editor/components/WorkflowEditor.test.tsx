@@ -372,6 +372,67 @@ describe('WorkflowEditor', () => {
     });
   });
 
+  describe('URL persistence of run-panel entry point', () => {
+    test('URL with runMode=custom-input opens panel with entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        trigger: 'trigger-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL without runMode opens panel without entryPoint', async () => {
+      urlState.setParams({ panel: 'run', trigger: 'trigger-1' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+        });
+      });
+    });
+
+    test('URL with runMode=custom-input + jobParam preserves entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        job: 'job-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          jobId: 'job-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL with only panel=run defaults to first trigger + custom-input', async () => {
+      urlState.setParams({ panel: 'run' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+  });
+
   describe('inspector integration', () => {
     test('shows inspector when node is selected', async () => {
       // Select a job

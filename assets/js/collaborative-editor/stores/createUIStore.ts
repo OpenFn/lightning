@@ -63,7 +63,7 @@ import { produce } from 'immer';
 
 import _logger from '#/utils/logger';
 
-import type { UIState, UIStore } from '../types/ui';
+import type { UICommands, UIState, UIStore } from '../types/ui';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -157,7 +157,7 @@ export const createUIStore = (): UIStore => {
 
   const withSelector = createWithSelector(getSnapshot);
 
-  const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
+  const openRunPanel: UICommands['openRunPanel'] = context => {
     state = produce(state, draft => {
       draft.runPanelContext = context;
       draft.runPanelOpen = true;

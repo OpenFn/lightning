@@ -12,6 +12,13 @@ import type { Template, WorkflowTemplate } from './template';
 // =============================================================================
 
 /**
+ * Entry point that opened the run panel. Drives the panel title.
+ * - 'custom-input': opened from the canvas Run dropdown or a default
+ *   (no specific node) entry path.
+ */
+export type RunPanelEntryPoint = 'custom-input';
+
+/**
  * UI store state for transient UI concerns like panel visibility
  */
 export interface UIState {
@@ -22,6 +29,7 @@ export interface UIState {
     jobId?: string | null;
     triggerId?: string | null;
     edgeId?: string | null;
+    entryPoint?: RunPanelEntryPoint | null;
   } | null;
 
   /** GitHub sync modal open state */
@@ -62,6 +70,7 @@ export interface UICommands {
     jobId?: string;
     triggerId?: string;
     edgeId?: string;
+    entryPoint?: RunPanelEntryPoint;
   }) => void;
 
   /** Close run panel */

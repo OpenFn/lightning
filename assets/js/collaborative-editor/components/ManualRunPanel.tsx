@@ -18,6 +18,7 @@ import ExistingView from '../../manual-run-panel/views/ExistingView';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
+import type { RunPanelEntryPoint } from '../types/ui';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
@@ -42,6 +43,7 @@ interface ManualRunPanelProps {
   jobId?: string | null;
   triggerId?: string | null;
   edgeId?: string | null;
+  entryPoint?: RunPanelEntryPoint | null;
   onClose: () => void;
   /** Called when close button is clicked in embedded mode */
   onClosePanel?: () => void;
@@ -70,6 +72,7 @@ export function ManualRunPanel({
   jobId,
   triggerId,
   edgeId,
+  entryPoint = null,
   onClose,
   onClosePanel,
   renderMode = RENDER_MODES.STANDALONE,
@@ -179,11 +182,14 @@ export function ManualRunPanel({
       ? workflow.triggers.find(t => t.id === runContext.id)
       : null;
 
-  const panelTitle = contextJob
-    ? `Run from ${contextJob.name}`
-    : contextTrigger
-      ? `Run from Trigger (${contextTrigger.type})`
-      : 'Run Workflow';
+  const panelTitle =
+    entryPoint === 'custom-input'
+      ? 'Pick a custom input'
+      : contextJob
+        ? `Run from ${contextJob.name}`
+        : contextTrigger
+          ? `Run from Trigger (${contextTrigger.type})`
+          : 'Run Workflow';
 
   // For triggers: find first connected job for dataclip fetching
   // (dataclips are associated with jobs, not triggers)
@@ -564,7 +570,7 @@ export function ManualRunPanel({
           { value: 'empty', label: 'Empty', icon: DocumentIcon },
           {
             value: 'custom',
-            label: 'Custom',
+            label: 'New',
             icon: PencilSquareIcon,
           },
           {
