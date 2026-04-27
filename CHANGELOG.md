@@ -169,6 +169,9 @@ and this project adheres to
   [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 - Fix AI assistant authorization for support users on projects with support
   access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
+- Support mailto link no longer opens a blank tab; email address is shown as
+  a tooltip for users without a mail client configured
+  [#2435](https://github.com/OpenFn/lightning/issues/2435)
 
 ## [2.16.0] - 2026-03-24
 
