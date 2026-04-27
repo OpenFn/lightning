@@ -13,6 +13,7 @@ interface NewRunButtonProps {
   isRunning?: boolean;
   tooltipSide?: 'top' | 'bottom';
   text?: string;
+  variant?: 'primary' | 'secondary';
 }
 
 /**
@@ -35,6 +36,7 @@ export function NewRunButton({
   isRunning = false,
   tooltipSide = 'bottom',
   text = 'Run',
+  variant = 'primary',
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun();
 
@@ -53,11 +55,16 @@ export function NewRunButton({
     <span className="hero-play h-4 w-4" />
   );
 
+  const splitButtonClasses =
+    variant === 'secondary'
+      ? 'bg-white text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400 disabled:bg-gray-50 disabled:text-gray-400'
+      : 'bg-primary-600 hover:bg-primary-500 disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white focus-visible:outline-primary-600';
+
   if (!onRunWithCustomInputClick) {
     return (
       <Tooltip content={tooltip} side={tooltipSide}>
         <span className="inline-block">
-          <Button variant="primary" onClick={onClick} disabled={isDisabled}>
+          <Button variant={variant} onClick={onClick} disabled={isDisabled}>
             <span className="flex items-center gap-1">
               {icon}
               {text}
@@ -73,13 +80,11 @@ export function NewRunButton({
       <Tooltip content={tooltip} side={tooltipSide}>
         <button
           type="button"
-          className="rounded-l-md text-sm font-semibold shadow-xs
+          className={`rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-          bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-300 text-white
+          disabled:cursor-not-allowed px-3 py-2
           focus-visible:outline-2 focus-visible:outline-offset-2
-          focus-visible:outline-primary-600 focus:ring-transparent"
+          focus:ring-transparent ${splitButtonClasses}`}
           onClick={onClick}
           disabled={isDisabled}
         >
@@ -92,12 +97,10 @@ export function NewRunButton({
       <Menu as="div" className="relative -ml-px block">
         <MenuButton
           disabled={isDisabled}
-          className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
+          className={`h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
           shadow-xs cursor-pointer disabled:cursor-not-allowed
-          bg-primary-600 hover:bg-primary-500
-          disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
           focus-visible:outline-2 focus-visible:outline-offset-2
-          focus-visible:outline-primary-600 focus:ring-transparent"
+          focus:ring-transparent ${splitButtonClasses}`}
         >
           <span className="sr-only">Open run options</span>
           <span className="hero-chevron-down w-4 h-4" />
