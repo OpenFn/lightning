@@ -95,7 +95,6 @@ export function JobInspector({
                 disabled={isIDEOpen}
               >
                 <span className="hero-arrows-pointing-out"></span>
-                {/* Coderman */}
               </Button>
             </span>
           </Tooltip>
@@ -104,10 +103,13 @@ export function JobInspector({
               <Button
                 variant="secondary"
                 onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={!canDelete || !canEdit}
+                disabled={!canDelete || !canEdit || isDeleting}
               >
-                <span className="hero-trash"></span>
-                {/* {isDeleting ? 'Deleting...' : 'Delete'} */}
+                {isDeleting ? (
+                  <span className="hero-arrow-path animate-spin"></span>
+                ) : (
+                  <span className="hero-trash"></span>
+                )}
               </Button>
             </span>
           </Tooltip>
