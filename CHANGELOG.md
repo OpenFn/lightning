@@ -283,6 +283,9 @@ and this project adheres to
 
 - Editors can now provision and merge sandboxes; merge checks editor+ role on
   the target project [#4384](https://github.com/OpenFn/lightning/issues/4384)
+- Superuser users and projects settings lists now use server-side pagination,
+  sorting, and search for better performance
+  [#2913](https://github.com/OpenFn/lightning/issues/2913)
 - Show specific workflow names in sandbox merge dialog when target project has
   diverged, instead of generic warning message
   [#4001](https://github.com/OpenFn/lightning/issues/4001)

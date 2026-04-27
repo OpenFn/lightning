@@ -561,6 +561,32 @@ defmodule LightningWeb.UserLiveTest do
              ])
     end
 
+    test "users index paginates and navigates pages", %{conn: conn} do
+      for i <- 1..25 do
+        user_fixture(
+          email: "page-user-#{i}@example.com",
+          first_name: "Page#{i}",
+          last_name: "User"
+        )
+      end
+
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "Showing"
+      assert has_element?(index_live, "nav[aria-label='Pagination'] a", "2")
+
+      index_live
+      |> element("nav[aria-label='Pagination'] a", "2")
+      |> render_click()
+
+      patched_path = assert_patch(index_live)
+      patch_uri = URI.parse(patched_path)
+      patch_params = URI.decode_query(patch_uri.query || "")
+
+      assert patch_uri.path == "/settings/users"
+      assert patch_params["page"] == "2"
+    end
+
     test "sorting by first name column works correctly", %{conn: conn} do
       _user_a = user_fixture(first_name: "Alice", email: "alice@example.com")
       _user_b = user_fixture(first_name: "Bob", email: "bob@example.com")
