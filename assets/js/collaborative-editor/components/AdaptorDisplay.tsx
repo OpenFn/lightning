@@ -2,8 +2,12 @@ import { useMemo } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { ADAPTORS_WITHOUT_CREDENTIALS } from '../constants/adaptors';
 import { useCredentialQueries } from '../hooks/useCredentials';
-import { extractAdaptorDisplayName } from '../utils/adaptorUtils';
+import {
+  extractAdaptorDisplayName,
+  extractAdaptorName,
+} from '../utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
 import { Tooltip } from './Tooltip';
@@ -84,6 +88,9 @@ export function AdaptorDisplay({
   // Check if credential is connected and found
   const hasCredential = !!credentialId;
   const credentialNotFound = hasCredential && !credential;
+  const needsCredential = !ADAPTORS_WITHOUT_CREDENTIALS.includes(
+    extractAdaptorName(adaptorPackage as string) ?? ''
+  );
 
   // TODO - come back to pulse concept later
   // // Check if adaptor is language-common (shouldn't pulse for common)
@@ -261,7 +268,7 @@ export function AdaptorDisplay({
             config.editButton,
             'rounded-md font-medium focus:outline-none flex-shrink-0 transition-colors relative',
             config.textSize,
-            hasCredential
+            hasCredential || !needsCredential
               ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               : 'bg-primary-600 hover:bg-primary-500 text-white shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
           )}
