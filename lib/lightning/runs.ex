@@ -207,36 +207,32 @@ defmodule Lightning.Runs do
   @spec update_run(Ecto.Changeset.t(Run.t())) ::
           {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
   def update_run(%Ecto.Changeset{data: %Run{}} = changeset) do
-    run_id = Ecto.Changeset.get_field(changeset, :id)
+    if changeset.valid? do
+      run_id = Ecto.Changeset.get_field(changeset, :id)
 
-    run_query =
-      from(a in Run,
-        where: a.id == ^run_id,
-        lock: "FOR UPDATE"
-      )
+      Repo.transaction(fn ->
+        # Pessimistic lock — serializes with mark_run_lost janitor
+        _locked =
+          from(r in Run, where: r.id == ^run_id, lock: "FOR UPDATE")
+          |> Repo.one!()
 
-    update_query =
-      Run
-      |> with_cte("subset", as: ^run_query)
-      |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
-      |> select([a, _], a)
-
-    case update_runs(update_query, changeset) do
-      {:ok, %{runs: {1, [run]}}} ->
-        {:ok, run}
-
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
+        with {:ok, run} <- Repo.update(changeset),
+             {:ok, _wo} <- Lightning.WorkOrders.update_state(run) do
+          run
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+      |> tap(fn
+        {:ok, run} -> broadcast_run_updates(run)
+        _ -> :noop
+      end)
+    else
+      {:error, changeset}
     end
   end
 
-  def update_runs(update_query, updates) do
-    updates =
-      case updates do
-        %Ecto.Changeset{changes: changes} -> [set: changes |> Enum.into([])]
-        updates when is_list(updates) -> updates
-      end
-
+  def update_runs(update_query, updates) when is_list(updates) do
     Ecto.Multi.new()
     |> Ecto.Multi.update_all(:runs, update_query, updates)
     |> Ecto.Multi.run(:post, fn _repo, %{runs: {_, runs}} ->
@@ -249,25 +245,26 @@ defmodule Lightning.Runs do
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, %{runs: {_n, runs}}} <- result do
-        # TODO: remove the requirement for events to be hydrated with a specific
-        # set of preloads.
-        runs
-        |> Enum.map(fn run ->
-          Repo.preload(run, [
-            :snapshot,
-            :created_by,
-            :starting_trigger,
-            workflow: [:project]
-          ])
-        end)
-        |> Enum.each(fn run ->
-          # Broadcast to run-specific topic (for run viewer)
-          Events.run_updated(run)
-          # Broadcast to project topic (for workflow channel/history)
-          Lightning.WorkOrders.Events.run_updated(run.workflow.project_id, run)
-        end)
+        Enum.each(runs, &broadcast_run_updates/1)
       end
     end)
+  end
+
+  defp broadcast_run_updates(%Run{} = run) do
+    # TODO: remove the requirement for events to be hydrated with a specific
+    # set of preloads.
+    run =
+      Repo.preload(run, [
+        :snapshot,
+        :created_by,
+        :starting_trigger,
+        workflow: [:project]
+      ])
+
+    # Broadcast to run-specific topic (for run viewer)
+    Events.run_updated(run)
+    # Broadcast to project topic (for workflow channel/history)
+    Lightning.WorkOrders.Events.run_updated(run.workflow.project_id, run)
   end
 
   def append_run_log(run, params, scrubber \\ nil) do

@@ -27,7 +27,10 @@ defmodule Lightning.Runs.Handlers do
       with {:ok, start_run} <- params |> new() |> apply_action(:validate) do
         run
         |> Run.start(to_run_params(start_run))
-        |> Runs.update_run()
+        |> case do
+          %{valid?: false} = changeset -> {:error, changeset}
+          changeset -> Runs.update_run(changeset)
+        end
         |> tap(&track_run_queue_delay/1)
       end
     end
@@ -145,10 +148,9 @@ defmodule Lightning.Runs.Handlers do
       |> Map.put(:finished_at, complete_run.timestamp)
     end
 
-    # @Stu - is this necessary? I'm worried that it's overkill to check first,
-    # but also don't want a situation where we crash the channel cause it's not
-    # there.
-    # When the worker sends an existing dataclip ID, verify it exists first.
+    # Pre-check existence for a clean error message to the worker.
+    # The FK constraint on Run.complete/2 is also enforced at the DB level
+    # as a safety net (via Repo.update in Runs.update_run/1).
     defp resolve_final_dataclip(
            %__MODULE__{final_dataclip_id: id} = complete_run,
            _options
