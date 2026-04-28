@@ -192,9 +192,11 @@ describe('TriggerForm - Response Mode Field', () => {
 
     // Check both options exist (use exact text to avoid "Async" matching "sync")
     expect(
-      screen.getByRole('option', { name: 'Async (default)' })
+      screen.getByRole('option', { name: 'Async (Before Start)' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Sync' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Sync (After Completion)' })
+    ).toBeInTheDocument();
   });
 
   test('shows Async as default selected value', async () => {
@@ -261,7 +263,7 @@ describe('TriggerForm - Response Mode Field', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /responds with the final output state after the run completes/i
+          /holds the http connection open and responds when the run completes/i
         )
       ).toBeInTheDocument();
     });
