@@ -7,6 +7,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   alias Lightning.OauthClients
   alias Lightning.Policies
 
+  @page_size 10
+
   @impl true
   def mount(socket) do
     {:ok,
@@ -16,10 +18,14 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        can_create_project_credential: false,
        credential: nil,
        credentials: [],
+       credentials_page: 1,
        current_user: nil,
        keychain_credentials: nil,
+       keychain_credentials_page: 1,
        oauth_client: nil,
        oauth_clients: [],
+       oauth_clients_expanded: false,
+       oauth_clients_page: 1,
        project: nil,
        project_user: nil,
        projects: [],
@@ -86,6 +92,24 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      socket
      |> assign(active_modal: nil, credential: nil, oauth_client: nil)
      |> load_credentials()}
+  end
+
+  def handle_event(
+        "change_page",
+        %{"table" => table, "page" => page, "container_id" => container_id},
+        socket
+      ) do
+    page = if is_integer(page), do: page, else: String.to_integer(page)
+    key = :"#{table}_page"
+
+    {:noreply,
+     socket
+     |> assign(key, page)
+     |> push_event("scroll-to-top", %{id: container_id})}
+  end
+
+  def handle_event("toggle_oauth_clients", _params, socket) do
+    {:noreply, update(socket, :oauth_clients_expanded, &(!&1))}
   end
 
   def handle_event("show_modal", %{"target" => "new_credential"}, socket) do
@@ -401,6 +425,22 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      socket
      |> put_flash(:error, "You are not authorized to perform this action")
      |> push_patch(to: socket.assigns.return_to)}
+  end
+
+  defp paginate(list, page) when is_list(list) do
+    total = length(list)
+    total_pages = max(1, div(total + @page_size - 1, @page_size))
+    page_num = max(1, min(page, total_pages))
+    slice = Enum.slice(list, (page_num - 1) * @page_size, @page_size)
+
+    page_info = %{
+      page_number: page_num,
+      page_size: @page_size,
+      total_entries: total,
+      total_pages: total_pages
+    }
+
+    {slice, page_info}
   end
 
   defp list_credentials(user_or_project) do
