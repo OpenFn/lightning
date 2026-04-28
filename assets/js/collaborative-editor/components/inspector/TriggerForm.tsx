@@ -239,7 +239,6 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           value={webhookUrl}
                           readOnly
                           disabled
-                          autoComplete="off"
                           className="block w-full flex-1 rounded-l-lg
                             text-slate-900 disabled:bg-gray-50
                             disabled:text-gray-500 border border-r-0
