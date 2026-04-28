@@ -375,13 +375,13 @@ defmodule LightningWeb.SandboxLive.Components do
               header="This sandbox will be deleted after merging"
             >
               <:message>
-                This action cannot be undone after {grace_period_label()}.
+                It can be restored by a workspace administrator for {grace_period_label()}, then permanently removed.
                 <div :if={@descendant_count == 1} class="mt-2">
                   Child sandbox <strong>{List.first(@descendants).name}</strong>
-                  will also be permanently closed.
+                  will also be deleted.
                 </div>
                 <div :if={@descendant_count > 1} class="mt-2">
-                  Its {@descendant_count} child sandboxes will also be permanently closed.
+                  Its {@descendant_count} child sandboxes will also be deleted.
                 </div>
               </:message>
             </Common.alert>
