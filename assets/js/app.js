@@ -129,6 +129,13 @@ window.addEventListener('phx:page-loading-stop', () => {
   topbar.hide();
 });
 
+// Scroll the table container to the top
+window.addEventListener('phx:scroll-to-top', e => {
+  document
+    .getElementById(e.detail.id)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 // connect if there are any LiveViews on the page
 liveSocket.connect();
 // expose liveSocket on window for web console debug logs and latency simulation:
