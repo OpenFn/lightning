@@ -57,8 +57,8 @@ and this project adheres to
   accidental deletions can be recovered by a workspace administrator.
   Soft-deleted sandboxes are hidden from the sandbox listing and surfaced on the
   existing superuser admin page for restore/cancel. The merge modal now exposes
-  a "Delete sandbox after merging" checkbox (default checked); unchecking it
-  keeps the sandbox alive after the merge for ongoing work.
+  a "Delete sandbox after merging" toggle (default on); turning it off keeps the
+  sandbox alive after the merge for ongoing work.
   [#4649](https://github.com/OpenFn/lightning/issues/4649)
 
 ### Fixed
