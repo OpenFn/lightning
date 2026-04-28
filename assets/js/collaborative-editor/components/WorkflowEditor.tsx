@@ -84,6 +84,9 @@ export function WorkflowEditor({
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
+      // runMode persists the panel entry point in the URL so the title
+      // ("Pick a custom input") survives reload, deep-link, and back/forward.
+      // Read back by the URL→store sync below.
       const contextEntryPoint = runPanelContext?.entryPoint ?? null;
       const runModeParam =
         contextEntryPoint === 'custom-input' ? 'custom-input' : null;
