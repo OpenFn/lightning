@@ -163,7 +163,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
         if changeset.valid? do
           {:noreply,
-           Lightning.Projects.delete_sandbox(
+           Sandboxes.schedule_sandbox_deletion(
              sandbox,
              current_user
            )
@@ -597,7 +597,9 @@ defmodule LightningWeb.SandboxLive.Index do
       socket
       |> put_flash(
         :info,
-        "Sandbox #{deleted_sandbox.name} and all its associated descendants deleted"
+        "Sandbox #{deleted_sandbox.name} and its descendants have been " <>
+          "scheduled for deletion. They will be retained for " <>
+          "#{human_readable_grace_period()} before being permanently removed."
       )
       |> reset_delete_modal_state()
 
@@ -622,7 +624,10 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp handle_sandbox_delete_result({:error, reason}, _sandbox, socket) do
     socket
-    |> put_flash(:error, "Failed to delete sandbox: #{inspect(reason)}")
+    |> put_flash(
+      :error,
+      "Failed to schedule sandbox deletion: #{inspect(reason)}"
+    )
     |> assign(:confirm_delete_open?, false)
   end
 
@@ -875,12 +880,23 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp build_merge_success_message(source, target, actor) do
-    case Lightning.Projects.delete_sandbox(source, actor) do
+    case Sandboxes.schedule_sandbox_deletion(source, actor) do
       {:ok, _} ->
-        "Successfully merged #{source.name} into #{target.name} and deleted the sandbox"
+        "Successfully merged #{source.name} into #{target.name}. " <>
+          "The sandbox has been scheduled for deletion and will be retained " <>
+          "for #{human_readable_grace_period()} before being permanently removed."
 
       {:error, _} ->
-        "Successfully merged #{source.name} into #{target.name}, but could not delete the sandbox"
+        "Successfully merged #{source.name} into #{target.name}, " <>
+          "but could not schedule the sandbox for deletion."
+    end
+  end
+
+  defp human_readable_grace_period do
+    case Lightning.Config.purge_deleted_after_days() do
+      nil -> "the configured grace period"
+      1 -> "1 day"
+      days when is_integer(days) -> "#{days} days"
     end
   end
 

@@ -862,6 +862,15 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Project, project_to_delete.id)
       assert Repo.get(Project, not_to_delete.id)
     end
+
+    test "no-ops when the per-project purge target was already cascaded" do
+      missing_id = Ecto.UUID.generate()
+
+      assert :ok =
+               Projects.perform(%Oban.Job{
+                 args: %{"project_id" => missing_id, "type" => "purge_deleted"}
+               })
+    end
   end
 
   describe "Projects.perform/1 for data retention periods" do
@@ -2651,6 +2660,41 @@ defmodule Lightning.ProjectsTest do
       # Should get both "duplicate" projects in alphabetical order
       names = Enum.map(descendants, & &1.name)
       assert names == ["duplicate", "duplicate", "other"]
+    end
+
+    test "excludes descendants with scheduled_deletion set" do
+      root = insert(:project, name: "root")
+      active = insert(:project, name: "active", parent: root)
+
+      _scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert Enum.map(descendants, & &1.id) == [active.id]
+    end
+
+    test "excludes the entire subtree under a scheduled descendant" do
+      root = insert(:project, name: "root")
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      _grandchild = insert(:project, name: "grandchild", parent: scheduled)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert descendants == []
     end
 
     test "raises when project doesn't exist" do

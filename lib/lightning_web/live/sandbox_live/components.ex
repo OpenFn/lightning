@@ -144,7 +144,9 @@ defmodule LightningWeb.SandboxLive.Components do
 
       <section class="space-y-4">
         <p class="text-gray-700">
-          Deleting a sandbox permanently removes its workflows, triggers, versions, keychain clones, and dataclips.
+          Deleting a sandbox removes it (along with its descendants) from
+          OpenFn. Workflows, triggers, versions, keychain clones, and
+          dataclips will be permanently removed once the grace period ends.
           <%= if @sandbox.is_current do %>
             You are currently viewing this project.
             After deletion, you'll be redirected to <strong>{@root_project.name}</strong>.
@@ -152,8 +154,10 @@ defmodule LightningWeb.SandboxLive.Components do
           To confirm, type the sandbox name below.
         </p>
 
-        <div class="bg-red-50 border border-red-200 rounded-md p-3">
-          <p class="text-sm text-red-800">This action cannot be undone.</p>
+        <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+          <p class="text-sm text-amber-800">
+            The sandbox will be scheduled for deletion and retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
+          </p>
         </div>
 
         <.form
@@ -178,7 +182,7 @@ defmodule LightningWeb.SandboxLive.Components do
               disabled={!@changeset.valid?}
               {if !@changeset.valid?, do: [tooltip: "Type the sandbox name to enable"], else: []}
             >
-              Delete Sandbox
+              Delete sandbox
             </.button>
             <.button
               theme="secondary"
@@ -192,6 +196,14 @@ defmodule LightningWeb.SandboxLive.Components do
       </section>
     </.modal>
     """
+  end
+
+  defp grace_period_label do
+    case Lightning.Config.purge_deleted_after_days() do
+      nil -> "the configured grace period"
+      1 -> "1 day"
+      days when is_integer(days) -> "#{days} days"
+    end
   end
 
   attr :open?, :boolean, required: true
@@ -269,7 +281,7 @@ defmodule LightningWeb.SandboxLive.Components do
             This will overwrite the selected workflows in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             with the versions from sandbox <strong>{@sandbox.name}</strong>,
-            then delete <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} />
+            then schedule <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} /> for deletion.
             Any conflicting changes in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             will be lost.
@@ -347,16 +359,16 @@ defmodule LightningWeb.SandboxLive.Components do
           <Common.alert
             id="merge-beta-warning"
             type="warning"
-            header="This sandbox will be deleted after merging"
+            header="This sandbox will be scheduled for deletion after merging"
           >
             <:message>
-              This action cannot be undone.
+              The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
               <div :if={@descendant_count == 1} class="mt-2">
                 Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be permanently closed.
+                will also be scheduled for deletion.
               </div>
               <div :if={@descendant_count > 1} class="mt-2">
-                Its {@descendant_count} child sandboxes will also be permanently closed.
+                Its {@descendant_count} child sandboxes will also be scheduled for deletion.
               </div>
             </:message>
           </Common.alert>

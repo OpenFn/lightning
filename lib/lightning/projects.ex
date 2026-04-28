@@ -135,7 +135,10 @@ defmodule Lightning.Projects do
   def perform(%Oban.Job{
         args: %{"project_id" => project_id, "type" => "purge_deleted"}
       }) do
-    project_id |> get_project!() |> delete_project()
+    case get_project(project_id) do
+      nil -> :ok
+      project -> delete_project(project)
+    end
 
     :ok
   end
@@ -1544,7 +1547,7 @@ defmodule Lightning.Projects do
 
     descendants_query =
       from(p in Project,
-        where: p.parent_id == ^root.id,
+        where: p.parent_id == ^root.id and is_nil(p.scheduled_deletion),
         select: %{id: p.id, parent_id: p.parent_id, level: 1}
       )
 
@@ -1552,6 +1555,7 @@ defmodule Lightning.Projects do
       from(p in Project,
         join: d in "descendants",
         on: p.parent_id == d.id,
+        where: is_nil(p.scheduled_deletion),
         select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
       )
 

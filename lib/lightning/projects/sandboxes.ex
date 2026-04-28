@@ -20,7 +20,12 @@ defmodule Lightning.Projects.Sandboxes do
   * `provision/3` - Create a new sandbox from a parent project
   * `merge/4` - Merge a sandbox into its target (workflows + collections)
   * `update_sandbox/3` - Update sandbox name, color, or environment
-  * `delete_sandbox/2` - Delete a sandbox and all its descendants
+  * `schedule_sandbox_deletion/2` - Soft-delete a sandbox and its descendants;
+    they remain in the database for a grace period before being purged
+  * `cancel_scheduled_sandbox_deletion/2` - Restore a scheduled sandbox subtree
+    while it is still within its grace period (admin recovery path)
+  * `delete_sandbox/2` - Hard-delete a sandbox and all its descendants
+    immediately (used by the Oban purge worker after the grace period elapses)
 
   ## Authorization
 
@@ -281,6 +286,143 @@ defmodule Lightning.Projects.Sandboxes do
       %Project{} = sandbox -> delete_sandbox(sandbox, actor)
       nil -> {:error, :not_found}
     end
+  end
+
+  @doc """
+  Schedules a sandbox and its entire descendant subtree for deletion.
+
+  The sandbox stays in the database for a grace period (controlled by
+  `PURGE_DELETED_AFTER_DAYS`) before the Oban purge worker permanently
+  deletes it. During the grace period the sandbox is hidden from the
+  parent's sandbox listing but remains recoverable via
+  `cancel_scheduled_sandbox_deletion/2`.
+
+  All triggers in the subtree are disabled so that scheduled work stops
+  immediately. The scheduled timestamp is applied to the target and every
+  descendant in a single transaction so the entire subtree shares a grace
+  period and gets purged together.
+
+  ## Parameters
+  * `sandbox` - Sandbox project to schedule (or sandbox ID as string)
+  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+
+  ## Returns
+  * `{:ok, scheduled_sandbox}` - Sandbox subtree scheduled for deletion
+  * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
+  * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  * `{:error, reason}` - Database or other failure
+  """
+  @spec schedule_sandbox_deletion(Project.t() | Ecto.UUID.t(), User.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def schedule_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      do_schedule_sandbox_deletion(sandbox)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def schedule_sandbox_deletion(sandbox_id, %User{} = actor)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sandbox -> schedule_sandbox_deletion(sandbox, actor)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Clears the scheduled deletion on a sandbox subtree, restoring it to active use.
+
+  Walks every descendant of `sandbox` and clears `scheduled_deletion` on any
+  row that has it set. Triggers are not automatically re-enabled: this is an
+  admin recovery path and the operator decides whether the subtree should
+  resume firing triggers.
+
+  ## Parameters
+  * `sandbox` - Sandbox project to restore (or sandbox ID as string)
+  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+
+  ## Returns
+  * `{:ok, restored_sandbox}` - Sandbox subtree restored
+  * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
+  * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  """
+  @spec cancel_scheduled_sandbox_deletion(
+          Project.t() | Ecto.UUID.t(),
+          User.t()
+        ) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      do_cancel_scheduled_sandbox_deletion(sandbox)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def cancel_scheduled_sandbox_deletion(sandbox_id, %User{} = actor)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sandbox -> cancel_scheduled_sandbox_deletion(sandbox, actor)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  defp do_schedule_sandbox_deletion(%Project{} = sandbox) do
+    date = scheduled_deletion_date()
+    subtree_ids = subtree_ids(sandbox)
+
+    Repo.transact(fn ->
+      {_count, _} =
+        Repo.update_all(
+          from(p in Project, where: p.id in ^subtree_ids),
+          set: [scheduled_deletion: date]
+        )
+
+      {_count, _} =
+        Repo.update_all(
+          from(t in Trigger,
+            join: w in assoc(t, :workflow),
+            where: w.project_id in ^subtree_ids and t.enabled == true
+          ),
+          set: [enabled: false]
+        )
+
+      SandboxPromExPlugin.fire_sandbox_deleted_event()
+
+      {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+  end
+
+  defp do_cancel_scheduled_sandbox_deletion(%Project{} = sandbox) do
+    subtree_ids = subtree_ids(sandbox)
+
+    {_count, _} =
+      Repo.update_all(
+        from(p in Project,
+          where: p.id in ^subtree_ids and not is_nil(p.scheduled_deletion)
+        ),
+        set: [scheduled_deletion: nil]
+      )
+
+    {:ok, %{sandbox | scheduled_deletion: nil}}
+  end
+
+  defp subtree_ids(%Project{id: id}) do
+    descendant_ids =
+      [id]
+      |> Lightning.Projects.descendants_query()
+      |> Repo.all()
+
+    [id | descendant_ids]
+  end
+
+  defp scheduled_deletion_date do
+    case Lightning.Config.purge_deleted_after_days() do
+      nil -> DateTime.utc_now()
+      integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+    end
+    |> DateTime.truncate(:second)
   end
 
   defp create_sandbox_from_parent(parent, actor, attrs) do

@@ -51,6 +51,13 @@ and this project adheres to
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Sandbox deletion (manual or after merge) is now soft. The sandbox and its
+  descendants are scheduled for purge after the configured grace period
+  (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
+  accidental deletions can be recovered by a workspace administrator.
+  Soft-deleted sandboxes are hidden from the sandbox listing and surfaced on the
+  existing superuser admin page for restore/cancel.
+  [#4649](https://github.com/OpenFn/lightning/issues/4649)
 
 ### Fixed
 

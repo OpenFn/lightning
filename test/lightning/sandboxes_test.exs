@@ -1913,4 +1913,223 @@ defmodule Lightning.Projects.SandboxesTest do
                Sandboxes.delete_sandbox(sandbox.id, actor)
     end
   end
+
+  describe "schedule_sandbox_deletion/2" do
+    test "sets scheduled_deletion on the target sandbox" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, scheduled} =
+               Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert %DateTime{} = scheduled.scheduled_deletion
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "uses PURGE_DELETED_AFTER_DAYS to compute the grace period" do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, 7)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      before = DateTime.utc_now()
+      {:ok, scheduled} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      diff_seconds = DateTime.diff(scheduled.scheduled_deletion, before)
+      assert diff_seconds in (7 * 86_400 - 5)..(7 * 86_400 + 5)
+    end
+
+    test "cascades scheduled_deletion to descendants" do
+      actor = insert(:user)
+      grandparent = insert(:project, name: "gp")
+      parent = insert(:project, name: "p", parent: grandparent)
+      child = insert(:project, name: "c", parent: parent)
+
+      for project <- [grandparent, parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(grandparent, actor)
+
+      for project <- [grandparent, parent, child] do
+        assert Repo.get!(Project, project.id).scheduled_deletion != nil
+      end
+    end
+
+    test "disables enabled triggers across the subtree" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      parent_workflow = insert(:workflow, project: parent)
+      child_workflow = insert(:workflow, project: child)
+
+      parent_trigger =
+        insert(:trigger,
+          workflow: parent_workflow,
+          type: :webhook,
+          enabled: true
+        )
+
+      child_trigger =
+        insert(:trigger, workflow: child_workflow, type: :webhook, enabled: true)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+
+      refute Repo.get!(Trigger, parent_trigger.id).enabled
+      refute Repo.get!(Trigger, child_trigger.id).enabled
+    end
+
+    test "leaves projects outside the subtree untouched" do
+      actor = insert(:user)
+      sibling_root = insert(:project, name: "sibling_root")
+      target = insert(:project, name: "target")
+
+      ensure_member!(target, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(target, actor)
+
+      assert Repo.get!(Project, sibling_root.id).scheduled_deletion == nil
+    end
+
+    test "emits the sandbox deleted telemetry event" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "returns :unauthorized when actor lacks delete_sandbox permission" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      assert {:error, :unauthorized} =
+               Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+      refute_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "accepts a string ID" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox.id, actor)
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "returns :not_found for an unknown string ID" do
+      actor = insert(:user)
+      non_existent_id = Ecto.UUID.generate()
+
+      assert {:error, :not_found} =
+               Sandboxes.schedule_sandbox_deletion(non_existent_id, actor)
+    end
+  end
+
+  describe "cancel_scheduled_sandbox_deletion/2" do
+    test "clears scheduled_deletion on the target sandbox" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+
+      assert {:ok, restored} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert restored.scheduled_deletion == nil
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "cascades the cancel through descendants" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      for project <- [parent, child, grandchild] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(parent, actor)
+
+      for project <- [parent, child, grandchild] do
+        assert Repo.get!(Project, project.id).scheduled_deletion == nil
+      end
+    end
+
+    test "is a no-op for sandboxes that aren't scheduled" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, _} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "returns :unauthorized when actor lacks delete_sandbox permission" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      assert {:error, :unauthorized} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+    end
+
+    test "accepts a string ID" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert {:ok, _} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox.id, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "returns :not_found for an unknown string ID" do
+      actor = insert(:user)
+      non_existent_id = Ecto.UUID.generate()
+
+      assert {:error, :not_found} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(
+                 non_existent_id,
+                 actor
+               )
+    end
+  end
 end

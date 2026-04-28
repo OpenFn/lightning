@@ -312,12 +312,15 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{id: id},
-                                                           user_arg ->
-        assert id == sb1.id
-        assert user_arg.id == user.id
-        {:ok, %Project{}}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn %Project{id: id}, user_arg ->
+          assert id == sb1.id
+          assert user_arg.id == user.id
+          {:ok, %Project{}}
+        end
+      )
 
       Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
         assert id == parent.id
@@ -329,6 +332,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
 
@@ -338,21 +342,22 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> render_submit()
 
       assert html =~
-               "Sandbox #{sb1.name} and all its associated descendants deleted"
+               "Sandbox #{sb1.name} and its descendants have been scheduled for deletion."
 
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
       target_id = sb2.id
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
-                                                             id: ^target_id
-                                                           },
-                                                           user_arg ->
-        assert user_arg.id == user.id
-        {:error, :unauthorized}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn %Project{id: ^target_id}, user_arg ->
+          assert user_arg.id == user.id
+          {:error, :unauthorized}
+        end
+      )
 
-      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
@@ -363,15 +368,16 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "You don&#39;t have permission to delete this sandbox"
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
-                                                             id: ^target_id
-                                                           },
-                                                           user_arg ->
-        assert user_arg.id == user.id
-        {:error, :not_found}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn %Project{id: ^target_id}, user_arg ->
+          assert user_arg.id == user.id
+          {:error, :not_found}
+        end
+      )
 
-      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
@@ -382,15 +388,16 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Sandbox not found"
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
-                                                             id: ^target_id
-                                                           },
-                                                           user_arg ->
-        assert user_arg.id == user.id
-        {:error, :boom}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn %Project{id: ^target_id}, user_arg ->
+          assert user_arg.id == user.id
+          {:error, :boom}
+        end
+      )
 
-      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
@@ -399,7 +406,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb2.name})
         |> render_submit()
 
-      assert html =~ "Failed to delete sandbox: "
+      assert html =~ "Failed to schedule sandbox deletion: "
     end
 
     test "open-delete-modal with unknown id shows flash", %{
@@ -728,11 +735,15 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{grandchild_sandbox.id}/sandboxes")
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn sandbox, user_arg ->
-        assert sandbox.id == child_sandbox.id
-        assert user_arg.id == user.id
-        {:ok, %Project{}}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn sandbox, user_arg ->
+          assert sandbox.id == child_sandbox.id
+          assert user_arg.id == user.id
+          {:ok, %Project{}}
+        end
+      )
 
       Mimic.expect(Lightning.Projects, :descendant_of?, fn current,
                                                            deleted,
@@ -744,6 +755,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#delete-sandbox-#{child_sandbox.id} button")
@@ -767,10 +779,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
          } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn sandbox, _user_arg ->
-        assert sandbox.id == child_sandbox.id
-        {:ok, %Project{}}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn sandbox, _user_arg ->
+          assert sandbox.id == child_sandbox.id
+          {:ok, %Project{}}
+        end
+      )
 
       Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
         assert id == parent.id
@@ -778,6 +794,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#delete-sandbox-#{child_sandbox.id} button")
@@ -953,7 +970,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ great_grandchild.name
-      assert html =~ "will also be permanently closed"
+      assert html =~ "will also be scheduled for deletion"
     end
 
     test "merge modal shows multiple descendants warning with full list", %{
@@ -969,7 +986,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "child sandboxes will also be permanently closed"
+      assert html =~ "child sandboxes will also be scheduled for deletion"
       assert html =~ child1.name
     end
 
@@ -1154,15 +1171,20 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         end
       )
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn source, actor ->
-        assert source.id == child1.id
-        assert actor.id == user.id
-        {:ok, source}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn source, actor ->
+          assert source.id == child1.id
+          assert actor.id == user.id
+          {:ok, source}
+        end
+      )
 
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{child1.id} button")
@@ -1238,7 +1260,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "child sandboxes will also be permanently closed"
+      assert html =~ "child sandboxes will also be scheduled for deletion"
     end
 
     test "sibling can be selected as merge target", %{
@@ -1339,7 +1361,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "shows partial success when merge succeeds but delete fails", %{
+    test "shows partial success when merge succeeds but schedule fails", %{
       conn: conn,
       root: root,
       child1: child1,
@@ -1360,13 +1382,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         {:ok, root}
       end)
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn _source, _actor ->
-        {:error, :unauthorized}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn _source, _actor ->
+          {:error, :unauthorized}
+        end
+      )
 
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{child1.id} button")
@@ -1379,7 +1406,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> follow_redirect(conn)
 
       assert html =~
-               "Successfully merged child1 into root, but could not delete the sandbox"
+               "Successfully merged child1 into root, but could not schedule the sandbox for deletion."
     end
 
     test "formats changeset error correctly", %{
@@ -1548,9 +1575,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         {:ok, target}
       end)
 
-      Mimic.expect(Lightning.Projects, :delete_sandbox, fn source, _actor ->
-        {:ok, source}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn source, _actor ->
+          {:ok, source}
+        end
+      )
     end
 
     test "new collections in sandbox are created in parent on merge", %{
@@ -1566,6 +1597,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
@@ -1594,6 +1626,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
@@ -1622,6 +1655,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
@@ -1825,14 +1859,15 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       )
 
       Mimic.expect(
-        Lightning.Projects,
-        :delete_sandbox,
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
         fn _source, _actor -> {:ok, sandbox} end
       )
 
       Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
       Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
