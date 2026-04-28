@@ -1197,6 +1197,51 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{root.id}/w")
     end
 
+    test "merge with delete_after_merge unchecked keeps the sandbox", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.MergeProjects,
+        :merge_project,
+        fn _source, _target, _opts -> "merged_yaml" end
+      )
+
+      Mimic.expect(
+        Lightning.Projects.Provisioner,
+        :import_document,
+        fn _target, _actor, _yaml, _opts -> {:ok, root} end
+      )
+
+      Mimic.reject(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        2
+      )
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      {:ok, _view, html} =
+        view
+        |> form("#merge-sandbox-modal form")
+        |> render_submit(%{"merge" => %{"delete_after_merge" => "false"}})
+        |> follow_redirect(conn)
+
+      assert html =~ "The sandbox has been kept"
+      refute html =~ "scheduled for deletion"
+      assert Repo.get!(Project, child1.id).scheduled_deletion == nil
+    end
+
     test "merge shows error on merge failure", %{
       conn: conn,
       root: root,

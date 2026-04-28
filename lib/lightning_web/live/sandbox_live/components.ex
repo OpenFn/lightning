@@ -221,6 +221,10 @@ defmodule LightningWeb.SandboxLive.Components do
       |> assign(:merge_form, to_form(assigns.changeset, as: :merge))
       |> assign(:descendant_count, length(assigns.descendants))
       |> assign(
+        :delete_after_merge?,
+        Ecto.Changeset.get_field(assigns.changeset, :delete_after_merge, true)
+      )
+      |> assign(
         :select_all_state,
         merge_select_all_state(
           assigns.selected_workflow_ids,
@@ -277,11 +281,21 @@ defmodule LightningWeb.SandboxLive.Components do
             </div>
           </div>
 
-          <p class="text-xs text-gray-700" phx-no-format>
+          <p :if={@delete_after_merge?} class="text-xs text-gray-700" phx-no-format>
             This will overwrite the selected workflows in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             with the versions from sandbox <strong>{@sandbox.name}</strong>,
             then schedule <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} /> for deletion.
+            Any conflicting changes in
+            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
+            will be lost.
+          </p>
+
+          <p :if={!@delete_after_merge?} class="text-xs text-gray-700" phx-no-format>
+            This will overwrite the selected workflows in
+            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
+            with the versions from sandbox <strong>{@sandbox.name}</strong>.
+            <strong>{@sandbox.name}</strong> will stay available after merging.
             Any conflicting changes in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             will be lost.
@@ -356,7 +370,30 @@ defmodule LightningWeb.SandboxLive.Components do
             </ul>
           </div>
 
+          <label class="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="hidden"
+              name={@merge_form[:delete_after_merge].name}
+              value="false"
+            />
+            <input
+              id="merge-delete-after-merge-toggle"
+              type="checkbox"
+              name={@merge_form[:delete_after_merge].name}
+              value="true"
+              checked={@delete_after_merge?}
+              class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>
+              <span class="font-medium">Delete sandbox after merging</span>
+              <span class="block text-xs text-gray-500">
+                Uncheck to keep the sandbox alive after the merge (for ongoing work, GitHub sync, or QA against live triggers).
+              </span>
+            </span>
+          </label>
+
           <Common.alert
+            :if={@delete_after_merge?}
             id="merge-beta-warning"
             type="warning"
             header="This sandbox will be scheduled for deletion after merging"
@@ -370,6 +407,18 @@ defmodule LightningWeb.SandboxLive.Components do
               <div :if={@descendant_count > 1} class="mt-2">
                 Its {@descendant_count} child sandboxes will also be scheduled for deletion.
               </div>
+            </:message>
+          </Common.alert>
+
+          <Common.alert
+            :if={!@delete_after_merge?}
+            id="merge-keep-notice"
+            type="info"
+            header="The sandbox will be kept after merging"
+          >
+            <:message>
+              <strong>{@sandbox.name}</strong>
+              stays available after the merge so you can keep iterating in it. You can still delete it later from the sandboxes list.
             </:message>
           </Common.alert>
 
