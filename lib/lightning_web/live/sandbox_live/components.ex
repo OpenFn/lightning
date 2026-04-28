@@ -370,7 +370,7 @@ defmodule LightningWeb.SandboxLive.Components do
             />
             <Common.alert
               :if={@delete_after_merge?}
-              id="merge-beta-warning"
+              id="merge-deletion-warning"
               type="warning"
               header="This sandbox will be deleted after merging"
             >
