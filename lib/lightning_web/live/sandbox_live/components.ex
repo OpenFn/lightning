@@ -281,21 +281,15 @@ defmodule LightningWeb.SandboxLive.Components do
             </div>
           </div>
 
-          <p :if={@delete_after_merge?} class="text-xs text-gray-700" phx-no-format>
-            This will overwrite the selected workflows in
-            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
-            with the versions from sandbox <strong>{@sandbox.name}</strong>,
-            then schedule <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} /> for deletion.
-            Any conflicting changes in
-            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
-            will be lost.
-          </p>
-
-          <p :if={!@delete_after_merge?} class="text-xs text-gray-700" phx-no-format>
+          <p class="text-xs text-gray-700" phx-no-format>
             This will overwrite the selected workflows in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             with the versions from sandbox <strong>{@sandbox.name}</strong>.
-            <strong>{@sandbox.name}</strong> will stay available after merging.
+            <%= if @delete_after_merge? do %>
+              <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} /> will then be scheduled for deletion.
+            <% else %>
+              <strong>{@sandbox.name}</strong> will stay available after merging.
+            <% end %>
             Any conflicting changes in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             will be lost.
@@ -383,32 +377,28 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
 
           <Common.alert
-            :if={@delete_after_merge?}
             id="merge-beta-warning"
-            type="warning"
-            header="This sandbox will be scheduled for deletion after merging"
+            type={if @delete_after_merge?, do: "warning", else: "info"}
+            header={
+              if @delete_after_merge?,
+                do: "This sandbox will be scheduled for deletion after merging",
+                else: "The sandbox will be kept after merging"
+            }
           >
             <:message>
-              The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
-              <div :if={@descendant_count == 1} class="mt-2">
-                Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be scheduled for deletion.
-              </div>
-              <div :if={@descendant_count > 1} class="mt-2">
-                Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-              </div>
-            </:message>
-          </Common.alert>
-
-          <Common.alert
-            :if={!@delete_after_merge?}
-            id="merge-keep-notice"
-            type="info"
-            header="The sandbox will be kept after merging"
-          >
-            <:message>
-              <strong>{@sandbox.name}</strong>
-              stays available after the merge so you can keep iterating in it. You can still delete it later from the sandboxes list.
+              <%= if @delete_after_merge? do %>
+                The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
+                <div :if={@descendant_count == 1} class="mt-2">
+                  Child sandbox <strong>{List.first(@descendants).name}</strong>
+                  will also be scheduled for deletion.
+                </div>
+                <div :if={@descendant_count > 1} class="mt-2">
+                  Its {@descendant_count} child sandboxes will also be scheduled for deletion.
+                </div>
+              <% else %>
+                <strong>{@sandbox.name}</strong>
+                stays available after the merge so you can keep iterating in it. You can still delete it later from the sandboxes list.
+              <% end %>
             </:message>
           </Common.alert>
 
