@@ -508,6 +508,115 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "CredentialIndexComponent pagination and collapsible" do
+    test "credentials table shows pagination footer and supports page changes when there are more than 10 credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert has_element?(index_live, "#credentials-pagination")
+
+      pagination_html =
+        index_live |> element("#credentials-pagination") |> render()
+
+      assert pagination_html =~ "Showing"
+      assert pagination_html =~ "12"
+
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("change_page", %{
+        "table" => "credentials",
+        "page" => 2,
+        "container_id" => "credentials-table-container"
+      })
+
+      assert has_element?(index_live, "#credentials-pagination")
+
+      pagination_html =
+        index_live |> element("#credentials-pagination") |> render()
+
+      assert pagination_html =~ "Showing"
+      assert pagination_html =~ "12"
+    end
+
+    test "credentials table does not show a pagination footer when there are 10 or fewer credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(index_live, "#credentials-pagination")
+    end
+
+    test "OAuth clients section is collapsed by default and toggle button is visible",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert has_element?(index_live, "#oauth-clients-section")
+      assert has_element?(index_live, "button[phx-click='toggle_oauth_clients']")
+      refute html =~ oauth_client.name
+    end
+
+    test "toggling OAuth clients section shows and then hides the clients table",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      assert html =~ oauth_client.name
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      refute html =~ oauth_client.name
+    end
+
+    test "OAuth clients table supports pagination after section is expanded",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("toggle_oauth_clients", %{})
+
+      assert has_element?(index_live, "#oauth-clients-pagination")
+
+      pagination_html =
+        index_live |> element("#oauth-clients-pagination") |> render()
+
+      assert pagination_html =~ "Showing"
+      assert pagination_html =~ "12"
+
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("change_page", %{
+        "table" => "oauth_clients",
+        "page" => 2,
+        "container_id" => "oauth-clients-table-container"
+      })
+
+      assert has_element?(index_live, "#oauth-clients-pagination")
+
+      pagination_html =
+        index_live |> element("#oauth-clients-pagination") |> render()
+
+      assert pagination_html =~ "Showing"
+      assert pagination_html =~ "12"
+    end
+  end
+
   describe "Clicking new from the list view" do
     test "allows the user to define and save a new raw credential", %{
       conn: conn,
