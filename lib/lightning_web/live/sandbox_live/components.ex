@@ -386,19 +386,25 @@ defmodule LightningWeb.SandboxLive.Components do
             }
           >
             <:message>
-              <%= if @delete_after_merge? do %>
-                The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
-                <div :if={@descendant_count == 1} class="mt-2">
-                  Child sandbox <strong>{List.first(@descendants).name}</strong>
-                  will also be scheduled for deletion.
-                </div>
-                <div :if={@descendant_count > 1} class="mt-2">
-                  Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-                </div>
-              <% else %>
-                <strong>{@sandbox.name}</strong>
-                stays available after the merge so you can keep iterating in it. You can still delete it later from the sandboxes list.
-              <% end %>
+              <div class={[
+                @descendant_count == 0 && "min-h-[3rem]",
+                @descendant_count == 1 && "min-h-[5rem]",
+                @descendant_count > 1 && "min-h-[5rem]"
+              ]}>
+                <%= if @delete_after_merge? do %>
+                  The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
+                  <div :if={@descendant_count == 1} class="mt-2">
+                    Child sandbox <strong>{List.first(@descendants).name}</strong>
+                    will also be scheduled for deletion.
+                  </div>
+                  <div :if={@descendant_count > 1} class="mt-2">
+                    Its {@descendant_count} child sandboxes will also be scheduled for deletion.
+                  </div>
+                <% else %>
+                  <strong>{@sandbox.name}</strong>
+                  stays available after the merge so you can keep iterating, sync it to GitHub, or use it for live QA. You can still delete it later from the sandboxes list when you are done.
+                <% end %>
+              </div>
             </:message>
           </Common.alert>
 
