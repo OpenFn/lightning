@@ -261,141 +261,181 @@ defmodule LightningWeb.SandboxLive.Components do
         phx-change="select-merge-target"
         phx-submit="confirm-merge"
       >
-        <section class="space-y-4">
-          <div class="flex items-center gap-2 text-gray-700">
-            <span>Merge</span>
-            <span class="p-1 bg-gray-50 text-gray-800 rounded-md border border-slate-200 font-medium">
-              {@sandbox.name}
-            </span>
-            <span>into</span>
-            <div class="inline-block min-w-[200px]">
-              <.input
-                type="custom-select"
-                id="merge-target-select"
-                field={@merge_form[:target_id]}
-                options={
-                  Enum.map(@target_options, fn opt -> {opt.label, opt.value} end)
-                }
-                class="text-base"
-              />
-            </div>
-          </div>
-
-          <p class="text-xs text-gray-700" phx-no-format>
-            This will overwrite the selected workflows in
-            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
-            with the versions from sandbox <strong>{@sandbox.name}</strong>.
-            Any conflicting changes in
-            <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
-            will be lost.
-          </p>
-
-          <div class="border border-gray-200 rounded-md overflow-hidden">
-            <label class={[
-              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
-              @select_all_state == :empty && "cursor-default",
-              @select_all_state != :empty && "cursor-pointer"
-            ]}>
-              <input
-                type="checkbox"
-                id="merge-select-all-workflows"
-                phx-hook="CheckboxIndeterminate"
-                phx-click="toggle-all-workflows"
-                disabled={@select_all_state == :empty}
-                checked={@select_all_state == :all}
-                class={[
-                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
-                  @select_all_state == :partial && "indeterminate"
-                ]}
-              />
-              <span class="text-sm font-medium text-gray-700">
-                Workflows to merge
+        <section class="space-y-5">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+              <span>Merge</span>
+              <span class="px-2 py-0.5 bg-gray-100 text-gray-900 rounded-md font-medium">
+                {@sandbox.name}
               </span>
-            </label>
-            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-              <li
-                :for={wf <- @source_workflows}
-                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                phx-click="toggle-workflow"
-                phx-value-id={wf.id}
-              >
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                  checked={MapSet.member?(@selected_workflow_ids, wf.id)}
-                  readonly
+              <span>into</span>
+              <div class="flex-1 max-w-[260px]">
+                <.input
+                  type="custom-select"
+                  id="merge-target-select"
+                  field={@merge_form[:target_id]}
+                  options={
+                    Enum.map(@target_options, fn opt -> {opt.label, opt.value} end)
+                  }
+                  class="text-sm"
                 />
-                <span class="flex-1 text-sm text-gray-800">{wf.name}</span>
-                <span
-                  :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
-                  class="flex items-center gap-1 text-xs text-green-600"
-                  title="This workflow has been modified in the sandbox"
-                >
-                  Changed
-                </span>
-                <span
-                  :if={wf.is_diverged}
-                  class="flex items-center gap-1 text-xs text-amber-600"
-                  title="This workflow was modified in the target project - this change will be lost"
-                >
-                  <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
-                  <strong>Diverged</strong>
-                </span>
-                <span
-                  :if={wf.is_new}
-                  class="flex items-center gap-1 text-xs text-blue-600"
-                  title="This workflow doesn't exist in the target — it will be created"
-                >
-                  New
-                </span>
-                <span
-                  :if={wf.is_deleted}
-                  class="flex items-center gap-1 text-xs text-red-600"
-                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
-                >
-                  Deleted in sandbox
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          <div class="space-y-1">
-            <.input
-              id="merge-delete-after-merge-toggle"
-              field={@merge_form[:delete_after_merge]}
-              type="toggle"
-              label="Delete sandbox after merging"
-            />
-            <p class="text-xs text-gray-500 ml-14">
-              Turn this off to keep the sandbox alive after the merge (for ongoing work, GitHub sync, or QA against live triggers).
+              </div>
+            </div>
+            <p class="text-xs text-gray-500" phx-no-format>
+              The workflows you select below will overwrite their counterparts in
+              <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>. Any conflicting changes in the target are lost.
             </p>
           </div>
 
-          <Common.alert
-            id="merge-disposition-notice"
-            type={if @delete_after_merge?, do: "warning", else: "info"}
-            header={
-              if @delete_after_merge?,
-                do: "Scheduled for deletion after merging",
-                else: "Sandbox will be kept"
-            }
-          >
-            <:message>
-              <%= if @delete_after_merge? do %>
-                Retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator to restore it during that window.
-              <% else %>
-                <strong>{@sandbox.name}</strong>
-                stays available after the merge. You can still delete it later from the sandboxes list.
-              <% end %>
-              <div :if={@delete_after_merge? and @descendant_count == 1} class="mt-2">
-                Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be scheduled for deletion.
+          <div class="space-y-1.5">
+            <div class="flex items-baseline justify-between">
+              <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Workflows
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_workflow_ids)} of {length(@source_workflows)} selected
+              </span>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <label class={[
+                "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+                @select_all_state == :empty && "cursor-default",
+                @select_all_state != :empty && "cursor-pointer"
+              ]}>
+                <input
+                  type="checkbox"
+                  id="merge-select-all-workflows"
+                  phx-hook="CheckboxIndeterminate"
+                  phx-click="toggle-all-workflows"
+                  disabled={@select_all_state == :empty}
+                  checked={@select_all_state == :all}
+                  class={[
+                    "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                    @select_all_state == :partial && "indeterminate"
+                  ]}
+                />
+                <span class="text-sm font-medium text-gray-700">
+                  Select all
+                </span>
+              </label>
+              <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                <li
+                  :for={wf <- @source_workflows}
+                  class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  phx-click="toggle-workflow"
+                  phx-value-id={wf.id}
+                >
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                    checked={MapSet.member?(@selected_workflow_ids, wf.id)}
+                    readonly
+                  />
+                  <span class="flex-1 text-sm text-gray-800 truncate">
+                    {wf.name}
+                  </span>
+                  <span
+                    :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                    class="flex items-center gap-1 text-xs text-green-600"
+                    title="This workflow has been modified in the sandbox"
+                  >
+                    Changed
+                  </span>
+                  <span
+                    :if={wf.is_diverged}
+                    class="flex items-center gap-1 text-xs text-amber-600"
+                    title="This workflow was modified in the target project - this change will be lost"
+                  >
+                    <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
+                    <strong>Diverged</strong>
+                  </span>
+                  <span
+                    :if={wf.is_new}
+                    class="flex items-center gap-1 text-xs text-blue-600"
+                    title="This workflow doesn't exist in the target — it will be created"
+                  >
+                    New
+                  </span>
+                  <span
+                    :if={wf.is_deleted}
+                    class="flex items-center gap-1 text-xs text-red-600"
+                    title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                  >
+                    Deleted in sandbox
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
+              After merging
+            </span>
+            <div class={[
+              "rounded-lg border transition-colors",
+              @delete_after_merge? && "border-amber-200 bg-amber-50/60",
+              !@delete_after_merge? && "border-sky-200 bg-sky-50/60"
+            ]}>
+              <div class="flex items-start gap-4 p-4">
+                <div class="flex-shrink-0 pt-0.5">
+                  <.input
+                    id="merge-delete-after-merge-toggle"
+                    field={@merge_form[:delete_after_merge]}
+                    type="toggle"
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class={[
+                    "text-sm font-medium",
+                    @delete_after_merge? && "text-amber-900",
+                    !@delete_after_merge? && "text-sky-900"
+                  ]}>
+                    <%= if @delete_after_merge? do %>
+                      Delete sandbox after merging
+                    <% else %>
+                      Keep sandbox after merging
+                    <% end %>
+                  </p>
+                  <p class={[
+                    "text-xs mt-1",
+                    @delete_after_merge? && "text-amber-800",
+                    !@delete_after_merge? && "text-sky-800"
+                  ]}>
+                    <%= if @delete_after_merge? do %>
+                      Scheduled for deletion. Retained for {grace_period_label()} before being permanently removed.
+                    <% else %>
+                      <strong>{@sandbox.name}</strong>
+                      stays available after the merge. You can still delete it later from the sandboxes list.
+                    <% end %>
+                  </p>
+                  <p
+                    :if={@delete_after_merge? and @descendant_count == 1}
+                    class="text-xs mt-1.5 text-amber-800"
+                  >
+                    Child sandbox <strong>{List.first(@descendants).name}</strong>
+                    will also be scheduled for deletion.
+                  </p>
+                  <p
+                    :if={@delete_after_merge? and @descendant_count > 1}
+                    class="text-xs mt-1.5 text-amber-800"
+                  >
+                    Its {@descendant_count} child sandboxes will also be scheduled for deletion.
+                  </p>
+                </div>
+                <.icon
+                  :if={@delete_after_merge?}
+                  name="hero-exclamation-triangle"
+                  class="h-5 w-5 text-amber-500 flex-shrink-0"
+                />
+                <.icon
+                  :if={!@delete_after_merge?}
+                  name="hero-information-circle"
+                  class="h-5 w-5 text-sky-500 flex-shrink-0"
+                />
               </div>
-              <div :if={@delete_after_merge? and @descendant_count > 1} class="mt-2">
-                Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-              </div>
-            </:message>
-          </Common.alert>
+            </div>
+          </div>
 
           <.modal_footer>
             <.button
