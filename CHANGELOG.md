@@ -51,6 +51,8 @@ and this project adheres to
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Updated ws-worker from
+  [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
 
 ### Fixed
 
