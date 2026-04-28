@@ -284,6 +284,14 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event(
         "select-merge-target",
+        %{"_target" => ["merge", "delete_after_merge"], "merge" => merge_params},
+        socket
+      ) do
+    {:noreply, assign(socket, :merge_changeset, merge_changeset(merge_params))}
+  end
+
+  def handle_event(
+        "select-merge-target",
         %{"merge" => merge_params},
         socket
       ) do

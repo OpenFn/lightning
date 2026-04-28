@@ -990,65 +990,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ child1.name
     end
 
-    test "merge sentence: leaf sandbox has no gap before period", %{
-      conn: conn,
-      root: root,
-      child2: child2
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child2.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      refute html =~ ~r{<strong>child2</strong>\s+\.},
-             "visible space between sandbox name and period for leaf sandbox"
-
-      assert html =~ "<strong>child2</strong>."
-
-      refute html =~ "phx-no-format",
-             "formatter directive leaked into rendered HTML"
-    end
-
-    test "merge sentence: single descendant has space and bolded child name",
-         %{conn: conn, root: root, grandchild1: grandchild1, user: user} do
-      _great =
-        insert(:project,
-          name: "great-grandchild",
-          parent: grandchild1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~
-               "<strong>grandchild1</strong> and its child sandbox <strong>great-grandchild</strong>."
-    end
-
-    test "merge sentence: multiple descendants mentions count", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ "<strong>child1</strong> and its 2 child sandboxes."
-    end
-
     test "merge modal shows correct dropdown options", %{
       conn: conn,
       root: root,
@@ -1306,6 +1247,63 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ "child sandboxes will also be scheduled for deletion"
+    end
+
+    test "toggling delete-after-merge off hides the descendants notice", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      assert render(view) =~
+               "child sandboxes will also be scheduled for deletion"
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{
+        "_target" => ["merge", "delete_after_merge"],
+        "merge" => %{
+          "target_id" => root.id,
+          "delete_after_merge" => "false"
+        }
+      })
+
+      html = render(view)
+
+      refute html =~ "child sandboxes will also be scheduled for deletion"
+      assert html =~ "stays available after the merge"
+    end
+
+    test "toggling delete-after-merge does not rebuild the workflow list", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      Mimic.reject(Lightning.Projects.MergeProjects, :diverged_workflows, 2)
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{
+        "_target" => ["merge", "delete_after_merge"],
+        "merge" => %{
+          "target_id" => root.id,
+          "delete_after_merge" => "false"
+        }
+      })
+
+      assert render(view) =~ "Sandbox will be kept"
     end
 
     test "sibling can be selected as merge target", %{

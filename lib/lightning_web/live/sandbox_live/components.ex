@@ -244,7 +244,7 @@ defmodule LightningWeb.SandboxLive.Components do
     >
       <:title>
         <div class="flex items-start justify-between">
-          <span class="font-bold">Merge Sandbox</span>
+          <span class="font-bold">Merge sandbox</span>
           <button
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -285,11 +285,6 @@ defmodule LightningWeb.SandboxLive.Components do
             This will overwrite the selected workflows in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             with the versions from sandbox <strong>{@sandbox.name}</strong>.
-            <%= if @delete_after_merge? do %>
-              <strong>{@sandbox.name}</strong><.descendant_suffix count={@descendant_count} descendants={@descendants} /> will then be scheduled for deletion.
-            <% else %>
-              <strong>{@sandbox.name}</strong> will stay available after merging.
-            <% end %>
             Any conflicting changes in
             <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
             will be lost.
@@ -377,33 +372,27 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
 
           <Common.alert
-            id="merge-beta-warning"
+            id="merge-disposition-notice"
             type={if @delete_after_merge?, do: "warning", else: "info"}
             header={
               if @delete_after_merge?,
-                do: "This sandbox will be scheduled for deletion after merging",
-                else: "The sandbox will be kept after merging"
+                do: "Scheduled for deletion after merging",
+                else: "Sandbox will be kept"
             }
           >
             <:message>
-              <div class={[
-                @descendant_count == 0 && "min-h-[3rem]",
-                @descendant_count == 1 && "min-h-[5rem]",
-                @descendant_count > 1 && "min-h-[5rem]"
-              ]}>
-                <%= if @delete_after_merge? do %>
-                  The sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
-                  <div :if={@descendant_count == 1} class="mt-2">
-                    Child sandbox <strong>{List.first(@descendants).name}</strong>
-                    will also be scheduled for deletion.
-                  </div>
-                  <div :if={@descendant_count > 1} class="mt-2">
-                    Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-                  </div>
-                <% else %>
-                  <strong>{@sandbox.name}</strong>
-                  stays available after the merge so you can keep iterating, sync it to GitHub, or use it for live QA. You can still delete it later from the sandboxes list when you are done.
-                <% end %>
+              <%= if @delete_after_merge? do %>
+                Retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator to restore it during that window.
+              <% else %>
+                <strong>{@sandbox.name}</strong>
+                stays available after the merge. You can still delete it later from the sandboxes list.
+              <% end %>
+              <div :if={@delete_after_merge? and @descendant_count == 1} class="mt-2">
+                Child sandbox <strong>{List.first(@descendants).name}</strong>
+                will also be scheduled for deletion.
+              </div>
+              <div :if={@delete_after_merge? and @descendant_count > 1} class="mt-2">
+                Its {@descendant_count} child sandboxes will also be scheduled for deletion.
               </div>
             </:message>
           </Common.alert>
@@ -431,23 +420,6 @@ defmodule LightningWeb.SandboxLive.Components do
       </.form>
     </.modal>
     """
-  end
-
-  # Caller sits in a phx-no-format <p> so no whitespace leaks between
-  # </strong> and this tag; ~H[...] + {" "} preserve the conditional leading
-  # space that heredoc ~H""" would strip.
-  attr :count, :integer, required: true
-  attr :descendants, :list, required: true
-
-  defp descendant_suffix(%{count: 0} = assigns), do: ~H[.]
-
-  defp descendant_suffix(%{count: 1} = assigns) do
-    assigns = assign(assigns, :name, List.first(assigns.descendants).name)
-    ~H[{" "}and its child sandbox <strong>{@name}</strong>.]
-  end
-
-  defp descendant_suffix(assigns) do
-    ~H[{" "}and its {@count} child sandboxes.]
   end
 
   defp merge_select_all_state(_selected, []), do: :empty
