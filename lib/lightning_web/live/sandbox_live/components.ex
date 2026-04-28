@@ -369,9 +369,6 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
-              After merging
-            </span>
             <.input
               id="merge-delete-after-merge-toggle"
               field={@merge_form[:delete_after_merge]}
