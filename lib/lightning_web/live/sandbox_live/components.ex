@@ -262,10 +262,10 @@ defmodule LightningWeb.SandboxLive.Components do
         phx-submit="confirm-merge"
       >
         <section class="space-y-5">
-          <div class="space-y-1.5">
+          <div class="space-y-2">
             <div class="flex items-center gap-2 text-sm text-gray-700">
               <span>Merge</span>
-              <span class="px-2 py-0.5 bg-gray-100 text-gray-900 rounded-md font-medium">
+              <span class="px-2 py-0.5 bg-gray-100 text-sm font-medium text-gray-900 rounded-md">
                 {@sandbox.name}
               </span>
               <span>into</span>
@@ -281,13 +281,13 @@ defmodule LightningWeb.SandboxLive.Components do
                 />
               </div>
             </div>
-            <p class="text-xs text-gray-500" phx-no-format>
+            <p class="text-sm text-gray-700" phx-no-format>
               The workflows you select below will overwrite their counterparts in
-              <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>. Any conflicting changes in the target are lost.
+              <strong class="font-medium text-gray-900">{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>. Any conflicting changes in the target are lost.
             </p>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-2">
             <div class="flex items-baseline justify-between">
               <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
                 Workflows
@@ -314,7 +314,7 @@ defmodule LightningWeb.SandboxLive.Components do
                     @select_all_state == :partial && "indeterminate"
                   ]}
                 />
-                <span class="text-sm font-medium text-gray-700">
+                <span class="text-sm font-medium text-gray-900">
                   Select all
                 </span>
               </label>
@@ -331,34 +331,34 @@ defmodule LightningWeb.SandboxLive.Components do
                     checked={MapSet.member?(@selected_workflow_ids, wf.id)}
                     readonly
                   />
-                  <span class="flex-1 text-sm text-gray-800 truncate">
+                  <span class="flex-1 text-sm text-gray-700 truncate">
                     {wf.name}
                   </span>
                   <span
                     :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
-                    class="flex items-center gap-1 text-xs text-green-600"
+                    class="flex items-center gap-1 text-xs font-medium text-green-700"
                     title="This workflow has been modified in the sandbox"
                   >
                     Changed
                   </span>
                   <span
                     :if={wf.is_diverged}
-                    class="flex items-center gap-1 text-xs text-amber-600"
+                    class="flex items-center gap-1 text-xs font-medium text-amber-700"
                     title="This workflow was modified in the target project - this change will be lost"
                   >
                     <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
-                    <strong>Diverged</strong>
+                    Diverged
                   </span>
                   <span
                     :if={wf.is_new}
-                    class="flex items-center gap-1 text-xs text-blue-600"
+                    class="flex items-center gap-1 text-xs font-medium text-blue-700"
                     title="This workflow doesn't exist in the target — it will be created"
                   >
                     New
                   </span>
                   <span
                     :if={wf.is_deleted}
-                    class="flex items-center gap-1 text-xs text-red-600"
+                    class="flex items-center gap-1 text-xs font-medium text-red-700"
                     title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
                   >
                     Deleted in sandbox
@@ -368,7 +368,7 @@ defmodule LightningWeb.SandboxLive.Components do
             </div>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-2">
             <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
               After merging
             </span>
@@ -385,7 +385,7 @@ defmodule LightningWeb.SandboxLive.Components do
                     type="toggle"
                   />
                 </div>
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 space-y-1.5">
                   <p class={[
                     "text-sm font-medium",
                     @delete_after_merge? && "text-amber-900",
@@ -398,27 +398,30 @@ defmodule LightningWeb.SandboxLive.Components do
                     <% end %>
                   </p>
                   <p class={[
-                    "text-xs mt-1",
+                    "text-sm",
                     @delete_after_merge? && "text-amber-800",
                     !@delete_after_merge? && "text-sky-800"
                   ]}>
                     <%= if @delete_after_merge? do %>
                       Scheduled for deletion. Retained for {grace_period_label()} before being permanently removed.
                     <% else %>
-                      <strong>{@sandbox.name}</strong>
+                      <strong class="font-medium">{@sandbox.name}</strong>
                       stays available after the merge. You can still delete it later from the sandboxes list.
                     <% end %>
                   </p>
                   <p
                     :if={@delete_after_merge? and @descendant_count == 1}
-                    class="text-xs mt-1.5 text-amber-800"
+                    class="text-sm text-amber-800"
                   >
-                    Child sandbox <strong>{List.first(@descendants).name}</strong>
+                    Child sandbox
+                    <strong class="font-medium">
+                      {List.first(@descendants).name}
+                    </strong>
                     will also be scheduled for deletion.
                   </p>
                   <p
                     :if={@delete_after_merge? and @descendant_count > 1}
-                    class="text-xs mt-1.5 text-amber-800"
+                    class="text-sm text-amber-800"
                   >
                     Its {@descendant_count} child sandboxes will also be scheduled for deletion.
                   </p>
