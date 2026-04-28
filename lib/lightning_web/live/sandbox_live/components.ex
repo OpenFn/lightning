@@ -290,7 +290,7 @@ defmodule LightningWeb.SandboxLive.Components do
           <div class="space-y-2">
             <div class="flex items-baseline justify-between">
               <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
-                Workflows
+                Workflows to merge
               </span>
               <span class="text-xs text-gray-500">
                 {MapSet.size(@selected_workflow_ids)} of {length(@source_workflows)} selected
