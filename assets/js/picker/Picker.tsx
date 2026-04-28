@@ -252,6 +252,7 @@ export function Picker(props: PickerProps) {
               ref={inputRef}
               type="text"
               spellCheck="false"
+              autoComplete="off"
               placeholder={placeholder}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
