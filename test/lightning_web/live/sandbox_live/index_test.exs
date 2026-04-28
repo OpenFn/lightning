@@ -341,8 +341,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb1.name})
         |> render_submit()
 
-      assert html =~
-               "Sandbox #{sb1.name} and its descendants have been scheduled for deletion."
+      assert html =~ "Sandbox #{sb1.name} scheduled for deletion."
 
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
@@ -1178,7 +1177,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> render_submit(%{"merge" => %{"delete_after_merge" => "false"}})
         |> follow_redirect(conn)
 
-      assert html =~ "The sandbox has been kept"
+      assert html =~ "Successfully merged"
       refute html =~ "scheduled for deletion"
       assert Repo.get!(Project, child1.id).scheduled_deletion == nil
     end
