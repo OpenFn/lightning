@@ -336,8 +336,51 @@ defmodule LightningWeb.RunChannel do
       resp when is_nil(resp) or resp == %{} ->
         build_default_response(run, final_state, config)
 
-      resp ->
-        build_response_from_state(resp)
+      resp when is_map(resp) ->
+        build_response_from_state(resp, run, final_state, config)
+
+      _non_map ->
+        build_default_response(run, final_state, config)
+    end
+  end
+
+  defp build_response_from_state(webhook_response, run, final_state, config) do
+    with {:ok, custom_status} <- parse_webhook_status(webhook_response),
+         {:ok, custom_body} <- parse_webhook_body(webhook_response) do
+      status = custom_status || default_response_status(run.state, config)
+      body = custom_body || default_response_body(run.state, final_state, config)
+      {status, body}
+    else
+      {:error, reason} -> malformed_response(reason)
+    end
+  end
+
+  defp parse_webhook_status(webhook_response) do
+    case Map.fetch(webhook_response, "status") do
+      :error ->
+        {:ok, nil}
+
+      {:ok, status} when is_integer(status) ->
+        {:ok, status}
+
+      {:ok, status} when is_float(status) ->
+        {:ok, trunc(status)}
+
+      {:ok, status} ->
+        {:error, "status needs to be an integer, got: #{inspect(status)}"}
+    end
+  end
+
+  defp parse_webhook_body(webhook_response) do
+    case Map.fetch(webhook_response, "body") do
+      :error ->
+        {:ok, nil}
+
+      {:ok, body} when is_map(body) ->
+        {:ok, body}
+
+      {:ok, body} ->
+        {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
     end
   end
 
@@ -356,10 +399,6 @@ defmodule LightningWeb.RunChannel do
 
   defp default_response_status(_run_status, _config), do: 201
 
-  defp default_response_body(_run_status, _final_state, %{body: body})
-       when is_map(body),
-       do: body
-
   defp default_response_body(:success, final_state, _config),
     do: final_state
 
@@ -368,30 +407,6 @@ defmodule LightningWeb.RunChannel do
       message:
         "Run completed with status: #{run_status}. As a security policy, OpenFn does not send state data when the run errors out to avoid leaking sensitive information"
     }
-  end
-
-  defp build_response_from_state(%{"status" => status, "body" => body})
-       when is_map(body) and is_integer(status) do
-    {status, body}
-  end
-
-  defp build_response_from_state(%{"status" => status, "body" => _} = response)
-       when is_float(status) do
-    response
-    |> Map.put("status", trunc(status))
-    |> build_response_from_state()
-  end
-
-  defp build_response_from_state(%{"status" => status}) do
-    malformed_response("status needs to be an integer, got: #{inspect(status)}")
-  end
-
-  defp build_response_from_state(%{"body" => body}) do
-    malformed_response("body needs to be json object, got: #{inspect(body)}")
-  end
-
-  defp build_response_from_state(_webhook_response) do
-    malformed_response("no status or body was defined")
   end
 
   defp malformed_response(reason) do

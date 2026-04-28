@@ -106,8 +106,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
       trigger.sync_webhook_response_config &&
         Map.take(trigger.sync_webhook_response_config, [
           :success_code,
-          :error_code,
-          :body
+          :error_code
         ])
 
     trigger

@@ -801,53 +801,6 @@ defmodule Lightning.WebAndWorkerTest do
 
     @tag :integration
     @tag timeout: 120_000
-    test "uses configured body for both success and error runs", %{uri: uri} do
-      project = insert(:project)
-      custom_body = %{"ack" => true, "ref" => "custom-response"}
-
-      for {job_body, label} <- [
-            {"fn(state => state);", "success"},
-            {"fn(state => { throw new Error('fail'); });", "error"}
-          ] do
-        trigger = build(:trigger, type: :webhook, enabled: true)
-
-        job =
-          build(:job,
-            adaptor: "@openfn/language-common@latest",
-            body: job_body,
-            name: label
-          )
-
-        workflow =
-          build(:workflow, project: project)
-          |> with_trigger(trigger)
-          |> with_job(job)
-          |> with_edge({trigger, job}, condition_type: :always)
-          |> insert()
-
-        [trigger] = workflow.triggers
-
-        trigger
-        |> Ecto.Changeset.change(webhook_reply: :after_completion)
-        |> Ecto.Changeset.put_embed(
-          :sync_webhook_response_config,
-          %SyncWebhookResponseConfig{body: custom_body}
-        )
-        |> Repo.update!()
-
-        Snapshot.create(workflow |> Repo.reload!())
-
-        response =
-          build_tesla_client(uri)
-          |> Tesla.post!("/i/#{trigger.id}", %{})
-
-        assert response.body == custom_body,
-               "expected custom body for #{label} run, got: #{inspect(response.body)}"
-      end
-    end
-
-    @tag :integration
-    @tag timeout: 120_000
     test "honours _webhookResponse set in final state", %{uri: uri} do
       project = insert(:project)
       trigger = build(:trigger, type: :webhook, enabled: true)

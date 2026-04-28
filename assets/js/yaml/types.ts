@@ -32,7 +32,6 @@ export type StateWebhookTrigger = {
   sync_webhook_response_config?: {
     success_code?: number | null;
     error_code?: number | null;
-    body?: Record<string, unknown> | null;
   } | null;
 };
 
@@ -95,7 +94,6 @@ export type SpecCronTrigger = {
 export type WebhookResponseConfig = {
   success_code?: number | null;
   error_code?: number | null;
-  body?: Record<string, unknown> | null;
 };
 
 export type SpecWebhookTrigger = {

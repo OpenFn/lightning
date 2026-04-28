@@ -8,23 +8,20 @@ defmodule Lightning.Workflows.Triggers.SyncWebhookResponseConfig do
   - `success_code` — HTTP status code when the run succeeds. Defaults to 201.
   - `error_code` — HTTP status code for any non-success terminal state
     (failed, crashed, exception, killed, cancelled). Defaults to 201.
-  - `body` — Custom response body (JSON). Falls back to the run's final state
-    when nil.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
-  @derive {Jason.Encoder, only: [:success_code, :error_code, :body]}
+  @derive {Jason.Encoder, only: [:success_code, :error_code]}
 
   @primary_key false
   embedded_schema do
     field :success_code, :integer
     field :error_code, :integer
-    field :body, :map
   end
 
   def changeset(config, attrs) do
-    cast(config, attrs, [:success_code, :error_code, :body])
+    cast(config, attrs, [:success_code, :error_code])
   end
 end

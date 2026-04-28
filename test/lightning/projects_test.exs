@@ -791,8 +791,7 @@ defmodule Lightning.ProjectsTest do
           sync_webhook_response_config:
             build(:sync_webhook_response_config,
               success_code: 200,
-              error_code: 500,
-              body: %{"status" => "ok"}
+              error_code: 500
             )
         )
 
@@ -814,7 +813,6 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml =~ "webhook_response:"
       assert generated_yaml =~ "success_code: 200"
       assert generated_yaml =~ "error_code: 500"
-      assert generated_yaml =~ "body:"
     end
 
     test "webhook_response is omitted when sync_webhook_response_config is nil" do

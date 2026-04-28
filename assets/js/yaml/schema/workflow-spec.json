@@ -66,8 +66,7 @@
               "type": ["object", "null"],
               "properties": {
                 "success_code": { "type": ["integer", "null"] },
-                "error_code": { "type": ["integer", "null"] },
-                "body": { "type": ["object", "null"] }
+                "error_code": { "type": ["integer", "null"] }
               },
               "additionalProperties": false
             },

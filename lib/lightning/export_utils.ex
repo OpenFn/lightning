@@ -139,8 +139,7 @@ defmodule Lightning.ExportUtils do
       Map.reject(
         %{
           success_code: config.success_code,
-          error_code: config.error_code,
-          body: config.body && Jason.encode!(config.body, pretty: true)
+          error_code: config.error_code
         },
         fn {_k, v} -> is_nil(v) end
       )
@@ -229,9 +228,6 @@ defmodule Lightning.ExportUtils do
     case k do
       :body ->
         "body: |\n#{indent_multiline_value(v, i)}"
-
-      :webhook_response ->
-        "webhook_response: |\n#{indent_multiline_value(v, i)}"
 
       :description ->
         "description: |\n#{indent_multiline_value(v, i)}"

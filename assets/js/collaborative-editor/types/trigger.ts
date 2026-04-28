@@ -28,7 +28,6 @@ const webhookTriggerSchema = baseTriggerSchema.extend({
     .object({
       success_code: z.number().int().nullable().default(null),
       error_code: z.number().int().nullable().default(null),
-      body: z.record(z.string(), z.unknown()).nullable().default(null),
     })
     .nullable()
     .default(null),

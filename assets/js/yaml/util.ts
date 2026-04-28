@@ -85,16 +85,13 @@ export const convertWorkflowStateToSpec = (
       const config = trigger.sync_webhook_response_config;
       if (
         config &&
-        (config.success_code != null ||
-          config.error_code != null ||
-          config.body != null)
+        (config.success_code != null || config.error_code != null)
       ) {
         triggerDetails.webhook_response = {
           ...(config.success_code != null && {
             success_code: config.success_code,
           }),
           ...(config.error_code != null && { error_code: config.error_code }),
-          ...(config.body != null && { body: config.body }),
         };
       }
     }
@@ -273,11 +270,7 @@ function parseWebhookResponseConfig(
   config: import('./types').WebhookResponseConfig | null | undefined
 ): import('./types').WebhookResponseConfig | null {
   if (!config) return null;
-  const body =
-    typeof config.body === 'string'
-      ? (JSON.parse(config.body) as Record<string, unknown>)
-      : config.body;
-  return { ...config, body };
+  return config;
 }
 
 export const extractJobCredentials = (jobs: Workflow.Job[]): JobCredentials => {

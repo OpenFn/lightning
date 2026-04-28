@@ -607,8 +607,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           sync_webhook_response_config:
             build(:sync_webhook_response_config,
               success_code: 200,
-              error_code: 500,
-              body: %{"status" => "ok"}
+              error_code: 500
             )
         )
 
@@ -638,8 +637,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "webhook_reply" => "after_completion",
                "webhook_response" => %{
                  "success_code" => 200,
-                 "error_code" => 500,
-                 "body" => %{"status" => "ok"}
+                 "error_code" => 500
                }
              } = trigger_json
     end

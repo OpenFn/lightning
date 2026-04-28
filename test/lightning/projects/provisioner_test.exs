@@ -375,8 +375,7 @@ defmodule Lightning.Projects.ProvisionerTest do
             "webhook_reply" => "after_completion",
             "webhook_response" => %{
               "success_code" => 200,
-              "error_code" => 500,
-              "body" => %{"status" => "ok"}
+              "error_code" => 500
             }
           })
         end)
@@ -403,49 +402,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert trigger.webhook_reply == :after_completion
       assert trigger.sync_webhook_response_config.success_code == 200
       assert trigger.sync_webhook_response_config.error_code == 500
-      assert trigger.sync_webhook_response_config.body == %{"status" => "ok"}
-    end
-
-    test "imports trigger with webhook_response body as a JSON string (from YAML)" do
-      Mox.verify_on_exit!()
-      user = insert(:user)
-
-      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
-        valid_document()
-
-      updated_triggers =
-        Enum.map(workflow["triggers"], fn trigger ->
-          Map.merge(trigger, %{
-            "type" => "webhook",
-            "webhook_reply" => "after_completion",
-            "webhook_response" => %{
-              "success_code" => 200,
-              "body" => ~s({"status": "ok"})
-            }
-          })
-        end)
-
-      body =
-        Map.put(body, "workflows", [
-          Map.put(workflow, "triggers", updated_triggers)
-        ])
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn _action, _context -> :ok end
-      )
-
-      {:ok, project} =
-        Provisioner.import_document(
-          %Lightning.Projects.Project{},
-          user,
-          body
-        )
-
-      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
-      assert trigger.sync_webhook_response_config.success_code == 200
-      assert trigger.sync_webhook_response_config.body == %{"status" => "ok"}
     end
 
     test "imports cron trigger with cron_cursor_job_id field" do

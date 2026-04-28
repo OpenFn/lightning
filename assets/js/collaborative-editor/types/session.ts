@@ -74,7 +74,6 @@ export namespace Session {
     sync_webhook_response_config: {
       success_code: number | null;
       error_code: number | null;
-      body: Record<string, unknown> | null;
     } | null;
     webhook_auth_methods: Array<{
       id: string;
