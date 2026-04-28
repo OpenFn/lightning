@@ -182,14 +182,16 @@ export function ManualRunPanel({
       ? workflow.triggers.find(t => t.id === runContext.id)
       : null;
 
-  const panelTitle =
-    entryPoint === 'custom-input'
-      ? 'Pick a custom input'
-      : contextJob
-        ? `Run from ${contextJob.name}`
-        : contextTrigger
-          ? `Run from Trigger (${contextTrigger.type})`
-          : 'Run Workflow';
+  let panelTitle: string;
+  if (entryPoint === 'custom-input') {
+    panelTitle = 'Pick a custom input';
+  } else if (contextJob) {
+    panelTitle = `Run from ${contextJob.name}`;
+  } else if (contextTrigger) {
+    panelTitle = `Run from Trigger (${contextTrigger.type})`;
+  } else {
+    panelTitle = 'Run Workflow';
+  }
 
   // For triggers: find first connected job for dataclip fetching
   // (dataclips are associated with jobs, not triggers)

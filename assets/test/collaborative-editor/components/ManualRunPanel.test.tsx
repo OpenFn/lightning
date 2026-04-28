@@ -252,6 +252,24 @@ describe('ManualRunPanel', () => {
     });
   });
 
+  test('renders "Pick a custom input" title when entryPoint is custom-input', async () => {
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      triggerId: 'trigger-1',
+      entryPoint: 'custom-input',
+      onClose: () => {},
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Pick a custom input')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText('Run from Trigger (webhook)')
+    ).not.toBeInTheDocument();
+  });
+
   test('shows three tabs with correct labels', async () => {
     renderManualRunPanel({
       workflow: mockWorkflow,
