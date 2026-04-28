@@ -237,8 +237,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
               config ->
                 Yex.MapPrelim.from(%{
                   "success_code" => config.success_code,
-                  "error_code" => config.error_code,
-                  "body" => config.body
+                  "error_code" => config.error_code
                 })
             end
         })

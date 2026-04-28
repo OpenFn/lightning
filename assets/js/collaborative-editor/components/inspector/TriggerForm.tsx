@@ -737,7 +737,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     </code>{' '}
                                     in the final run state.{' '}
                                     <a
-                                      href="https://docs.openfn.org/documentation/build/triggers#webhook-response"
+                                      href="https://docs.openfn.org/documentation/build/triggers"
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="underline hover:text-blue-900"
