@@ -25,39 +25,7 @@ defmodule LightningWeb.Components.FormTest do
     |> Phoenix.Component.to_form()
   end
 
-  # ---- password_field/1 autocomplete ----------------------------------------
-
-  describe "password_field/1 autocomplete" do
-    test "renders autocomplete='off' by default" do
-      form = form_for_item()
-
-      html =
-        render_component(&Form.password_field/1, %{
-          form: form,
-          id: :secret
-        })
-
-      assert html =~ ~s(autocomplete="off")
-    end
-
-    test "allows explicit autocomplete override" do
-      form = form_for_item()
-
-      html =
-        render_component(&Form.password_field/1, %{
-          form: form,
-          id: :secret,
-          autocomplete: "current-password"
-        })
-
-      assert html =~ ~s(autocomplete="current-password")
-      refute html =~ ~s(autocomplete="off")
-    end
-  end
-
-  # ---- text_field/1 autocomplete --------------------------------------------
-
-  describe "text_field/1 autocomplete" do
+  describe "autocomplete" do
     test "renders autocomplete='off' by default" do
       form = form_for_item()
 

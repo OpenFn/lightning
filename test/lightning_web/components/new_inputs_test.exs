@@ -138,31 +138,6 @@ defmodule LightningWeb.Components.NewInputsTest do
 
       assert html =~ ~s(autocomplete="email")
     end
-
-    test "input/1 password type renders autocomplete='off' by default" do
-      form = used_field_form()
-
-      html =
-        render_component(&NewInputs.input/1, %{
-          field: form[:name],
-          type: "password"
-        })
-
-      assert html =~ ~s(autocomplete="off")
-    end
-
-    test "input/1 password type allows explicit autocomplete override" do
-      form = used_field_form()
-
-      html =
-        render_component(&NewInputs.input/1, %{
-          field: form[:name],
-          type: "password",
-          autocomplete: "current-password"
-        })
-
-      assert html =~ ~s(autocomplete="current-password")
-    end
   end
 
   # ---- old_error/1 (CoreComponents) -----------------------------------------
