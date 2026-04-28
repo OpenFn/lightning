@@ -136,8 +136,6 @@ defmodule LightningWeb.Components.NewInputsTest do
           autocomplete: "email"
         })
 
-      # The override value is rendered via {@rest} after the static default.
-      # Browsers use the last attribute value, so autocomplete="email" wins.
       assert html =~ ~s(autocomplete="email")
     end
 
@@ -163,8 +161,6 @@ defmodule LightningWeb.Components.NewInputsTest do
           autocomplete: "current-password"
         })
 
-      # The override value is rendered via {@rest} after the static default.
-      # Browsers use the last attribute value, so autocomplete="current-password" wins.
       assert html =~ ~s(autocomplete="current-password")
     end
   end
