@@ -84,6 +84,12 @@ export function WorkflowEditor({
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
+      // runMode persists the panel entry point in the URL so the title
+      // ("Pick a custom input") survives reload, deep-link, and back/forward.
+      // Read back by the URL→store sync below.
+      const contextEntryPoint = runPanelContext?.entryPoint ?? null;
+      const runModeParam =
+        contextEntryPoint === 'custom-input' ? 'custom-input' : null;
 
       // run panel can override all panels
       const nodePanels = ['editor', 'run', 'code', 'settings'].includes(
@@ -96,15 +102,17 @@ export function WorkflowEditor({
             panel: 'run',
             job: contextJobId,
             trigger: null,
+            runMode: runModeParam,
           });
         } else if (contextTriggerId) {
           updateSearchParams({
             panel: 'run',
             trigger: contextTriggerId,
             job: null,
+            runMode: runModeParam,
           });
         } else {
-          updateSearchParams({ panel: 'run' });
+          updateSearchParams({ panel: 'run', runMode: runModeParam });
         }
         setTimeout(() => {
           isSyncingRef.current = false;
@@ -117,7 +125,7 @@ export function WorkflowEditor({
       !isInitialMountRef.current
     ) {
       isSyncingRef.current = true;
-      updateSearchParams({ panel: null });
+      updateSearchParams({ panel: null, runMode: null });
       setTimeout(() => {
         isSyncingRef.current = false;
       }, 0);
@@ -132,19 +140,32 @@ export function WorkflowEditor({
 
       const jobParam = params['job'] ?? null;
       const triggerParam = params['trigger'] ?? null;
+      const entryPointFromUrl =
+        params['runMode'] === 'custom-input'
+          ? { entryPoint: 'custom-input' as const }
+          : {};
 
       if (jobParam) {
-        openRunPanel({ jobId: jobParam });
+        openRunPanel({ jobId: jobParam, ...entryPointFromUrl });
       } else if (triggerParam) {
-        openRunPanel({ triggerId: triggerParam });
+        openRunPanel({ triggerId: triggerParam, ...entryPointFromUrl });
       } else if (currentNode.type === 'job' && currentNode.node) {
-        openRunPanel({ jobId: currentNode.node.id });
+        openRunPanel({
+          jobId: currentNode.node.id,
+          ...entryPointFromUrl,
+        });
       } else if (currentNode.type === 'trigger' && currentNode.node) {
-        openRunPanel({ triggerId: currentNode.node.id });
+        openRunPanel({
+          triggerId: currentNode.node.id,
+          ...entryPointFromUrl,
+        });
       } else {
         const firstTrigger = workflow.triggers[0];
         if (firstTrigger?.id) {
-          openRunPanel({ triggerId: firstTrigger.id });
+          openRunPanel({
+            triggerId: firstTrigger.id,
+            entryPoint: 'custom-input',
+          });
         }
       }
 
@@ -424,7 +445,10 @@ export function WorkflowEditor({
       } else {
         const firstTrigger = workflow.triggers[0];
         if (firstTrigger?.id) {
-          openRunPanel({ triggerId: firstTrigger.id });
+          openRunPanel({
+            triggerId: firstTrigger.id,
+            entryPoint: 'custom-input',
+          });
         }
       }
     },
@@ -768,6 +792,7 @@ export function WorkflowEditor({
                 jobId={runPanelContext.jobId ?? null}
                 triggerId={runPanelContext.triggerId ?? null}
                 edgeId={runPanelContext.edgeId ?? null}
+                entryPoint={runPanelContext.entryPoint ?? null}
                 onClose={closeRunPanel}
                 saveWorkflow={saveWorkflow}
               />
