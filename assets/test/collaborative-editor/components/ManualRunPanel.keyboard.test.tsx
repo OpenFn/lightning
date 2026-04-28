@@ -550,8 +550,8 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       // Wait for component to be fully ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Switch to Custom tab
-      const customTab = screen.getByText('Custom');
+      // Switch to New tab (custom input)
+      const customTab = screen.getByText('New');
       await user.click(customTab);
 
       // The Monaco editor is mocked, so we need to find the mock element
@@ -1360,8 +1360,8 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         // Wait for component to be fully ready
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Switch to Custom tab
-        const customTab = screen.getByText('Custom');
+        // Switch to New tab (custom input)
+        const customTab = screen.getByText('New');
         await user.click(customTab);
 
         // The Monaco editor is mocked

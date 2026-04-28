@@ -300,7 +300,10 @@ export function Header({
     if (firstTriggerId) {
       selectNode(firstTriggerId);
       updateSearchParams({ panel: 'run' });
-      openRunPanel({ triggerId: firstTriggerId });
+      openRunPanel({
+        triggerId: firstTriggerId,
+        entryPoint: 'custom-input',
+      });
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
