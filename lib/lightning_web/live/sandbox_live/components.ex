@@ -372,72 +372,41 @@ defmodule LightningWeb.SandboxLive.Components do
             <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
               After merging
             </span>
-            <div class={[
-              "rounded-lg border transition-colors",
-              @delete_after_merge? && "border-amber-200 bg-amber-50/60",
-              !@delete_after_merge? && "border-sky-200 bg-sky-50/60"
-            ]}>
-              <div class="flex items-start gap-4 p-4">
-                <div class="flex-shrink-0 pt-0.5">
-                  <.input
-                    id="merge-delete-after-merge-toggle"
-                    field={@merge_form[:delete_after_merge]}
-                    type="toggle"
-                  />
-                </div>
-                <div class="flex-1 min-w-0 space-y-1.5">
-                  <p class={[
-                    "text-sm font-medium",
-                    @delete_after_merge? && "text-amber-900",
-                    !@delete_after_merge? && "text-sky-900"
-                  ]}>
-                    <%= if @delete_after_merge? do %>
-                      Delete sandbox after merging
-                    <% else %>
-                      Keep sandbox after merging
-                    <% end %>
-                  </p>
-                  <p class={[
-                    "text-sm",
-                    @delete_after_merge? && "text-amber-800",
-                    !@delete_after_merge? && "text-sky-800"
-                  ]}>
-                    <%= if @delete_after_merge? do %>
-                      Scheduled for deletion. Retained for {grace_period_label()} before being permanently removed.
-                    <% else %>
-                      <strong class="font-medium">{@sandbox.name}</strong>
-                      stays available after the merge. You can still delete it later from the sandboxes list.
-                    <% end %>
-                  </p>
-                  <p
-                    :if={@delete_after_merge? and @descendant_count == 1}
-                    class="text-sm text-amber-800"
-                  >
-                    Child sandbox
-                    <strong class="font-medium">
-                      {List.first(@descendants).name}
-                    </strong>
-                    will also be scheduled for deletion.
-                  </p>
-                  <p
-                    :if={@delete_after_merge? and @descendant_count > 1}
-                    class="text-sm text-amber-800"
-                  >
-                    Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-                  </p>
-                </div>
-                <.icon
-                  :if={@delete_after_merge?}
-                  name="hero-exclamation-triangle"
-                  class="h-5 w-5 text-amber-500 flex-shrink-0"
-                />
-                <.icon
-                  :if={!@delete_after_merge?}
-                  name="hero-information-circle"
-                  class="h-5 w-5 text-sky-500 flex-shrink-0"
-                />
-              </div>
-            </div>
+            <.input
+              id="merge-delete-after-merge-toggle"
+              field={@merge_form[:delete_after_merge]}
+              type="toggle"
+              label="Delete sandbox after merging"
+            />
+            <Common.alert
+              id="merge-disposition-notice"
+              type={if @delete_after_merge?, do: "warning", else: "info"}
+            >
+              <:message>
+                <%= if @delete_after_merge? do %>
+                  Scheduled for deletion. Retained for {grace_period_label()} before being permanently removed.
+                <% else %>
+                  <strong class="font-medium">{@sandbox.name}</strong>
+                  stays available after the merge. You can still delete it later from the sandboxes list.
+                <% end %>
+                <p
+                  :if={@delete_after_merge? and @descendant_count == 1}
+                  class="mt-1.5"
+                >
+                  Child sandbox
+                  <strong class="font-medium">
+                    {List.first(@descendants).name}
+                  </strong>
+                  will also be scheduled for deletion.
+                </p>
+                <p
+                  :if={@delete_after_merge? and @descendant_count > 1}
+                  class="mt-1.5"
+                >
+                  Its {@descendant_count} child sandboxes will also be scheduled for deletion.
+                </p>
+              </:message>
+            </Common.alert>
           </div>
 
           <.modal_footer>

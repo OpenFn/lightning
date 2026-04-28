@@ -1303,7 +1303,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       })
 
-      assert render(view) =~ "Keep sandbox after merging"
+      assert render(view) =~ "stays available after the merge"
     end
 
     test "sibling can be selected as merge target", %{
