@@ -302,6 +302,15 @@ defmodule Lightning.Projects.Sandboxes do
   descendant in a single transaction so the entire subtree shares a grace
   period and gets purged together.
 
+  ## Cascade semantics
+
+  Scheduling cascades through every descendant unconditionally. If a child
+  sandbox was already scheduled separately (with an earlier timestamp), that
+  earlier timestamp is overwritten with the new one. The intent is that
+  scheduling a parent always synchronises the whole subtree's grace window;
+  if you need a child to be purged on its original earlier timestamp, do not
+  schedule the parent.
+
   ## Parameters
   * `sandbox` - Sandbox project to schedule (or sandbox ID as string)
   * `actor` - User performing the action (needs `:delete_sandbox` permission)
@@ -337,6 +346,13 @@ defmodule Lightning.Projects.Sandboxes do
   row that has it set. Triggers are not automatically re-enabled: this is an
   admin recovery path and the operator decides whether the subtree should
   resume firing triggers.
+
+  ## Cascade semantics
+
+  The cancel clears `scheduled_deletion` on every descendant that has it set,
+  regardless of whether the schedule originated from this subtree's parent
+  or from a separate scheduling action on the descendant itself. Any row
+  whose `scheduled_deletion` is already nil is left alone.
 
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)

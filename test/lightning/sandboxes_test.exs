@@ -2005,6 +2005,28 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Repo.get!(Project, sibling_root.id).scheduled_deletion == nil
     end
 
+    test "scheduling a parent overwrites a child's earlier scheduled_deletion" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(child, actor)
+      child_first_scheduled = Repo.get!(Project, child.id).scheduled_deletion
+      assert %DateTime{} = child_first_scheduled
+
+      :timer.sleep(1100)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+      child_second_scheduled = Repo.get!(Project, child.id).scheduled_deletion
+
+      assert DateTime.compare(child_second_scheduled, child_first_scheduled) ==
+               :gt
+    end
+
     test "emits the sandbox deleted telemetry event" do
       actor = insert(:user)
       parent = insert(:project, name: "parent")
@@ -2097,6 +2119,27 @@ defmodule Lightning.Projects.SandboxesTest do
                Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
 
       assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "leaves un-scheduled siblings untouched when cancelling" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      scheduled_child = insert(:project, name: "scheduled", parent: parent)
+      active_sibling = insert(:project, name: "active", parent: parent)
+
+      for project <- [parent, scheduled_child, active_sibling] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(scheduled_child, actor)
+
+      assert Repo.get!(Project, scheduled_child.id).scheduled_deletion != nil
+      assert Repo.get!(Project, active_sibling.id).scheduled_deletion == nil
+
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(parent, actor)
+
+      assert Repo.get!(Project, scheduled_child.id).scheduled_deletion == nil
+      assert Repo.get!(Project, active_sibling.id).scheduled_deletion == nil
     end
 
     test "returns :unauthorized when actor lacks delete_sandbox permission" do

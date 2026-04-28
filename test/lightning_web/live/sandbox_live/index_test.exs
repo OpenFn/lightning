@@ -1259,7 +1259,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{child1.id} button")
       |> render_click()
 
-      assert has_element?(view, "#merge-beta-warning")
+      assert has_element?(view, "#merge-deletion-warning")
 
       view
       |> form("#merge-sandbox-modal form")
@@ -1271,7 +1271,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       })
 
-      refute has_element?(view, "#merge-beta-warning")
+      refute has_element?(view, "#merge-deletion-warning")
     end
 
     test "toggling delete-after-merge does not rebuild the workflow list", %{
@@ -1298,7 +1298,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       })
 
-      refute has_element?(view, "#merge-beta-warning")
+      refute has_element?(view, "#merge-deletion-warning")
     end
 
     test "sibling can be selected as merge target", %{
