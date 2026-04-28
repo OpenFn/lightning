@@ -52,6 +52,9 @@ and this project adheres to
   [#4615](https://github.com/OpenFn/lightning/issues/4615)
 - Clearer step panel button design with icon-only secondary buttons for Code and
   Delete. [#4618](https://github.com/OpenFn/lightning/issues/4618)
+- "Pick a custom input" panel and renamed "New" tab when opening the manual run
+  panel from the canvas Run dropdown.
+  [#4616](https://github.com/OpenFn/lightning/issues/4616)
 
 ### Fixed
 
