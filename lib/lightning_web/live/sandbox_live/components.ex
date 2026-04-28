@@ -287,85 +287,78 @@ defmodule LightningWeb.SandboxLive.Components do
             </p>
           </div>
 
-          <div class="space-y-2">
-            <div class="flex items-baseline justify-between">
-              <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <div class="border border-gray-200 rounded-lg overflow-hidden bg-white">
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @select_all_state == :empty && "cursor-default",
+              @select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-workflows"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-workflows"
+                disabled={@select_all_state == :empty}
+                checked={@select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
                 Workflows to merge
               </span>
               <span class="text-xs text-gray-500">
                 {MapSet.size(@selected_workflow_ids)} of {length(@source_workflows)} selected
               </span>
-            </div>
-            <div class="border border-gray-200 rounded-lg overflow-hidden bg-white">
-              <label class={[
-                "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
-                @select_all_state == :empty && "cursor-default",
-                @select_all_state != :empty && "cursor-pointer"
-              ]}>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={wf <- @source_workflows}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-workflow"
+                phx-value-id={wf.id}
+              >
                 <input
                   type="checkbox"
-                  id="merge-select-all-workflows"
-                  phx-hook="CheckboxIndeterminate"
-                  phx-click="toggle-all-workflows"
-                  disabled={@select_all_state == :empty}
-                  checked={@select_all_state == :all}
-                  class={[
-                    "h-4 w-4 rounded border-gray-300 text-indigo-600",
-                    @select_all_state == :partial && "indeterminate"
-                  ]}
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_workflow_ids, wf.id)}
+                  readonly
                 />
-                <span class="text-sm font-medium text-gray-900">
-                  Select all
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {wf.name}
                 </span>
-              </label>
-              <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                <li
-                  :for={wf <- @source_workflows}
-                  class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                  phx-click="toggle-workflow"
-                  phx-value-id={wf.id}
+                <span
+                  :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                  class="flex items-center gap-1 text-xs font-medium text-green-700"
+                  title="This workflow has been modified in the sandbox"
                 >
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                    checked={MapSet.member?(@selected_workflow_ids, wf.id)}
-                    readonly
-                  />
-                  <span class="flex-1 text-sm text-gray-700 truncate">
-                    {wf.name}
-                  </span>
-                  <span
-                    :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
-                    class="flex items-center gap-1 text-xs font-medium text-green-700"
-                    title="This workflow has been modified in the sandbox"
-                  >
-                    Changed
-                  </span>
-                  <span
-                    :if={wf.is_diverged}
-                    class="flex items-center gap-1 text-xs font-medium text-amber-700"
-                    title="This workflow was modified in the target project - this change will be lost"
-                  >
-                    <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
-                    Diverged
-                  </span>
-                  <span
-                    :if={wf.is_new}
-                    class="flex items-center gap-1 text-xs font-medium text-blue-700"
-                    title="This workflow doesn't exist in the target — it will be created"
-                  >
-                    New
-                  </span>
-                  <span
-                    :if={wf.is_deleted}
-                    class="flex items-center gap-1 text-xs font-medium text-red-700"
-                    title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
-                  >
-                    Deleted in sandbox
-                  </span>
-                </li>
-              </ul>
-            </div>
+                  Changed
+                </span>
+                <span
+                  :if={wf.is_diverged}
+                  class="flex items-center gap-1 text-xs font-medium text-amber-700"
+                  title="This workflow was modified in the target project - this change will be lost"
+                >
+                  <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
+                  Diverged
+                </span>
+                <span
+                  :if={wf.is_new}
+                  class="flex items-center gap-1 text-xs font-medium text-blue-700"
+                  title="This workflow doesn't exist in the target — it will be created"
+                >
+                  New
+                </span>
+                <span
+                  :if={wf.is_deleted}
+                  class="flex items-center gap-1 text-xs font-medium text-red-700"
+                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                >
+                  Deleted in sandbox
+                </span>
+              </li>
+            </ul>
           </div>
 
           <div class="space-y-2">
