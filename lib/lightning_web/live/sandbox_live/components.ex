@@ -370,27 +370,17 @@ defmodule LightningWeb.SandboxLive.Components do
             </ul>
           </div>
 
-          <label class="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="hidden"
-              name={@merge_form[:delete_after_merge].name}
-              value="false"
-            />
-            <input
+          <div class="space-y-1">
+            <.input
               id="merge-delete-after-merge-toggle"
-              type="checkbox"
-              name={@merge_form[:delete_after_merge].name}
-              value="true"
-              checked={@delete_after_merge?}
-              class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              field={@merge_form[:delete_after_merge]}
+              type="toggle"
+              label="Delete sandbox after merging"
             />
-            <span>
-              <span class="font-medium">Delete sandbox after merging</span>
-              <span class="block text-xs text-gray-500">
-                Uncheck to keep the sandbox alive after the merge (for ongoing work, GitHub sync, or QA against live triggers).
-              </span>
-            </span>
-          </label>
+            <p class="text-xs text-gray-500 ml-14">
+              Turn this off to keep the sandbox alive after the merge (for ongoing work, GitHub sync, or QA against live triggers).
+            </p>
+          </div>
 
           <Common.alert
             :if={@delete_after_merge?}
