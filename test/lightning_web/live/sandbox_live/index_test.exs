@@ -970,7 +970,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ great_grandchild.name
-      assert html =~ "will also be scheduled for deletion"
+      assert html =~ "will also be permanently closed"
     end
 
     test "merge modal shows multiple descendants warning with full list", %{
@@ -986,7 +986,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "child sandboxes will also be scheduled for deletion"
+      assert html =~ "child sandboxes will also be permanently closed"
       assert html =~ child1.name
     end
 
@@ -1246,10 +1246,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "child sandboxes will also be scheduled for deletion"
+      assert html =~ "child sandboxes will also be permanently closed"
     end
 
-    test "toggling delete-after-merge off hides the descendants notice", %{
+    test "toggling delete-after-merge off hides the deletion warning", %{
       conn: conn,
       root: root,
       child1: child1
@@ -1260,8 +1260,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{child1.id} button")
       |> render_click()
 
-      assert render(view) =~
-               "child sandboxes will also be scheduled for deletion"
+      assert has_element?(view, "#merge-beta-warning")
 
       view
       |> form("#merge-sandbox-modal form")
@@ -1273,10 +1272,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       })
 
-      html = render(view)
-
-      refute html =~ "child sandboxes will also be scheduled for deletion"
-      assert html =~ "stays available after the merge"
+      refute has_element?(view, "#merge-beta-warning")
     end
 
     test "toggling delete-after-merge does not rebuild the workflow list", %{
@@ -1303,7 +1299,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       })
 
-      assert render(view) =~ "stays available after the merge"
+      refute has_element?(view, "#merge-beta-warning")
     end
 
     test "sibling can be selected as merge target", %{

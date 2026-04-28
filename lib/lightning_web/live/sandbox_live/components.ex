@@ -369,32 +369,20 @@ defmodule LightningWeb.SandboxLive.Components do
               label="Delete sandbox after merging"
             />
             <Common.alert
-              id="merge-disposition-notice"
-              type={if @delete_after_merge?, do: "warning", else: "info"}
+              :if={@delete_after_merge?}
+              id="merge-beta-warning"
+              type="warning"
+              header="This sandbox will be deleted after merging"
             >
               <:message>
-                <%= if @delete_after_merge? do %>
-                  Scheduled for deletion. Retained for {grace_period_label()} before being permanently removed.
-                <% else %>
-                  <strong class="font-medium">{@sandbox.name}</strong>
-                  stays available after the merge. You can still delete it later from the sandboxes list.
-                <% end %>
-                <p
-                  :if={@delete_after_merge? and @descendant_count == 1}
-                  class="mt-1.5"
-                >
-                  Child sandbox
-                  <strong class="font-medium">
-                    {List.first(@descendants).name}
-                  </strong>
-                  will also be scheduled for deletion.
-                </p>
-                <p
-                  :if={@delete_after_merge? and @descendant_count > 1}
-                  class="mt-1.5"
-                >
-                  Its {@descendant_count} child sandboxes will also be scheduled for deletion.
-                </p>
+                This action cannot be undone after {grace_period_label()}.
+                <div :if={@descendant_count == 1} class="mt-2">
+                  Child sandbox <strong>{List.first(@descendants).name}</strong>
+                  will also be permanently closed.
+                </div>
+                <div :if={@descendant_count > 1} class="mt-2">
+                  Its {@descendant_count} child sandboxes will also be permanently closed.
+                </div>
               </:message>
             </Common.alert>
           </div>
