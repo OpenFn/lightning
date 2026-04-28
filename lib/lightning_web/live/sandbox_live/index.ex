@@ -616,9 +616,7 @@ defmodule LightningWeb.SandboxLive.Index do
       socket
       |> put_flash(
         :info,
-        "Sandbox #{deleted_sandbox.name} and its descendants have been " <>
-          "scheduled for deletion. They will be retained for " <>
-          "#{human_readable_grace_period()} before being permanently removed."
+        "Sandbox #{deleted_sandbox.name} scheduled for deletion."
       )
       |> reset_delete_modal_state()
 
@@ -905,8 +903,7 @@ defmodule LightningWeb.SandboxLive.Index do
     case Sandboxes.schedule_sandbox_deletion(source, actor) do
       {:ok, _} ->
         "Successfully merged #{source.name} into #{target.name}. " <>
-          "The sandbox has been scheduled for deletion and will be retained " <>
-          "for #{human_readable_grace_period()} before being permanently removed."
+          "Sandbox scheduled for deletion."
 
       {:error, _} ->
         "Successfully merged #{source.name} into #{target.name}, " <>
@@ -915,8 +912,7 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp build_merge_success_message(source, target, _actor, false) do
-    "Successfully merged #{source.name} into #{target.name}. " <>
-      "The sandbox has been kept and remains available for further work."
+    "Successfully merged #{source.name} into #{target.name}."
   end
 
   defp parse_delete_after_merge(%{"delete_after_merge" => "true"}), do: true
@@ -925,14 +921,6 @@ defmodule LightningWeb.SandboxLive.Index do
   defp parse_delete_after_merge(%{"delete_after_merge" => false}), do: false
   defp parse_delete_after_merge(%{"delete_after_merge" => "on"}), do: true
   defp parse_delete_after_merge(_), do: true
-
-  defp human_readable_grace_period do
-    case Lightning.Config.purge_deleted_after_days() do
-      nil -> "the configured grace period"
-      1 -> "1 day"
-      days when is_integer(days) -> "#{days} days"
-    end
-  end
 
   defp create_sandbox_tooltip_message(can_create_sandbox, limiter_result) do
     case {can_create_sandbox, limiter_result} do
