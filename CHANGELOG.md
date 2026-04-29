@@ -60,6 +60,8 @@ and this project adheres to
   a "Delete sandbox after merging" toggle (default on); turning it off keeps the
   sandbox alive after the merge for ongoing work.
   [#4649](https://github.com/OpenFn/lightning/issues/4649)
+- Updated ws-worker from
+  [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
 
 ### Fixed
 
