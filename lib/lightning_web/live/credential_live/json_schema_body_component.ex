@@ -68,7 +68,8 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         form_field: assigns.form[assigns.field],
         title: Map.get(properties, "title"),
         type: input_type(properties),
-        required: Credentials.Schema.required?(assigns.schema, assigns.field)
+        required: Credentials.Schema.required?(assigns.schema, assigns.field),
+        schema_warning: Credentials.Schema.warning(assigns.schema, assigns.field)
       )
 
     ~H"""
@@ -80,6 +81,18 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         required={@required}
         checked={@type == "checkbox" and @form_field.value == true}
       />
+      <div
+        :if={@schema_warning}
+        class="mt-1 flex items-start gap-1 text-xs text-yellow-700"
+      >
+        <span class="hero-exclamation-triangle-solid h-4 w-4 text-yellow-500 flex-shrink-0">
+        </span>
+        <span>
+          This adaptor's configuration schema specifies an unrecognized type
+          (<code>{@schema_warning}</code>) for this field;
+          we'll store it as text.
+        </span>
+      </div>
     </div>
     """
   end
