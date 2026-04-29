@@ -54,11 +54,10 @@ and this project adheres to
 - Sandbox deletion (manual or after merge) is now soft. The sandbox and its
   descendants are scheduled for purge after the configured grace period
   (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
-  accidental deletions can be recovered by a workspace administrator.
-  Soft-deleted sandboxes are hidden from the sandbox listing and surfaced on the
-  existing superuser admin page for restore/cancel. The merge modal now exposes
-  a "Delete sandbox after merging" toggle (default on); turning it off keeps the
-  sandbox alive after the merge for ongoing work.
+  accidental deletions can be recovered. Scheduled-for-deletion sandboxes remain
+  visible in the parent's sandbox listing with a "Scheduled for deletion" badge
+  and a Cancel-deletion action, so anyone with permission to delete the sandbox
+  can also restore it during the grace window.
   [#4649](https://github.com/OpenFn/lightning/issues/4649)
 - Updated ws-worker from
   [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)

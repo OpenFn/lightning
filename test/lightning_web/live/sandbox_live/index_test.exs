@@ -812,6 +812,77 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
+  describe "Scheduled-for-deletion sandboxes" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, parent: parent, scheduled: scheduled}
+    end
+
+    test "shows scheduled sandboxes with a deletion badge and cancel action",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      {:ok, view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert html =~ "Scheduled for deletion"
+      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      assert has_element?(view, "#cancel-deletion-sandbox-#{scheduled.id}")
+      refute has_element?(view, "#delete-sandbox-#{scheduled.id}")
+      refute has_element?(view, "#edit-sandbox-#{scheduled.id}")
+      refute has_element?(view, "#branch-rewire-sandbox-#{scheduled.id}")
+    end
+
+    test "cancelling deletion clears scheduled_deletion and refreshes the list",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
+      |> render_click()
+
+      assert render(view) =~ "Cancelled deletion of sandbox #{scheduled.name}"
+      assert Repo.get!(Project, scheduled.id).scheduled_deletion == nil
+      refute has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      assert has_element?(view, "#delete-sandbox-#{scheduled.id}")
+    end
+
+    test "cancelling fails gracefully when actor lacks permission", %{
+      conn: conn,
+      parent: parent,
+      scheduled: scheduled
+    } do
+      other_user = insert(:user)
+      conn = log_in_user(conn, other_user)
+
+      _ =
+        Lightning.Projects.add_project_users(parent, [
+          %{user_id: other_user.id, role: :viewer}
+        ])
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+
+      refute has_element?(
+               view,
+               "#cancel-deletion-sandbox-#{scheduled.id} button:not([disabled])"
+             )
+    end
+  end
+
   describe "Merge modal functionality" do
     setup :register_and_log_in_user
 
@@ -1137,51 +1208,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{root.id}/w")
     end
 
-    test "merge with delete_after_merge unchecked keeps the sandbox", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn _source, _target, _opts -> "merged_yaml" end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn _target, _actor, _yaml, _opts -> {:ok, root} end
-      )
-
-      Mimic.reject(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        2
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      {:ok, _view, html} =
-        view
-        |> form("#merge-sandbox-modal form")
-        |> render_submit(%{"merge" => %{"delete_after_merge" => "false"}})
-        |> follow_redirect(conn)
-
-      assert html =~ "Successfully merged"
-      refute html =~ "scheduled for deletion"
-      assert Repo.get!(Project, child1.id).scheduled_deletion == nil
-    end
-
     test "merge shows error on merge failure", %{
       conn: conn,
       root: root,
@@ -1246,59 +1272,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html = render(view)
 
       assert html =~ "child sandboxes will also be deleted"
-    end
-
-    test "toggling delete-after-merge off hides the deletion warning", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#merge-deletion-warning")
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_change(%{
-        "_target" => ["merge", "delete_after_merge"],
-        "merge" => %{
-          "target_id" => root.id,
-          "delete_after_merge" => "false"
-        }
-      })
-
-      refute has_element?(view, "#merge-deletion-warning")
-    end
-
-    test "toggling delete-after-merge does not rebuild the workflow list", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      Mimic.reject(Lightning.Projects.MergeProjects, :diverged_workflows, 2)
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_change(%{
-        "_target" => ["merge", "delete_after_merge"],
-        "merge" => %{
-          "target_id" => root.id,
-          "delete_after_merge" => "false"
-        }
-      })
-
-      refute has_element?(view, "#merge-deletion-warning")
     end
 
     test "sibling can be selected as merge target", %{

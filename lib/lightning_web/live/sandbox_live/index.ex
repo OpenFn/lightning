@@ -180,6 +180,32 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "cancel-sandbox-deletion",
+        %{"id" => sandbox_id},
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
+    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+
+      sandbox ->
+        if sandbox.can_cancel_deletion do
+          Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, current_user)
+          |> handle_cancel_deletion_result(sandbox, socket)
+          |> noreply()
+        else
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "You are not authorized to cancel this sandbox's deletion"
+           )}
+        end
+    end
+  end
+
+  @impl true
   def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
     case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
       nil ->
@@ -284,19 +310,10 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event(
         "select-merge-target",
-        %{"_target" => ["merge", "delete_after_merge"], "merge" => merge_params},
+        %{"merge" => %{"target_id" => target_id}},
         socket
       ) do
-    {:noreply, assign(socket, :merge_changeset, merge_changeset(merge_params))}
-  end
-
-  def handle_event(
-        "select-merge-target",
-        %{"merge" => merge_params},
-        socket
-      ) do
-    merge_changeset = merge_changeset(merge_params)
-    target_id = merge_params["target_id"]
+    merge_changeset = merge_changeset(%{target_id: target_id})
 
     target_project =
       Enum.find(socket.assigns.workspace_projects, fn project ->
@@ -350,7 +367,7 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event(
         "confirm-merge",
-        %{"merge" => merge_params},
+        %{"merge" => %{"target_id" => target_id}},
         %{
           assigns: %{
             merge_source_sandbox: source,
@@ -359,9 +376,6 @@ defmodule LightningWeb.SandboxLive.Index do
           }
         } = socket
       ) do
-    target_id = merge_params["target_id"]
-    delete_after_merge? = parse_delete_after_merge(merge_params)
-
     cond do
       is_nil(source) ->
         socket
@@ -397,14 +411,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
               source
               |> perform_merge(target, actor, selected_ids)
-              |> handle_merge_result(
-                socket,
-                source,
-                target,
-                root_project,
-                actor,
-                delete_after_merge?
-              )
+              |> handle_merge_result(socket, source, target, root_project, actor)
             else
               socket
               |> put_flash(
@@ -539,10 +546,14 @@ defmodule LightningWeb.SandboxLive.Index do
             merge: false
           })
 
+        scheduled? = not is_nil(sandbox.scheduled_deletion)
+
         sandbox
-        |> Map.put(:can_edit, perms.update)
-        |> Map.put(:can_delete, perms.delete)
-        |> Map.put(:can_merge, perms.merge)
+        |> Map.put(:can_edit, perms.update and not scheduled?)
+        |> Map.put(:can_delete, perms.delete and not scheduled?)
+        |> Map.put(:can_merge, perms.merge and not scheduled?)
+        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
+        |> Map.put(:scheduled_for_deletion?, scheduled?)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
 
@@ -574,10 +585,10 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp merge_changeset(params \\ %{}) do
-    types = %{target_id: :string, delete_after_merge: :boolean}
+    types = %{target_id: :string}
 
-    {%{delete_after_merge: true}, types}
-    |> Changeset.cast(params, [:target_id, :delete_after_merge])
+    {%{}, types}
+    |> Changeset.cast(params, [:target_id])
     |> Changeset.validate_required([:target_id])
   end
 
@@ -646,6 +657,35 @@ defmodule LightningWeb.SandboxLive.Index do
       "Failed to schedule sandbox deletion: #{inspect(reason)}"
     )
     |> assign(:confirm_delete_open?, false)
+  end
+
+  defp handle_cancel_deletion_result({:ok, _sandbox}, sandbox, socket) do
+    socket
+    |> put_flash(
+      :info,
+      "Cancelled deletion of sandbox #{sandbox.name}."
+    )
+    |> load_workspace_projects()
+  end
+
+  defp handle_cancel_deletion_result({:error, :unauthorized}, _sandbox, socket) do
+    put_flash(
+      socket,
+      :error,
+      "You are not authorized to cancel this sandbox's deletion"
+    )
+  end
+
+  defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket) do
+    put_flash(socket, :error, "Sandbox not found")
+  end
+
+  defp handle_cancel_deletion_result({:error, reason}, _sandbox, socket) do
+    put_flash(
+      socket,
+      :error,
+      "Failed to cancel sandbox deletion: #{inspect(reason)}"
+    )
   end
 
   defp get_merge_target_options(socket, source_sandbox) do
@@ -869,13 +909,11 @@ defmodule LightningWeb.SandboxLive.Index do
          source,
          target,
          _root_project,
-         actor,
-         delete_after_merge?
+         actor
        ) do
     Lightning.Projects.SandboxPromExPlugin.fire_sandbox_merged_event()
 
-    flash_message =
-      build_merge_success_message(source, target, actor, delete_after_merge?)
+    flash_message = build_merge_success_message(source, target, actor)
 
     socket
     |> put_flash(:info, flash_message)
@@ -890,8 +928,7 @@ defmodule LightningWeb.SandboxLive.Index do
          _source,
          _target,
          _root,
-         _actor,
-         _delete_after_merge?
+         _actor
        ) do
     socket
     |> put_flash(:error, format_merge_error(reason))
@@ -899,7 +936,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> noreply()
   end
 
-  defp build_merge_success_message(source, target, actor, true) do
+  defp build_merge_success_message(source, target, actor) do
     case Sandboxes.schedule_sandbox_deletion(source, actor) do
       {:ok, _} ->
         "Successfully merged #{source.name} into #{target.name}. " <>
@@ -910,17 +947,6 @@ defmodule LightningWeb.SandboxLive.Index do
           "but could not schedule the sandbox for deletion."
     end
   end
-
-  defp build_merge_success_message(source, target, _actor, false) do
-    "Successfully merged #{source.name} into #{target.name}."
-  end
-
-  defp parse_delete_after_merge(%{"delete_after_merge" => "true"}), do: true
-  defp parse_delete_after_merge(%{"delete_after_merge" => "false"}), do: false
-  defp parse_delete_after_merge(%{"delete_after_merge" => true}), do: true
-  defp parse_delete_after_merge(%{"delete_after_merge" => false}), do: false
-  defp parse_delete_after_merge(%{"delete_after_merge" => "on"}), do: true
-  defp parse_delete_after_merge(_), do: true
 
   defp create_sandbox_tooltip_message(can_create_sandbox, limiter_result) do
     case {can_create_sandbox, limiter_result} do
