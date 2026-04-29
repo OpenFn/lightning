@@ -2662,11 +2662,11 @@ defmodule Lightning.ProjectsTest do
       assert names == ["duplicate", "duplicate", "other"]
     end
 
-    test "excludes descendants with scheduled_deletion set" do
+    test "includes descendants with scheduled_deletion set so the listing can offer cancel" do
       root = insert(:project, name: "root")
       active = insert(:project, name: "active", parent: root)
 
-      _scheduled =
+      scheduled =
         insert(:project,
           name: "scheduled",
           parent: root,
@@ -2676,10 +2676,11 @@ defmodule Lightning.ProjectsTest do
       %{descendants: descendants} =
         Projects.list_workspace_projects(root.id)
 
-      assert Enum.map(descendants, & &1.id) == [active.id]
+      ids = Enum.map(descendants, & &1.id) |> MapSet.new()
+      assert MapSet.equal?(ids, MapSet.new([active.id, scheduled.id]))
     end
 
-    test "excludes the entire subtree under a scheduled descendant" do
+    test "includes the subtree under a scheduled descendant" do
       root = insert(:project, name: "root")
 
       scheduled =
@@ -2689,12 +2690,13 @@ defmodule Lightning.ProjectsTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
-      _grandchild = insert(:project, name: "grandchild", parent: scheduled)
+      grandchild = insert(:project, name: "grandchild", parent: scheduled)
 
       %{descendants: descendants} =
         Projects.list_workspace_projects(root.id)
 
-      assert descendants == []
+      ids = Enum.map(descendants, & &1.id) |> MapSet.new()
+      assert MapSet.equal?(ids, MapSet.new([scheduled.id, grandchild.id]))
     end
 
     test "raises when project doesn't exist" do
