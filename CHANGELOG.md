@@ -59,6 +59,7 @@ and this project adheres to
 - Prevent crash when an unsupported data type from `credential-schema.json` is
   loaded for building a credential schema from an adaptor. Fall-back to
   `:string` type, log warning and alert Sentry.
+  [#4681](https://github.com/OpenFn/lightning/issues/4681)
 
 ## [2.16.2] - 2026-04-20
 
