@@ -41,6 +41,24 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   describe "new/1" do
+    test "handles JSON Schema array-form `type` (e.g. nullable fields)" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "baseUrl" => %{"type" => ["string", "null"]},
+            "settings" => %{"type" => ["object", "null"]},
+            "fallback" => %{"type" => ["null"]}
+          },
+          "type" => "object"
+        })
+
+      assert schema.types == %{
+               baseUrl: :string,
+               settings: :map,
+               fallback: :string
+             }
+    end
+
     test "creates a struct containing the schema, types and data", %{
       schema_map: schema_map
     } do

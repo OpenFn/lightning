@@ -162,13 +162,26 @@ defmodule Lightning.Credentials.Schema do
       type =
         properties
         |> Map.get("type", "string")
-        |> then(fn type -> if type == "object", do: "map", else: type end)
+        |> normalize_property_type()
         |> String.to_atom()
 
       {String.to_existing_atom(field), type}
     end)
     |> Map.new()
   end
+
+  # JSON Schema draft-07 lets `type` be a list (e.g. `["string", "null"]`
+  # for nullable fields). Pick the first non-null member, defaulting to
+  # "string" if only "null" remains.
+  defp normalize_property_type(types) when is_list(types) do
+    types
+    |> Enum.reject(&(&1 == "null"))
+    |> List.first("string")
+    |> normalize_property_type()
+  end
+
+  defp normalize_property_type("object"), do: "map"
+  defp normalize_property_type(type) when is_binary(type), do: type
 
   defp validate_json_object(value) when is_binary(value) do
     case Jason.decode(value) do
