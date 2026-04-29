@@ -484,20 +484,9 @@ defmodule Lightning.Projects.Provisioner do
         attrs
 
       {config, attrs} ->
-        config = decode_webhook_response_body(config)
         Map.put(attrs, "sync_webhook_response_config", config)
     end
   end
-
-  defp decode_webhook_response_body(%{"body" => body} = config)
-       when is_binary(body) do
-    case Jason.decode(body) do
-      {:ok, decoded} -> Map.put(config, "body", decoded)
-      _ -> config
-    end
-  end
-
-  defp decode_webhook_response_body(config), do: config
 
   defp kafka_config_changeset(kafka_config, attrs) do
     kafka_config
