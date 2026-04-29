@@ -59,6 +59,35 @@ defmodule Lightning.Credentials.SchemaTest do
              }
     end
 
+    test "validates round-trip against schema using array-form `type`" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "baseUrl" => %{
+              "type" => ["string", "null"],
+              "format" => "uri",
+              "minLength" => 1
+            }
+          },
+          "type" => "object",
+          "required" => ["baseUrl"]
+        })
+
+      ok =
+        %Ecto.Changeset{data: %{}, types: schema.types}
+        |> Ecto.Changeset.put_change(:baseUrl, "https://example.com")
+        |> Schema.validate(schema)
+
+      assert ok.errors == []
+
+      bad =
+        %Ecto.Changeset{data: %{}, types: schema.types}
+        |> Ecto.Changeset.put_change(:baseUrl, "not a uri")
+        |> Schema.validate(schema)
+
+      assert {:baseUrl, {"expected to be a URI", []}} in bad.errors
+    end
+
     test "creates a struct containing the schema, types and data", %{
       schema_map: schema_map
     } do
