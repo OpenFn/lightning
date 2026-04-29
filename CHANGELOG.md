@@ -73,6 +73,9 @@ and this project adheres to
   upstream in
   [`@openfn/language-browserless`](https://github.com/OpenFn/adaptors/pull/1659).
   [#4647](https://github.com/OpenFn/lightning/issues/4647)
+- Prevent crash when an unsupported data type from `credential-schema.json` is
+  loaded for building a credential schema from an adaptor. Fall-back to
+  `:string` type, log warning and alert Sentry.
 
 ## [2.16.2] - 2026-04-20
 
