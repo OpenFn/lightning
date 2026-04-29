@@ -2027,7 +2027,21 @@ defmodule Lightning.Projects.SandboxesTest do
                :gt
     end
 
-    test "emits the sandbox deleted telemetry event" do
+    test "emits the sandbox scheduled-for-deletion telemetry event" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :scheduled_for_deletion]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "does not emit the deleted event at schedule time" do
       actor = insert(:user)
       parent = insert(:project, name: "parent")
       sandbox = insert(:project, name: "sandbox", parent: parent)
@@ -2038,14 +2052,14 @@ defmodule Lightning.Projects.SandboxesTest do
 
       {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
 
-      assert_received {^event, ^ref, %{}, %{}}
+      refute_received {^event, ^ref, %{}, %{}}
     end
 
     test "returns :unauthorized when actor lacks delete_sandbox permission" do
       actor = insert(:user)
       sandbox = insert(:project, name: "no-perm")
 
-      event = [:lightning, :sandbox, :deleted]
+      event = [:lightning, :sandbox, :scheduled_for_deletion]
       ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       assert {:error, :unauthorized} =
@@ -2119,6 +2133,22 @@ defmodule Lightning.Projects.SandboxesTest do
                Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
 
       assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "emits the deletion-cancelled telemetry event" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      event = [:lightning, :sandbox, :deletion_cancelled]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
     end
 
     test "leaves un-scheduled siblings untouched when cancelling" do

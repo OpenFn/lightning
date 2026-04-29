@@ -268,14 +268,7 @@ defmodule Lightning.Projects.Sandboxes do
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
-      case Lightning.Projects.delete_project(sandbox) do
-        {:ok, deleted} ->
-          SandboxPromExPlugin.fire_sandbox_deleted_event()
-          {:ok, deleted}
-
-        error ->
-          error
-      end
+      Lightning.Projects.delete_project(sandbox)
     else
       {:error, :unauthorized}
     end
@@ -404,7 +397,7 @@ defmodule Lightning.Projects.Sandboxes do
           set: [enabled: false]
         )
 
-      SandboxPromExPlugin.fire_sandbox_deleted_event()
+      SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
       {:ok, %{sandbox | scheduled_deletion: date}}
     end)
@@ -420,6 +413,8 @@ defmodule Lightning.Projects.Sandboxes do
         ),
         set: [scheduled_deletion: nil]
       )
+
+    SandboxPromExPlugin.fire_sandbox_deletion_cancelled_event()
 
     {:ok, %{sandbox | scheduled_deletion: nil}}
   end
