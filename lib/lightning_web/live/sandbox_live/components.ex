@@ -507,7 +507,8 @@ defmodule LightningWeb.SandboxLive.Components do
       id={"sandbox-card-#{@sandbox.id}"}
       class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 cursor-not-allowed overflow-hidden"
       aria-disabled="true"
-      title="This sandbox is scheduled for deletion. Cancel the deletion to use it again."
+      phx-hook="Tooltip"
+      aria-label="This sandbox is scheduled for deletion. Cancel the deletion to use it again."
     >
       <div class="flex items-stretch">
         <div
