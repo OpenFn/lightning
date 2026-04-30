@@ -502,13 +502,16 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, :map, required: true
 
   defp sandbox_card(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    assigns =
+      assign(assigns, :deletion_tooltip, deletion_tooltip(assigns.sandbox))
+
     ~H"""
     <div
       id={"sandbox-card-#{@sandbox.id}"}
       class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 cursor-not-allowed overflow-hidden"
       aria-disabled="true"
       phx-hook="Tooltip"
-      aria-label="This sandbox is scheduled for deletion. Cancel the deletion to use it again."
+      aria-label={@deletion_tooltip}
     >
       <div class="flex items-stretch">
         <div
@@ -819,6 +822,24 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   defp has_environment?(_), do: false
+
+  defp deletion_tooltip(%{scheduled_deletion: %DateTime{} = at}) do
+    formatted = Calendar.strftime(at, "%d %b %Y")
+
+    "Scheduled for deletion on #{formatted}#{relative_deletion_suffix(at)}. Cancel the deletion to keep it."
+  end
+
+  defp deletion_tooltip(_),
+    do: "Scheduled for deletion. Cancel the deletion to keep it."
+
+  defp relative_deletion_suffix(at) do
+    case DateTime.diff(at, DateTime.utc_now(), :day) do
+      n when n > 1 -> " (in #{n} days)"
+      1 -> " (in 1 day)"
+      0 -> " (today)"
+      _ -> ""
+    end
+  end
 
   defp get_selected_target_label(target_options, selected_target_id) do
     case Enum.find(target_options, &(&1.value == selected_target_id)) do
