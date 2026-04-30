@@ -56,6 +56,14 @@ and this project adheres to
 
 ### Fixed
 
+- Credential form no longer crashes when opening a schema that declares a
+  property `type` as a JSON Schema array (e.g. `["string", "null"]`), as the
+  Browserless adaptor does. The contradictory `null` member in the Browserless
+  schema itself (the field is `required` with `minLength: 1`) is corrected
+  upstream in
+  [`@openfn/language-browserless`](https://github.com/OpenFn/adaptors/pull/1659).
+  [#4647](https://github.com/OpenFn/lightning/issues/4647)
+
 ## [2.16.2] - 2026-04-20
 
 ## [2.16.2-pre1] - 2026-04-20
