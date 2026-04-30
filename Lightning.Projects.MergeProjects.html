@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.2">
+    <meta name="project" content="Lightning v2.16.3-pre">
 
 
-    <title>Lightning.Projects.MergeProjects — Lightning v2.16.2</title>
+    <title>Lightning.Projects.MergeProjects — Lightning v2.16.3-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-4AF24319.js"></script>
+    <script defer src="dist/sidebar_items-FBC2D5E4.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.2
+          v2.16.3-pre
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Projects.MergeProjects</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.2)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.16.3-pre)</small>
 
     </h1>
 
@@ -213,11 +213,11 @@ sandbox workflows back onto their parent workflows.</p>
 
 <p>Returns the list of workflow names that have diverged between source and target projects.</p><p>A workflow is considered diverged when the target project (parent) has changed since the
 sandbox was forked. Specifically, a workflow has diverged if the target's current HEAD
-version is not present in the sandbox's version history.</p><p>Arguments can be reversed to get changes in a sandbox against main.</p><h2 id="diverged_workflows/2-parameters" class="section-heading"><a href="#diverged_workflows/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project</li><li><code class="inline">target_project</code> - The target project to compare against</li></ul><h2 id="diverged_workflows/2-returns" class="section-heading"><a href="#diverged_workflows/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>List of workflow names (strings) that have diverged</li><li>Empty list if no workflows have diverged</li></ul><h2 id="diverged_workflows/2-examples" class="section-heading"><a href="#diverged_workflows/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="0706444756-1">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="0706444756-1">)</span><span class="w">
-</span><span class="p" data-group-id="0706444756-2">[</span><span class="s">&quot;Payment Processing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Data Sync&quot;</span><span class="p" data-group-id="0706444756-2">]</span><span class="w">
+version is not present in the sandbox's version history.</p><p>Arguments can be reversed to get changes in a sandbox against main.</p><h2 id="diverged_workflows/2-parameters" class="section-heading"><a href="#diverged_workflows/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project</li><li><code class="inline">target_project</code> - The target project to compare against</li></ul><h2 id="diverged_workflows/2-returns" class="section-heading"><a href="#diverged_workflows/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>List of workflow names (strings) that have diverged</li><li>Empty list if no workflows have diverged</li></ul><h2 id="diverged_workflows/2-examples" class="section-heading"><a href="#diverged_workflows/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="9845146885-1">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="9845146885-1">)</span><span class="w">
+</span><span class="p" data-group-id="9845146885-2">[</span><span class="s">&quot;Payment Processing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Data Sync&quot;</span><span class="p" data-group-id="9845146885-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="0706444756-3">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="0706444756-3">)</span><span class="w">
-</span><span class="p" data-group-id="0706444756-4">[</span><span class="p" data-group-id="0706444756-4">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="9845146885-3">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="9845146885-3">)</span><span class="w">
+</span><span class="p" data-group-id="9845146885-4">[</span><span class="p" data-group-id="9845146885-4">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="has_diverged?/2">

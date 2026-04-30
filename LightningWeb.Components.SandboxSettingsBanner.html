@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.2">
+    <meta name="project" content="Lightning v2.16.3-pre">
 
 
-    <title>LightningWeb.Components.SandboxSettingsBanner — Lightning v2.16.2</title>
+    <title>LightningWeb.Components.SandboxSettingsBanner — Lightning v2.16.3-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-4AF24319.js"></script>
+    <script defer src="dist/sidebar_items-FBC2D5E4.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.2
+          v2.16.3-pre
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Components.SandboxSettingsBanner</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.2)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.16.3-pre)</small>
 
     </h1>
 
@@ -113,11 +113,11 @@ Lightning
     <section id="moduledoc">
 <p>Banner shown at the top of a Project Settings tab when the project is a
 sandbox, communicating how changes on that tab will (or will not) flow
-to the parent project on merge.</p><p>Three variants:</p><ul><li><code class="inline">:local</code> — changes apply only to this sandbox and do not sync on merge</li><li><code class="inline">:editable</code> — changes will sync to the parent on merge</li><li><code class="inline">:inherited</code> — settings are read-only, managed in the parent project</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">sandbox_settings_banner</span><span class="w"> </span><span class="n">variant</span><span class="o">=</span><span class="p" data-group-id="6957507484-1">{</span><span class="ss">:local</span><span class="p" data-group-id="6957507484-1">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+to the parent project on merge.</p><p>Three variants:</p><ul><li><code class="inline">:local</code> — changes apply only to this sandbox and do not sync on merge</li><li><code class="inline">:editable</code> — changes will sync to the parent on merge</li><li><code class="inline">:inherited</code> — settings are read-only, managed in the parent project</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">sandbox_settings_banner</span><span class="w"> </span><span class="n">variant</span><span class="o">=</span><span class="p" data-group-id="5012576432-1">{</span><span class="ss">:local</span><span class="p" data-group-id="5012576432-1">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
 
 </span><span class="o">&lt;</span><span class="o">.</span><span class="n">sandbox_settings_banner</span><span class="w">
-  </span><span class="n">variant</span><span class="o">=</span><span class="p" data-group-id="6957507484-2">{</span><span class="ss">:inherited</span><span class="p" data-group-id="6957507484-2">}</span><span class="w">
-  </span><span class="n">parent_project</span><span class="o">=</span><span class="p" data-group-id="6957507484-3">{</span><span class="na">@parent_project</span><span class="p" data-group-id="6957507484-3">}</span><span class="w">
+  </span><span class="n">variant</span><span class="o">=</span><span class="p" data-group-id="5012576432-2">{</span><span class="ss">:inherited</span><span class="p" data-group-id="5012576432-2">}</span><span class="w">
+  </span><span class="n">parent_project</span><span class="o">=</span><span class="p" data-group-id="5012576432-3">{</span><span class="na">@parent_project</span><span class="p" data-group-id="5012576432-3">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre>
     </section>
 
