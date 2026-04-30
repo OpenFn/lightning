@@ -19,7 +19,18 @@ and this project adheres to
 
 ### Changed
 
+- Project Settings, Collections panel: rename the "Used Storage (MB)" column to
+  "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
+  instead of integer megabytes. The column is now sortable, alongside the
+  existing Name column. Same change applied on the admin collections index.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+
 ### Fixed
+
+- Collection storage on Project Settings, Collections no longer shows `0` for
+  collections holding less than one megabyte of data. The underlying counter was
+  always correct, the rendering now reflects values at any scale.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
 
 ## [2.16.3-pre] - 2026-04-30
 

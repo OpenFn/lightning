@@ -6900,6 +6900,60 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert flash["error"] == "Collection not found"
     end
+
+    test "collections can be sorted by name and used storage", %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user} | _] = setup_project_users(conn, project, [:owner])
+
+      insert(:collection,
+        project: project,
+        name: "Charlie",
+        byte_size_sum: 100
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Alpha",
+        byte_size_sum: 5_000_000_000
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Bravo",
+        byte_size_sum: 2_500_000
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='name']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+    end
+  end
+
+  defp collection_row_names(view) do
+    view
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("#collections-table-table tbody tr td:first-child")
+    |> Enum.map(&(Floki.text(&1) |> String.trim()))
   end
 
   defp find_selected_option(html, selector) do
