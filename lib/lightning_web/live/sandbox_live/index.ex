@@ -682,14 +682,6 @@ defmodule LightningWeb.SandboxLive.Index do
     put_flash(socket, :error, "Sandbox not found")
   end
 
-  defp handle_cancel_deletion_result({:error, reason}, _sandbox, socket) do
-    put_flash(
-      socket,
-      :error,
-      "Failed to cancel sandbox deletion: #{inspect(reason)}"
-    )
-  end
-
   defp get_merge_target_options(socket, source_sandbox) do
     current_user = socket.assigns.current_user
     root_project = socket.assigns.root_project
