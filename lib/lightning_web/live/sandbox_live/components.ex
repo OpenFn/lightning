@@ -508,10 +508,8 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div
       id={"sandbox-card-#{@sandbox.id}"}
-      class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 cursor-not-allowed overflow-hidden"
+      class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 overflow-hidden"
       aria-disabled="true"
-      phx-hook="Tooltip"
-      aria-label={@deletion_tooltip}
     >
       <div class="flex items-stretch">
         <div
@@ -520,7 +518,12 @@ defmodule LightningWeb.SandboxLive.Components do
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
-          <div class="flex-1 min-w-0">
+          <div
+            id={"sandbox-card-info-#{@sandbox.id}"}
+            class="flex-1 min-w-0 cursor-not-allowed"
+            phx-hook="Tooltip"
+            aria-label={@deletion_tooltip}
+          >
             <div class="flex items-center gap-3 mb-1">
               <h3 class="font-semibold text-lg text-slate-500 line-through truncate">
                 {@sandbox.name}
