@@ -3,7 +3,8 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
   PromEx plugin for sandbox-related telemetry metrics.
 
   Tracks:
-  - Sandbox project creation, merging, and deletion
+  - Sandbox project creation, merging, and the lifecycle of a soft-delete
+    (scheduling, cancelling, and the eventual purge)
   - Workflow saves tagged by project type (sandbox vs regular)
   - Provisioner imports tagged by project type
   """
@@ -13,6 +14,16 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
 
   @sandbox_created_event [:lightning, :sandbox, :created]
   @sandbox_merged_event [:lightning, :sandbox, :merged]
+  @sandbox_scheduled_for_deletion_event [
+    :lightning,
+    :sandbox,
+    :scheduled_for_deletion
+  ]
+  @sandbox_deletion_cancelled_event [
+    :lightning,
+    :sandbox,
+    :deletion_cancelled
+  ]
   @sandbox_deleted_event [:lightning, :sandbox, :deleted]
   @workflow_saved_event [:lightning, :workflow, :saved]
   @provisioner_import_event [:lightning, :provisioner, :import]
@@ -29,6 +40,8 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
     if Lightning.Config.promex_enabled?() do
       seed_counter(@sandbox_created_event ++ [:count], %{})
       seed_counter(@sandbox_merged_event ++ [:count], %{})
+      seed_counter(@sandbox_scheduled_for_deletion_event ++ [:count], %{})
+      seed_counter(@sandbox_deletion_cancelled_event ++ [:count], %{})
       seed_counter(@sandbox_deleted_event ++ [:count], %{})
       seed_counter(@workflow_saved_event ++ [:count], %{is_sandbox: true})
       seed_counter(@workflow_saved_event ++ [:count], %{is_sandbox: false})
@@ -54,8 +67,17 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
       Metrics.counter(@sandbox_merged_event ++ [:count],
         description: "Count of sandbox projects merged into targets."
       ),
+      Metrics.counter(@sandbox_scheduled_for_deletion_event ++ [:count],
+        description:
+          "Count of sandbox projects scheduled for deletion (user clicked delete or merged with the default behaviour)."
+      ),
+      Metrics.counter(@sandbox_deletion_cancelled_event ++ [:count],
+        description:
+          "Count of times a scheduled sandbox deletion was cancelled during the grace period."
+      ),
       Metrics.counter(@sandbox_deleted_event ++ [:count],
-        description: "Count of sandbox projects manually deleted."
+        description:
+          "Count of sandbox projects permanently deleted from the database (purged after the grace period or hard-deleted by an admin)."
       ),
       Metrics.counter(@workflow_saved_event ++ [:count],
         tags: [:is_sandbox],
@@ -80,7 +102,17 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
     :telemetry.execute(@sandbox_merged_event, %{})
   end
 
-  @doc "Fires a telemetry event when a sandbox project is manually deleted."
+  @doc "Fires a telemetry event when a sandbox is scheduled for deletion (user intent)."
+  def fire_sandbox_scheduled_for_deletion_event do
+    :telemetry.execute(@sandbox_scheduled_for_deletion_event, %{})
+  end
+
+  @doc "Fires a telemetry event when a scheduled sandbox deletion is cancelled."
+  def fire_sandbox_deletion_cancelled_event do
+    :telemetry.execute(@sandbox_deletion_cancelled_event, %{})
+  end
+
+  @doc "Fires a telemetry event when a sandbox is permanently deleted from the database."
   def fire_sandbox_deleted_event do
     :telemetry.execute(@sandbox_deleted_event, %{})
   end

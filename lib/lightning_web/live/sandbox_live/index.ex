@@ -163,7 +163,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
         if changeset.valid? do
           {:noreply,
-           Lightning.Projects.delete_sandbox(
+           Sandboxes.schedule_sandbox_deletion(
              sandbox,
              current_user
            )
@@ -177,6 +177,32 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event("close-delete-modal", _params, socket) do
     {:noreply, reset_delete_modal_state(socket)}
+  end
+
+  @impl true
+  def handle_event(
+        "cancel-sandbox-deletion",
+        %{"id" => sandbox_id},
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
+    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+
+      sandbox ->
+        if sandbox.can_cancel_deletion do
+          Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, current_user)
+          |> handle_cancel_deletion_result(sandbox, socket)
+          |> noreply()
+        else
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "You are not authorized to cancel this sandbox's deletion"
+           )}
+        end
+    end
   end
 
   @impl true
@@ -520,10 +546,14 @@ defmodule LightningWeb.SandboxLive.Index do
             merge: false
           })
 
+        scheduled? = not is_nil(sandbox.scheduled_deletion)
+
         sandbox
-        |> Map.put(:can_edit, perms.update)
-        |> Map.put(:can_delete, perms.delete)
-        |> Map.put(:can_merge, perms.merge)
+        |> Map.put(:can_edit, perms.update and not scheduled?)
+        |> Map.put(:can_delete, perms.delete and not scheduled?)
+        |> Map.put(:can_merge, perms.merge and not scheduled?)
+        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
+        |> Map.put(:scheduled_for_deletion?, scheduled?)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
 
@@ -597,7 +627,7 @@ defmodule LightningWeb.SandboxLive.Index do
       socket
       |> put_flash(
         :info,
-        "Sandbox #{deleted_sandbox.name} and all its associated descendants deleted"
+        "Sandbox #{deleted_sandbox.name} scheduled for deletion."
       )
       |> reset_delete_modal_state()
 
@@ -622,8 +652,40 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp handle_sandbox_delete_result({:error, reason}, _sandbox, socket) do
     socket
-    |> put_flash(:error, "Failed to delete sandbox: #{inspect(reason)}")
+    |> put_flash(
+      :error,
+      "Failed to schedule sandbox deletion: #{inspect(reason)}"
+    )
     |> assign(:confirm_delete_open?, false)
+  end
+
+  defp handle_cancel_deletion_result({:ok, _sandbox}, sandbox, socket) do
+    socket
+    |> put_flash(
+      :info,
+      "Cancelled deletion of sandbox #{sandbox.name}."
+    )
+    |> load_workspace_projects()
+  end
+
+  defp handle_cancel_deletion_result({:error, :unauthorized}, _sandbox, socket) do
+    put_flash(
+      socket,
+      :error,
+      "You are not authorized to cancel this sandbox's deletion"
+    )
+  end
+
+  defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket) do
+    put_flash(socket, :error, "Sandbox not found")
+  end
+
+  defp handle_cancel_deletion_result({:error, reason}, _sandbox, socket) do
+    put_flash(
+      socket,
+      :error,
+      "Failed to cancel sandbox deletion: #{inspect(reason)}"
+    )
   end
 
   defp get_merge_target_options(socket, source_sandbox) do
@@ -875,12 +937,14 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp build_merge_success_message(source, target, actor) do
-    case Lightning.Projects.delete_sandbox(source, actor) do
+    case Sandboxes.schedule_sandbox_deletion(source, actor) do
       {:ok, _} ->
-        "Successfully merged #{source.name} into #{target.name} and deleted the sandbox"
+        "Successfully merged #{source.name} into #{target.name}. " <>
+          "Sandbox scheduled for deletion."
 
       {:error, _} ->
-        "Successfully merged #{source.name} into #{target.name}, but could not delete the sandbox"
+        "Successfully merged #{source.name} into #{target.name}, " <>
+          "but could not schedule the sandbox for deletion."
     end
   end
 
