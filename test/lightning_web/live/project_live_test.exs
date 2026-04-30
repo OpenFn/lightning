@@ -6923,8 +6923,12 @@ defmodule LightningWeb.ProjectLiveTest do
         byte_size_sum: 2_500_000
       )
 
-      {:ok, view, _html} =
+      {:ok, view, html} =
         live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert html =~ "100 B"
+      assert html =~ "2.5 MB"
+      assert html =~ "5 GB"
 
       assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
 
