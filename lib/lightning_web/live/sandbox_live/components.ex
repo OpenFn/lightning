@@ -162,7 +162,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
         <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
           <p class="text-sm text-amber-800">
-            This sandbox will be retained for {grace_period_label()} before being permanently removed. Contact a workspace administrator if you need it restored within that window.
+            This sandbox will be retained for {grace_period_label()} before being permanently removed. You can restore it from the sandbox list during that window.
           </p>
         </div>
 
@@ -369,7 +369,7 @@ defmodule LightningWeb.SandboxLive.Components do
             header="This sandbox will be deleted after merging"
           >
             <:message>
-              It can be restored by a workspace administrator for {grace_period_label()}, then permanently removed.
+              It can be restored from the sandbox list for {grace_period_label()}, then permanently removed.
               <div :if={@descendant_count == 1} class="mt-2">
                 Child sandbox <strong>{List.first(@descendants).name}</strong>
                 will also be deleted.
