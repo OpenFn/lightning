@@ -88,6 +88,7 @@ export function TemplateSearchInput({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        autoComplete="off"
         className={cn(
           'block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg',
           'text-sm placeholder-gray-400',

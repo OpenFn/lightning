@@ -72,6 +72,7 @@ export function SelectedDataclipView({
               <input
                 type="text"
                 value={editedName}
+                autoComplete="off"
                 onChange={e => setEditedName(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !isSaving) {

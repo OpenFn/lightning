@@ -56,6 +56,8 @@ and this project adheres to
 
 ### Fixed
 
+- Only allow auto-completion in relevant input fields
+  [#1553](https://github.com/OpenFn/lightning/issues/1553)
 - Credential form no longer crashes when opening a schema that declares a
   property `type` as a JSON Schema array (e.g. `["string", "null"]`), as the
   Browserless adaptor does. The contradictory `null` member in the Browserless
