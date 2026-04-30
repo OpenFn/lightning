@@ -521,6 +521,16 @@ defmodule LightningWeb.SandboxLive.Components do
               <h3 class="font-semibold text-lg text-slate-500 line-through truncate">
                 {@sandbox.name}
               </h3>
+              <.badge
+                :if={has_environment?(@sandbox)}
+                id={"env-badge-#{@sandbox.id}"}
+                env={@sandbox.env}
+              />
+              <.badge
+                :if={@sandbox.is_current}
+                id={"active-badge-#{@sandbox.id}"}
+                env="active"
+              />
               <span
                 id={"scheduled-deletion-badge-#{@sandbox.id}"}
                 class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
