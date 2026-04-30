@@ -120,8 +120,11 @@ defmodule LightningWeb.RunChannel do
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        # Broadcast webhook response if after_completion is enabled
-        maybe_broadcast_webhook_response(run_with_preloads, payload)
+        # Broadcast webhook response for after_completion mode
+        maybe_broadcast_webhook_response(
+          run_with_preloads,
+          payload["final_state"]
+        )
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -306,51 +309,109 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(run, payload) do
-    work_order = run.work_order
-    trigger = work_order.trigger
-
-    if trigger && trigger.type == :webhook &&
-         trigger.webhook_reply == :after_completion do
-      topic = "work_order:#{work_order.id}:webhook_response"
-
-      # TODO - Later allow workflow authors to customize the status code
-      # and body of the reply.
-      status_code = determine_status_code(run.state)
-
-      body = %{
-        data: payload["final_state"],
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: run.state,
-          error_type: run.error_type,
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
-      }
+  defp maybe_broadcast_webhook_response(
+         run,
+         final_state
+       ) do
+    if run.work_order.trigger.webhook_reply == :after_completion do
+      {status_code, body} =
+        determine_webhook_response(
+          run,
+          final_state,
+          run.work_order.trigger.sync_webhook_response_config
+        )
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        topic,
+        "work_order:#{run.work_order_id}:webhook_response",
         {:webhook_response, status_code, body}
       )
     end
   end
 
-  # TODO - decide how we should respond... do we use HTTP codes for run states?
-  defp determine_status_code(state) do
-    case state do
-      :success -> 201
-      :failed -> 201
-      :crashed -> 201
-      :exception -> 201
-      :killed -> 201
-      :cancelled -> 201
-      _other -> 201
+  defp determine_webhook_response(run, final_state, config) do
+    (final_state || %{})
+    |> Map.get("_webhookResponse")
+    |> case do
+      resp when is_nil(resp) or resp == %{} ->
+        build_default_response(run, final_state, config)
+
+      resp when is_map(resp) ->
+        build_response_from_state(resp, run, final_state, config)
+
+      _non_map ->
+        build_default_response(run, final_state, config)
     end
+  end
+
+  defp build_response_from_state(webhook_response, run, final_state, config) do
+    with {:ok, custom_status} <- parse_webhook_status(webhook_response),
+         {:ok, custom_body} <- parse_webhook_body(webhook_response) do
+      status = custom_status || default_response_status(run.state, config)
+      body = custom_body || default_response_body(run.state, final_state, config)
+      {status, body}
+    else
+      {:error, reason} -> malformed_response(reason)
+    end
+  end
+
+  defp parse_webhook_status(webhook_response) do
+    case Map.fetch(webhook_response, "status") do
+      :error ->
+        {:ok, nil}
+
+      {:ok, status} when is_integer(status) ->
+        {:ok, status}
+
+      {:ok, status} when is_float(status) ->
+        {:ok, trunc(status)}
+
+      {:ok, status} ->
+        {:error, "status needs to be an integer, got: #{inspect(status)}"}
+    end
+  end
+
+  defp parse_webhook_body(webhook_response) do
+    case Map.fetch(webhook_response, "body") do
+      :error ->
+        {:ok, nil}
+
+      {:ok, body} when is_map(body) ->
+        {:ok, body}
+
+      {:ok, body} ->
+        {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
+    end
+  end
+
+  defp build_default_response(run, final_state, config) do
+    {default_response_status(run.state, config),
+     default_response_body(run.state, final_state, config)}
+  end
+
+  defp default_response_status(:success, %{success_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, %{error_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, _config), do: 201
+
+  defp default_response_body(:success, final_state, _config),
+    do: final_state
+
+  defp default_response_body(run_status, _final_state, _config) do
+    %{
+      message:
+        "Run completed with status: #{run_status}. As a security policy, OpenFn does not send state data when the run errors out to avoid leaking sensitive information"
+    }
+  end
+
+  defp malformed_response(reason) do
+    {201,
+     %{message: "Run completed, but _webhookResponse was malformed: #{reason}"}}
   end
 
   defp update_scrubber(nil, samples, basic_auth) do

@@ -32,6 +32,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
@@ -455,6 +456,8 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp trigger_changeset(trigger, attrs) do
+    attrs = remap_webhook_response(attrs)
+
     trigger
     |> Trigger.cast_changeset(attrs)
     |> cast_embed(
@@ -462,12 +465,27 @@ defmodule Lightning.Projects.Provisioner do
       required: false,
       with: &kafka_config_changeset/2
     )
+    |> cast_embed(
+      :sync_webhook_response_config,
+      required: false,
+      with: &SyncWebhookResponseConfig.changeset/2
+    )
     |> Trigger.validate()
     |> cast(attrs, [:delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :triggers_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
+  end
+
+  defp remap_webhook_response(attrs) do
+    case Map.pop(attrs, "webhook_response") do
+      {nil, attrs} ->
+        attrs
+
+      {config, attrs} ->
+        Map.put(attrs, "sync_webhook_response_config", config)
+    end
   end
 
   defp kafka_config_changeset(kafka_config, attrs) do

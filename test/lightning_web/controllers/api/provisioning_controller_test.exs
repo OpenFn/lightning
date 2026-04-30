@@ -594,6 +594,79 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } = trigger_json
     end
 
+    test "returns webhook_response when sync_webhook_response_config is set", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          webhook_reply: :after_completion,
+          sync_webhook_response_config:
+            build(:sync_webhook_response_config,
+              success_code: 200,
+              error_code: 500
+            )
+        )
+
+      job = build(:job)
+
+      %{triggers: [%{id: trigger_id}]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "webhook",
+               "webhook_reply" => "after_completion",
+               "webhook_response" => %{
+                 "success_code" => 200,
+                 "error_code" => 500
+               }
+             } = trigger_json
+    end
+
+    test "omits webhook_response when sync_webhook_response_config is nil", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger = build(:trigger, type: :webhook)
+      job = build(:job)
+
+      build(:workflow, project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [%{"triggers" => [trigger_json]}]
+             } = response["data"]
+
+      refute Map.has_key?(trigger_json, "webhook_response")
+    end
+
     test "returns a cron trigger with cron_cursor_job_id in the response", %{
       conn: conn,
       user: user

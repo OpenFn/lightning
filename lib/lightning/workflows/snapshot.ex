@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -64,6 +65,9 @@ defmodule Lightning.Workflows.Snapshot do
         values: [:before_start, :after_completion, :custom],
         default: :before_start
 
+      embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
+        on_replace: :update
+
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
         on_replace: :delete
@@ -111,7 +115,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   @job_fields Lightning.Workflows.Job.__schema__(:fields) -- [:workflow_id]
   @trigger_fields Lightning.Workflows.Trigger.__schema__(:fields) --
-                    [:workflow_id]
+                    [:workflow_id, :sync_webhook_response_config]
   @edge_fields Lightning.Workflows.Edge.__schema__(:fields) -- [:workflow_id]
 
   defp job_changeset(schema, params) do
@@ -124,6 +128,10 @@ defmodule Lightning.Workflows.Snapshot do
     schema
     |> cast(params, @trigger_fields)
     |> validate_required([:id, :inserted_at, :updated_at])
+    |> cast_embed(:sync_webhook_response_config,
+      required: false,
+      with: &SyncWebhookResponseConfig.changeset/2
+    )
   end
 
   defp edge_changeset(schema, params) do
@@ -142,7 +150,7 @@ defmodule Lightning.Workflows.Snapshot do
     |> Enum.into(%{}, fn {field, value} ->
       case field do
         field when field in @associations_to_include ->
-          {field, Enum.map(value, &Map.from_struct/1)}
+          {field, assoc_to_map(field, value)}
 
         field when field in [:name, :lock_version, :positions] ->
           {field, value}
@@ -156,6 +164,40 @@ defmodule Lightning.Workflows.Snapshot do
     end)
     |> new()
   end
+
+  defp assoc_to_map(field, structs) when is_list(structs) do
+    Enum.map(structs, &assoc_to_map(field, &1))
+  end
+
+  defp assoc_to_map(:triggers, %module{} = struct) do
+    base = Ecto.embedded_dump(struct, :json)
+
+    module.__schema__(:embeds)
+    |> Enum.reduce(base, fn field, acc ->
+      embed = Map.get(struct, field)
+      Map.put(acc, field, embed_to_map(embed))
+    end)
+  end
+
+  defp assoc_to_map(_, %_{} = struct) do
+    Ecto.embedded_dump(struct, :json)
+  end
+
+  defp embed_to_map(%module{} = struct) do
+    base = Ecto.embedded_dump(struct, :json)
+
+    module.__schema__(:embeds)
+    |> Enum.reduce(base, fn field, acc ->
+      embed = Map.get(struct, field)
+      Map.put(acc, field, embed_to_map(embed))
+    end)
+  end
+
+  defp embed_to_map(embeds) when is_list(embeds) do
+    Enum.map(embeds, &embed_to_map/1)
+  end
+
+  defp embed_to_map(nil), do: nil
 
   @spec create(Workflow.t()) ::
           {:ok, t()} | {:error, Ecto.Changeset.t()}

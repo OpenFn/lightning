@@ -16,6 +16,7 @@ defmodule Lightning.Workflows.Trigger do
 
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -36,7 +37,8 @@ defmodule Lightning.Workflows.Trigger do
              :cron_cursor_job_id,
              :type,
              :enabled,
-             :webhook_reply
+             :webhook_reply,
+             :sync_webhook_response_config
            ]}
   schema "triggers" do
     field :comment, :string
@@ -62,6 +64,9 @@ defmodule Lightning.Workflows.Trigger do
 
     embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
+    embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
+      on_replace: :update
+
     timestamps()
   end
 
@@ -85,10 +90,13 @@ defmodule Lightning.Workflows.Trigger do
   def changeset(trigger, attrs) do
     trigger
     |> cast_changeset(attrs)
-    |> cast_embed(
-      :kafka_configuration,
+    |> cast_embed(:kafka_configuration,
       required: false,
       with: &KafkaConfiguration.changeset/2
+    )
+    |> cast_embed(:sync_webhook_response_config,
+      required: false,
+      with: &SyncWebhookResponseConfig.changeset/2
     )
     |> validate()
   end
@@ -141,6 +149,7 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
+        |> maybe_clear_sync_config()
 
       :cron ->
         changeset
@@ -148,6 +157,7 @@ defmodule Lightning.Workflows.Trigger do
         |> validate_cron()
         |> put_change(:kafka_configuration, nil)
         |> put_change(:webhook_reply, nil)
+        |> put_change(:sync_webhook_response_config, nil)
 
       :kafka ->
         changeset
@@ -155,9 +165,17 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
+        |> put_change(:sync_webhook_response_config, nil)
 
       nil ->
         changeset
+    end
+  end
+
+  defp maybe_clear_sync_config(changeset) do
+    case fetch_field!(changeset, :webhook_reply) do
+      :after_completion -> changeset
+      _ -> put_change(changeset, :sync_webhook_response_config, nil)
     end
   end
 

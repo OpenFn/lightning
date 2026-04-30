@@ -102,11 +102,19 @@ defmodule LightningWeb.API.ProvisioningJSON do
           ~w(hosts topics initial_offset_reset_policy connect_timeout)a
         )
 
+    webhook_response =
+      trigger.sync_webhook_response_config &&
+        Map.take(trigger.sync_webhook_response_config, [
+          :success_code,
+          :error_code
+        ])
+
     trigger
     |> Map.take(
       ~w(id type cron_expression enabled webhook_reply cron_cursor_job_id)a
     )
     |> Map.put(:kafka_configuration, kafka_configuration)
+    |> Map.put(:webhook_response, webhook_response)
     |> drop_keys_with_nil_value()
   end
 

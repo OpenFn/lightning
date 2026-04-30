@@ -31,6 +31,7 @@ defmodule Lightning.ExportUtils do
     trigger: [
       :type,
       :webhook_reply,
+      :webhook_response,
       :cron_expression,
       :cron_cursor_job,
       :enabled,
@@ -121,13 +122,36 @@ defmodule Lightning.ExportUtils do
         Map.put(base, :kafka_configuration, kafka_config)
 
       :webhook ->
-        if trigger.webhook_reply do
-          Map.put(base, :webhook_reply, Atom.to_string(trigger.webhook_reply))
-        else
-          base
-        end
+        base
+        |> maybe_put_webhook_reply(trigger.webhook_reply)
+        |> maybe_put_webhook_response(trigger.sync_webhook_response_config)
     end
   end
+
+  defp maybe_put_webhook_reply(map, nil), do: map
+
+  defp maybe_put_webhook_reply(map, reply) when is_atom(reply) do
+    Map.put(map, :webhook_reply, Atom.to_string(reply))
+  end
+
+  defp maybe_put_webhook_response(map, %{} = config) do
+    webhook_response =
+      Map.reject(
+        %{
+          success_code: config.success_code,
+          error_code: config.error_code
+        },
+        fn {_k, v} -> is_nil(v) end
+      )
+
+    if map_size(webhook_response) > 0 do
+      Map.put(map, :webhook_response, webhook_response)
+    else
+      map
+    end
+  end
+
+  defp maybe_put_webhook_response(map, _), do: map
 
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
     source_trigger =
