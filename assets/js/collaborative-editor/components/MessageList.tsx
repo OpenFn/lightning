@@ -11,6 +11,15 @@ import { Tooltip } from '../../components/Tooltip';
 
 const STREAMING_MESSAGE_ID = '__streaming__' as const;
 
+const LOADING_STATUSES = [
+  'Thinking about the question...',
+  'Working on it...',
+  'Processing your request...',
+  'Examining your question...',
+  'Taking a look...',
+  'Looking into it...',
+] as const;
+
 const PROSE_CLASSES =
   'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
 
@@ -416,6 +425,14 @@ export function MessageList({
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
+  // Pick a new random status each time loading starts so it stays
+  // stable across re-renders within one loading session.
+  const loadingStatus = useMemo(
+    () =>
+      LOADING_STATUSES[Math.floor(Math.random() * LOADING_STATUSES.length)],
+    [isLoading]
+  );
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -773,7 +790,7 @@ export function MessageList({
                 <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
               </div>
               <span className="text-xs text-gray-400 italic">
-                {streamingStatus || 'Generating response...'}
+                {streamingStatus || loadingStatus}
               </span>
             </div>
           </div>
