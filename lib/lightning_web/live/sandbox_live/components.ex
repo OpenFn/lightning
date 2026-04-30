@@ -501,16 +501,46 @@ defmodule LightningWeb.SandboxLive.Components do
 
   attr :sandbox, :map, required: true
 
+  defp sandbox_card(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    ~H"""
+    <div
+      id={"sandbox-card-#{@sandbox.id}"}
+      class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 cursor-not-allowed overflow-hidden"
+      aria-disabled="true"
+      title="This sandbox is scheduled for deletion. Cancel the deletion to use it again."
+    >
+      <div class="flex items-stretch">
+        <div
+          class="w-3 flex-shrink-0 opacity-60"
+          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+        >
+        </div>
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-lg text-slate-500 line-through truncate">
+                {@sandbox.name}
+              </h3>
+              <span
+                id={"scheduled-deletion-badge-#{@sandbox.id}"}
+                class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
+              >
+                <.icon name="hero-clock-mini" class="h-3.5 w-3.5" />
+                Scheduled for deletion
+              </span>
+            </div>
+          </div>
+          <.sandbox_actions sandbox={@sandbox} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   defp sandbox_card(assigns) do
     ~H"""
     <div
-      class={[
-        "group block rounded-xl border transition-all duration-200 overflow-hidden",
-        if(@sandbox.scheduled_for_deletion?,
-          do: "bg-amber-50/40 border-amber-200 cursor-pointer hover:bg-amber-50/70",
-          else: "bg-white border-gray-200 hover:bg-gray-50 cursor-pointer"
-        )
-      ]}
+      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 overflow-hidden"
       phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
       role="button"
       tabindex="0"
@@ -524,13 +554,7 @@ defmodule LightningWeb.SandboxLive.Components do
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-1">
-              <h3 class={[
-                "font-semibold text-lg group-hover:text-slate-800 truncate",
-                if(@sandbox.scheduled_for_deletion?,
-                  do: "text-slate-500",
-                  else: "text-slate-900"
-                )
-              ]}>
+              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
                 {@sandbox.name}
               </h3>
               <.badge
@@ -543,14 +567,6 @@ defmodule LightningWeb.SandboxLive.Components do
                 id={"active-badge-#{@sandbox.id}"}
                 env="active"
               />
-              <span
-                :if={@sandbox.scheduled_for_deletion?}
-                id={"scheduled-deletion-badge-#{@sandbox.id}"}
-                class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
-              >
-                <.icon name="hero-clock-mini" class="h-3.5 w-3.5" />
-                Scheduled for deletion
-              </span>
             </div>
           </div>
           <.sandbox_actions sandbox={@sandbox} />
