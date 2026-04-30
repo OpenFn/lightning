@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.3-pre] - 2026-04-30
+
+### Added
+
 - Add support for sync v2 protocol
   [#4523](https://github.com/OpenFn/lightning/issues/4523)
 - Support collections in sandboxes. Collection names are now scoped per project,
