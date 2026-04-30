@@ -129,6 +129,10 @@ and this project adheres to
   to send emails. This is now fixed for a limited number of use cases (see
   (DEPLOYMENT.md)[https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#mail]
   for details). [#4602](https://github.com/OpenFn/lightning/issues/4602)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy and
+  sandbox merge
+  [#4596](https://github.com/OpenFn/lightning/issues/4596)
 
 ## [2.16.1] - 2026-04-07
 
