@@ -593,7 +593,7 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <span
       id={@id}
-      class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32"
+      class="inline-block px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full truncate max-w-32"
     >
       {@env}
     </span>
