@@ -56,6 +56,9 @@ and this project adheres to
 
 ### Fixed
 
+- Only allow auto-completion in relevant input fields
+  [#1553](https://github.com/OpenFn/lightning/issues/1553)
+
 ## [2.16.2] - 2026-04-20
 
 ## [2.16.2-pre1] - 2026-04-20
