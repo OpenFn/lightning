@@ -632,7 +632,9 @@ defmodule LightningWeb.SandboxLive.Index do
       |> reset_delete_modal_state()
 
     if should_redirect do
-      push_navigate(socket_to_return, to: ~p"/projects/#{root_project.id}/w")
+      push_navigate(socket_to_return,
+        to: ~p"/projects/#{deleted_sandbox.parent_id}/sandboxes"
+      )
     else
       load_workspace_projects(socket_to_return)
     end

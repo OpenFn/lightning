@@ -766,7 +766,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       )
       |> render_submit()
 
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+      assert_redirect(view, ~p"/projects/#{parent.id}/sandboxes")
     end
 
     test "deleting sandbox does not redirect when current project is not descendant",
