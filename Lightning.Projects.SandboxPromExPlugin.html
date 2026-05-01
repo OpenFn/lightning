@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B77B15F8.js"></script>
+    <script defer src="dist/sidebar_items-9C7888CA.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -111,7 +111,8 @@ Lightning
 
 
     <section id="moduledoc">
-<p>PromEx plugin for sandbox-related telemetry metrics.</p><p>Tracks:</p><ul><li>Sandbox project creation, merging, and deletion</li><li>Workflow saves tagged by project type (sandbox vs regular)</li><li>Provisioner imports tagged by project type</li></ul>
+<p>PromEx plugin for sandbox-related telemetry metrics.</p><p>Tracks:</p><ul><li>Sandbox project creation, merging, and the lifecycle of a soft-delete
+(scheduling, cancelling, and the eventual purge)</li><li>Workflow saves tagged by project type (sandbox vs regular)</li><li>Provisioner imports tagged by project type</li></ul>
     </section>
 
 </div>
@@ -154,7 +155,17 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><p>Fires a telemetry event when a sandbox project is manually deleted.</p></div>
+        <div class="summary-synopsis"><p>Fires a telemetry event when a sandbox is permanently deleted from the database.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#fire_sandbox_deletion_cancelled_event/0" data-no-tooltip="" translate="no">fire_sandbox_deletion_cancelled_event()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fires a telemetry event when a scheduled sandbox deletion is cancelled.</p></div>
 
     </div>
 
@@ -165,6 +176,16 @@ Lightning
       </div>
 
         <div class="summary-synopsis"><p>Fires a telemetry event when a sandbox project is merged into its target.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#fire_sandbox_scheduled_for_deletion_event/0" data-no-tooltip="" translate="no">fire_sandbox_scheduled_for_deletion_event()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fires a telemetry event when a sandbox is scheduled for deletion (user intent).</p></div>
 
     </div>
 
@@ -212,7 +233,7 @@ Lightning
       <h1 class="signature" translate="no">fire_provisioner_import_event(is_sandbox)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L128" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -234,7 +255,7 @@ Lightning
       <h1 class="signature" translate="no">fire_sandbox_created_event()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L96" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -256,7 +277,7 @@ Lightning
       <h1 class="signature" translate="no">fire_sandbox_deleted_event()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L84" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L116" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -265,7 +286,29 @@ Lightning
 
   <section class="docstring">
 
-<p>Fires a telemetry event when a sandbox project is manually deleted.</p>
+<p>Fires a telemetry event when a sandbox is permanently deleted from the database.</p>
+  </section>
+</section>
+<section class="detail" id="fire_sandbox_deletion_cancelled_event/0">
+
+  <div class="detail-header">
+    <a href="#fire_sandbox_deletion_cancelled_event/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fire_sandbox_deletion_cancelled_event()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Fires a telemetry event when a scheduled sandbox deletion is cancelled.</p>
   </section>
 </section>
 <section class="detail" id="fire_sandbox_merged_event/0">
@@ -278,7 +321,7 @@ Lightning
       <h1 class="signature" translate="no">fire_sandbox_merged_event()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L79" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L101" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -288,6 +331,28 @@ Lightning
   <section class="docstring">
 
 <p>Fires a telemetry event when a sandbox project is merged into its target.</p>
+  </section>
+</section>
+<section class="detail" id="fire_sandbox_scheduled_for_deletion_event/0">
+
+  <div class="detail-header">
+    <a href="#fire_sandbox_scheduled_for_deletion_event/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fire_sandbox_scheduled_for_deletion_event()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L106" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Fires a telemetry event when a sandbox is scheduled for deletion (user intent).</p>
   </section>
 </section>
 <section class="detail" id="fire_workflow_saved_event/1">
@@ -300,7 +365,7 @@ Lightning
       <h1 class="signature" translate="no">fire_workflow_saved_event(is_sandbox)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L121" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -322,7 +387,7 @@ Lightning
       <h1 class="signature" translate="no">seed_event_metrics()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandbox_prom_ex_plugin.ex#L39" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
