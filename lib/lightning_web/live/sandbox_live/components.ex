@@ -71,39 +71,58 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :disabled_button_tooltip, :string, default: nil
 
   def workspace_list(assigns) do
+    {scheduled, active} =
+      Enum.split_with(assigns.sandboxes, & &1.scheduled_for_deletion?)
+
+    assigns =
+      assigns
+      |> assign(:active_sandboxes, active)
+      |> assign(:scheduled_sandboxes, scheduled)
+
     ~H"""
-    <div class="space-y-3">
-      <div>
-        <.root_project_card
-          root_project={@root_project}
-          is_current={@current_project.id == @root_project.id}
-        />
-      </div>
-      <div>
-        <%= if Enum.empty?(@sandboxes) do %>
-          <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
-            <div class="space-y-3">
-              <div class="text-base font-medium">No sandboxes found</div>
-              <div class="text-sm">
-                <%= if @enable_create_button do %>
-                  <.link
-                    navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
-                    class="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Create your first sandbox
-                  </.link>
-                  to start experimenting.
-                <% else %>
-                  {@disabled_button_tooltip}
-                <% end %>
+    <div class="space-y-8">
+      <div class="space-y-3">
+        <div>
+          <.root_project_card
+            root_project={@root_project}
+            is_current={@current_project.id == @root_project.id}
+          />
+        </div>
+        <div>
+          <%= if Enum.empty?(@active_sandboxes) and Enum.empty?(@scheduled_sandboxes) do %>
+            <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
+              <div class="space-y-3">
+                <div class="text-base font-medium">No sandboxes found</div>
+                <div class="text-sm">
+                  <%= if @enable_create_button do %>
+                    <.link
+                      navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
+                      class="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Create your first sandbox
+                    </.link>
+                    to start experimenting.
+                  <% else %>
+                    {@disabled_button_tooltip}
+                  <% end %>
+                </div>
               </div>
             </div>
-          </div>
-        <% else %>
-          <div class="space-y-3">
-            <.sandbox_card :for={sandbox <- @sandboxes} sandbox={sandbox} />
-          </div>
-        <% end %>
+          <% else %>
+            <div class="space-y-3">
+              <.sandbox_card :for={sandbox <- @active_sandboxes} sandbox={sandbox} />
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div :if={@scheduled_sandboxes != []} id="scheduled-for-deletion-section">
+        <h2 class="text-2xl font-bold text-slate-900 mb-3">
+          Scheduled for deletion
+        </h2>
+        <div class="space-y-3">
+          <.sandbox_card :for={sandbox <- @scheduled_sandboxes} sandbox={sandbox} />
+        </div>
       </div>
     </div>
     """
@@ -538,13 +557,6 @@ defmodule LightningWeb.SandboxLive.Components do
                 id={"active-badge-#{@sandbox.id}"}
                 env="active"
               />
-              <span
-                id={"scheduled-deletion-badge-#{@sandbox.id}"}
-                class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
-              >
-                <.icon name="hero-clock-mini" class="h-3.5 w-3.5" />
-                Scheduled for deletion
-              </span>
             </div>
           </div>
           <.sandbox_actions sandbox={@sandbox} />

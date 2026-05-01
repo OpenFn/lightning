@@ -872,12 +872,21 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, parent: parent, scheduled: scheduled}
     end
 
-    test "shows scheduled sandboxes with a deletion badge and cancel action",
+    test "lists scheduled sandboxes under a separate section with the cancel action",
          %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      assert html =~ "Scheduled for deletion"
-      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      assert has_element?(
+               view,
+               "#scheduled-for-deletion-section",
+               "Scheduled for deletion"
+             )
+
+      assert has_element?(
+               view,
+               ~s(#scheduled-for-deletion-section #sandbox-card-#{scheduled.id}[aria-disabled="true"])
+             )
+
       assert has_element?(view, "#cancel-deletion-sandbox-#{scheduled.id}")
       refute has_element?(view, "#delete-sandbox-#{scheduled.id}")
       refute has_element?(view, "#edit-sandbox-#{scheduled.id}")
@@ -956,7 +965,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert render(view) =~ "Cancelled deletion of sandbox #{scheduled.name}"
       assert Repo.get!(Project, scheduled.id).scheduled_deletion == nil
-      refute has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      refute has_element?(view, "#scheduled-for-deletion-section")
       assert has_element?(view, "#delete-sandbox-#{scheduled.id}")
     end
 
@@ -975,7 +984,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      assert has_element?(
+               view,
+               ~s(#sandbox-card-#{scheduled.id}[aria-disabled="true"])
+             )
 
       refute has_element?(
                view,
@@ -1137,7 +1149,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      assert has_element?(
+               view,
+               ~s(#sandbox-card-#{scheduled.id}[aria-disabled="true"])
+             )
+
       refute render(view) =~ "(in"
     end
   end
