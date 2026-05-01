@@ -485,6 +485,45 @@ defmodule LightningWeb.SandboxLive.IndexTest do
              |> has_element?()
     end
 
+    test "delete modal mentions the configured grace period when no purge window is set",
+         %{conn: conn, parent: parent, sb1: sb1} do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        view
+        |> element("#delete-sandbox-#{sb1.id} button")
+        |> render_click()
+
+      assert html =~ "the configured grace period"
+    end
+
+    test "delete modal uses singular '1 day' when grace period is one day",
+         %{conn: conn, parent: parent, sb1: sb1} do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, 1)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        view
+        |> element("#delete-sandbox-#{sb1.id} button")
+        |> render_click()
+
+      assert html =~ "retained for 1 day "
+      refute html =~ "retained for 1 days"
+    end
+
     test "confirm-delete-validate ignores event when no sandbox selected" do
       socket = %Phoenix.LiveView.Socket{
         assigns: %{
@@ -845,6 +884,68 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#branch-rewire-sandbox-#{scheduled.id}")
     end
 
+    test "shows the env badge on a scheduled sandbox card", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "p-env",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      scheduled =
+        insert(:project,
+          name: "scheduled-with-env",
+          env: "production",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "#env-badge-#{scheduled.id}", "production")
+    end
+
+    test "shows the active badge when the current project gets scheduled mid-session",
+         %{conn: conn, user: user} do
+      grandparent =
+        insert(:project,
+          name: "gp-active",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      current =
+        insert(:project,
+          name: "current-mid-session",
+          parent: grandparent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sibling =
+        insert(:project,
+          name: "sibling",
+          parent: grandparent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{current.id}/sandboxes")
+
+      Repo.update!(
+        Ecto.Changeset.change(current,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      view
+      |> element("#cancel-deletion-sandbox-#{sibling.id} button")
+      |> render_click()
+
+      assert has_element?(view, "#active-badge-#{current.id}", "active")
+    end
+
     test "cancelling deletion clears scheduled_deletion and refreshes the list",
          %{conn: conn, parent: parent, scheduled: scheduled} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
@@ -880,6 +981,164 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                view,
                "#cancel-deletion-sandbox-#{scheduled.id} button:not([disabled])"
              )
+    end
+
+    test "cancel-sandbox-deletion with an unknown id flashes a not-found error",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        render_click(view, "cancel-sandbox-deletion", %{
+          "id" => Ecto.UUID.generate()
+        })
+
+      assert html =~ "Sandbox not found"
+    end
+
+    test "flashes an unauthorized error when the context refuses the cancel",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :cancel_scheduled_sandbox_deletion,
+        fn _sandbox, _actor -> {:error, :unauthorized} end
+      )
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      html =
+        view
+        |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
+        |> render_click()
+
+      assert html =~
+               "You are not authorized to cancel this sandbox&#39;s deletion"
+    end
+
+    test "flashes a not-found error when the sandbox vanished before the cancel",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :cancel_scheduled_sandbox_deletion,
+        fn _sandbox, _actor -> {:error, :not_found} end
+      )
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      html =
+        view
+        |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
+        |> render_click()
+
+      assert html =~ "Sandbox not found"
+    end
+
+    test "tooltip shows the day count when scheduled more than a day out", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "p-multi-day",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _scheduled =
+        insert(:project,
+          name: "later",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(5, :day)
+            |> DateTime.truncate(:second)
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert html =~ ~r/\(in \d+ days\)/
+    end
+
+    test "tooltip shows '1 day' when scheduled exactly one day out", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "p-1day",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _scheduled =
+        insert(:project,
+          name: "soon",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(1, :day)
+            |> DateTime.truncate(:second)
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert html =~ "(in 1 day)"
+    end
+
+    test "tooltip shows '(today)' when scheduled within the same day", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "p-today",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _scheduled =
+        insert(:project,
+          name: "now",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(2, :hour)
+            |> DateTime.truncate(:second)
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert html =~ "(today)"
+    end
+
+    test "tooltip omits the relative suffix when scheduled in the past", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "p-past",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      scheduled =
+        insert(:project,
+          name: "overdue",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(-2, :day)
+            |> DateTime.truncate(:second)
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "#scheduled-deletion-badge-#{scheduled.id}")
+      refute render(view) =~ "(in"
     end
   end
 

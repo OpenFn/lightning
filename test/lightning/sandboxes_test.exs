@@ -1948,6 +1948,26 @@ defmodule Lightning.Projects.SandboxesTest do
       assert diff_seconds in (7 * 86_400 - 5)..(7 * 86_400 + 5)
     end
 
+    test "schedules at now when PURGE_DELETED_AFTER_DAYS is nil" do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      before = DateTime.utc_now()
+      {:ok, scheduled} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      diff_seconds = DateTime.diff(scheduled.scheduled_deletion, before)
+      assert abs(diff_seconds) <= 5
+    end
+
     test "cascades scheduled_deletion to descendants" do
       actor = insert(:user)
       grandparent = insert(:project, name: "gp")

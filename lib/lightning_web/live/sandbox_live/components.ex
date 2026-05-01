@@ -828,12 +828,10 @@ defmodule LightningWeb.SandboxLive.Components do
 
   defp deletion_tooltip(%{scheduled_deletion: %DateTime{} = at}) do
     formatted = Calendar.strftime(at, "%d %b %Y")
+    suffix = relative_deletion_suffix(at)
 
-    "Scheduled for deletion on #{formatted}#{relative_deletion_suffix(at)}. Cancel the deletion to restore it."
+    "Scheduled for deletion on #{formatted}#{suffix}. Cancel the deletion to restore it."
   end
-
-  defp deletion_tooltip(_),
-    do: "Scheduled for deletion. Cancel the deletion to restore it."
 
   defp relative_deletion_suffix(at) do
     case DateTime.diff(at, DateTime.utc_now(), :day) do
