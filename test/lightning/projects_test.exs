@@ -1996,6 +1996,60 @@ defmodule Lightning.ProjectsTest do
                %ProjectOverviewRow{id: ^may_id}
              ] = asc
     end
+
+    test "support-user view sorts projects with no workflows below those with activity" do
+      # Covers the `nil -> 0` branch in the in-memory sort key helper: a
+      # project with no workflows has `last_updated_at: nil`, which should
+      # sort below any project with real activity in descending order.
+      user = insert(:user, support_user: true)
+
+      project_with_activity =
+        %{id: with_id} =
+        insert(:project,
+          name: "With Activity",
+          allow_support_access: true
+        )
+
+      %{id: without_id} =
+        insert(:project,
+          name: "No Activity",
+          allow_support_access: true
+        )
+
+      insert(:simple_workflow,
+        project: project_with_activity,
+        updated_at: ~U[2026-05-01 01:10:00Z]
+      )
+
+      desc =
+        Projects.get_projects_overview(user, order_by: {:last_updated_at, :desc})
+
+      assert [
+               %ProjectOverviewRow{id: ^with_id},
+               %ProjectOverviewRow{id: ^without_id}
+             ] = desc
+    end
+
+    test "support-user view sorts by name when requested" do
+      # Covers the `other -> other` branch in the in-memory sort key helper:
+      # non-DateTime sort keys (here, :name) pass through unchanged so the
+      # default lexicographic compare still applies.
+      user = insert(:user, support_user: true)
+
+      %{id: zebra_id} =
+        insert(:project, name: "Zebra Project", allow_support_access: true)
+
+      %{id: alpha_id} =
+        insert(:project, name: "Alpha Project", allow_support_access: true)
+
+      asc =
+        Projects.get_projects_overview(user, order_by: {:name, :asc})
+
+      assert [
+               %ProjectOverviewRow{id: ^alpha_id},
+               %ProjectOverviewRow{id: ^zebra_id}
+             ] = asc
+    end
   end
 
   describe ".update_project/3" do
