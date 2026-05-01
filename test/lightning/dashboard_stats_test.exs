@@ -220,7 +220,7 @@ defmodule Lightning.DashboardStatsTest do
       assert timestamps == Enum.sort(timestamps, {:desc, DateTime})
     end
 
-    test "sorts by last_workorder_updated_at chronologically across UTC midnight",
+    test "sorts by last_workorder_updated_at chronologically across a UTC month boundary",
          %{stats: [stats1, stats2, stats3]} do
       later = ~U[2026-05-01 01:10:00.000000Z]
       earlier = ~U[2026-04-30 23:10:00.000000Z]
