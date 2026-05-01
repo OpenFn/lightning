@@ -24,6 +24,8 @@ and this project adheres to
   instead of integer megabytes. The column is now sortable, alongside the
   existing Name column. Same change applied on the admin collections index.
   [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Set initial streaming status when sending messages to the AI Assistant
+  [#4630](https://github.com/OpenFn/lightning/pull/4630)
 
 ### Fixed
 
@@ -74,6 +76,14 @@ and this project adheres to
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Sandbox deletion (manual or after merge) is now soft. The sandbox and its
+  descendants are scheduled for purge after the configured grace period
+  (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
+  accidental deletions can be recovered. Scheduled-for-deletion sandboxes remain
+  visible in the parent's sandbox listing with a "Scheduled for deletion" badge
+  and a Cancel-deletion action, so anyone with permission to delete the sandbox
+  can also restore it during the grace window.
+  [#4649](https://github.com/OpenFn/lightning/issues/4649)
 - Updated ws-worker from
   [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
 

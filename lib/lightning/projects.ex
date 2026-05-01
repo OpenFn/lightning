@@ -135,7 +135,10 @@ defmodule Lightning.Projects do
   def perform(%Oban.Job{
         args: %{"project_id" => project_id, "type" => "purge_deleted"}
       }) do
-    project_id |> get_project!() |> delete_project()
+    case get_project(project_id) do
+      nil -> :ok
+      project -> delete_project(project)
+    end
 
     :ok
   end
@@ -1436,6 +1439,13 @@ defmodule Lightning.Projects do
 
   This is a flat view: only rows where `parent.id == child.parent_id` are returned.
   If we later support arbitrarily deep nesting, switch this to a recursive CTE.
+
+  Intentionally **unfiltered** by `scheduled_deletion`. This function is the
+  recursive walker used by `Lightning.Extensions.ProjectHook.handle_delete_project/1`
+  to cascade hard-deletes through the subtree at purge time. Filtering would
+  skip scheduled descendants and (because the parent FK is `:nilify_all`) leave
+  them as orphan root projects in the database. User-facing surfaces should use
+  `list_workspace_projects/2`, which filters scheduled rows out.
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
