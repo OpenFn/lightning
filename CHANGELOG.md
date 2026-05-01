@@ -21,22 +21,14 @@ and this project adheres to
 
 ### Fixed
 
-- Sort the project workflow list chronologically by Latest Work Order. The
-  column previously sorted incorrectly when the most recent work orders for two
-  workflows fell on either side of a month boundary in UTC.
+- Sort the workflow list, projects overview, and admin tables chronologically by
+  their date columns. Each previously inverted when timestamps fell on either
+  side of a month boundary in UTC. Affected columns: "Latest Work Order" on the
+  workflow list, "Last Updated" on the support-user projects overview, "Created
+  at" and "Scheduled deletion" on the admin Projects and Users tables.
   [#4687](https://github.com/OpenFn/lightning/pull/4687)
 - Sort the adaptor version dropdown per semver. Pre-release versions previously
-  appeared above the corresponding stable release because the sort relied on
-  structural comparison of parsed version structs rather than
-  `Version.compare/2`. [#4687](https://github.com/OpenFn/lightning/pull/4687)
-- Sort the support-user projects overview chronologically by Last Updated. The
-  in-memory sort over project rows previously relied on structural comparison of
-  timestamps and could invert when projects' last activity straddled a month
-  boundary in UTC. [#4687](https://github.com/OpenFn/lightning/pull/4687)
-- Sort admin tables chronologically when the active column is a date column
-  (admin projects "Created at" and "Scheduled deletion", admin users "Scheduled
-  deletion"). The shared in-memory sort helper previously used structural
-  comparison on date values and could invert across a month boundary in UTC.
+  appeared above their corresponding stable release.
   [#4687](https://github.com/OpenFn/lightning/pull/4687)
 - Prevent crash when an unsupported data type from `credential-schema.json` is
   loaded for building a credential schema from an adaptor. Fall-back to
