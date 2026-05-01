@@ -45,7 +45,10 @@ defmodule Lightning.Credentials.Schema do
   def new(json_schema, name) when is_map(json_schema) do
     fields = collect_fields(json_schema)
 
-    plain_schema = to_plain_map(json_schema)
+    plain_schema =
+      json_schema
+      |> to_plain_map()
+      |> normalize_schema_uri()
 
     {sanitized, warnings} = sanitize_property_types(plain_schema, name)
 
@@ -91,6 +94,18 @@ defmodule Lightning.Credentials.Schema do
   end
 
   defp to_plain_map(other), do: other
+
+  # ExJsonSchema's version detection only matches the canonical `http://`
+  # form of the JSON Schema URI. The spec calls the URI an identifier, not
+  # a literal URL, and `https://json-schema.org/...` is widely used in the
+  # wild. Rewrite to the canonical form so the resolver accepts either.
+  defp normalize_schema_uri(
+         %{"$schema" => "https://json-schema.org/" <> rest} = schema
+       ) do
+    Map.put(schema, "$schema", "http://json-schema.org/" <> rest)
+  end
+
+  defp normalize_schema_uri(schema), do: schema
 
   @spec validate(changeset :: Ecto.Changeset.t(), schema :: t()) ::
           Ecto.Changeset.t()

@@ -272,6 +272,18 @@ defmodule Lightning.Credentials.SchemaTest do
       assert schema.warnings == %{}
     end
 
+    test "accepts both `http://` and `https://` JSON Schema URIs" do
+      raw = ~s({
+        "$schema": "https://json-schema.org/draft-07/schema#",
+        "properties": {"server": {"type": "string"}},
+        "type": "object"
+      })
+
+      schema = Schema.new(raw, "https-uri")
+      assert schema.types == %{server: :string}
+      assert schema.fields == [:server]
+    end
+
     test "exposes warning/2 for fields with rewritten types" do
       schema_map = %{
         "properties" => %{
