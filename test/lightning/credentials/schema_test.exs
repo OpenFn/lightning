@@ -1,9 +1,20 @@
 defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
+  import ExUnit.CaptureLog
+  import Mox
+
   alias Lightning.Credentials
   alias Lightning.Credentials.Schema
   alias Lightning.Credentials.SchemaDocument
+
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+    Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
+    :ok
+  end
 
   setup do
     schema_map =
@@ -112,6 +123,181 @@ defmodule Lightning.Credentials.SchemaTest do
              }
 
       assert schema.fields == [:username, :password, :hostUrl, :number]
+    end
+
+    test "falls back to :string and logs a warning for unknown types" do
+      schema_map = %{
+        "title" => "broken",
+        "properties" => %{
+          "count" => %{"type" => "Number"},
+          "label" => %{"type" => "string"}
+        }
+      }
+
+      {schema, log} =
+        with_log(fn -> Schema.new(schema_map) end)
+
+      assert schema.types == %{count: :float, label: :string}
+      refute log =~ "count"
+
+      schema_map = put_in(schema_map["properties"]["count"]["type"], "Bogus")
+
+      test_pid = self()
+
+      expect(Lightning.MockSentry, :capture_message, fn msg, opts ->
+        send(test_pid, {:sentry_called, msg, opts})
+        :ok
+      end)
+
+      {schema, log} =
+        with_log(fn -> Schema.new(schema_map, "broken-schema") end)
+
+      assert schema.types == %{count: :string, label: :string}
+      assert log =~ ~s(Unknown JSON Schema type "Bogus")
+      assert log =~ ~s("count")
+      assert log =~ ~s(in schema "broken-schema")
+
+      assert_received {:sentry_called, msg, opts}
+      assert msg =~ ~s(Unknown JSON Schema type "Bogus")
+      assert opts[:level] == :warning
+      assert opts[:tags] == %{type: "credential_schema"}
+
+      assert opts[:extra] == %{
+               schema_name: "broken-schema",
+               field: "count",
+               unknown_type: "Bogus"
+             }
+    end
+
+    test "accepts JSON Schema types case-insensitively" do
+      schema_map = %{
+        "properties" => %{
+          "flag" => %{"type" => "Boolean"},
+          "count" => %{"type" => "INTEGER"},
+          "items" => %{"type" => "Array"}
+        }
+      }
+
+      {schema, log} = with_log(fn -> Schema.new(schema_map) end)
+
+      assert schema.types == %{
+               flag: :boolean,
+               count: :integer,
+               items: {:array, :string}
+             }
+
+      assert log == ""
+    end
+
+    test "resolves anyOf types by picking the first concrete type" do
+      schema_map = %{
+        "properties" => %{
+          "maybe_int" => %{
+            "anyOf" => [%{"type" => "integer"}, %{"type" => "null"}]
+          }
+        }
+      }
+
+      schema = Schema.new(schema_map)
+      assert schema.types == %{maybe_int: :integer}
+    end
+
+    test "defaults to :string when type is missing entirely" do
+      schema_map = %{"properties" => %{"name" => %{"description" => "no type"}}}
+
+      schema = Schema.new(schema_map)
+      assert schema.types == %{name: :string}
+    end
+
+    test "sanitizes unknown types in JSON loaded with ordered_objects" do
+      raw = ~s({
+        "properties": {
+          "endPoint": {"type": "string"},
+          "port": {"type": "mistake"},
+          "useSSL": {"type": "boolean"}
+        }
+      })
+
+      {schema, _log} = with_log(fn -> Schema.new(raw, "minio") end)
+
+      assert schema.types == %{
+               endPoint: :string,
+               port: :string,
+               useSSL: :boolean
+             }
+
+      assert schema.fields == [:endPoint, :port, :useSSL]
+      assert schema.warnings == %{port: "mistake"}
+
+      changeset =
+        SchemaDocument.changeset(%{"port" => "2"}, schema: schema)
+
+      refute Enum.any?(changeset.errors, &match?({:port, _}, &1))
+    end
+
+    test "prefers non-null anyOf alternatives regardless of order" do
+      schema_map = %{
+        "properties" => %{
+          "null_first" => %{
+            "anyOf" => [%{"type" => "null"}, %{"type" => "integer"}]
+          }
+        }
+      }
+
+      schema = Schema.new(schema_map)
+      assert schema.types == %{null_first: :integer}
+    end
+
+    test "bubbles unknown anyOf types up to the parent field's warning" do
+      schema_map = %{
+        "properties" => %{
+          "weird" => %{
+            "anyOf" => [%{"type" => "Bogus"}, %{"type" => "string"}]
+          }
+        }
+      }
+
+      {schema, log} = with_log(fn -> Schema.new(schema_map, "weird-schema") end)
+
+      assert schema.warnings == %{weird: "Bogus"}
+      assert log =~ ~s(Unknown JSON Schema type "Bogus")
+      assert log =~ ~s("weird")
+    end
+
+    test "tolerates schemas without a `properties` key" do
+      schema = Schema.new(%{"type" => "object"})
+
+      assert schema.fields == []
+      assert schema.types == %{}
+      assert schema.warnings == %{}
+    end
+
+    test "accepts both `http://` and `https://` JSON Schema URIs" do
+      raw = ~s({
+        "$schema": "https://json-schema.org/draft-07/schema#",
+        "properties": {"server": {"type": "string"}},
+        "type": "object"
+      })
+
+      schema = Schema.new(raw, "https-uri")
+      assert schema.types == %{server: :string}
+      assert schema.fields == [:server]
+    end
+
+    test "exposes warning/2 for fields with rewritten types" do
+      schema_map = %{
+        "properties" => %{
+          "weird" => %{"type" => "Bogus"},
+          "fine" => %{"type" => "string"}
+        }
+      }
+
+      {schema, _log} = with_log(fn -> Schema.new(schema_map) end)
+
+      assert Schema.warning(schema, :weird) == "Bogus"
+      assert Schema.warning(schema, "weird") == "Bogus"
+      assert Schema.warning(schema, :fine) == nil
+      assert Schema.warning(schema, "never_seen_field_name") == nil
     end
   end
 

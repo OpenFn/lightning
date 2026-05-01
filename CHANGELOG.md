@@ -36,6 +36,10 @@ and this project adheres to
   (admin projects "Created at" and "Scheduled deletion", admin users "Scheduled
   deletion"). The shared in-memory sort helper previously used structural
   comparison on date values and could invert across a month boundary in UTC.
+- Prevent crash when an unsupported data type from `credential-schema.json` is
+  loaded for building a credential schema from an adaptor. Fall-back to
+  `:string` type, log warning and alert Sentry.
+  [#4681](https://github.com/OpenFn/lightning/issues/4681)
 
 ## [2.16.3-pre] - 2026-04-30
 
