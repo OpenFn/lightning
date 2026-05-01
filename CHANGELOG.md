@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Set initial streaming status when sending messages to the AI Assistant
+  [#4630](https://github.com/OpenFn/lightning/pull/4630)
+
 ### Fixed
 
 - Prevent crash when an unsupported data type from `credential-schema.json` is
