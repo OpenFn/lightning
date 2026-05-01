@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const INITIAL_LOADING_STATUSES = [
+  'Thinking about the question...',
+  'Working on it...',
+  'Processing your request...',
+  'Examining your question...',
+  'Taking a look...',
+  'Looking into it...',
+] as const;
+
+const getRandomStatus = () =>
+  INITIAL_LOADING_STATUSES[
+    Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
+  ];
+
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
@@ -409,6 +423,7 @@ export function AIAssistantPanelWrapper({
 
         // Mark message as sending in store
         aiStore.setMessageSending();
+        aiStore.setStreamingStatus(getRandomStatus());
         return;
       }
 
@@ -461,6 +476,7 @@ export function AIAssistantPanelWrapper({
 
       // Update store state and send through registry
       aiStore.setMessageSending();
+      aiStore.setStreamingStatus(getRandomStatus());
       sendMessageToChannel(content, options);
     },
     [
@@ -480,6 +496,7 @@ export function AIAssistantPanelWrapper({
   const handleRetryMessage = useCallback(
     (messageId: string) => {
       aiStore.retryMessage(messageId);
+      aiStore.setStreamingStatus(getRandomStatus());
       retryMessageViaChannel(messageId);
     },
     [aiStore, retryMessageViaChannel]

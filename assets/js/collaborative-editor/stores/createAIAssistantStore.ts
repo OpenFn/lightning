@@ -583,11 +583,11 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_appendStreamingChunk');
   };
 
-  const _setStreamingStatus = (text: string) => {
+  const setStreamingStatus = (text: string) => {
     state = produce(state, draft => {
       draft.streamingStatus = text;
     });
-    notify('_setStreamingStatus');
+    notify('setStreamingStatus');
   };
 
   const _setStreamingChanges = (changes: Record<string, unknown>) => {
@@ -682,7 +682,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _initializeContext,
     _setProcessingState,
     _appendStreamingChunk,
-    _setStreamingStatus,
+    setStreamingStatus,
     _setStreamingChanges,
     _clearStreaming,
     _connectChannel,
