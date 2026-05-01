@@ -144,6 +144,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
 - Flickering/disappearing visualization on
   [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
   [PR#4628](https://github.com/OpenFn/lightning/pull/4628)
