@@ -32,6 +32,10 @@ and this project adheres to
   in-memory sort over project rows previously relied on structural comparison of
   timestamps and could invert when projects' last activity straddled a month
   boundary in UTC.
+- Sort admin tables chronologically when the active column is a date column
+  (admin projects "Created at" and "Scheduled deletion", admin users "Scheduled
+  deletion"). The shared in-memory sort helper previously used structural
+  comparison on date values and could invert across a month boundary in UTC.
 
 ## [2.16.3-pre] - 2026-04-30
 
