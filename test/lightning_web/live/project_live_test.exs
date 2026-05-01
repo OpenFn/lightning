@@ -844,30 +844,29 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
-      # Current project shown in breadcrumb project picker button
+      # Current project shown in breadcrumb project picker button (React mount point)
       assert view
              |> element(
-               "#breadcrumb-project-picker-trigger",
-               ~r/project-1/
+               "#breadcrumb-project-picker-trigger[data-label='project-1']"
              )
              |> has_element?()
 
       # Project picker is a React component - check data attributes contain correct projects
       html = render(view)
       assert html =~ project_1.name
-      assert html =~ ~s(data-current-project-id="#{project_1.id}")
+      assert html =~ ~s(data-current-id="#{project_1.id}")
 
-      # Projects data is passed as JSON to React component
-      # User's projects (project_1, project_2) should be in data-projects
+      # Projects data is passed as JSON via data-items on the picker mount
+      # User's projects (project_1, project_2) should be in data-items
       assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-projects
+      # Other user's project (project_3) should NOT be in data-items
       refute html =~ project_3.id
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ ~s(data-current-id="#{project_2.id}")
       assert html =~ project_1.id
       refute html =~ project_3.id
 
@@ -6841,7 +6840,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
 
     test "cannot edit a collection belonging to another project", %{
@@ -6870,7 +6869,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
 
     test "cannot delete a collection belonging to another project", %{
@@ -6899,7 +6898,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{their_project.id}/settings#collections"
         )
 
-      assert flash["error"] == "You are not authorized to perform this action"
+      assert flash["error"] == "Collection not found"
     end
   end
 

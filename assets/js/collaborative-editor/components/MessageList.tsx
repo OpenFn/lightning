@@ -7,7 +7,7 @@ import { cn } from '#/utils/cn';
 
 import type { Message } from '../types/ai-assistant';
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 const STREAMING_MESSAGE_ID = '__streaming__' as const;
 

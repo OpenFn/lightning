@@ -255,6 +255,53 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Preloads the full ancestor chain on a project's `:parent` association,
+  so that `Project.display_name/1` can walk to the root.
+
+  Fetches the entire chain in a single recursive CTE query.
+  """
+  @spec preload_ancestors(Project.t()) :: Project.t()
+  def preload_ancestors(%Project{parent_id: nil} = p), do: p
+
+  def preload_ancestors(%Project{parent: %Project{} = parent} = p) do
+    %{p | parent: preload_ancestors(parent)}
+  end
+
+  def preload_ancestors(%Project{parent_id: parent_id} = p)
+      when is_binary(parent_id) do
+    ancestors_by_id =
+      parent_id
+      |> list_ancestors()
+      |> Map.new(&{&1.id, &1})
+
+    %{p | parent: nest_ancestors(parent_id, ancestors_by_id)}
+  end
+
+  defp list_ancestors(start_id) do
+    initial = from(p in Project, where: p.id == ^start_id)
+
+    recursion =
+      from(p in Project,
+        join: a in "ancestors",
+        on: a.parent_id == p.id
+      )
+
+    from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
+    |> recursive_ctes(true)
+    |> with_cte("ancestors", as: ^union_all(initial, ^recursion))
+    |> Repo.all()
+  end
+
+  defp nest_ancestors(nil, _by_id), do: nil
+
+  defp nest_ancestors(id, by_id) do
+    case Map.get(by_id, id) do
+      nil -> nil
+      project -> %{project | parent: nest_ancestors(project.parent_id, by_id)}
+    end
+  end
+
+  @doc """
   Returns true if `child_project` is a descendant of `parent_project`.
 
   Walks up the parent chain using preloaded `:parent` associations to determine
@@ -319,7 +366,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_user!(id), do: Repo.get!(ProjectUser, id)
+  def get_project_user!(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+    ProjectUser |> Repo.get!(id) |> Repo.preload(include)
+  end
 
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
@@ -574,6 +624,15 @@ defmodule Lightning.Projects do
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
 
+    if Project.sandbox?(project_user.project) and
+         Lightning.Projects.Sandboxes.parent_admin?(
+           project_user.project,
+           project_user.user
+         ) do
+      raise ArgumentError,
+            "Cannot remove a parent project admin from a sandbox"
+    end
+
     Repo.transaction(fn ->
       from(pc in Lightning.Projects.ProjectCredential,
         join: c in Lightning.Credentials.Credential,
@@ -810,6 +869,33 @@ defmodule Lightning.Projects do
     user
     |> projects_for_user_query()
     |> Repo.all()
+  end
+
+  @doc """
+  Returns all projects the user can access, including sandboxes at any depth.
+
+  Root projects are fetched via the user's project memberships, then all
+  descendants are included using a recursive CTE via `descendant_ids/1`.
+  """
+  @spec get_project_tree_for_user(User.t()) :: [Project.t()]
+  def get_project_tree_for_user(%User{} = user) do
+    roots = get_projects_for_user(user)
+    root_ids = Enum.map(roots, & &1.id)
+
+    case descendant_ids(root_ids) do
+      [] ->
+        roots
+
+      desc_ids ->
+        descendants =
+          from(p in Project,
+            where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
+            order_by: [asc: p.name]
+          )
+          |> Repo.all()
+
+        roots ++ descendants
+    end
   end
 
   defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do

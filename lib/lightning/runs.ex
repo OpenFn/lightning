@@ -84,7 +84,7 @@ defmodule Lightning.Runs do
     Multi.new()
     |> Multi.one(
       :__pre_check_run__,
-      get_query(id, include: [snapshot: [jobs: :credential]])
+      get_query(id, include: [snapshot: [:workflow, jobs: :credential]])
     )
     |> Multi.merge(fn %{__pre_check_run__: run} ->
       Multi.new() |> Multi.put(:run, run)

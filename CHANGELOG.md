@@ -17,6 +17,97 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+- Prevent crash when an unsupported data type from `credential-schema.json` is
+  loaded for building a credential schema from an adaptor. Fall-back to
+  `:string` type, log warning and alert Sentry.
+  [#4681](https://github.com/OpenFn/lightning/issues/4681)
+
+## [2.16.3-pre] - 2026-04-30
+
+### Added
+
+- Add support for sync v2 protocol
+  [#4523](https://github.com/OpenFn/lightning/issues/4523)
+- Support collections in sandboxes. Collection names are now scoped per project,
+  empty collections are cloned into a sandbox on provision, and collection names
+  (not data) are synchronised when a sandbox is merged back into its parent. The
+  collections API accepts an optional `?project_id=<uuid>` query param to scope
+  a request to a specific project. When the query param is omitted and the name
+  is ambiguous across projects, the API returns 409 with guidance to add
+  `?project_id=`. Existing unscoped calls keep working for unambiguous names.
+  [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Sandbox-aware Project Settings page. Each tab shows a banner explaining how
+  changes will (or will not) flow on merge: Local (sandbox-only), Editable
+  (syncs on merge), or Inherited (read-only, managed in the parent). The Sandbox
+  Identity panel links back to the parent project, the MFA toggle is read-only,
+  webhook authentication methods are managed from the parent project, and parent
+  project admins cannot be removed from a sandbox. The danger zone inside a
+  sandbox now deletes the sandbox through `Sandboxes.delete_sandbox/2` (matching
+  the Sandboxes page behaviour).
+  [#3398](https://github.com/OpenFn/lightning/issues/3398)
+- Ability to filter work orders and runs via REST API by UUIDs or status; added
+  example curl requests to REST API docs.
+  [#4552](https://github.com/OpenFn/lightning/issues/4552)
+
+### Changed
+
+- Project picker now shows sandbox hierarchy with parent project name (e.g.
+  `root:sandbox`), sandbox accent color, and nested tree view. Sandbox theming
+  removed from sidebar/navbar.
+  [#4510](https://github.com/OpenFn/lightning/issues/4510)
+- Worker plan payload now includes `project_id` so workers can scope callbacks
+  (e.g. the collections API) to the project that owns the run.
+- Bumped local worker to 1.24.0
+- Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
+  workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Updated ws-worker from
+  [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
+
+### Fixed
+
+- Only allow auto-completion in relevant input fields
+  [#1553](https://github.com/OpenFn/lightning/issues/1553)
+- Credential form no longer crashes when opening a schema that declares a
+  property `type` as a JSON Schema array (e.g. `["string", "null"]`), as the
+  Browserless adaptor does. The contradictory `null` member in the Browserless
+  schema itself (the field is `required` with `minLength: 1`) is corrected
+  upstream in
+  [`@openfn/language-browserless`](https://github.com/OpenFn/adaptors/pull/1659).
+  [#4647](https://github.com/OpenFn/lightning/issues/4647)
+
+## [2.16.2] - 2026-04-20
+
+## [2.16.2-pre1] - 2026-04-20
+
+### Changed
+
+- When a run is `:claimed` by a worker, set its parent work order to `:running`
+  rather than leaving it in `:pending`.
+  [#4635](https://github.com/OpenFn/lightning/issues/4635)
+
+  When a run is claimed by a worker, there's no stopping it. From the platform's
+  perspective, the parent work order should be moved from `:pending` to
+  `:running`, even though there's an underlying technical difference between the
+  run states `:claimed` and `:started`. As a result, the "Cancel" button on the
+  history view disappears once a run has been claimed.
+
+  This shift is also visible to external consumers: the `/api/workorders`
+  endpoint and workflow channel subscribers will now report `running` where they
+  previously reported `pending` for work orders whose run has been claimed.
+
+### Fixed
+
+- Bump `@openfn/ws-worker` from
+  [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.8/packages/ws-worker/CHANGELOG.md?plain=1#L3-L16)
+
+## [2.16.2-pre] - 2026-04-16
+
+### Added
+
 - Collection preview modal in project settings — click the eye icon on any
   collection row to see the first record as formatted JSON.
   [#4528](https://github.com/OpenFn/lightning/issues/4528)
@@ -42,9 +133,15 @@ and this project adheres to
 
 ### Fixed
 
+<<<<<<< return-42-for-lost
 - Non-map state coming back from the worker would cause a lost run, every time.
   Rather than losing these runs that return non-map x's, we now wrap them like
   so `{"value": x}`
+=======
+- Flickering/disappearing visualization on
+  [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
+  [PR#4628](https://github.com/OpenFn/lightning/pull/4628)
+>>>>>>> main
 - AI-generated workflows can now be saved when the workflow name collides with
   an existing workflow or when jobs have duplicate names
   [#4607](https://github.com/OpenFn/lightning/issues/4607)

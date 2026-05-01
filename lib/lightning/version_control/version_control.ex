@@ -572,8 +572,15 @@ defmodule Lightning.VersionControl do
 
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
+      content =
+        if repo_connection.sync_version do
+          path_to_openfn_yaml(repo_connection)
+        else
+          config_json(repo_connection)
+        end
+
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
-        content: config_json(repo_connection)
+        content: content
       })
     else
       {:ok, nil}
@@ -623,6 +630,16 @@ defmodule Lightning.VersionControl do
       },
       pretty: true
     )
+  end
+
+  defp path_to_openfn_yaml(repo_connection) do
+    project_id = repo_connection.project_id
+
+    """
+    project:
+      uuid: #{project_id}
+      endpoint: #{LightningWeb.Endpoint.url()}
+    """
   end
 
   defp pull_yml_target_path do

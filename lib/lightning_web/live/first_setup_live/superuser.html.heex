@@ -35,7 +35,12 @@
 
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <.input type="password" field={f[:password]} label="Password" />
+          <.input
+            type="password"
+            field={f[:password]}
+            label="Password"
+            autocomplete="new-password"
+          />
         </div>
       </div>
 
@@ -45,6 +50,7 @@
             type="password"
             field={f[:password_confirmation]}
             label="Password confirmation"
+            autocomplete="new-password"
           />
         </div>
       </div>

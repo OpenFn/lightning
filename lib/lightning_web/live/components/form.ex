@@ -128,7 +128,10 @@ defmodule LightningWeb.Components.Form do
         label_classes: label_classes,
         error_classes: error_classes,
         input_classes: input_classes,
-        opts: assigns.rest |> assigns_to_attributes()
+        opts:
+          assigns.rest
+          |> assigns_to_attributes()
+          |> Keyword.put_new(:autocomplete, "off")
       )
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:hint, fn -> nil end)
@@ -269,7 +272,10 @@ defmodule LightningWeb.Components.Form do
         label_classes: label_classes,
         error_classes: error_classes,
         input_classes: input_classes,
-        opts: assigns.rest |> assigns_to_attributes()
+        opts:
+          assigns.rest
+          |> assigns_to_attributes()
+          |> Keyword.put_new(:autocomplete, "off")
       )
 
     ~H"""

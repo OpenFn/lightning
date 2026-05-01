@@ -79,8 +79,8 @@ export interface UseRunRetryOptions {
 }
 
 export interface UseRunRetryReturn {
-  handleRun: () => Promise<void>;
-  handleRetry: () => Promise<void>;
+  handleRun: () => Promise<boolean>;
+  handleRetry: () => Promise<boolean>;
   isSubmitting: boolean;
   isRetryable: boolean;
   runIsProcessing: boolean;
@@ -237,7 +237,7 @@ export function useRunRetry({
     const contextId = runContext.id;
     if (!contextId) {
       logger.error('No context ID available');
-      return;
+      return false;
     }
 
     // Check workflow-level permissions before running
@@ -246,7 +246,7 @@ export function useRunRetry({
         title: 'Cannot run workflow',
         description: workflowRunTooltipMessage,
       });
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -297,6 +297,8 @@ export function useRunRetry({
         updateSearchParams({ run: response.data.run_id });
         setIsSubmitting(false);
       }
+
+      return true;
     } catch (error) {
       logger.error('Failed to submit run:', error);
       notifications.alert({
@@ -305,6 +307,7 @@ export function useRunRetry({
           error instanceof Error ? error.message : 'An unknown error occurred',
       });
       setIsSubmitting(false);
+      return false;
     }
   }, [
     workflowId,
@@ -326,14 +329,14 @@ export function useRunRetry({
   const handleRetry = useCallback(async () => {
     // Guard against double-calls (e.g., from rapid keyboard shortcuts)
     if (isRetryingRef.current) {
-      return;
+      return false;
     }
     isRetryingRef.current = true;
 
     if (!followedRunId || !followedRunStep) {
       logger.error('Cannot retry: missing run or step data');
       isRetryingRef.current = false;
-      return;
+      return false;
     }
 
     if (!canRunWorkflow) {
@@ -342,7 +345,7 @@ export function useRunRetry({
         description: workflowRunTooltipMessage,
       });
       isRetryingRef.current = false;
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -396,6 +399,8 @@ export function useRunRetry({
         setIsSubmitting(false);
         isRetryingRef.current = false;
       }
+
+      return true;
     } catch (error) {
       logger.error('Failed to retry run:', error);
       notifications.alert({
@@ -404,6 +409,7 @@ export function useRunRetry({
       });
       setIsSubmitting(false);
       isRetryingRef.current = false;
+      return false;
     }
   }, [
     followedRunId,
