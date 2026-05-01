@@ -232,10 +232,44 @@ defmodule Lightning.Credentials.SchemaTest do
       changeset =
         SchemaDocument.changeset(%{"port" => "2"}, schema: schema)
 
-      assert changeset.valid? or
-               not Enum.any?(changeset.errors, fn {field, _} ->
-                 field == :port
-               end)
+      refute Enum.any?(changeset.errors, &match?({:port, _}, &1))
+    end
+
+    test "prefers non-null anyOf alternatives regardless of order" do
+      schema_map = %{
+        "properties" => %{
+          "null_first" => %{
+            "anyOf" => [%{"type" => "null"}, %{"type" => "integer"}]
+          }
+        }
+      }
+
+      schema = Schema.new(schema_map)
+      assert schema.types == %{null_first: :integer}
+    end
+
+    test "bubbles unknown anyOf types up to the parent field's warning" do
+      schema_map = %{
+        "properties" => %{
+          "weird" => %{
+            "anyOf" => [%{"type" => "Bogus"}, %{"type" => "string"}]
+          }
+        }
+      }
+
+      {schema, log} = with_log(fn -> Schema.new(schema_map, "weird-schema") end)
+
+      assert schema.warnings == %{weird: "Bogus"}
+      assert log =~ ~s(Unknown JSON Schema type "Bogus")
+      assert log =~ ~s("weird")
+    end
+
+    test "tolerates schemas without a `properties` key" do
+      schema = Schema.new(%{"type" => "object"})
+
+      assert schema.fields == []
+      assert schema.types == %{}
+      assert schema.warnings == %{}
     end
 
     test "exposes warning/2 for fields with rewritten types" do
@@ -251,6 +285,7 @@ defmodule Lightning.Credentials.SchemaTest do
       assert Schema.warning(schema, :weird) == "Bogus"
       assert Schema.warning(schema, "weird") == "Bogus"
       assert Schema.warning(schema, :fine) == nil
+      assert Schema.warning(schema, "never_seen_field_name") == nil
     end
   end
 

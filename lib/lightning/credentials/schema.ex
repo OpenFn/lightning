@@ -67,8 +67,6 @@ defmodule Lightning.Credentials.Schema do
     |> new(name)
   end
 
-  # `Jason.decode!(objects: :ordered_objects)` returns `Jason.OrderedObject`
-  # structs, so we capture field order from the original before flattening.
   defp collect_fields(json_schema) do
     case json_schema["properties"] do
       nil ->
@@ -240,16 +238,14 @@ defmodule Lightning.Credentials.Schema do
   end
 
   defp resolve_type(%{"anyOf" => alternatives}) when is_list(alternatives) do
-    Enum.find_value(alternatives, "string", fn alt -> Map.get(alt, "type") end)
+    alternatives
+    |> Enum.map(&Map.get(&1, "type"))
+    |> Enum.reject(&(&1 in [nil, "null"]))
+    |> List.first("string")
   end
 
   defp resolve_type(_), do: "string"
 
-  # Walks `properties` and replaces any "type" value that isn't a known JSON
-  # Schema primitive with "string". ExJsonSchema's meta-schema validation
-  # rejects unknown type names outright, so this has to run before
-  # `ExJsonSchema.Schema.resolve/1`. Returns `{sanitized_schema, warnings}`
-  # where warnings is `%{field_atom => original_unknown_type}`.
   defp sanitize_property_types(json_schema, schema_name) do
     case Map.get(json_schema, "properties") do
       properties when is_map(properties) ->
@@ -273,7 +269,6 @@ defmodule Lightning.Credentials.Schema do
     end
   end
 
-  # Returns {sanitized_property, unknown_type_or_nil}.
   defp sanitize_property(%{"type" => type} = prop, field, schema_name)
        when is_binary(type) do
     case normalize_type_string(type, field, schema_name) do
@@ -282,15 +277,15 @@ defmodule Lightning.Credentials.Schema do
     end
   end
 
-  defp sanitize_property(%{"anyOf" => alternatives} = prop, _field, schema_name)
+  defp sanitize_property(%{"anyOf" => alternatives} = prop, field, schema_name)
        when is_list(alternatives) do
-    sanitized =
-      Enum.map(alternatives, fn alt ->
-        {alt_sanitized, _unknown} = sanitize_property(alt, "anyOf", schema_name)
-        alt_sanitized
+    {sanitized, unknown} =
+      Enum.map_reduce(alternatives, nil, fn alt, acc ->
+        {alt_sanitized, alt_unknown} = sanitize_property(alt, field, schema_name)
+        {alt_sanitized, acc || alt_unknown}
       end)
 
-    {Map.put(prop, "anyOf", sanitized), nil}
+    {Map.put(prop, "anyOf", sanitized), unknown}
   end
 
   defp sanitize_property(prop, _field, _schema_name), do: {prop, nil}
