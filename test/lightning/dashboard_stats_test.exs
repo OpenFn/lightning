@@ -205,7 +205,7 @@ defmodule Lightning.DashboardStatsTest do
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
-      assert timestamps == Enum.sort(timestamps)
+      assert timestamps == Enum.sort(timestamps, {:asc, DateTime})
     end
 
     test "sorts by last_workorder_updated_at descending", %{stats: stats} do
@@ -217,7 +217,38 @@ defmodule Lightning.DashboardStatsTest do
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
-      assert timestamps == Enum.sort(timestamps, :desc)
+      assert timestamps == Enum.sort(timestamps, {:desc, DateTime})
+    end
+
+    test "sorts by last_workorder_updated_at chronologically across UTC midnight",
+         %{stats: [stats1, stats2, stats3]} do
+      later = ~U[2026-05-01 01:10:00.000000Z]
+      earlier = ~U[2026-04-30 23:10:00.000000Z]
+      earliest = ~U[2026-04-30 21:10:00.000000Z]
+
+      stats1 = put_in(stats1.last_workorder.updated_at, later)
+      stats2 = put_in(stats2.last_workorder.updated_at, earlier)
+      stats3 = put_in(stats3.last_workorder.updated_at, earliest)
+
+      sorted_desc =
+        DashboardStats.sort_workflow_stats(
+          [stats2, stats3, stats1],
+          :last_workorder_updated_at,
+          :desc
+        )
+
+      assert Enum.map(sorted_desc, & &1.last_workorder.updated_at) ==
+               [later, earlier, earliest]
+
+      sorted_asc =
+        DashboardStats.sort_workflow_stats(
+          [stats1, stats2, stats3],
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      assert Enum.map(sorted_asc, & &1.last_workorder.updated_at) ==
+               [earliest, earlier, later]
     end
 
     test "sorts by workflow name when given invalid sort field", %{stats: stats} do

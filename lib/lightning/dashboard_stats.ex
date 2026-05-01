@@ -158,9 +158,16 @@ defmodule Lightning.DashboardStats do
     Enum.sort_by(workflow_stats, sorter, sort_direction)
   end
 
+  # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
+  # on `DateTime` structs orders by struct keys (day before month before year),
+  # not chronologically. Returning unix microseconds avoids that pitfall for
+  # any datetime-valued sort key added later.
   defp get_sorter(:last_workorder_updated_at) do
     fn stats ->
-      stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
+      case stats.last_workorder.updated_at do
+        nil -> 0
+        dt -> DateTime.to_unix(dt, :microsecond)
+      end
     end
   end
 

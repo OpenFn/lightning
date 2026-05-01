@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Sort the project workflow list chronologically by Latest Work Order. The sort
+  previously used structural comparison on timestamps, so the order could flip
+  when the most recent work orders straddled a UTC date boundary.
+
 ## [2.16.3-pre] - 2026-04-30
 
 ### Added
