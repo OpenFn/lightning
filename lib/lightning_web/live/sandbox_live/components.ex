@@ -623,35 +623,23 @@ defmodule LightningWeb.SandboxLive.Components do
 
   defp sandbox_actions(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
     ~H"""
-    <div class="flex gap-1 flex-shrink-0 ml-4">
-      <.action_button
-        id={"cancel-deletion-sandbox-#{@sandbox.id}"}
-        icon_type="heroicon"
-        icon_name="hero-arrow-uturn-left"
-        label={
-          if @sandbox.can_cancel_deletion do
-            "Cancel deletion"
-          else
+    <div id={"cancel-deletion-sandbox-#{@sandbox.id}"} class="flex-shrink-0 ml-4">
+      <.button
+        theme="secondary"
+        type="button"
+        disabled={not @sandbox.can_cancel_deletion}
+        tooltip={
+          not @sandbox.can_cancel_deletion &&
             "You are not authorized to cancel deletion of this sandbox"
-          end
         }
-        action={
+        phx-click={
           if @sandbox.can_cancel_deletion,
             do: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id}),
             else: %JS{}
         }
-        disabled={not @sandbox.can_cancel_deletion}
-        icon_class={
-          if @sandbox.can_cancel_deletion,
-            do: "text-amber-700",
-            else: "text-slate-300"
-        }
-        button_class={
-          if @sandbox.can_cancel_deletion,
-            do: "hover:bg-amber-100",
-            else: "cursor-not-allowed"
-        }
-      />
+      >
+        Restore
+      </.button>
     </div>
     """
   end

@@ -887,7 +887,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                ~s(#scheduled-for-deletion-section #sandbox-card-#{scheduled.id}[aria-disabled="true"])
              )
 
-      assert has_element?(view, "#cancel-deletion-sandbox-#{scheduled.id}")
+      assert has_element?(
+               view,
+               "#cancel-deletion-sandbox-#{scheduled.id} button",
+               "Restore"
+             )
+
       refute has_element?(view, "#delete-sandbox-#{scheduled.id}")
       refute has_element?(view, "#edit-sandbox-#{scheduled.id}")
       refute has_element?(view, "#branch-rewire-sandbox-#{scheduled.id}")
