@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const INITIAL_LOADING_STATUSES = [
+  'Thinking about the question...',
+  'Working on it...',
+  'Processing your request...',
+  'Examining your question...',
+  'Taking a look...',
+  'Looking into it...',
+] as const;
+
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
@@ -409,6 +418,11 @@ export function AIAssistantPanelWrapper({
 
         // Mark message as sending in store
         aiStore.setMessageSending();
+        aiStore.setStreamingStatus(
+          INITIAL_LOADING_STATUSES[
+            Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
+          ]
+        );
         return;
       }
 
@@ -461,6 +475,11 @@ export function AIAssistantPanelWrapper({
 
       // Update store state and send through registry
       aiStore.setMessageSending();
+      aiStore.setStreamingStatus(
+        INITIAL_LOADING_STATUSES[
+          Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
+        ]
+      );
       sendMessageToChannel(content, options);
     },
     [
