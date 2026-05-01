@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- Sort the adaptor version dropdown per semver. Pre-release versions previously
+  appeared above the corresponding stable release because the sort relied on
+  structural comparison of parsed version structs rather than
+  `Version.compare/2`.
+
 ## [2.16.3-pre] - 2026-04-30
 
 ### Added

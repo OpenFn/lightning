@@ -31,7 +31,18 @@ defmodule LightningWeb.JobLive.AdaptorPickerTest do
           Version.parse!(version)
         end)
 
-      assert version_numbers == Enum.sort(version_numbers, :desc)
+      assert version_numbers == Enum.sort(version_numbers, {:desc, Version})
+    end
+
+    test "sort_versions_desc/1 orders pre-releases per semver" do
+      # Per semver, a pre-release sorts BEFORE its corresponding release (so
+      # descending puts the release first). Structural compare on parsed
+      # `Version` structs walks struct keys alphabetically (build, major,
+      # minor, patch, pre) and would put `1.0.0-beta` ahead of `1.0.0`.
+      versions = ["1.0.0", "1.0.0-beta", "1.0.0-alpha", "0.9.0"]
+
+      assert AdaptorPicker.sort_versions_desc(versions) ==
+               ["1.0.0", "1.0.0-beta", "1.0.0-alpha", "0.9.0"]
     end
 
     test "handles adaptor with specific version" do
