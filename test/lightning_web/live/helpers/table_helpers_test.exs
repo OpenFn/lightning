@@ -130,5 +130,24 @@ defmodule LightningWeb.Live.Helpers.TableHelpersTest do
       assert TableHelpers.sort_items(items, "name", "desc", sort_map)
              |> Enum.map(& &1.name) == ["Charlie", "Bob", "Alice"]
     end
+
+    test "keeps nil and a real 1970-01-01 timestamp cleanly separated" do
+      # The sort-key normalizer returns a sentinel tuple ({0, _} for nil,
+      # {1, _} for present) so nil rows can never tie with a real
+      # `~U[1970-01-01]` row even though both would otherwise normalize
+      # toward the empty string / unix epoch.
+      items = [
+        %{name: "Epoch", at: ~U[1970-01-01 00:00:00Z]},
+        %{name: "Nil", at: nil}
+      ]
+
+      sort_map = %{"at" => :at}
+
+      asc = TableHelpers.sort_items(items, "at", "asc", sort_map)
+      assert Enum.map(asc, & &1.name) == ["Nil", "Epoch"]
+
+      desc = TableHelpers.sort_items(items, "at", "desc", sort_map)
+      assert Enum.map(desc, & &1.name) == ["Epoch", "Nil"]
+    end
   end
 end

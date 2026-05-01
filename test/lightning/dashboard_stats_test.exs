@@ -274,5 +274,37 @@ defmodule Lightning.DashboardStatsTest do
 
       assert first_stat.last_workorder.updated_at == nil
     end
+
+    test "keeps nil and a real 1970-01-01 timestamp cleanly separated", %{
+      stats: [stats1, stats2 | _]
+    } do
+      # The sort-key extractor returns a sentinel tuple ({0, _} for nil,
+      # {1, _} for present) so nil rows can never tie with a real
+      # `~U[1970-01-01 00:00:00Z]` row even though both map to unix 0.
+      stats_nil = put_in(stats1.last_workorder.updated_at, nil)
+
+      stats_epoch =
+        put_in(stats2.last_workorder.updated_at, ~U[1970-01-01 00:00:00Z])
+
+      asc =
+        DashboardStats.sort_workflow_stats(
+          [stats_epoch, stats_nil],
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      assert Enum.map(asc, & &1.last_workorder.updated_at) ==
+               [nil, ~U[1970-01-01 00:00:00Z]]
+
+      desc =
+        DashboardStats.sort_workflow_stats(
+          [stats_nil, stats_epoch],
+          :last_workorder_updated_at,
+          :desc
+        )
+
+      assert Enum.map(desc, & &1.last_workorder.updated_at) ==
+               [~U[1970-01-01 00:00:00Z], nil]
+    end
   end
 end

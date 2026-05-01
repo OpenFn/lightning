@@ -192,14 +192,16 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
   # comparison, which on `DateTime`/`NaiveDateTime`/`Date`/`Time` walks struct
   # keys alphabetically (day before month before year) and disagrees with
   # chronology at month boundaries. Convert to ISO 8601 strings, which sort
-  # lexicographically the same as chronologically.
-  defp normalize_sort_value(nil), do: ""
-  defp normalize_sort_value(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  # lexicographically the same as chronologically. The leading sentinel
+  # (`0` for nil, `1` for present) keeps nil rows cleanly separate from any
+  # real value, so the two can never tie at the comparator.
+  defp normalize_sort_value(nil), do: {0, ""}
+  defp normalize_sort_value(%DateTime{} = dt), do: {1, DateTime.to_iso8601(dt)}
 
   defp normalize_sort_value(%NaiveDateTime{} = dt),
-    do: NaiveDateTime.to_iso8601(dt)
+    do: {1, NaiveDateTime.to_iso8601(dt)}
 
-  defp normalize_sort_value(%Date{} = d), do: Date.to_iso8601(d)
-  defp normalize_sort_value(%Time{} = t), do: Time.to_iso8601(t)
-  defp normalize_sort_value(value), do: value
+  defp normalize_sort_value(%Date{} = d), do: {1, Date.to_iso8601(d)}
+  defp normalize_sort_value(%Time{} = t), do: {1, Time.to_iso8601(t)}
+  defp normalize_sort_value(value), do: {1, value}
 end

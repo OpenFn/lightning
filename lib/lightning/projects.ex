@@ -98,13 +98,15 @@ defmodule Lightning.Projects do
 
   # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
   # on `DateTime` structs orders by struct keys (day before month before year),
-  # not chronologically. Map datetime keys to unix microseconds so the sort is
-  # chronological at month boundaries.
+  # not chronologically. Map datetime keys to unix microseconds so the sort
+  # is chronological at month boundaries. The leading sentinel (`0` for nil,
+  # `1` for present) keeps nil rows cleanly separate from a hypothetical
+  # `~U[1970-01-01]` row, so the two can never tie at the comparator.
   defp overview_sort_key(row, sort_key) do
     case Map.get(row, sort_key) do
-      %DateTime{} = dt -> DateTime.to_unix(dt, :microsecond)
-      nil -> 0
-      other -> other
+      nil -> {0, 0}
+      %DateTime{} = dt -> {1, DateTime.to_unix(dt, :microsecond)}
+      other -> {1, other}
     end
   end
 
