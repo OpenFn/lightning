@@ -28,6 +28,10 @@ and this project adheres to
   appeared above the corresponding stable release because the sort relied on
   structural comparison of parsed version structs rather than
   `Version.compare/2`.
+- Sort the support-user projects overview chronologically by Last Updated. The
+  in-memory sort over project rows previously relied on structural comparison of
+  timestamps and could invert when projects' last activity straddled a month
+  boundary in UTC.
 
 ## [2.16.3-pre] - 2026-04-30
 
