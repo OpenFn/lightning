@@ -74,7 +74,7 @@ defmodule LightningWeb.AdaptorIconController do
 
   defp serve_icon(conn, data) do
     conn
-    |> put_resp_header("content-type", "image/png")
+    |> put_resp_content_type("image/png", nil)
     |> put_resp_header(
       "cache-control",
       "public, max-age=#{@icon_max_age}"
