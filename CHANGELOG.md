@@ -29,6 +29,15 @@ and this project adheres to
 
 ### Fixed
 
+- Sort the workflow list, projects overview, and admin tables chronologically by
+  their date columns. Each previously inverted when timestamps fell on either
+  side of a month boundary in UTC. Affected columns: "Latest Work Order" on the
+  workflow list, "Last Updated" on the support-user projects overview, "Created
+  at" and "Scheduled deletion" on the admin Projects and Users tables.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
+- Sort the adaptor version dropdown per semver. Pre-release versions previously
+  appeared above their corresponding stable release.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
 - Collection storage on Project Settings, Collections no longer shows `0` for
   collections holding less than one megabyte of data. The underlying counter was
   always correct, the rendering now reflects values at any scale.
