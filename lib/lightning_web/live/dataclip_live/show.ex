@@ -40,7 +40,7 @@ defmodule LightningWeb.DataclipLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_project_picker project={@project} />
               <LayoutComponents.breadcrumb>
                 <:label>
                   {@page_title}

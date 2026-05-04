@@ -2,7 +2,7 @@ import { cn } from '../../utils/cn';
 import { useAwareness } from '../hooks/useAwareness';
 import { getAvatarInitials } from '../utils/avatar';
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 function lessthanmin(val: number, mins: number) {
   const now = Date.now();

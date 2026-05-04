@@ -3,6 +3,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   use LightningWeb, :live_component
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
   alias Lightning.Collections
@@ -30,9 +31,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           collections: _,
           return_to: _,
           project: _,
+          sandbox?: _,
           current_user: _
-        } =
-          assigns,
+        } = assigns,
         socket
       ) do
     {:ok,
@@ -266,6 +267,11 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         action_button_target={@myself}
         action_button_disabled={!@can_create_collection}
         action_button_id="open-create-collection-modal-button"
+      />
+      <.sandbox_settings_banner
+        :if={@sandbox?}
+        id="sandbox-banner-collections"
+        variant={:editable}
       />
 
       <.form_modal_component

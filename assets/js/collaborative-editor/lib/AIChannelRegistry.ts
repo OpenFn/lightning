@@ -693,7 +693,7 @@ export class AIChannelRegistry {
 
     const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { text: string };
-      this.store._setStreamingStatus(typedPayload.text);
+      this.store.setStreamingStatus(typedPayload.text);
     };
 
     const streamingChangesHandler: ChannelCallback = (payload: unknown) => {

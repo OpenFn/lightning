@@ -7,7 +7,7 @@ import { cn } from '#/utils/cn';
 
 import type { Message } from '../types/ai-assistant';
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 const STREAMING_MESSAGE_ID = '__streaming__' as const;
 
@@ -773,7 +773,7 @@ export function MessageList({
                 <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
               </div>
               <span className="text-xs text-gray-400 italic">
-                {streamingStatus || 'Generating response...'}
+                {streamingStatus}
               </span>
             </div>
           </div>

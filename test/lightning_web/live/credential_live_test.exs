@@ -968,6 +968,42 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(view)
       assert flash == %{"info" => "Credential created successfully"}
     end
+
+    test "renders the unrecognized-type warning under affected fields", %{
+      conn: conn
+    } do
+      Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+      Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "unknownish")
+      click_continue(view)
+
+      refute view |> has_element?("#credential-type-picker")
+
+      html = view |> element("#credential-form-new") |> render()
+
+      assert html =~ "unrecognized type"
+      assert html =~ "<code>badThing</code>"
+      assert html =~ "we&#39;ll store it as text"
+    end
+
+    test "does not render an unrecognized-type warning for known types", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "dhis2")
+      click_continue(view)
+
+      html = view |> element("#credential-form-new") |> render()
+
+      refute html =~ "unrecognized type"
+      refute html =~ "we&#39;ll store it as text"
+    end
   end
 
   describe "Edit" do

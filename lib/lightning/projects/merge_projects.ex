@@ -952,6 +952,8 @@ defmodule Lightning.Projects.MergeProjects do
   sandbox was forked. Specifically, a workflow has diverged if the target's current HEAD
   version is not present in the sandbox's version history.
 
+  Arguments can be reversed to get changes in a sandbox against main.
+
   ## Parameters
     * `source_project` - The sandbox project
     * `target_project` - The target project to compare against

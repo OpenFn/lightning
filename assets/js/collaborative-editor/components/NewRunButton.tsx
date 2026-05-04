@@ -2,7 +2,7 @@ import { useCanRun } from '../hooks/useWorkflow';
 
 import { Button } from './Button';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface NewRunButtonProps {
   onClick: () => void;
