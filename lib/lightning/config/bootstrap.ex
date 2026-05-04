@@ -389,6 +389,16 @@ defmodule Lightning.Config.Bootstrap do
               end,
               :always
             ),
+          tls_options: [
+            versions: [:"tlsv1.3"],
+            verify: :verify_peer,
+            cacerts: :public_key.cacerts_get(),
+            server_name_indication: env!("SMTP_RELAY", :string) |> to_charlist(),
+            depth: 5,
+            customize_hostname_check: [
+              match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+            ]
+          ],
           port: env!("SMTP_PORT", :integer, 587)
 
       unknown ->

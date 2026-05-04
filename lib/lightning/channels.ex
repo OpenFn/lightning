@@ -1,7 +1,7 @@
 defmodule Lightning.Channels do
   @moduledoc """
   Context for managing Channels — HTTP proxy configurations that forward
-  requests from a source to a sink.
+  requests from a client to a destination.
   """
 
   import Ecto.Query
@@ -10,13 +10,15 @@ defmodule Lightning.Channels do
   alias Lightning.Accounts.User
   alias Lightning.Channels.Audit
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
   alias Lightning.Channels.SearchParams
+  alias Lightning.Config
   alias Lightning.Projects.Project
   alias Lightning.Repo
+
+  require Logger
 
   @doc """
   Returns all channels for a project, ordered by name.
@@ -99,7 +101,7 @@ defmodule Lightning.Channels do
       ) do
     events_query =
       from(e in ChannelEvent,
-        where: e.type in [:sink_response, :error],
+        where: e.type in [:destination_response, :error],
         order_by: [e.channel_request_id, e.inserted_at]
       )
 
@@ -120,50 +122,66 @@ defmodule Lightning.Channels do
   end
 
   @doc """
-  Gets a single channel by ID. Returns nil if not found.
+  Gets a single channel by ID. Returns `nil` if not found.
+
+  ## Options
+
+    * `:include` - list of associations to preload (default: `[]`)
   """
-  def get_channel(id) do
-    Repo.get(Channel, id)
+  def get_channel(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one()
+  end
+
+  @doc """
+  Gets a single channel by ID. Raises `Ecto.NoResultsError` if not found.
+
+  Accepts the same options as `get_channel/2`.
+  """
+  def get_channel!(id, opts \\ []) do
+    channel_query(id, opts) |> Repo.one!()
+  end
+
+  defp channel_query(id, opts) do
+    preloads = Keyword.get(opts, :include, [])
+
+    from(c in Channel, where: c.id == ^id)
+    |> preload(^preloads)
   end
 
   @doc """
   Gets a channel by ID with all auth methods preloaded.
 
-  Preloads source auth methods (with webhook_auth_method) and sink auth
-  methods (with project_credential → credential). Returns nil if not found.
+  Preloads client auth methods (with webhook_auth_method) and destination auth
+  method (with project_credential → credential). Returns nil if not found.
 
-  Used by ChannelProxyPlug for source authentication and sink credential resolution.
+  Used by ChannelProxyPlug for client authentication and destination credential resolution.
   """
   def get_channel_with_auth(id) do
     from(c in Channel,
       where: c.id == ^id,
-      left_join: src in assoc(c, :source_auth_methods),
-      left_join: wam in assoc(src, :webhook_auth_method),
-      left_join: snk in assoc(c, :sink_auth_methods),
-      left_join: pc in assoc(snk, :project_credential),
+      left_join: cli in assoc(c, :client_auth_methods),
+      left_join: wam in assoc(cli, :webhook_auth_method),
+      left_join: dest in assoc(c, :destination_auth_method),
+      left_join: pc in assoc(dest, :project_credential),
       left_join: cred in assoc(pc, :credential),
       preload: [
-        source_auth_methods: {src, webhook_auth_method: wam},
-        sink_auth_methods: {snk, project_credential: {pc, credential: cred}}
+        client_auth_methods: {cli, webhook_auth_method: wam},
+        client_webhook_auth_methods: wam,
+        destination_auth_method:
+          {dest, project_credential: {pc, credential: cred}}
       ]
     )
     |> Repo.one()
   end
 
   @doc """
-  Gets a single channel. Raises if not found.
-  """
-  def get_channel!(id, opts \\ []) do
-    preloads = Keyword.get(opts, :include, [])
-    Repo.get!(Channel, id) |> Repo.preload(preloads)
-  end
-
-  @doc """
   Gets a channel by ID scoped to a project. Returns `nil` if the channel
   does not exist or belongs to a different project.
   """
-  def get_channel_for_project(project_id, channel_id) do
-    Repo.get_by(Channel, id: channel_id, project_id: project_id)
+  def get_channel_for_project(project_id, channel_id, opts \\ []) do
+    channel_query(channel_id, opts)
+    |> where([c], c.project_id == ^project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -179,7 +197,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: channel} ->
       Audit.event("created", channel.id, actor, changeset)
     end)
-    |> maybe_audit_auth_method_changes(changeset, actor)
+    |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -200,7 +218,7 @@ defmodule Lightning.Channels do
     |> Multi.insert(:audit, fn %{channel: updated} ->
       Audit.event("updated", updated.id, actor, changeset)
     end)
-    |> maybe_audit_auth_method_changes(changeset, actor)
+    |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -211,12 +229,20 @@ defmodule Lightning.Channels do
   @doc """
   Deletes a channel.
 
-  Returns `{:error, changeset}` if the channel has snapshots
-  (due to `:restrict` FK on `channel_snapshots`).
+  Explicitly deletes all channel_requests first (required because
+  `channel_requests.channel_id` uses `on_delete: :restrict`). Channel
+  events cascade automatically, and channel snapshots cascade via
+  `on_delete: :delete_all` on `channel_snapshots.channel_id`.
   """
   @spec delete_channel(Channel.t(), actor: User.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
+    from(cr in ChannelRequest,
+      where: cr.channel_id == ^channel.id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
     |> Multi.delete(:channel, channel)
@@ -225,88 +251,6 @@ defmodule Lightning.Channels do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
     end
-  end
-
-  # Emits one "auth_method_added" or "auth_method_removed" audit step per
-  # association change. No-op when the changeset has no auth method changes
-  # (e.g. the toggle handler, which passes no "channel_auth_methods" key).
-  defp maybe_audit_auth_method_changes(multi, changeset, actor) do
-    auth_changes =
-      Ecto.Changeset.get_change(changeset, :channel_auth_methods, [])
-
-    inserted = Enum.filter(auth_changes, &(&1.action == :insert))
-    deleted = Enum.filter(auth_changes, &(&1.action == :delete))
-
-    multi
-    |> add_auth_method_added_audits(inserted, actor)
-    |> add_auth_method_removed_audits(deleted, actor)
-  end
-
-  defp add_auth_method_added_audits(multi, inserted, actor) do
-    inserted
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {cs, idx}, acc ->
-      role = Ecto.Changeset.get_field(cs, :role)
-      fields = auth_method_fields_for(cs, role)
-
-      Multi.insert(
-        acc,
-        :"audit_auth_method_added_#{idx}",
-        fn %{channel: channel} ->
-          Audit.event("auth_method_added", channel.id, actor, %{
-            before: nil,
-            after: fields
-          })
-        end
-      )
-    end)
-  end
-
-  defp add_auth_method_removed_audits(multi, deleted, actor) do
-    deleted
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {cs, idx}, acc ->
-      role = cs.data.role
-      fields = auth_method_fields_for(cs, role)
-
-      Multi.insert(
-        acc,
-        :"audit_auth_method_removed_#{idx}",
-        fn %{channel: channel} ->
-          Audit.event("auth_method_removed", channel.id, actor, %{
-            before: fields,
-            after: nil
-          })
-        end
-      )
-    end)
-  end
-
-  defp auth_method_fields_for(cs, :source) do
-    %{
-      role: "source",
-      webhook_auth_method_id:
-        Ecto.Changeset.get_field(cs, :webhook_auth_method_id)
-    }
-  end
-
-  defp auth_method_fields_for(cs, :sink) do
-    %{
-      role: "sink",
-      project_credential_id: Ecto.Changeset.get_field(cs, :project_credential_id)
-    }
-  end
-
-  @doc """
-  Returns all ChannelAuthMethod records for a channel, preloading
-  their associated webhook_auth_method and project_credential (with credential).
-  """
-  def list_channel_auth_methods(%Channel{} = channel) do
-    from(cam in ChannelAuthMethod,
-      where: cam.channel_id == ^channel.id,
-      preload: [:webhook_auth_method, project_credential: :credential]
-    )
-    |> Repo.all()
   end
 
   @doc """
@@ -331,7 +275,7 @@ defmodule Lightning.Channels do
           channel_id: channel.id,
           lock_version: channel.lock_version,
           name: channel.name,
-          sink_url: channel.sink_url,
+          destination_url: channel.destination_url,
           enabled: channel.enabled
         }
 
@@ -359,5 +303,142 @@ defmodule Lightning.Channels do
             {:error, changeset}
         end
     end
+  end
+
+  @doc """
+  Deletes channel_requests older than `period_days` for channels in the
+  given project. Channel events are cascade-deleted by the database FK.
+
+  After deletion, removes orphaned channel_snapshots that are no longer
+  referenced by any request and are not the current version.
+  """
+  @spec delete_expired_requests(Ecto.UUID.t(), pos_integer()) :: :ok
+  def delete_expired_requests(project_id, period_days)
+      when is_binary(project_id) and is_integer(period_days) do
+    request_count =
+      expired_requests_query(project_id, period_days)
+      |> batch_delete_requests()
+
+    if request_count > 0 do
+      Logger.info("Deleted expired channel requests for project #{project_id}")
+    end
+
+    {snapshot_count, _} = delete_unused_channel_snapshots(project_id)
+
+    if snapshot_count > 0 do
+      Logger.info(
+        "Deleted #{snapshot_count} unused channel snapshots for project #{project_id}"
+      )
+    end
+
+    :ok
+  end
+
+  @doc """
+  Deletes ALL channel_requests for a project's channels.
+
+  Used during project deletion to satisfy the RESTRICT FK constraint
+  on `channel_requests.channel_id` before channels are cascade-deleted.
+  """
+  @spec delete_channel_requests_for_project(Project.t()) :: :ok
+  def delete_channel_requests_for_project(%Project{id: project_id}) do
+    from(cr in ChannelRequest,
+      join: c in Channel,
+      on: cr.channel_id == c.id,
+      where: c.project_id == ^project_id,
+      select: cr.id
+    )
+    |> batch_delete_requests()
+
+    :ok
+  end
+
+  defp batch_delete_requests(query) do
+    batch_size = Config.activity_cleanup_chunk_size()
+
+    total =
+      Repo.aggregate(query, :count,
+        timeout: Config.default_ecto_database_timeout() * 3
+      )
+
+    if total > 0 do
+      delete_query =
+        ChannelRequest
+        |> with_cte("requests_to_delete",
+          as: ^limit(query, ^batch_size)
+        )
+        |> join(:inner, [cr], rtd in "requests_to_delete", on: cr.id == rtd.id)
+
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.take(ceil(total / batch_size))
+      |> Enum.each(fn _i ->
+        {_count, _} =
+          Repo.delete_all(delete_query,
+            returning: false,
+            timeout: Config.default_ecto_database_timeout() * 3
+          )
+      end)
+    end
+
+    total
+  end
+
+  defp expired_requests_query(project_id, period_days) do
+    from(cr in ChannelRequest,
+      join: c in Channel,
+      on: cr.channel_id == c.id,
+      where: c.project_id == ^project_id,
+      where: cr.started_at < ago(^period_days, "day"),
+      select: cr.id
+    )
+  end
+
+  defp delete_unused_channel_snapshots(project_id) do
+    batch_size = Config.activity_cleanup_chunk_size()
+
+    unused_query =
+      from(cs in ChannelSnapshot,
+        as: :channel_snapshot,
+        join: c in Channel,
+        on: cs.channel_id == c.id,
+        where: c.project_id == ^project_id,
+        where: cs.lock_version != c.lock_version,
+        where:
+          not exists(
+            from(cr in ChannelRequest,
+              where:
+                cr.channel_snapshot_id ==
+                  parent_as(:channel_snapshot).id,
+              select: 1
+            )
+          ),
+        select: cs.id
+      )
+
+    total =
+      Repo.aggregate(unused_query, :count,
+        timeout: Config.default_ecto_database_timeout() * 3
+      )
+
+    if total > 0 do
+      delete_query =
+        ChannelSnapshot
+        |> with_cte("snapshots_to_delete",
+          as: ^limit(unused_query, ^batch_size)
+        )
+        |> join(:inner, [cs], std in "snapshots_to_delete", on: cs.id == std.id)
+
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.take(ceil(total / batch_size))
+      |> Enum.each(fn _i ->
+        {_count, _} =
+          Repo.delete_all(delete_query,
+            returning: false,
+            timeout: Config.default_ecto_database_timeout() * 3
+          )
+      end)
+    end
+
+    {total, nil}
   end
 end

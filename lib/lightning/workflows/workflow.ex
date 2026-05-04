@@ -44,9 +44,12 @@ defmodule Lightning.Workflows.Workflow do
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
 
+    # the ordering of edges, triggers and jobs are intentional
+    # ecto reverses the relations when inserting. so jobs->triggers->edges
+    # triggers depend on jobs for cron_cursor_job_id
     has_many :edges, Edge, on_replace: :delete_if_exists
-    has_many :jobs, Job, on_replace: :delete
     has_many :triggers, Trigger, on_replace: :delete_if_exists
+    has_many :jobs, Job, on_replace: :delete
     has_many :versions, WorkflowVersion, foreign_key: :workflow_id
 
     has_many :work_orders, Lightning.WorkOrder

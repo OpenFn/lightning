@@ -37,7 +37,7 @@ defmodule Lightning.Accounts do
     count > 0
   end
 
-  @spec purge_user(id :: Ecto.UUID.t()) :: :ok
+  @spec purge_user(id :: Ecto.UUID.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def purge_user(id) do
     Logger.debug(fn ->
       # coveralls-ignore-start
@@ -53,15 +53,19 @@ defmodule Lightning.Accounts do
     Credentials.list_credentials(%User{id: id})
     |> Enum.each(&Credentials.delete_credential/1)
 
-    Repo.get(User, id) |> delete_user()
+    case Repo.get(User, id) |> delete_user() do
+      {:ok, _user} ->
+        Logger.debug(fn ->
+          # coveralls-ignore-start
+          "User ##{id} purged."
+          # coveralls-ignore-stop
+        end)
 
-    Logger.debug(fn ->
-      # coveralls-ignore-start
-      "User ##{id} purged."
-      # coveralls-ignore-stop
-    end)
+        :ok
 
-    :ok
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -90,7 +94,18 @@ defmodule Lightning.Accounts do
       )
       |> Repo.all()
 
-    :ok = Enum.each(users_to_delete, fn u -> purge_user(u.id) end)
+    :ok =
+      Enum.each(users_to_delete, fn u ->
+        case purge_user(u.id) do
+          :ok ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.warning(fn ->
+              "Failed to purge user ##{u.id}: #{inspect(changeset.errors)}"
+            end)
+        end
+      end)
 
     {:ok, %{users_deleted: users_to_delete}}
   end
@@ -618,7 +633,13 @@ defmodule Lightning.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    user
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:runs,
+      name: :runs_created_by_id_fkey,
+      message: "user has associated runs and cannot be deleted"
+    )
+    |> Repo.delete()
   end
 
   @doc """

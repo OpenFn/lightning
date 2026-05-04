@@ -19,9 +19,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   require Logger
 
-  @timeout_buffer_percentage 10
-  @minimum_buffer_ms 1000
-
   @doc """
   Processes an AI assistant message asynchronously.
 
@@ -66,9 +63,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()
   def timeout(_job) do
-    apollo_timeout_ms = Lightning.Config.apollo(:timeout) || 30_000
-    buffer_ms = round(apollo_timeout_ms * @timeout_buffer_percentage / 100)
-    apollo_timeout_ms + max(buffer_ms, @minimum_buffer_ms)
+    # The Finch receive_timeout on the streaming client is the primary
+    # timeout mechanism. The Oban worker timeout is a safety net that
+    # should be slightly longer.
+    streaming_timeout_ms =
+      Lightning.Config.apollo(:streaming_timeout) || 120_000
+
+    streaming_timeout_ms + 10_000
   end
 
   @doc false
@@ -130,11 +131,32 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           ChatMessage.t()
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp dispatch_message_processing(session, message) do
-    if job_chat?(session, message) do
-      process_job_message(session, message)
+    if global_chat?(session) do
+      process_global_message(session, message)
     else
-      process_workflow_message(session, message)
+      if job_chat?(session, message) do
+        process_job_message(session, message)
+      else
+        process_workflow_message(session, message)
+      end
     end
+  end
+
+  @spec global_chat?(AiAssistant.ChatSession.t()) :: boolean()
+  defp global_chat?(session) do
+    get_in(session.meta, ["message_options", "use_global_assistant"]) == true
+  end
+
+  @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp process_global_message(session, message) do
+    workflow_yaml = message.code
+    page = get_in(session.meta, ["message_options", "page"])
+
+    AiAssistant.query_global_stream(session, message.content,
+      workflow_yaml: workflow_yaml,
+      page: page
+    )
   end
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
@@ -198,7 +220,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           options
       end
 
-    AiAssistant.query(enriched_session, message.content, options)
+    AiAssistant.query_stream(enriched_session, message.content, options)
   end
 
   @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
@@ -230,7 +252,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
-    AiAssistant.query_workflow(session, message.content, code: code)
+    AiAssistant.query_workflow_stream(session, message.content, code: code)
   end
 
   @doc false
@@ -331,7 +353,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   def handle_ai_assistant_exception(measure, meta) do
     job = meta.job
     error = meta.error
-    timeout? = Map.get(error, :reason) == :timeout
+    timeout? = is_map(error) and Map.get(error, :reason) == :timeout
 
     Logger.error(~s"""
     AI Assistant exception:

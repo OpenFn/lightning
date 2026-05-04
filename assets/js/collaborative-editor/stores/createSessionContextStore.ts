@@ -122,6 +122,7 @@ export const createSessionContextStore = (
       versionsError: null,
       workflow_template: null,
       hasReadAIDisclaimer: false,
+      experimentalFeaturesEnabled: false,
       limits: {},
       isNewWorkflow,
       isLoading: false,
@@ -189,6 +190,8 @@ export const createSessionContextStore = (
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
         draft.hasReadAIDisclaimer = sessionContext.has_read_ai_disclaimer;
+        draft.experimentalFeaturesEnabled =
+          sessionContext.experimental_features_enabled;
         draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;

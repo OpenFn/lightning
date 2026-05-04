@@ -22,6 +22,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :branch, :string
     field :access_token, :binary
     field :config_path, :string
+    field :sync_version, :boolean, default: false
     field :accept, :boolean, virtual: true
 
     field :sync_direction, Ecto.Enum,
@@ -56,7 +57,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   end
 
   @required_fields ~w(github_installation_id repo branch project_id)a
-  @other_fields ~w(config_path)a
+  @other_fields ~w(config_path sync_version)a
 
   def changeset(project_repo_connection, attrs) do
     project_repo_connection
@@ -125,6 +126,14 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
 
   def config_path(repo_connection) do
     repo_connection.config_path ||
-      "./openfn-#{repo_connection.project_id}-config.json"
+      if repo_connection.sync_version do
+        path_to_openfn_yaml()
+      else
+        "./openfn-#{repo_connection.project_id}-config.json"
+      end
+  end
+
+  def path_to_openfn_yaml do
+    "openfn.yaml"
   end
 end

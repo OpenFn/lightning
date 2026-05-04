@@ -27,6 +27,54 @@ defmodule LightningWeb.API.WorkflowsController do
       GET /api/workflows/a1b2c3d4-...
       POST /api/workflows
       PATCH /api/workflows/a1b2c3d4-...
+
+  ## Sample curl requests
+
+  List all workflows:
+
+  ```bash
+  curl http://localhost:4000/api/workflows \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Get a single workflow:
+
+  ```bash
+  curl http://localhost:4000/api/workflows/$WORKFLOW_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Filter by project:
+
+  ```bash
+  curl "http://localhost:4000/api/workflows?project_id=$PROJECT_ID" \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Nested route — workflows for a specific project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID/workflows \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Create a workflow:
+
+  ```bash
+  curl -X POST http://localhost:4000/api/projects/$PROJECT_ID/workflows \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -H "Content-Type: application/json" \\
+    -d '{"name":"My Workflow","jobs":[...],"triggers":[...],"edges":[...]}'
+  ```
+
+  Update a workflow:
+
+  ```bash
+  curl -X PATCH http://localhost:4000/api/projects/$PROJECT_ID/workflows/$WORKFLOW_ID \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -H "Content-Type: application/json" \\
+    -d '{"name":"Updated Name"}'
+  ```
   """
   use LightningWeb, :controller
 

@@ -714,6 +714,115 @@ defmodule Lightning.InvocationTest do
       assert result.id == final_dataclip.id
     end
 
+    test "returns the final dataclip from a manual run (no trigger on work order)" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project)
+
+      final_dataclip =
+        insert(:dataclip,
+          project: project,
+          body: %{"manual_final" => "state"},
+          type: :step_result
+        )
+
+      [job] = workflow.jobs
+
+      # Manual run: work order has no trigger, run has starting_job instead
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: nil,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_job: job,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: DateTime.utc_now(),
+        final_dataclip: final_dataclip
+      )
+
+      result = Invocation.get_next_cron_run_dataclip(trigger)
+      assert result.id == final_dataclip.id
+    end
+
+    test "prefers the most recent successful run regardless of trigger" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      [job] = workflow.jobs
+
+      old_dataclip = insert(:dataclip, project: project)
+
+      old_final =
+        insert(:dataclip,
+          project: project,
+          body: %{"old" => "state"},
+          type: :step_result
+        )
+
+      # Older cron-triggered run
+      old_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: old_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: old_wo,
+        dataclip: old_dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: ~U[2025-01-01 00:00:00Z],
+        final_dataclip: old_final
+      )
+
+      # Newer manual run
+      new_dataclip = insert(:dataclip, project: project)
+
+      new_final =
+        insert(:dataclip,
+          project: project,
+          body: %{"new" => "state"},
+          type: :step_result
+        )
+
+      new_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: nil,
+          dataclip: new_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: new_wo,
+        dataclip: new_dataclip,
+        starting_job: job,
+        snapshot: snapshot,
+        state: :success,
+        finished_at: ~U[2025-06-01 00:00:00Z],
+        final_dataclip: new_final
+      )
+
+      # Should use the newer manual run's final dataclip
+      result = Invocation.get_next_cron_run_dataclip(trigger)
+      assert result.id == new_final.id
+    end
+
     test "skips wiped dataclips and returns nil" do
       project = insert(:project)
 
@@ -863,6 +972,85 @@ defmodule Lightning.InvocationTest do
       refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.snapshot))
       refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.workflow))
       refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.runs))
+    end
+  end
+
+  describe "search_workorders_for_cancel/2" do
+    test "returns workorders that have available runs" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      # Work order with available run — should be returned
+      wo_available =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        work_order: wo_available,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        state: :available
+      )
+
+      # Work order with claimed run — should NOT be returned
+      wo_claimed =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        work_order: wo_claimed,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        state: :claimed,
+        claimed_at: build(:timestamp)
+      )
+
+      found =
+        Invocation.search_workorders_for_cancel(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()})
+        )
+
+      assert [wo_available.id] == Enum.map(found, & &1.id)
+    end
+
+    test "includes workorders with wiped dataclips (unlike retry)" do
+      project = insert(:project)
+      wiped_dataclip = insert(:dataclip, wiped_at: Timex.now())
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: wiped_dataclip
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: wiped_dataclip,
+        starting_trigger: trigger,
+        state: :available
+      )
+
+      found =
+        Invocation.search_workorders_for_cancel(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()})
+        )
+
+      assert [wo.id] == Enum.map(found, & &1.id)
     end
   end
 

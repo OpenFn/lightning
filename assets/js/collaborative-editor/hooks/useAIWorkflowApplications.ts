@@ -123,7 +123,7 @@ export function useAIWorkflowApplications({
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
   workflowActions: {
-    importWorkflow: (state: YAMLWorkflowState) => void;
+    importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
     doneApplyingWorkflow: (messageId: string) => Promise<void>;
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
@@ -198,7 +198,7 @@ export function useAIWorkflowApplications({
           extractJobCredentials(jobs)
         );
 
-        importWorkflow(workflowStateWithCreds);
+        await importWorkflow(workflowStateWithCreds);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
@@ -256,6 +256,13 @@ export function useAIWorkflowApplications({
 
       // If already previewing this message, do nothing
       if (previewingMessageId === messageId) {
+        return;
+      }
+
+      // If we're previewing from streaming and the real message arrives,
+      // just update the message ID without re-rendering the diff
+      if (previewingMessageId === '__streaming__') {
+        setPreviewingMessageId(messageId);
         return;
       }
 

@@ -42,20 +42,45 @@ defmodule Lightning.Collections do
     Repo.all(from(c in Collection, order_by: ^order_by, preload: ^preload))
   end
 
-  @spec list_project_collections(Project.t()) :: [Collection.t(), ...] | []
-  def list_project_collections(%Project{id: project_id}) do
+  @spec list_project_collections(Project.t(), keyword()) ::
+          [Collection.t(), ...] | []
+  def list_project_collections(%Project{id: project_id}, opts \\ []) do
+    order_by = Keyword.get(opts, :order_by, asc: :name)
+
     query =
       from c in Collection,
         where: c.project_id == ^project_id,
-        order_by: [desc: :inserted_at]
+        order_by: ^order_by
 
     Repo.all(query)
   end
 
+  @doc """
+  Looks up a collection by name across all projects.
+
+  Returns `{:error, :conflict}` when the name exists in more than one
+  project; the caller should then retry with `get_collection/2`.
+  """
   @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :not_found}
+          {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
   def get_collection(name) do
-    case Repo.get_by(Collection, name: name) do
+    case Repo.all(from c in Collection, where: c.name == ^name) do
+      [] -> {:error, :not_found}
+      [collection] -> {:ok, collection}
+      [_ | _] -> {:error, :conflict}
+    end
+  end
+
+  @doc """
+  Looks up a collection scoped to a specific project.
+
+  Unambiguous by construction: there is at most one collection with a given
+  name in a project.
+  """
+  @spec get_collection(Ecto.UUID.t(), String.t()) ::
+          {:ok, Collection.t()} | {:error, :not_found}
+  def get_collection(project_id, name) do
+    case Repo.get_by(Collection, project_id: project_id, name: name) do
       nil -> {:error, :not_found}
       collection -> {:ok, collection}
     end

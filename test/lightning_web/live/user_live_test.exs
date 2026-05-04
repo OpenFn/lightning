@@ -417,6 +417,56 @@ defmodule LightningWeb.UserLiveTest do
       refute index_live |> element("user-#{user.id}") |> has_element?()
     end
 
+    test "delete now shows an error when purge fails due to associated runs",
+         %{conn: conn} do
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _html} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete now")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      # Simulate TOCTOU race: a run is created after the modal opens
+      # but before the admin clicks delete. The has_activity_in_projects?
+      # assign is now stale, so the delete path fires.
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
+
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          user: %{
+            "scheduled_deletion_email" => user.email
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      # The UI should not claim the user was deleted when they weren't
+      refute html =~ "User deleted"
+      assert html =~ "Cannot delete user with associated activity"
+      assert Repo.get(User, user.id), "User should still exist in the database"
+    end
+
     test "does not enable the `Delete now` button for a superuser", %{
       conn: conn,
       user: user

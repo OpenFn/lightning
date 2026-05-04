@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const INITIAL_LOADING_STATUSES = [
+  'Thinking about the question...',
+  'Working on it...',
+  'Processing your request...',
+  'Examining your question...',
+  'Taking a look...',
+  'Looking into it...',
+] as const;
+
+const getRandomStatus = () =>
+  INITIAL_LOADING_STATUSES[
+    Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
+  ];
+
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
@@ -12,6 +26,9 @@ import {
   useAISessionId,
   useAISessionType,
   useAIStore,
+  useAIStreamingChanges,
+  useAIStreamingContent,
+  useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
@@ -24,6 +41,7 @@ import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
+  useExperimentalFeaturesEnabled,
   useHasReadAIDisclaimer,
   useIsNewWorkflow,
   useLimits,
@@ -122,11 +140,16 @@ export function AIAssistantPanelWrapper({
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
+  const streamingContent = useAIStreamingContent();
+  const streamingStatus = useAIStreamingStatus();
+  const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
   const sessionContextLoaded = useSessionContextLoaded();
   const hasReadDisclaimer = useHasReadAIDisclaimer();
+  const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
+  const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
   const markAIDisclaimerRead = useMarkAIDisclaimerRead();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
@@ -303,6 +326,7 @@ export function AIAssistantPanelWrapper({
         attach_logs?: boolean;
         attach_io_data?: boolean;
         step_id?: string;
+        use_global_assistant?: boolean;
       }
     ) => {
       const currentState = aiStore.getSnapshot();
@@ -349,10 +373,16 @@ export function AIAssistantPanelWrapper({
           ...(messageOptions?.attach_logs && { attach_logs: true }),
           ...(messageOptions?.attach_io_data && { attach_io_data: true }),
           ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
+          ...(messageOptions?.use_global_assistant && {
+            use_global_assistant: true,
+          }),
         };
 
-        // Add workflow YAML if in workflow mode
-        if (page === 'workflow_template') {
+        // Add workflow YAML if in workflow mode or global assistant
+        if (
+          page === 'workflow_template' ||
+          messageOptions?.use_global_assistant
+        ) {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -365,6 +395,18 @@ export function AIAssistantPanelWrapper({
             if (workflowYAML) {
               finalContext = { ...finalContext, code: workflowYAML };
             }
+          }
+
+          // Derive page for global assistant routing
+          if (messageOptions?.use_global_assistant) {
+            const jobName = (context as JobCodeContext)?.job_name;
+            const workflowName = workflow?.name || 'workflow';
+            finalContext = {
+              ...finalContext,
+              page: jobName
+                ? `workflows/${workflowName}/${jobName}`
+                : `workflows/${workflowName}`,
+            };
           }
         }
 
@@ -381,6 +423,7 @@ export function AIAssistantPanelWrapper({
 
         // Mark message as sending in store
         aiStore.setMessageSending();
+        aiStore.setStreamingStatus(getRandomStatus());
         return;
       }
 
@@ -392,12 +435,17 @@ export function AIAssistantPanelWrapper({
             attach_io_data?: boolean;
             step_id?: string;
             code?: string;
+            use_global_assistant?: boolean;
+            page?: string;
           }
         | undefined = {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
-      if (aiMode?.page === 'workflow_template') {
+      if (
+        aiMode?.page === 'workflow_template' ||
+        messageOptions?.use_global_assistant
+      ) {
         const workflowData = prepareWorkflowForSerialization(
           workflow,
           jobs,
@@ -412,6 +460,15 @@ export function AIAssistantPanelWrapper({
         if (workflowYAML) {
           options = { ...options, code: workflowYAML };
         }
+
+        // Derive page for global assistant routing
+        if (messageOptions?.use_global_assistant) {
+          const jobName = (aiMode?.context as JobCodeContext)?.job_name;
+          const workflowName = workflow?.name || 'workflow';
+          options.page = jobName
+            ? `workflows/${workflowName}/${jobName}`
+            : `workflows/${workflowName}`;
+        }
       } else {
         // important: determines what ai to be used
         options = { ...aiMode?.context, ...options };
@@ -419,6 +476,7 @@ export function AIAssistantPanelWrapper({
 
       // Update store state and send through registry
       aiStore.setMessageSending();
+      aiStore.setStreamingStatus(getRandomStatus());
       sendMessageToChannel(content, options);
     },
     [
@@ -438,10 +496,15 @@ export function AIAssistantPanelWrapper({
   const handleRetryMessage = useCallback(
     (messageId: string) => {
       aiStore.retryMessage(messageId);
+      aiStore.setStreamingStatus(getRandomStatus());
       retryMessageViaChannel(messageId);
     },
     [aiStore, retryMessageViaChannel]
   );
+
+  const handleGlobalAssistantChange = useCallback((active: boolean) => {
+    setIsGlobalAssistantActive(active);
+  }, []);
 
   const handleMarkDisclaimerRead = useCallback(() => {
     // Persist to backend via workflow channel and update local state
@@ -539,6 +602,58 @@ export function AIAssistantPanelWrapper({
     onPreview: handlePreviewJobCode,
   });
 
+  // Auto-apply streaming changes as soon as they arrive (before text finishes)
+  // This triggers the same apply/preview logic that normally runs on new_message,
+  // but earlier — as soon as Apollo sends the structured changes event.
+  const appliedStreamingChangesRef = useRef<Record<string, unknown> | null>(
+    null
+  );
+  // Track whether we applied via streaming so we can skip the duplicate
+  // auto-apply when the final new_message arrives
+  const appliedViaStreamingRef = useRef(false);
+  useEffect(() => {
+    if (!streamingChanges || !canApplyChanges) return;
+    // Avoid re-applying the same streaming changes object
+    if (appliedStreamingChangesRef.current === streamingChanges) return;
+    appliedStreamingChangesRef.current = streamingChanges;
+
+    if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
+      const yaml = streamingChanges['yaml'] as string;
+      if (yaml) {
+        appliedViaStreamingRef.current = true;
+        void handleApplyWorkflow(yaml, '__streaming__');
+      }
+    } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
+      const code = streamingChanges['code'] as string;
+      if (code) {
+        appliedViaStreamingRef.current = true;
+        handlePreviewJobCode(code, '__streaming__');
+      }
+    }
+  }, [
+    streamingChanges,
+    aiMode?.page,
+    canApplyChanges,
+    handleApplyWorkflow,
+    handlePreviewJobCode,
+  ]);
+
+  // When a new assistant message with code arrives after we already applied
+  // via streaming, mark it as already applied to prevent duplicate auto-apply
+  // and update previewingMessageId to the real ID to prevent diff flicker
+  useEffect(() => {
+    if (!appliedViaStreamingRef.current) return;
+
+    const latestAssistantMessage = [...messages]
+      .reverse()
+      .find(m => m.role === 'assistant' && m.code && m.status === 'success');
+
+    if (latestAssistantMessage) {
+      appliedMessageIdsRef.current.add(latestAssistantMessage.id);
+      appliedViaStreamingRef.current = false;
+    }
+  }, [messages, appliedMessageIdsRef]);
+
   return (
     <div
       className="flex h-full flex-shrink-0"
@@ -584,6 +699,9 @@ export function AIAssistantPanelWrapper({
               showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
               aiLimit={limits.ai_assistant ?? null}
+              showGlobalAssistantOption={experimentalFeaturesEnabled}
+              isGlobalAssistantActive={isGlobalAssistantActive}
+              onGlobalAssistantChange={handleGlobalAssistantChange}
             >
               <MessageList
                 messages={messages}
@@ -626,6 +744,8 @@ export function AIAssistantPanelWrapper({
                 }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}
+                streamingContent={streamingContent}
+                streamingStatus={streamingStatus}
               />
             </AIAssistantPanel>
           </div>

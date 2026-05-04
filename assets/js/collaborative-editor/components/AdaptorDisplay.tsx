@@ -6,7 +6,7 @@ import { useCredentialQueries } from '../hooks/useCredentials';
 import { extractAdaptorDisplayName } from '../utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 type AdaptorDisplaySize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 

@@ -15,6 +15,8 @@ defmodule LightningWeb.RunLive.IndexTest do
     %{project: project, triggers: [trigger], jobs: jobs} =
       workflow = insert(:complex_workflow, project: project) |> with_snapshot()
 
+    snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
     dataclip = insert(:dataclip, project: project)
 
     work_order_1 =
@@ -22,6 +24,7 @@ defmodule LightningWeb.RunLive.IndexTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
+        state: :failed,
         last_activity: DateTime.utc_now()
       )
       |> with_run(
@@ -34,10 +37,11 @@ defmodule LightningWeb.RunLive.IndexTest do
           |> Enum.map(fn j ->
             build(:step,
               job: j,
+              snapshot: snapshot,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_reason: "failed"
+              exit_reason: "fail"
             )
           end)
       )
@@ -49,6 +53,7 @@ defmodule LightningWeb.RunLive.IndexTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
+        state: :failed,
         last_activity: DateTime.utc_now()
       )
       |> with_run(
@@ -61,10 +66,11 @@ defmodule LightningWeb.RunLive.IndexTest do
           |> Enum.map(fn j ->
             build(:step,
               job: j,
+              snapshot: snapshot,
               input_dataclip: dataclip,
               started_at: build(:timestamp),
               finished_at: build(:timestamp),
-              exit_reason: "failed"
+              exit_reason: "fail"
             )
           end)
       )
@@ -172,8 +178,8 @@ defmodule LightningWeb.RunLive.IndexTest do
               log: true,
               success: true,
               pending: true,
-              crash: true,
-              failure: true
+              crashed: true,
+              failed: true
             }
           )
         )
@@ -198,8 +204,8 @@ defmodule LightningWeb.RunLive.IndexTest do
             log: true,
             success: true,
             pending: true,
-            crash: true,
-            failure: true
+            crashed: true,
+            failed: true
           }
         )
 
@@ -523,8 +529,8 @@ defmodule LightningWeb.RunLive.IndexTest do
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
       html = render(view)
-      assert html =~ "Channel Requests"
-      assert html =~ "channel-request-filter-form"
+      assert html =~ "Channel is"
+      assert html =~ "channel_filter_dropdown"
     end
 
     test "channel logs tab shows empty state with no requests", %{
@@ -635,6 +641,586 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert_raise FunctionClauseError, fn ->
         live(conn, "/projects/#{project.id}/channels/requests")
       end
+    end
+  end
+
+  describe "filter chips" do
+    test "workflow filter chip shows active state when workflow selected", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      # Initially shows "Workflow is any"
+      chip = element(view, "#workflow-filter-chip")
+      assert render(chip) =~ "Workflow is"
+      assert render(chip) =~ "any"
+
+      # Select a workflow via the apply_filters event
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"workflow_id" => workflow.id}
+      })
+
+      # Chip now shows the workflow name and the clear button
+      html = render(view)
+      assert html =~ workflow.name
+      assert has_element?(view, "[aria-label=\"Clear filter\"]")
+    end
+
+    test "clearing workflow filter resets chip to inactive", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{workflow_id: workflow.id}
+          )
+        )
+
+      # Workflow is active
+      html = render(view)
+      assert html =~ workflow.name
+
+      # Clear the filter
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"workflow_id" => ""}
+      })
+
+      html = render(view)
+      assert html =~ "Workflow is"
+      assert html =~ "any"
+    end
+
+    test "status filter chip shows selected statuses", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      # Initially shows "Status is any"
+      chip = element(view, "#status-filter-chip")
+      assert render(chip) =~ "Status"
+      assert render(chip) =~ "any"
+
+      # Select a status via apply_filters
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"failed" => "true"}
+      })
+
+      html = render(view)
+      assert html =~ "Failed"
+    end
+
+    test "status filter chip shows 'in' for multiple statuses", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{failed: true, success: true}
+          )
+        )
+
+      html = render(view)
+      assert html =~ "Status in"
+      assert html =~ "Failed"
+      assert html =~ "Success"
+    end
+
+    test "date filter chips show date range when active", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2025-01-01T00:00"}
+          )
+        )
+
+      chip = element(view, "#received-filter-chip")
+      html = render(chip)
+      assert html =~ "Received"
+      assert html =~ "after"
+    end
+
+    test "clearing date filter resets chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2025-01-01T00:00"}
+          )
+        )
+
+      # Clear the received date filter
+      view
+      |> render_hook("apply_filters", %{
+        "filters" => %{"wo_date_after" => "", "wo_date_before" => ""}
+      })
+
+      chip = element(view, "#received-filter-chip")
+      html = render(chip)
+      assert html =~ "any time"
+    end
+
+    test "workorder ID chip appears when workorder_id filter is set", %{
+      conn: conn,
+      project: project,
+      work_order_1: wo
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              workorder_id: wo.id,
+              failed: true
+            }
+          )
+        )
+
+      assert has_element?(view, "#workorder-id-filter-chip")
+      chip = element(view, "#workorder-id-filter-chip")
+      assert render(chip) =~ "Work order:"
+    end
+  end
+
+  describe "cancel work orders" do
+    @tag role: :editor
+    test "cancel button shown for pending WOs, retry for final states",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           work_order_1: failed_wo
+         } do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true, failed: true}
+          )
+        )
+
+      # Pending WO shows cancel button, not retry
+      assert has_element?(view, "button#cancel-wo-#{pending_wo.id}")
+      refute has_element?(view, "button#retry-workorder-#{pending_wo.id}")
+
+      # Failed WO shows retry button, not cancel
+      assert has_element?(view, "button#retry-workorder-#{failed_wo.id}")
+      refute has_element?(view, "button#cancel-wo-#{failed_wo.id}")
+    end
+
+    @tag role: :editor
+    test "bulk cancel for selected pending work orders",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      # Select the pending work order
+      view
+      |> form("#selection-form-#{pending_wo.id}")
+      |> render_change(%{selected: true})
+
+      # Cancel button should be enabled in toolbar
+      assert has_element?(view, "button#bulk-cancel-modal-trigger")
+      # Retry should be disabled
+      refute has_element?(view, "button#bulk-rerun-from-start-job-modal-trigger")
+
+      # Click bulk cancel
+      result = render_click(view, "bulk-cancel", %{type: "selected"})
+      {:ok, _view, html} = follow_redirect(result, conn)
+
+      assert html =~ "Cancelled 1 run"
+    end
+
+    @tag role: :editor
+    test "single work order cancel from inline button",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      html =
+        render_click(view, "cancel", %{
+          "workorder_id" => pending_wo.id
+        })
+
+      assert html =~ "Work order cancelled."
+    end
+
+    @tag role: :editor
+    test "per-run cancel button in expanded run rows",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      run = List.first(pending_wo.runs)
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      # Expand work order details
+      view
+      |> element("#toggle_details_for_#{pending_wo.id}")
+      |> render_click()
+
+      # Cancel button should be visible for the available run
+      assert has_element?(view, "button#cancel-run-#{run.id}")
+
+      # Cancel the run
+      html =
+        render_click(view, "cancel-run", %{"run_id" => run.id})
+
+      assert html =~ "Run cancelled."
+    end
+
+    @tag role: :viewer
+    test "viewers cannot cancel work orders",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      html =
+        render_click(view, "bulk-cancel", %{type: "selected"})
+
+      assert html =~ "You are not authorized to perform this action."
+    end
+
+    @tag role: :editor
+    test "mixed-state selection disables both cancel and retry",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      _pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true, failed: true}
+          )
+        )
+
+      # Select all (mix of pending and failed)
+      render_change(view, "toggle_all_selections", %{
+        all_selections: true
+      })
+
+      # Cancel should be disabled (mixed states)
+      assert has_element?(view, "#bulk-cancel-disabled-tooltip")
+      # Retry should be disabled (mixed states)
+      assert has_element?(view, "#bulk-retry-disabled-tooltip")
+    end
+
+    @tag role: :editor
+    test "cancel work order that is no longer pending",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      # Create a WO that looks pending but its run is already claimed
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :running,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :claimed,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          claimed_at: build(:timestamp)
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{running: true}
+          )
+        )
+
+      html =
+        render_click(view, "cancel", %{
+          "workorder_id" => wo.id
+        })
+
+      assert html =~ "Work order could not be cancelled"
+    end
+
+    @tag role: :editor
+    test "cancel button disappears when run is claimed while page is live",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true, running: true}
+          )
+        )
+
+      assert has_element?(view, "button#cancel-wo-#{pending_wo.id}")
+
+      run = List.first(pending_wo.runs)
+
+      {:ok, run} =
+        run |> Ecto.Changeset.change(state: :claimed) |> Repo.update()
+
+      {:ok, _wo} = WorkOrders.update_state(run)
+
+      render(view)
+
+      refute has_element?(view, "button#cancel-wo-#{pending_wo.id}")
+    end
+
+    @tag role: :editor
+    test "cancel-run with nonexistent run shows error",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      html =
+        render_click(view, "cancel-run", %{"run_id" => Ecto.UUID.generate()})
+
+      assert html =~ "Run not found."
+    end
+
+    @tag role: :editor
+    test "cancel-run when run already claimed shows info flash",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :running,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :claimed,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          claimed_at: build(:timestamp)
+        )
+
+      run = List.first(pending_wo.runs)
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{running: true}
+          )
+        )
+
+      html = render_click(view, "cancel-run", %{"run_id" => run.id})
+
+      assert html =~ "no longer available"
+    end
+
+    @tag role: :viewer
+    test "viewers cannot cancel individual runs",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      html =
+        render_click(view, "cancel-run", %{"run_id" => Ecto.UUID.generate()})
+
+      assert html =~ "You are not authorized to perform this action."
+    end
+
+    @tag role: :editor
+    test "bulk cancel all matching work orders via async path",
+         %{conn: conn, project: project, workflow: workflow} do
+      trigger = List.first(workflow.triggers)
+      dataclip = insert(:dataclip, project: project)
+
+      for _i <- 1..3 do
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending,
+          last_activity: DateTime.utc_now()
+        )
+        |> with_run(
+          state: :available,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+      end
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{pending: true}
+          )
+        )
+
+      # Select all
+      render_change(view, "toggle_all_selections", %{
+        all_selections: true
+      })
+
+      # Use "all" type to trigger the async path
+      result = render_click(view, "bulk-cancel", %{type: "all"})
+      {:ok, _view, html} = follow_redirect(result, conn)
+
+      assert html =~ "Cancelling runs for"
+      assert html =~ "work order"
+      assert html =~ "in the background"
     end
   end
 

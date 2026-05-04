@@ -5,11 +5,11 @@ defmodule Lightning.Channels.ChannelEvent do
 
   ## Event Types
 
-  - `:sink_response` — emitted by `Handler.persist_completion/2` on successful
-    upstream proxy completion. Carries all fields (request/response details,
-    latency, ttfb).
+  - `:destination_response` — emitted by `Handler.persist_completion/2` on
+    successful upstream proxy completion. Carries all fields
+    (request/response details, latency, ttfb).
   - `:error` — emitted by `Handler.persist_completion/2` on upstream proxy
-    error, or by `ChannelProxyPlug.record_credential_error/2` when sink
+    error, or by `ChannelProxyPlug.record_credential_error/2` when destination
     credential resolution fails before proxying. Carries request fields and
     `error_message`; response fields may be nil.
   """
@@ -20,7 +20,7 @@ defmodule Lightning.Channels.ChannelEvent do
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
           channel_request_id: Ecto.UUID.t(),
-          type: :sink_response | :error,
+          type: :destination_response | :error,
           request_method: String.t() | nil,
           request_path: String.t() | nil,
           request_headers: String.t() | nil,
@@ -37,7 +37,7 @@ defmodule Lightning.Channels.ChannelEvent do
         }
 
   schema "channel_events" do
-    field :type, Ecto.Enum, values: [:sink_response, :error]
+    field :type, Ecto.Enum, values: [:destination_response, :error]
 
     field :request_method, :string
     field :request_path, :string

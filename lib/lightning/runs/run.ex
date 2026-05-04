@@ -51,6 +51,13 @@ defmodule Lightning.Run do
     :lost
   ]
 
+  @states [:available, :claimed, :started] ++ @final_states
+
+  @doc """
+  Returns all possible states for a run.
+  """
+  def states, do: @states
+
   @doc """
   Returns the list of final states for a run.
   """
@@ -72,6 +79,13 @@ defmodule Lightning.Run do
   schema "runs" do
     belongs_to :work_order, WorkOrder
 
+    # starting_job and starting_trigger have NO database-level FK constraint.
+    # This is intentional: the snapshot system preserves the full job/trigger
+    # data (name, body, adaptor, config) for every run, so the live rows in
+    # the jobs/triggers tables can be freely deleted from workflows without
+    # affecting audit history. These columns are bare UUID pointers used for
+    # convenience lookups — the snapshot is the authoritative audit record.
+    # See issue #4538 and migration 20260319103734 for context.
     belongs_to :starting_job, Job
     belongs_to :starting_trigger, Trigger
     belongs_to :created_by, User
@@ -91,15 +105,7 @@ defmodule Lightning.Run do
     embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
-      values:
-        Enum.concat(
-          [
-            :available,
-            :claimed,
-            :started
-          ],
-          @final_states
-        ),
+      values: @states,
       default: :available
 
     field :error_type, :string
@@ -193,6 +199,9 @@ defmodule Lightning.Run do
     {changeset.data |> Map.get(:state), get_field(changeset, :state)}
     |> case do
       {:available, :claimed} ->
+        changeset
+
+      {:available, :cancelled} ->
         changeset
 
       {:available, to} ->

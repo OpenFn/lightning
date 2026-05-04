@@ -6,7 +6,7 @@ defmodule LoadTest.Report do
   @moduledoc false
 
   def print(summary, opts, command \\ nil) do
-    direct? = opts[:scenario] == "direct_sink"
+    direct? = opts[:scenario] == "direct_destination"
 
     scenario_label =
       if direct?, do: "#{opts[:scenario]} (baseline)", else: opts[:scenario]
@@ -401,7 +401,7 @@ defmodule LoadTest.Report do
   # -- Formatting helpers --
 
   defp format_memory_section(_summary, true = _direct?) do
-    " Memory:     n/a (direct sink baseline)"
+    " Memory:     n/a (direct destination baseline)"
   end
 
   defp format_memory_section(summary, _direct?) do

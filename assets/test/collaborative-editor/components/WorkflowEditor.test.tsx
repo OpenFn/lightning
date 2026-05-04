@@ -238,7 +238,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
   useWorkflowStoreContext: () => ({
     validateWorkflowName: vi.fn(),
-    importWorkflow: vi.fn(),
+    importWorkflow: vi.fn().mockResolvedValue(undefined),
   }),
   useWorkflowActions: () => ({
     saveWorkflow: vi.fn(),

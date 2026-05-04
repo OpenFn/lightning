@@ -10,7 +10,9 @@ import { useURLState } from '#/react/lib/use-url-state';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
-import CustomView from '../../manual-run-panel/views/CustomView';
+import CustomView, {
+  DEFAULT_MAX_DATACLIP_SIZE_BYTES,
+} from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
 import ExistingView from '../../manual-run-panel/views/ExistingView';
 import type { Dataclip } from '../api/dataclips';
@@ -19,6 +21,7 @@ import { RENDER_MODES, type RenderMode } from '../constants/panel';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
+import { useAppConfig } from '../hooks/useSessionContext';
 import { useCanRun } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { Workflow } from '../types/workflow';
@@ -80,6 +83,10 @@ export function ManualRunPanel({
   customBody: customBodyProp,
   disableAutoSelection = false,
 }: ManualRunPanelProps) {
+  const appConfig = useAppConfig();
+  const maxDataclipSizeBytes =
+    appConfig?.max_dataclip_size_bytes ?? DEFAULT_MAX_DATACLIP_SIZE_BYTES;
+
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>('empty');
   const [selectedDataclipInternal, setSelectedDataclipInternal] =
@@ -142,7 +149,7 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
@@ -209,6 +216,7 @@ export function ManualRunPanel({
     onRunSubmitted: onRunSubmitted,
     edgeId: edgeId || null,
     workflowEdges: workflow.edges,
+    maxDataclipSizeBytes,
   });
 
   const followedRunStep = useMemo(() => {
@@ -441,10 +449,17 @@ export function ManualRunPanel({
     25 // RUN_PANEL priority
   );
 
+  // Close the run panel and clear the URL param so the URL→state sync
+  // in WorkflowEditor doesn't immediately reopen it.
+  const closeAfterRun = useCallback(() => {
+    updateSearchParams({ panel: null });
+    onClose();
+  }, [updateSearchParams, onClose]);
+
   // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
   useRunRetryShortcuts({
-    onRun: () => void handleRun(),
-    onRetry: () => void handleRetry(),
+    onRun: () => void handleRun().then(ok => ok && closeAfterRun()),
+    onRetry: () => void handleRetry().then(ok => ok && closeAfterRun()),
     canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
@@ -473,6 +488,7 @@ export function ManualRunPanel({
             }
           }}
           renderMode={renderMode}
+          maxDataclipSizeBytes={maxDataclipSizeBytes}
         />
       )}
       {selectedTab === 'existing' && (
@@ -625,10 +641,10 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
-                void handleRun();
+                void handleRun().then(ok => ok && closeAfterRun());
               }}
               onRetry={() => {
-                void handleRetry();
+                void handleRetry().then(ok => ok && closeAfterRun());
               }}
               buttonText={{
                 run: 'Run',

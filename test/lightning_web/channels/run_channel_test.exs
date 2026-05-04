@@ -163,6 +163,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert payload == %{
                "id" => id,
+               "project_id" => workflow.project_id,
                "triggers" => triggers,
                "jobs" => jobs,
                "edges" => edges,
@@ -221,6 +222,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert payload == %{
                "id" => id,
+               "project_id" => workflow.project_id,
                "triggers" => triggers,
                "jobs" => jobs,
                "edges" => edges,

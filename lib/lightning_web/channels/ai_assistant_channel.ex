@@ -314,6 +314,50 @@ defmodule LightningWeb.AiAssistantChannel do
     {:noreply, socket}
   end
 
+  # Streaming: text chunk from Apollo
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_chunk,
+         %{content: content, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_chunk", %{content: content})
+    {:noreply, socket}
+  end
+
+  # Streaming: status update (e.g., "Thinking...")
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_status,
+         %{text: text, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_status", %{text: text})
+    {:noreply, socket}
+  end
+
+  # Streaming: structured changes (code edits or workflow YAML)
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_changes,
+         %{changes: changes, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_changes", %{changes: changes})
+    {:noreply, socket}
+  end
+
+  # Streaming: error during stream
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_error,
+         %{error: error, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_error", %{error: error})
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,
@@ -587,7 +631,7 @@ defmodule LightningWeb.AiAssistantChannel do
     # Include message_options for the initial message (attach_io_data, step_id, etc.)
     meta =
       if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
-           params["attach_logs"] do
+           params["attach_logs"] || params["use_global_assistant"] do
         Map.put(meta, "message_options", build_message_options(params))
       else
         meta
@@ -610,7 +654,29 @@ defmodule LightningWeb.AiAssistantChannel do
         opts
       end
 
+    opts =
+      if params["use_global_assistant"] do
+        meta = Keyword.get(opts, :meta, %{})
+
+        meta =
+          Map.put(meta, "message_options", build_message_options(params))
+
+        Keyword.put(opts, :meta, meta)
+      else
+        opts
+      end
+
     opts
+  end
+
+  defp extract_message_options(%{"use_global_assistant" => true} = params) do
+    opts = [meta: %{"message_options" => build_message_options(params)}]
+
+    if code = params["code"] do
+      [{:code, code} | opts]
+    else
+      opts
+    end
   end
 
   defp extract_message_options(%{"job_id" => _job_id} = params) do
@@ -642,7 +708,9 @@ defmodule LightningWeb.AiAssistantChannel do
       "code" => params["attach_code"] == true,
       "log" => params["attach_logs"] == true,
       "attach_io_data" => params["attach_io_data"] == true,
-      "step_id" => params["step_id"]
+      "step_id" => params["step_id"],
+      "use_global_assistant" => params["use_global_assistant"] == true,
+      "page" => params["page"]
     }
   end
 
@@ -656,6 +724,10 @@ defmodule LightningWeb.AiAssistantChannel do
         %{"from_unsaved_job" => unsaved_job_id}
         when not is_nil(unsaved_job_id) ->
           unsaved_job_id
+
+        %{"from_global_job_code" => job_key}
+        when not is_nil(job_key) ->
+          job_key
 
         _ ->
           message.job_id

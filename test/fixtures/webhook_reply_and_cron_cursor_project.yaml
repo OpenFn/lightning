@@ -1,0 +1,46 @@
+name: webhook-reply-and-cron-cursor-project
+description: null
+collections: null
+credentials: null
+workflows:
+  cron-cursor-workflow:
+    name: cron cursor workflow
+    jobs:
+      cursor-job:
+        name: cursor job
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          fn(state => state)
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '0 6 * * *'
+        cron_cursor_job: cursor-job
+        enabled: true
+    edges:
+      cron->cursor-job:
+        source_trigger: cron
+        target_job: cursor-job
+        condition_type: always
+        enabled: true
+  webhook-reply-workflow:
+    name: webhook reply workflow
+    jobs:
+      reply-job:
+        name: reply job
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          fn(state => state)
+    triggers:
+      webhook:
+        type: webhook
+        webhook_reply: after_completion
+        enabled: true
+    edges:
+      webhook->reply-job:
+        source_trigger: webhook
+        target_job: reply-job
+        condition_type: always
+        enabled: true

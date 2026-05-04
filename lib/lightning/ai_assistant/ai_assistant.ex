@@ -930,6 +930,42 @@ defmodule Lightning.AiAssistant do
     |> handle_ai_response(session, &build_job_message/1)
   end
 
+  @doc """
+  Queries the AI service for job assistance with streaming.
+
+  Same as `query/3` but uses SSE streaming. Text chunks and status updates
+  are broadcast via PubSub as they arrive. The complete message is saved
+  to the database when the stream finishes.
+  """
+  @spec query_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_stream(session, content, opts \\ []) do
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    initial_context = %{
+      expression: session.expression,
+      adaptor: session.adaptor,
+      log: session.logs
+    }
+
+    context = build_context(initial_context, opts)
+    history = build_history(session)
+    meta = session.meta || %{}
+
+    case ApolloClient.job_chat_stream(content,
+           context: context,
+           history: history,
+           meta: meta
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(session, body, &build_job_message/1)
+
+      error ->
+        handle_error_response(error, session)
+    end
+  end
+
   defp build_context(context, opts) do
     Enum.reduce(opts, context, fn opt, acc ->
       case opt do
@@ -991,6 +1027,68 @@ defmodule Lightning.AiAssistant do
       meta: meta
     )
     |> handle_ai_response(session, &build_workflow_message/1)
+  end
+
+  @doc """
+  Queries the AI service for workflow template generation with streaming.
+
+  Same as `query_workflow/3` but uses SSE streaming.
+  """
+  @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_workflow_stream(session, content, opts \\ []) do
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
+    meta = Keyword.get(opts, :meta, session.meta || %{})
+
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    case ApolloClient.workflow_chat_stream(content,
+           code: code,
+           errors: errors,
+           history: build_history(session),
+           meta: meta
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(session, body, &build_workflow_message/1)
+
+      error ->
+        handle_error_response(error, session)
+    end
+  end
+
+  @doc """
+  Queries the Apollo global chat endpoint with SSE streaming.
+
+  The global chat unifies job and workflow assistance behind a router.
+  Uses the same streaming pipeline as job_chat and workflow_chat.
+  """
+  @spec query_global_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_global_stream(session, content, opts \\ []) do
+    workflow_yaml = Keyword.get(opts, :workflow_yaml)
+    page = Keyword.get(opts, :page)
+    history = build_history(session)
+
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    case ApolloClient.global_chat_stream(content,
+           workflow_yaml: workflow_yaml,
+           page: page,
+           history: history
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(
+          session,
+          body,
+          &build_global_message(&1, session)
+        )
+
+      error ->
+        handle_error_response(error, session)
+    end
   end
 
   @doc """
@@ -1127,6 +1225,167 @@ defmodule Lightning.AiAssistant do
     end
   end
 
+  # All SSE events from Apollo come through the Node.js bridge with an
+  # explicit `event:` type prefix. The SSE middleware parses them into
+  # maps with both :event and :data keys:
+  #
+  #   event: log\ndata: "..."                    → %{event: "log", data: "..."}
+  #   event: content_block_delta\ndata: {...}    → %{event: "content_block_delta", data: "..."}
+  #   event: complete\ndata: {...}               → %{event: "complete", data: "..."}
+  #   event: error\ndata: {...}                  → %{event: "error", data: "..."}
+  #
+  # When stream: true is sent in the payload, Apollo forwards Anthropic
+  # streaming events (content_block_start, content_block_delta, etc.)
+  # as typed SSE events. The `complete` event always arrives last with
+  # the full response payload.
+
+  defp process_stream(session, body_stream, message_builder) do
+    complete_payload =
+      body_stream
+      |> Enum.reduce(nil, fn sse_event, acc ->
+        handle_sse_event(session.id, sse_event, acc)
+      end)
+
+    if complete_payload do
+      {message_attrs, opts} = message_builder.(complete_payload)
+      save_message(session, message_attrs, opts)
+    else
+      {:error, "Stream ended without complete response"}
+    end
+  rescue
+    e ->
+      broadcast_streaming_error(
+        session.id,
+        "Streaming failed: #{Exception.message(e)}"
+      )
+
+      {:error, Exception.message(e)}
+  catch
+    :exit, reason ->
+      message = "Streaming connection lost"
+
+      broadcast_streaming_error(session.id, message)
+
+      Logger.error(
+        "[AI Assistant] Stream exited for session #{session.id}: #{inspect(reason)}"
+      )
+
+      {:error, message}
+  end
+
+  # Bridge event: complete — final payload (same shape as sync response)
+  defp handle_sse_event(_session_id, %{event: "complete", data: data}, _acc) do
+    case Jason.decode(data) do
+      {:ok, payload} when is_map(payload) -> payload
+      _ -> nil
+    end
+  end
+
+  # Bridge event: error
+  defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"message" => message}} ->
+        broadcast_streaming_error(session_id, message)
+
+      {:ok, error} ->
+        broadcast_streaming_error(session_id, inspect(error))
+
+      _ ->
+        broadcast_streaming_error(session_id, data)
+    end
+
+    acc
+  end
+
+  # Bridge event: changes — structured data (code edits or workflow YAML)
+  # sent before text streaming begins
+  defp handle_sse_event(session_id, %{event: "changes", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, changes} when is_map(changes) ->
+        broadcast_streaming_changes(session_id, changes)
+
+      _ ->
+        :ok
+    end
+
+    acc
+  end
+
+  # Bridge event: log — skip Python stdout
+  defp handle_sse_event(_session_id, %{event: "log"}, acc), do: acc
+
+  # Anthropic streaming events forwarded through the bridge
+  # (e.g. content_block_delta, content_block_start, message_stop, etc.)
+  defp handle_sse_event(session_id, %{data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"type" => _} = event} ->
+        handle_stream_event(session_id, event)
+
+      _ ->
+        :ok
+    end
+
+    acc
+  end
+
+  # Catch-all for anything unexpected
+  defp handle_sse_event(_session_id, _event, acc), do: acc
+
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_delta",
+         "delta" => %{"type" => "text_delta", "text" => text}
+       }) do
+    broadcast_streaming_chunk(session_id, text)
+  end
+
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_start",
+         "content_block" => %{"type" => "thinking"}
+       }) do
+    broadcast_streaming_status(session_id, "Thinking...")
+  end
+
+  # Apollo sends discrete thinking blocks as progress updates
+  # (e.g. "Searching documentation...", "Loading adaptor documentation...")
+  defp handle_stream_event(session_id, %{
+         "type" => "content_block_delta",
+         "delta" => %{"type" => "thinking_delta", "thinking" => text}
+       }) do
+    broadcast_streaming_status(session_id, text)
+  end
+
+  defp handle_stream_event(_session_id, _event), do: :ok
+
+  defp broadcast_streaming_chunk(session_id, content) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_chunk,
+       %{content: content, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_status(session_id, text) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_status, %{text: text, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_changes(session_id, changes) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_changes,
+       %{changes: changes, session_id: session_id}}
+    )
+  end
+
+  defp broadcast_streaming_error(session_id, error) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_error, %{error: error, session_id: session_id}}
+    )
+  end
+
   defp handle_ai_response(response, session, message_builder) do
     case response do
       {:ok, %Tesla.Env{status: status, body: body}}
@@ -1195,6 +1454,94 @@ defmodule Lightning.AiAssistant do
 
     {message_attrs, opts}
   end
+
+  defp build_global_message(body, session) do
+    {code, job, job_key} =
+      extract_global_code_and_job(body["attachments"], session)
+
+    message_attrs = %{
+      role: :assistant,
+      content: body["response"]
+    }
+
+    # Set job on message for "Generated Job Code" rendering.
+    # For saved jobs, set the job association directly.
+    # For unsaved jobs, set from_unsaved_job in meta so
+    # format_message can use it as a fallback job_id.
+    message_attrs =
+      cond do
+        job ->
+          Map.put(message_attrs, :job, job)
+
+        job_key ->
+          Map.put(message_attrs, :meta, %{"from_global_job_code" => job_key})
+
+        true ->
+          message_attrs
+      end
+
+    opts = [
+      usage: body["usage"] || %{},
+      meta: body["meta"],
+      code: code
+    ]
+
+    {message_attrs, opts}
+  end
+
+  # Extracts the appropriate code artifact and optional job from global chat
+  # attachments. On a job step, prefers job_code (renders as code diff).
+  # On the workflow overview, prefers workflow_yaml (renders as YAML card).
+  defp extract_global_code_and_job(attachments, session)
+       when is_list(attachments) do
+    page = get_in(session.meta || %{}, ["message_options", "page"])
+    on_job_step = page && length(String.split(page, "/")) >= 3
+
+    job_code_attachment =
+      Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
+
+    if on_job_step && job_code_attachment do
+      job_key = job_code_attachment["job_key"]
+
+      job =
+        resolve_job_from_key(session.workflow_id, job_key)
+
+      {job_code_attachment["content"], job, job_key}
+    else
+      workflow_yaml =
+        Enum.find_value(attachments, fn
+          %{"type" => "workflow_yaml", "content" => content} -> content
+          _ -> nil
+        end)
+
+      {workflow_yaml, nil, nil}
+    end
+  end
+
+  defp extract_global_code_and_job(_, _), do: {nil, nil, nil}
+
+  defp resolve_job_from_key(nil, _), do: nil
+  defp resolve_job_from_key(_, nil), do: nil
+
+  defp resolve_job_from_key(workflow_id, job_key) do
+    import Ecto.Query
+
+    Lightning.Workflows.Job
+    |> where([j], j.workflow_id == ^workflow_id)
+    |> Repo.all()
+    |> Enum.find(fn job ->
+      normalize_job_name(job.name) == normalize_job_name(job_key)
+    end)
+  end
+
+  defp normalize_job_name(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+  end
+
+  defp normalize_job_name(_), do: ""
 
   defp build_history(session) do
     messages = session.messages || []

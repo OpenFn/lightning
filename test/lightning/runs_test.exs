@@ -9,6 +9,7 @@ defmodule Lightning.RunsTest do
   alias Lightning.Invocation
   alias Lightning.Run
   alias Lightning.Runs
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.Workflows
 
@@ -233,23 +234,6 @@ defmodule Lightning.RunsTest do
 
       assert claimed_6.id == last_run.id
       assert claimed_6.state == :claimed
-    end
-  end
-
-  describe "dequeue/1" do
-    test "removes a run from the queue" do
-      %{triggers: [trigger]} =
-        workflow = insert(:simple_workflow) |> with_snapshot()
-
-      {:ok, %{runs: [run]}} =
-        WorkOrders.create_for(trigger,
-          workflow: workflow,
-          dataclip: params_with_assocs(:dataclip)
-        )
-
-      assert {:ok, dequeued} = Runs.dequeue(run)
-
-      refute dequeued |> Repo.reload()
     end
   end
 
@@ -987,6 +971,88 @@ defmodule Lightning.RunsTest do
         %{count: 1},
         %{}
       }
+    end
+  end
+
+  describe "cancel_run/1" do
+    test "cancels an available run and updates work order state" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :available
+        )
+
+      assert {:ok, cancelled_run} = Runs.cancel_run(run)
+      assert cancelled_run.state == :cancelled
+      assert is_nil(cancelled_run.finished_at)
+
+      updated_wo = Repo.get(WorkOrder, work_order.id)
+      assert updated_wo.state == :cancelled
+    end
+
+    test "returns {:error, :not_available} for non-available run" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          claimed_at: DateTime.utc_now()
+        )
+
+      assert {:error, :not_available} = Runs.cancel_run(run)
+    end
+
+    test "broadcasts RunUpdated and WorkOrderUpdated events" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :available
+        )
+
+      Runs.subscribe(run)
+      WorkOrders.subscribe(workflow.project_id)
+
+      assert {:ok, _cancelled_run} = Runs.cancel_run(run)
+
+      assert_received %Runs.Events.RunUpdated{}
+      assert_received %WorkOrders.Events.RunUpdated{}
     end
   end
 

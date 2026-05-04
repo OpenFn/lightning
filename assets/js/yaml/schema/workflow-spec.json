@@ -55,6 +55,13 @@
             "cron_expression": {
               "type": "string"
             },
+            "cron_cursor_job": {
+              "type": ["string", "null"]
+            },
+            "webhook_reply": {
+              "type": ["string", "null"],
+              "enum": ["before_start", "after_completion", "custom", null]
+            },
             "pos": {
               "type": "object",
               "properties": {
@@ -71,7 +78,9 @@
           "additionalProperties": false,
           "oneOf": [
             {
-              "properties": { "type": { "const": "webhook" } }
+              "properties": {
+                "type": { "const": "webhook" }
+              }
             },
             {
               "properties": {

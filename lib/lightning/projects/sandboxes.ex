@@ -18,8 +18,14 @@ defmodule Lightning.Projects.Sandboxes do
   ## Operations
 
   * `provision/3` - Create a new sandbox from a parent project
+  * `merge/4` - Merge a sandbox into its target (workflows + collections)
   * `update_sandbox/3` - Update sandbox name, color, or environment
-  * `delete_sandbox/2` - Delete a sandbox and all its descendants
+  * `schedule_sandbox_deletion/2` - Soft-delete a sandbox and its descendants;
+    they remain in the database for a grace period before being purged
+  * `cancel_scheduled_sandbox_deletion/2` - Restore a scheduled sandbox subtree
+    while it is still within its grace period (admin recovery path)
+  * `delete_sandbox/2` - Hard-delete a sandbox and all its descendants
+    immediately (used by the Oban purge worker after the grace period elapses)
 
   ## Authorization
 
@@ -36,12 +42,17 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Collections
+  alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
+  alias Lightning.Services.CollectionHook
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -122,6 +133,46 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
+  Merges a sandbox into its target project.
+
+  Imports the sandbox's workflow configuration into the target via the
+  provisioner and synchronises collection names. Runs inside a single
+  transaction. Collection data is never copied.
+
+  Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
+
+  ## Parameters
+  * `source` - The sandbox project being merged
+  * `target` - The project receiving the merge
+  * `actor` - The user performing the merge
+  * `opts` - Merge options (`:selected_workflow_ids`, `:deleted_target_workflow_ids`)
+
+  ## Returns
+  * `{:ok, updated_target}` - Merge succeeded
+  * `{:error, reason}` - Workflow merge or collection sync failed
+  """
+  @spec merge(Project.t(), Project.t(), User.t(), map()) ::
+          {:ok, Project.t()} | {:error, term()}
+  def merge(
+        %Project{} = source,
+        %Project{} = target,
+        %User{} = actor,
+        opts \\ %{}
+      ) do
+    merge_doc = MergeProjects.merge_project(source, target, opts)
+
+    Repo.transact(fn ->
+      with {:ok, updated_target} <-
+             Provisioner.import_document(target, actor, merge_doc,
+               allow_stale: true
+             ),
+           {:ok, _} <- sync_collections(source, target) do
+        {:ok, updated_target}
+      end
+    end)
+  end
+
+  @doc """
   Updates a sandbox project's basic attributes.
 
   ## Parameters
@@ -169,10 +220,36 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Deletes a sandbox and all its descendant projects.
+  Returns `true` when `user` has an `:admin` or `:owner` role on any ancestor
+  of `project`, walking the parent chain.
 
-  **Warning**: This permanently removes the sandbox and any nested sandboxes
-  within it. This action cannot be undone.
+  Used to enforce the parent-admin floor rule: a user who is admin/owner on
+  any ancestor project cannot be removed from, or downgraded within, a
+  sandbox descended from that project.
+  """
+  @spec parent_admin?(Project.t(), User.t()) :: boolean()
+  def parent_admin?(%Project{} = project, %User{} = user) do
+    project
+    |> ancestors()
+    |> Enum.any?(fn ancestor ->
+      Lightning.Projects.get_project_user_role(user, ancestor) in [
+        :admin,
+        :owner
+      ]
+    end)
+  end
+
+  defp ancestors(%Project{parent_id: nil}), do: []
+
+  defp ancestors(%Project{parent_id: parent_id}) do
+    case Lightning.Projects.get_project(parent_id) do
+      nil -> []
+      %Project{} = parent -> [parent | ancestors(parent)]
+    end
+  end
+
+  @doc """
+  Deletes a sandbox and all its descendant projects.
 
   ## Parameters
   * `sandbox` - Sandbox project to delete (or sandbox ID as string)
@@ -191,14 +268,7 @@ defmodule Lightning.Projects.Sandboxes do
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
-      case Lightning.Projects.delete_project(sandbox) do
-        {:ok, deleted} ->
-          SandboxPromExPlugin.fire_sandbox_deleted_event()
-          {:ok, deleted}
-
-        error ->
-          error
-      end
+      Lightning.Projects.delete_project(sandbox)
     else
       {:error, :unauthorized}
     end
@@ -209,6 +279,161 @@ defmodule Lightning.Projects.Sandboxes do
       %Project{} = sandbox -> delete_sandbox(sandbox, actor)
       nil -> {:error, :not_found}
     end
+  end
+
+  @doc """
+  Schedules a sandbox and its entire descendant subtree for deletion.
+
+  The sandbox stays in the database for a grace period (controlled by
+  `PURGE_DELETED_AFTER_DAYS`) before the Oban purge worker permanently
+  deletes it. During the grace period the sandbox is hidden from the
+  parent's sandbox listing but remains recoverable via
+  `cancel_scheduled_sandbox_deletion/2`.
+
+  All triggers in the subtree are disabled so that scheduled work stops
+  immediately. The scheduled timestamp is applied to the target and every
+  descendant in a single transaction so the entire subtree shares a grace
+  period and gets purged together.
+
+  ## Cascade semantics
+
+  Scheduling cascades through every descendant unconditionally. If a child
+  sandbox was already scheduled separately (with an earlier timestamp), that
+  earlier timestamp is overwritten with the new one. The intent is that
+  scheduling a parent always synchronises the whole subtree's grace window;
+  if you need a child to be purged on its original earlier timestamp, do not
+  schedule the parent.
+
+  ## Parameters
+  * `sandbox` - Sandbox project to schedule (or sandbox ID as string)
+  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+
+  ## Returns
+  * `{:ok, scheduled_sandbox}` - Sandbox subtree scheduled for deletion
+  * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
+  * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  * `{:error, reason}` - Database or other failure
+  """
+  @spec schedule_sandbox_deletion(Project.t() | Ecto.UUID.t(), User.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def schedule_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      do_schedule_sandbox_deletion(sandbox)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def schedule_sandbox_deletion(sandbox_id, %User{} = actor)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sandbox -> schedule_sandbox_deletion(sandbox, actor)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Clears the scheduled deletion on a sandbox subtree, restoring it to active use.
+
+  Walks every descendant of `sandbox` and clears `scheduled_deletion` on any
+  row that has it set. Triggers are not automatically re-enabled: this is an
+  admin recovery path and the operator decides whether the subtree should
+  resume firing triggers.
+
+  ## Cascade semantics
+
+  The cancel clears `scheduled_deletion` on every descendant that has it set,
+  regardless of whether the schedule originated from this subtree's parent
+  or from a separate scheduling action on the descendant itself. Any row
+  whose `scheduled_deletion` is already nil is left alone.
+
+  ## Parameters
+  * `sandbox` - Sandbox project to restore (or sandbox ID as string)
+  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+
+  ## Returns
+  * `{:ok, restored_sandbox}` - Sandbox subtree restored
+  * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
+  * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  """
+  @spec cancel_scheduled_sandbox_deletion(
+          Project.t() | Ecto.UUID.t(),
+          User.t()
+        ) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      do_cancel_scheduled_sandbox_deletion(sandbox)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def cancel_scheduled_sandbox_deletion(sandbox_id, %User{} = actor)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sandbox -> cancel_scheduled_sandbox_deletion(sandbox, actor)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  defp do_schedule_sandbox_deletion(%Project{} = sandbox) do
+    date = scheduled_deletion_date()
+    subtree_ids = subtree_ids(sandbox)
+
+    Repo.transact(fn ->
+      {_count, _} =
+        Repo.update_all(
+          from(p in Project, where: p.id in ^subtree_ids),
+          set: [scheduled_deletion: date]
+        )
+
+      {_count, _} =
+        Repo.update_all(
+          from(t in Trigger,
+            join: w in assoc(t, :workflow),
+            where: w.project_id in ^subtree_ids and t.enabled == true
+          ),
+          set: [enabled: false]
+        )
+
+      SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
+
+      {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+  end
+
+  defp do_cancel_scheduled_sandbox_deletion(%Project{} = sandbox) do
+    subtree_ids = subtree_ids(sandbox)
+
+    {_count, _} =
+      Repo.update_all(
+        from(p in Project,
+          where: p.id in ^subtree_ids and not is_nil(p.scheduled_deletion)
+        ),
+        set: [scheduled_deletion: nil]
+      )
+
+    SandboxPromExPlugin.fire_sandbox_deletion_cancelled_event()
+
+    {:ok, %{sandbox | scheduled_deletion: nil}}
+  end
+
+  defp subtree_ids(%Project{id: id}) do
+    descendant_ids =
+      [id]
+      |> Lightning.Projects.descendants_query()
+      |> Repo.all()
+
+    [id | descendant_ids]
+  end
+
+  defp scheduled_deletion_date do
+    case Lightning.Config.purge_deleted_after_days() do
+      nil -> DateTime.utc_now()
+      integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+    end
+    |> DateTime.truncate(:second)
   end
 
   defp create_sandbox_from_parent(parent, actor, attrs) do
@@ -566,6 +791,87 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> clone_collections_from_parent(parent)
+  end
+
+  defp clone_collections_from_parent(sandbox, parent) do
+    parent_names = parent |> Collections.list_project_collections() |> names()
+    insert_empty_collections(sandbox.id, parent_names)
+    sandbox
+  end
+
+  @doc """
+  Synchronises collection names from a sandbox to its merge target.
+
+  Names only in the source are created empty in the target; names only in
+  the target are deleted along with their items. Collection data is never
+  copied. The combined byte-size of deleted collections is reported via
+  `CollectionHook.handle_delete/2` for usage accounting.
+
+  Runs inside a single transaction.
+  """
+  @spec sync_collections(Project.t(), Project.t()) ::
+          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
+          | {:error, term()}
+  def sync_collections(%Project{} = source, %Project{} = target) do
+    source_names = source |> Collections.list_project_collections() |> names()
+
+    target_collections = Collections.list_project_collections(target)
+    target_names = names(target_collections)
+
+    to_create = MapSet.difference(source_names, target_names)
+
+    names_to_delete = MapSet.difference(target_names, source_names)
+
+    collections_to_delete =
+      Enum.filter(target_collections, &(&1.name in names_to_delete))
+
+    to_delete_ids = Enum.map(collections_to_delete, & &1.id)
+
+    deleted_byte_size =
+      Enum.reduce(collections_to_delete, 0, &(&1.byte_size_sum + &2))
+
+    Repo.transaction(fn ->
+      {created, _} = insert_empty_collections(target.id, to_create)
+      {deleted, _} = delete_collections(to_delete_ids)
+
+      if deleted_byte_size > 0 do
+        :ok = CollectionHook.handle_delete(target.id, deleted_byte_size)
+      end
+
+      %{created: created, deleted: deleted}
+    end)
+  end
+
+  defp names(collections), do: MapSet.new(collections, & &1.name)
+
+  defp insert_empty_collections(project_id, names) do
+    if Enum.empty?(names) do
+      {0, nil}
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      rows =
+        Enum.map(names, fn name ->
+          %{
+            id: Ecto.UUID.generate(),
+            name: name,
+            project_id: project_id,
+            byte_size_sum: 0,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      # Concurrent merges may race to create the same collection.
+      Repo.insert_all(Collection, rows, on_conflict: :nothing)
+    end
+  end
+
+  defp delete_collections([]), do: {0, nil}
+
+  defp delete_collections(ids) do
+    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do
