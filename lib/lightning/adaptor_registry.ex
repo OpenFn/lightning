@@ -328,10 +328,43 @@ defmodule Lightning.AdaptorRegistry do
     end)
   end
 
+  # Hot path: AdaptorRegistry.all/0, versions_for/2, latest_for/2 all
+  # land here in non-local mode. The raw cache stores the JSON binary so
+  # invalidation broadcasts stay cheap and node-symmetric, but decoding
+  # the full registry (~50-200 KB) on every read is wasteful when the
+  # workflow editor mounts and channels join. We keep a parallel
+  # `{"registry", "decoded"}` Cachex entry holding the decoded list.
+  #
+  # The decoded entry is per-node (not DB-backed) — it's a memoization
+  # of work derived from the raw cache. We use `Cache.fetch_local/2` to
+  # avoid the read-through `Cache.get/2`, which would attempt a pointless
+  # DB lookup for an entry that has no DB representation.
+  #
+  # The listener's `Cache.invalidate("registry")` clears every key
+  # matching `{"registry", _}`, so the decoded entry is invalidated
+  # automatically when the registry refresh broadcasts.
   defp get_adaptors_from_cache do
+    case Cache.fetch_local("registry", "decoded") do
+      %{data: decoded} when is_list(decoded) ->
+        decoded
+
+      _ ->
+        decode_and_cache_registry()
+    end
+  end
+
+  defp decode_and_cache_registry do
     case Cache.get("registry", "all") do
       %{data: data} ->
-        Jason.decode!(data, keys: :atoms!)
+        decoded = Jason.decode!(data, keys: :atoms!)
+
+        Cache.put(
+          "registry",
+          "decoded",
+          %{data: decoded, content_type: "application/x-erlang-term"}
+        )
+
+        decoded
 
       nil ->
         []

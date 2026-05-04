@@ -103,6 +103,76 @@ defmodule Lightning.AdaptorRegistryTest do
                "@openfn/language-foobar"
              ) == nil
     end
+
+    test "decodes the registry once, then serves from the decoded cache" do
+      adaptors = [
+        %{
+          name: "@openfn/language-common",
+          repo: "git+https://github.com/OpenFn/language-common.git",
+          latest: "1.6.2",
+          versions: [%{version: "1.6.2"}]
+        }
+      ]
+
+      Lightning.AdaptorData.put("registry", "all", Jason.encode!(adaptors))
+      Lightning.AdaptorData.Cache.invalidate("registry")
+
+      refute Cachex.get!(:adaptor_data, {"registry", "decoded"})
+
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_decoded_cache_registry, use_cache: false]}
+      )
+
+      assert [%{name: "@openfn/language-common"}] =
+               AdaptorRegistry.all(:test_decoded_cache_registry)
+
+      # First call populated the decoded entry; subsequent reads hit it.
+      assert %{data: [%{name: "@openfn/language-common"}]} =
+               Cachex.get!(:adaptor_data, {"registry", "decoded"})
+
+      # Mutate the raw entry so we can prove subsequent reads use the
+      # cached decoded form rather than re-decoding.
+      Lightning.AdaptorData.Cache.put(
+        "registry",
+        "all",
+        %{data: Jason.encode!([]), content_type: "application/json"}
+      )
+
+      assert [%{name: "@openfn/language-common"}] =
+               AdaptorRegistry.all(:test_decoded_cache_registry)
+    end
+
+    test "registry invalidation clears both the raw and decoded entries" do
+      adaptors = [
+        %{
+          name: "@openfn/language-common",
+          repo: "",
+          latest: "1.0.0",
+          versions: []
+        }
+      ]
+
+      Lightning.AdaptorData.put("registry", "all", Jason.encode!(adaptors))
+      Lightning.AdaptorData.Cache.invalidate("registry")
+
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_invalidation_registry, use_cache: false]}
+      )
+
+      # Prime both raw and decoded entries via a read.
+      assert [%{name: "@openfn/language-common"}] =
+               AdaptorRegistry.all(:test_invalidation_registry)
+
+      assert %{data: _} = Cachex.get!(:adaptor_data, {"registry", "all"})
+
+      assert %{data: _} =
+               Cachex.get!(:adaptor_data, {"registry", "decoded"})
+
+      Lightning.AdaptorData.Cache.invalidate("registry")
+
+      refute Cachex.get!(:adaptor_data, {"registry", "all"})
+      refute Cachex.get!(:adaptor_data, {"registry", "decoded"})
+    end
   end
 
   describe "start_link/1 in local mode" do

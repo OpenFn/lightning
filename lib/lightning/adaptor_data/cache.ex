@@ -51,6 +51,16 @@ defmodule Lightning.AdaptorData.Cache do
     end
   end
 
+  @doc """
+  Read a value from Cachex only (no DB read-through).
+
+  Use this for per-node memoized entries that have no DB representation
+  (e.g., a decoded form of a DB-backed payload).
+  """
+  def fetch_local(kind, key) do
+    Cachex.get!(@cache, {kind, key})
+  end
+
   @doc "Put a value directly into the cache (does not touch the DB)."
   def put(kind, key, value) do
     Cachex.put!(@cache, {kind, key}, value)

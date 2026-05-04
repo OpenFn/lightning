@@ -580,7 +580,13 @@ defmodule Lightning.Credentials do
         Credentials.Schema.new(data, schema_name)
 
       nil ->
-        # Fall back to filesystem for backwards compatibility
+        # Offline-mode read path. In LOCAL_ADAPTORS deployments the
+        # AdaptorRefreshWorker cron is skipped, the DB starts empty, and
+        # there is no upstream traffic to populate it. Schemas are baked
+        # into the release at Docker build time via
+        # `mix lightning.install_schemas` (no --db) -> `priv/schemas/*.json`.
+        # This branch serves them when the DB cache is empty. Without it,
+        # offline deployments cannot render credential forms.
         {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
         case File.read("#{schemas_path}/#{schema_name}.json") do
