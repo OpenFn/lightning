@@ -23,7 +23,8 @@ defmodule LightningWeb.CollectionLive.Index do
          page_title: "Collections",
          active_menu_item: :collections,
          collections: Collections.list_collections(),
-         name_sort_direction: :asc
+         sort_by: "name",
+         sort_direction: :asc
        ), layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
@@ -34,22 +35,25 @@ defmodule LightningWeb.CollectionLive.Index do
   end
 
   @impl true
-  def handle_event("sort", %{"by" => field}, socket) do
-    sort_key = String.to_atom("#{field}_sort_direction")
-    sort_direction = Map.get(socket.assigns, sort_key, :asc)
-    new_sort_direction = switch_sort_direction(sort_direction)
-
-    order_column = map_sort_field_to_column(field)
+  def handle_event("sort", %{"by" => field}, socket)
+      when field in ~w(name byte_size_sum) do
+    new_direction =
+      if socket.assigns.sort_by == field do
+        switch_sort_direction(socket.assigns.sort_direction)
+      else
+        :asc
+      end
 
     collections =
       Collections.list_collections(
-        order_by: [{new_sort_direction, order_column}]
+        order_by: [{new_direction, String.to_existing_atom(field)}]
       )
 
     {:noreply,
      socket
      |> assign(:collections, collections)
-     |> assign(sort_key, new_sort_direction)}
+     |> assign(:sort_by, field)
+     |> assign(:sort_direction, new_direction)}
   end
 
   def handle_event("delete_collection", %{"collection" => collection_id}, socket) do
@@ -73,8 +77,6 @@ defmodule LightningWeb.CollectionLive.Index do
   defp switch_sort_direction(:asc), do: :desc
   defp switch_sort_direction(:desc), do: :asc
 
-  defp map_sort_field_to_column("name"), do: :name
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -89,7 +91,8 @@ defmodule LightningWeb.CollectionLive.Index do
           <.collections_table
             collections={@collections}
             user={@current_user}
-            name_direction={@name_sort_direction}
+            sort_by={@sort_by}
+            sort_direction={@sort_direction}
           >
             <:empty_state>
               <.empty_state

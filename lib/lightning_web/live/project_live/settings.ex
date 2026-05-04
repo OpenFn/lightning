@@ -8,7 +8,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   import LightningWeb.LayoutComponents
 
   alias Lightning.Accounts.User
-  alias Lightning.Collections
   alias Lightning.Credentials
   alias Lightning.Helpers
   alias Lightning.Policies.Permissions
@@ -45,7 +44,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     project_user = Projects.get_project_user(project, current_user)
 
     project_files = Projects.list_project_files(project)
-    collections = Collections.list_project_collections(project)
 
     projects = Projects.get_projects_for_user(current_user)
 
@@ -130,7 +128,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
-       collections: collections,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
        name: project.name,
