@@ -17,7 +17,7 @@ defmodule Lightning.AdaptorData.Listener do
 
   @impl GenServer
   def init(_opts) do
-    Lightning.API.subscribe("adaptor:data")
+    Lightning.subscribe("adaptor:data")
     {:ok, %{}}
   end
 

@@ -1,10 +1,16 @@
 defmodule Lightning.AdaptorRefreshWorker do
   @moduledoc """
-  Oban worker that periodically refreshes the adaptor registry and
-  credential schemas from their upstream sources, storing results in
-  the database via `Lightning.AdaptorData`.
+  Oban worker that periodically refreshes the adaptor registry, the
+  icon manifest, and credential schemas from their upstream sources,
+  storing results in the database via `Lightning.AdaptorData`.
 
-  Scheduled via cron when `ADAPTOR_REFRESH_INTERVAL_HOURS` is configured.
+  Scheduled via cron when `ADAPTOR_REFRESH_INTERVAL_HOURS` is configured:
+
+    * `1..23` — runs every N hours
+    * `>= 24` — runs once daily at 04:00 UTC (cron has no "every N days";
+      values of 24, 36, 48, ... all collapse to the same daily slot)
+    * `0` or unset — disabled
+
   Returns `:ok` even on partial failure since retries are not useful for
   transient network issues — the next scheduled run will try again.
   """
@@ -29,8 +35,20 @@ defmodule Lightning.AdaptorRefreshWorker do
   defp do_refresh do
     Logger.info("Starting scheduled adaptor refresh")
 
+    registry_result = safe_call(&refresh_registry/0)
+
+    # Rebuild the icon manifest from the (just-refreshed) registry. No
+    # upstream traffic — the manifest is computed from the in-DB registry.
+    # PNG prefetch stays manual because it does hit GitHub.
+    manifest_result =
+      case registry_result do
+        {:ok, _} -> safe_call(&refresh_icon_manifest/0)
+        _ -> {:error, :skipped_registry_failed}
+      end
+
     results = [
-      {:registry, safe_call(&refresh_registry/0)},
+      {:registry, registry_result},
+      {:icon_manifest, manifest_result},
       {:schemas, safe_call(&refresh_schemas/0)}
     ]
 
@@ -68,6 +86,13 @@ defmodule Lightning.AdaptorRefreshWorker do
       data = Jason.encode!(adaptors)
       Lightning.AdaptorData.put("registry", "all", data)
       {:ok, length(adaptors)}
+    end
+  end
+
+  defp refresh_icon_manifest do
+    case Lightning.AdaptorIcons.refresh_manifest() do
+      {:ok, manifest} -> {:ok, map_size(manifest)}
+      error -> error
     end
   end
 

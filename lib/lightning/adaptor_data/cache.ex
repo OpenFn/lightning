@@ -75,7 +75,7 @@ defmodule Lightning.AdaptorData.Cache do
 
   @doc "Broadcast cache invalidation to all nodes."
   def broadcast_invalidation(kinds) when is_list(kinds) do
-    Lightning.API.broadcast(
+    Lightning.broadcast(
       "adaptor:data",
       {:invalidate_cache, kinds, node()}
     )

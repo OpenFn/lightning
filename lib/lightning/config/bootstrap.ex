@@ -291,17 +291,23 @@ defmodule Lightning.Config.Bootstrap do
         ],
         else: []
 
+    # ADAPTOR_REFRESH_INTERVAL_HOURS controls how often the registry,
+    # icon manifest, and credential schemas are refreshed from upstream.
+    #   1..23  -> every N hours starting at minute 0
+    #   >= 24  -> once daily at 04:00 UTC (cron has no native "every N days")
+    #   0/unset -> disabled
+    # The 04:00 UTC slot for daily runs is chosen to avoid peak traffic.
     adaptor_refresh_cron =
       case Application.get_env(
              :lightning,
              :adaptor_refresh_interval_hours,
              0
            ) do
+        hours when is_integer(hours) and hours in 1..23 ->
+          [{"0 */#{hours} * * *", Lightning.AdaptorRefreshWorker}]
+
         hours when is_integer(hours) and hours >= 24 ->
           [{"0 4 * * *", Lightning.AdaptorRefreshWorker}]
-
-        hours when is_integer(hours) and hours > 0 ->
-          [{"0 */#{hours} * * *", Lightning.AdaptorRefreshWorker}]
 
         _disabled ->
           []

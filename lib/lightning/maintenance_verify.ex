@@ -247,6 +247,10 @@ defmodule Lightning.MaintenanceVerify do
             {:error, "content-type was #{inspect(content_type)}"}
           end
       end
+    else
+      {:error, reason} -> {:error, reason}
+      [] -> {:error, "icon manifest is empty"}
+      other -> {:error, "icon manifest lookup failed: #{inspect(other)}"}
     end
   end
 
