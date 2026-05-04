@@ -33,9 +33,7 @@ defmodule LightningWeb.AdaptorIconControllerTest do
 
       assert response(conn, 200) == png_data
 
-      assert get_resp_header(conn, "content-type") == [
-               "image/png; charset=utf-8"
-             ]
+      assert get_resp_header(conn, "content-type") == ["image/png"]
 
       assert ["public, max-age=604800"] =
                get_resp_header(conn, "cache-control")
