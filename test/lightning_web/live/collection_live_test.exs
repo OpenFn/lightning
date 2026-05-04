@@ -57,9 +57,24 @@ defmodule LightningWeb.CollectionLiveTest do
       sorted_names = get_sorted_collection_names(view)
       assert sorted_names == ["A Collection", "B Collection"]
 
-      view |> element("a[phx-click='sort']") |> render_click()
+      view |> element("a[phx-value-by='name']") |> render_click()
       sorted_names = get_sorted_collection_names(view)
       assert sorted_names == ["B Collection", "A Collection"]
+    end
+
+    test "Collections can be sorted by used storage for superuser", %{conn: conn} do
+      insert(:collection, name: "Tiny", byte_size_sum: 100)
+      insert(:collection, name: "Huge", byte_size_sum: 5_000_000_000)
+      insert(:collection, name: "Medium", byte_size_sum: 2_500_000)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/collections", on_error: :raise)
+
+      view |> element("a[phx-value-by='byte_size_sum']") |> render_click()
+      assert get_sorted_collection_names(view) == ["Tiny", "Medium", "Huge"]
+
+      view |> element("a[phx-value-by='byte_size_sum']") |> render_click()
+      assert get_sorted_collection_names(view) == ["Huge", "Medium", "Tiny"]
     end
 
     test "Superuser can delete a collection", %{conn: conn} do

@@ -34,7 +34,15 @@ defmodule Lightning.Extensions.ProjectHook do
     Projects.project_credentials_query(project) |> Repo.delete_all()
     Projects.delete_project_dataclips(project)
 
-    Repo.delete(project)
+    project
+    |> Repo.delete()
+    |> tap(fn
+      {:ok, %Project{parent_id: parent_id}} when not is_nil(parent_id) ->
+        Lightning.Projects.SandboxPromExPlugin.fire_sandbox_deleted_event()
+
+      _ ->
+        :ok
+    end)
   end
 
   @spec handle_project_validation(Changeset.t(Project.t())) ::

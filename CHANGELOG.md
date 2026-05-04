@@ -19,6 +19,14 @@ and this project adheres to
 
 ### Changed
 
+- Project Settings, Collections panel: rename the "Used Storage (MB)" column to
+  "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
+  instead of integer megabytes. The column is now sortable, alongside the
+  existing Name column. Same change applied on the admin collections index.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Set initial streaming status when sending messages to the AI Assistant
+  [#4630](https://github.com/OpenFn/lightning/pull/4630)
+
 ### Fixed
 
 - Sort the workflow list, projects overview, and admin tables chronologically by
@@ -30,6 +38,10 @@ and this project adheres to
 - Sort the adaptor version dropdown per semver. Pre-release versions previously
   appeared above their corresponding stable release.
   [#4687](https://github.com/OpenFn/lightning/pull/4687)
+- Collection storage on Project Settings, Collections no longer shows `0` for
+  collections holding less than one megabyte of data. The underlying counter was
+  always correct, the rendering now reflects values at any scale.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
 - Prevent crash when an unsupported data type from `credential-schema.json` is
   loaded for building a credential schema from an adaptor. Fall-back to
   `:string` type, log warning and alert Sentry.
@@ -73,6 +85,14 @@ and this project adheres to
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Sandbox deletion (manual or after merge) is now soft. The sandbox and its
+  descendants are scheduled for purge after the configured grace period
+  (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
+  accidental deletions can be recovered. Scheduled-for-deletion sandboxes remain
+  visible in the parent's sandbox listing with a "Scheduled for deletion" badge
+  and a Cancel-deletion action, so anyone with permission to delete the sandbox
+  can also restore it during the grace window.
+  [#4649](https://github.com/OpenFn/lightning/issues/4649)
 - Updated ws-worker from
   [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
 
@@ -142,6 +162,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
 - Flickering/disappearing visualization on
   [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
   [PR#4628](https://github.com/OpenFn/lightning/pull/4628)

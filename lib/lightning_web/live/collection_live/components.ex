@@ -85,13 +85,20 @@ defmodule LightningWeb.CollectionLive.Components do
               <.th
                 sortable={true}
                 sort_by="name"
-                active={true}
-                sort_direction={to_string(@name_direction)}
+                active={@sort_by == "name"}
+                sort_direction={to_string(@sort_direction)}
               >
                 Name
               </.th>
               <.th>Project</.th>
-              <.th>Used Storage (MB)</.th>
+              <.th
+                sortable={true}
+                sort_by="byte_size_sum"
+                active={@sort_by == "byte_size_sum"}
+                sort_direction={to_string(@sort_direction)}
+              >
+                Used storage
+              </.th>
               <.th></.th>
             </.tr>
           </:header>
@@ -105,7 +112,7 @@ defmodule LightningWeb.CollectionLive.Components do
                   {collection.project.name}
                 </.td>
                 <.td class="wrap-break-word max-w-[25rem]">
-                  {div(collection.byte_size_sum, 1_000_000)}
+                  {Lightning.Helpers.bytes_to_human(collection.byte_size_sum)}
                 </.td>
                 <.td>
                   <div class="text-right">

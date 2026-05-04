@@ -201,8 +201,16 @@ defmodule Lightning.Runs do
   @spec complete_run(Run.t(), %{optional(any()) => any()}) ::
           {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
   def complete_run(run, params) do
+    params = wrap_final_state(params)
     Handlers.CompleteRun.call(run, params)
   end
+
+  defp wrap_final_state(%{"final_state" => state} = params)
+       when not is_map(state) and not is_nil(state) do
+    Map.put(params, "final_state", %{"value" => state})
+  end
+
+  defp wrap_final_state(params), do: params
 
   @spec update_run(Ecto.Changeset.t(Run.t())) ::
           {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
