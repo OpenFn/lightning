@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.16.3-pre1] - 2026-05-04
+
+### Changed
+
 - Project Settings, Collections panel: rename the "Used Storage (MB)" column to
   "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
   instead of integer megabytes. The column is now sortable, alongside the
