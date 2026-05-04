@@ -48,11 +48,13 @@ describe('NumberField', () => {
     );
   }
 
-  it('renders with label and help text', () => {
+  it('renders with label, help text, and autoComplete="off"', () => {
     render(<TestForm />);
 
-    expect(screen.getByLabelText('Count')).toBeInTheDocument();
+    const input = screen.getByLabelText('Count') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
     expect(screen.getByText('Enter a number')).toBeInTheDocument();
+    expect(input).toHaveAttribute('autocomplete', 'off');
   });
 
   it('shows placeholder when value is null', () => {

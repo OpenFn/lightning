@@ -58,6 +58,7 @@ export function SearchableList({
           aria-controls={listboxId}
           aria-activedescendant={activeDescendantId}
           aria-autocomplete="list"
+          autoComplete="off"
           className="block w-full rounded-md border-secondary-300
             pl-10 pr-10 shadow-xs sm:text-sm
             focus:border-primary-300 focus:ring

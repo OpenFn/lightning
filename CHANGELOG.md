@@ -17,6 +17,41 @@ and this project adheres to
 
 ### Added
 
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
+
+### Changed
+
+- Project Settings, Collections panel: rename the "Used Storage (MB)" column to
+  "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
+  instead of integer megabytes. The column is now sortable, alongside the
+  existing Name column. Same change applied on the admin collections index.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Set initial streaming status when sending messages to the AI Assistant
+  [#4630](https://github.com/OpenFn/lightning/pull/4630)
+
+### Fixed
+
+- Collection storage on Project Settings, Collections no longer shows `0` for
+  collections holding less than one megabyte of data. The underlying counter was
+  always correct, the rendering now reflects values at any scale.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Prevent crash when an unsupported data type from `credential-schema.json` is
+  loaded for building a credential schema from an adaptor. Fall-back to
+  `:string` type, log warning and alert Sentry.
+  [#4681](https://github.com/OpenFn/lightning/issues/4681)
+
+## [2.16.3-pre] - 2026-04-30
+
+### Added
+
 - Add support for sync v2 protocol
   [#4523](https://github.com/OpenFn/lightning/issues/4523)
 - Support collections in sandboxes. Collection names are now scoped per project,
@@ -39,15 +74,6 @@ and this project adheres to
 - Ability to filter work orders and runs via REST API by UUIDs or status; added
   example curl requests to REST API docs.
   [#4552](https://github.com/OpenFn/lightning/issues/4552)
-- Channel request detail page, reached by clicking a row in the channel history
-  table. Shows a client / destination / timing summary, a nested timing
-  visualization with per-phase breakdown and TTFB marker, foldable request and
-  response headers and body, and humanized transport and credential errors.
-  Captures richer request metadata (query string, body sizes, per-direction
-  durations, Finch phase timings) and attributes both the matched client webhook
-  auth method and the destination project credential on every proxied request.
-  Feature-gated behind experimental features.
-  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 
 ### Changed
 
@@ -62,8 +88,31 @@ and this project adheres to
   and request and response headers are stored as native jsonb on
   `channel_events`. Handler adapted to Philter 0.3.0 timing map.
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Bumped local worker to 1.24.0
+- Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
+  workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Sandbox deletion (manual or after merge) is now soft. The sandbox and its
+  descendants are scheduled for purge after the configured grace period
+  (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
+  accidental deletions can be recovered. Scheduled-for-deletion sandboxes remain
+  visible in the parent's sandbox listing with a "Scheduled for deletion" badge
+  and a Cancel-deletion action, so anyone with permission to delete the sandbox
+  can also restore it during the grace window.
+  [#4649](https://github.com/OpenFn/lightning/issues/4649)
+- Updated ws-worker from
+  [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
 
 ### Fixed
+
+- Only allow auto-completion in relevant input fields
+  [#1553](https://github.com/OpenFn/lightning/issues/1553)
+- Credential form no longer crashes when opening a schema that declares a
+  property `type` as a JSON Schema array (e.g. `["string", "null"]`), as the
+  Browserless adaptor does. The contradictory `null` member in the Browserless
+  schema itself (the field is `required` with `minLength: 1`) is corrected
+  upstream in
+  [`@openfn/language-browserless`](https://github.com/OpenFn/adaptors/pull/1659).
+  [#4647](https://github.com/OpenFn/lightning/issues/4647)
 
 ## [2.16.2] - 2026-04-20
 
@@ -119,6 +168,9 @@ and this project adheres to
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
 - Flickering/disappearing visualization on
   [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
   [PR#4628](https://github.com/OpenFn/lightning/pull/4628)

@@ -17,6 +17,7 @@
           field={f[:first_name]}
           label="First name"
           required="true"
+          autocomplete="given-name"
         />
       </div>
       <div class="space-y-4">
@@ -25,6 +26,7 @@
           field={f[:last_name]}
           label="Last name"
           required="true"
+          autocomplete="family-name"
         />
       </div>
       <div class="space-y-4">
@@ -80,6 +82,7 @@
           label="Enter password to confirm"
           required="true"
           phx-debounce="blur"
+          autocomplete="current-password"
         />
       </div>
     </div>
@@ -113,6 +116,7 @@
           field={f[:password]}
           label="New password"
           required="true"
+          autocomplete="new-password"
         />
       </div>
       <div class="space-y-4">
@@ -121,6 +125,7 @@
           field={f[:password_confirmation]}
           label="Confirm new password"
           required="true"
+          autocomplete="new-password"
         />
       </div>
       <div class="space-y-4">
@@ -129,6 +134,7 @@
           field={f[:current_password]}
           label="Current password"
           required="true"
+          autocomplete="current-password"
         />
       </div>
     </div>

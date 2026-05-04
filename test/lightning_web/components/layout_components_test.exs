@@ -147,6 +147,49 @@ defmodule LightningWeb.LayoutComponentsTest do
              "menu-item-active"
   end
 
+  describe "settings_menu_items_extension/1" do
+    test "renders nothing when no extension is configured" do
+      Application.delete_env(:lightning, :settings_menu_items_extension)
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :projects
+        })
+
+      assert html |> String.trim() == ""
+    end
+
+    test "renders the configured extension component with whitelisted assigns" do
+      on_exit(fn ->
+        Application.delete_env(:lightning, :settings_menu_items_extension)
+      end)
+
+      Application.put_env(:lightning, :settings_menu_items_extension, %{
+        component: &Menu.profile_items/1,
+        assigns_keys: [:active_menu_item]
+      })
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :credentials
+        })
+
+      element =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[href='/credentials']")
+
+      assert Floki.text(element) == "Credentials"
+
+      assert element |> Floki.attribute("class") |> List.first() =~
+               "menu-item-active"
+    end
+  end
+
   describe "breadcrumb_items/1" do
     test "renders breadcrumbs from list of tuples" do
       assigns = %{

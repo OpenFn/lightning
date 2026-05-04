@@ -14,7 +14,7 @@ defmodule LightningWeb.SandboxLive.Index do
   require Logger
 
   defmodule MergeWorkflow do
-    defstruct [:id, :name, :is_diverged, :is_new, :is_deleted]
+    defstruct [:id, :name, :is_changed, :is_diverged, :is_new, :is_deleted]
   end
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -163,7 +163,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
         if changeset.valid? do
           {:noreply,
-           Lightning.Projects.delete_sandbox(
+           Sandboxes.schedule_sandbox_deletion(
              sandbox,
              current_user
            )
@@ -177,6 +177,32 @@ defmodule LightningWeb.SandboxLive.Index do
   @impl true
   def handle_event("close-delete-modal", _params, socket) do
     {:noreply, reset_delete_modal_state(socket)}
+  end
+
+  @impl true
+  def handle_event(
+        "cancel-sandbox-deletion",
+        %{"id" => sandbox_id},
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
+    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+
+      sandbox ->
+        if sandbox.can_cancel_deletion do
+          Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, current_user)
+          |> handle_cancel_deletion_result(sandbox, socket)
+          |> noreply()
+        else
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "You are not authorized to cancel this sandbox's deletion"
+           )}
+        end
+    end
   end
 
   @impl true
@@ -200,29 +226,34 @@ defmodule LightningWeb.SandboxLive.Index do
               target_id: default_target && default_target.value
             })
 
-          diverged_workflows =
-            get_diverged_workflows(
-              sandbox,
-              default_target && default_target.value,
-              socket.assigns.workspace_projects
-            )
+          target_id = default_target && default_target.value
 
           target_project =
             Enum.find(
               socket.assigns.workspace_projects,
-              fn project ->
-                project.id == (default_target && default_target.value)
-              end
+              fn project -> project.id == target_id end
             )
+
+          {sandbox, target_project} =
+            preload_merge_projects(sandbox, target_project)
+
+          diverged_workflows = get_diverged_workflows(sandbox, target_project)
+
+          sandbox_changed_workflows =
+            get_changed_workflows(sandbox, target_project)
 
           source_workflows =
             build_merge_workflow_list(
               sandbox,
               diverged_workflows,
+              sandbox_changed_workflows,
               target_project
             )
 
-          selected_ids = MapSet.new(source_workflows, fn wf -> wf.id end)
+          selected_ids =
+            source_workflows
+            |> Enum.filter(fn wf -> wf.is_changed end)
+            |> MapSet.new(fn wf -> wf.id end)
 
           {:noreply,
            socket
@@ -284,38 +315,46 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
-    diverged_workflows =
-      get_diverged_workflows(
-        socket.assigns.merge_source_sandbox,
-        target_id,
-        socket.assigns.workspace_projects
-      )
-
     target_project =
       Enum.find(socket.assigns.workspace_projects, fn project ->
         project.id == target_id
       end)
 
+    {sandbox, target_project} =
+      preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
+
+    diverged_workflows = get_diverged_workflows(sandbox, target_project)
+
+    sandbox_changed_workflows = get_changed_workflows(sandbox, target_project)
+
     source_workflows =
       if target_project do
         build_merge_workflow_list(
-          socket.assigns.merge_source_sandbox,
+          sandbox,
           diverged_workflows,
+          sandbox_changed_workflows,
           target_project
         )
       else
         socket.assigns.merge_source_workflows
       end
 
-    all_ids = MapSet.new(source_workflows, fn wf -> wf.id end)
-
     prev_ids =
       MapSet.new(socket.assigns.merge_source_workflows, fn wf -> wf.id end)
+
+    all_ids = MapSet.new(source_workflows, fn wf -> wf.id end)
+
+    added_changed_ids =
+      source_workflows
+      |> Enum.filter(fn wf ->
+        wf.is_changed and not MapSet.member?(prev_ids, wf.id)
+      end)
+      |> MapSet.new(fn wf -> wf.id end)
 
     selected_ids =
       socket.assigns.merge_selected_workflow_ids
       |> MapSet.intersection(all_ids)
-      |> MapSet.union(MapSet.difference(all_ids, prev_ids))
+      |> MapSet.union(added_changed_ids)
 
     {:noreply,
      socket
@@ -507,10 +546,14 @@ defmodule LightningWeb.SandboxLive.Index do
             merge: false
           })
 
+        scheduled? = not is_nil(sandbox.scheduled_deletion)
+
         sandbox
-        |> Map.put(:can_edit, perms.update)
-        |> Map.put(:can_delete, perms.delete)
-        |> Map.put(:can_merge, perms.merge)
+        |> Map.put(:can_edit, perms.update and not scheduled?)
+        |> Map.put(:can_delete, perms.delete and not scheduled?)
+        |> Map.put(:can_merge, perms.merge and not scheduled?)
+        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
+        |> Map.put(:scheduled_for_deletion?, scheduled?)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
 
@@ -584,12 +627,14 @@ defmodule LightningWeb.SandboxLive.Index do
       socket
       |> put_flash(
         :info,
-        "Sandbox #{deleted_sandbox.name} and all its associated descendants deleted"
+        "Sandbox #{deleted_sandbox.name} scheduled for deletion."
       )
       |> reset_delete_modal_state()
 
     if should_redirect do
-      push_navigate(socket_to_return, to: ~p"/projects/#{root_project.id}/w")
+      push_navigate(socket_to_return,
+        to: ~p"/projects/#{deleted_sandbox.parent_id}/sandboxes"
+      )
     else
       load_workspace_projects(socket_to_return)
     end
@@ -609,8 +654,32 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp handle_sandbox_delete_result({:error, reason}, _sandbox, socket) do
     socket
-    |> put_flash(:error, "Failed to delete sandbox: #{inspect(reason)}")
+    |> put_flash(
+      :error,
+      "Failed to schedule sandbox deletion: #{inspect(reason)}"
+    )
     |> assign(:confirm_delete_open?, false)
+  end
+
+  defp handle_cancel_deletion_result({:ok, _sandbox}, sandbox, socket) do
+    socket
+    |> put_flash(
+      :info,
+      "Cancelled deletion of sandbox #{sandbox.name}."
+    )
+    |> load_workspace_projects()
+  end
+
+  defp handle_cancel_deletion_result({:error, :unauthorized}, _sandbox, socket) do
+    put_flash(
+      socket,
+      :error,
+      "You are not authorized to cancel this sandbox's deletion"
+    )
+  end
+
+  defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket) do
+    put_flash(socket, :error, "Sandbox not found")
   end
 
   defp get_merge_target_options(socket, source_sandbox) do
@@ -671,7 +740,12 @@ defmodule LightningWeb.SandboxLive.Index do
     Enum.find(workspace_projects, fn project -> project.id == target_id end)
   end
 
-  defp build_merge_workflow_list(source, _diverged_names, nil) do
+  defp build_merge_workflow_list(
+         source,
+         _diverged_names,
+         _sandbox_changed_names,
+         nil
+       ) do
     source
     |> Repo.preload(:workflows)
     |> Map.get(:workflows, [])
@@ -679,6 +753,7 @@ defmodule LightningWeb.SandboxLive.Index do
       %MergeWorkflow{
         id: wf.id,
         name: wf.name,
+        is_changed: true,
         is_diverged: false,
         is_new: true,
         is_deleted: false
@@ -687,7 +762,12 @@ defmodule LightningWeb.SandboxLive.Index do
     |> Enum.sort_by(fn wf -> wf.name end)
   end
 
-  defp build_merge_workflow_list(source, diverged_names, target_project) do
+  defp build_merge_workflow_list(
+         source,
+         diverged_names,
+         sandbox_changed_names,
+         target_project
+       ) do
     target_workflows =
       target_project
       |> Repo.preload(:workflows)
@@ -696,6 +776,7 @@ defmodule LightningWeb.SandboxLive.Index do
     target_workflow_names = MapSet.new(target_workflows, fn wf -> wf.name end)
 
     diverged_set = MapSet.new(diverged_names)
+    sandbox_changed_set = MapSet.new(sandbox_changed_names)
 
     source_workflows =
       source
@@ -706,11 +787,14 @@ defmodule LightningWeb.SandboxLive.Index do
 
     source_entries =
       Enum.map(source_workflows, fn wf ->
+        is_new = not MapSet.member?(target_workflow_names, wf.name)
+
         %MergeWorkflow{
           id: wf.id,
           name: wf.name,
+          is_changed: is_new or MapSet.member?(sandbox_changed_set, wf.name),
           is_diverged: MapSet.member?(diverged_set, wf.name),
-          is_new: not MapSet.member?(target_workflow_names, wf.name),
+          is_new: is_new,
           is_deleted: false
         }
       end)
@@ -722,6 +806,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %MergeWorkflow{
           id: wf.id,
           name: wf.name,
+          is_changed: true,
           is_diverged: false,
           is_new: false,
           is_deleted: true
@@ -759,14 +844,22 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp get_diverged_workflows(source, target_id, workspace_projects) do
-    with true <- !is_nil(target_id),
-         target_project when not is_nil(target_project) <-
-           Enum.find(workspace_projects, &(&1.id == target_id)) do
-      MergeProjects.diverged_workflows(source, target_project)
-    else
-      _ -> []
-    end
+  defp preload_merge_projects(source, nil),
+    do: {Repo.preload(source, :workflows), nil}
+
+  defp preload_merge_projects(source, target),
+    do: {Repo.preload(source, :workflows), Repo.preload(target, :workflows)}
+
+  defp get_diverged_workflows(_source, nil), do: []
+
+  defp get_diverged_workflows(source, target_project) do
+    MergeProjects.diverged_workflows(source, target_project)
+  end
+
+  defp get_changed_workflows(_source, nil), do: []
+
+  defp get_changed_workflows(source, target_project) do
+    MergeProjects.diverged_workflows(target_project, source)
   end
 
   defp perform_merge(
@@ -838,12 +931,14 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp build_merge_success_message(source, target, actor) do
-    case Lightning.Projects.delete_sandbox(source, actor) do
+    case Sandboxes.schedule_sandbox_deletion(source, actor) do
       {:ok, _} ->
-        "Successfully merged #{source.name} into #{target.name} and deleted the sandbox"
+        "Successfully merged #{source.name} into #{target.name}. " <>
+          "Sandbox scheduled for deletion."
 
       {:error, _} ->
-        "Successfully merged #{source.name} into #{target.name}, but could not delete the sandbox"
+        "Successfully merged #{source.name} into #{target.name}, " <>
+          "but could not schedule the sandbox for deletion."
     end
   end
 

@@ -163,4 +163,42 @@ defmodule Lightning.HelpersTest do
       assert Helpers.url_safe_name("Project 2023") == "project-2023"
     end
   end
+
+  describe "bytes_to_human/1" do
+    test "renders zero bytes" do
+      assert Helpers.bytes_to_human(0) == "0 B"
+    end
+
+    test "renders sub-KB values in bytes" do
+      assert Helpers.bytes_to_human(512) == "512 B"
+      assert Helpers.bytes_to_human(999) == "999 B"
+    end
+
+    test "renders sub-MB values in KB" do
+      assert Helpers.bytes_to_human(1_000) == "1 KB"
+      assert Helpers.bytes_to_human(1_483) == "1.5 KB"
+      assert Helpers.bytes_to_human(999_999) == "1000 KB"
+    end
+
+    test "renders sub-GB values in MB" do
+      assert Helpers.bytes_to_human(1_000_000) == "1 MB"
+      assert Helpers.bytes_to_human(2_500_000) == "2.5 MB"
+      assert Helpers.bytes_to_human(600_000_000) == "600 MB"
+    end
+
+    test "renders sub-TB values in GB" do
+      assert Helpers.bytes_to_human(1_000_000_000) == "1 GB"
+      assert Helpers.bytes_to_human(3_200_000_000) == "3.2 GB"
+    end
+
+    test "renders multi-TB values in TB" do
+      assert Helpers.bytes_to_human(1_000_000_000_000) == "1 TB"
+      assert Helpers.bytes_to_human(2_700_000_000_000) == "2.7 TB"
+    end
+
+    test "drops the decimal when scaled value is a whole number" do
+      assert Helpers.bytes_to_human(2_000_000) == "2 MB"
+      assert Helpers.bytes_to_human(2_000) == "2 KB"
+    end
+  end
 end

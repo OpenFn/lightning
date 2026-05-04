@@ -42,12 +42,15 @@ defmodule Lightning.Collections do
     Repo.all(from(c in Collection, order_by: ^order_by, preload: ^preload))
   end
 
-  @spec list_project_collections(Project.t()) :: [Collection.t(), ...] | []
-  def list_project_collections(%Project{id: project_id}) do
+  @spec list_project_collections(Project.t(), keyword()) ::
+          [Collection.t(), ...] | []
+  def list_project_collections(%Project{id: project_id}, opts \\ []) do
+    order_by = Keyword.get(opts, :order_by, asc: :name)
+
     query =
       from c in Collection,
         where: c.project_id == ^project_id,
-        order_by: [desc: :inserted_at]
+        order_by: ^order_by
 
     Repo.all(query)
   end
