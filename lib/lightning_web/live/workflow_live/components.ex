@@ -389,6 +389,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
                 value={url(~p"/i/#{@form[:id].value}")}
                 disabled="disabled"
+                autocomplete="off"
               />
 
               <button

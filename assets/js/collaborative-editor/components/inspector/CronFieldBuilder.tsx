@@ -756,6 +756,7 @@ export function CronFieldBuilder({
             <input
               id="cron-expression"
               type="text"
+              autoComplete="off"
               value={value}
               onChange={e => {
                 onChange(e.target.value);

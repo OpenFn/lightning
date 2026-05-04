@@ -64,7 +64,9 @@ defmodule Lightning.Runs.Handlers do
 
     The worker may send either:
     - `final_dataclip_id` — reuse an existing step output dataclip (single leaf)
-    - `final_state` — a new map to persist as a dataclip (multiple leaves)
+    - `final_state` — leaf state to persist as a dataclip (multiple leaves).
+      Map values are stored as-is. Non-map values (numbers, strings, booleans,
+      lists) are wrapped as `%{"value" => x}` before persistence.
 
     These are mutually exclusive. If both are sent, `final_dataclip_id` wins.
     """
@@ -473,10 +475,13 @@ defmodule Lightning.Runs.Handlers do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
-        body: output_dataclip |> Jason.decode!(),
+        body: output_dataclip |> Jason.decode!() |> ensure_map(),
         type: :step_result
       })
       |> Repo.insert()
     end
+
+    defp ensure_map(%{} = map), do: map
+    defp ensure_map(value), do: %{"value" => value}
   end
 end

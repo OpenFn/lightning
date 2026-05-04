@@ -61,14 +61,61 @@ defmodule LightningWeb.LayoutComponentsTest do
   end
 
   describe "breadcrumb_project_picker/1" do
-    test "renders project picker button with label" do
+    test "renders ReactComponent mount point for a root project" do
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-project",
+        parent_id: nil,
+        parent: %Ecto.Association.NotLoaded{
+          __field__: :parent,
+          __owner__: Lightning.Projects.Project,
+          __cardinality__: :one
+        }
+      }
+
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{label: "My Project"})
+        |> render_component(%{project: project})
 
       assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ "My Project"
-      assert html =~ "open-project-picker"
+      assert html =~ ~s(data-react-name="PickerButton")
+      assert html =~ ~s(data-label="my-project")
+      assert html =~ ~s(data-is-sandbox="false")
+    end
+
+    test "renders ReactComponent mount point with sandbox data" do
+      parent = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "parent-project"
+      }
+
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-sandbox",
+        parent_id: parent.id,
+        parent: parent,
+        color: "#E33D63"
+      }
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: project})
+
+      assert html =~ "breadcrumb-project-picker-trigger"
+      assert html =~ ~s(data-react-name="PickerButton")
+      assert html =~ ~s(data-label="parent-project/my-sandbox")
+      assert html =~ ~s(data-is-sandbox="true")
+      assert html =~ ~s(data-color="#E33D63")
+    end
+  end
+
+  describe "global_project_picker/1" do
+    test "renders nothing when no current_user" do
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{})
+
+      refute html =~ "global-project-picker"
     end
   end
 
@@ -98,6 +145,49 @@ defmodule LightningWeb.LayoutComponentsTest do
 
     assert element |> Floki.attribute("class") |> List.first() =~
              "menu-item-active"
+  end
+
+  describe "settings_menu_items_extension/1" do
+    test "renders nothing when no extension is configured" do
+      Application.delete_env(:lightning, :settings_menu_items_extension)
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :projects
+        })
+
+      assert html |> String.trim() == ""
+    end
+
+    test "renders the configured extension component with whitelisted assigns" do
+      on_exit(fn ->
+        Application.delete_env(:lightning, :settings_menu_items_extension)
+      end)
+
+      Application.put_env(:lightning, :settings_menu_items_extension, %{
+        component: &Menu.profile_items/1,
+        assigns_keys: [:active_menu_item]
+      })
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :credentials
+        })
+
+      element =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[href='/credentials']")
+
+      assert Floki.text(element) == "Credentials"
+
+      assert element |> Floki.attribute("class") |> List.first() =~
+               "menu-item-active"
+    end
   end
 
   describe "breadcrumb_items/1" do

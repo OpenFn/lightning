@@ -2,7 +2,9 @@ name: Security Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review, synchronize]
+    types: [opened, ready_for_review]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -10,12 +12,27 @@ permissions:
 
 jobs:
   security-review:
-    if: ${{ !github.event.pull_request.draft }}
+    # Run on: non-draft PR open/ready, OR a PR comment starting with "/security-review".
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       startsWith(github.event.comment.body, '/security-review'))
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve checkout ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            echo "ref=refs/pull/${{ github.event.issue.number }}/head" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.ref.outputs.ref }}
 
       - uses: anthropics/claude-code-action@v1
         id: claude-review
