@@ -80,6 +80,19 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     state => state.activeTriggerAuthMethods
   );
 
+  useEffect(() => {
+    const cfg = trigger.sync_webhook_response_config;
+    if (cfg == null) {
+      setHasResponseStatus(false);
+      setShownSuccessCode(false);
+      setShownErrorCode(false);
+    } else {
+      setHasResponseStatus(true);
+      setShownSuccessCode(cfg.success_code != null);
+      setShownErrorCode(cfg.error_code != null);
+    }
+  }, [trigger.sync_webhook_response_config]);
+
   // Request auth methods when trigger is selected
   useEffect(() => {
     if (trigger.id) {
