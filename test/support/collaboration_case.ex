@@ -25,9 +25,6 @@ defmodule Lightning.CollaborationCase do
       use Lightning.DataCase, async: false
 
       import Lightning.CollaborationCase
-      import Mox
-
-      setup :verify_on_exit!
     end
   end
 

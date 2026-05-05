@@ -7,6 +7,7 @@ defmodule Lightning.SessionTest do
   import Eventually
   import Lightning.CollaborationHelpers
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
