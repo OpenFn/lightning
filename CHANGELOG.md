@@ -43,6 +43,8 @@ and this project adheres to
   existing, restoring the intended missing-cache fallback that Cachex 4.x broke
   by raising `ArgumentError` from `:ets.lookup` instead of returning
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- AI Assistant: fix an issue where inline code snippets render with extra
+  backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
 
 ## [2.16.3] - 2026-05-07
 
