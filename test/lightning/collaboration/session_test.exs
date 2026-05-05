@@ -26,7 +26,8 @@ defmodule Lightning.SessionTest do
 
   describe "start/1" do
     test "start_link/1 returns an error when the SharedDoc doesn't exist", %{
-      user: user
+      user: user,
+      collaboration_base: base
     } do
       workflow_id = Ecto.UUID.generate()
 
@@ -42,17 +43,22 @@ defmodule Lightning.SessionTest do
                  {Session,
                   user: user,
                   workflow: workflow,
-                  document_name: "workflow:#{workflow.id}"}
+                  document_name: "workflow:#{workflow.id}",
+                  base: base}
                )
     end
 
-    test "start/1 can join an existing shared doc", %{user: user1} do
+    test "start/1 can join an existing shared doc", %{
+      user: user1,
+      collaboration_base: base
+    } do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
       Lightning.Collaborate.start_document(
         workflow,
-        "workflow:#{workflow.id}"
+        "workflow:#{workflow.id}",
+        base
       )
 
       [parent1, parent2] = build_parents(2)
@@ -64,7 +70,8 @@ defmodule Lightning.SessionTest do
               user: user,
               workflow: workflow,
               parent_pid: parent,
-              document_name: "workflow:#{workflow.id}"
+              document_name: "workflow:#{workflow.id}",
+              base: base
             )
 
           client
@@ -87,7 +94,7 @@ defmodule Lightning.SessionTest do
         end)
 
       shared_doc_pid =
-        Registry.get_group("workflow:#{workflow.id}")
+        Registry.get_group(base, "workflow:#{workflow.id}")
         |> Map.get(:shared_doc)
 
       observer_processes =
@@ -112,7 +119,7 @@ defmodule Lightning.SessionTest do
       assert_eventually(
         length(
           :pg.get_members(
-            Lightning.Collaboration.Topology.pg_scope(),
+            Lightning.Collaboration.Topology.pg_scope(base),
             document_name
           )
         ) == 1
@@ -133,7 +140,7 @@ defmodule Lightning.SessionTest do
       assert_eventually(
         length(
           :pg.get_members(
-            Lightning.Collaboration.Topology.pg_scope(),
+            Lightning.Collaboration.Topology.pg_scope(base),
             workflow.id
           )
         ) == 0
@@ -142,7 +149,10 @@ defmodule Lightning.SessionTest do
   end
 
   describe "workflow initialization" do
-    test "SharedDoc is initialized with workflow data", %{user: user} do
+    test "SharedDoc is initialized with workflow data", %{
+      user: user,
+      collaboration_base: base
+    } do
       # Create a workflow with jobs
       workflow =
         build(:complex_workflow, name: "Test Workflow")
@@ -150,7 +160,7 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       # Start a session - this should initialize the SharedDoc with workflow data
@@ -159,7 +169,8 @@ defmodule Lightning.SessionTest do
           {Session,
            user: user,
            workflow: workflow,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       # Send a message to allow :handle_continue to finish
@@ -240,14 +251,17 @@ defmodule Lightning.SessionTest do
       end
     end
 
-    test "existing SharedDoc is not reinitialized", %{user: user} do
+    test "existing SharedDoc is not reinitialized", %{
+      user: user,
+      collaboration_base: base
+    } do
       workflow = insert(:workflow, name: "Test Workflow")
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       # Start first session
@@ -256,7 +270,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       shared_doc_1 = Session.get_doc(session_1)
@@ -272,7 +287,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       shared_doc_2 = Session.get_doc(session_2)
@@ -292,7 +308,10 @@ defmodule Lightning.SessionTest do
       refute_eventually(Process.alive?(shared_doc_pid))
     end
 
-    test "client can sync workflow data from SharedDoc", %{user: user} do
+    test "client can sync workflow data from SharedDoc", %{
+      user: user,
+      collaboration_base: base
+    } do
       # Create workflow with jobs
       workflow = insert(:workflow, name: "Sync Test Workflow")
 
@@ -305,7 +324,7 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       # Start session to initialize SharedDoc
@@ -314,7 +333,8 @@ defmodule Lightning.SessionTest do
           {Session,
            user: user,
            workflow: workflow,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
@@ -353,13 +373,18 @@ defmodule Lightning.SessionTest do
 
   describe "persistence" do
     # @tag :pick
-    test "saves document state to the database", %{user: user} do
+    test "saves document state to the database", %{
+      user: user,
+      collaboration_base: base
+    } do
       workflow = insert(:simple_workflow)
 
       _document_supervisor =
         start_supervised!(
           {DocumentSupervisor,
-           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       session_pid =
@@ -367,7 +392,8 @@ defmodule Lightning.SessionTest do
           {Session,
            user: user,
            workflow: workflow,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       # This is an existing workflow, so when the session starts, it should
@@ -394,35 +420,39 @@ defmodule Lightning.SessionTest do
 
       # Lets find the PersistenceWriter and check it's state
 
-      persistence_writer = get_persistence_writer(document_name)
+      persistence_writer = get_persistence_writer(document_name, base)
 
       # There should be 1 pending update
-      assert get_pending_updates(document_name) |> length() == 1
+      assert get_pending_updates(document_name, base) |> length() == 1
 
       assert get_document_state(document_name) |> length() == 0,
              "Nothing is expected in the database yet"
 
       # Now lets add a job
       add_job(session_pid)
-      assert get_pending_updates(document_name) |> length() == 2
+      assert get_pending_updates(document_name, base) |> length() == 2
 
       # And another
       job = string_params_for(:job)
       add_job(session_pid, job)
-      assert get_pending_updates(document_name) |> length() == 3
+      assert get_pending_updates(document_name, base) |> length() == 3
 
       # And force saving the updates (this normally happens on a timer)
       send(persistence_writer, :force_save)
 
-      assert_eventually(get_pending_updates(document_name) |> length() == 0)
+      assert_eventually(
+        get_pending_updates(document_name, base) |> length() == 0
+      )
 
       # And remove a job
       remove_job(session_pid, job)
-      assert get_pending_updates(document_name) |> length() == 1
+      assert get_pending_updates(document_name, base) |> length() == 1
 
       send(persistence_writer, :force_save)
 
-      assert_eventually(get_pending_updates(document_name) |> length() == 0)
+      assert_eventually(
+        get_pending_updates(document_name, base) |> length() == 0
+      )
 
       # And check that the document state is in the database
       assert get_document_state(document_name) |> length() == 2
@@ -431,13 +461,13 @@ defmodule Lightning.SessionTest do
       # TODO: Recover from state with a checkpoint
     end
 
-    defp get_persistence_writer(document_name) do
-      Registry.get_group(document_name)
+    defp get_persistence_writer(document_name, base) do
+      Registry.get_group(base, document_name)
       |> Map.get(:persistence_writer)
     end
 
-    defp get_pending_updates(document_name) do
-      persistence_writer = get_persistence_writer(document_name)
+    defp get_pending_updates(document_name, base) do
+      persistence_writer = get_persistence_writer(document_name, base)
       :sys.get_state(persistence_writer).pending_updates
     end
 
@@ -474,24 +504,27 @@ defmodule Lightning.SessionTest do
     # from persistence.
 
     @tag :pick
-    test "client doc is still around", %{user: user} do
+    test "client doc is still around", %{user: user, collaboration_base: base} do
       workflow = insert(:simple_workflow)
 
       document_supervisor =
         start_supervised!(
           {DocumentSupervisor,
-           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       %{shared_doc: shared_doc, persistence_writer: persistence_writer} =
-        Registry.get_group("workflow:#{workflow.id}")
+        Registry.get_group(base, "workflow:#{workflow.id}")
 
       session_pid =
         start_supervised!(
           {Session,
            user: user,
            workflow: workflow,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       {:ok, client_pid} =
@@ -533,7 +566,7 @@ defmodule Lightning.SessionTest do
       # pick up the existing document from the database.
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       # Starting a new session
@@ -542,10 +575,12 @@ defmodule Lightning.SessionTest do
           {Session,
            user: user,
            workflow: workflow,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
-      shared_doc_pid = Registry.get_group("workflow:#{workflow.id}").shared_doc
+      shared_doc_pid =
+        Registry.get_group(base, "workflow:#{workflow.id}").shared_doc
 
       GenServer.call(client_pid, {:observe, shared_doc_pid})
 
@@ -592,7 +627,7 @@ defmodule Lightning.SessionTest do
 
   describe "teardown" do
     @tag :capture_log
-    test "when a session is stopped", %{user: user1} do
+    test "when a session is stopped", %{user: user1, collaboration_base: base} do
       workflow_id = Ecto.UUID.generate()
 
       workflow = %Lightning.Workflows.Workflow{
@@ -607,7 +642,7 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
@@ -620,7 +655,8 @@ defmodule Lightning.SessionTest do
                user: user,
                workflow: workflow,
                parent_pid: parent,
-               document_name: "workflow:#{workflow.id}"}
+               document_name: "workflow:#{workflow.id}",
+               base: base}
             )
 
           {client, parent}
@@ -730,7 +766,7 @@ defmodule Lightning.SessionTest do
   end
 
   describe "save_workflow/2" do
-    setup do
+    setup %{collaboration_base: base} do
       # Set global mode for the mock to allow cross-process calls
       Mox.set_mox_global(LightningMock)
       # Stub the broadcast calls that save_workflow makes
@@ -745,7 +781,7 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       session_pid =
@@ -753,7 +789,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       %{
@@ -938,7 +975,8 @@ defmodule Lightning.SessionTest do
 
     test "saves workflow with :built state and lock_version > 0", %{
       user: user,
-      project: project
+      project: project,
+      collaboration_base: base
     } do
       # Create a new workflow struct (not yet saved)
       workflow_id = Ecto.UUID.generate()
@@ -956,7 +994,9 @@ defmodule Lightning.SessionTest do
       # Start document and session with the new workflow
       start_supervised!(
         {DocumentSupervisor,
-         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+         workflow: new_workflow,
+         document_name: "workflow:#{workflow_id}",
+         base: base}
       )
 
       session_pid =
@@ -964,7 +1004,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: new_workflow,
            user: user,
-           document_name: "workflow:#{workflow_id}"}
+           document_name: "workflow:#{workflow_id}",
+           base: base}
         )
 
       # First save - this creates the workflow in DB (lock_version becomes 1)
@@ -993,7 +1034,8 @@ defmodule Lightning.SessionTest do
 
     test "handles workflow deleted for :built workflow with lock_version > 0", %{
       user: user,
-      project: project
+      project: project,
+      collaboration_base: base
     } do
       # Create a workflow and save it once to get lock_version > 0
       workflow_id = Ecto.UUID.generate()
@@ -1008,9 +1050,12 @@ defmodule Lightning.SessionTest do
         triggers: []
       }
 
+      # Start document and session with the new workflow
       start_supervised!(
         {DocumentSupervisor,
-         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+         workflow: new_workflow,
+         document_name: "workflow:#{workflow_id}",
+         base: base}
       )
 
       session_pid =
@@ -1018,7 +1063,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: new_workflow,
            user: user,
-           document_name: "workflow:#{workflow_id}"}
+           document_name: "workflow:#{workflow_id}",
+           base: base}
         )
 
       # First save to create in DB
@@ -1044,7 +1090,7 @@ defmodule Lightning.SessionTest do
   # we need workflows with :built state (not yet persisted to DB).
   # The main save_workflow/2 tests use insert() which creates :loaded workflows.
   describe "save_workflow/2 with NEW workflows" do
-    setup do
+    setup %{collaboration_base: base} do
       Mox.set_mox_global(LightningMock)
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
@@ -1065,12 +1111,17 @@ defmodule Lightning.SessionTest do
       document_name = "workflow:new:#{workflow_id}"
 
       start_supervised!(
-        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+        {DocumentSupervisor,
+         workflow: workflow, document_name: document_name, base: base}
       )
 
       session_pid =
         start_supervised!(
-          {Session, workflow: workflow, user: user, document_name: document_name}
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: document_name,
+           base: base}
         )
 
       %{
@@ -1177,7 +1228,7 @@ defmodule Lightning.SessionTest do
   end
 
   describe "save_workflow/2 validation errors" do
-    setup do
+    setup %{collaboration_base: base} do
       # Set global mode for the mock to allow cross-process calls
       Mox.set_mox_global(LightningMock)
       # Stub the broadcast calls that save_workflow makes
@@ -1189,7 +1240,7 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       session_pid =
@@ -1197,7 +1248,8 @@ defmodule Lightning.SessionTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       %{
@@ -1669,21 +1721,23 @@ defmodule Lightning.SessionTest do
 
   describe "persistence reconciliation" do
     test "restores persisted Y.Doc content on doc supervisor restart", %{
-      user: user
+      user: user,
+      collaboration_base: base
     } do
       workflow = insert(:simple_workflow)
       document_name = "workflow:#{workflow.id}"
 
       # Start a session and add an unsaved job to the Y.Doc
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(workflow, document_name)
+        Lightning.Collaborate.start_document(workflow, document_name, base)
 
       {:ok, session1} =
         Session.start_link(
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: document_name
+          document_name: document_name,
+          base: base
         )
 
       custom_job_id = Ecto.UUID.generate()
@@ -1702,18 +1756,19 @@ defmodule Lightning.SessionTest do
 
       # Stop the session and doc supervisor — PersistenceWriter flushes state
       Session.stop(session1)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       # Restart — persisted state should be restored including the custom job
       {:ok, _doc_supervisor2} =
-        Lightning.Collaborate.start_document(workflow, document_name)
+        Lightning.Collaborate.start_document(workflow, document_name, base)
 
       {:ok, session2} =
         Session.start_link(
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: document_name
+          document_name: document_name,
+          base: base
         )
 
       doc = Session.get_doc(session2)
@@ -1730,7 +1785,8 @@ defmodule Lightning.SessionTest do
     end
 
     test "handles persisted Y.Doc with nil lock_version without crashing", %{
-      user: user
+      user: user,
+      collaboration_base: base
     } do
       workflow = insert(:simple_workflow)
       doc_name = "workflow:#{workflow.id}"
@@ -1756,14 +1812,15 @@ defmodule Lightning.SessionTest do
 
       # Should not crash when loading persisted state with nil lock_version
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(workflow, doc_name)
+        Lightning.Collaborate.start_document(workflow, doc_name, base)
 
       {:ok, session} =
         Session.start_link(
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: doc_name
+          document_name: doc_name,
+          base: base
         )
 
       # Persisted state is loaded as-is — nil lock_version stays nil
@@ -1777,7 +1834,8 @@ defmodule Lightning.SessionTest do
     end
 
     test "merges delta updates with persisted state across save batches", %{
-      user: user
+      user: user,
+      collaboration_base: base
     } do
       # This tests the fix for the merge_updates bug where delta updates
       # saved in subsequent batches were applied to an empty doc instead of
@@ -1844,7 +1902,8 @@ defmodule Lightning.SessionTest do
       {:ok, _doc_supervisor} =
         Lightning.Collaborate.start_document(
           workflow,
-          doc_name
+          doc_name,
+          base
         )
 
       {:ok, session} =
@@ -1852,7 +1911,8 @@ defmodule Lightning.SessionTest do
           user: user,
           workflow: workflow,
           parent_pid: self(),
-          document_name: doc_name
+          document_name: doc_name,
+          base: base
         )
 
       # Verify the session loaded the full state correctly

@@ -8,6 +8,7 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
 
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.Topology
   alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -27,13 +28,19 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   Versioned snapshots (e.g., "workflow:123:v22") are read-only historical views
   and should never receive live updates from saves.
   """
-  @spec reconcile_workflow_changes(Ecto.Changeset.t(), Workflow.t()) :: :ok
-  def reconcile_workflow_changes(%Ecto.Changeset{} = changeset, workflow) do
+  @spec reconcile_workflow_changes(Ecto.Changeset.t(), Workflow.t(), atom()) ::
+          :ok
+  def reconcile_workflow_changes(
+        %Ecto.Changeset{} = changeset,
+        workflow,
+        base \\ nil
+      ) do
     # Always reconcile to the latest (unversioned) document
     # Format: "workflow:123" (not "workflow:123:v22")
     document_name = "workflow:#{workflow.id}"
+    effective_base = base || Topology.base()
 
-    case Session.lookup_shared_doc(document_name) do
+    case Session.lookup_shared_doc(document_name, effective_base) do
       nil ->
         Logger.debug(
           "No active SharedDoc for workflow #{workflow.id}, skipping reconciliation"
@@ -74,10 +81,16 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   @spec reconcile_workflow_from_db(
           Workflow.t(),
           Lightning.Accounts.User.t()
-          | Lightning.VersionControl.ProjectRepoConnection.t()
+          | Lightning.VersionControl.ProjectRepoConnection.t(),
+          atom() | nil
         ) :: :ok
-  def reconcile_workflow_from_db(%Workflow{} = workflow, actor) do
-    case Collaborate.start(workflow: workflow, user: actor) do
+  def reconcile_workflow_from_db(%Workflow{} = workflow, actor, base \\ nil) do
+    start_opts =
+      if base,
+        do: [workflow: workflow, user: actor, base: base],
+        else: [workflow: workflow, user: actor]
+
+    case Collaborate.start(start_opts) do
       {:ok, session_pid} ->
         try do
           Session.update_doc(session_pid, fn doc ->

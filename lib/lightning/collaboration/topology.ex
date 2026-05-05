@@ -48,4 +48,5 @@ defmodule Lightning.Collaboration.Topology do
   active Registry.
   """
   def via(key), do: {:via, Registry, {registry(), key}}
+  def via(base, key), do: {:via, Registry, {registry(base), key}}
 end

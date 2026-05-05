@@ -14,14 +14,14 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   # that starts :pg with the :workflow_collaboration scope
   # and a dynamic supervisor called Lightning.WorkflowCollaboration
 
-  setup do
+  setup %{collaboration_base: base} do
     # Set global mode for the mock to allow cross-process calls
     Mox.set_mox_global(LightningMock)
     # Stub the broadcast calls that WorkflowReconciler makes
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
     user = insert(:user)
-    {:ok, user: user}
+    {:ok, user: user, base: base}
   end
 
   describe "reconcile_workflow_changes/2" do
@@ -32,11 +32,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "job insert operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Create a new job changeset
       new_job =
@@ -66,7 +67,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       Yex.Doc.monitor_update(shared_doc)
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       assert_one_update(shared_doc)
 
@@ -85,16 +90,17 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
              } = new_job_data
 
       Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
     end
 
     test "job update operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the SharedDoc and verify initial state
       shared_doc = Session.get_doc(session_pid)
@@ -133,7 +139,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       assert_one_update(shared_doc)
 
@@ -152,16 +162,17 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
                updated_job_data
 
       Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
     end
 
     test "job delete operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the first job to delete
       job_to_delete = Enum.at(workflow.jobs, 0)
@@ -184,7 +195,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the job was removed from the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -197,16 +212,17 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       refute find_in_ydoc_array(jobs_array, job_to_delete.id)
 
       Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
     end
 
     test "edge insert operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Create a new edge between existing jobs
       %{id: source_job_id} = source_job = Enum.at(workflow.jobs, 1)
@@ -238,7 +254,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the edge was added to the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -260,11 +280,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "edge update operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the first edge to update
       edge_to_update = Enum.at(workflow.edges, 0)
@@ -289,7 +310,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the edge was updated in the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -302,11 +327,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "edge delete operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the first edge to delete
       edge_to_delete = Enum.at(workflow.edges, 0)
@@ -331,7 +357,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the edge was removed from the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -347,11 +377,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "trigger update operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the first trigger to update
       trigger_to_update = Enum.at(workflow.triggers, 0)
@@ -377,7 +408,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the trigger was updated in the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -395,11 +430,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "trigger delete operations are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get the trigger to delete
       trigger_to_delete = Enum.at(workflow.triggers, 0)
@@ -422,7 +458,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the trigger was removed from the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -434,11 +474,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "workflow-level updates are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Create changeset for updating workflow properties
       workflow_changeset =
@@ -450,7 +491,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         |> Map.put(:action, :update)
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify the workflow was updated in the YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -462,11 +507,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "lock_version updates are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get initial lock_version from YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -488,7 +534,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       Yex.Doc.monitor_update(shared_doc)
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify exactly one update was sent
       assert_one_update(shared_doc)
@@ -500,16 +550,17 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
                new_lock_version
 
       Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
     end
 
     test "positions updates are applied to YDoc", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get some job IDs to create positions for
       job1_id = Enum.at(workflow.jobs, 0).id
@@ -533,7 +584,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       Yex.Doc.monitor_update(shared_doc)
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       assert_one_update(shared_doc)
 
@@ -547,11 +602,12 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "multiple simultaneous changes are applied correctly", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Get existing entities to modify
       job_to_update = Enum.at(workflow.jobs, 0)
@@ -606,7 +662,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile all changes at once
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # Verify all changes were applied
       shared_doc = Session.get_doc(session_pid)
@@ -640,7 +700,8 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "reconciliation with no active sessions does not crash", %{
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Don't start any session - no active SharedDoc
 
@@ -654,17 +715,19 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       assert :ok =
                WorkflowReconciler.reconcile_workflow_changes(
                  workflow_changeset,
-                 workflow
+                 workflow,
+                 base
                )
     end
 
     test "reconciliation handles large workflow modifications efficiently", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Create many new jobs at once (stress test)
       new_jobs =
@@ -696,7 +759,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       start_time = System.monotonic_time(:millisecond)
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       end_time = System.monotonic_time(:millisecond)
       duration = end_time - start_time
@@ -714,17 +781,18 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
     test "reconciliation handles concurrent sessions correctly", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      base: base
     } do
       # Start multiple sessions to create multiple references to SharedDoc
       {:ok, session1_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       {:ok, session2_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       {:ok, session3_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       # Verify all sessions share the same SharedDoc
       shared_doc1 = Session.get_doc(session1_pid)
@@ -756,7 +824,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       }
 
       # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      WorkflowReconciler.reconcile_workflow_changes(
+        workflow_changeset,
+        workflow,
+        base
+      )
 
       # All sessions should see the same updated data
       jobs_array1 = Yex.Doc.get_array(shared_doc1, "jobs")
@@ -775,17 +847,18 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   end
 
   describe "reconcile_workflow_from_db/2" do
-    setup %{user: _user} do
+    setup %{user: _user, collaboration_base: base} do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
 
-      %{workflow: workflow}
+      %{workflow: workflow, base: base}
     end
 
     test "phantom job (in Y.Doc but not in DB) is removed from the doc",
-         %{user: user, workflow: workflow} do
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+         %{user: user, workflow: workflow, base: base} do
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       phantom_id = Ecto.UUID.generate()
 
@@ -801,14 +874,14 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         )
       end)
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       doc = Session.get_doc(session)
       jobs = Yex.Doc.get_array(doc, "jobs") |> Yex.Array.to_json()
       job_ids = Enum.map(jobs, & &1["id"])
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       [original_job] = workflow.jobs
       assert original_job.id in job_ids
@@ -816,8 +889,9 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "multiple phantom jobs are all removed from the doc",
-         %{user: user, workflow: workflow} do
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+         %{user: user, workflow: workflow, base: base} do
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       phantom_ids = Enum.map(1..3, fn _ -> Ecto.UUID.generate() end)
 
@@ -837,14 +911,14 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         end)
       end)
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       doc = Session.get_doc(session)
       jobs = Yex.Doc.get_array(doc, "jobs") |> Yex.Array.to_json()
       job_ids = Enum.map(jobs, & &1["id"])
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       assert length(job_ids) == 1
       [original_job] = workflow.jobs
@@ -853,9 +927,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "job body is updated in the doc when it differs from DB",
-         %{user: user, workflow: workflow} do
+         %{user: user, workflow: workflow, base: base} do
       [db_job] = workflow.jobs
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       Session.update_doc(session, fn doc ->
         jobs_array = Yex.Doc.get_array(doc, "jobs")
@@ -869,7 +945,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         Yex.Text.insert(body_text, 0, "stale editor body")
       end)
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       doc = Session.get_doc(session)
       jobs_array = Yex.Doc.get_array(doc, "jobs")
@@ -881,14 +957,15 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       body_string = Yex.Text.to_string(body_text)
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       assert body_string == db_job.body
     end
 
     test "no-op reconcile does not modify Y.Doc when doc is already in sync with DB",
-         %{user: user, workflow: workflow} do
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+         %{user: user, workflow: workflow, base: base} do
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       [db_job] = workflow.jobs
       doc = Session.get_doc(session)
@@ -900,20 +977,21 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
       name_before = Yex.Map.fetch!(job_map, "name")
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       name_after = Yex.Map.fetch!(job_map, "name")
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       assert name_before == name_after
       assert name_after == db_job.name
     end
 
     test "phantom edge (in Y.Doc but not in DB) is removed from the doc",
-         %{user: user, workflow: workflow} do
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+         %{user: user, workflow: workflow, base: base} do
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       phantom_edge_id = Ecto.UUID.generate()
 
@@ -931,7 +1009,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         )
       end)
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       doc = Session.get_doc(session)
 
@@ -941,7 +1019,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         |> Enum.map(& &1["id"])
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       [original_edge] = workflow.edges
       assert original_edge.id in edge_ids
@@ -949,8 +1027,9 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "phantom trigger (in Y.Doc but not in DB) is removed from the doc",
-         %{user: user, workflow: workflow} do
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+         %{user: user, workflow: workflow, base: base} do
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       phantom_trigger_id = Ecto.UUID.generate()
 
@@ -967,7 +1046,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         )
       end)
 
-      WorkflowReconciler.reconcile_workflow_from_db(workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(workflow, user, base)
 
       doc = Session.get_doc(session)
 
@@ -977,7 +1056,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
         |> Enum.map(& &1["id"])
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       [original_trigger] = workflow.triggers
       assert original_trigger.id in trigger_ids
@@ -985,7 +1064,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "new kafka trigger is inserted with kafka_configuration fields",
-         %{user: user, workflow: workflow} do
+         %{user: user, workflow: workflow, base: base} do
       kafka_trigger =
         insert(:trigger,
           type: :kafka,
@@ -993,20 +1072,21 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
           kafka_configuration: build(:triggers_kafka_configuration)
         )
 
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       updated_workflow =
         Lightning.Workflows.get_workflow(workflow.id,
           include: [:jobs, :triggers, :edges]
         )
 
-      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user, base)
 
       doc = Session.get_doc(session)
       triggers = Yex.Doc.get_array(doc, "triggers") |> Yex.Array.to_json()
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       kafka_t = Enum.find(triggers, &(&1["id"] == kafka_trigger.id))
 
@@ -1017,10 +1097,11 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     end
 
     test "trigger cron_expression is updated in the doc when it differs from DB",
-         %{user: user, workflow: workflow} do
+         %{user: user, workflow: workflow, base: base} do
       [original_trigger] = workflow.triggers
 
-      {:ok, session} = Collaborate.start(workflow: workflow, user: user)
+      {:ok, session} =
+        Collaborate.start(workflow: workflow, user: user, base: base)
 
       Session.update_doc(session, fn doc ->
         triggers_array = Yex.Doc.get_array(doc, "triggers")
@@ -1040,7 +1121,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
 
       updated_workflow = %{workflow | triggers: [updated_trigger]}
 
-      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user)
+      WorkflowReconciler.reconcile_workflow_from_db(updated_workflow, user, base)
 
       doc = Session.get_doc(session)
       triggers_array = Yex.Doc.get_array(doc, "triggers")
@@ -1053,7 +1134,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       cron_expression = Yex.Map.fetch!(t_map, "cron_expression")
 
       Session.stop(session)
-      ensure_doc_supervisor_stopped(workflow.id)
+      ensure_doc_supervisor_stopped(workflow.id, base)
 
       assert cron_expression == "0 * * * *"
     end

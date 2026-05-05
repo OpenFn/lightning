@@ -54,9 +54,6 @@ defmodule Lightning.CollaborationCase do
     {:ok, sup_pid} =
       Lightning.Collaboration.Supervisor.start_link(name: base)
 
-    previous = Application.get_env(:lightning, Topology)
-    Application.put_env(:lightning, Topology, base)
-
     # Tear the collaboration tree down via `on_exit` (rather than
     # `start_supervised!`) so the shutdown happens *before* the SQL Sandbox
     # connection is checked back in. ExUnit runs `on_exit` callbacks in
@@ -73,14 +70,6 @@ defmodule Lightning.CollaborationCase do
       after
         5_000 -> :ok
       end
-
-      # Restore Application config after the supervisor has fully stopped,
-      # so any in-flight Topology.base() calls during shutdown see the
-      # correct base.
-      case previous do
-        nil -> Application.delete_env(:lightning, Topology)
-        val -> Application.put_env(:lightning, Topology, val)
-      end
     end)
 
     base
@@ -93,11 +82,9 @@ defmodule Lightning.CollaborationCase do
   Returns a map with `:document_supervisor`, `:persistence_writer`,
   `:shared_doc`, and `:document_name`.
   """
-  def start_workflow_collab!(workflow, opts \\ []) do
+  def start_workflow_collab!(base, workflow, opts \\ []) do
     document_name =
       Keyword.get(opts, :document_name, "workflow:#{workflow.id}")
-
-    base = Topology.base()
 
     {:ok, doc_sup_pid} =
       Lightning.Collaboration.Supervisor.start_child(
@@ -105,11 +92,12 @@ defmodule Lightning.CollaborationCase do
         {Lightning.Collaboration.DocumentSupervisor,
          workflow: workflow,
          document_name: document_name,
-         name: Topology.via({:doc_supervisor, document_name})}
+         base: base,
+         name: Topology.via(base, {:doc_supervisor, document_name})}
       )
 
     %{shared_doc: sd, persistence_writer: pw} =
-      Registry.get_group(document_name)
+      Registry.get_group(base, document_name)
 
     %{
       document_supervisor: doc_sup_pid,

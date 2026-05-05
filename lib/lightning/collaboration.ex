@@ -36,20 +36,22 @@ defmodule Lightning.Collaborate do
 
   @spec start(opts :: Keyword.t()) :: GenServer.on_start()
   def start(opts) do
-    case do_start(opts) do
+    base = Keyword.get(opts, :base, Topology.base())
+
+    case do_start(opts, base) do
       {:error, {:error, :shared_doc_not_found}} ->
         # A SharedDoc was registered in :pg but died before the Session could
         # observe it (0ms auto_exit race). Yield one ms — enough for the timer
         # to fire and clear :pg — then try once more from scratch.
         Process.sleep(1)
-        do_start(opts)
+        do_start(opts, base)
 
       result ->
         result
     end
   end
 
-  defp do_start(opts) do
+  defp do_start(opts, base) do
     session_id = Ecto.UUID.generate()
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
@@ -70,11 +72,11 @@ defmodule Lightning.Collaborate do
     # Returns {:error, reason} on failure rather than raising, so callers
     # such as WorkflowReconciler can handle failures gracefully.
     doc_result =
-      case lookup_shared_doc(document_name) do
+      case lookup_shared_doc(document_name, base) do
         nil ->
           Logger.info("Starting document for #{document_name}")
 
-          case start_document(workflow, document_name) do
+          case start_document(workflow, document_name, base) do
             {:ok, _} -> :ok
             error -> error
           end
@@ -89,14 +91,18 @@ defmodule Lightning.Collaborate do
         # Start session for this user
         user_id = if is_struct(user, User), do: user.id, else: nil
 
-        SessionSupervisor.start_child(Topology.base(), {
+        SessionSupervisor.start_child(base, {
           Session,
           workflow: workflow,
           user: user,
           parent_pid: parent_pid,
           document_name: document_name,
+          base: base,
           name:
-            Registry.via({:session, "#{document_name}:#{session_id}", user_id})
+            Topology.via(
+              base,
+              {:session, "#{document_name}:#{session_id}", user_id}
+            )
         })
 
       error ->
@@ -106,19 +112,21 @@ defmodule Lightning.Collaborate do
 
   def start_document(
         %Lightning.Workflows.Workflow{} = workflow,
-        document_name
+        document_name,
+        base \\ Topology.base()
       ) do
     SessionSupervisor.start_child(
-      Topology.base(),
+      base,
       {DocumentSupervisor,
        workflow: workflow,
        document_name: document_name,
-       name: Registry.via({:doc_supervisor, document_name})}
+       base: base,
+       name: Topology.via(base, {:doc_supervisor, document_name})}
     )
   end
 
-  defp lookup_shared_doc(document_name) do
-    case :pg.get_members(Topology.pg_scope(), document_name) do
+  defp lookup_shared_doc(document_name, base) do
+    case :pg.get_members(Topology.pg_scope(base), document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

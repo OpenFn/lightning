@@ -28,16 +28,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
     document_name = Keyword.fetch!(opts, :document_name)
+    base = Keyword.fetch!(opts, :base)
 
     # Resolve topology references once at init time so subsequent callbacks
     # don't need to re-read the Mox stub or Application env.
-    pg_scope = Topology.pg_scope()
+    pg_scope = Topology.pg_scope(base)
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
         document_name: document_name,
         workflow_id: workflow.id,
-        name: Topology.via({:persistence_writer, document_name})
+        base: base,
+        name: Topology.via(base, {:persistence_writer, document_name})
       )
 
     persistence_writer_ref = Process.monitor(persistence_writer_pid)
@@ -54,7 +56,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
                persistence_writer: persistence_writer_pid
              }}
         ],
-        name: Topology.via({:shared_doc, document_name})
+        name: Topology.via(base, {:shared_doc, document_name})
       )
 
     # Register with :pg using document_name so versioned rooms are isolated

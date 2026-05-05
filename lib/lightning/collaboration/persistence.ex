@@ -9,7 +9,6 @@ defmodule Lightning.Collaboration.Persistence do
   @behaviour Yex.Sync.SharedDoc.PersistenceBehaviour
 
   alias Lightning.Collaboration.DocumentState
-  alias Lightning.Collaboration.PersistenceWriter
   alias Lightning.Collaboration.Session
 
   require Logger
@@ -44,15 +43,16 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    case PersistenceWriter.add_update(doc_name, update) do
-      :ok ->
-        state
-
-      {:error, reason} ->
+    case state[:persistence_writer] do
+      nil ->
         Logger.error(
-          "Failed to add update to PersistenceWriter: #{inspect(reason)}"
+          "PersistenceWriter pid not in persistence state. document=#{doc_name}"
         )
 
+        state
+
+      pid ->
+        GenServer.cast(pid, {:add_update, update})
         state
     end
   end

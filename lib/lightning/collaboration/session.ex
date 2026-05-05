@@ -36,13 +36,15 @@ defmodule Lightning.Collaboration.Session do
     :shared_doc_pid,
     :user,
     :workflow,
-    :document_name
+    :document_name,
+    :base
   ]
 
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t() | ProjectRepoConnection.t(),
-          parent_pid: pid()
+          parent_pid: pid(),
+          base: atom()
         ]
 
   @doc """
@@ -98,6 +100,7 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
     document_name = Keyword.fetch!(opts, :document_name)
+    base = Keyword.fetch!(opts, :base)
 
     Logger.info("Starting session for document #{document_name}")
 
@@ -109,10 +112,11 @@ defmodule Lightning.Collaboration.Session do
       shared_doc_pid: nil,
       user: user,
       workflow: workflow,
-      document_name: document_name
+      document_name: document_name,
+      base: base
     }
 
-    lookup_shared_doc(document_name)
+    lookup_shared_doc(document_name, base)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
@@ -160,8 +164,8 @@ defmodule Lightning.Collaboration.Session do
     :ok
   end
 
-  def lookup_shared_doc(document_name) do
-    case :pg.get_members(Topology.pg_scope(), document_name) do
+  def lookup_shared_doc(document_name, base) do
+    case :pg.get_members(Topology.pg_scope(base), document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

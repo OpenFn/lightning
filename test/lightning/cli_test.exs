@@ -3,6 +3,11 @@ defmodule Lightning.CLITest do
 
   alias Lightning.CLI
 
+  setup do
+    FakeRambo.Setup.start_cache!()
+    :ok
+  end
+
   test "any command" do
     CLI.execute("foo")
 

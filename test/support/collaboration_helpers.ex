@@ -13,8 +13,8 @@ defmodule Lightning.CollaborationHelpers do
   handlers) because it reads `Application.get_env` rather than a
   process-scoped Mox stub.
   """
-  def ensure_doc_supervisor_stopped(workflow_id) do
-    registry = Topology.registry()
+  def ensure_doc_supervisor_stopped(workflow_id, base \\ Topology.base()) do
+    registry = Topology.registry(base)
 
     case Process.whereis(registry) do
       nil ->

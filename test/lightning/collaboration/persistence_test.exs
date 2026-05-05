@@ -20,7 +20,9 @@ defmodule Lightning.Collaboration.PersistenceTest do
   end
 
   describe "bind/3 with no persisted state" do
-    test "initializes workflow document from database" do
+    test "initializes workflow document from database", %{
+      collaboration_base: base
+    } do
       workflow = insert(:workflow)
       document_name = "workflow:#{workflow.id}"
 
@@ -29,14 +31,14 @@ defmodule Lightning.Collaboration.PersistenceTest do
       # Start DocumentSupervisor
       {:ok, doc_supervisor} =
         DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
+          [workflow: workflow, document_name: document_name, base: base],
+          name: Registry.via(base, {:doc_supervisor, document_name})
         )
 
       assert Process.alive?(doc_supervisor)
 
       # Verify workflow was initialized from database
-      shared_doc = Registry.whereis({:shared_doc, document_name})
+      shared_doc = Registry.whereis(base, {:shared_doc, document_name})
       doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
       workflow_map = Yex.Doc.get_map(doc, "workflow")
 
@@ -52,7 +54,9 @@ defmodule Lightning.Collaboration.PersistenceTest do
   end
 
   describe "bind/3 with stale persisted state" do
-    test "loads persisted state as-is without reconciliation" do
+    test "loads persisted state as-is without reconciliation", %{
+      collaboration_base: base
+    } do
       workflow = insert(:workflow, lock_version: 5)
       document_name = "workflow:#{workflow.id}"
 
@@ -79,14 +83,14 @@ defmodule Lightning.Collaboration.PersistenceTest do
       # Start DocumentSupervisor
       {:ok, doc_supervisor} =
         DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
+          [workflow: workflow, document_name: document_name, base: base],
+          name: Registry.via(base, {:doc_supervisor, document_name})
         )
 
       assert Process.alive?(doc_supervisor)
 
       # Persisted state is loaded as-is — no automatic reconciliation
-      shared_doc = Registry.whereis({:shared_doc, document_name})
+      shared_doc = Registry.whereis(base, {:shared_doc, document_name})
       doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
       workflow_map = Yex.Doc.get_map(doc, "workflow")
 

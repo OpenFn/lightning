@@ -27,12 +27,13 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
 
     test "does not create snapshot when saving Y.Doc with no changes", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      collaboration_base: base
     } do
       # Start document and session
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       session_pid =
@@ -40,7 +41,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       # Get initial lock_version
@@ -75,12 +77,13 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
 
     test "creates snapshot when actually changing workflow data", %{
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      collaboration_base: base
     } do
       # Start document and session
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow, document_name: "workflow:#{workflow.id}", base: base}
       )
 
       session_pid =
@@ -88,7 +91,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
           {Session,
            workflow: workflow,
            user: user,
-           document_name: "workflow:#{workflow.id}"}
+           document_name: "workflow:#{workflow.id}",
+           base: base}
         )
 
       # Get initial lock_version

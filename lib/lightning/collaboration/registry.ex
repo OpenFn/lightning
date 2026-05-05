@@ -71,7 +71,7 @@ defmodule Lightning.Collaboration.Registry do
     Registry.count(Topology.registry())
   end
 
-  def count(key) do
+  def count(key) when is_binary(key) do
     select(key) |> length()
   end
 
@@ -90,6 +90,77 @@ defmodule Lightning.Collaboration.Registry do
 
   def get_group(key) do
     select(key)
+    |> Enum.reduce(%{}, fn [type, pid], acc ->
+      case type do
+        :session ->
+          Map.update(acc, :sessions, [pid], fn existing -> existing ++ [pid] end)
+
+        _ ->
+          Map.put(acc, type, pid)
+      end
+    end)
+  end
+
+  # --- Base-aware overloads (for test code and any explicit callers) ---
+
+  @doc """
+  Register the current process with the given key in the registry derived from `base`.
+  """
+  def register(base, key) when is_atom(base) and not is_nil(base) do
+    case Registry.register(Topology.registry(base), key, nil) do
+      {:ok, _pid} -> {:ok, self()}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Returns a `:via` tuple for the registry derived from `base`.
+  """
+  def via(base, key) when is_atom(base) and not is_nil(base),
+    do: Topology.via(base, key)
+
+  @doc """
+  Look up all processes registered with the given key in the registry derived from `base`.
+  """
+  def lookup(base, key) when is_atom(base) and not is_nil(base) do
+    Registry.lookup(Topology.registry(base), key)
+  end
+
+  @doc """
+  Find the pid registered with the given key in the registry derived from `base`.
+  """
+  def whereis(base, key) when is_atom(base) and not is_nil(base) do
+    case lookup(base, key) do
+      [{pid, _value}] -> pid
+      [] -> nil
+    end
+  end
+
+  @doc """
+  Count entries whose key starts with `key` in the registry derived from `base`.
+  """
+  def count(base, key) when is_atom(base) and not is_nil(base) do
+    select(base, key) |> length()
+  end
+
+  @doc """
+  Select processes whose key starts with the given binary prefix in the registry derived from `base`.
+  """
+  def select(base, key)
+      when is_atom(base) and not is_nil(base) and is_binary(key) do
+    Registry.select(Topology.registry(base), [
+      {{{:"$1", :"$2"}, :"$3", :"$4"},
+       [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]},
+      {{{:"$1", :"$2", :"$5"}, :"$3", :"$4"},
+       [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]}
+    ])
+  end
+
+  @doc """
+  Return a map grouping processes for the given key prefix in the registry derived from `base`.
+  """
+  def get_group(base, key) when is_atom(base) and not is_nil(base) do
+    select(base, key)
     |> Enum.reduce(%{}, fn [type, pid], acc ->
       case type do
         :session ->

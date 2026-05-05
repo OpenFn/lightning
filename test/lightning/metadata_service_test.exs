@@ -3,6 +3,11 @@ defmodule Lightning.MetadataServiceTest do
 
   alias Lightning.MetadataService
 
+  setup do
+    FakeRambo.Setup.start_cache!()
+    :ok
+  end
+
   describe "fetch/2" do
     test "returns the metadata when it exists" do
       path =

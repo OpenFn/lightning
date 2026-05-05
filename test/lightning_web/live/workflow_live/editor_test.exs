@@ -1693,6 +1693,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   end
 
   describe "Editor events" do
+    setup do
+      FakeRambo.Setup.start_cache!()
+      :ok
+    end
+
     test "can handle request_metadata event", %{
       conn: conn,
       project: project,

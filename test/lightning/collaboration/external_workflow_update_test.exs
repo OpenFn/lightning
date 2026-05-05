@@ -23,6 +23,7 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry, as: CollaborationRegistry
   alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.Topology
   alias Lightning.Projects.Provisioner
 
   setup do
@@ -59,6 +60,7 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         {DocumentSupervisor,
          workflow: workflow,
          document_name: document_name,
+         base: Topology.base(),
          name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
@@ -133,6 +135,7 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         {DocumentSupervisor,
          workflow: workflow,
          document_name: document_name,
+         base: Topology.base(),
          name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
@@ -206,6 +209,7 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         {DocumentSupervisor,
          workflow: workflow,
          document_name: document_name,
+         base: Topology.base(),
          name: CollaborationRegistry.via({:doc_supervisor, document_name})}
       )
 
