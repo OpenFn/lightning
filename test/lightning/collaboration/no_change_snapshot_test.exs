@@ -12,11 +12,6 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
 
   describe "saving without changes" do
     setup do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
-      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
       user = insert(:user)
       project = insert(:project)
       workflow = insert(:workflow, name: "Test Workflow", project: project)
@@ -44,6 +39,9 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
            document_name: "workflow:#{workflow.id}",
            base: base}
         )
+
+      # $callers does not propagate through ExUnit's test supervisor.
+      Mox.allow(LightningMock, self(), session_pid)
 
       # Get initial lock_version
       workflow = Workflows.get_workflow!(workflow.id)
@@ -94,6 +92,9 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
            document_name: "workflow:#{workflow.id}",
            base: base}
         )
+
+      # $callers does not propagate through ExUnit's test supervisor.
+      Mox.allow(LightningMock, self(), session_pid)
 
       # Get initial lock_version
       workflow = Workflows.get_workflow!(workflow.id)

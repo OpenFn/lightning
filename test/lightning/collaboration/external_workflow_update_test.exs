@@ -33,11 +33,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       fn _action, _context -> :ok end
     )
 
-    # set_mox_global so the mock is reachable from spawned GenServer processes
-    # (e.g. Session calling LightningMock.broadcast inside save_workflow)
-    Mox.set_mox_global(LightningMock)
-    Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
     :ok
   end
 
@@ -141,6 +136,9 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
 
       # Tab A: User A opens the workflow and adds an unsaved job
       {:ok, session_a} = Collaborate.start(user: user_a, workflow: workflow)
+      # This test uses Topology.base() (production topology); $callers from the
+      # test pid does not reach the Session process, so explicit allow is needed.
+      Mox.allow(LightningMock, self(), session_a)
 
       tab_a_unsaved_job_id = Ecto.UUID.generate()
 

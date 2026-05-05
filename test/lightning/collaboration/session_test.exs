@@ -767,11 +767,6 @@ defmodule Lightning.SessionTest do
 
   describe "save_workflow/2" do
     setup %{collaboration_base: base} do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
-      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
       user = insert(:user)
       project = insert(:project)
       workflow = insert(:workflow, name: "Original Name", project: project)
@@ -792,6 +787,10 @@ defmodule Lightning.SessionTest do
            document_name: "workflow:#{workflow.id}",
            base: base}
         )
+
+      # $callers does not propagate through ExUnit's test supervisor;
+      # explicit allow is required for Session to call LightningMock.
+      Mox.allow(LightningMock, self(), session_pid)
 
       %{
         session: session_pid,
@@ -1008,6 +1007,8 @@ defmodule Lightning.SessionTest do
            base: base}
         )
 
+      Mox.allow(LightningMock, self(), session_pid)
+
       # First save - this creates the workflow in DB (lock_version becomes 1)
       assert {:ok, saved_workflow} = Session.save_workflow(session_pid, user)
       assert saved_workflow.lock_version == 1
@@ -1067,6 +1068,8 @@ defmodule Lightning.SessionTest do
            base: base}
         )
 
+      Mox.allow(LightningMock, self(), session_pid)
+
       # First save to create in DB
       assert {:ok, _saved_workflow} = Session.save_workflow(session_pid, user)
 
@@ -1091,9 +1094,6 @@ defmodule Lightning.SessionTest do
   # The main save_workflow/2 tests use insert() which creates :loaded workflows.
   describe "save_workflow/2 with NEW workflows" do
     setup %{collaboration_base: base} do
-      Mox.set_mox_global(LightningMock)
-      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
       user = insert(:user)
       project = insert(:project)
 
@@ -1123,6 +1123,11 @@ defmodule Lightning.SessionTest do
            document_name: document_name,
            base: base}
         )
+
+      # Mox private mode does not guarantee stub visibility in processes
+      # started under ExUnit's test supervisor; explicit allow is required.
+      Mox.allow(LightningMock, self(), session_pid)
+      Mox.allow(Lightning.Extensions.MockUsageLimiter, self(), session_pid)
 
       %{
         session: session_pid,
@@ -1229,11 +1234,6 @@ defmodule Lightning.SessionTest do
 
   describe "save_workflow/2 validation errors" do
     setup %{collaboration_base: base} do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
-      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
       user = insert(:user)
       project = insert(:project)
       workflow = insert(:workflow, name: "Original Name", project: project)
@@ -1251,6 +1251,11 @@ defmodule Lightning.SessionTest do
            document_name: "workflow:#{workflow.id}",
            base: base}
         )
+
+      # Mox private mode does not guarantee stub visibility in processes
+      # started under ExUnit's test supervisor; explicit allow is required.
+      Mox.allow(LightningMock, self(), session_pid)
+      Mox.allow(Lightning.Extensions.MockUsageLimiter, self(), session_pid)
 
       %{
         session: session_pid,

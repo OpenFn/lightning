@@ -15,11 +15,6 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   # and a dynamic supervisor called Lightning.WorkflowCollaboration
 
   setup %{collaboration_base: base} do
-    # Set global mode for the mock to allow cross-process calls
-    Mox.set_mox_global(LightningMock)
-    # Stub the broadcast calls that WorkflowReconciler makes
-    Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
-
     user = insert(:user)
     {:ok, user: user, base: base}
   end

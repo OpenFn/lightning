@@ -5,24 +5,40 @@ defmodule Lightning.CollaborationCase do
 
   Each test gets its own `Lightning.Collaboration.Supervisor` started via
   `start_isolated_collaboration/0`, so the registry, dynamic supervisor, and
-  `:pg` scope are isolated to that test. `Application.put_env/3` points
-  `Lightning.Collaboration.Topology` at the per-test base for the duration of
-  the test, so every process in the VM — including GenServer children spawned
-  under the supervisor — resolves the right tree without any Mox plumbing.
+  `:pg` scope are isolated to that test. The topology base is threaded
+  explicitly through every spawned process — no `Application.put_env` global
+  state is written.
+
+  `Lightning.Workflows.Events.workflow_updated/1` calls `Phoenix.PubSub`
+  directly rather than through the `Lightning` behaviour mock, so private-mode
+  Mox stubs in the test process are not needed for `broadcast` — `Mox.set_mox_global`
+  and the companion `Mox.stub(LightningMock, :broadcast, ...)` are not required
+  in any collaboration test.
 
   When the test exits, the collaboration supervisor is shut down (draining
   `DocumentSupervisor.terminate/2`'s flush) *before* the SQL Sandbox
   connection is checked back in — so any DB writes the `PersistenceWriter`
   does on the way out happen inside the test's sandbox.
+
+  ## Options
+
+      use Lightning.CollaborationCase, async: true
+
+  Passes `async:` through to `Lightning.DataCase`. Defaults to `false`.
+  No global application state is written by this case template, so
+  individual test modules may opt in once they have verified their own
+  code is race-condition-free.
   """
   use ExUnit.CaseTemplate
 
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Topology
 
-  using do
+  using opts do
+    async = Keyword.get(opts, :async, false)
+
     quote do
-      use Lightning.DataCase, async: false
+      use Lightning.DataCase, async: unquote(async)
 
       import Lightning.CollaborationCase
     end
