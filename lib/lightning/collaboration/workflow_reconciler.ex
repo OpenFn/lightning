@@ -77,32 +77,45 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
           | Lightning.VersionControl.ProjectRepoConnection.t()
         ) :: :ok
   def reconcile_workflow_from_db(%Workflow{} = workflow, actor) do
-    {:ok, session_pid} = Collaborate.start(workflow: workflow, user: actor)
+    case Collaborate.start(workflow: workflow, user: actor) do
+      {:ok, session_pid} ->
+        try do
+          Session.update_doc(session_pid, fn doc ->
+            apply_db_state_to_doc(doc, workflow)
+          end)
 
-    Session.update_doc(session_pid, fn doc ->
-      apply_db_state_to_doc(doc, workflow)
-    end)
+          # Session.stop/1 calls GenServer.stop/3 which re-raises as `:exit`
+          # when the DocumentSupervisor cascades on the last unobserve
+          # (auto_exit: true SharedDoc -> sup stops :normal -> DynSup kills
+          # session :shutdown). That exit escapes `rescue`, so catch it.
+          try do
+            Session.stop(session_pid)
+          catch
+            :exit, _reason -> :ok
+          end
 
-    Session.stop(session_pid)
+          Phoenix.PubSub.broadcast(
+            Lightning.PubSub,
+            "workflow:collaborate:#{workflow.id}",
+            {:workflow_updated_externally, workflow}
+          )
+        rescue
+          error ->
+            # Reconciler failure must never fail the provisioner.
+            Logger.error(
+              "Failed to reconcile SharedDoc for workflow #{workflow.id}: #{inspect(error)}"
+            )
+        end
 
-    Phoenix.PubSub.broadcast(
-      Lightning.PubSub,
-      "workflow:collaborate:#{workflow.id}",
-      {:workflow_updated_externally, workflow}
-    )
+        :ok
 
-    :ok
-  rescue
-    error ->
-      # Intentional: reconciler failure must never fail the provisioner.
-      # This also catches Session startup failures (e.g. Collaborate.start
-      # returns {:error, _} and the match raises), so the log is the only
-      # signal that reconciliation was skipped.
-      Logger.error(
-        "Failed to reconcile SharedDoc for workflow #{workflow.id}: #{inspect(error)}"
-      )
+      {:error, reason} ->
+        Logger.error(
+          "Could not start session to reconcile workflow #{workflow.id}: #{inspect(reason)}"
+        )
 
-      :ok
+        :ok
+    end
   end
 
   defp apply_db_state_to_doc(doc, workflow) do

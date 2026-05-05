@@ -14,14 +14,11 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   """
   use GenServer
 
-  import Lightning.Collaboration.Registry, only: [via: 1]
-
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
+  alias Lightning.Collaboration.Topology
 
   require Logger
-
-  @pg_scope :workflow_collaboration
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
@@ -32,11 +29,15 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     workflow = Keyword.fetch!(opts, :workflow)
     document_name = Keyword.fetch!(opts, :document_name)
 
+    # Resolve topology references once at init time so subsequent callbacks
+    # don't need to re-read the Mox stub or Application env.
+    pg_scope = Topology.pg_scope()
+
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
         document_name: document_name,
         workflow_id: workflow.id,
-        name: via({:persistence_writer, document_name})
+        name: Topology.via({:persistence_writer, document_name})
       )
 
     persistence_writer_ref = Process.monitor(persistence_writer_pid)
@@ -53,17 +54,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
                persistence_writer: persistence_writer_pid
              }}
         ],
-        name: via({:shared_doc, document_name})
+        name: Topology.via({:shared_doc, document_name})
       )
 
     # Register with :pg using document_name so versioned rooms are isolated
-    :ok = register_shared_doc_with_pg(document_name, shared_doc_pid)
+    :ok = :pg.join(pg_scope, document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
 
     {:ok,
      %{
        workflow: workflow,
+       pg_scope: pg_scope,
        persistence_writer_pid: persistence_writer_pid,
        persistence_writer_ref: persistence_writer_ref,
        shared_doc_pid: shared_doc_pid,
@@ -136,10 +138,5 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     # We're not going to stop the children here, we handle that in terminate.
 
     {:stop, :normal, state |> Map.put(key, nil)}
-  end
-
-  # Supervisor.start_link(children, strategy: :one_for_all)
-  defp register_shared_doc_with_pg(document_name, shared_doc_pid) do
-    :pg.join(@pg_scope, document_name, shared_doc_pid)
   end
 end

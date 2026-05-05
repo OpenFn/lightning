@@ -12,21 +12,18 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
     to update the doc and flush the correct state before the next user opens)
   """
 
-  # async: false — we start supervised GenServers (DocumentSupervisor, Session)
-  # that are not owned by the test process.
-  use Lightning.DataCase, async: false
+  # Each test gets its own isolated collaboration tree via
+  # `Lightning.CollaborationCase`.
+  use Lightning.CollaborationCase
 
   import Lightning.CollaborationHelpers
   import Lightning.Factories
-  import Mox
 
   alias Lightning.Collaborate
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry, as: CollaborationRegistry
   alias Lightning.Collaboration.Session
   alias Lightning.Projects.Provisioner
-
-  setup :verify_on_exit!
 
   setup do
     Mox.stub(
@@ -51,8 +48,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
-
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
@@ -128,8 +123,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
 
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
-
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
 
@@ -202,8 +195,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
-
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
@@ -284,8 +275,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
-
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       project =
         Lightning.Repo.get!(Lightning.Projects.Project, workflow.project_id)
@@ -373,8 +362,6 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
 
       repo_connection = insert(:project_repo_connection, project: project)
       user = insert(:user)
-
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       [original_job] = workflow.jobs
 

@@ -1,20 +1,15 @@
 defmodule Lightning.CollaborateTest do
-  use Lightning.DataCase, async: false
+  use Lightning.CollaborationCase
 
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Registry
 
   import Lightning.Factories
   import Eventually
-  import Lightning.CollaborationHelpers
 
   setup do
     user = insert(:user)
     workflow = insert(:workflow)
-
-    on_exit(fn ->
-      ensure_doc_supervisor_stopped(workflow.id)
-    end)
 
     {:ok, user: user, workflow: workflow}
   end

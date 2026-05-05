@@ -3,7 +3,7 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
   Tests to reproduce and verify the fix for phantom snapshot creation
   when no actual changes are made to a workflow.
   """
-  use Lightning.DataCase, async: false
+  use Lightning.CollaborationCase
 
   import Lightning.Factories
 

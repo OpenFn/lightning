@@ -21,6 +21,7 @@ defmodule Lightning.Collaboration.Session do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.Topology
   alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Presence
@@ -37,8 +38,6 @@ defmodule Lightning.Collaboration.Session do
     :workflow,
     :document_name
   ]
-
-  @pg_scope :workflow_collaboration
 
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
@@ -162,7 +161,7 @@ defmodule Lightning.Collaboration.Session do
   end
 
   def lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+    case :pg.get_members(Topology.pg_scope(), document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

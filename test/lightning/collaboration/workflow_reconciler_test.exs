@@ -1,11 +1,10 @@
 defmodule Lightning.Collaboration.WorkflowReconcilerTest do
-  # Tests must be async: false because we put a SharedDoc in a dynamic supervisor
-  # that isn't owned by the test process. So we need our Ecto sandbox to be
-  # in shared mode.
-  use Lightning.DataCase, async: false
+  # Each test gets its own collaboration supervisor (Registry, :pg scope,
+  # DynamicSupervisor) via `Lightning.CollaborationCase`.
+  use Lightning.CollaborationCase
 
-  import Lightning.Factories
   import Lightning.CollaborationHelpers
+  import Lightning.Factories
 
   alias Lightning.Collaborate
   alias Lightning.Collaboration.{Session, WorkflowReconciler}
@@ -28,11 +27,6 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   describe "reconcile_workflow_changes/2" do
     setup do
       workflow = insert(:complex_workflow)
-
-      on_exit(fn ->
-        ensure_doc_supervisor_stopped(workflow.id)
-      end)
-
       %{workflow: workflow}
     end
 
@@ -785,8 +779,6 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       workflow =
         insert(:simple_workflow)
         |> Lightning.Repo.preload([:jobs, :triggers, :edges])
-
-      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
       %{workflow: workflow}
     end

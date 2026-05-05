@@ -1,5 +1,5 @@
 defmodule Lightning.Collaboration.PersistenceTest do
-  use Lightning.DataCase, async: false
+  use Lightning.CollaborationCase
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor

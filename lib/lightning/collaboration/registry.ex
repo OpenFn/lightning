@@ -1,16 +1,18 @@
 defmodule Lightning.Collaboration.Registry do
   @moduledoc """
-  Registry for collaboration processes.
+  Registry-helpers for collaboration processes.
 
-  This Registry provides local process tracking for the collaboration system,
-  complementing the cluster-wide :pg process groups. It supports the following
-  key patterns:
+  This module provides convenience helpers around the `Registry` started by
+  `Lightning.Collaboration.Supervisor`. The actual registry name is resolved
+  through `Lightning.Collaboration.Topology` so the same call sites work for
+  the production singleton supervisor and per-test isolated supervisors.
 
   ## Supported Key Patterns
 
-  - `{:shared_doc, document_name}` - SharedDoc processes for documents (e.g., "workflow:workflow_id")
-  - `{:persistence_writer, document_name}` - PersistenceWriter processes (future use)
-  - `{:doc_supervisor, workflow_id}` - DocumentSupervisor processes (future use)
+  - `{:shared_doc, document_name}` - SharedDoc processes for documents
+    (e.g., "workflow:workflow_id")
+  - `{:persistence_writer, document_name}` - PersistenceWriter processes
+  - `{:doc_supervisor, document_name}` - DocumentSupervisor processes
 
   Session processes are not registered here as there may be multiple sessions
   for the same workflow and the same user.
@@ -19,98 +21,41 @@ defmodule Lightning.Collaboration.Registry do
 
   This Registry is used for local node process lookup and coordination, while
   `:pg` (process groups) remains for cluster-wide SharedDoc uniqueness. The
-  Registry provides faster local lookups and better integration with supervision
-  trees.
-
-  ## Usage
-
-  Processes can register themselves either in their init callback or using via tuples
-  in their child_spec:
-
-      # Session registration in init callback
-      Lightning.Collaboration.Registry.register({:session, "workflow_123", "user_456"})
-
-      # SharedDoc registration via child_spec
-      {SharedDoc, [
-        doc_name: "workflow:workflow_123",
-        name: {:via, Registry, {Lightning.Collaboration.Registry.registry_name(), {:shared_doc, "workflow:workflow_123"}}}
-      ]}
+  Registry provides faster local lookups and better integration with
+  supervision trees.
   """
 
-  @doc """
-  Child specification for starting the Registry.
-  """
-  def child_spec(_opts) do
-    %{
-      id: __MODULE__,
-      start: {Registry, :start_link, [[keys: :unique, name: __MODULE__]]},
-      type: :supervisor
-    }
-  end
+  alias Lightning.Collaboration.Topology
 
   @doc """
-  Register the current process with the given key.
-
-  ## Examples
-
-      Lightning.Collaboration.Registry.register({:session, "workflow_123"})
-      # => {:ok, #PID<0.123.0>}
-
-      Lightning.Collaboration.Registry.register({:shared_doc, "workflow:workflow_123"})
-      # => {:ok, #PID<0.123.0>}
-
-  ## Error Cases
-
-      Lightning.Collaboration.Registry.register({:session, "workflow_123"})
-      # => {:error, {:already_registered, #PID<0.456.0>}}
-
+  Register the current process with the given key in the active registry.
   """
   @spec register(term()) :: {:ok, pid()} | {:error, {:already_registered, pid()}}
   def register(key) do
-    case Registry.register(__MODULE__, key, nil) do
+    case Registry.register(Topology.registry(), key, nil) do
       {:ok, _pid} -> {:ok, self()}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  def via(key) do
-    {:via, Registry, {__MODULE__, key}}
-  end
+  @doc """
+  Returns a `:via` tuple suitable for naming a process under the active
+  registry.
+  """
+  def via(key), do: Topology.via(key)
 
   @doc """
   Look up all processes registered with the given key.
 
-  Returns a list of {pid, value} tuples. Since we use unique keys,
-  this will typically return a single-item list or an empty list.
-
-  ## Examples
-
-      Lightning.Collaboration.Registry.lookup({:session, "workflow_123"})
-      # => [{#PID<0.123.0>, nil}]
-
-      Lightning.Collaboration.Registry.lookup({:session, "nonexistent"})
-      # => []
-
+  Returns a list of `{pid, value}` tuples.
   """
   @spec lookup(term()) :: [{pid(), term()}]
   def lookup(key) do
-    Registry.lookup(__MODULE__, key)
+    Registry.lookup(Topology.registry(), key)
   end
 
   @doc """
   Find the pid registered with the given key.
-
-  This is a convenience function that returns just the pid, or nil
-  if no process is registered.
-
-  ## Examples
-
-      Lightning.Collaboration.Registry.whereis({:session, "workflow_123"})
-      # => #PID<0.123.0>
-
-      Lightning.Collaboration.Registry.whereis({:session, "nonexistent"})
-      # => nil
-
   """
   @spec whereis(term()) :: pid() | nil
   def whereis(key) do
@@ -123,7 +68,7 @@ defmodule Lightning.Collaboration.Registry do
   def count(key \\ nil)
 
   def count(nil) do
-    Registry.count(__MODULE__)
+    Registry.count(Topology.registry())
   end
 
   def count(key) do
@@ -131,18 +76,11 @@ defmodule Lightning.Collaboration.Registry do
   end
 
   @doc """
-  Select processes registered with the given key (prefix).
-
-  The key pattern expected is:
-  - `{:type, key}`
-  - `{:type, key, any()}`.
-
-  We do a select with any key that _starts with_ the given key.
+  Select processes whose key starts with the given binary prefix.
   """
-  @spec select(binary()) :: [{term(), pid()}]
+  @spec select(binary()) :: [[term() | pid()]]
   def select(key) when is_binary(key) do
-    # We have two select specs, for keys with and without values.
-    Registry.select(__MODULE__, [
+    Registry.select(Topology.registry(), [
       {{{:"$1", :"$2"}, :"$3", :"$4"},
        [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]},
       {{{:"$1", :"$2", :"$5"}, :"$3", :"$4"},

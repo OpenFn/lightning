@@ -30,10 +30,9 @@ defmodule Lightning.Collaborate do
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Supervisor, as: SessionSupervisor
+  alias Lightning.Collaboration.Topology
 
   require Logger
-
-  @pg_scope :workflow_collaboration
 
   @spec start(opts :: Keyword.t()) :: GenServer.on_start()
   def start(opts) do
@@ -67,47 +66,59 @@ defmodule Lightning.Collaborate do
       "Starting collaboration for document: #{document_name} (workflow: #{workflow.id})"
     )
 
-    # Ensure document supervisor exists for this document
-    case lookup_shared_doc(document_name) do
-      nil ->
-        Logger.info("Starting document for #{document_name}")
-        {:ok, _doc_supervisor_pid} = start_document(workflow, document_name)
+    # Ensure document supervisor exists for this document.
+    # Returns {:error, reason} on failure rather than raising, so callers
+    # such as WorkflowReconciler can handle failures gracefully.
+    doc_result =
+      case lookup_shared_doc(document_name) do
+        nil ->
+          Logger.info("Starting document for #{document_name}")
 
-      _shared_doc_pid ->
-        Logger.info("Found existing document for #{document_name}")
-        :ok
+          case start_document(workflow, document_name) do
+            {:ok, _} -> :ok
+            error -> error
+          end
+
+        _shared_doc_pid ->
+          Logger.info("Found existing document for #{document_name}")
+          :ok
+      end
+
+    case doc_result do
+      :ok ->
+        # Start session for this user
+        user_id = if is_struct(user, User), do: user.id, else: nil
+
+        SessionSupervisor.start_child(Topology.base(), {
+          Session,
+          workflow: workflow,
+          user: user,
+          parent_pid: parent_pid,
+          document_name: document_name,
+          name:
+            Registry.via({:session, "#{document_name}:#{session_id}", user_id})
+        })
+
+      error ->
+        error
     end
-
-    # Start session for this user
-    user_id = if is_struct(user, User), do: user.id, else: nil
-
-    SessionSupervisor.start_child({
-      Session,
-      workflow: workflow,
-      user: user,
-      parent_pid: parent_pid,
-      document_name: document_name,
-      name: Registry.via({:session, "#{document_name}:#{session_id}", user_id})
-    })
   end
 
   def start_document(
         %Lightning.Workflows.Workflow{} = workflow,
         document_name
       ) do
-    {:ok, doc_supervisor_pid} =
-      SessionSupervisor.start_child(
-        {DocumentSupervisor,
-         workflow: workflow,
-         document_name: document_name,
-         name: Registry.via({:doc_supervisor, document_name})}
-      )
-
-    {:ok, doc_supervisor_pid}
+    SessionSupervisor.start_child(
+      Topology.base(),
+      {DocumentSupervisor,
+       workflow: workflow,
+       document_name: document_name,
+       name: Registry.via({:doc_supervisor, document_name})}
+    )
   end
 
   defp lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+    case :pg.get_members(Topology.pg_scope(), document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

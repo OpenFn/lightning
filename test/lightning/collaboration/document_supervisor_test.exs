@@ -1,5 +1,5 @@
 defmodule Lightning.Collaboration.DocumentSupervisorTest do
-  use Lightning.DataCase, async: false
+  use Lightning.CollaborationCase
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -71,7 +71,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
     # Verify process group is cleaned up eventually
     refute_eventually(
-      :pg.get_members(:workflow_collaboration, document_name)
+      :pg.get_members(Lightning.Collaboration.Topology.pg_scope(), document_name)
       |> Enum.any?()
     )
   end
@@ -171,7 +171,9 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     assert registered_supervisor == doc_supervisor
 
     # Verify SharedDoc is in process group (now keyed by document_name, not workflow_id)
-    members = :pg.get_members(:workflow_collaboration, document_name)
+    members =
+      :pg.get_members(Lightning.Collaboration.Topology.pg_scope(), document_name)
+
     assert shared_doc in members
 
     # Verify both processes are monitored by checking state
@@ -536,10 +538,16 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     } do
       # Test SharedDoc is the only member in workflow_collaboration process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, document_name)
+               :pg.get_members(
+                 Lightning.Collaboration.Topology.pg_scope(),
+                 document_name
+               )
 
       assert [^shared_doc] =
-               :pg.get_local_members(:workflow_collaboration, document_name)
+               :pg.get_local_members(
+                 Lightning.Collaboration.Topology.pg_scope(),
+                 document_name
+               )
 
       # Clean up and verify process group is cleaned up
       GenServer.stop(doc_supervisor, :normal)
@@ -699,7 +707,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       # Verify SharedDoc is in process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, document_name)
+               :pg.get_members(
+                 Lightning.Collaboration.Topology.pg_scope(),
+                 document_name
+               )
 
       # Clean up session which should clean up DocumentSupervisor
       # Capture potential race condition logs during process shutdown
@@ -718,7 +729,12 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     } do
       # Both discovery methods should find the same process
       found_via_registry = Registry.whereis({:shared_doc, document_name})
-      [found_via_pg] = :pg.get_members(:workflow_collaboration, document_name)
+
+      [found_via_pg] =
+        :pg.get_members(
+          Lightning.Collaboration.Topology.pg_scope(),
+          document_name
+        )
 
       assert found_via_registry == shared_doc
       assert found_via_pg == shared_doc
@@ -774,7 +790,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
         # Verify process group membership
         assert [^shared_doc] =
-                 :pg.get_members(:workflow_collaboration, document_name)
+                 :pg.get_members(
+                   Lightning.Collaboration.Topology.pg_scope(),
+                   document_name
+                 )
 
         # Stop DocumentSupervisor normally
         GenServer.stop(doc_supervisor, :normal)

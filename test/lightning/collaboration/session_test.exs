@@ -1,16 +1,12 @@
 defmodule Lightning.SessionTest do
-  # We assume that the WorkflowCollaboration supervisor is up
-  # that starts :pg with the :workflow_collaboration scope
-  # and a dynamic supervisor called Lightning.WorkflowCollaboration
-
-  # Tests must be async: false, some of the processes we start are either
-  # not owned by the test process, or themselves start processes.
-  use Lightning.DataCase, async: false
+  # Each test gets its own collaboration supervisor (Registry, :pg scope,
+  # DynamicSupervisor) via `Lightning.CollaborationCase`, so the GenServers
+  # spawned here can't outlive the test's SQL sandbox checkout.
+  use Lightning.CollaborationCase
 
   import Eventually
-  import Lightning.Factories
   import Lightning.CollaborationHelpers
-  import Mox
+  import Lightning.Factories
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -26,8 +22,6 @@ defmodule Lightning.SessionTest do
     user = insert(:user)
     {:ok, user: user}
   end
-
-  setup :verify_on_exit!
 
   describe "start/1" do
     test "start_link/1 returns an error when the SharedDoc doesn't exist", %{
@@ -115,7 +109,12 @@ defmodule Lightning.SessionTest do
       document_name = "workflow:#{workflow.id}"
 
       assert_eventually(
-        length(:pg.get_members(:workflow_collaboration, document_name)) == 1
+        length(
+          :pg.get_members(
+            Lightning.Collaboration.Topology.pg_scope(),
+            document_name
+          )
+        ) == 1
       )
 
       Process.exit(parent2, :normal)
@@ -131,7 +130,12 @@ defmodule Lightning.SessionTest do
       # But we might want to control the cleanup ourselves, in which case
       # this will be > 0 until we stop the SharedDoc ourselves.
       assert_eventually(
-        length(:pg.get_members(:workflow_collaboration, workflow.id)) == 0
+        length(
+          :pg.get_members(
+            Lightning.Collaboration.Topology.pg_scope(),
+            workflow.id
+          )
+        ) == 0
       )
     end
   end
