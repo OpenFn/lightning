@@ -509,44 +509,35 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   describe "CredentialIndexComponent pagination and collapsible" do
-    test "credentials table shows pagination footer and supports page changes when there are more than 10 credentials",
+    test "credentials table shows pagination bar and supports page navigation when there are more than 10 credentials",
          %{conn: conn, user: user} do
       for _i <- 1..12, do: insert(:credential, user: user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert has_element?(index_live, "#credentials-pagination")
+      table_html = index_live |> element("#credentials-table") |> render()
 
-      pagination_html =
-        index_live |> element("#credentials-pagination") |> render()
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
 
-      assert pagination_html =~ "Showing"
-      assert pagination_html =~ "12"
+      render_patch(index_live, ~p"/credentials?credentials_page=2")
 
-      index_live
-      |> with_target("#credentials-index-component")
-      |> render_click("change_page", %{
-        "table" => "credentials",
-        "page" => 2,
-        "container_id" => "credentials-table-container"
-      })
+      table_html = index_live |> element("#credentials-table") |> render()
 
-      assert has_element?(index_live, "#credentials-pagination")
-
-      pagination_html =
-        index_live |> element("#credentials-pagination") |> render()
-
-      assert pagination_html =~ "Showing"
-      assert pagination_html =~ "12"
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
     end
 
-    test "credentials table does not show a pagination footer when there are 10 or fewer credentials",
+    test "credentials table does not show page navigation links when there are 10 or fewer credentials",
          %{conn: conn, user: user} do
       for _i <- 1..5, do: insert(:credential, user: user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      refute has_element?(index_live, "#credentials-pagination")
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      refute table_html =~ "sr-only\">Previous"
+      refute table_html =~ "sr-only\">Next"
     end
 
     test "OAuth clients section is collapsed by default and toggle button is visible",
@@ -581,7 +572,7 @@ defmodule LightningWeb.CredentialLiveTest do
       refute html =~ oauth_client.name
     end
 
-    test "OAuth clients table supports pagination after section is expanded",
+    test "OAuth clients table shows pagination bar after section is expanded and supports page navigation",
          %{conn: conn, user: user} do
       for _i <- 1..12, do: insert(:oauth_client, user: user)
 
@@ -591,29 +582,99 @@ defmodule LightningWeb.CredentialLiveTest do
       |> with_target("#credentials-index-component")
       |> render_click("toggle_oauth_clients", %{})
 
-      assert has_element?(index_live, "#oauth-clients-pagination")
+      table_html = index_live |> element("#oauth-clients-table") |> render()
 
-      pagination_html =
-        index_live |> element("#oauth-clients-pagination") |> render()
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
 
-      assert pagination_html =~ "Showing"
-      assert pagination_html =~ "12"
+      render_patch(index_live, ~p"/credentials?oauth_clients_page=2")
 
-      index_live
-      |> with_target("#credentials-index-component")
-      |> render_click("change_page", %{
-        "table" => "oauth_clients",
-        "page" => 2,
-        "container_id" => "oauth-clients-table-container"
-      })
+      table_html = index_live |> element("#oauth-clients-table") |> render()
 
-      assert has_element?(index_live, "#oauth-clients-pagination")
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
 
-      pagination_html =
-        index_live |> element("#oauth-clients-pagination") |> render()
+    test "credentials pagination works on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do:
+            insert(:credential,
+              user: user,
+              project_credentials: [%{project: project}]
+            )
 
-      assert pagination_html =~ "Showing"
-      assert pagination_html =~ "12"
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?credentials_page=2")
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials table shows pagination on project settings when there are more than 10",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do: insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?keychain_page=2")
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials section is not shown on the user credentials page",
+         %{conn: conn} do
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(index_live, "#keychain-credentials-table")
+    end
+
+    test "keychain credentials section is shown on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert has_element?(view, "#keychain-credentials-table")
+    end
+
+    test "navigating to a page number beyond total pages falls back gracefully",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      render_patch(index_live, ~p"/credentials?credentials_page=999")
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
     end
   end
 

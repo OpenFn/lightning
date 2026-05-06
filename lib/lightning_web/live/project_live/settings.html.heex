@@ -353,6 +353,12 @@
           can_create_project_credential={@can_create_project_credential}
           show_owner_in_tables={true}
           return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          credentials_page={@credentials_page}
+          keychain_credentials_page={@keychain_credentials_page}
+          oauth_clients_page={@oauth_clients_page}
+          credentials_url={@credentials_url}
+          keychain_url={@keychain_url}
+          oauth_clients_url={@oauth_clients_url}
         />
       </:panel>
       <:panel hash="collections" class="space-y-4">

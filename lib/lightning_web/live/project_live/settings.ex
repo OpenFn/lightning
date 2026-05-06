@@ -10,6 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Helpers
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -128,9 +129,16 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
+       collections: collections,
+       credentials_page: nil,
+       credentials_url: nil,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
+       keychain_credentials_page: nil,
+       keychain_url: nil,
        name: project.name,
+       oauth_clients_page: nil,
+       oauth_clients_url: nil,
        parent_project: parent_project,
        root_project: root_project,
        project: project,
@@ -161,9 +169,10 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> apply_action(live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
-    project_users = Projects.get_project_users!(socket.assigns.project.id)
-    auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
+  defp apply_action(socket, :index, params) do
+    project = socket.assigns.project
+    project_users = Projects.get_project_users!(project.id)
+    auth_methods = WebhookAuthMethods.list_for_project(project)
 
     concurrency_input_component =
       socket.router
@@ -173,6 +182,21 @@ defmodule LightningWeb.ProjectLive.Settings do
         nil
       )
       |> Map.get(:concurrency_input)
+
+    creds_params = %{"page" => params["credentials_page"] || "1"}
+    keychain_params = %{"page" => params["keychain_page"] || "1"}
+    oauth_params = %{"page" => params["oauth_clients_page"] || "1"}
+
+    credentials_page =
+      Credentials.list_credentials(project, creds_params)
+      |> map_credentials()
+
+    keychain_credentials_page =
+      Credentials.list_keychain_credentials_for_project(project, keychain_params)
+
+    oauth_clients_page =
+      OauthClients.list_clients(project, oauth_params)
+      |> map_oauth_clients()
 
     socket
     |> assign(
@@ -184,6 +208,33 @@ defmodule LightningWeb.ProjectLive.Settings do
       show_invite_collaborators_modal: false,
       active_modal: nil,
       active_modal_assigns: nil
+    )
+    |> assign(:credentials_page, credentials_page)
+    |> assign(:keychain_credentials_page, keychain_credentials_page)
+    |> assign(:oauth_clients_page, oauth_clients_page)
+    |> assign(
+      :credentials_url,
+      fn opts ->
+        Routes.project_settings_path(socket, :index, project.id,
+          credentials_page: opts[:page]
+        )
+      end
+    )
+    |> assign(
+      :keychain_url,
+      fn opts ->
+        Routes.project_settings_path(socket, :index, project.id,
+          keychain_page: opts[:page]
+        )
+      end
+    )
+    |> assign(
+      :oauth_clients_url,
+      fn opts ->
+        Routes.project_settings_path(socket, :index, project.id,
+          oauth_clients_page: opts[:page]
+        )
+      end
     )
   end
 
@@ -795,6 +846,34 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _reason, %{text: error}} ->
         error
     end
+  end
+
+  defp map_credentials(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &add_credential_display_fields/1)}
+  end
+
+  defp add_credential_display_fields(credential) do
+    project_names = Map.get(credential, :projects, []) |> Enum.map(& &1.name)
+
+    environment_names =
+      credential |> Map.get(:credential_bodies, []) |> Enum.map(& &1.name)
+
+    credential
+    |> Map.put(:project_names, project_names)
+    |> Map.put(:environment_names, environment_names)
+  end
+
+  defp map_oauth_clients(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &add_oauth_client_display_fields/1)}
+  end
+
+  defp add_oauth_client_display_fields(client) do
+    project_names =
+      if client.global,
+        do: ["GLOBAL"],
+        else: Map.get(client, :projects, []) |> Enum.map(& &1.name)
+
+    Map.put(client, :project_names, project_names)
   end
 
   attr :can_edit_project, :boolean, required: true

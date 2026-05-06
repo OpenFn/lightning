@@ -7,7 +7,13 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   alias Lightning.OauthClients
   alias Lightning.Policies
 
-  @page_size 10
+  @empty_page %{
+    entries: [],
+    page_size: 0,
+    total_entries: 0,
+    page_number: 1,
+    total_pages: 0
+  }
 
   @impl true
   def mount(socket) do
@@ -17,15 +23,15 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        can_create_keychain_credential: false,
        can_create_project_credential: false,
        credential: nil,
-       credentials: [],
-       credentials_page: 1,
+       credentials_page: @empty_page,
+       credentials_url: nil,
        current_user: nil,
-       keychain_credentials: nil,
-       keychain_credentials_page: 1,
+       keychain_credentials_page: @empty_page,
+       keychain_url: nil,
        oauth_client: nil,
-       oauth_clients: [],
+       oauth_clients_page: @empty_page,
        oauth_clients_expanded: false,
-       oauth_clients_page: 1,
+       oauth_clients_url: nil,
        project: nil,
        project_user: nil,
        projects: [],
@@ -51,8 +57,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
            current_user,
            %{project: project, project_user: project_user}
          )
-     })
-     |> load_credentials()}
+     })}
   end
 
   @impl true
@@ -60,52 +65,14 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{current_user: _, projects: _, return_to: _} = assigns,
         socket
       ) do
-    {:ok, socket |> assign(assigns) |> load_credentials()}
-  end
-
-  defp load_credentials(socket) do
-    %{current_user: current_user, project: project} = socket.assigns
-
-    socket
-    |> assign(%{
-      credentials: list_credentials(project || current_user),
-      oauth_clients: list_clients(project || current_user)
-    })
-    |> then(fn socket ->
-      if socket.assigns.project do
-        socket
-        |> assign(
-          :keychain_credentials,
-          Lightning.Credentials.list_keychain_credentials_for_project(
-            socket.assigns.project
-          )
-        )
-      else
-        socket
-      end
-    end)
+    {:ok, socket |> assign(assigns)}
   end
 
   @impl true
   def handle_event("close_active_modal", _params, socket) do
     {:noreply,
      socket
-     |> assign(active_modal: nil, credential: nil, oauth_client: nil)
-     |> load_credentials()}
-  end
-
-  def handle_event(
-        "change_page",
-        %{"table" => table, "page" => page, "container_id" => container_id},
-        socket
-      ) do
-    page = if is_integer(page), do: page, else: String.to_integer(page)
-    key = :"#{table}_page"
-
-    {:noreply,
-     socket
-     |> assign(key, page)
-     |> push_event("scroll-to-top", %{id: container_id})}
+     |> assign(active_modal: nil, credential: nil, oauth_client: nil)}
   end
 
   def handle_event("toggle_oauth_clients", _params, socket) do
@@ -188,7 +155,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   def handle_event("edit_oauth_client", %{"id" => client_id}, socket) do
-    %{oauth_clients: oauth_clients} = socket.assigns
+    oauth_clients = socket.assigns.oauth_clients_page.entries
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
     if can_edit_credential(socket.assigns.current_user, client) do
@@ -204,7 +171,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   def handle_event("request_oauth_client_deletion", %{"id" => client_id}, socket) do
-    %{oauth_clients: oauth_clients} = socket.assigns
+    oauth_clients = socket.assigns.oauth_clients_page.entries
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
     if can_edit_credential(socket.assigns.current_user, client) do
@@ -240,7 +207,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   def handle_event("edit_credential", %{"id" => credential_id}, socket) do
-    %{credentials: credentials} = socket.assigns
+    credentials = socket.assigns.credentials_page.entries
     credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
 
     if can_edit_credential(socket.assigns.current_user, credential) do
@@ -260,7 +227,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
+    %{current_user: current_user} = socket.assigns
+    credentials = socket.assigns.credentials_page.entries
     credential = Enum.find(credentials, &(&1.id == credential_id))
 
     if credential && can_delete_credential(current_user, credential) do
@@ -276,7 +244,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
+    %{current_user: current_user} = socket.assigns
+    credentials = socket.assigns.credentials_page.entries
     credential = Enum.find(credentials, &(&1.id == credential_id))
 
     if credential && can_edit_credential(current_user, credential) do
@@ -292,8 +261,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => keychain_credential_id},
         socket
       ) do
-    %{current_user: current_user, keychain_credentials: keychain_credentials} =
-      socket.assigns
+    %{current_user: current_user} = socket.assigns
+
+    keychain_credentials = socket.assigns.keychain_credentials_page.entries
 
     credential =
       Enum.find(keychain_credentials, &(&1.id == keychain_credential_id))
@@ -315,7 +285,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => keychain_credential_id},
         socket
       ) do
-    %{keychain_credentials: keychain_credentials} = socket.assigns
+    keychain_credentials = socket.assigns.keychain_credentials_page.entries
 
     credential =
       Enum.find(keychain_credentials, &(&1.id == keychain_credential_id))
@@ -348,14 +318,12 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     if credential && can_delete_credential(current_user, credential) do
       Lightning.Credentials.delete_keychain_credential(credential)
       |> case do
-        {:ok, %{id: id}} ->
+        {:ok, _deleted} ->
           {:noreply,
            socket
-           |> update(:keychain_credentials, fn credentials ->
-             credentials |> Enum.reject(&(&1.id == id))
-           end)
            |> push_event("close_modal", %{id: modal_id})
-           |> put_flash(:info, "Keychain credential deleted")}
+           |> put_flash(:info, "Keychain credential deleted")
+           |> push_patch(to: socket.assigns.return_to)}
 
         {:error, _} ->
           {:noreply,
@@ -425,55 +393,6 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      socket
      |> put_flash(:error, "You are not authorized to perform this action")
      |> push_patch(to: socket.assigns.return_to)}
-  end
-
-  defp paginate(list, page) when is_list(list) do
-    total = length(list)
-    total_pages = max(1, div(total + @page_size - 1, @page_size))
-    page_num = max(1, min(page, total_pages))
-    slice = Enum.slice(list, (page_num - 1) * @page_size, @page_size)
-
-    page_info = %{
-      page_number: page_num,
-      page_size: @page_size,
-      total_entries: total,
-      total_pages: total_pages
-    }
-
-    {slice, page_info}
-  end
-
-  defp list_credentials(user_or_project) do
-    user_or_project
-    |> Credentials.list_credentials()
-    |> Enum.map(fn credential ->
-      project_names =
-        Map.get(credential, :projects, []) |> Enum.map(fn p -> p.name end)
-
-      environment_names =
-        credential
-        |> Map.get(:credential_bodies, [])
-        |> Enum.map(& &1.name)
-
-      credential
-      |> Map.put(:project_names, project_names)
-      |> Map.put(:environment_names, environment_names)
-    end)
-  end
-
-  defp list_clients(user_or_project) do
-    user_or_project
-    |> OauthClients.list_clients()
-    |> Enum.map(fn c ->
-      project_names =
-        if c.global,
-          do: ["GLOBAL"],
-          else:
-            Map.get(c, :projects, [])
-            |> Enum.map(fn p -> p.name end)
-
-      Map.put(c, :project_names, project_names)
-    end)
   end
 
   defp delete_action(assigns) do

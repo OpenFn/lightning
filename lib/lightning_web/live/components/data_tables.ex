@@ -14,7 +14,7 @@ defmodule LightningWeb.Components.DataTables do
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
   attr :page, :map, default: nil
-  attr :phx_target, :any, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -31,7 +31,7 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
@@ -116,14 +116,6 @@ defmodule LightningWeb.Components.DataTables do
             <% end %>
           </:body>
         </.table>
-        <.pagination_footer
-          :if={@page && @page.total_pages > 1}
-          id={"#{@id}-pagination"}
-          page={@page}
-          table_name="credentials"
-          container_id={"#{@id}-table-container"}
-          phx_target={@phx_target}
-        />
       <% end %>
     </div>
     """
@@ -135,7 +127,7 @@ defmodule LightningWeb.Components.DataTables do
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
   attr :page, :map, default: nil
-  attr :phx_target, :any, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -152,7 +144,7 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@keychain_credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
@@ -201,14 +193,6 @@ defmodule LightningWeb.Components.DataTables do
             <% end %>
           </:body>
         </.table>
-        <.pagination_footer
-          :if={@page && @page.total_pages > 1}
-          id={"#{@id}-pagination"}
-          page={@page}
-          table_name="keychain_credentials"
-          container_id={"#{@id}-table-container"}
-          phx_target={@phx_target}
-        />
       <% end %>
     </div>
     """
@@ -220,7 +204,7 @@ defmodule LightningWeb.Components.DataTables do
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
   attr :page, :map, default: nil
-  attr :phx_target, :any, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -237,7 +221,7 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@clients) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
@@ -281,105 +265,7 @@ defmodule LightningWeb.Components.DataTables do
             <% end %>
           </:body>
         </.table>
-        <.pagination_footer
-          :if={@page && @page.total_pages > 1}
-          id={"#{@id}-pagination"}
-          page={@page}
-          table_name="oauth_clients"
-          container_id={"#{@id}-table-container"}
-          phx_target={@phx_target}
-        />
       <% end %>
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :page, :map, required: true
-  attr :table_name, :string, required: true
-  attr :container_id, :string, required: true
-  attr :phx_target, :any, default: nil
-
-  defp pagination_footer(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 rounded-b-lg"
-    >
-      <p class="text-sm text-gray-600">
-        Showing
-        <span class="font-medium">
-          {@page.page_number * @page.page_size - @page.page_size + 1}
-        </span>
-        –
-        <span class="font-medium">
-          {min(@page.page_number * @page.page_size, @page.total_entries)}
-        </span>
-        of <span class="font-medium">{@page.total_entries}</span>
-      </p>
-      <nav class="inline-flex items-center gap-1" aria-label="Pagination">
-        <button
-          type="button"
-          disabled={@page.page_number <= 1}
-          phx-click={
-            JS.push("change_page",
-              value: %{
-                table: @table_name,
-                page: @page.page_number - 1,
-                container_id: @container_id
-              },
-              target: @phx_target
-            )
-          }
-          class="relative inline-flex items-center px-2 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span class="sr-only">Previous</span>
-          <.icon name="hero-chevron-left" class="h-4 w-4" />
-        </button>
-        <%= for page_num <- max(1, @page.page_number - 2)..min(@page.total_pages, @page.page_number + 2) do %>
-          <button
-            type="button"
-            phx-click={
-              JS.push("change_page",
-                value: %{
-                  table: @table_name,
-                  page: page_num,
-                  container_id: @container_id
-                },
-                target: @phx_target
-              )
-            }
-            class={[
-              "relative inline-flex items-center px-3 py-1.5 rounded border text-sm",
-              if(page_num == @page.page_number,
-                do:
-                  "z-10 bg-primary-50 border-primary-500 text-primary-600 font-medium",
-                else: "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"
-              )
-            ]}
-          >
-            {page_num}
-          </button>
-        <% end %>
-        <button
-          type="button"
-          disabled={@page.page_number >= @page.total_pages}
-          phx-click={
-            JS.push("change_page",
-              value: %{
-                table: @table_name,
-                page: @page.page_number + 1,
-                container_id: @container_id
-              },
-              target: @phx_target
-            )
-          }
-          class="relative inline-flex items-center px-2 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span class="sr-only">Next</span>
-          <.icon name="hero-chevron-right" class="h-4 w-4" />
-        </button>
-      </nav>
     </div>
     """
   end

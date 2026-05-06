@@ -58,9 +58,11 @@ and this project adheres to
 ### Added
 
 - Pagination (10 items per page) for credentials, keychain credentials, and
-  OAuth clients tables on the credentials list pages. OAuth clients are now
-  behind a collapsible section, collapsed by default. Tables are ordered:
-  credentials first, keychain credentials second, OAuth clients last.
+  OAuth clients on the credentials page (`/credentials`) and the project
+  settings credentials tab. Each table paginates independently via URL
+  parameters. OAuth clients are behind a collapsible section, collapsed by
+  default. Tables are ordered: credentials first, keychain credentials second
+  (project settings only), OAuth clients last.
   [#4301](https://github.com/OpenFn/lightning/issues/4301)
 - Add support for sync v2 protocol
   [#4523](https://github.com/OpenFn/lightning/issues/4523)
