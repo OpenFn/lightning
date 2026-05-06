@@ -129,14 +129,32 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
-       credentials_page: nil,
+       credentials_page: %{
+         entries: [],
+         page_size: 0,
+         total_entries: 0,
+         page_number: 1,
+         total_pages: 0
+       },
        credentials_url: nil,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
-       keychain_credentials_page: nil,
+       keychain_credentials_page: %{
+         entries: [],
+         page_size: 0,
+         total_entries: 0,
+         page_number: 1,
+         total_pages: 0
+       },
        keychain_url: nil,
        name: project.name,
-       oauth_clients_page: nil,
+       oauth_clients_page: %{
+         entries: [],
+         page_size: 0,
+         total_entries: 0,
+         page_number: 1,
+         total_pages: 0
+       },
        oauth_clients_url: nil,
        parent_project: parent_project,
        root_project: root_project,
