@@ -3,8 +3,7 @@ interface StepIconProps {
   errorType: string | null;
 }
 
-// Ported from lib/lightning_web/live/run_live/components.ex:504-555
-// Matches the LiveView step_icon implementation exactly
+// Mirrors LightningWeb.RunLive.Components.step_icon/1.
 export function StepIcon({ exitReason, errorType }: StepIconProps) {
   // Note: mr-1.5 and inline are intentionally omitted here as they're context-dependent
   // The parent component should handle spacing
@@ -43,6 +42,7 @@ export function StepIcon({ exitReason, errorType }: StepIconProps) {
     IconComponent = 'hero-exclamation-circle-solid';
     colorClass = 'text-yellow-800';
   } else if (exitReason === 'kill') {
+    console.warn(`StepIcon: unknown kill error_type "${errorType ?? ''}"`);
     IconComponent = 'hero-exclamation-circle-solid';
     colorClass = 'text-yellow-800';
   } else if (exitReason === 'exception') {

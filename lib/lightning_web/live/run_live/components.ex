@@ -5,6 +5,8 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
+  require Logger
+
   attr :item, :map,
     required: true,
     doc: "An item with id, started_at, and finished_at fields"
@@ -555,7 +557,7 @@ defmodule LightningWeb.RunLive.Components do
         {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
         {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
         {"kill", "StateTooLargeError"} -> [:circle_ex, "text-yellow-800"]
-        {"kill", _any} -> [:circle_ex, "text-yellow-800"]
+        {"kill", unknown} -> unknown_kill_icon(unknown)
         {"exception", ""} -> [:triangle_ex, "text-black-800"]
         {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
@@ -588,6 +590,17 @@ defmodule LightningWeb.RunLive.Components do
         <Heroicons.exclamation_triangle solid class={@classes} />
     <% end %>
     """
+  end
+
+  defp unknown_kill_icon(error_type) do
+    Logger.warning("Unknown kill error_type: #{inspect(error_type)}")
+
+    Lightning.Sentry.capture_message("Unknown kill error_type",
+      level: :warning,
+      extra: %{error_type: error_type}
+    )
+
+    [:circle_ex, "text-yellow-800"]
   end
 
   # BULK CANCEL
