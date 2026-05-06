@@ -272,9 +272,13 @@ export function AdaptorDisplay({
               ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               : 'bg-primary-600 hover:bg-primary-500 text-white shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
           )}
-          aria-label={hasCredential ? 'Edit adaptor' : 'Connect credential'}
+          aria-label={
+            hasCredential || !needsCredential
+              ? 'Edit adaptor'
+              : 'Connect credential'
+          }
         >
-          {hasCredential ? 'Edit' : 'Connect'}
+          {hasCredential || !needsCredential ? 'Edit' : 'Connect'}
           {/* TODO - come back to pulse concept later
           {shouldPulse && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
