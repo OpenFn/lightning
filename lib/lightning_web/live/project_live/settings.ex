@@ -129,7 +129,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
-       collections: collections,
        credentials_page: nil,
        credentials_url: nil,
        current_user: socket.assigns.current_user,
