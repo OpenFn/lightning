@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add SECURITY.md with vulnerability reporting policy, supported versions, and
+  security best practices for self-hosted deployments
+  [#XXXX](https://github.com/OpenFn/lightning/issues/XXXX)
+
 ### Changed
 
 ### Fixed
