@@ -342,6 +342,24 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     end
   end
 
+  describe "step_icon/1" do
+    test "kill family renders the resource-budget icon for known and unknown error types" do
+      for error_type <- [
+            "OOMError",
+            "StateTooLargeError",
+            "SomeFutureWorkerError"
+          ] do
+        html =
+          render_component(&Components.step_icon/1,
+            reason: "kill",
+            error_type: error_type
+          )
+
+        assert html =~ "text-yellow-800"
+      end
+    end
+  end
+
   test "no rerun button is displayed when user can't rerun a job" do
     %{triggers: [trigger], jobs: [job | _rest]} =
       workflow = insert(:simple_workflow)

@@ -39,6 +39,12 @@ export function StepIcon({ exitReason, errorType }: StepIconProps) {
   } else if (exitReason === 'kill' && errorType === 'OOMError') {
     IconComponent = 'hero-exclamation-circle-solid';
     colorClass = 'text-yellow-800';
+  } else if (exitReason === 'kill' && errorType === 'StateTooLargeError') {
+    IconComponent = 'hero-exclamation-circle-solid';
+    colorClass = 'text-yellow-800';
+  } else if (exitReason === 'kill') {
+    IconComponent = 'hero-exclamation-circle-solid';
+    colorClass = 'text-yellow-800';
   } else if (exitReason === 'exception') {
     // Note: Elixir checks for empty string errorType, but this matches the behavior
     // text-black-800 in Elixir is invalid; using text-black to match visual intent

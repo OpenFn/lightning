@@ -554,6 +554,8 @@ defmodule LightningWeb.RunLive.Components do
         {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
         {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
         {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
+        {"kill", "StateTooLargeError"} -> [:circle_ex, "text-yellow-800"]
+        {"kill", _any} -> [:circle_ex, "text-yellow-800"]
         {"exception", ""} -> [:triangle_ex, "text-black-800"]
         {"lost", _nil} -> [:triangle_ex, "text-black-800"]
       end
