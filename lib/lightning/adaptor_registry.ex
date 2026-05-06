@@ -91,8 +91,9 @@ defmodule Lightning.AdaptorRegistry do
   def handle_continue(opts, _state) do
     adaptors =
       case Enum.into(opts, %{}) do
-        %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
-          read_adaptors_from_local_repo(repo_path)
+        %{local_adaptors_repos: repo_paths}
+        when is_list(repo_paths) and repo_paths != [] ->
+          read_adaptors_from_local_repos(repo_paths)
 
         %{use_cache: use_cache}
         when use_cache === true or is_binary(use_cache) ->
@@ -150,10 +151,21 @@ defmodule Lightning.AdaptorRegistry do
     and uses the cached file for every subsequent start.
     It can either be a boolean, or a string - the latter being a file path
     to set where the cache file is located.
+  - `:local_adaptors_repos` - an ordered list of paths to local adaptor
+    monorepos (each containing a `packages/` subdirectory). When set, the
+    registry skips NPM and lists adaptors from these directories instead.
+    Earlier paths win on dirname collisions; shadowed entries are summarised
+    in a single warning log.
   - `:name` (defaults to AdaptorRegistry) - the name of the process, useful
     for testing and/or running multiple versions of the registry
   """
-  @spec start_link(opts :: [use_cache: boolean() | binary(), name: term()]) ::
+  @spec start_link(
+          opts :: [
+            use_cache: boolean() | binary(),
+            local_adaptors_repos: [binary()],
+            name: term()
+          ]
+        ) ::
           {:error, any} | {:ok, pid}
   def start_link(opts \\ [use_cache: true]) do
     Logger.info("Starting AdaptorRegistry")
@@ -270,20 +282,71 @@ defmodule Lightning.AdaptorRegistry do
     }
   end
 
-  defp read_adaptors_from_local_repo(repo_path) do
-    Logger.debug("Using local adaptors repo at #{repo_path}")
+  defp read_adaptors_from_local_repos(repo_paths) when is_list(repo_paths) do
+    Logger.debug("Using local adaptors repos at #{inspect(repo_paths)}")
 
-    repo_path
-    |> Path.join("packages")
-    |> File.ls!()
-    |> Enum.map(fn package ->
-      %{
-        name: "@openfn/language-" <> package,
-        repo: "file://" <> Path.join([repo_path, "packages", package]),
-        latest: "local",
-        versions: []
-      }
-    end)
+    repo_paths
+    |> Enum.flat_map(&adaptors_in_repo/1)
+    |> dedupe_first_wins()
+  end
+
+  defp adaptors_in_repo(repo_path) do
+    packages_path = Path.join(repo_path, "packages")
+
+    case File.ls(packages_path) do
+      {:ok, entries} ->
+        Enum.map(entries, fn package ->
+          %{
+            name: "@openfn/language-" <> package,
+            repo: "file://" <> Path.join([repo_path, "packages", package]),
+            latest: "local",
+            versions: []
+          }
+        end)
+
+      {:error, reason} ->
+        Logger.error(
+          "Skipping local adaptors repo #{inspect(repo_path)}: " <>
+            "cannot list #{inspect(packages_path)} (#{:file.format_error(reason)})"
+        )
+
+        []
+    end
+  end
+
+  # First-occurrence wins: when two roots ship a package with the same
+  # `@openfn/language-<dirname>` name, the entry from the earlier root is kept.
+  # Listing your private repo before the canonical one therefore lets you
+  # override individual adaptors locally without forking the whole canonical
+  # tree. Shadowed entries are summarised in a single warning so the override
+  # case (the intended use of ordering) does not flood logs with one line per
+  # package.
+  defp dedupe_first_wins(adaptors) do
+    {kept_reversed, _seen, shadowed} =
+      Enum.reduce(adaptors, {[], MapSet.new(), []}, fn adaptor, {kept, seen, shadowed} ->
+        if MapSet.member?(seen, adaptor.name) do
+          {kept, seen, [adaptor | shadowed]}
+        else
+          {[adaptor | kept], MapSet.put(seen, adaptor.name), shadowed}
+        end
+      end)
+
+    log_shadowed(shadowed)
+    Enum.reverse(kept_reversed)
+  end
+
+  defp log_shadowed([]), do: :ok
+
+  defp log_shadowed(shadowed) do
+    names =
+      shadowed
+      |> Enum.reverse()
+      |> Enum.map_join(", ", & &1.name)
+
+    Logger.warning(
+      "AdaptorRegistry: #{length(shadowed)} adaptor(s) shadowed by earlier " <>
+        "local-adaptors repo entries: #{names}"
+    )
   end
 
   @doc """
@@ -362,8 +425,9 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   def local_adaptors_enabled? do
-    config = Lightning.Config.adaptor_registry()
-
-    if config[:local_adaptors_repo], do: true, else: false
+    case Lightning.Config.adaptor_registry()[:local_adaptors_repos] do
+      [_ | _] -> true
+      _ -> false
+    end
   end
 end

@@ -159,13 +159,20 @@ To start, set up the following environment variables:
 - `LOCAL_ADAPTORS`: Used to enable or disable the local adaptors mode. Set it to
   `true` to enable.
 - `OPENFN_ADAPTORS_REPO`: This should point to the adaptors monorepo. This is
-  the same variable used when you pass `-m` to the CLI.
+  the same variable used when you pass `-m` to the CLI. It also accepts a
+  colon-separated list of paths to merge multiple repos into the registry; the
+  first path wins on dirname collisions, with a warning logged for shadowed
+  entries. The bundled `ws-worker` still resolves `@local` adaptors against a
+  single path, so colon-separated values only widen the picker/metadata view.
 
 Example configuration:
 
 ```sh
 export LOCAL_ADAPTORS=true
 export OPENFN_ADAPTORS_REPO=/path/to/repo/
+
+# Or, merge a private adaptor repo with the canonical one (first wins):
+export OPENFN_ADAPTORS_REPO=/path/to/private:/path/to/canonical
 ```
 
 You can also run the server directly in local mode with:
