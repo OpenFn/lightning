@@ -30,6 +30,9 @@ and this project adheres to
 
 ### Changed
 
+- Patch pheonix to 1.7.23 for CVE-2026-32689
+  [#4712](https://github.com/OpenFn/lightning/issues/4712)
+
 ### Fixed
 
 ## [2.16.3-pre1] - 2026-05-04
