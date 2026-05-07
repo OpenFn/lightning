@@ -42,7 +42,7 @@ defmodule LightningWeb.ChannelRequestLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_project_picker project={@project} />
               <LayoutComponents.breadcrumb_items items={[
                 {"History", ~p"/projects/#{@project}/history"},
                 {"Channels", ~p"/projects/#{@project}/history/channels"}
