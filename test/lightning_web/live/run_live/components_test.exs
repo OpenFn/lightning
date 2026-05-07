@@ -1,6 +1,8 @@
 defmodule LightningWeb.RunLive.ComponentsTest do
   use LightningWeb.ConnCase, async: true
 
+  import ExUnit.CaptureLog
+  import Mox
   import Phoenix.LiveViewTest
 
   alias Lightning.Workflows
@@ -9,6 +11,14 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   alias LightningWeb.RunLive.Index
 
   import Lightning.Factories
+
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+    Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
+    :ok
+  end
 
   test "is_checked returns true if a specified filter is part of a filter changeset" do
     changeset =
@@ -339,6 +349,62 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
              )
              |> Enum.any?()
+    end
+  end
+
+  describe "step_icon/1" do
+    test "StateTooLargeError and unknown kill error types render the same icon as OOMError" do
+      reference =
+        render_component(&Components.step_icon/1,
+          reason: "kill",
+          error_type: "OOMError"
+        )
+
+      for error_type <- ["StateTooLargeError", "SomeFutureWorkerError"] do
+        {html, _log} =
+          with_log(fn ->
+            render_component(&Components.step_icon/1,
+              reason: "kill",
+              error_type: error_type
+            )
+          end)
+
+        assert html == reference,
+               "expected kill/#{error_type} to render identically to kill/OOMError"
+      end
+    end
+
+    test "unknown kill error types log a warning and report to Sentry; known ones do neither" do
+      expect(Lightning.MockSentry, :capture_message, fn msg, opts ->
+        assert msg == "Unknown kill error_type"
+        assert opts[:level] == :warning
+        assert opts[:extra][:error_type] == "SomeFutureWorkerError"
+        :ok
+      end)
+
+      log_unknown =
+        capture_log(fn ->
+          render_component(&Components.step_icon/1,
+            reason: "kill",
+            error_type: "SomeFutureWorkerError"
+          )
+        end)
+
+      assert log_unknown =~ "Unknown kill error_type"
+      assert log_unknown =~ "SomeFutureWorkerError"
+
+      for error_type <- ["OOMError", "StateTooLargeError"] do
+        log_known =
+          capture_log(fn ->
+            render_component(&Components.step_icon/1,
+              reason: "kill",
+              error_type: error_type
+            )
+          end)
+
+        refute log_known =~ "Unknown kill error_type",
+               "did not expect log warning for known error_type kill/#{error_type}"
+      end
     end
   end
 

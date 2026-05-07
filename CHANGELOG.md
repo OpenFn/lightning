@@ -29,6 +29,37 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Runs UI no longer crashes when a step is killed with a worker error type the
+  renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
+  reasons fall back to the resource-budget icon instead.
+  [#4709](https://github.com/OpenFn/lightning/issues/4709)
+
+## [2.16.3-pre2] - 2026-05-07
+
+### Added
+
+- Update 'Run' button label to 'Run From Here' in the job inspector panel
+  [#4617](https://github.com/OpenFn/lightning/issues/4617)
+- Split run button in the canvas header. one-click runs instantly, dropdown
+  opens run with custom input.
+  [#4615](https://github.com/OpenFn/lightning/issues/4615)
+- Clearer step panel button design with icon-only secondary buttons for Code and
+  Delete. [#4618](https://github.com/OpenFn/lightning/issues/4618)
+- "Pick a custom input" panel and renamed "New" tab when opening the manual run
+  panel from the canvas Run dropdown.
+  [#4616](https://github.com/OpenFn/lightning/issues/4616)
+
+### Changed
+
+- Patch pheonix to 1.7.23 for CVE-2026-32689
+  [#4712](https://github.com/OpenFn/lightning/issues/4712)
+
+## [2.16.3-pre1] - 2026-05-04
+
+### Changed
+
 - Project Settings, Collections panel: rename the "Used Storage (MB)" column to
   "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
   instead of integer megabytes. The column is now sortable, alongside the
@@ -39,6 +70,15 @@ and this project adheres to
 
 ### Fixed
 
+- Sort the workflow list, projects overview, and admin tables chronologically by
+  their date columns. Each previously inverted when timestamps fell on either
+  side of a month boundary in UTC. Affected columns: "Latest Work Order" on the
+  workflow list, "Last Updated" on the support-user projects overview, "Created
+  at" and "Scheduled deletion" on the admin Projects and Users tables.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
+- Sort the adaptor version dropdown per semver. Pre-release versions previously
+  appeared above their corresponding stable release.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
 - Collection storage on Project Settings, Collections no longer shows `0` for
   collections holding less than one megabyte of data. The underlying counter was
   always correct, the rendering now reflects values at any scale.

@@ -84,7 +84,7 @@ defmodule Lightning.Projects do
     [user_projects, support_projects]
     |> Enum.concat()
     |> Enum.uniq_by(& &1.id)
-    |> Enum.sort_by(&Map.get(&1, sort_key), sort_direction)
+    |> Enum.sort_by(&overview_sort_key(&1, sort_key), sort_direction)
   end
 
   def get_projects_overview(%User{id: user_id}, opts) do
@@ -94,6 +94,20 @@ defmodule Lightning.Projects do
     |> projects_overview_query()
     |> order_by(^dynamic_order_by(order_by))
     |> Repo.all()
+  end
+
+  # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
+  # on `DateTime` structs orders by struct keys (day before month before year),
+  # not chronologically. Map datetime keys to unix microseconds so the sort
+  # is chronological at month boundaries. The leading sentinel (`0` for nil,
+  # `1` for present) keeps nil rows cleanly separate from a hypothetical
+  # `~U[1970-01-01]` row, so the two can never tie at the comparator.
+  defp overview_sort_key(row, sort_key) do
+    case Map.get(row, sort_key) do
+      nil -> {0, 0}
+      %DateTime{} = dt -> {1, DateTime.to_unix(dt, :microsecond)}
+      other -> {1, other}
+    end
   end
 
   defp projects_overview_query(user_id) do
