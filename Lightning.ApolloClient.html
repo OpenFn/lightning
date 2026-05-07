@@ -394,7 +394,7 @@ error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_c
 
 <p>Requests AI assistance for job-specific tasks with SSE streaming.</p><p>Same as <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> but connects to Apollo's streaming endpoint,
 returning the response body as a lazy <a href="https://hexdocs.pm/elixir/Stream.html"><code class="inline">Stream</code></a> of parsed SSE data strings.
-Each element is a raw JSON string that must be decoded with <a href="https://hexdocs.pm/jason/1.4.4/Jason.html#decode!/1"><code class="inline">Jason.decode!/1</code></a>.</p><p>The stream emits Anthropic-formatted events (<code class="inline">content_block_delta</code>, etc.)
+Each element is a raw JSON string that must be decoded with <a href="https://hexdocs.pm/jason/1.4.5/Jason.html#decode!/1"><code class="inline">Jason.decode!/1</code></a>.</p><p>The stream emits Anthropic-formatted events (<code class="inline">content_block_delta</code>, etc.)
 followed by a final <code class="inline">complete</code> event containing the full response payload
 (same shape as the synchronous <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> response).</p>
   </section>
