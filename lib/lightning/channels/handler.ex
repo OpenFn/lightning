@@ -134,29 +134,46 @@ defmodule Lightning.Channels.Handler do
       completed_at: DateTime.utc_now()
     }
 
-    with {:ok, _event} <-
-           %ChannelEvent{}
-           |> ChannelEvent.changeset(event_attrs)
-           |> Repo.insert(),
-         {:ok, _request} <-
-           state.channel_request
-           |> ChannelRequest.changeset(request_update)
-           |> Repo.update() do
-      :ok
-    else
-      {:error, changeset} ->
+    try do
+      with {:ok, _event} <-
+             %ChannelEvent{}
+             |> ChannelEvent.changeset(event_attrs)
+             |> Repo.insert(),
+           {:ok, _request} <-
+             state.channel_request
+             |> ChannelRequest.changeset(request_update)
+             |> Repo.update() do
+        :ok
+      else
+        {:error, changeset} ->
+          Logger.warning(
+            "Failed to persist channel observation for request " <>
+              "#{state.channel_request.request_id}: #{inspect(changeset.errors)}"
+          )
+
+          mark_request_errored(state.channel_request)
+      end
+    rescue
+      # Body fields are stored as :text. Non-UTF-8 upstream responses (gzip, png, …)
+      # raise a Postgrex.Error on insert. Catch it so the proxy doesn't crash and
+      # the request is still marked as errored for the audit log.
+      e in Postgrex.Error ->
         Logger.warning(
-          "Failed to persist channel observation for request " <>
-            "#{state.channel_request.request_id}: #{inspect(changeset.errors)}"
+          "Postgres rejected channel event for request " <>
+            "#{state.channel_request.request_id}: #{Exception.message(e)}"
         )
 
-        state.channel_request
-        |> ChannelRequest.changeset(%{
-          state: :error,
-          completed_at: DateTime.utc_now()
-        })
-        |> Repo.update()
+        mark_request_errored(state.channel_request)
     end
+  end
+
+  defp mark_request_errored(channel_request) do
+    channel_request
+    |> ChannelRequest.changeset(%{
+      state: :error,
+      completed_at: DateTime.utc_now()
+    })
+    |> Repo.update()
   end
 
   defp derive_request_state(result) do

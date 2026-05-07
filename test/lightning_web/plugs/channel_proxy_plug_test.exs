@@ -368,6 +368,116 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
+  describe "GET requests" do
+    test "GET with accept-encoding gzip persists request, response, and timing",
+         %{bypass: bypass, channel: channel} do
+      json_body = ~s({"data":[{"breed":"Abyssinian"},{"breed":"Aegean"}]})
+
+      Bypass.expect_once(bypass, "GET", "/breeds", fn conn ->
+        case Plug.Conn.get_req_header(conn, "accept-encoding") do
+          [enc | _] when enc != "" ->
+            conn
+            |> Plug.Conn.put_resp_header("content-type", "application/json")
+            |> Plug.Conn.put_resp_header("content-encoding", "gzip")
+            |> Plug.Conn.send_resp(200, :zlib.gzip(json_body))
+
+          _ ->
+            conn
+            |> Plug.Conn.put_resp_header("content-type", "application/json")
+            |> Plug.Conn.send_resp(200, json_body)
+        end
+      end)
+
+      before = DateTime.utc_now()
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/breeds?limit=10")
+        |> Plug.Conn.put_req_header("accept-encoding", "gzip, deflate, br")
+        |> send_to_endpoint()
+
+      after_ = DateTime.utc_now()
+
+      assert resp.status == 200
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :success
+      assert request.request_id != nil
+      assert request.started_at != nil
+      assert request.completed_at != nil
+      assert DateTime.compare(request.started_at, before) in [:eq, :gt]
+      assert DateTime.compare(request.completed_at, after_) in [:eq, :lt]
+
+      assert DateTime.compare(request.completed_at, request.started_at) in [
+               :eq,
+               :gt
+             ]
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.type == :destination_response
+      assert event.request_method == "GET"
+      assert event.request_path == "/breeds"
+      assert event.request_query_string == "limit=10"
+      assert event.response_status == 200
+
+      # Preview stored as readable text — proves the upstream did not gzip.
+      assert is_binary(event.response_body_preview)
+      assert event.response_body_preview =~ "breed"
+      assert String.valid?(event.response_body_preview)
+
+      assert is_integer(event.response_body_size) and
+               event.response_body_size > 0
+
+      assert is_binary(event.response_body_hash)
+      assert is_list(event.request_headers) and event.request_headers != []
+      assert is_list(event.response_headers) and event.response_headers != []
+      assert is_integer(event.latency_us) and event.latency_us > 0
+    end
+
+    test "non-UTF-8 upstream body does not crash proxy; request lands in :error",
+         %{bypass: bypass, channel: channel} do
+      # `0x8b` is the second byte of the gzip magic number. We send it directly
+      # in the body to mimic the exact byte that Postgres rejected in dev. The
+      # `content-encoding: gzip` header isn't necessary — what matters is that
+      # the bytes Philter captures into `response_body_preview` aren't UTF-8.
+      Bypass.expect_once(bypass, "GET", "/binary", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/octet-stream")
+        |> Plug.Conn.send_resp(200, <<0x1F, 0x8B, 0x08, 0x00, 0xFF, 0xFE>>)
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/binary")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :error
+      assert request.completed_at != nil
+
+      # No event row could be persisted (the insert raised), but the request is
+      # still recorded so the audit log shows the attempt.
+      assert Lightning.Repo.aggregate(
+               from(e in ChannelEvent,
+                 where: e.channel_request_id == ^request.id
+               ),
+               :count
+             ) == 0
+    end
+  end
+
   describe "handler persistence" do
     test "creates ChannelRequest and ChannelEvent on successful proxy", %{
       conn: conn,
