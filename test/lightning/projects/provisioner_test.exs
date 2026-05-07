@@ -785,6 +785,98 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The soft-deleted workflow should be excluded from the project"
     end
 
+    test "disables all triggers on a workflow that is soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      extra_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => extra_trigger_id,
+          "type" => "cron",
+          "cron_expression" => "* * * * *",
+          "enabled" => true
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert %{deleted_at: %DateTime{}} =
+               Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, trigger_id).enabled == false
+
+      assert Repo.get!(Lightning.Workflows.Trigger, extra_trigger_id).enabled ==
+               false
+    end
+
+    test "does not disable triggers on workflows that are not soft-deleted",
+         %{
+           project: project,
+           user: user
+         } do
+      %{
+        body: body,
+        workflows: [%{trigger_id: wf1_trigger_id}, %{id: wf2_id}]
+      } = valid_document(project.id, 2)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, wf2_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, wf1_trigger_id).enabled ==
+               true
+    end
+
+    test "fires kafka_trigger_updated for kafka triggers on a workflow soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      alias Lightning.Workflows.Triggers.Events
+      alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+
+      kafka_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: webhook_trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => kafka_trigger_id,
+          "type" => "kafka",
+          "enabled" => true,
+          "kafka_configuration" => %{
+            "hosts" => [["localhost", "9092"]],
+            "topics" => ["topic"],
+            "initial_offset_reset_policy" => "earliest",
+            "connect_timeout" => 30
+          }
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert_receive %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
+    end
+
     test "marking a new/changed record for deletion", %{
       project: project,
       user: user
