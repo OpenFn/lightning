@@ -25,6 +25,9 @@ and this project adheres to
   renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
   reasons fall back to the resource-budget icon instead.
   [#4709](https://github.com/OpenFn/lightning/issues/4709)
+- Cron scheduler now attempts all triggers each tick, even if one fails. A
+  single slow or erroring trigger previously aborted the entire batch.
+  [#4716](https://github.com/OpenFn/lightning/issues/4716)
 
 ## [2.16.3-pre2] - 2026-05-07
 
