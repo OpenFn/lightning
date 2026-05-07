@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.3-pre2] - 2026-05-07
+
+### Added
+
 - Update 'Run' button label to 'Run From Here' in the job inspector panel
   [#4617](https://github.com/OpenFn/lightning/issues/4617)
 - Split run button in the canvas header. one-click runs instantly, dropdown
@@ -30,7 +38,8 @@ and this project adheres to
 
 ### Changed
 
-### Fixed
+- Patch pheonix to 1.7.23 for CVE-2026-32689
+  [#4712](https://github.com/OpenFn/lightning/issues/4712)
 
 - Runs UI no longer crashes when a step is killed with a worker error type the
   renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
