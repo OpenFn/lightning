@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.3-pre3] - 2026-05-07
+
+### Fixed
+
 - Runs UI no longer crashes when a step is killed with a worker error type the
   renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
   reasons fall back to the resource-budget icon instead.
