@@ -309,6 +309,26 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
+  Fires `kafka_trigger_updated` for every kafka trigger belonging to the
+  given workflow IDs. Call after triggers have been disabled so kafka pipeline
+  supervisors shut down those pipelines.
+  """
+  @spec notify_kafka_triggers_for_workflows([Ecto.UUID.t()]) :: :ok
+  def notify_kafka_triggers_for_workflows([]), do: :ok
+
+  def notify_kafka_triggers_for_workflows(workflow_ids)
+      when is_list(workflow_ids) do
+    from(t in Trigger,
+      where: t.workflow_id in ^workflow_ids and t.type == :kafka,
+      select: t.id
+    )
+    |> Repo.all()
+    |> Enum.each(&Triggers.Events.kafka_trigger_updated/1)
+
+    :ok
+  end
+
+  @doc """
   Creates a snapshot from a multi.
 
   When the multi already has a `:workflow` change, it is assumed to be changed
@@ -571,10 +591,9 @@ defmodule Lightning.Workflows do
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, _} <- result do
-        workflow
-        |> Repo.preload([:triggers], force: true)
-        |> tap(&notify_of_affected_kafka_triggers/1)
-        |> Events.workflow_updated()
+        preloaded = Repo.preload(workflow, [:triggers], force: true)
+        notify_kafka_triggers_for_workflows([workflow.id])
+        Events.workflow_updated(preloaded)
       end
     end)
   end
@@ -604,12 +623,6 @@ defmodule Lightning.Workflows do
     if MapSet.member?(existing_names, candidate),
       do: find_available_name(base_name, existing_names, n + 1),
       else: candidate
-  end
-
-  defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do
-    triggers
-    |> Enum.filter(&(&1.type == :kafka))
-    |> Enum.each(&Triggers.Events.kafka_trigger_updated(&1.id))
   end
 
   @doc """
