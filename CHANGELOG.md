@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- Runs UI no longer crashes when a step is killed with a worker error type the
+  renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
+  reasons fall back to the resource-budget icon instead.
+  [#4709](https://github.com/OpenFn/lightning/issues/4709)
+
 ## [2.16.3-pre2] - 2026-05-07
 
 ### Added
@@ -40,11 +45,6 @@ and this project adheres to
 
 - Patch pheonix to 1.7.23 for CVE-2026-32689
   [#4712](https://github.com/OpenFn/lightning/issues/4712)
-
-- Runs UI no longer crashes when a step is killed with a worker error type the
-  renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
-  reasons fall back to the resource-budget icon instead.
-  [#4709](https://github.com/OpenFn/lightning/issues/4709)
 
 ## [2.16.3-pre1] - 2026-05-04
 
