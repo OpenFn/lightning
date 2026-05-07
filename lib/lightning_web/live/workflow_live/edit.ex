@@ -2401,6 +2401,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :unregister_component ->
         handle_component_unregistration(socket, payload)
+
+      # Streaming events share the ai_session:* topic but are consumed by
+      # AiAssistantChannel, not this LiveView.
+      _ ->
+        {:noreply, socket}
     end
   end
 

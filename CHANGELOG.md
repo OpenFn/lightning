@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+- Legacy workflow editor no longer crashes when the AI assistant streams
+  progress updates. The editor LiveView shares a PubSub topic with the
+  collaborative editor's React channel and was missing a clause for the four
+  streaming events, causing a `CaseClauseError` and a reconnect on the first
+  "Thinking..." update. [#4719](https://github.com/OpenFn/lightning/issues/4719)
+
 ## [2.16.3-pre3] - 2026-05-07
 
 ### Fixed

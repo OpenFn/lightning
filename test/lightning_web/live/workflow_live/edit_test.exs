@@ -622,6 +622,39 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert html =~ "You are not authorized to perform this action."
     end
+
+    test "ignores AI assistant streaming events on the shared ai_session topic",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy", on_error: :raise)
+
+      session_id = Ecto.UUID.generate()
+
+      send(
+        view.pid,
+        {:ai_assistant, :register_component,
+         %{component_id: "new-workflow-panel-assistant", session_id: session_id}}
+      )
+
+      # Force a sync round-trip so the LV finishes handling :register_component
+      # (and therefore subscribes to the topic) before we publish on it.
+      assert render(view)
+
+      for action <- [
+            :streaming_status,
+            :streaming_chunk,
+            :streaming_changes,
+            :streaming_error
+          ] do
+        Lightning.broadcast(
+          "ai_session:#{session_id}",
+          {:ai_assistant, action, %{session_id: session_id}}
+        )
+      end
+
+      assert render(view)
+      assert Process.alive?(view.pid)
+    end
   end
 
   describe "edit" do
