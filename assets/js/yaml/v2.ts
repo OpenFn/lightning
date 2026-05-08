@@ -1,39 +1,38 @@
-// v2 (CLI-aligned / portability spec) YAML format implementation.
+// v2 (portability spec) YAML format implementation.
 //
 // Mirror of `lib/lightning/workflows/yaml_format/v2.ex`. Read
 // `test/fixtures/portability/v2/canonical_workflow.yaml` first — that
 // fixture is the spec witness; this module must round-trip it.
 //
-// ## Wire shape
+// Spec source: https://raw.githubusercontent.com/OpenFn/kit/5e4d65a/packages/lexicon/portability.d.ts
 //
-// The wire format has a single top-level `steps:` array combining triggers
-// and jobs. Trigger steps carry a `type:` discriminator (`webhook` / `cron` /
-// `kafka`); job steps don't. Trigger Lightning-specific config lives nested
-// under `openfn:` (`cron:`, `cron_cursor:`, `webhook_reply:`, `kafka:`).
+// ## Wire shape (workflow)
 //
-// | concept                      | v2 field name                |
-// |------------------------------|------------------------------|
-// | workflow steps array (YAML)  | `steps:` (jobs + triggers)   |
-// | trigger discriminator        | `type:`                      |
-// | trigger enabled              | `enabled:`                   |
-// | step expression / body       | `expression:`                |
-// | step adaptor                 | `adaptor:`                   |
-// | step credential              | `configuration:`             |
-// | trigger Lightning-only state | nested under `openfn:`       |
-// | cron expression              | `cron:` (under `openfn:`)    |
-// | cron cursor reference        | `cron_cursor:` (under `openfn:`) |
-// | webhook reply mode           | `webhook_reply:` (under `openfn:`) |
-// | kafka block                  | `kafka:` (under `openfn:`)   |
-// | outgoing edges from a node   | `next:` (string or object)   |
-// | edge condition               | `condition:`                 |
-// | edge JS expression body      | `expression:` (sibling of `condition: js_expression`) |
-// | edge label                   | `label:`                     |
-// | edge disabled (inverted)     | `disabled:`                  |
+// `steps: Array<Job | Trigger>` — single top-level array combining triggers
+// and jobs. Jobs use `adaptors: string[]` (plural array). Trigger fields are
+// explicitly TODO in the spec; we keep `type:`/`openfn:` as a documented
+// Lightning extension until the spec author fills them in.
 //
-// `next:` value-shape rule: when a TRIGGER has a single outgoing edge with
-// `condition: always` and no other edge fields, the value collapses to the
-// bare target step-id string. Job edges always emit the object form. Multiple
-// targets always emit a map.
+// ## Edge shape (`next:`)
+//
+// Spec: `next?: string | Record<StepId, StepEdge>` where
+// `StepEdge = boolean | string | ConditionalStepEdge` and
+// `ConditionalStepEdge = { condition?: string /* JS body */, label?, disabled? }`.
+//
+// Lightning's internal `condition_type` enum maps to canonical JS strings:
+//   :always           → omit `condition` (or boolean true shortcut)
+//   :on_job_success   → `condition: '!state.errors'`
+//   :on_job_failure   → `condition: '!!state.errors'`
+//   :js_expression    → `condition: <user JS body>`
+//
+// On parse the canonical strings are matched verbatim to round-trip back to
+// the original `condition_type`. Anything else under `condition` is treated
+// as a `:js_expression` body. Boolean `true` is `:always`; boolean `false`
+// becomes `:js_expression` with body "false" (Lightning has no `never`).
+//
+// `next:` collapse: when a step has a single unconditional outgoing edge
+// (no condition / label / disabled), the value collapses to the bare target
+// id string. Multi-target or non-:always edges always emit the object form.
 
 import Ajv from 'ajv';
 import YAML from 'yaml';
@@ -153,12 +152,14 @@ export const parseWorkflow = (parsedYaml: unknown): WorkflowSpec => {
 
 interface V2EdgeObject {
   condition?: string;
-  expression?: string;
   label?: string;
   disabled?: boolean;
 }
 
-type V2NextValue = string | Record<string, V2EdgeObject>;
+// Spec: `StepEdge = boolean | string | ConditionalStepEdge`.
+type V2StepEdge = boolean | string | V2EdgeObject;
+
+type V2NextValue = string | Record<string, V2StepEdge>;
 
 interface V2KafkaConfig {
   hosts?: string[];
@@ -183,6 +184,7 @@ interface V2OpenfnBlock {
 
 interface V2TriggerStep {
   id: string;
+  name?: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled?: boolean;
   openfn?: V2OpenfnBlock;
@@ -192,7 +194,7 @@ interface V2TriggerStep {
 interface V2JobStep {
   id: string;
   name: string;
-  adaptor: string;
+  adaptors: string[];
   expression: string;
   configuration?: string | null;
   next?: V2NextValue;
@@ -201,6 +203,7 @@ interface V2JobStep {
 type V2Step = V2TriggerStep | V2JobStep;
 
 interface V2WorkflowDoc {
+  id?: string;
   name?: string | null;
   steps: V2Step[];
 }
@@ -219,13 +222,13 @@ const isTriggerStep = (step: V2Step): step is V2TriggerStep => {
 
 interface CanonicalEdge {
   condition?: string;
-  expression?: string;
   label?: string;
   disabled?: boolean;
 }
 
 interface CanonicalTriggerStep {
   id: string;
+  name: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled: boolean;
   openfn?: V2OpenfnBlock;
@@ -235,7 +238,7 @@ interface CanonicalTriggerStep {
 interface CanonicalJobStep {
   id: string;
   name: string;
-  adaptor: string;
+  adaptors: string[];
   expression: string;
   configuration?: string;
   next?: string | Record<string, CanonicalEdge>;
@@ -244,6 +247,7 @@ interface CanonicalJobStep {
 type CanonicalStep = CanonicalTriggerStep | CanonicalJobStep;
 
 interface CanonicalWorkflow {
+  id: string;
   name: string;
   steps: CanonicalStep[];
 }
@@ -265,6 +269,7 @@ const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
   );
 
   return {
+    id: hyphenate(state.name),
     name: state.name,
     // Trigger steps first, then job steps — matches Elixir's emit order.
     steps: [...triggerSteps, ...jobSteps],
@@ -279,6 +284,9 @@ const triggerStateToCanonical = (
 ): CanonicalTriggerStep => {
   const base: CanonicalTriggerStep = {
     id: trigger.type,
+    name: trigger.type,
+    // `type:` and the `openfn:` blob are Lightning extensions to the
+    // portability spec, which leaves trigger fields explicitly TODO.
     type: trigger.type,
     enabled: trigger.enabled ?? false,
   };
@@ -318,21 +326,19 @@ const jobStateToCanonical = (
   const base: CanonicalJobStep = {
     id: hyphenate(job.name),
     name: job.name,
-    adaptor: job.adaptor,
+    // Spec: `adaptors?: string[]`. State carries a single adaptor today, so
+    // we wrap it in a one-element array to satisfy the array-typed field.
+    adaptors: job.adaptor ? [job.adaptor] : [],
     expression: job.body,
   };
 
-  // State doesn't carry a credential key directly — the human-readable
-  // `<email>|<credential-name>` configuration string is resolved elsewhere
-  // (Phase 4 will plumb this through). Round-trip parses preserve it from the
-  // YAML when present.
-
   const outgoing = edges.filter(e => e.source_job_id === job.id);
-  // Job edges always emit the object form (no shorthand collapse).
+  // Single unconditional edges collapse to a bare target string for both
+  // triggers and jobs (matches the server emitter).
   const next = buildNextField(
     outgoing,
     jobIdToKey,
-    /* collapseToString */ false
+    /* collapseToString */ true
   );
   if (next !== undefined) base.next = next;
 
@@ -360,27 +366,42 @@ const buildNextField = (
     next[target] = edgeToCanonical(edge);
   });
 
-  // Single-target `:always` collapse — only for triggers.
+  // Single-target unconditional collapse: when there's exactly one outgoing
+  // edge with no condition / label / disabled flag, emit `next: <target>`
+  // (string shortcut). Matches the server's `maybe_collapse_next/2`.
   if (collapseToString) {
     const keys = Object.keys(next);
     if (keys.length === 1) {
       const key = keys[0]!;
       const edge = next[key]!;
-      const isAlwaysOnly =
-        edge.condition === 'always' && Object.keys(edge).length === 1;
-      if (isAlwaysOnly) return key;
+      if (Object.keys(edge).length === 0) return key;
     }
   }
 
   return next;
 };
 
+// Map Lightning's `condition_type` enum to a JS expression body, per the
+// portability spec. `:always` returns undefined so the emitter omits the
+// `condition:` key entirely.
+const edgeConditionJs = (edge: StateEdge): string | undefined => {
+  switch (edge.condition_type) {
+    case 'js_expression':
+      return edge.condition_expression || undefined;
+    case 'on_job_success':
+      return '!state.errors';
+    case 'on_job_failure':
+      return '!!state.errors';
+    case 'always':
+    default:
+      return undefined;
+  }
+};
+
 const edgeToCanonical = (edge: StateEdge): CanonicalEdge => {
   const out: CanonicalEdge = {};
-  out.condition = edge.condition_type || 'always';
-  if (edge.condition_type === 'js_expression' && edge.condition_expression) {
-    out.expression = edge.condition_expression;
-  }
+  const condition = edgeConditionJs(edge);
+  if (condition !== undefined) out.condition = condition;
   if (edge.condition_label) out.label = edge.condition_label;
   if (edge.enabled === false) out.disabled = true;
   return out;
@@ -484,9 +505,11 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
 
   const jobs: Record<string, SpecJob> = {};
   jobSteps.forEach(step => {
+    // Spec uses `adaptors: string[]`; Lightning state stores a single adaptor,
+    // so we collapse the array to its first element.
     const job: SpecJob & { credential?: string } = {
       name: step.name,
-      adaptor: step.adaptor,
+      adaptor: step.adaptors[0] ?? '',
       body: step.expression,
       pos: undefined as unknown as Position | undefined,
     };
@@ -572,11 +595,49 @@ const iterateNext = (
   cb: (target: string, edge: V2EdgeObject) => void
 ): void => {
   if (typeof next === 'string') {
-    // Single-target shorthand: bare target id ⇒ implicit `condition: always`.
-    cb(next, { condition: 'always' });
+    // Bare target id ⇒ unconditional edge (spec: `next: <step-id>`).
+    cb(next, {});
     return;
   }
-  Object.entries(next).forEach(([target, edge]) => cb(target, edge));
+  Object.entries(next).forEach(([target, value]) => {
+    if (value === true) {
+      // Boolean shortcut: `next: { foo: true }` ⇒ unconditional edge.
+      cb(target, {});
+    } else if (value === false) {
+      // Boolean false ⇒ never-firing edge. Lightning has no `:never` enum,
+      // so we round-trip via a `:js_expression` body of "false".
+      cb(target, { condition: 'false' });
+    } else if (typeof value === 'string') {
+      // String shortcut: `next: { foo: "<js>" }` ⇒ ConditionalStepEdge with
+      // only the `condition` field.
+      cb(target, { condition: value });
+    } else {
+      cb(target, value);
+    }
+  });
+};
+
+// Recognize the canonical JS expressions emitted for Lightning's enum
+// condition_types. Anything else is treated as a `:js_expression` body.
+const conditionTypeFromJs = (
+  condition: string | undefined
+): { condition_type: string; condition_expression?: string } => {
+  if (condition === undefined || condition === '') {
+    return { condition_type: 'always' };
+  }
+  // Strip a single trailing newline so block-literal bodies match the inline
+  // canonical strings (`yaml` parses `|` blocks with a trailing `\n`).
+  const trimmed = condition.replace(/\n$/, '');
+  if (trimmed === '!state.errors') {
+    return { condition_type: 'on_job_success' };
+  }
+  if (trimmed === '!!state.errors') {
+    return { condition_type: 'on_job_failure' };
+  }
+  return {
+    condition_type: 'js_expression',
+    condition_expression: condition,
+  };
 };
 
 const nextEntryToSpecEdge = (
@@ -584,9 +645,13 @@ const nextEntryToSpecEdge = (
   target: string,
   edge: V2EdgeObject
 ): SpecEdge => {
+  const { condition_type, condition_expression } = conditionTypeFromJs(
+    edge.condition
+  );
+
   const out: SpecEdge = {
     target_job: target,
-    condition_type: edge.condition ?? 'always',
+    condition_type,
     // v2 wire field is `disabled:` (defaults false). v1/SpecEdge uses the
     // inverted `enabled` boolean.
     enabled: edge.disabled === true ? false : true,
@@ -594,7 +659,9 @@ const nextEntryToSpecEdge = (
   if (source.fromTrigger) out.source_trigger = source.fromTrigger;
   if (source.fromJob) out.source_job = source.fromJob;
   if (edge.label) out.condition_label = edge.label;
-  if (edge.expression) out.condition_expression = edge.expression;
+  if (condition_expression !== undefined) {
+    out.condition_expression = condition_expression;
+  }
   return out;
 };
 

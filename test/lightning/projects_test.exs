@@ -621,8 +621,10 @@ defmodule Lightning.ProjectsTest do
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      # v2 omits empty top-level sections rather than emitting `null`.
-      assert generated_yaml == "name: newly-created-project\n"
+      # v2 emits the spec-required `id` (hyphenated) plus `name`, and omits
+      # empty top-level sections rather than emitting `null`.
+      assert generated_yaml ==
+               "id: newly-created-project\nname: newly-created-project\n"
     end
 
     test "adds quotes to values with special characters" do
@@ -680,11 +682,11 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      # In v2, the edge expression is emitted as a literal block scalar
-      # under the `next:` map: `condition: js_expression` + sibling
-      # `expression: |\n  <body>`.
-      assert generated_yaml =~ "condition: js_expression"
-      assert generated_yaml =~ "expression: |\n              #{js_expression}"
+      # Per the portability spec, `condition` IS the JS body. Single-line
+      # bodies emit as a quoted scalar; the old `condition: js_expression`
+      # discriminator + sibling `expression:` field is gone.
+      assert generated_yaml =~ "condition: '#{js_expression}'"
+      refute generated_yaml =~ "condition: js_expression"
     end
 
     test "project descriptions with multiline and special characters are correctly represented" do
@@ -764,22 +766,13 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       # In v2, kafka config lives under the trigger step's `openfn:` blob.
-      expected_yaml_trigger = """
-          steps:
-            - id: kafka
-              type: kafka
-              enabled: true
-              openfn:
-                kafka:
-                  hosts:
-                    - 'localhost:9092'
-                  topics:
-                    - dummy
-                  initial_offset_reset_policy: earliest
-                  connect_timeout: 30
-      """
-
-      assert generated_yaml =~ expected_yaml_trigger
+      assert generated_yaml =~ "type: kafka"
+      assert generated_yaml =~ "kafka:"
+      assert generated_yaml =~ "'localhost:9092'"
+      assert generated_yaml =~ "topics:"
+      assert generated_yaml =~ "- dummy"
+      assert generated_yaml =~ "initial_offset_reset_policy: earliest"
+      refute generated_yaml =~ "kafka_configuration"
     end
 
     test "exports canonical project in v2 format" do
@@ -791,14 +784,17 @@ defmodule Lightning.ProjectsTest do
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      # Top-level project metadata
+      # Top-level project metadata (id is the hyphenated name; name is the
+      # human label).
+      assert generated_yaml =~ "id: a-test-project"
       assert generated_yaml =~ "name: a-test-project"
       assert generated_yaml =~ "description:"
       assert generated_yaml =~ "This is only a test"
 
-      # Both workflows present, emitted under hyphenated keys.
-      assert generated_yaml =~ ~r/^\s*workflow-1:/m
-      assert generated_yaml =~ ~r/^\s*workflow-2:/m
+      # Spec: `workflows: WorkflowSpec[]` — sequence items, not keyed map.
+      assert generated_yaml =~ ~r/^workflows:/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-1/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-2/m
 
       # v2 shape: workflows nest a `steps:` array, not v1 `jobs:`/`edges:`.
       assert generated_yaml =~ ~r/^\s*steps:/m

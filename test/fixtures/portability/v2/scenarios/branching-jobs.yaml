@@ -1,26 +1,31 @@
+id: branching-jobs
 name: branching jobs
 steps:
   - id: webhook
-    type: webhook
+    name: webhook
     enabled: true
+    type: webhook
     next: fan-out
   - id: fan-out
     name: fan out
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next:
       branch-a:
-        condition: on_job_success
+        condition: '!state.errors'
       branch-b:
-        condition: on_job_failure
+        condition: '!!state.errors'
   - id: branch-a
     name: branch a
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
   - id: branch-b
     name: branch b
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)

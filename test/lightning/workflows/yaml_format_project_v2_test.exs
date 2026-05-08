@@ -18,23 +18,28 @@ defmodule Lightning.Workflows.YamlFormatProjectV2Test do
              "expected no UUIDs in the v2 project body, got: #{yaml}"
     end
 
-    test "emits a v2 project doc with name, workflows and v2 step shape" do
+    test "emits a v2 project doc with id, workflows array and v2 step shape" do
       project = build_full_project_with_associations()
 
       assert {:ok, yaml} = V2.serialize_project(project)
 
+      # Top-level project metadata: id (hyphenated) + name.
+      assert yaml =~ "id: stateless-source-project"
       assert yaml =~ "name: stateless-source-project"
 
-      # Workflows are emitted under hyphenated keys at the top level.
-      assert yaml =~ ~r/^\s*alpha-flow:/m
-      assert yaml =~ ~r/^\s*beta-flow:/m
+      # Spec: `workflows: WorkflowSpec[]` — emitted as a YAML sequence.
+      # Each workflow item is `- id: <hyphenated>` followed by `name:` and
+      # `steps:` continuation lines.
+      assert yaml =~ ~r/^workflows:/m
+      assert yaml =~ ~r/^\s*- id: alpha-flow/m
+      assert yaml =~ ~r/^\s*- id: beta-flow/m
 
-      # v2 shape: each workflow body holds a `steps:` array (not v1 jobs/edges).
+      # Each workflow body holds a `steps:` array (not v1 jobs/edges).
       assert yaml =~ ~r/^\s*steps:/m
       refute yaml =~ ~r/^\s*jobs:/m
       refute yaml =~ ~r/^\s*edges:/m
 
-      # Trigger steps carry a `type:` discriminator; jobs do not.
+      # Trigger steps carry a `type:` discriminator (Lightning extension).
       assert yaml =~ "type: webhook"
 
       # Step ids are hyphenated names.
@@ -42,12 +47,15 @@ defmodule Lightning.Workflows.YamlFormatProjectV2Test do
       assert yaml =~ "id: alpha-two"
       assert yaml =~ "id: beta-only"
 
-      # Edge condition surfaces under `next:` for non-:always edges.
-      assert yaml =~ "condition: on_job_success"
+      # Edge condition surfaces as JS for the on_job_success edge.
+      assert yaml =~ "condition: '!state.errors'"
 
-      # Project-level collection and credential are exported by name.
-      assert yaml =~ "patients"
-      assert yaml =~ "ext-creds"
+      # Spec: `collections: string[]` — sequence of names.
+      assert yaml =~ ~r/^collections:\s*\n\s*- patients/m
+
+      # Spec: `credentials: Credential[]` (`{name, owner}`).
+      assert yaml =~ ~r/^\s*- name: ext-creds/m
+      assert yaml =~ ~r/owner: u-\d+@example\.com/
     end
   end
 

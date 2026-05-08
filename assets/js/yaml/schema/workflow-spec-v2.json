@@ -6,21 +6,18 @@
     "edgeObject": {
       "type": "object",
       "properties": {
-        "condition": {
-          "type": "string",
-          "enum": [
-            "always",
-            "never",
-            "on_job_success",
-            "on_job_failure",
-            "js_expression"
-          ]
-        },
-        "expression": { "type": "string" },
+        "condition": { "type": "string" },
         "label": { "type": "string" },
         "disabled": { "type": "boolean" }
       },
       "additionalProperties": false
+    },
+    "stepEdge": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string" },
+        { "$ref": "#/definitions/edgeObject" }
+      ]
     },
     "next": {
       "oneOf": [
@@ -28,7 +25,7 @@
         {
           "type": "object",
           "patternProperties": {
-            "^.*$": { "$ref": "#/definitions/edgeObject" }
+            "^.*$": { "$ref": "#/definitions/stepEdge" }
           },
           "additionalProperties": false
         }
@@ -65,6 +62,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "name": { "type": "string" },
         "type": {
           "type": "string",
           "enum": ["webhook", "cron", "kafka"]
@@ -81,12 +79,16 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "adaptor": { "type": "string" },
+        "adaptors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
         "expression": { "type": "string" },
         "configuration": { "type": ["string", "null"] },
         "next": { "$ref": "#/definitions/next" }
       },
-      "required": ["id", "name", "adaptor", "expression"],
+      "required": ["id", "name", "adaptors", "expression"],
       "additionalProperties": false
     },
     "step": {
@@ -97,6 +99,7 @@
     }
   },
   "properties": {
+    "id": { "type": "string" },
     "name": { "type": ["string", "null"] },
     "steps": {
       "type": "array",

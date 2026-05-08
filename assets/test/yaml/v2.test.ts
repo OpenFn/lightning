@@ -442,7 +442,7 @@ describe('v2 AJV schema rejection', () => {
         {
           id: 'a',
           name: 'a',
-          adaptor: '@openfn/language-common@latest',
+          adaptors: ['@openfn/language-common@latest'],
           expression: 'fn(s => s)',
         },
       ],
@@ -456,7 +456,7 @@ describe('v2 AJV schema rejection', () => {
         {
           id: 'a',
           name: 'a',
-          adaptor: '@openfn/language-common@latest',
+          adaptors: ['@openfn/language-common@latest'],
           expression: 'fn(s => s)',
         },
       ],
@@ -472,25 +472,28 @@ describe('v2 AJV schema rejection', () => {
     expect(validate(doc)).toBe(false);
   });
 
-  it('rejects an edge with an invalid `condition`', () => {
+  it('accepts an edge whose `condition` is any JS expression body', () => {
+    // Per the portability spec, `condition` is a JS expression body — there
+    // is no enum. The schema accepts any string here; semantic interpretation
+    // is the parser's job.
     const doc = {
       steps: [
         {
           id: 'a',
           name: 'a',
-          adaptor: '@openfn/language-common@latest',
+          adaptors: ['@openfn/language-common@latest'],
           expression: 'fn(s => s)',
-          next: { b: { condition: 'not_a_real_condition' } },
+          next: { b: { condition: '!state.errors && state.foo > 0' } },
         },
         {
           id: 'b',
           name: 'b',
-          adaptor: '@openfn/language-common@latest',
+          adaptors: ['@openfn/language-common@latest'],
           expression: 'fn(s => s)',
         },
       ],
     };
-    expect(validate(doc)).toBe(false);
+    expect(validate(doc)).toBe(true);
   });
 });
 
@@ -506,12 +509,12 @@ name: dangling
 steps:
   - id: a
     name: a
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next:
-      ghost:
-        condition: always
+      ghost: true
 `;
     expect(() => v2.parseWorkflow(yaml)).toThrow();
 
@@ -534,14 +537,14 @@ steps:
 name: dangling-trigger
 steps:
   - id: webhook
+    name: webhook
     type: webhook
     enabled: true
-    next:
-      ghost:
-        condition: always
+    next: ghost
   - id: a
     name: a
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
 `;

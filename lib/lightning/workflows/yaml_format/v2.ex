@@ -96,11 +96,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Workflow
 
-  # The standard edge condition literals understood by `@openfn/cli`. Anything
-  # not in this list, when found in `condition:`, is treated as a JS expression
-  # body (per `to-app-state.ts`).
-  @standard_condition_literals ~w(always never on_job_success on_job_failure)
-
   # Kafka configuration sub-fields. Aligns with Lightning's
   # `Triggers.KafkaConfiguration` schema (the standard four plus optional
   # SASL/SSL credentials).
@@ -187,6 +182,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       end)
 
     %{
+      id: hyphenate(workflow.name),
       name: workflow.name,
       triggers: triggers_canonical,
       steps: jobs_canonical
@@ -203,10 +199,15 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp trigger_to_canonical(trigger, edges, job_id_to_key, jobs) do
+    type_str = Atom.to_string(trigger.type)
+
     base = %{
-      id: Atom.to_string(trigger.type),
-      type: Atom.to_string(trigger.type),
-      enabled: trigger.enabled || false
+      id: type_str,
+      name: type_str,
+      enabled: trigger.enabled || false,
+      # `type:` and the `openfn:` blob are Lightning extensions to the
+      # portability spec, which leaves trigger fields explicitly TODO.
+      type: type_str
     }
 
     base
@@ -279,14 +280,18 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     base = %{
       id: hyphenate(job.name),
       name: job.name,
-      adaptor: job.adaptor,
       expression: job.body
     }
 
     base
+    |> maybe_put(:adaptors, adaptors_list(job.adaptor))
     |> maybe_put(:configuration, job_credential_key(job))
     |> add_next_for_step(job, edges, job_id_to_key)
   end
+
+  defp adaptors_list(nil), do: nil
+  defp adaptors_list(""), do: nil
+  defp adaptors_list(adaptor) when is_binary(adaptor), do: [adaptor]
 
   defp job_credential_key(%{
          project_credential: %{credential: %{name: name}, user: %{email: email}}
@@ -316,7 +321,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       |> Enum.filter(fn e -> e.source_job_id == job.id end)
       |> Enum.sort_by(fn e -> Map.get(job_id_to_key, e.target_job_id, "") end)
 
-    add_next(base, outgoing, job_id_to_key, collapse_to_string?: false)
+    add_next(base, outgoing, job_id_to_key, collapse_to_string?: true)
   end
 
   defp add_next(base, [], _job_id_to_key, _opts), do: base
@@ -334,19 +339,15 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     Map.put(base, :next, next_value)
   end
 
-  # Collapse a single-target `:always` next map to the bare target string,
-  # so triggers emit `next: target-id` instead of the verbose object form.
-  # We only collapse for triggers (per the v2 spec example); job edges always
-  # use the object form because their condition often differs from `:always`.
+  # Collapse a single-target unconditional next map to the bare target string,
+  # so triggers and unconditional job edges emit `next: target-id` instead of
+  # the verbose object form. An "unconditional" edge is `:always` with no
+  # label or disabled flag, which canonicalises to an empty edge map.
   defp maybe_collapse_next(%{} = next_map, opts) do
     if Keyword.get(opts, :collapse_to_string?, false) do
       case Map.to_list(next_map) do
-        [{target, %{condition: "always"} = edge}]
-        when map_size(edge) == 1 ->
-          target
-
-        _ ->
-          next_map
+        [{target, edge}] when map_size(edge) == 0 -> target
+        _ -> next_map
       end
     else
       next_map
@@ -355,28 +356,31 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   defp edge_to_canonical(edge) do
     %{}
-    |> Map.merge(edge_condition_pair(edge))
+    |> maybe_put(:condition, edge_condition_js(edge))
     |> put_unless_nil(:label, Map.get(edge, :condition_label))
     |> put_disabled(edge)
   end
 
-  # JS expression edges emit `condition: js_expression` (literal) plus a
-  # sibling `expression:` key carrying the body. Standard literal conditions
-  # emit on a single line.
-  defp edge_condition_pair(%{
+  # Map Lightning's internal condition_type to a JS expression body, per the
+  # portability spec (`condition` is "Javascript expression (function body,
+  # not function)"). `:always` becomes nil — caller omits the key entirely.
+  # The canonical strings here are matched verbatim on the parse side to
+  # round-trip back to the original condition_type.
+  defp edge_condition_js(%{
          condition_type: :js_expression,
          condition_expression: expression
        })
        when is_binary(expression) do
-    %{condition: "js_expression", expression: expression}
+    expression
   end
 
-  defp edge_condition_pair(%{condition_type: condition_type})
-       when is_atom(condition_type) and not is_nil(condition_type) do
-    %{condition: Atom.to_string(condition_type)}
-  end
+  defp edge_condition_js(%{condition_type: :on_job_success}), do: "!state.errors"
 
-  defp edge_condition_pair(_), do: %{condition: "always"}
+  defp edge_condition_js(%{condition_type: :on_job_failure}),
+    do: "!!state.errors"
+
+  defp edge_condition_js(%{condition_type: :always}), do: nil
+  defp edge_condition_js(_), do: nil
 
   # Lightning's Edge.enabled boolean inverts to v2's `disabled:` field.
   defp put_disabled(map, edge) do
@@ -439,10 +443,10 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     ordered_keys =
       cond do
         Map.has_key?(step, :type) ->
-          [:id, :type, :enabled, :openfn, :next]
+          [:id, :name, :enabled, :type, :openfn, :next]
 
         true ->
-          [:id, :name, :adaptor, :expression, :configuration, :next]
+          [:id, :name, :adaptors, :expression, :configuration, :next]
       end
 
     lines = emit_record_lines(step, ordered_keys)
@@ -538,7 +542,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp emit_edge_object(edge) do
-    [:condition, :expression, :label, :disabled]
+    [:condition, :label, :disabled]
     |> Enum.flat_map(fn key ->
       case Map.fetch(edge, key) do
         :error ->
@@ -548,18 +552,14 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           []
 
         {:ok, value} when key == :condition and is_binary(value) ->
-          # Standard literals (always / never / on_job_success / on_job_failure
-          # / js_expression) emit on a single line. Anything else — typically a
-          # bare JS expression body when `:expression` was not split out — is
-          # emitted as a `|` block for readability.
-          if value in @standard_condition_literals or value == "js_expression" do
-            [emit_scalar_field("condition", value)]
-          else
+          # Per the portability spec, `condition` is a JS expression body.
+          # Multi-line bodies emit as a `|` literal block; single-line bodies
+          # emit as a quoted scalar.
+          if String.contains?(value, "\n") do
             multiline_block("condition", value)
+          else
+            [emit_scalar_field("condition", value)]
           end
-
-        {:ok, value} when key == :expression and is_binary(value) ->
-          multiline_block("expression", value)
 
         {:ok, value}
         when is_binary(value) or is_boolean(value) or is_number(value) ->
@@ -695,23 +695,27 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           |> Enum.map(&workflow_struct_to_canonical/1)
       end
 
+    # Collections are emitted as a string list of names (spec: `string[]`),
+    # alphabetically sorted for stable output.
     collections_canonical =
       (project.collections || [])
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&collection_to_canonical/1)
+      |> Enum.map(& &1.name)
+      |> Enum.sort()
 
+    # Credentials are emitted as `[{name, owner}]`. The spec requires both
+    # fields, so we drop entries with no resolvable owner email.
     credentials_canonical =
       (project.project_credentials || [])
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&project_credential_to_canonical/1)
+      |> Enum.flat_map(&project_credential_to_canonical/1)
 
     %{
+      id: hyphenate(project.name),
       name: project.name,
       description: project.description,
       collections: collections_canonical,
       credentials: credentials_canonical,
-      workflows: workflows_canonical,
-      openfn: %{}
+      workflows: workflows_canonical
     }
   end
 
@@ -747,42 +751,32 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       not match?(%Ecto.Association.NotLoaded{}, p.project_credentials)
   end
 
-  defp collection_to_canonical(%{} = collection) do
-    %{name: collection.name}
-    |> maybe_put(:description, Map.get(collection, :description))
+  # Returns a single-element list (so callers can flat_map and skip silent
+  # drops) or empty list when the credential has no owner email.
+  defp project_credential_to_canonical(%{credential: %{name: name} = credential})
+       when is_binary(name) do
+    case credential do
+      %{user: %{email: email}} when is_binary(email) ->
+        [%{name: name, owner: email}]
+
+      _ ->
+        []
+    end
   end
 
-  defp project_credential_to_canonical(%{credential: credential})
-       when not is_nil(credential) do
-    %{name: credential.name}
-    |> maybe_put(:schema, Map.get(credential, :schema))
-  end
-
-  defp project_credential_to_canonical(_), do: nil
+  defp project_credential_to_canonical(_), do: []
 
   # ── Project canonical map → string emitter ──────────────────────────────────
 
   @doc false
   def emit_project(project_canonical) when is_map(project_canonical) do
     [
+      emit_top_scalar("id", Map.get(project_canonical, :id)),
       emit_top_scalar("name", Map.get(project_canonical, :name)),
       emit_top_description(Map.get(project_canonical, :description)),
-      emit_keyed_block(
-        "collections",
-        Map.get(project_canonical, :collections, []),
-        &emit_collection/2
-      ),
-      emit_keyed_block(
-        "credentials",
-        Map.get(project_canonical, :credentials, []),
-        &emit_credential/2
-      ),
-      emit_keyed_block(
-        "workflows",
-        Map.get(project_canonical, :workflows, []),
-        &emit_workflow_under_project/2
-      ),
-      emit_openfn_top_block(Map.get(project_canonical, :openfn))
+      emit_collections_array(Map.get(project_canonical, :collections, [])),
+      emit_credentials_array(Map.get(project_canonical, :credentials, [])),
+      emit_workflows_array(Map.get(project_canonical, :workflows, []))
     ]
     |> Enum.reject(&(&1 == ""))
     |> Enum.join("\n")
@@ -806,77 +800,69 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     multiline_block("description", value) |> Enum.join("\n")
   end
 
-  # Emit a keyed block of records:
-  #
-  #     collections:
-  #       <name>:
-  #         <body>
-  #
-  # `record_emit_fn` receives `(record, indent)` and returns the body lines as
-  # a list of pre-indented strings.
-  defp emit_keyed_block(_key, [], _record_emit_fn), do: ""
-  defp emit_keyed_block(_key, nil, _record_emit_fn), do: ""
+  # Spec: `collections?: string[]`. Emit as a YAML sequence of names.
+  defp emit_collections_array([]), do: ""
+  defp emit_collections_array(nil), do: ""
 
-  defp emit_keyed_block(key, records, record_emit_fn) when is_list(records) do
-    body =
-      records
+  defp emit_collections_array(names) when is_list(names) do
+    items =
+      names
       |> Enum.reject(&is_nil/1)
-      |> Enum.map(fn record ->
-        record_key = hyphenate(record.name)
-        body_lines = record_emit_fn.(record, "    ")
+      |> Enum.map(fn name -> "  - #{quote_if_needed(to_string(name))}" end)
 
-        case body_lines do
-          [] -> "  #{record_key}: {}"
-          _ -> "  #{record_key}:\n" <> Enum.join(body_lines, "\n")
-        end
-      end)
-
-    case body do
+    case items do
       [] -> ""
-      _ -> "#{key}:\n" <> Enum.join(body, "\n")
+      _ -> "collections:\n" <> Enum.join(items, "\n")
     end
   end
 
-  defp emit_collection(record, indent) do
-    [
-      {:description, Map.get(record, :description)}
-    ]
-    |> Enum.flat_map(fn
-      {_k, nil} ->
-        []
+  # Spec: `credentials?: Credential[]` where `Credential = {name, owner}`.
+  defp emit_credentials_array([]), do: ""
+  defp emit_credentials_array(nil), do: ""
 
-      {:description, value} when is_binary(value) ->
-        # description on collections is short; emit single-line if no newlines
-        if String.contains?(value, "\n") do
-          multiline_block("description", value)
-          |> Enum.map(fn l -> indent <> l end)
-        else
-          [indent <> emit_scalar_field("description", value)]
-        end
-    end)
+  defp emit_credentials_array(records) when is_list(records) do
+    items =
+      records
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(fn record ->
+        "  - name: #{quote_if_needed(to_string(record.name))}\n" <>
+          "    owner: #{quote_if_needed(to_string(record.owner))}"
+      end)
+
+    case items do
+      [] -> ""
+      _ -> "credentials:\n" <> Enum.join(items, "\n")
+    end
   end
 
-  defp emit_credential(record, indent) do
-    [
-      {:schema, Map.get(record, :schema)}
-    ]
-    |> Enum.flat_map(fn
-      {_k, nil} -> []
-      {k, v} -> [indent <> emit_scalar_field(Atom.to_string(k), v)]
-    end)
+  # Spec: `workflows: WorkflowSpec[]`. Emit as a YAML sequence of objects.
+  defp emit_workflows_array([]), do: ""
+  defp emit_workflows_array(nil), do: ""
+
+  defp emit_workflows_array(workflows) when is_list(workflows) do
+    items = Enum.map(workflows, &emit_workflow_array_item/1)
+
+    case items do
+      [] -> ""
+      _ -> "workflows:\n" <> Enum.join(items, "\n")
+    end
   end
 
-  defp emit_workflow_under_project(workflow_canonical, indent) do
-    name = Map.get(workflow_canonical, :name)
+  defp emit_workflow_array_item(workflow_canonical) do
     triggers = Map.get(workflow_canonical, :triggers, [])
     jobs = Map.get(workflow_canonical, :steps, [])
     steps = triggers ++ jobs
 
-    name_line =
-      case name do
-        nil -> []
-        n -> [indent <> emit_scalar_field("name", n)]
-      end
+    head_lines =
+      [:id, :name]
+      |> Enum.flat_map(fn key ->
+        case Map.get(workflow_canonical, key) do
+          nil -> []
+          val -> [emit_scalar_field(Atom.to_string(key), val)]
+        end
+      end)
+
+    [first | rest] = head_lines
 
     steps_lines =
       case steps do
@@ -884,36 +870,18 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           []
 
         list ->
-          step_indent = indent <> "  "
-
           [
-            indent <> "steps:"
-            | Enum.map(list, fn step -> emit_step(step, step_indent) end)
+            "    steps:"
+            | Enum.map(list, fn step -> emit_step(step, "      ") end)
           ]
       end
 
-    name_line ++ steps_lines
-  end
+    body =
+      ["  - #{first}"] ++
+        Enum.map(rest, fn l -> "    #{l}" end) ++
+        steps_lines
 
-  defp emit_openfn_top_block(nil), do: ""
-  defp emit_openfn_top_block(map) when map_size(map) == 0, do: ""
-
-  defp emit_openfn_top_block(%{} = openfn) do
-    lines =
-      openfn
-      |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-      |> Enum.flat_map(fn
-        {_k, nil} ->
-          []
-
-        {k, v} when is_binary(v) or is_boolean(v) or is_number(v) ->
-          ["  " <> emit_scalar_field(to_string(k), v)]
-      end)
-
-    case lines do
-      [] -> ""
-      _ -> "openfn:\n" <> Enum.join(lines, "\n")
-    end
+    Enum.join(body, "\n")
   end
 
   # ── small helpers ───────────────────────────────────────────────────────────

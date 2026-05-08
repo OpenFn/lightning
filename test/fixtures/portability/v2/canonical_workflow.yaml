@@ -1,21 +1,25 @@
+id: canonical-workflow
 name: canonical workflow
 steps:
   - id: webhook
-    type: webhook
+    name: webhook
     enabled: true
+    type: webhook
     openfn:
       webhook_reply: after_completion
     next: ingest
   - id: cron
-    type: cron
+    name: cron
     enabled: false
+    type: cron
     openfn:
       cron: '0 6 * * *'
       cron_cursor: ingest
     next: ingest
   - id: kafka
-    type: kafka
+    name: kafka
     enabled: true
+    type: kafka
     openfn:
       kafka:
         hosts:
@@ -27,44 +31,44 @@ steps:
     next: ingest
   - id: ingest
     name: ingest
-    adaptor: '@openfn/language-http@latest'
+    adaptors:
+      - '@openfn/language-http@latest'
     expression: |
       fn(state => state)
     configuration: alice@example.com|http creds
     next:
       maybe-skip:
-        condition: js_expression
-        expression: |
+        condition: |
           !state.errors && state.data
         label: Skip when no errors
         disabled: true
       report-failure:
-        condition: on_job_failure
+        condition: '!!state.errors'
       transform:
-        condition: on_job_success
+        condition: '!state.errors'
   - id: transform
     name: transform
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
-    next:
-      load:
-        condition: always
+    next: load
   - id: report-failure
     name: report failure
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
-    next:
-      load:
-        condition: always
+    next: load
   - id: maybe-skip
     name: maybe skip
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
   - id: load
     name: load
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)

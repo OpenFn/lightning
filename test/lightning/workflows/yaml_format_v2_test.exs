@@ -83,10 +83,13 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       assert yaml =~ "next: step-alpha"
     end
 
-    test "non-:always edges emit as object with condition", %{workflow: workflow} do
+    test "non-:always edges emit condition as a JS expression", %{
+      workflow: workflow
+    } do
       {:ok, yaml} = V2.serialize_workflow(workflow)
-      # step-alpha -> step-beta is :on_job_success
-      assert yaml =~ ~r/step-beta:\s*\n\s*condition: on_job_success/
+
+      # step-alpha -> step-beta is :on_job_success → canonical JS "!state.errors"
+      assert yaml =~ ~r/step-beta:\s*\n\s*condition: '!state\.errors'/
     end
 
     test "emits `expression:` (not `body:`) for step code", %{workflow: workflow} do
@@ -185,7 +188,7 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ "kafka_configuration"
     end
 
-    test "js_expression edges emit condition + expression + label fields" do
+    test "js_expression edges emit the JS body inline as `condition`" do
       a =
         build(:job,
           id: Ecto.UUID.generate(),
@@ -235,12 +238,90 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
 
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      assert yaml =~ "condition: js_expression"
-      assert yaml =~ "label: go condition"
-      assert yaml =~ "expression: |"
+      # Per the portability spec, `condition` is the JS expression body.
+      # Multi-line bodies emit as a `|` literal block.
+      assert yaml =~ "condition: |"
       assert yaml =~ "state.go === true"
+      assert yaml =~ "label: go condition"
+
+      # No more discriminator literal or sibling `expression:` field.
+      refute yaml =~ "condition: js_expression"
+      refute yaml =~ ~r/^\s*expression: \|\s*\n\s*state\.go/m
       refute yaml =~ "condition_expression"
       refute yaml =~ "condition_type"
+    end
+
+    test "always edges emit no `condition:` key (spec: omit when unconditional)" do
+      a =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "a",
+          body: "fn(state => state)\n"
+        )
+
+      b =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "b",
+          body: "fn(state => state)\n"
+        )
+
+      c =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "c",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge_t =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: a.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      # Two outgoing :always edges from `a` (collapse-to-string blocked by
+      # multi-target), forcing the object form.
+      edge_a_b =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: a.id,
+          target_job_id: b.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      edge_a_c =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: a.id,
+          target_job_id: c.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "always flow",
+        jobs: [a, b, c],
+        triggers: [trigger],
+        edges: [edge_t, edge_a_b, edge_a_c]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Object form `b: {}` and `c: {}` for unconditional multi-target edges.
+      assert yaml =~ "b: {}"
+      assert yaml =~ "c: {}"
+      refute yaml =~ "condition:"
     end
   end
 end

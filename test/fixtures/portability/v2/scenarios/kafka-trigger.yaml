@@ -1,8 +1,10 @@
+id: kafka-trigger
 name: kafka trigger
 steps:
   - id: kafka
-    type: kafka
+    name: kafka
     enabled: true
+    type: kafka
     openfn:
       kafka:
         hosts:
@@ -15,6 +17,7 @@ steps:
     next: consume
   - id: consume
     name: consume
-    adaptor: '@openfn/language-common@latest'
+    adaptors:
+      - '@openfn/language-common@latest'
     expression: |
       fn(state => state)
