@@ -102,12 +102,9 @@ defmodule Lightning.CliDeployTest do
 
       assert actual_state == expected_state_for_comparison
 
-      # TODO(#4718, Phase 4 export cutover): server-side export now emits v2,
-      # so this integration test's expected v1 fixture no longer matches the
-      # `pull` output. Update to compare against a v2 fixture (e.g.
-      # `test/fixtures/portability/v2/canonical_project.yaml` or a v2
-      # equivalent of canonical_project.yaml) when the @openfn/cli
-      # integration suite is next exercised.
+      # TODO(#4718): server-side export now emits v2, so this expected v1
+      # fixture no longer matches the `pull` output. Update when the
+      # @openfn/cli integration suite is next exercised.
       expected_yaml =
         File.read!("test/fixtures/portability/v1/canonical_project.yaml")
 

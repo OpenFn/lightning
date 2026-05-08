@@ -19,7 +19,6 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.Projects.Project
   alias Lightning.Projects.Provisioner
   alias Lightning.Workflows
-  alias Lightning.Workflows.YamlFormat.Importer, as: YamlImporter
   alias Lightning.WorkflowVersions
 
   action_fallback(LightningWeb.FallbackController)
@@ -69,12 +68,7 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_resource,
              project
            ) do
-      # Phase 5 (issue #4718): the provisioner stays UUID-required, but
-      # callers may now send either the legacy provisioner-shape JSON or
-      # a v2 canonical document. The Importer bridge auto-detects format
-      # and injects UUIDs by stable-name lookup before the Provisioner
-      # ever sees the doc.
-      case YamlImporter.import_document(
+      case Provisioner.import_document(
              project,
              conn.assigns.current_resource,
              params

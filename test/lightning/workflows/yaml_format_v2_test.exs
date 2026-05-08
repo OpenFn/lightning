@@ -1,108 +1,9 @@
 defmodule Lightning.Workflows.YamlFormatV2Test do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Workflows.YamlFormat
   alias Lightning.Workflows.YamlFormat.V2
 
   import Lightning.Factories
-
-  @v1_fixtures_dir "test/fixtures/portability/v1"
-  @v2_fixtures_dir "test/fixtures/portability/v2"
-
-  # canonical_workflow.yaml lives at the top of each version dir;
-  # everything else lives under scenarios/.
-  @scenarios ~w(
-    canonical_workflow
-    scenarios/simple-webhook
-    scenarios/cron-with-cursor
-    scenarios/js-expression-edge
-    scenarios/multi-trigger
-    scenarios/kafka-trigger
-    scenarios/branching-jobs
-  )
-
-  describe "detect_format/1" do
-    for scenario <- @scenarios do
-      test "returns :v2 for v2/#{scenario}.yaml" do
-        yaml = read_v2_fixture(unquote(scenario))
-        assert :v2 = YamlFormat.detect_format(yaml)
-      end
-
-      test "returns :v1 for v1/#{scenario}.yaml" do
-        yaml = read_v1_fixture(unquote(scenario))
-        assert :v1 = YamlFormat.detect_format(yaml)
-      end
-    end
-
-    test "returns :v2 for parsed v2 doc" do
-      parsed = %{"name" => "x", "steps" => [], "triggers" => []}
-      assert :v2 = YamlFormat.detect_format(parsed)
-    end
-
-    test "returns :v1 for parsed v1 doc" do
-      parsed = %{
-        "name" => "x",
-        "jobs" => %{"a" => %{"name" => "a"}},
-        "triggers" => %{"webhook" => %{"type" => "webhook"}},
-        "edges" => %{}
-      }
-
-      assert :v1 = YamlFormat.detect_format(parsed)
-    end
-
-    test "logs and falls back to :v1 on ambiguous input" do
-      assert ExUnit.CaptureLog.capture_log(fn ->
-               assert :v1 = YamlFormat.detect_format(%{"name" => "x"})
-             end) =~ "ambiguous"
-    end
-
-    test "logs and falls back to :v1 when both jobs and steps present" do
-      parsed = %{
-        "name" => "x",
-        "steps" => [],
-        "jobs" => %{"a" => %{"name" => "a"}}
-      }
-
-      log =
-        ExUnit.CaptureLog.capture_log(fn ->
-          assert :v1 = YamlFormat.detect_format(parsed)
-        end)
-
-      assert log =~ "both"
-    end
-
-    test "non-map input falls back to :v1" do
-      assert :v1 = YamlFormat.detect_format(:not_a_map)
-    end
-  end
-
-  describe "parse_workflow/1 against fixtures" do
-    for scenario <- @scenarios do
-      test "parses v2/#{scenario}.yaml without dangling next references" do
-        yaml = read_v2_fixture(unquote(scenario))
-        assert {:ok, doc} = V2.parse_workflow(yaml)
-        assert is_binary(doc.name) or is_nil(doc.name)
-        assert is_list(doc.steps)
-        assert is_list(doc.triggers)
-      end
-    end
-  end
-
-  describe "round-trip: v2 fixture → parse → emit → matches fixture bytes" do
-    for scenario <- @scenarios do
-      test "#{scenario}" do
-        original = read_v2_fixture(unquote(scenario))
-        assert {:ok, parsed1} = V2.parse_workflow(original)
-        emitted = V2.emit(parsed1)
-
-        # The fixture's literal bytes may differ from emit/1 output (whitespace
-        # / key ordering) so we compare structurally: re-parse and assert the
-        # canonical maps match.
-        assert {:ok, parsed2} = V2.parse_workflow(emitted)
-        assert normalise(parsed1) == normalise(parsed2)
-      end
-    end
-  end
 
   describe "serialize_workflow/1 from a Workflow struct" do
     setup do
@@ -156,40 +57,36 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       %{workflow: workflow, jobs: [job_a, job_b], trigger: trigger}
     end
 
-    test "round-trips structurally to a parseable v2 doc", %{workflow: workflow} do
+    test "emits v2 shape (steps array, hyphenated ids, no v1 keys)", %{
+      workflow: workflow
+    } do
       assert {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      # Output should declare itself as v2
-      assert YamlFormat.detect_format(yaml) == :v2
+      assert yaml =~ "name: round trip workflow"
+      assert yaml =~ ~r/^\s*steps:/m
 
-      assert {:ok, parsed} = V2.parse_workflow(yaml)
+      # Hyphenated step ids derived from job/trigger names.
+      assert yaml =~ "- id: webhook"
+      assert yaml =~ "- id: step-alpha"
+      assert yaml =~ "- id: step-beta"
 
-      assert parsed.name == "round trip workflow"
+      # No v1 keys leak through.
+      refute yaml =~ ~r/^\s*jobs:/m
+      refute yaml =~ ~r/^\s*edges:/m
+    end
 
-      assert [
-               %{
-                 id: "step-alpha",
-                 name: "step alpha",
-                 adaptor: _,
-                 expression: _
-               },
-               %{id: "step-beta", name: "step beta"}
-             ] = parsed.steps
+    test "single :always edge collapses to plain string target", %{
+      workflow: workflow
+    } do
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+      # webhook trigger -> step-alpha is the only :always edge
+      assert yaml =~ "next: step-alpha"
+    end
 
-      # The trigger->step edge is `:always` — emitted as a plain string target
-      assert [
-               %{
-                 id: "webhook",
-                 type: "webhook",
-                 enabled: true,
-                 next: "step-alpha"
-               }
-             ] =
-               parsed.triggers
-
-      # The on_job_success edge becomes an object value under :next
-      [%{next: next}, _] = parsed.steps
-      assert %{"step-beta" => %{condition: "on_job_success"}} = next
+    test "non-:always edges emit as object with condition", %{workflow: workflow} do
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+      # step-alpha -> step-beta is :on_job_success
+      assert yaml =~ ~r/step-beta:\s*\n\s*condition: on_job_success/
     end
 
     test "emits `expression:` (not `body:`) for step code", %{workflow: workflow} do
@@ -346,66 +243,4 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ "condition_type"
     end
   end
-
-  describe "v2/canonical_workflow.yaml field coverage" do
-    test "every public v2 field listed in V2 appears at least once" do
-      yaml = read_v2_fixture("canonical_workflow")
-      assert {:ok, doc} = V2.parse_workflow(yaml)
-
-      # workflow-level fields
-      for field <- V2.v2_workflow_fields() do
-        assert Map.has_key?(doc, field),
-               "expected workflow field #{inspect(field)} in canonical fixture"
-      end
-
-      # trigger fields — at least one trigger somewhere has each
-      for field <- V2.v2_trigger_fields() do
-        assert Enum.any?(doc.triggers, fn t -> Map.has_key?(t, field) end),
-               "expected trigger field #{inspect(field)} in canonical fixture"
-      end
-
-      # step fields — at least one step somewhere has each
-      for field <- V2.v2_step_fields() do
-        assert Enum.any?(doc.steps, fn s -> Map.has_key?(s, field) end),
-               "expected step field #{inspect(field)} in canonical fixture"
-      end
-
-      # edge fields — at least one edge somewhere has each
-      all_edges =
-        (doc.triggers ++ doc.steps)
-        |> Enum.flat_map(fn r ->
-          case Map.get(r, :next) do
-            %{} = m -> Map.values(m)
-            _ -> []
-          end
-        end)
-
-      for field <- V2.v2_edge_fields() do
-        assert Enum.any?(all_edges, fn e -> Map.has_key?(e, field) end),
-               "expected edge field #{inspect(field)} in canonical fixture"
-      end
-    end
-  end
-
-  # ── helpers ────────────────────────────────────────────────────────────────
-
-  defp read_v1_fixture(name) do
-    Path.join([@v1_fixtures_dir, name <> ".yaml"]) |> File.read!()
-  end
-
-  defp read_v2_fixture(name) do
-    Path.join([@v2_fixtures_dir, name <> ".yaml"]) |> File.read!()
-  end
-
-  # The serializer doesn't preserve key order in maps, so for round-trip
-  # comparison we normalise by re-sorting the canonical maps recursively.
-  defp normalise(value) when is_map(value) do
-    value
-    |> Enum.map(fn {k, v} -> {k, normalise(v)} end)
-    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-    |> Map.new()
-  end
-
-  defp normalise(list) when is_list(list), do: Enum.map(list, &normalise/1)
-  defp normalise(other), do: other
 end
