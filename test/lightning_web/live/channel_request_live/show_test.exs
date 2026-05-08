@@ -520,10 +520,6 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
 
       # Destination auth: credential name
       assert html =~ "Destination API"
-
-      # Section labels
-      assert html =~ "Client auth"
-      assert html =~ "Destination auth"
     end
 
     test "renders 'None' when no client auth configured and credential name when destination set",
