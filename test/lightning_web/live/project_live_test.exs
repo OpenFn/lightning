@@ -755,7 +755,7 @@ defmodule LightningWeb.ProjectLiveTest do
     test "having edge with condition_type=always", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :always})
@@ -763,13 +763,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: always]
+      # v2: an unconditional single-target next collapses to the bare step id.
+      assert response =~ ~s[next: #{job.name}]
+      refute response =~ "condition:"
     end
 
     test "having edge with condition_type=on_job_success", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :on_job_success})
@@ -777,13 +779,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: on_job_success]
+      # v2: condition_type → JS expression body in `condition:`.
+      assert response =~ ~s[#{job.name}:\n            condition: '!state.errors']
     end
 
     test "having edge with condition_type=on_job_failure", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :on_job_failure})
@@ -791,13 +794,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: on_job_failure]
+      assert response =~
+               ~s[#{job.name}:\n            condition: '!!state.errors']
     end
 
     test "having edge with condition_type=js_expression", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{
@@ -809,11 +813,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: js_expression]
-      assert response =~ ~S[condition_label: not underaged]
-
+      # v2: `condition` IS the JS body (no separate condition_expression);
+      # `label` is the optional human-readable string.
       assert response =~
-               ~s[condition_expression: |\n          state.data.age > 18]
+               ~s[#{job.name}:\n            condition: state.data.age > 18]
+
+      assert response =~ ~S[label: not underaged]
     end
   end
 
