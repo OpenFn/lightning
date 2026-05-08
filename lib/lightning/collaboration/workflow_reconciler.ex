@@ -415,8 +415,12 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
       end
     end)
 
-    # kafka_configuration nested fields are not updated here — the provisioner
-    # does not expose kafka config changes through this reconciliation path.
+    # TODO: kafka_configuration changes on *existing* triggers are not reconciled
+    # here. The provisioner does accept kafka config changes (cast_embed in
+    # provisioner.ex), so after a deploy the Y.Doc will be stale for connected
+    # editors. A subsequent save from an open tab will revert the provisioner's
+    # kafka config change. New triggers are handled correctly via trigger_to_prelim/1.
+    # Track: https://github.com/OpenFn/lightning/issues/4564
   end
 
   # ---------------------------------------------------------------------------

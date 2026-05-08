@@ -73,7 +73,7 @@ defmodule Lightning.Projects.Provisioner do
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
-    with {:ok, updated_project} <-
+    with {:ok, {updated_project, changed_wf_ids}} <-
            Repo.transact(fn ->
              with :ok <-
                     maybe_limit_provisioning(project.id, user_or_repo_connection),
@@ -115,13 +115,20 @@ defmodule Lightning.Projects.Provisioner do
                  Lightning.Projects.Project.sandbox?(updated_project)
                )
 
-               {:ok, updated_project}
+               changed_wf_ids =
+                 project_changeset
+                 |> changed_workflow_changesets()
+                 |> MapSet.new(&get_field(&1, :id))
+
+               {:ok, {updated_project, changed_wf_ids}}
              end
            end) do
       # Reconcile SharedDocs OUTSIDE the transaction — the reconciler
       # mutates in-memory CRDT processes, not the DB.
-      Enum.each(
-        updated_project.workflows,
+      # Only reconcile workflows that actually changed (non-deleted, non-identical).
+      updated_project.workflows
+      |> Enum.filter(&MapSet.member?(changed_wf_ids, &1.id))
+      |> Enum.each(
         &WorkflowReconciler.reconcile_workflow_from_db(
           &1,
           user_or_repo_connection
@@ -194,13 +201,18 @@ defmodule Lightning.Projects.Provisioner do
     {:no_action, nil}
   end
 
-  defp update_workflows_version(project_changeset, inserted_workflows) do
+  defp changed_workflow_changesets(project_changeset) do
     project_changeset
     |> get_assoc(:workflows)
     |> Enum.reject(fn changeset ->
       changeset.changes == %{} or get_change(changeset, :delete) == true or
         not is_nil(get_change(changeset, :deleted_at))
     end)
+  end
+
+  defp update_workflows_version(project_changeset, inserted_workflows) do
+    project_changeset
+    |> changed_workflow_changesets()
     |> Enum.reduce(Multi.new(), fn changeset, multi ->
       workflow =
         Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
@@ -211,11 +223,11 @@ defmodule Lightning.Projects.Provisioner do
       end)
     end)
     |> Repo.transaction()
-    |> normalize_txn()
+    |> case do
+      {:error, _key, reason, _} -> {:error, reason}
+      {:ok, _} = result -> result
+    end
   end
-
-  defp normalize_txn({:ok, changes}), do: {:ok, changes}
-  defp normalize_txn({:error, _key, reason, _}), do: {:error, reason}
 
   defp audit_workflow_multi(action, workflow_id, user_or_repo_connection) do
     Multi.new()
@@ -235,11 +247,7 @@ defmodule Lightning.Projects.Provisioner do
          user_or_repo_connection
        ) do
     project_changeset
-    |> get_assoc(:workflows)
-    |> Enum.reject(fn changeset ->
-      changeset.changes == %{} or get_change(changeset, :delete) == true or
-        not is_nil(get_change(changeset, :deleted_at))
-    end)
+    |> changed_workflow_changesets()
     |> Enum.reduce(Multi.new(), fn changeset, multi ->
       workflow =
         inserted_workflows
@@ -322,10 +330,10 @@ defmodule Lightning.Projects.Provisioner do
     deleted_job_ids =
       project_changeset
       |> get_assoc(:workflows)
-      |> Enum.flat_map(fn wf_cs ->
-        wf_cs
+      |> Enum.flat_map(fn workflow_changeset ->
+        workflow_changeset
         |> get_assoc(:jobs)
-        |> Enum.filter(fn job_cs -> job_cs.action == :delete end)
+        |> Enum.filter(fn job_changeset -> job_changeset.action == :delete end)
         |> Enum.map(&get_field(&1, :id))
       end)
       |> Enum.reject(&is_nil/1)

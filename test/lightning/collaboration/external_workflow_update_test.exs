@@ -395,6 +395,69 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
   end
 
   # ---------------------------------------------------------------------------
+  # Only changed workflows are reconciled
+  # ---------------------------------------------------------------------------
+
+  describe "when a project with multiple workflows is imported" do
+    test "only workflows with actual changes are reconciled", %{
+      collaboration_base: _base
+    } do
+      user = insert(:user)
+
+      workflow_a =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      workflow_b =
+        insert(:simple_workflow,
+          project:
+            Lightning.Repo.get!(
+              Lightning.Projects.Project,
+              workflow_a.project_id
+            )
+        )
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      project =
+        Lightning.Repo.get!(Lightning.Projects.Project, workflow_a.project_id)
+
+      # Subscribe BEFORE the import so the messages are in the mailbox.
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow_a.id}"
+      )
+
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow_b.id}"
+      )
+
+      # Body: workflow_a gets a new job (changed); workflow_b is re-sent verbatim.
+      body =
+        build_two_workflow_provisioner_body(project, workflow_a, workflow_b)
+
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # workflow_a was changed — it must have been reconciled.
+      assert_receive {:workflow_updated_externally, %{id: id}}
+                     when id == workflow_a.id,
+                     1_000,
+                     "Expected reconciler broadcast for changed workflow_a"
+
+      # workflow_b was NOT changed — reconciler must NOT have run for it.
+      refute_receive {:workflow_updated_externally, %{id: id}}
+                     when id == workflow_b.id,
+                     200,
+                     "Reconciler should not have been called for unchanged workflow_b"
+
+      # Drain any doc supervisors the reconciler started to avoid
+      # races with the SQL Sandbox teardown.
+      ensure_doc_supervisor_stopped(workflow_a.id)
+      ensure_doc_supervisor_stopped(workflow_b.id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
 
@@ -457,5 +520,88 @@ defmodule Lightning.Collaboration.ExternalWorkflowUpdateTest do
     body
     |> get_in(["workflows", Access.at(0), "jobs"])
     |> Enum.reject(&(&1["id"] in existing_job_ids))
+  end
+
+  defp build_two_workflow_provisioner_body(
+         project,
+         changed_workflow,
+         unchanged_workflow
+       ) do
+    %{
+      "id" => project.id,
+      "name" => project.name,
+      "workflows" => [
+        # changed_workflow: add a new job so the changeset has changes != %{}
+        %{
+          "id" => changed_workflow.id,
+          "name" => changed_workflow.name,
+          "jobs" =>
+            Enum.map(changed_workflow.jobs, fn j ->
+              %{
+                "id" => j.id,
+                "name" => j.name,
+                "adaptor" => j.adaptor,
+                "body" => j.body
+              }
+            end) ++
+              [
+                %{
+                  "id" => Ecto.UUID.generate(),
+                  "name" => "reconciler-test-new-job",
+                  "adaptor" => "@openfn/language-common@latest",
+                  "body" => "fn(state => state)"
+                }
+              ],
+          "triggers" =>
+            Enum.map(changed_workflow.triggers, fn t ->
+              %{"id" => t.id, "enabled" => t.enabled}
+            end),
+          "edges" =>
+            Enum.map(changed_workflow.edges, fn e ->
+              %{
+                "id" => e.id,
+                "source_trigger_id" => e.source_trigger_id,
+                "source_job_id" => e.source_job_id,
+                "target_job_id" => e.target_job_id,
+                "condition_type" => to_string(e.condition_type),
+                "condition_expression" => e.condition_expression,
+                "condition_label" => e.condition_label
+              }
+              |> Map.reject(fn {_, v} -> is_nil(v) end)
+            end)
+        },
+        # unchanged_workflow: verbatim re-send — no change, changeset.changes == %{}
+        %{
+          "id" => unchanged_workflow.id,
+          "name" => unchanged_workflow.name,
+          "jobs" =>
+            Enum.map(unchanged_workflow.jobs, fn j ->
+              %{
+                "id" => j.id,
+                "name" => j.name,
+                "adaptor" => j.adaptor,
+                "body" => j.body
+              }
+            end),
+          "triggers" =>
+            Enum.map(unchanged_workflow.triggers, fn t ->
+              %{"id" => t.id, "enabled" => t.enabled}
+            end),
+          "edges" =>
+            Enum.map(unchanged_workflow.edges, fn e ->
+              %{
+                "id" => e.id,
+                "source_trigger_id" => e.source_trigger_id,
+                "source_job_id" => e.source_job_id,
+                "target_job_id" => e.target_job_id,
+                "condition_type" => to_string(e.condition_type),
+                "condition_expression" => e.condition_expression,
+                "condition_label" => e.condition_label
+              }
+              |> Map.reject(fn {_, v} -> is_nil(v) end)
+            end)
+        }
+      ]
+    }
   end
 end
