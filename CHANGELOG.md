@@ -17,11 +17,16 @@ and this project adheres to
 
 ### Added
 
+- Optional per-project usage cap columns (`run_cap`, `ai_tokens_cap`,
+  `storage_cap_mb`) on `projects`, castable through `Project.changeset/2` and
+  `Project.form_changeset/2` with non-negative-integer validation.
+
 ### Changed
 
 ### Fixed
 
 ## [2.16.3] - 2026-05-07
+
 ## [2.16.3-pre3] - 2026-05-07
 
 ### Fixed
