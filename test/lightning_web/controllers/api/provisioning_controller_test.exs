@@ -1352,6 +1352,98 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     end
   end
 
+  describe "post (v2 canonical-shape JSON) — Phase 5 import bridge" do
+    setup [:assign_bearer_for_api]
+
+    @tag login_as: "superuser"
+    test "accepts a v2 canonical project doc and creates the project", %{
+      conn: conn
+    } do
+      # The v2 canonical project shape: workflows as a map keyed by
+      # hyphenated names, each workflow holding a `steps:` array. The bridge
+      # in `Lightning.Workflows.YamlFormat.Importer` is what makes this go;
+      # without Phase 5 wiring the provisioner would reject the doc for
+      # missing UUIDs.
+      body = %{
+        "name" => "v2-via-http",
+        "workflows" => %{
+          "ingest-flow" => %{
+            "name" => "ingest flow",
+            "steps" => [
+              %{
+                "id" => "webhook",
+                "type" => "webhook",
+                "enabled" => true,
+                "next" => "ingest"
+              },
+              %{
+                "id" => "ingest",
+                "name" => "ingest",
+                "adaptor" => "@openfn/language-common@latest",
+                "expression" => "fn(state => state)\n"
+              }
+            ]
+          }
+        }
+      }
+
+      response = post(conn, ~p"/api/provision", body) |> json_response(201)
+      assert %{"id" => project_id, "name" => "v2-via-http"} = response["data"]
+
+      project =
+        Lightning.Projects.get_project!(project_id)
+        |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
+
+      assert [workflow] = project.workflows
+      assert workflow.name == "ingest flow"
+      assert [%{name: "ingest"}] = workflow.jobs
+      assert [%{type: :webhook}] = workflow.triggers
+      assert [%{condition_type: :always}] = workflow.edges
+    end
+
+    @tag login_as: "superuser"
+    test "v2 doc without UUIDs round-trips: POST → GET .yaml emits v2", %{
+      conn: conn
+    } do
+      body = %{
+        "name" => "v2-roundtrip",
+        "workflows" => %{
+          "rt" => %{
+            "name" => "rt",
+            "steps" => [
+              %{
+                "id" => "webhook",
+                "type" => "webhook",
+                "enabled" => true,
+                "next" => "echo"
+              },
+              %{
+                "id" => "echo",
+                "name" => "echo",
+                "adaptor" => "@openfn/language-common@latest",
+                "expression" => "fn(state => state)\n"
+              }
+            ]
+          }
+        }
+      }
+
+      response = post(conn, ~p"/api/provision", body) |> json_response(201)
+      assert %{"id" => project_id} = response["data"]
+
+      yaml_conn = get(conn, ~p"/api/provision/yaml?id=#{project_id}")
+      assert yaml_conn.status == 200
+
+      yaml = yaml_conn.resp_body
+
+      # Phase 4 cutover means exports are v2 — and a v2 export must contain
+      # `steps:` somewhere (the Phase 5 import that just succeeded should
+      # serialize back to v2 here).
+      assert yaml =~ "steps:"
+      refute yaml =~ ~r/^\s*jobs:/m
+    end
+  end
+
   defp valid_payload(project_id \\ nil) do
     project_id = project_id || Ecto.UUID.generate()
     first_job_id = Ecto.UUID.generate()

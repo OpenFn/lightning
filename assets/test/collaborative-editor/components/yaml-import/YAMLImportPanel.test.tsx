@@ -4,11 +4,22 @@
  * Tests state machine, debounced validation, and import flow
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { YAMLImportPanel } from '../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createMockStoreContextValue } from '../../__helpers__';
+
+const FIXTURES_ROOT = resolve(
+  __dirname,
+  '../../../../../test/fixtures/portability'
+);
+
+const readScenario = (format: 'v1' | 'v2', name: string): string =>
+  readFileSync(`${FIXTURES_ROOT}/${format}/scenarios/${name}.yaml`, 'utf-8');
 
 // Mock the awareness hook
 vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
@@ -116,7 +127,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -140,7 +151,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -167,7 +178,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: invalidYAML } });
 
@@ -194,7 +205,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -231,7 +242,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: 'name:' } });
 
@@ -259,7 +270,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       const createButton = screen.getByRole('button', { name: /Create/i });
 
@@ -312,7 +323,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
 
       // Initially disabled
@@ -331,5 +342,97 @@ describe('YAMLImportPanel', () => {
         { timeout: 600 }
       );
     });
+  });
+
+  // Phase 5 of #4718: import accepts both v1 (legacy Lightning) and v2
+  // (CLI-aligned portability spec) YAML transparently. The panel itself is
+  // format-agnostic; it routes through `parseWorkflowYAML` which auto-detects.
+  describe('Format dispatch (v1 + v2)', () => {
+    const SCENARIOS = [
+      'simple-webhook',
+      'cron-with-cursor',
+      'js-expression-edge',
+      'multi-trigger',
+      'kafka-trigger',
+      'branching-jobs',
+    ] as const;
+
+    test.each(SCENARIOS)(
+      'accepts v1 fixture for %s and previews via onImport',
+      async name => {
+        const mockStore = createMockStoreContextValue();
+        render(
+          <StoreContext.Provider value={mockStore}>
+            <YAMLImportPanel
+              onBack={mockOnBack}
+              onImport={mockOnImport}
+              onSave={mockOnSave}
+            />
+          </StoreContext.Provider>
+        );
+
+        const textarea = screen.getByPlaceholderText(
+          /Paste your workflow YAML here/i
+        );
+        fireEvent.change(textarea, {
+          target: { value: readScenario('v1', name) },
+        });
+
+        await waitFor(
+          () => {
+            const createButton = screen.getByRole('button', {
+              name: /Create/i,
+            });
+            expect(createButton).not.toBeDisabled();
+          },
+          { timeout: 600 }
+        );
+
+        // onImport receives a non-empty WorkflowState — the panel only
+        // surfaces a populated state when validation passed.
+        const populatedCalls = mockOnImport.mock.calls.filter(
+          ([state]) => state && state.jobs && state.jobs.length > 0
+        );
+        expect(populatedCalls.length).toBeGreaterThan(0);
+      }
+    );
+
+    test.each(SCENARIOS)(
+      'accepts v2 fixture for %s and previews via onImport',
+      async name => {
+        const mockStore = createMockStoreContextValue();
+        render(
+          <StoreContext.Provider value={mockStore}>
+            <YAMLImportPanel
+              onBack={mockOnBack}
+              onImport={mockOnImport}
+              onSave={mockOnSave}
+            />
+          </StoreContext.Provider>
+        );
+
+        const textarea = screen.getByPlaceholderText(
+          /Paste your workflow YAML here/i
+        );
+        fireEvent.change(textarea, {
+          target: { value: readScenario('v2', name) },
+        });
+
+        await waitFor(
+          () => {
+            const createButton = screen.getByRole('button', {
+              name: /Create/i,
+            });
+            expect(createButton).not.toBeDisabled();
+          },
+          { timeout: 600 }
+        );
+
+        const populatedCalls = mockOnImport.mock.calls.filter(
+          ([state]) => state && state.jobs && state.jobs.length > 0
+        );
+        expect(populatedCalls.length).toBeGreaterThan(0);
+      }
+    );
   });
 });

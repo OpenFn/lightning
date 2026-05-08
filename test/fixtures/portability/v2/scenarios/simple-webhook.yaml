@@ -1,0 +1,11 @@
+name: simple webhook
+steps:
+  - id: webhook
+    type: webhook
+    enabled: true
+    next: greet
+  - id: greet
+    name: greet
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)

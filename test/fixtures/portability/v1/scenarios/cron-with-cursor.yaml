@@ -1,0 +1,20 @@
+name: cron with cursor
+jobs:
+  cursor-step:
+    name: cursor step
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+triggers:
+  cron:
+    type: cron
+    cron_expression: '0 6 * * *'
+    cron_cursor_job: cursor-step
+    enabled: true
+edges:
+  cron->cursor-step:
+    source_trigger: cron
+    target_job: cursor-step
+    condition_type: always
+    enabled: true

@@ -1,0 +1,14 @@
+name: cron with cursor
+steps:
+  - id: cron
+    type: cron
+    enabled: true
+    openfn:
+      cron: '0 6 * * *'
+      cron_cursor: cursor-step
+    next: cursor-step
+  - id: cursor-step
+    name: cursor step
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)

@@ -1,0 +1,70 @@
+name: canonical workflow
+steps:
+  - id: webhook
+    type: webhook
+    enabled: true
+    openfn:
+      webhook_reply: after_completion
+    next: ingest
+  - id: cron
+    type: cron
+    enabled: false
+    openfn:
+      cron: '0 6 * * *'
+      cron_cursor: ingest
+    next: ingest
+  - id: kafka
+    type: kafka
+    enabled: true
+    openfn:
+      kafka:
+        hosts:
+          - 'localhost:9092'
+        topics:
+          - dummy
+        initial_offset_reset_policy: earliest
+        connect_timeout: 30
+    next: ingest
+  - id: ingest
+    name: ingest
+    adaptor: '@openfn/language-http@latest'
+    expression: |
+      fn(state => state)
+    configuration: alice@example.com|http creds
+    next:
+      maybe-skip:
+        condition: js_expression
+        expression: |
+          !state.errors && state.data
+        label: Skip when no errors
+        disabled: true
+      report-failure:
+        condition: on_job_failure
+      transform:
+        condition: on_job_success
+  - id: transform
+    name: transform
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+    next:
+      load:
+        condition: always
+  - id: report-failure
+    name: report failure
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+    next:
+      load:
+        condition: always
+  - id: maybe-skip
+    name: maybe skip
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+  - id: load
+    name: load
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)

@@ -1,0 +1,96 @@
+name: canonical workflow
+jobs:
+  ingest:
+    name: ingest
+    adaptor: '@openfn/language-http@latest'
+    credential: alice@example.com-http-creds
+    body: |
+      fn(state => state)
+  transform:
+    name: transform
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+  report-failure:
+    name: report failure
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+  maybe-skip:
+    name: maybe skip
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+  load:
+    name: load
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+triggers:
+  webhook:
+    type: webhook
+    webhook_reply: after_completion
+    enabled: true
+  cron:
+    type: cron
+    cron_expression: '0 6 * * *'
+    cron_cursor_job: ingest
+    enabled: false
+  kafka:
+    type: kafka
+    enabled: true
+    kafka_configuration:
+      hosts:
+        - 'localhost:9092'
+      topics:
+        - dummy
+      initial_offset_reset_policy: earliest
+      connect_timeout: 30
+edges:
+  webhook->ingest:
+    source_trigger: webhook
+    target_job: ingest
+    condition_type: always
+    enabled: true
+  cron->ingest:
+    source_trigger: cron
+    target_job: ingest
+    condition_type: always
+    enabled: true
+  kafka->ingest:
+    source_trigger: kafka
+    target_job: ingest
+    condition_type: always
+    enabled: true
+  ingest->transform:
+    source_job: ingest
+    target_job: transform
+    condition_type: on_job_success
+    enabled: true
+  ingest->report-failure:
+    source_job: ingest
+    target_job: report-failure
+    condition_type: on_job_failure
+    enabled: true
+  ingest->maybe-skip:
+    source_job: ingest
+    target_job: maybe-skip
+    condition_type: js_expression
+    condition_label: Skip when no errors
+    condition_expression: |
+      !state.errors && state.data
+    enabled: false
+  transform->load:
+    source_job: transform
+    target_job: load
+    condition_type: always
+    enabled: true
+  report-failure->load:
+    source_job: report-failure
+    target_job: load
+    condition_type: always
+    enabled: true

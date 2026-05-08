@@ -1,0 +1,22 @@
+name: js expression edge
+steps:
+  - id: webhook
+    type: webhook
+    enabled: true
+    next: source-step
+  - id: source-step
+    name: source step
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+    next:
+      target-step:
+        condition: js_expression
+        expression: |
+          !!state.data && state.data.length > 0
+        label: Only when payload present
+  - id: target-step
+    name: target step
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)

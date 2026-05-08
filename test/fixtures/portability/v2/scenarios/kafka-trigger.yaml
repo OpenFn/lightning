@@ -1,0 +1,20 @@
+name: kafka trigger
+steps:
+  - id: kafka
+    type: kafka
+    enabled: true
+    openfn:
+      kafka:
+        hosts:
+          - 'localhost:9092'
+          - 'localhost:9093'
+        topics:
+          - events
+        initial_offset_reset_policy: earliest
+        connect_timeout: 30
+    next: consume
+  - id: consume
+    name: consume
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)

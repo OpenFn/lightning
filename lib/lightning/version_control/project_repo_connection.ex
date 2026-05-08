@@ -5,7 +5,10 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
 
   use Lightning.Schema
 
+  import Ecto.Query
+
   alias Lightning.Projects.Project
+  alias Lightning.Repo
 
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -66,6 +69,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     |> unique_constraint(:project_id,
       message: "project already has a repo connection"
     )
+    |> validate_no_ancestor_branch_conflict()
   end
 
   def configure_changeset(project_repo_connection, attrs) do
@@ -100,6 +104,45 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     else
       changeset
     end
+  end
+
+  defp validate_no_ancestor_branch_conflict(changeset) do
+    project_id = get_field(changeset, :project_id)
+    repo = get_field(changeset, :repo)
+    branch = get_field(changeset, :branch)
+
+    if is_binary(project_id) and is_binary(repo) and is_binary(branch) do
+      ancestor_ids = Lightning.Projects.ancestor_ids(project_id)
+
+      if ancestor_ids != [] and
+           ancestor_branch_conflict?(ancestor_ids, repo, branch) do
+        add_error(
+          changeset,
+          :branch,
+          "this branch is already linked to a parent project; sandboxes must use a different branch"
+        )
+      else
+        changeset
+      end
+    else
+      changeset
+    end
+  end
+
+  @doc false
+  @spec ancestor_branch_conflict?([Ecto.UUID.t()], String.t(), String.t()) ::
+          boolean()
+  def ancestor_branch_conflict?([], _repo, _branch), do: false
+
+  def ancestor_branch_conflict?(ancestor_ids, repo, branch)
+      when is_list(ancestor_ids) and is_binary(repo) and is_binary(branch) do
+    Repo.exists?(
+      from(c in __MODULE__,
+        where: c.project_id in ^ancestor_ids,
+        where: c.repo == ^repo,
+        where: c.branch == ^branch
+      )
+    )
   end
 
   defp validate_sync_direction(changeset) do

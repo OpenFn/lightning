@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorkflowSpecV2",
+  "type": "object",
+  "definitions": {
+    "edgeObject": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "type": "string",
+          "enum": [
+            "always",
+            "never",
+            "on_job_success",
+            "on_job_failure",
+            "js_expression"
+          ]
+        },
+        "expression": { "type": "string" },
+        "label": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "next": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": { "$ref": "#/definitions/edgeObject" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "openfnTriggerBlock": {
+      "type": "object",
+      "properties": {
+        "cron": { "type": "string" },
+        "cron_cursor": { "type": "string" },
+        "webhook_reply": {
+          "type": "string",
+          "enum": ["before_start", "after_completion", "custom"]
+        },
+        "kafka": {
+          "type": "object",
+          "properties": {
+            "hosts": { "type": "array", "items": { "type": "string" } },
+            "topics": { "type": "array", "items": { "type": "string" } },
+            "initial_offset_reset_policy": { "type": "string" },
+            "connect_timeout": { "type": "number" },
+            "group_id": { "type": "string" },
+            "sasl": { "type": "string" },
+            "ssl": { "type": "boolean" },
+            "username": { "type": "string" },
+            "password": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "triggerStep": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["webhook", "cron", "kafka"]
+        },
+        "enabled": { "type": "boolean" },
+        "openfn": { "$ref": "#/definitions/openfnTriggerBlock" },
+        "next": { "$ref": "#/definitions/next" }
+      },
+      "required": ["id", "type"],
+      "additionalProperties": false
+    },
+    "jobStep": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "adaptor": { "type": "string" },
+        "expression": { "type": "string" },
+        "configuration": { "type": ["string", "null"] },
+        "next": { "$ref": "#/definitions/next" }
+      },
+      "required": ["id", "name", "adaptor", "expression"],
+      "additionalProperties": false
+    },
+    "step": {
+      "oneOf": [
+        { "$ref": "#/definitions/triggerStep" },
+        { "$ref": "#/definitions/jobStep" }
+      ]
+    }
+  },
+  "properties": {
+    "name": { "type": ["string", "null"] },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/step" }
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": false
+}

@@ -29,13 +29,17 @@ defmodule Lightning.VersionControl do
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_by_ancestor}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.insert(changeset),
+      with :ok <- check_ancestor_branch_conflict(changeset),
+           {:ok, repo_connection} <- Repo.insert(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -48,6 +52,28 @@ defmodule Lightning.VersionControl do
         {:ok, repo_connection}
       end
     end)
+  end
+
+  defp check_ancestor_branch_conflict(changeset) do
+    project_id = Ecto.Changeset.get_field(changeset, :project_id)
+    repo = Ecto.Changeset.get_field(changeset, :repo)
+    branch = Ecto.Changeset.get_field(changeset, :branch)
+
+    if is_binary(project_id) and is_binary(repo) and is_binary(branch) do
+      ancestor_ids = Lightning.Projects.ancestor_ids(project_id)
+
+      if ProjectRepoConnection.ancestor_branch_conflict?(
+           ancestor_ids,
+           repo,
+           branch
+         ) do
+        {:error, :branch_used_by_ancestor}
+      else
+        :ok
+      end
+    else
+      :ok
+    end
   end
 
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::

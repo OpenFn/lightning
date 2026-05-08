@@ -62,6 +62,21 @@
               "type": ["string", "null"],
               "enum": ["before_start", "after_completion", "custom", null]
             },
+            "kafka_configuration": {
+              "type": "object",
+              "properties": {
+                "hosts": { "type": "array", "items": { "type": "string" } },
+                "topics": { "type": "array", "items": { "type": "string" } },
+                "initial_offset_reset_policy": { "type": "string" },
+                "connect_timeout": { "type": "number" },
+                "group_id": { "type": "string" },
+                "sasl": { "type": "string" },
+                "ssl": { "type": "boolean" },
+                "username": { "type": "string" },
+                "password": { "type": "string" }
+              },
+              "additionalProperties": true
+            },
             "pos": {
               "type": "object",
               "properties": {

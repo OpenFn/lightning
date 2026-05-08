@@ -1,0 +1,27 @@
+name: multi trigger
+jobs:
+  shared-step:
+    name: shared step
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+triggers:
+  webhook:
+    type: webhook
+    enabled: true
+  cron:
+    type: cron
+    cron_expression: '*/5 * * * *'
+    enabled: true
+edges:
+  webhook->shared-step:
+    source_trigger: webhook
+    target_job: shared-step
+    condition_type: always
+    enabled: true
+  cron->shared-step:
+    source_trigger: cron
+    target_job: shared-step
+    condition_type: always
+    enabled: true

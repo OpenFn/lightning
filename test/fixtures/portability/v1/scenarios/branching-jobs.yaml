@@ -1,0 +1,40 @@
+name: branching jobs
+jobs:
+  fan-out:
+    name: fan out
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+  branch-a:
+    name: branch a
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+  branch-b:
+    name: branch b
+    adaptor: '@openfn/language-common@latest'
+    credential: null
+    body: |
+      fn(state => state)
+triggers:
+  webhook:
+    type: webhook
+    enabled: true
+edges:
+  webhook->fan-out:
+    source_trigger: webhook
+    target_job: fan-out
+    condition_type: always
+    enabled: true
+  fan-out->branch-a:
+    source_job: fan-out
+    target_job: branch-a
+    condition_type: on_job_success
+    enabled: true
+  fan-out->branch-b:
+    source_job: fan-out
+    target_job: branch-b
+    condition_type: on_job_failure
+    enabled: true

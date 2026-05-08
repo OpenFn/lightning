@@ -245,6 +245,34 @@ defmodule Lightning.VersionControlTest do
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
+
+    test "returns {:error, :branch_used_by_ancestor} when sandbox claims an ancestor's (repo, branch)" do
+      parent = insert(:project)
+
+      insert(:project_repo_connection,
+        project: parent,
+        repo: "someaccount/somerepo",
+        branch: "main"
+      )
+
+      sandbox = insert(:project, parent: parent)
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sandbox.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "main",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, :branch_used_by_ancestor} =
+               VersionControl.create_github_connection(params, user)
+
+      # parent's existing connection is the only one in the DB
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
   end
 
   describe "remove_github_connection/2" do

@@ -1,0 +1,17 @@
+name: multi trigger
+steps:
+  - id: webhook
+    type: webhook
+    enabled: true
+    next: shared-step
+  - id: cron
+    type: cron
+    enabled: true
+    openfn:
+      cron: '*/5 * * * *'
+    next: shared-step
+  - id: shared-step
+    name: shared step
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
