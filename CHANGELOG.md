@@ -31,10 +31,18 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.3] - 2026-05-07
+## [2.16.3-pre3] - 2026-05-07
+
+### Fixed
+
 - Runs UI no longer crashes when a step is killed with a worker error type the
   renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
   reasons fall back to the resource-budget icon instead.
   [#4709](https://github.com/OpenFn/lightning/issues/4709)
+- Cron scheduler now attempts all triggers each tick, even if one fails. A
+  single slow or erroring trigger previously aborted the entire batch.
+  [#4716](https://github.com/OpenFn/lightning/issues/4716)
 
 ## [2.16.3-pre2] - 2026-05-07
 

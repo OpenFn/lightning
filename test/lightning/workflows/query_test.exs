@@ -2,6 +2,8 @@ defmodule Lightning.Workflows.QueryTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Workflow
+  import Ecto.Query
   import Lightning.JobsFixtures
   import Lightning.AccountsFixtures
   import Lightning.ProjectsFixtures
@@ -51,6 +53,31 @@ defmodule Lightning.Workflows.QueryTest do
         |> Enum.map(fn e -> e.target_job.id end)
 
       assert jobs == [job.id]
+    end
+
+    test "excludes edges whose workflow is soft-deleted" do
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          enabled: true
+        })
+
+      job = insert(:job, workflow: trigger.workflow)
+
+      insert(:edge, %{
+        source_trigger: trigger,
+        target_job: job,
+        workflow: job.workflow,
+        enabled: true
+      })
+
+      Repo.update_all(
+        from(w in Workflow, where: w.id == ^trigger.workflow_id),
+        set: [deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)]
+      )
+
+      assert Query.enabled_cron_jobs_by_edge() |> Repo.all() == []
     end
 
     test "returns no jobs when trigger is disabled" do
