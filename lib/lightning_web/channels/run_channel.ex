@@ -18,6 +18,10 @@ defmodule LightningWeb.RunChannel do
   require Jason.Helpers
   require Logger
 
+  defmodule WebhookResponse do
+    defstruct status: nil, body: nil, step_id: nil, sent_at: nil
+  end
+
   @impl true
   def join(
         "run:" <> id,
@@ -39,7 +43,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         webhook_response: nil
        })}
     else
       {:error, :not_found} ->
@@ -120,11 +125,12 @@ defmodule LightningWeb.RunChannel do
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        # Broadcast webhook response for after_completion mode
-        maybe_broadcast_webhook_response(
-          run_with_preloads,
-          payload["final_state"]
-        )
+        socket =
+          maybe_send_after_completion_response(
+            socket,
+            run_with_preloads,
+            payload["final_state"]
+          )
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -213,7 +219,9 @@ defmodule LightningWeb.RunChannel do
         reply_with(socket, {:error, changeset})
 
       {:ok, step} ->
-        reply_with(socket, {:ok, %{step_id: step.id}})
+        socket
+        |> put_webhook_response(payload)
+        |> reply_with({:ok, %{step_id: step.id}})
     end
   end
 
@@ -309,80 +317,104 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(
-         run,
-         final_state
-       ) do
-    if run.work_order.trigger.webhook_reply == :after_completion do
-      {status_code, body} =
-        determine_webhook_response(
+  defp put_webhook_response(socket, payload) do
+    if already_sent?(socket.assigns.webhook_response) do
+      socket
+    else
+      case Map.get(payload, "webhook_response") do
+        %{} = wr ->
+          assign(socket, :webhook_response, %WebhookResponse{
+            status: Map.get(wr, "status"),
+            body: Map.get(wr, "body"),
+            step_id: Map.get(payload, "step_id")
+          })
+
+        _ ->
+          socket
+      end
+    end
+  end
+
+  defp already_sent?(%WebhookResponse{sent_at: %DateTime{}}), do: true
+  defp already_sent?(_), do: false
+
+  defp maybe_send_after_completion_response(socket, run, final_state) do
+    trigger = run.work_order.trigger
+
+    if trigger.webhook_reply == :after_completion do
+      webhook_response =
+        build_webhook_response(
           run,
           final_state,
-          run.work_order.trigger.sync_webhook_response_config
+          trigger.sync_webhook_response_config,
+          socket.assigns.webhook_response
         )
 
+      socket
+      |> assign(:webhook_response, webhook_response)
+      |> maybe_broadcast_webhook_response()
+    else
+      socket
+    end
+  end
+
+  defp maybe_broadcast_webhook_response(socket) do
+    %{run: run, webhook_response: %WebhookResponse{} = webhook_response} =
+      socket.assigns
+
+    if already_sent?(webhook_response) do
+      socket
+    else
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{run.work_order_id}:webhook_response",
-        {:webhook_response, status_code, body}
+        {:webhook_response, webhook_response.status, webhook_response.body}
       )
+
+      assign(socket, :webhook_response, %{
+        webhook_response
+        | sent_at: DateTime.utc_now()
+      })
     end
   end
 
-  defp determine_webhook_response(run, final_state, config) do
-    (final_state || %{})
-    |> Map.get("_webhookResponse")
-    |> case do
-      resp when is_nil(resp) or resp == %{} ->
-        build_default_response(run, final_state, config)
-
-      resp when is_map(resp) ->
-        build_response_from_state(resp, run, final_state, config)
-
-      _non_map ->
-        build_default_response(run, final_state, config)
-    end
+  defp build_webhook_response(run, final_state, config, nil) do
+    {status, body} = build_default_response(run, final_state, config)
+    %WebhookResponse{status: status, body: body}
   end
 
-  defp build_response_from_state(webhook_response, run, final_state, config) do
-    with {:ok, custom_status} <- parse_webhook_status(webhook_response),
-         {:ok, custom_body} <- parse_webhook_body(webhook_response) do
+  defp build_webhook_response(
+         run,
+         final_state,
+         config,
+         %WebhookResponse{} = webhook_response
+       ) do
+    with {:ok, custom_status} <- parse_webhook_status(webhook_response.status),
+         {:ok, custom_body} <- parse_webhook_body(webhook_response.body) do
       status = custom_status || default_response_status(run.state, config)
       body = custom_body || default_response_body(run.state, final_state, config)
-      {status, body}
+      %{webhook_response | status: status, body: body}
     else
-      {:error, reason} -> malformed_response(reason)
+      {:error, reason} ->
+        {status, body} = malformed_response(reason)
+        %{webhook_response | status: status, body: body}
     end
   end
 
-  defp parse_webhook_status(webhook_response) do
-    case Map.fetch(webhook_response, "status") do
-      :error ->
-        {:ok, nil}
+  defp parse_webhook_status(nil), do: {:ok, nil}
+  defp parse_webhook_status(status) when is_integer(status), do: {:ok, status}
 
-      {:ok, status} when is_integer(status) ->
-        {:ok, status}
+  defp parse_webhook_status(status) when is_float(status),
+    do: {:ok, trunc(status)}
 
-      {:ok, status} when is_float(status) ->
-        {:ok, trunc(status)}
+  defp parse_webhook_status(status),
+    do: {:error, "status needs to be an integer, got: #{inspect(status)}"}
 
-      {:ok, status} ->
-        {:error, "status needs to be an integer, got: #{inspect(status)}"}
-    end
-  end
+  defp parse_webhook_body(nil), do: {:ok, nil}
+  defp parse_webhook_body(body) when is_map(body), do: {:ok, body}
 
-  defp parse_webhook_body(webhook_response) do
-    case Map.fetch(webhook_response, "body") do
-      :error ->
-        {:ok, nil}
-
-      {:ok, body} when is_map(body) ->
-        {:ok, body}
-
-      {:ok, body} ->
-        {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
-    end
-  end
+  defp parse_webhook_body(body),
+    do: {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
 
   defp build_default_response(run, final_state, config) do
     {default_response_status(run.state, config),
@@ -411,7 +443,7 @@ defmodule LightningWeb.RunChannel do
 
   defp malformed_response(reason) do
     {201,
-     %{message: "Run completed, but _webhookResponse was malformed: #{reason}"}}
+     %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
   end
 
   defp update_scrubber(nil, samples, basic_auth) do

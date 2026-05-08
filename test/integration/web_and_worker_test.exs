@@ -801,7 +801,7 @@ defmodule Lightning.WebAndWorkerTest do
 
     @tag :integration
     @tag timeout: 120_000
-    test "honours _webhookResponse set in final state", %{uri: uri} do
+    test "honours webhook_response sent on step:complete", %{uri: uri} do
       project = insert(:project)
       trigger = build(:trigger, type: :webhook, enabled: true)
 
@@ -811,7 +811,7 @@ defmodule Lightning.WebAndWorkerTest do
           body: """
           fn(state => ({
             ...state,
-            _webhookResponse: { status: 200, body: { ack: true, received: state.data.value } }
+            webhook_response: { status: 200, body: { ack: true, received: state.data.value } }
           }));
           """,
           name: "responding-job"

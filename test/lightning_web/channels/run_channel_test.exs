@@ -1783,7 +1783,7 @@ defmodule LightningWeb.RunChannelTest do
 
       job = build(:job)
 
-      %{triggers: [trigger]} =
+      %{triggers: [trigger], jobs: [job]} =
         workflow =
         build(:workflow, project: project)
         |> with_trigger(trigger)
@@ -1811,23 +1811,32 @@ defmodule LightningWeb.RunChannelTest do
             |> Map.new()
         )
 
-      %{run: run, work_order: work_order, trigger: trigger}
+      %{run: run, work_order: work_order, trigger: trigger, job: job}
     end
 
     setup [:create_socket, :join_run_channel]
 
+    setup %{work_order: work_order} do
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "work_order:#{work_order.id}:webhook_response"
+      )
+
+      :ok
+    end
+
     test "does not broadcast when webhook_reply is not :after_completion", %{
       socket: socket,
-      work_order: work_order,
+      run: run,
+      job: job,
       trigger: trigger
     } do
       trigger
       |> Ecto.Changeset.change(webhook_reply: :before_start)
       |> Repo.update!()
 
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => %{"data" => "ok"}}
       )
 
       ref =
@@ -1840,15 +1849,10 @@ defmodule LightningWeb.RunChannelTest do
       refute_receive {:webhook_response, _, _}
     end
 
-    test "broadcasts final state as body on success with no config", %{
-      socket: socket,
-      work_order: work_order
-    } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
+    test "broadcasts final state as body on success with no captured response",
+         %{
+           socket: socket
+         } do
       final_state = %{"data" => %{"result" => "ok"}}
 
       ref =
@@ -1861,15 +1865,9 @@ defmodule LightningWeb.RunChannelTest do
       assert_receive {:webhook_response, 201, ^final_state}
     end
 
-    test "broadcasts security message on error with no config", %{
-      socket: socket,
-      work_order: work_order
+    test "broadcasts security message on error with no captured response", %{
+      socket: socket
     } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
       ref =
         push(socket, "run:complete", %{
           "reason" => "fail",
@@ -1886,15 +1884,9 @@ defmodule LightningWeb.RunChannelTest do
 
     test "uses configured success_code on success", %{
       socket: socket,
-      work_order: work_order,
       trigger: trigger
     } do
       put_webhook_config(trigger, success_code: 200)
-
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
 
       final_state = %{"data" => "ok"}
 
@@ -1910,15 +1902,9 @@ defmodule LightningWeb.RunChannelTest do
 
     test "uses configured error_code on error", %{
       socket: socket,
-      work_order: work_order,
       trigger: trigger
     } do
       put_webhook_config(trigger, error_code: 422)
-
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
 
       ref =
         push(socket, "run:complete", %{
@@ -1931,111 +1917,109 @@ defmodule LightningWeb.RunChannelTest do
       assert_receive {:webhook_response, 422, %{message: _}}
     end
 
-    test "valid _webhookResponse overrides config entirely", %{
+    test "captured webhook_response from step:complete overrides config", %{
       socket: socket,
-      work_order: work_order,
+      run: run,
+      job: job,
       trigger: trigger
     } do
       put_webhook_config(trigger, success_code: 999)
 
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
       override_body = %{"custom" => "response"}
 
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => override_body}
+      )
+
       ref =
         push(socket, "run:complete", %{
           "reason" => "success",
-          "final_state" => %{
-            "_webhookResponse" => %{"status" => 200, "body" => override_body}
-          }
+          "final_state" => %{"data" => "ok"}
         })
 
       assert_reply ref, :ok, nil
       assert_receive {:webhook_response, 200, ^override_body}
     end
 
-    test "float status in _webhookResponse is normalised to integer", %{
-      socket: socket,
-      work_order: work_order
-    } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
-      override_body = %{"ok" => true}
-
-      ref =
-        push(socket, "run:complete", %{
-          "reason" => "success",
-          "final_state" => %{
-            "_webhookResponse" => %{"status" => 200.0, "body" => override_body}
-          }
-        })
-
-      assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^override_body}
-    end
-
-    test "empty _webhookResponse map falls back to default behaviour", %{
-      socket: socket,
-      work_order: work_order
-    } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
-      final_state = %{"_webhookResponse" => %{}, "data" => "ok"}
-
-      ref =
-        push(socket, "run:complete", %{
-          "reason" => "success",
-          "final_state" => final_state
-        })
-
-      assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 201, ^final_state}
-    end
-
-    test "_webhookResponse with only status uses default body", %{
-      socket: socket,
-      work_order: work_order
-    } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
-      final_state = %{"_webhookResponse" => %{"status" => 200}, "data" => "ok"}
-
-      ref =
-        push(socket, "run:complete", %{
-          "reason" => "success",
-          "final_state" => final_state
-        })
-
-      assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^final_state}
-    end
-
-    test "_webhookResponse with only status uses config status code over its own default",
+    test "last step:complete with a webhook_response wins (last-write-wins)",
          %{
            socket: socket,
-           work_order: work_order,
-           trigger: trigger
+           run: run,
+           job: job
          } do
-      put_webhook_config(trigger, success_code: 999)
-
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 201, "body" => %{"first" => true}}
       )
 
-      final_state = %{"_webhookResponse" => %{"status" => 200}, "data" => "ok"}
+      last_body = %{"last" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 202, "body" => last_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 202, ^last_body}
+    end
+
+    test "step without webhook_response does not clear a previously captured one",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      captured_body = %{"captured" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => captured_body}
+      )
+
+      complete_step(socket, run, job, [])
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 200, ^captured_body}
+    end
+
+    test "float status in webhook_response is normalised to integer", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      override_body = %{"ok" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200.0, "body" => override_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 200, ^override_body}
+    end
+
+    test "webhook_response with only status uses default body", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      final_state = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"status" => 200})
 
       ref =
         push(socket, "run:complete", %{
@@ -2044,75 +2028,92 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-
-      # _webhookResponse.status (200) wins over config success_code (999)
       assert_receive {:webhook_response, 200, ^final_state}
     end
 
-    test "_webhookResponse with only body uses config status code", %{
+    test "webhook_response with only body uses config status code", %{
       socket: socket,
-      work_order: work_order,
+      run: run,
+      job: job,
       trigger: trigger
     } do
       put_webhook_config(trigger, success_code: 202)
 
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
       custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
 
       ref =
         push(socket, "run:complete", %{
           "reason" => "success",
-          "final_state" => %{"_webhookResponse" => %{"body" => custom_body}}
+          "final_state" => %{"data" => "ok"}
         })
 
       assert_reply ref, :ok, nil
       assert_receive {:webhook_response, 202, ^custom_body}
     end
 
-    test "_webhookResponse with only body falls back to 201 when no config", %{
+    test "webhook_response with only body falls back to 201 when no config", %{
       socket: socket,
-      work_order: work_order
+      run: run,
+      job: job
     } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
-      )
-
       custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
 
       ref =
         push(socket, "run:complete", %{
           "reason" => "success",
-          "final_state" => %{"_webhookResponse" => %{"body" => custom_body}}
+          "final_state" => %{"data" => "ok"}
         })
 
       assert_reply ref, :ok, nil
       assert_receive {:webhook_response, 201, ^custom_body}
     end
 
-    test "non-map _webhookResponse falls back to default behaviour", %{
+    test "malformed status in webhook_response yields 201 with explanation", %{
       socket: socket,
-      work_order: work_order
+      run: run,
+      job: job
     } do
-      Phoenix.PubSub.subscribe(
-        Lightning.PubSub,
-        "work_order:#{work_order.id}:webhook_response"
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
       )
-
-      final_state = %{"_webhookResponse" => "not a map", "data" => "ok"}
 
       ref =
         push(socket, "run:complete", %{
           "reason" => "success",
-          "final_state" => final_state
+          "final_state" => %{"data" => "ok"}
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 201, ^final_state}
+
+      assert_receive {:webhook_response, 201, %{message: message}}
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "status"
+    end
+
+    test "malformed body in webhook_response yields 201 with explanation", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201, %{message: message}}
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "body"
     end
   end
 
@@ -2125,6 +2126,26 @@ defmodule LightningWeb.RunChannelTest do
     |> Ecto.Changeset.put_embed(:sync_webhook_response_config, config)
     |> Repo.update!()
   end
+
+  defp complete_step(socket, run, job, opts) do
+    step = insert(:step, runs: [run], job: job)
+
+    payload =
+      %{
+        "step_id" => step.id,
+        "output_dataclip_id" => Ecto.UUID.generate(),
+        "output_dataclip" => ~s({"foo": "bar"}),
+        "reason" => "normal"
+      }
+      |> maybe_put("webhook_response", Keyword.get(opts, :webhook_response))
+
+    ref = push(socket, "step:complete", payload)
+    assert_reply ref, :ok, %{step_id: _}
+    step
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp create_socket_and_run(context) do
     merge_setups(context, [
