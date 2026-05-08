@@ -6,11 +6,8 @@ import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import {
-  BreadcrumbLink,
-  BreadcrumbProjectPicker,
-  BreadcrumbText,
-} from './components/Breadcrumbs';
+import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -37,10 +34,12 @@ export interface CollaborativeEditorDataProps {
   'data-workflow-name': string;
   'data-project-id': string;
   'data-project-name'?: string;
+  'data-project-display-name'?: string;
+  'data-project-is-sandbox'?: string;
   'data-project-color'?: string;
-  'data-project-env'?: string;
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
+  'data-project-env'?: string;
   'data-is-new-workflow'?: string;
   'data-ai-assistant-enabled'?: string;
   // Initial run data from server to avoid client-side race conditions
@@ -64,6 +63,9 @@ interface BreadcrumbContentProps {
   workflowName: string;
   projectIdFallback?: string;
   projectNameFallback?: string;
+  projectDisplayNameFallback?: string | null;
+  projectIsSandboxFallback?: string;
+  projectColorFallback?: string | null;
   projectEnvFallback?: string;
   isNewWorkflow?: boolean;
   aiAssistantEnabled: boolean;
@@ -74,6 +76,9 @@ function BreadcrumbContent({
   workflowName,
   projectIdFallback,
   projectNameFallback,
+  projectDisplayNameFallback,
+  projectIsSandboxFallback,
+  projectColorFallback,
   projectEnvFallback,
   isNewWorkflow = false,
   aiAssistantEnabled,
@@ -91,25 +96,25 @@ function BreadcrumbContent({
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
   const projectEnv = projectFromStore?.env ?? projectEnvFallback;
+  const displayName = projectDisplayNameFallback ?? projectName;
+  const projectColor = projectColorFallback ?? null;
+  const isSandbox = projectIsSandboxFallback === 'true';
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
   const handleVersionSelect = useVersionSelect();
 
-  const handleProjectPickerClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    // Dispatch the event that the global ProjectPicker listens for
-    document.body.dispatchEvent(new CustomEvent('open-project-picker'));
-  };
-
   const breadcrumbElements = useMemo(() => {
     return [
       // Project name as picker trigger
-      <BreadcrumbProjectPicker
+      <PickerButton
         key="project-picker"
-        onClick={handleProjectPickerClick}
-      >
-        {projectName}
-      </BreadcrumbProjectPicker>,
+        data-label={displayName ?? ''}
+        data-icon="hero-folder"
+        data-accent-icon="hero-beaker"
+        data-open-event="open-project-picker"
+        data-is-sandbox={isSandbox ? 'true' : 'false'}
+        data-color={projectColor ?? undefined}
+      />,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
         Workflows
       </BreadcrumbLink>,
@@ -142,7 +147,9 @@ function BreadcrumbContent({
     ];
   }, [
     projectId,
-    projectName,
+    displayName,
+    isSandbox,
+    projectColor,
     projectEnv,
     currentWorkflowName,
     workflowId,
@@ -172,9 +179,12 @@ export const CollaborativeEditor: WithActionProps<
   const workflowName = props['data-workflow-name'];
   const projectId = props['data-project-id'];
   const projectName = props['data-project-name'];
-  const projectEnv = props['data-project-env'];
+  const projectDisplayName = props['data-project-display-name'] ?? null;
+  const projectIsSandbox = props['data-project-is-sandbox'] ?? 'false';
+  const projectColor = props['data-project-color'] ?? null;
   const rootProjectId = props['data-root-project-id'] ?? null;
   const rootProjectName = props['data-root-project-name'] ?? null;
+  const projectEnv = props['data-project-env'];
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
   const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
   const initialRunData = props['data-initial-run-data'];
@@ -220,14 +230,15 @@ export const CollaborativeEditor: WithActionProps<
                         {...(projectName !== undefined && {
                           projectNameFallback: projectName,
                         })}
+                        {...(projectDisplayName !== null && {
+                          projectDisplayNameFallback: projectDisplayName,
+                        })}
+                        projectIsSandboxFallback={projectIsSandbox}
+                        {...(projectColor !== null && {
+                          projectColorFallback: projectColor,
+                        })}
                         {...(projectEnv !== undefined && {
                           projectEnvFallback: projectEnv,
-                        })}
-                        {...(rootProjectId !== null && {
-                          rootProjectIdFallback: rootProjectId,
-                        })}
-                        {...(rootProjectName !== null && {
-                          rootProjectNameFallback: rootProjectName,
                         })}
                       />
                       <div className="flex-1 min-h-0 overflow-hidden relative">

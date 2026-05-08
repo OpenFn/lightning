@@ -844,30 +844,29 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
-      # Current project shown in breadcrumb project picker button
+      # Current project shown in breadcrumb project picker button (React mount point)
       assert view
              |> element(
-               "#breadcrumb-project-picker-trigger",
-               ~r/project-1/
+               "#breadcrumb-project-picker-trigger[data-label='project-1']"
              )
              |> has_element?()
 
       # Project picker is a React component - check data attributes contain correct projects
       html = render(view)
       assert html =~ project_1.name
-      assert html =~ ~s(data-current-project-id="#{project_1.id}")
+      assert html =~ ~s(data-current-id="#{project_1.id}")
 
-      # Projects data is passed as JSON to React component
-      # User's projects (project_1, project_2) should be in data-projects
+      # Projects data is passed as JSON via data-items on the picker mount
+      # User's projects (project_1, project_2) should be in data-items
       assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-projects
+      # Other user's project (project_3) should NOT be in data-items
       refute html =~ project_3.id
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ ~s(data-current-id="#{project_2.id}")
       assert html =~ project_1.id
       refute html =~ project_3.id
 
@@ -6901,6 +6900,64 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert flash["error"] == "Collection not found"
     end
+
+    test "collections can be sorted by name and used storage", %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user} | _] = setup_project_users(conn, project, [:owner])
+
+      insert(:collection,
+        project: project,
+        name: "Charlie",
+        byte_size_sum: 100
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Alpha",
+        byte_size_sum: 5_000_000_000
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Bravo",
+        byte_size_sum: 2_500_000
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert html =~ "100 B"
+      assert html =~ "2.5 MB"
+      assert html =~ "5 GB"
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='name']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+    end
+  end
+
+  defp collection_row_names(view) do
+    view
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("#collections-table-table tbody tr td:first-child")
+    |> Enum.map(&(Floki.text(&1) |> String.trim()))
   end
 
   defp find_selected_option(html, selector) do

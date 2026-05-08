@@ -3,6 +3,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   use LightningWeb, :live_component
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
   alias Lightning.Collections
@@ -19,7 +20,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
        collection: nil,
        collections: [],
        preview_json: nil,
-       current_user: nil
+       current_user: nil,
+       sort_by: "name",
+       sort_direction: :asc
      )}
   end
 
@@ -27,20 +30,49 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   def update(
         %{
           can_create_collection: _,
-          collections: _,
           return_to: _,
-          project: _,
+          project: project,
+          sandbox?: _,
           current_user: _
-        } =
-          assigns,
+        } = assigns,
         socket
       ) do
+    sort_by = Map.get(socket.assigns, :sort_by, "name")
+    sort_direction = Map.get(socket.assigns, :sort_direction, :asc)
+
+    collections =
+      Collections.list_project_collections(project,
+        order_by: [{sort_direction, String.to_existing_atom(sort_by)}]
+      )
+
     {:ok,
      socket
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign(:collections, collections)}
   end
 
   @impl true
+  def handle_event("sort", %{"by" => field}, socket)
+      when field in ~w(name byte_size_sum) do
+    new_direction =
+      if socket.assigns.sort_by == field do
+        switch_sort_direction(socket.assigns.sort_direction)
+      else
+        :asc
+      end
+
+    collections =
+      Collections.list_project_collections(socket.assigns.project,
+        order_by: [{new_direction, String.to_existing_atom(field)}]
+      )
+
+    {:noreply,
+     socket
+     |> assign(:collections, collections)
+     |> assign(:sort_by, field)
+     |> assign(:sort_direction, new_direction)}
+  end
+
   def handle_event("toggle_action", %{"action" => "new"}, socket) do
     with :ok <- can_create_collection(socket) do
       changeset = Collection.form_changeset(%Collection{}, %{})
@@ -251,6 +283,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     end
   end
 
+  defp switch_sort_direction(:asc), do: :desc
+  defp switch_sort_direction(:desc), do: :asc
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -266,6 +301,11 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         action_button_target={@myself}
         action_button_disabled={!@can_create_collection}
         action_button_id="open-create-collection-modal-button"
+      />
+      <.sandbox_settings_banner
+        :if={@sandbox?}
+        id="sandbox-banner-collections"
+        variant={:editable}
       />
 
       <.form_modal_component
@@ -300,6 +340,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         id="collections-table"
         collections={@collections}
         can_create_collection={@can_create_collection}
+        sort_by={@sort_by}
+        sort_direction={@sort_direction}
+        sort_target={@myself}
       >
         <:actions :let={collection}>
           <div class="text-right flex">

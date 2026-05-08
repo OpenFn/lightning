@@ -148,7 +148,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           Lightning.AdaptorRegistry.versions_for(module_name)
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
-          |> Enum.sort_by(&Version.parse(&1), :desc)
+          |> sort_versions_desc()
           |> Enum.map(fn version ->
             build_select_option(module_name, version)
           end)
@@ -175,6 +175,14 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   defp build_select_option(module_name, version) do
     [key: version, value: "#{module_name}@#{version}"]
+  end
+
+  @doc "Sort version strings in descending semver order."
+  @spec sort_versions_desc([String.t()]) :: [String.t()]
+  def sort_versions_desc(versions) when is_list(versions) do
+    # Use `Version.compare/2`. Structural compare on parsed `Version` structs
+    # disagrees with semver for pre-releases.
+    Enum.sort(versions, {:desc, Version})
   end
 
   @impl true

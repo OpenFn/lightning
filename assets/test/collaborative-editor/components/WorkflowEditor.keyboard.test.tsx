@@ -316,6 +316,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       await waitFor(() => {
         expect(mockOpenRunPanel).toHaveBeenCalledWith({
           triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
         });
       });
     });
