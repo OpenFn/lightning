@@ -264,7 +264,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
         # ["host:port", ...] for human readability. The parser splits back.
         {:hosts,
          Enum.map(hosts, fn host_port ->
-           host_port |> Enum.map(&to_string/1) |> Enum.join(":")
+           Enum.map_join(host_port, ":", &to_string/1)
          end)}
 
       {:sasl, sasl} when is_atom(sasl) ->
@@ -441,12 +441,10 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   defp emit_step(step, indent) do
     ordered_keys =
-      cond do
-        Map.has_key?(step, :type) ->
-          [:id, :name, :enabled, :type, :openfn, :next]
-
-        true ->
-          [:id, :name, :adaptors, :expression, :configuration, :next]
+      if Map.has_key?(step, :type) do
+        [:id, :name, :enabled, :type, :openfn, :next]
+      else
+        [:id, :name, :adaptors, :expression, :configuration, :next]
       end
 
     lines = emit_record_lines(step, ordered_keys)
@@ -597,24 +595,22 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           ["  kafka:" | emit_kafka_block(nested)]
 
         {:ok, value} when is_list(value) ->
-          if value == [] do
-            []
-          else
-            header = "  #{key}:"
-
-            items =
-              Enum.map(value, fn v ->
-                "    - #{quote_if_needed(to_string(v))}"
-              end)
-
-            [header | items]
-          end
+          emit_openfn_list(key, value)
 
         {:ok, value}
         when is_binary(value) or is_boolean(value) or is_number(value) ->
           ["  " <> emit_scalar_field(Atom.to_string(key), value)]
       end
     end)
+  end
+
+  defp emit_openfn_list(_key, []), do: []
+
+  defp emit_openfn_list(key, values) do
+    items =
+      Enum.map(values, fn v -> "    - #{quote_if_needed(to_string(v))}" end)
+
+    ["  #{key}:" | items]
   end
 
   defp emit_kafka_block(kafka) do
@@ -671,8 +667,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     end
   end
 
-  defp quote_if_needed(value), do: to_string(value)
-
   defp yaml_reserved?(value) do
     String.downcase(value) in ~w(true false null yes no on off ~)
   end
@@ -683,16 +677,14 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     project = preload_project_for_export(project)
 
     workflows_canonical =
-      cond do
-        is_list(snapshots) ->
-          snapshots
-          |> Enum.sort_by(& &1.name)
-          |> Enum.map(&snapshot_to_canonical_workflow/1)
-
-        true ->
-          (project.workflows || [])
-          |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-          |> Enum.map(&workflow_struct_to_canonical/1)
+      if is_list(snapshots) do
+        snapshots
+        |> Enum.sort_by(& &1.name)
+        |> Enum.map(&snapshot_to_canonical_workflow/1)
+      else
+        (project.workflows || [])
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&workflow_struct_to_canonical/1)
       end
 
     # Collections are emitted as a string list of names (spec: `string[]`),
