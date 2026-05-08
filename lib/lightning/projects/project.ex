@@ -32,6 +32,10 @@ defmodule Lightning.Projects.Project do
     field :history_retention_period, :integer
     field :dataclip_retention_period, :integer
 
+    field :run_cap, :integer
+    field :ai_tokens_cap, :integer
+    field :storage_cap_mb, :integer
+
     field :color, :string
     field :env, :string
 
@@ -76,6 +80,9 @@ defmodule Lightning.Projects.Project do
       :retention_policy,
       :history_retention_period,
       :dataclip_retention_period,
+      :run_cap,
+      :ai_tokens_cap,
+      :storage_cap_mb,
       :allow_support_access,
       :parent_id,
       :color,
@@ -104,6 +111,9 @@ defmodule Lightning.Projects.Project do
     |> maybe_validate_dataclip_retention_period()
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
+    |> validate_number(:run_cap, greater_than_or_equal_to: 0)
+    |> validate_number(:ai_tokens_cap, greater_than_or_equal_to: 0)
+    |> validate_number(:storage_cap_mb, greater_than_or_equal_to: 0)
     |> validate_format(
       :color,
       ~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3}|[A-Fa-f0-9]{8})$/,
@@ -142,6 +152,9 @@ defmodule Lightning.Projects.Project do
       :retention_policy,
       :history_retention_period,
       :dataclip_retention_period,
+      :run_cap,
+      :ai_tokens_cap,
+      :storage_cap_mb,
       :allow_support_access,
       :parent_id,
       :color,

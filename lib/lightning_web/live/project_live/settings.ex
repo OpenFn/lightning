@@ -165,14 +165,16 @@ defmodule LightningWeb.ProjectLive.Settings do
     project_users = Projects.get_project_users!(socket.assigns.project.id)
     auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
 
-    concurrency_input_component =
+    route_metadata =
       socket.router
       |> Phoenix.Router.route_info(
         "GET",
         ~p"/projects/:project_id/settings",
         nil
       )
-      |> Map.get(:concurrency_input)
+
+    concurrency_input_component = Map.get(route_metadata, :concurrency_input)
+    usage_caps_input_component = Map.get(route_metadata, :usage_caps_input)
 
     socket
     |> assign(
@@ -180,6 +182,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_users: project_users,
       webhook_auth_methods: auth_methods,
       concurrency_input_component: concurrency_input_component,
+      usage_caps_input_component: usage_caps_input_component,
       show_collaborators_modal: false,
       show_invite_collaborators_modal: false,
       active_modal: nil,

@@ -240,6 +240,14 @@
             </.form>
           </div>
 
+          <.live_component
+            :if={assigns[:usage_caps_input_component]}
+            module={assigns[:usage_caps_input_component]}
+            id="usage-caps-input-component"
+            project={@project}
+            current_user={@current_user}
+          />
+
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
               <h6 class="font-medium text-black">Export your Project</h6>

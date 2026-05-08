@@ -100,6 +100,52 @@ defmodule Lightning.Projects.ProjectTest do
       refute cs.valid?
       assert "cannot be self" in errors_on(cs).parent_id
     end
+
+    test "casts and validates run_cap, ai_tokens_cap, storage_cap_mb" do
+      proj = insert(:project)
+
+      cs =
+        Project.changeset(proj, %{
+          run_cap: 1000,
+          ai_tokens_cap: 50_000,
+          storage_cap_mb: 100
+        })
+
+      assert cs.valid?
+      assert Ecto.Changeset.get_field(cs, :run_cap) == 1000
+      assert Ecto.Changeset.get_field(cs, :ai_tokens_cap) == 50_000
+      assert Ecto.Changeset.get_field(cs, :storage_cap_mb) == 100
+    end
+
+    test "allows nil caps (no cap)" do
+      proj = insert(:project)
+
+      cs =
+        Project.changeset(proj, %{
+          run_cap: nil,
+          ai_tokens_cap: nil,
+          storage_cap_mb: nil
+        })
+
+      assert cs.valid?
+      assert Ecto.Changeset.get_field(cs, :run_cap) == nil
+    end
+
+    test "rejects negative caps" do
+      proj = insert(:project)
+
+      cs = Project.changeset(proj, %{run_cap: -1})
+      refute cs.valid?
+      assert "must be greater than or equal to 0" in errors_on(cs).run_cap
+
+      cs = Project.changeset(proj, %{ai_tokens_cap: -1})
+      refute cs.valid?
+      assert "must be greater than or equal to 0" in errors_on(cs).ai_tokens_cap
+
+      cs = Project.changeset(proj, %{storage_cap_mb: -1})
+      refute cs.valid?
+      assert "must be greater than or equal to 0" in errors_on(cs).storage_cap_mb
+    end
   end
 
   describe "unique name scoped to parent (sandboxes)" do
