@@ -2967,6 +2967,43 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "root_id/1" do
+    test "returns the project's own id for a root project" do
+      project = insert(:project)
+      assert Projects.root_id(project) == project.id
+      assert Projects.root_id(project.id) == project.id
+    end
+
+    test "returns the parent's id for a direct sandbox" do
+      parent = insert(:project)
+      sandbox = insert(:project, parent: parent)
+
+      assert Projects.root_id(sandbox) == parent.id
+      assert Projects.root_id(sandbox.id) == parent.id
+    end
+
+    test "walks all the way to the top of a deep chain" do
+      grandparent = insert(:project)
+      parent = insert(:project, parent: grandparent)
+      grandchild = insert(:project, parent: parent)
+
+      assert Projects.root_id(grandchild) == grandparent.id
+    end
+
+    test "siblings share the same root" do
+      parent = insert(:project)
+      a = insert(:project, parent: parent)
+      b = insert(:project, parent: parent)
+
+      assert Projects.root_id(a) == parent.id
+      assert Projects.root_id(b) == parent.id
+    end
+
+    test "returns nil for an unknown project id" do
+      assert Projects.root_id(Ecto.UUID.generate()) == nil
+    end
+  end
+
   describe "sandbox facade delegates" do
     test "provision_sandbox/3 creates a child project and sets parent_id" do
       owner = insert(:user)

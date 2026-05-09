@@ -5,9 +5,9 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
 
   import Lightning.Factories
 
-  @ancestor_branch_error "this branch is already linked to a parent project; sandboxes must use a different branch"
+  @tree_branch_error "this branch is already linked to another project in the same project family; use a different branch"
 
-  describe "validate_no_ancestor_branch_conflict in changeset/2" do
+  describe "validate_no_tree_branch_conflict in changeset/2" do
     test "rejects sandbox claiming the same (repo, branch) as its direct parent" do
       parent = insert(:project)
 
@@ -28,7 +28,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
         })
 
       refute changeset.valid?
-      assert {@ancestor_branch_error, _} = changeset.errors[:branch]
+      assert {@tree_branch_error, _} = changeset.errors[:branch]
     end
 
     test "rejects grandchild sandbox claiming a grandparent's (repo, branch)" do
@@ -52,7 +52,52 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
         })
 
       refute changeset.valid?
-      assert {@ancestor_branch_error, _} = changeset.errors[:branch]
+      assert {@tree_branch_error, _} = changeset.errors[:branch]
+    end
+
+    test "rejects sibling sandboxes from sharing the same (repo, branch)" do
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "openfn/example",
+        branch: "dev"
+      )
+
+      changeset =
+        ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
+          project_id: sibling_b.id,
+          repo: "openfn/example",
+          branch: "dev",
+          github_installation_id: "1234"
+        })
+
+      refute changeset.valid?
+      assert {@tree_branch_error, _} = changeset.errors[:branch]
+    end
+
+    test "rejects a parent claiming a (repo, branch) already taken by its sandbox" do
+      parent = insert(:project)
+      sandbox = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sandbox,
+        repo: "openfn/example",
+        branch: "feature"
+      )
+
+      changeset =
+        ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
+          project_id: parent.id,
+          repo: "openfn/example",
+          branch: "feature",
+          github_installation_id: "1234"
+        })
+
+      refute changeset.valid?
+      assert {@tree_branch_error, _} = changeset.errors[:branch]
     end
 
     test "allows a sandbox to share parent's repo on a different branch" do
@@ -101,7 +146,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
       refute changeset.errors[:branch]
     end
 
-    test "non-sandbox project (no parent) is unaffected by the guard" do
+    test "non-sandbox project (no parent) is unaffected when no other project in its tree uses the (repo, branch)" do
       project = insert(:project)
 
       changeset =
@@ -116,22 +161,21 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
       refute changeset.errors[:branch]
     end
 
-    test "sibling sandboxes can share the same (repo, branch) — they are not ancestors" do
-      parent = insert(:project)
-      sibling_a = insert(:project, parent: parent)
-      sibling_b = insert(:project, parent: parent)
+    test "unrelated projects (separate trees) may share the same (repo, branch)" do
+      tree_a = insert(:project)
+      tree_b = insert(:project)
 
       insert(:project_repo_connection,
-        project: sibling_a,
+        project: tree_a,
         repo: "openfn/example",
-        branch: "dev"
+        branch: "main"
       )
 
       changeset =
         ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
-          project_id: sibling_b.id,
+          project_id: tree_b.id,
           repo: "openfn/example",
-          branch: "dev",
+          branch: "main",
           github_installation_id: "1234"
         })
 
@@ -158,11 +202,11 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
           github_installation_id: "1234"
         })
 
-      refute changeset.errors[:branch] == {@ancestor_branch_error, []}
+      refute changeset.errors[:branch] == {@tree_branch_error, []}
     end
   end
 
-  describe "validate_no_ancestor_branch_conflict in configure_changeset/2" do
+  describe "validate_no_tree_branch_conflict in configure_changeset/2" do
     test "rejects on configure_changeset path too" do
       parent = insert(:project)
 
@@ -185,48 +229,68 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
         })
 
       refute changeset.valid?
-      assert {@ancestor_branch_error, _} = changeset.errors[:branch]
+      assert {@tree_branch_error, _} = changeset.errors[:branch]
     end
   end
 
-  describe "ancestor_branch_conflict?/3" do
-    test "returns false for an empty ancestor list" do
-      refute ProjectRepoConnection.ancestor_branch_conflict?(
-               [],
-               "any/repo",
-               "any"
-             )
-    end
+  describe "tree_branch_conflict?/4" do
+    test "returns false when no other connection in the tree uses the (repo, branch)" do
+      root = insert(:project)
 
-    test "returns true when an ancestor is linked to (repo, branch)" do
-      parent = insert(:project)
-
-      insert(:project_repo_connection,
-        project: parent,
-        repo: "openfn/example",
-        branch: "main"
-      )
-
-      assert ProjectRepoConnection.ancestor_branch_conflict?(
-               [parent.id],
+      refute ProjectRepoConnection.tree_branch_conflict?(
+               root.id,
                "openfn/example",
                "main"
              )
     end
 
-    test "returns false when no ancestor matches" do
-      parent = insert(:project)
+    test "returns true when another connection in the same tree uses the (repo, branch)" do
+      root = insert(:project)
 
       insert(:project_repo_connection,
-        project: parent,
+        project: root,
         repo: "openfn/example",
         branch: "main"
       )
 
-      refute ProjectRepoConnection.ancestor_branch_conflict?(
-               [parent.id],
+      assert ProjectRepoConnection.tree_branch_conflict?(
+               root.id,
+               "openfn/example",
+               "main"
+             )
+    end
+
+    test "returns false when a different branch is used in the tree" do
+      root = insert(:project)
+
+      insert(:project_repo_connection,
+        project: root,
+        repo: "openfn/example",
+        branch: "main"
+      )
+
+      refute ProjectRepoConnection.tree_branch_conflict?(
+               root.id,
                "openfn/example",
                "dev"
+             )
+    end
+
+    test "excludes self_id so a row doesn't conflict with itself" do
+      root = insert(:project)
+
+      conn =
+        insert(:project_repo_connection,
+          project: root,
+          repo: "openfn/example",
+          branch: "main"
+        )
+
+      refute ProjectRepoConnection.tree_branch_conflict?(
+               root.id,
+               "openfn/example",
+               "main",
+               conn.id
              )
     end
   end

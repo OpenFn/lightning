@@ -819,9 +819,6 @@ defmodule Lightning.Projects do
   Returns a list of ancestor project IDs for the given project, walking the
   `parent_id` chain upward via a recursive CTE. The project's own id is **not**
   included; for a non-sandbox project (`parent_id == nil`) returns `[]`.
-
-  Used by the GitHub-sync sandbox guard to ensure a sandbox cannot claim the
-  same `(repo, branch)` as any of its ancestors.
   """
   @spec ancestor_ids(Project.t() | Ecto.UUID.t()) :: [Ecto.UUID.t()]
   def ancestor_ids(%Project{parent_id: nil}), do: []
@@ -855,6 +852,44 @@ defmodule Lightning.Projects do
     )
     |> select([a], type(a.id, Ecto.UUID))
     |> Repo.all()
+  end
+
+  @doc """
+  Returns the topmost ancestor (root) project id for the given project. For a
+  root project (`parent_id == nil`) returns its own id. Returns `nil` if the
+  project does not exist.
+
+  Used by the GitHub-sync guard to ensure no two projects sharing the same
+  ultimate root claim the same `(repo, branch)` pair.
+  """
+  @spec root_id(Project.t() | Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def root_id(%Project{id: id, parent_id: nil}) when is_binary(id), do: id
+
+  def root_id(%Project{id: id, parent_id: parent_id})
+      when is_binary(parent_id) and is_binary(id) do
+    root_id(id)
+  end
+
+  def root_id(project_id) when is_binary(project_id) do
+    initial =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: a in "project_chain",
+        on: a.parent_id == p.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    "project_chain"
+    |> recursive_ctes(true)
+    |> with_cte("project_chain", as: ^union_all(initial, ^recursion))
+    |> where([c], is_nil(c.parent_id))
+    |> select([c], type(c.id, Ecto.UUID))
+    |> Repo.one()
   end
 
   @doc """

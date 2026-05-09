@@ -25,21 +25,26 @@ defmodule Lightning.VersionControl do
   defdelegate subscribe(user), to: Events
 
   @doc """
-  Creates a connection between a project and a github repo
+  Creates a connection between a project and a github repo.
+
+  The `(root_project_id, repo, branch)` uniqueness constraint on
+  `project_repo_connections` is the source of truth: two concurrent inserts
+  for the same project family + (repo, branch) cannot both succeed even at
+  READ COMMITTED isolation. The constraint violation is translated back into
+  `:branch_used_in_project_tree` for callers.
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
           | {:error,
              Ecto.Changeset.t()
              | UsageLimiting.message()
-             | :branch_used_by_ancestor}
+             | :branch_used_in_project_tree}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with :ok <- check_ancestor_branch_conflict(changeset),
-           {:ok, repo_connection} <- Repo.insert(changeset),
+      with {:ok, repo_connection} <- insert_repo_connection(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -54,25 +59,17 @@ defmodule Lightning.VersionControl do
     end)
   end
 
-  defp check_ancestor_branch_conflict(changeset) do
-    project_id = Ecto.Changeset.get_field(changeset, :project_id)
-    repo = Ecto.Changeset.get_field(changeset, :repo)
-    branch = Ecto.Changeset.get_field(changeset, :branch)
+  defp insert_repo_connection(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, repo_connection} ->
+        {:ok, repo_connection}
 
-    if is_binary(project_id) and is_binary(repo) and is_binary(branch) do
-      ancestor_ids = Lightning.Projects.ancestor_ids(project_id)
-
-      if ProjectRepoConnection.ancestor_branch_conflict?(
-           ancestor_ids,
-           repo,
-           branch
-         ) do
-        {:error, :branch_used_by_ancestor}
-      else
-        :ok
-      end
-    else
-      :ok
+      {:error, %Ecto.Changeset{} = failed} ->
+        if ProjectRepoConnection.tree_unique_violation?(failed) do
+          {:error, :branch_used_in_project_tree}
+        else
+          {:error, failed}
+        end
     end
   end
 

@@ -174,15 +174,15 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     |> maybe_force_branch_error_action()
   end
 
-  # When the ancestor-branch guard fails on a branch the user just selected,
-  # set the changeset action so Phoenix renders the error inline. We only
-  # promote the action when the conflict error is present so other "blank"
-  # errors stay hidden until the user submits.
+  # When the project-tree branch guard fails on a branch the user just
+  # selected, set the changeset action so Phoenix renders the error inline.
+  # We only promote the action when the conflict error is present so other
+  # "blank" errors stay hidden until the user submits.
   defp maybe_force_branch_error_action(changeset) do
     branch_errors = Keyword.get_values(changeset.errors, :branch)
 
     if Enum.any?(branch_errors, fn {msg, _} ->
-         msg =~ "already linked to a parent project"
+         msg =~ "already linked to another project in the same project family"
        end) do
       Map.put(changeset, :action, :validate)
     else
