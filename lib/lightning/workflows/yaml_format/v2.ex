@@ -33,11 +33,11 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       - id: <string>
         type: webhook | cron | kafka
         enabled: true | false
+        cron_expression: "0 0 * * *"          # cron only (spec: flat field)
+        webhook_reply: <string>               # webhook only (spec: flat field)
         openfn:
-          # Lightning-specific runtime config goes here:
-          cron: "0 0 * * *"                   # cron only
+          # Lightning-specific extensions (not in the portability spec):
           cron_cursor: <step-id>              # cron only
-          webhook_reply: before_start | ...   # webhook only
           kafka:                              # kafka only
             hosts: [["broker", 9092]]
             topics: [...]
@@ -83,8 +83,10 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   | step expression / body         | `expression:`                |
   | step adaptor                   | `adaptor:`                   |
   | step credential                | `configuration:`             |
-  | trigger Lightning-only state   | nested under `openfn:`       |
-  | cron expression                | `cron:` (under `openfn:`)    |
+  | cron expression (flat on trig) | `cron_expression:`           |
+  | webhook reply (flat on trig)   | `webhook_reply:`             |
+  | trigger Lightning extensions   | nested under `openfn:`       |
+  | cron cursor                    | `cron_cursor:` (under openfn)|
   | kafka block                    | `kafka:` (under `openfn:`)   |
   | outgoing edges from a node     | `next:` (string or object)   |
   | edge condition                 | `condition:`                 |
@@ -205,28 +207,34 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       id: type_str,
       name: type_str,
       enabled: trigger.enabled || false,
-      # `type:` and the `openfn:` blob are Lightning extensions to the
-      # portability spec, which leaves trigger fields explicitly TODO.
       type: type_str
     }
 
     base
+    |> maybe_put_trigger_spec_fields(trigger)
     |> maybe_put(:openfn, trigger_openfn_blob(trigger, jobs))
     |> add_next_for_trigger(trigger, edges, job_id_to_key)
   end
 
-  defp trigger_openfn_blob(%{type: :cron} = trigger, jobs) do
-    %{}
-    |> maybe_put(:cron, trigger.cron_expression)
-    |> maybe_put(:cron_cursor, cron_cursor_key(trigger, jobs))
-    |> nil_if_empty()
+  # Per the portability spec, `cron_expression` and `webhook_reply` are flat
+  # fields on the trigger itself (not nested under `openfn:`).
+  defp maybe_put_trigger_spec_fields(base, %{type: :cron} = trigger) do
+    maybe_put(base, :cron_expression, trigger.cron_expression)
   end
 
-  defp trigger_openfn_blob(%{type: :webhook} = trigger, _jobs) do
+  defp maybe_put_trigger_spec_fields(base, %{type: :webhook} = trigger) do
     case trigger.webhook_reply do
-      nil -> nil
-      reply -> %{webhook_reply: Atom.to_string(reply)}
+      nil -> base
+      reply -> Map.put(base, :webhook_reply, Atom.to_string(reply))
     end
+  end
+
+  defp maybe_put_trigger_spec_fields(base, _trigger), do: base
+
+  defp trigger_openfn_blob(%{type: :cron} = trigger, jobs) do
+    %{}
+    |> maybe_put(:cron_cursor, cron_cursor_key(trigger, jobs))
+    |> nil_if_empty()
   end
 
   defp trigger_openfn_blob(%{type: :kafka} = trigger, _jobs) do
@@ -284,14 +292,14 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     }
 
     base
-    |> maybe_put(:adaptors, adaptors_list(job.adaptor))
+    |> maybe_put(:adaptor, adaptor_value(job.adaptor))
     |> maybe_put(:configuration, job_credential_key(job))
     |> add_next_for_step(job, edges, job_id_to_key)
   end
 
-  defp adaptors_list(nil), do: nil
-  defp adaptors_list(""), do: nil
-  defp adaptors_list(adaptor) when is_binary(adaptor), do: [adaptor]
+  defp adaptor_value(nil), do: nil
+  defp adaptor_value(""), do: nil
+  defp adaptor_value(adaptor) when is_binary(adaptor), do: adaptor
 
   defp job_credential_key(%{
          project_credential: %{credential: %{name: name}, user: %{email: email}}
@@ -442,9 +450,18 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   defp emit_step(step, indent) do
     ordered_keys =
       if Map.has_key?(step, :type) do
-        [:id, :name, :enabled, :type, :openfn, :next]
+        [
+          :id,
+          :name,
+          :enabled,
+          :type,
+          :cron_expression,
+          :webhook_reply,
+          :openfn,
+          :next
+        ]
       else
-        [:id, :name, :adaptors, :expression, :configuration, :next]
+        [:id, :name, :adaptor, :expression, :configuration, :next]
       end
 
     lines = emit_record_lines(step, ordered_keys)
@@ -511,16 +528,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     [emit_scalar_field(Atom.to_string(key), value)]
   end
 
-  defp emit_record_field(key, value) when is_atom(key) and is_list(value) do
-    if value == [] do
-      []
-    else
-      header = "#{key}:"
-      items = Enum.map(value, fn v -> "  - #{quote_if_needed(to_string(v))}" end)
-      [header | items]
-    end
-  end
-
   defp emit_next_target(target_key, edge_obj)
        when is_binary(target_key) or is_atom(target_key) do
     target_str = to_string(target_key)
@@ -567,12 +574,12 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp emit_openfn_block(openfn) do
-    # Stable order: cron, cron_cursor, webhook_reply, kafka, then any other
-    # keys (e.g. uuid for project-level round-tripping with the CLI).
+    # Stable order: cron_cursor, kafka, then any other keys (e.g. uuid for
+    # project-level round-tripping with the CLI). `cron_expression` and
+    # `webhook_reply` are spec-defined flat fields on the trigger itself, not
+    # under `openfn:`.
     known_order = [
-      :cron,
       :cron_cursor,
-      :webhook_reply,
       :kafka
     ]
 

@@ -98,7 +98,7 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ ~r/^\s*body:/m
     end
 
-    test "emits `cron:` (not `cron_expression:`) and `cron_cursor:` for cron triggers" do
+    test "emits flat `cron_expression:` on trigger and `cron_cursor:` under openfn" do
       cursor_job =
         build(:job,
           id: Ecto.UUID.generate(),
@@ -135,9 +135,10 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
 
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      assert yaml =~ ~r/cron: '0 6 \* \* \*'/
-      assert yaml =~ ~r/cron_cursor: cursor-step/
-      refute yaml =~ "cron_expression"
+      # Spec: `cron_expression` is a flat field on the trigger, not under openfn.
+      assert yaml =~ ~r/cron_expression: '0 6 \* \* \*'/
+      # Lightning extension stays under openfn.
+      assert yaml =~ ~r/openfn:\s*\n\s*cron_cursor: cursor-step/
       refute yaml =~ "cron_cursor_job"
     end
 

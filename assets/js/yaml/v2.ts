@@ -4,14 +4,15 @@
 // `test/fixtures/portability/v2/canonical_workflow.yaml` first — that
 // fixture is the spec witness; this module must round-trip it.
 //
-// Spec source: https://raw.githubusercontent.com/OpenFn/kit/5e4d65a/packages/lexicon/portability.d.ts
+// Spec source: https://raw.githubusercontent.com/OpenFn/kit/42d6b38/packages/lexicon/portability.d.ts
 //
 // ## Wire shape (workflow)
 //
 // `steps: Array<Job | Trigger>` — single top-level array combining triggers
-// and jobs. Jobs use `adaptors: string[]` (plural array). Trigger fields are
-// explicitly TODO in the spec; we keep `type:`/`openfn:` as a documented
-// Lightning extension until the spec author fills them in.
+// and jobs. Jobs use `adaptor: string` (singular). Triggers carry
+// `cron_expression?` and `webhook_reply?` as flat spec-defined fields.
+// Lightning-specific extensions (`cron_cursor`, `kafka`) live under
+// `openfn:` since the spec doesn't define them.
 //
 // ## Edge shape (`next:`)
 //
@@ -175,9 +176,7 @@ interface V2KafkaConfig {
 }
 
 interface V2OpenfnBlock {
-  cron?: string;
   cron_cursor?: string;
-  webhook_reply?: 'before_start' | 'after_completion' | 'custom';
   kafka?: V2KafkaConfig;
   [key: string]: unknown;
 }
@@ -187,6 +186,8 @@ interface V2TriggerStep {
   name?: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled?: boolean;
+  cron_expression?: string;
+  webhook_reply?: string;
   openfn?: V2OpenfnBlock;
   next?: V2NextValue;
 }
@@ -194,7 +195,7 @@ interface V2TriggerStep {
 interface V2JobStep {
   id: string;
   name: string;
-  adaptors: string[];
+  adaptor: string;
   expression: string;
   configuration?: string | null;
   next?: V2NextValue;
@@ -231,6 +232,8 @@ interface CanonicalTriggerStep {
   name: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled: boolean;
+  cron_expression?: string;
+  webhook_reply?: string;
   openfn?: V2OpenfnBlock;
   next?: string | Record<string, CanonicalEdge>;
 }
@@ -238,7 +241,7 @@ interface CanonicalTriggerStep {
 interface CanonicalJobStep {
   id: string;
   name: string;
-  adaptors: string[];
+  adaptor: string;
   expression: string;
   configuration?: string;
   next?: string | Record<string, CanonicalEdge>;
@@ -285,23 +288,22 @@ const triggerStateToCanonical = (
   const base: CanonicalTriggerStep = {
     id: trigger.type,
     name: trigger.type,
-    // `type:` and the `openfn:` blob are Lightning extensions to the
-    // portability spec, which leaves trigger fields explicitly TODO.
     type: trigger.type,
     enabled: trigger.enabled ?? false,
   };
 
+  // Spec-defined flat fields go on the trigger itself.
+  if (trigger.type === 'cron' && trigger.cron_expression) {
+    base.cron_expression = trigger.cron_expression;
+  } else if (trigger.type === 'webhook' && trigger.webhook_reply) {
+    base.webhook_reply = trigger.webhook_reply;
+  }
+
+  // Lightning-specific extensions (cron_cursor, kafka) live under `openfn:`.
   const openfn: V2OpenfnBlock = {};
-  if (trigger.type === 'cron') {
-    if (trigger.cron_expression) openfn.cron = trigger.cron_expression;
-    if (trigger.cron_cursor_job_id) {
-      const cursorJob = jobs.find(j => j.id === trigger.cron_cursor_job_id);
-      if (cursorJob) openfn.cron_cursor = hyphenate(cursorJob.name);
-    }
-  } else if (trigger.type === 'webhook') {
-    if (trigger.webhook_reply) {
-      openfn.webhook_reply = trigger.webhook_reply;
-    }
+  if (trigger.type === 'cron' && trigger.cron_cursor_job_id) {
+    const cursorJob = jobs.find(j => j.id === trigger.cron_cursor_job_id);
+    if (cursorJob) openfn.cron_cursor = hyphenate(cursorJob.name);
   }
   // Kafka: state has no kafka_configuration today; placeholder for parity.
 
@@ -326,9 +328,8 @@ const jobStateToCanonical = (
   const base: CanonicalJobStep = {
     id: hyphenate(job.name),
     name: job.name,
-    // Spec: `adaptors?: string[]`. State carries a single adaptor today, so
-    // we wrap it in a one-element array to satisfy the array-typed field.
-    adaptors: job.adaptor ? [job.adaptor] : [],
+    // Spec: `adaptor?: string` (singular).
+    adaptor: job.adaptor ?? '',
     expression: job.body,
   };
 
@@ -505,11 +506,11 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
 
   const jobs: Record<string, SpecJob> = {};
   jobSteps.forEach(step => {
-    // Spec uses `adaptors: string[]`; Lightning state stores a single adaptor,
-    // so we collapse the array to its first element.
+    // Spec: `adaptor?: string` (singular). Read it directly into Lightning's
+    // single-adaptor state field.
     const job: SpecJob & { credential?: string } = {
       name: step.name,
-      adaptor: step.adaptors[0] ?? '',
+      adaptor: step.adaptor ?? '',
       body: step.expression,
       pos: undefined as unknown as Position | undefined,
     };
@@ -568,7 +569,7 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
     const out: SpecCronTrigger = {
       type: 'cron',
       enabled,
-      cron_expression: openfn.cron ?? '',
+      cron_expression: trigger.cron_expression ?? '',
       cron_cursor_job: openfn.cron_cursor ?? null,
       pos: undefined,
     };
@@ -578,7 +579,7 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
     const out: SpecWebhookTrigger = {
       type: 'webhook',
       enabled,
-      webhook_reply: openfn.webhook_reply ?? null,
+      webhook_reply: trigger.webhook_reply ?? null,
       pos: undefined,
     };
     return out;

@@ -5,15 +5,14 @@ steps:
     name: webhook
     enabled: true
     type: webhook
-    openfn:
-      webhook_reply: after_completion
+    webhook_reply: after_completion
     next: ingest
   - id: cron
     name: cron
     enabled: false
     type: cron
+    cron_expression: '0 6 * * *'
     openfn:
-      cron: '0 6 * * *'
       cron_cursor: ingest
     next: ingest
   - id: kafka
@@ -31,8 +30,7 @@ steps:
     next: ingest
   - id: ingest
     name: ingest
-    adaptors:
-      - '@openfn/language-http@latest'
+    adaptor: '@openfn/language-http@latest'
     expression: |
       fn(state => state)
     configuration: alice@example.com|http creds
@@ -48,27 +46,23 @@ steps:
         condition: '!state.errors'
   - id: transform
     name: transform
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next: load
   - id: report-failure
     name: report failure
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next: load
   - id: maybe-skip
     name: maybe skip
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
   - id: load
     name: load
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

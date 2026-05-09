@@ -8,8 +8,7 @@ steps:
     next: source-step
   - id: source-step
     name: source step
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next:
@@ -19,7 +18,6 @@ steps:
         label: Only when payload present
   - id: target-step
     name: target step
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

@@ -11,11 +11,12 @@
  *     are rejected at parse time (`JobNotFoundError`).
  *
  * The wire shape is the unified `steps:` array (triggers AND jobs in one
- * list, distinguished by a `type:` discriminator on triggers, with
- * Lightning-specific trigger config nested under `openfn:`). This matches the
- * Elixir `Lightning.Workflows.YamlFormat.V2` module and the @openfn/cli
- * lexicon. See `test/fixtures/portability/v2/canonical_workflow.yaml` for the
- * spec witness.
+ * list, distinguished by a `type:` discriminator on triggers). Spec-defined
+ * trigger fields (`cron_expression`, `webhook_reply`) are flat on the trigger;
+ * Lightning-only extensions (`cron_cursor`, `kafka`) live nested under
+ * `openfn:`. This matches the Elixir `Lightning.Workflows.YamlFormat.V2`
+ * module and the @openfn/cli lexicon. See
+ * `test/fixtures/portability/v2/canonical_workflow.yaml` for the spec witness.
  */
 
 import { readFileSync } from 'node:fs';
@@ -442,7 +443,7 @@ describe('v2 AJV schema rejection', () => {
         {
           id: 'a',
           name: 'a',
-          adaptors: ['@openfn/language-common@latest'],
+          adaptor: '@openfn/language-common@latest',
           expression: 'fn(s => s)',
         },
       ],
@@ -456,7 +457,7 @@ describe('v2 AJV schema rejection', () => {
         {
           id: 'a',
           name: 'a',
-          adaptors: ['@openfn/language-common@latest'],
+          adaptor: '@openfn/language-common@latest',
           expression: 'fn(s => s)',
         },
       ],
@@ -481,14 +482,14 @@ describe('v2 AJV schema rejection', () => {
         {
           id: 'a',
           name: 'a',
-          adaptors: ['@openfn/language-common@latest'],
+          adaptor: '@openfn/language-common@latest',
           expression: 'fn(s => s)',
           next: { b: { condition: '!state.errors && state.foo > 0' } },
         },
         {
           id: 'b',
           name: 'b',
-          adaptors: ['@openfn/language-common@latest'],
+          adaptor: '@openfn/language-common@latest',
           expression: 'fn(s => s)',
         },
       ],
@@ -509,8 +510,7 @@ name: dangling
 steps:
   - id: a
     name: a
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
     next:
@@ -543,8 +543,7 @@ steps:
     next: ghost
   - id: a
     name: a
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
 `;

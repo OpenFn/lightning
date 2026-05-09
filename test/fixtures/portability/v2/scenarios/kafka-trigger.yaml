@@ -17,7 +17,6 @@ steps:
     next: consume
   - id: consume
     name: consume
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

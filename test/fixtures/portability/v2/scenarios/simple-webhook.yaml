@@ -8,7 +8,6 @@ steps:
     next: greet
   - id: greet
     name: greet
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

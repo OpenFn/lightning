@@ -5,13 +5,12 @@ steps:
     name: cron
     enabled: true
     type: cron
+    cron_expression: '0 6 * * *'
     openfn:
-      cron: '0 6 * * *'
       cron_cursor: cursor-step
     next: cursor-step
   - id: cursor-step
     name: cursor step
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

@@ -34,12 +34,7 @@
     "openfnTriggerBlock": {
       "type": "object",
       "properties": {
-        "cron": { "type": "string" },
         "cron_cursor": { "type": "string" },
-        "webhook_reply": {
-          "type": "string",
-          "enum": ["before_start", "after_completion", "custom"]
-        },
         "kafka": {
           "type": "object",
           "properties": {
@@ -68,6 +63,8 @@
           "enum": ["webhook", "cron", "kafka"]
         },
         "enabled": { "type": "boolean" },
+        "cron_expression": { "type": "string" },
+        "webhook_reply": { "type": "string" },
         "openfn": { "$ref": "#/definitions/openfnTriggerBlock" },
         "next": { "$ref": "#/definitions/next" }
       },
@@ -79,16 +76,12 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "adaptors": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 1
-        },
+        "adaptor": { "type": "string" },
         "expression": { "type": "string" },
         "configuration": { "type": ["string", "null"] },
         "next": { "$ref": "#/definitions/next" }
       },
-      "required": ["id", "name", "adaptors", "expression"],
+      "required": ["id", "name", "adaptor", "expression"],
       "additionalProperties": false
     },
     "step": {

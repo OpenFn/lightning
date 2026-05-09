@@ -10,12 +10,10 @@ steps:
     name: cron
     enabled: true
     type: cron
-    openfn:
-      cron: '*/5 * * * *'
+    cron_expression: '*/5 * * * *'
     next: shared-step
   - id: shared-step
     name: shared step
-    adaptors:
-      - '@openfn/language-common@latest'
+    adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)

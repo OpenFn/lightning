@@ -808,9 +808,8 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml =~ "type: webhook"
       assert generated_yaml =~ "type: cron"
 
-      # Cron workflow carries the cron expression under `openfn:`.
-      assert generated_yaml =~ "openfn:"
-      assert generated_yaml =~ "cron: '0 23 * * *'"
+      # Spec: `cron_expression` is a flat field on the trigger.
+      assert generated_yaml =~ "cron_expression: '0 23 * * *'"
 
       # Collections and credentials are exported.
       assert generated_yaml =~ "cannonical-collection"
