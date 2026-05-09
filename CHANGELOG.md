@@ -17,11 +17,19 @@ and this project adheres to
 
 ### Added
 
+- New `usage_caps_input` view-extension slot on the project settings page
+  (`/projects/:project_id/settings`). Same pattern as the existing
+  `concurrency_input` slot: downstream apps register a component via
+  `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
+  Lightning renders it in the settings view. No-op for OSS Lightning by default.
+  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+
 ### Changed
 
 ### Fixed
 
 ## [2.16.3] - 2026-05-07
+
 ## [2.16.3-pre3] - 2026-05-07
 
 ### Fixed
