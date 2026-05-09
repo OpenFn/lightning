@@ -10,7 +10,9 @@ workflows:
         enabled: true
         type: webhook
         webhook_reply: after_completion
-        next: reply-job
+        next:
+          reply-job:
+            condition: always
       - id: reply-job
         name: reply job
         adaptor: '@openfn/language-common@latest'
@@ -26,7 +28,9 @@ workflows:
         type: cron
         cron_expression: '0 6 * * *'
         cron_cursor: cursor-job
-        next: cursor-job
+        next:
+          cursor-job:
+            condition: always
       - id: cursor-job
         name: cursor job
         adaptor: '@openfn/language-common@latest'

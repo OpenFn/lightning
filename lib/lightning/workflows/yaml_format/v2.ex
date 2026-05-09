@@ -35,10 +35,12 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     spec's `Trigger` interface doesn't define kafka extensions; Lightning's
     flat shape is the cleanest fit since the interface doesn't forbid extra
     fields. Revisit if upstream defines kafka extensions formally.
-  - **`next: <step-id>` string shortcut** — `portability.d.ts` carries a
+  - **`next:` form** — `portability.d.ts:60` carries a
     `// TODO remove next: string (next should always be an object)` note.
-    Lightning still collapses single-`:always` edges to the bare-string
-    shortcut; switch to verbose-only when upstream removes the union.
+    Lightning emits **verbose-only** to align with the spec direction and
+    to avoid the bare-string parsing bug in `@openfn/project@0.15` where
+    `next: <step-id>` gets misread as iterating over the target id's
+    characters. Bare-string `next:` is no longer emitted.
   - **`name`** vs **`label`** on `ConditionalStepEdge` —
     `portability.d.ts` has `// TODO this is probably the name`. Lightning
     emits `label:` today; swap when upstream lands.
@@ -77,11 +79,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
         ssl: true | false                     # kafka only (optional)
         username: <string>                    # kafka only (optional)
         password: <string>                    # kafka only (optional)
-        next: <step-id>                       # collapsed when single :always
-        # OR
         next:
           <step-id>:
-            condition: always                 # object form when 2+ targets
+            condition: always | on_job_success | on_job_failure | <js body>
 
   A **job step** has no `type` field:
 
@@ -105,11 +105,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   `'always' | 'on_job_success' | 'on_job_failure' | string`. Lightning emits
   the named literals (`always`, `on_job_success`, `on_job_failure`) verbatim
   for those `condition_type` values; for `:js_expression` the field carries
-  the user-supplied JS body string. On parse, the three literals round-trip
-  back to their `condition_type`; anything else is treated as a JS body.
-  `:always` keeps the existing nil → omit-the-field behavior so single-
-  target unconditional edges can collapse to the bare-string `next:`
-  shortcut.
+  the user-supplied JS body string. The literal is always present (matches
+  the kitchen-sink example), so parsers don't need to assume a default for
+  a missing `condition:` field.
 
   ## Field-name table
 
@@ -374,7 +372,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       |> Enum.filter(fn e -> e.source_trigger_id == trigger.id end)
       |> Enum.sort_by(fn e -> Map.get(job_id_to_key, e.target_job_id, "") end)
 
-    add_next(base, outgoing, job_id_to_key, collapse_to_string?: true)
+    add_next(base, outgoing, job_id_to_key)
   end
 
   defp add_next_for_step(base, job, edges, job_id_to_key) do
@@ -383,12 +381,18 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       |> Enum.filter(fn e -> e.source_job_id == job.id end)
       |> Enum.sort_by(fn e -> Map.get(job_id_to_key, e.target_job_id, "") end)
 
-    add_next(base, outgoing, job_id_to_key, collapse_to_string?: true)
+    add_next(base, outgoing, job_id_to_key)
   end
 
-  defp add_next(base, [], _job_id_to_key, _opts), do: base
+  defp add_next(base, [], _job_id_to_key), do: base
 
-  defp add_next(base, edges, job_id_to_key, opts) when is_list(edges) do
+  # Always emit the verbose object form for `next:`. The spec's
+  # `portability.d.ts:60` carries `// TODO remove next: string (next should
+  # always be an object)`, and the CLI library's v2 parser
+  # (@openfn/project@0.15) mangles the bare-string shortcut by iterating
+  # over the target id's characters. Verbose-only emission is the cleanest
+  # path: spec-aligned, library-compatible, and unambiguous.
+  defp add_next(base, edges, job_id_to_key) when is_list(edges) do
     next_map =
       edges
       |> Enum.map(fn edge ->
@@ -397,23 +401,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       end)
       |> Map.new()
 
-    next_value = maybe_collapse_next(next_map, opts)
-    Map.put(base, :next, next_value)
-  end
-
-  # Collapse a single-target unconditional next map to the bare target string,
-  # so triggers and unconditional job edges emit `next: target-id` instead of
-  # the verbose object form. An "unconditional" edge is `:always` with no
-  # label or disabled flag, which canonicalises to an empty edge map.
-  defp maybe_collapse_next(%{} = next_map, opts) do
-    if Keyword.get(opts, :collapse_to_string?, false) do
-      case Map.to_list(next_map) do
-        [{target, edge}] when map_size(edge) == 0 -> target
-        _ -> next_map
-      end
-    else
-      next_map
-    end
+    Map.put(base, :next, next_map)
   end
 
   defp edge_to_canonical(edge) do
@@ -424,11 +412,12 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   # Per `lightning.d.ts:102`, `condition` is the union
-  # `'always' | 'on_job_success' | 'on_job_failure' | string`. Named literals
-  # round-trip verbatim to the matching `condition_type`; arbitrary JS bodies
-  # land under `:js_expression`. `:always` returns nil so the caller omits the
-  # field entirely — that lets a single unconditional `next:` collapse to the
-  # bare-string shortcut.
+  # `'always' | 'on_job_success' | 'on_job_failure' | string`. We emit the
+  # literal verbatim for the three named values; arbitrary JS bodies pass
+  # through unchanged for `:js_expression`. The kitchen-sink example
+  # (`portability.md`) uses the verbose `condition: always` form even for
+  # unconditional edges; matching that keeps our emit unambiguous and makes
+  # the field always present so downstream parsers don't need a default.
   defp edge_condition(%{
          condition_type: :js_expression,
          condition_expression: expression
@@ -439,7 +428,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   defp edge_condition(%{condition_type: :on_job_success}), do: "on_job_success"
   defp edge_condition(%{condition_type: :on_job_failure}), do: "on_job_failure"
-  defp edge_condition(%{condition_type: :always}), do: nil
+  defp edge_condition(%{condition_type: :always}), do: "always"
   defp edge_condition(_), do: nil
 
   # Lightning's Edge.enabled boolean inverts to v2's `disabled:` field.

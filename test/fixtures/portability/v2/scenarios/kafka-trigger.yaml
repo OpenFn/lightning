@@ -13,7 +13,9 @@ steps:
       - events
     initial_offset_reset_policy: earliest
     connect_timeout: 30
-    next: consume
+    next:
+      consume:
+        condition: always
   - id: consume
     name: consume
     adaptor: '@openfn/language-common@latest'

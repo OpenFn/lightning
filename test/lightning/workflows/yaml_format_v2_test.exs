@@ -75,12 +75,16 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ ~r/^\s*edges:/m
     end
 
-    test "single :always edge collapses to plain string target", %{
+    test ":always edges emit verbose form with `condition: always`", %{
       workflow: workflow
     } do
       {:ok, yaml} = V2.serialize_workflow(workflow)
-      # webhook trigger -> step-alpha is the only :always edge
-      assert yaml =~ "next: step-alpha"
+
+      # webhook trigger -> step-alpha is the only :always edge. Per
+      # `portability.d.ts:60` the bare-string `next:` shortcut is being
+      # removed from the spec; verbose-only emission is what we ship.
+      assert yaml =~ ~r/step-alpha:\s*\n\s*condition: always/
+      refute yaml =~ ~r/next: step-alpha/
     end
 
     test "non-:always edges emit the named condition literal", %{
@@ -260,7 +264,7 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ "condition_type"
     end
 
-    test "always edges emit no `condition:` key (spec: omit when unconditional)" do
+    test ":always edges emit verbose `condition: always` (multi-target)" do
       a =
         build(:job,
           id: Ecto.UUID.generate(),
@@ -295,8 +299,7 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
           enabled: true
         )
 
-      # Two outgoing :always edges from `a` (collapse-to-string blocked by
-      # multi-target), forcing the object form.
+      # Two outgoing :always edges from `a`.
       edge_a_b =
         build(:edge,
           id: Ecto.UUID.generate(),
@@ -327,10 +330,11 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
 
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      # Object form `b: {}` and `c: {}` for unconditional multi-target edges.
-      assert yaml =~ "b: {}"
-      assert yaml =~ "c: {}"
-      refute yaml =~ "condition:"
+      # Verbose form: every target gets a `condition: always` literal.
+      assert yaml =~ ~r/^\s*b:\s*\n\s*condition: always/m
+      assert yaml =~ ~r/^\s*c:\s*\n\s*condition: always/m
+      # No collapse to bare-string `next: <id>` shortcut.
+      refute yaml =~ ~r/next: [a-z]+\s*$/m
     end
   end
 end

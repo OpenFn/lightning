@@ -8,7 +8,9 @@ steps:
     type: cron
     cron_expression: '0 6 * * *'
     cron_cursor: ingest
-    next: ingest
+    next:
+      ingest:
+        condition: always
   - id: kafka
     name: kafka
     enabled: true
@@ -19,13 +21,17 @@ steps:
       - dummy
     initial_offset_reset_policy: earliest
     connect_timeout: 30
-    next: ingest
+    next:
+      ingest:
+        condition: always
   - id: webhook
     name: webhook
     enabled: true
     type: webhook
     webhook_reply: after_completion
-    next: ingest
+    next:
+      ingest:
+        condition: always
   - id: ingest
     name: ingest
     adaptor: '@openfn/language-http@latest'
@@ -47,13 +53,17 @@ steps:
     adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
-    next: load
+    next:
+      load:
+        condition: always
   - id: report-failure
     name: report failure
     adaptor: '@openfn/language-common@latest'
     expression: |
       fn(state => state)
-    next: load
+    next:
+      load:
+        condition: always
   - id: maybe-skip
     name: maybe skip
     adaptor: '@openfn/language-common@latest'

@@ -6,7 +6,9 @@ steps:
     name: webhook
     enabled: true
     type: webhook
-    next: greet
+    next:
+      greet:
+        condition: always
   - id: greet
     name: greet
     adaptor: '@openfn/language-common@latest'

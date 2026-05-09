@@ -763,9 +763,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      # v2: an unconditional single-target next collapses to the bare step id.
-      assert response =~ ~s[next: #{job.name}]
-      refute response =~ "condition:"
+      # v2 emits the verbose `next:` form with `condition: always` literal
+      # (per portability.d.ts:60 the bare-string shortcut is being removed).
+      assert response =~ ~s[#{job.name}:\n            condition: always]
     end
 
     test "having edge with condition_type=on_job_success", %{

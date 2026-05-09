@@ -327,11 +327,7 @@ const triggerStateToCanonical = (
   // When it lands, hosts/topics/etc. land flat on `base` directly.
 
   const outgoing = edges.filter(e => e.source_trigger_id === trigger.id);
-  const next = buildNextField(
-    outgoing,
-    jobIdToKey,
-    /* collapseToString */ true
-  );
+  const next = buildNextField(outgoing, jobIdToKey);
   if (next !== undefined) base.next = next;
 
   return base;
@@ -351,13 +347,7 @@ const jobStateToCanonical = (
   };
 
   const outgoing = edges.filter(e => e.source_job_id === job.id);
-  // Single unconditional edges collapse to a bare target string for both
-  // triggers and jobs (matches the server emitter).
-  const next = buildNextField(
-    outgoing,
-    jobIdToKey,
-    /* collapseToString */ true
-  );
+  const next = buildNextField(outgoing, jobIdToKey);
   if (next !== undefined) base.next = next;
 
   return base;
@@ -365,9 +355,8 @@ const jobStateToCanonical = (
 
 const buildNextField = (
   edges: StateEdge[],
-  jobIdToKey: Record<string, string>,
-  collapseToString: boolean
-): string | Record<string, CanonicalEdge> | undefined => {
+  jobIdToKey: Record<string, string>
+): Record<string, CanonicalEdge> | undefined => {
   if (edges.length === 0) return undefined;
 
   const sorted = [...edges].sort((a, b) => {
@@ -376,7 +365,9 @@ const buildNextField = (
     return ak < bk ? -1 : ak > bk ? 1 : 0;
   });
 
-  // Build the object map first.
+  // Build the object map. Verbose-only emission per
+  // `portability.d.ts:60` (`// TODO remove next: string`) and to avoid the
+  // bare-string parsing bug in @openfn/project@0.15.
   const next: Record<string, CanonicalEdge> = {};
   sorted.forEach(edge => {
     const target = jobIdToKey[edge.target_job_id];
@@ -384,28 +375,16 @@ const buildNextField = (
     next[target] = edgeToCanonical(edge);
   });
 
-  // Single-target unconditional collapse: when there's exactly one outgoing
-  // edge with no condition / label / disabled flag, emit `next: <target>`
-  // (string shortcut). Matches the server's `maybe_collapse_next/2`.
-  if (collapseToString) {
-    const keys = Object.keys(next);
-    if (keys.length === 1) {
-      const key = keys[0]!;
-      const edge = next[key]!;
-      if (Object.keys(edge).length === 0) return key;
-    }
-  }
-
   return next;
 };
 
 // Map Lightning's `condition_type` enum to the wire-format condition value.
 // Per `lightning.d.ts:102` the spec accepts the union
 // `'always' | 'on_job_success' | 'on_job_failure' | string`. We emit the
-// literal for the three named values and the user JS body for js_expression.
-// `:always` returns undefined so the emitter omits the `condition:` key
-// entirely (allows single unconditional edges to collapse to the bare-string
-// `next:` shortcut).
+// literal verbatim for all three named values (matching the kitchen-sink
+// example) and the user JS body for js_expression. The condition is always
+// present in the verbose `next:` form, so downstream parsers don't need a
+// default for missing values.
 const edgeConditionValue = (edge: StateEdge): string | undefined => {
   switch (edge.condition_type) {
     case 'js_expression':
@@ -415,6 +394,7 @@ const edgeConditionValue = (edge: StateEdge): string | undefined => {
     case 'on_job_failure':
       return 'on_job_failure';
     case 'always':
+      return 'always';
     default:
       return undefined;
   }

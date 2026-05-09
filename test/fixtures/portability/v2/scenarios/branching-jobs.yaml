@@ -6,7 +6,9 @@ steps:
     name: webhook
     enabled: true
     type: webhook
-    next: fan-out
+    next:
+      fan-out:
+        condition: always
   - id: fan-out
     name: fan out
     adaptor: '@openfn/language-common@latest'

@@ -7,12 +7,16 @@ steps:
     enabled: true
     type: cron
     cron_expression: '*/5 * * * *'
-    next: shared-step
+    next:
+      shared-step:
+        condition: always
   - id: webhook
     name: webhook
     enabled: true
     type: webhook
-    next: shared-step
+    next:
+      shared-step:
+        condition: always
   - id: shared-step
     name: shared step
     adaptor: '@openfn/language-common@latest'

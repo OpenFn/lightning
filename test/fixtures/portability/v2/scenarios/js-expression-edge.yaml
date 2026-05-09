@@ -6,7 +6,9 @@ steps:
     name: webhook
     enabled: true
     type: webhook
-    next: source-step
+    next:
+      source-step:
+        condition: always
   - id: source-step
     name: source step
     adaptor: '@openfn/language-common@latest'

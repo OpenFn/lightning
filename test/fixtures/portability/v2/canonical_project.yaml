@@ -16,7 +16,9 @@ workflows:
         name: webhook
         enabled: true
         type: webhook
-        next: webhook-job
+        next:
+          webhook-job:
+            condition: always
       - id: webhook-job
         name: webhook job
         adaptor: '@openfn/language-common@latest'
@@ -49,7 +51,9 @@ workflows:
         enabled: true
         type: cron
         cron_expression: '0 23 * * *'
-        next: some-cronjob
+        next:
+          some-cronjob:
+            condition: always
       - id: some-cronjob
         name: some cronjob
         adaptor: '@openfn/language-common@latest'
