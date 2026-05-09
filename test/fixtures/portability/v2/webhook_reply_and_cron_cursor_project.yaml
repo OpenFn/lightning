@@ -1,0 +1,34 @@
+id: webhook-reply-and-cron-cursor-project
+name: webhook-reply-and-cron-cursor-project
+workflows:
+  - id: webhook-reply-workflow
+    name: webhook reply workflow
+    start: webhook
+    steps:
+      - id: webhook
+        name: webhook
+        enabled: true
+        type: webhook
+        webhook_reply: after_completion
+        next: reply-job
+      - id: reply-job
+        name: reply job
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          fn(state => state)
+  - id: cron-cursor-workflow
+    name: cron cursor workflow
+    start: cron
+    steps:
+      - id: cron
+        name: cron
+        enabled: true
+        type: cron
+        cron_expression: '0 6 * * *'
+        cron_cursor: cursor-job
+        next: cursor-job
+      - id: cursor-job
+        name: cursor job
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          fn(state => state)
