@@ -222,14 +222,12 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp build_strip_headers(client_auth_types) do
-    auth_strips =
-      Enum.flat_map(client_auth_types, fn
-        :api -> ["x-api-key"]
-        :basic -> ["authorization"]
-        _ -> []
-      end)
-
-    ["accept-encoding" | auth_strips] |> Enum.uniq()
+    Enum.flat_map(client_auth_types, fn
+      :api -> ["x-api-key"]
+      :basic -> ["authorization"]
+      _ -> []
+    end)
+    |> Enum.uniq()
   end
 
   defp fetch_channel(id) do

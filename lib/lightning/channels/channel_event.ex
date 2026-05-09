@@ -105,7 +105,24 @@ defmodule Lightning.Channels.ChannelEvent do
       ],
       empty_values: []
     )
+    |> drop_non_utf8_preview(:request_body_preview)
+    |> drop_non_utf8_preview(:response_body_preview)
     |> validate_required([:channel_request_id, :type])
     |> assoc_constraint(:channel_request)
+  end
+
+  # Body previews are stored as :text (UTF-8 only). Drop the preview when the
+  # upstream returns binary content (gzip-encoded responses, images, PDFs, …)
+  # so the rest of the event — headers, hash, size, timing — still persists.
+  defp drop_non_utf8_preview(changeset, field) do
+    case get_change(changeset, field) do
+      preview when is_binary(preview) and preview != "" ->
+        if String.valid?(preview),
+          do: changeset,
+          else: put_change(changeset, field, nil)
+
+      _ ->
+        changeset
+    end
   end
 end
