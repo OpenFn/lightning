@@ -1,32 +1,30 @@
 id: canonical-workflow
 name: canonical workflow
+start: cron
 steps:
-  - id: webhook
-    name: webhook
-    enabled: true
-    type: webhook
-    webhook_reply: after_completion
-    next: ingest
   - id: cron
     name: cron
     enabled: false
     type: cron
     cron_expression: '0 6 * * *'
-    openfn:
-      cron_cursor: ingest
+    cron_cursor: ingest
     next: ingest
   - id: kafka
     name: kafka
     enabled: true
     type: kafka
-    openfn:
-      kafka:
-        hosts:
-          - 'localhost:9092'
-        topics:
-          - dummy
-        initial_offset_reset_policy: earliest
-        connect_timeout: 30
+    hosts:
+      - 'localhost:9092'
+    topics:
+      - dummy
+    initial_offset_reset_policy: earliest
+    connect_timeout: 30
+    next: ingest
+  - id: webhook
+    name: webhook
+    enabled: true
+    type: webhook
+    webhook_reply: after_completion
     next: ingest
   - id: ingest
     name: ingest
@@ -41,9 +39,9 @@ steps:
         label: Skip when no errors
         disabled: true
       report-failure:
-        condition: '!!state.errors'
+        condition: on_job_failure
       transform:
-        condition: '!state.errors'
+        condition: on_job_success
   - id: transform
     name: transform
     adaptor: '@openfn/language-common@latest'

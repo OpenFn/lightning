@@ -1,5 +1,6 @@
 id: js-expression-edge
 name: js expression edge
+start: webhook
 steps:
   - id: webhook
     name: webhook

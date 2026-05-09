@@ -1,13 +1,13 @@
 id: cron-with-cursor
 name: cron with cursor
+start: cron
 steps:
   - id: cron
     name: cron
     enabled: true
     type: cron
     cron_expression: '0 6 * * *'
-    openfn:
-      cron_cursor: cursor-step
+    cron_cursor: cursor-step
     next: cursor-step
   - id: cursor-step
     name: cursor step

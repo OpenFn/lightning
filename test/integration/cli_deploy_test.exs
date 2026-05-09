@@ -102,11 +102,8 @@ defmodule Lightning.CliDeployTest do
 
       assert actual_state == expected_state_for_comparison
 
-      # TODO(#4718): server-side export now emits v2, so this expected v1
-      # fixture no longer matches the `pull` output. Update when the
-      # @openfn/cli integration suite is next exercised.
       expected_yaml =
-        File.read!("test/fixtures/portability/v1/canonical_project.yaml")
+        File.read!("test/fixtures/portability/v2/canonical_project.yaml")
 
       actual_yaml = File.read!(config.specPath)
 
@@ -274,13 +271,9 @@ defmodule Lightning.CliDeployTest do
         env: @required_env
       )
 
-      # TODO(#4718, Phase 4 export cutover): server-side export now emits v2,
-      # so this integration test's expected v1 fixture no longer matches the
-      # `pull` output. Update when the @openfn/cli integration suite is next
-      # exercised.
       expected_yaml =
         File.read!(
-          "test/fixtures/portability/v1/webhook_reply_and_cron_cursor_project.yaml"
+          "test/fixtures/portability/v2/webhook_reply_and_cron_cursor_project.yaml"
         )
 
       actual_yaml = File.read!(config.specPath)

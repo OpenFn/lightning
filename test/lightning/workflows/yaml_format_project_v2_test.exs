@@ -47,8 +47,10 @@ defmodule Lightning.Workflows.YamlFormatProjectV2Test do
       assert yaml =~ "id: alpha-two"
       assert yaml =~ "id: beta-only"
 
-      # Edge condition surfaces as JS for the on_job_success edge.
-      assert yaml =~ "condition: '!state.errors'"
+      # Edge condition surfaces as the literal for the named on_job_success
+      # edge (per lightning.d.ts:102 the spec accepts the literal alongside
+      # JS bodies; we emit the literal).
+      assert yaml =~ "condition: on_job_success"
 
       # Spec: `collections: string[]` — sequence of names.
       assert yaml =~ ~r/^collections:\s*\n\s*- patients/m

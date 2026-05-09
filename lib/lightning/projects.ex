@@ -32,7 +32,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.YamlFormat
+  alias Lightning.Workflows.YamlFormat.V2
   alias Lightning.WorkOrder
 
   require Logger
@@ -1040,7 +1040,7 @@ defmodule Lightning.Projects do
     snapshots =
       if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
 
-    {:ok, _yaml} = YamlFormat.serialize_project(project, snapshots)
+    {:ok, _yaml} = V2.serialize_project(project, snapshots)
   end
 
   @doc """

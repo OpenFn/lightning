@@ -32,6 +32,7 @@
       ]
     },
     "openfnTriggerBlock": {
+      "description": "DEPRECATED: legacy nested extension block. Lightning emits cron_cursor and kafka config flat at the trigger root. Kept for backwards-compatibility with externally-authored v2 documents.",
       "type": "object",
       "properties": {
         "cron_cursor": { "type": "string" },
@@ -64,7 +65,17 @@
         },
         "enabled": { "type": "boolean" },
         "cron_expression": { "type": "string" },
+        "cron_cursor": { "type": "string" },
         "webhook_reply": { "type": "string" },
+        "hosts": { "type": "array", "items": { "type": "string" } },
+        "topics": { "type": "array", "items": { "type": "string" } },
+        "initial_offset_reset_policy": { "type": "string" },
+        "connect_timeout": { "type": "number" },
+        "group_id": { "type": "string" },
+        "sasl": { "type": "string" },
+        "ssl": { "type": "boolean" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
         "openfn": { "$ref": "#/definitions/openfnTriggerBlock" },
         "next": { "$ref": "#/definitions/next" }
       },
@@ -94,6 +105,7 @@
   "properties": {
     "id": { "type": "string" },
     "name": { "type": ["string", "null"] },
+    "start": { "type": "string" },
     "steps": {
       "type": "array",
       "items": { "$ref": "#/definitions/step" }

@@ -1,16 +1,17 @@
 id: multi-trigger
 name: multi trigger
+start: cron
 steps:
-  - id: webhook
-    name: webhook
-    enabled: true
-    type: webhook
-    next: shared-step
   - id: cron
     name: cron
     enabled: true
     type: cron
     cron_expression: '*/5 * * * *'
+    next: shared-step
+  - id: webhook
+    name: webhook
+    enabled: true
+    type: webhook
     next: shared-step
   - id: shared-step
     name: shared step

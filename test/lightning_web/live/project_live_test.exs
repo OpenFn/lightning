@@ -779,8 +779,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      # v2: condition_type → JS expression body in `condition:`.
-      assert response =~ ~s[#{job.name}:\n            condition: '!state.errors']
+      # v2 emits the named condition literal (per lightning.d.ts:102 union).
+      assert response =~ ~s[#{job.name}:\n            condition: on_job_success]
     end
 
     test "having edge with condition_type=on_job_failure", %{
@@ -795,7 +795,7 @@ defmodule LightningWeb.ProjectLiveTest do
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
       assert response =~
-               ~s[#{job.name}:\n            condition: '!!state.errors']
+               ~s[#{job.name}:\n            condition: on_job_failure]
     end
 
     test "having edge with condition_type=js_expression", %{

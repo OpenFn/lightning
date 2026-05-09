@@ -765,13 +765,17 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      # In v2, kafka config lives under the trigger step's `openfn:` blob.
+      # In v2, kafka config fields land flat at the trigger root — no
+      # `openfn:` wrapper, no nested `kafka:` block. The spec's `Trigger`
+      # interface doesn't forbid extra fields and the kitchen-sink convention
+      # is flat fields (matches `cron_expression`, `webhook_reply`).
       assert generated_yaml =~ "type: kafka"
-      assert generated_yaml =~ "kafka:"
       assert generated_yaml =~ "'localhost:9092'"
       assert generated_yaml =~ "topics:"
       assert generated_yaml =~ "- dummy"
       assert generated_yaml =~ "initial_offset_reset_policy: earliest"
+      refute generated_yaml =~ "openfn:"
+      refute generated_yaml =~ ~r/^\s*kafka:/m
       refute generated_yaml =~ "kafka_configuration"
     end
 

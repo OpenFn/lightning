@@ -1,5 +1,6 @@
 id: branching-jobs
 name: branching jobs
+start: webhook
 steps:
   - id: webhook
     name: webhook
@@ -13,9 +14,9 @@ steps:
       fn(state => state)
     next:
       branch-a:
-        condition: '!state.errors'
+        condition: on_job_success
       branch-b:
-        condition: '!!state.errors'
+        condition: on_job_failure
   - id: branch-a
     name: branch a
     adaptor: '@openfn/language-common@latest'

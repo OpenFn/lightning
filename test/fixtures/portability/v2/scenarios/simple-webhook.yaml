@@ -1,5 +1,6 @@
 id: simple-webhook
 name: simple webhook
+start: webhook
 steps:
   - id: webhook
     name: webhook

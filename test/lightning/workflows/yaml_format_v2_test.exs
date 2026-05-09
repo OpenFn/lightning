@@ -83,13 +83,15 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       assert yaml =~ "next: step-alpha"
     end
 
-    test "non-:always edges emit condition as a JS expression", %{
+    test "non-:always edges emit the named condition literal", %{
       workflow: workflow
     } do
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      # step-alpha -> step-beta is :on_job_success → canonical JS "!state.errors"
-      assert yaml =~ ~r/step-beta:\s*\n\s*condition: '!state\.errors'/
+      # step-alpha -> step-beta is :on_job_success. Per lightning.d.ts:102 the
+      # spec accepts the literal alongside arbitrary JS bodies; we emit the
+      # literal so the output reads as the kitchen-sink example.
+      assert yaml =~ ~r/step-beta:\s*\n\s*condition: on_job_success/
     end
 
     test "emits `expression:` (not `body:`) for step code", %{workflow: workflow} do
@@ -98,7 +100,7 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ ~r/^\s*body:/m
     end
 
-    test "emits flat `cron_expression:` on trigger and `cron_cursor:` under openfn" do
+    test "emits flat `cron_expression:` and `cron_cursor:` directly on the trigger" do
       cursor_job =
         build(:job,
           id: Ecto.UUID.generate(),
@@ -135,14 +137,15 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
 
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      # Spec: `cron_expression` is a flat field on the trigger, not under openfn.
+      # Both fields land flat at the trigger root — spec doesn't forbid extra
+      # fields and the kitchen-sink convention (mod the UUID bug) is flat.
       assert yaml =~ ~r/cron_expression: '0 6 \* \* \*'/
-      # Lightning extension stays under openfn.
-      assert yaml =~ ~r/openfn:\s*\n\s*cron_cursor: cursor-step/
+      assert yaml =~ ~r/cron_cursor: cursor-step/
+      refute yaml =~ "openfn:"
       refute yaml =~ "cron_cursor_job"
     end
 
-    test "kafka trigger emits a kafka: block with hosts joined as host:port" do
+    test "kafka trigger emits hosts/topics/etc. flat at the trigger root" do
       consumer =
         build(:job,
           id: Ecto.UUID.generate(),
@@ -183,9 +186,14 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
 
       {:ok, yaml} = V2.serialize_workflow(workflow)
 
-      assert yaml =~ "kafka:"
-      assert yaml =~ "'localhost:9092'"
-      assert yaml =~ "topics:"
+      # All kafka config lives flat on the trigger — no `kafka:` wrapper, no
+      # `openfn:` block. Hosts are joined as `host:port` for human readability.
+      assert yaml =~ ~r/^\s*hosts:\s*\n\s*- 'localhost:9092'/m
+      assert yaml =~ ~r/^\s*topics:\s*\n\s*- events/m
+      assert yaml =~ "initial_offset_reset_policy: earliest"
+      assert yaml =~ "connect_timeout: 30"
+      refute yaml =~ "openfn:"
+      refute yaml =~ ~r/^\s*kafka:/m
       refute yaml =~ "kafka_configuration"
     end
 

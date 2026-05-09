@@ -175,19 +175,27 @@ interface V2KafkaConfig {
   [key: string]: unknown;
 }
 
+/**
+ * DEPRECATED legacy nested extension block. Lightning now emits `cron_cursor`
+ * and kafka config fields flat at the trigger root. Kept here as an
+ * accepted-on-parse shape so externally-authored v2 documents that still use
+ * the old form keep working.
+ */
 interface V2OpenfnBlock {
   cron_cursor?: string;
   kafka?: V2KafkaConfig;
   [key: string]: unknown;
 }
 
-interface V2TriggerStep {
+interface V2TriggerStep extends V2KafkaConfig {
   id: string;
   name?: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled?: boolean;
   cron_expression?: string;
+  cron_cursor?: string;
   webhook_reply?: string;
+  /** DEPRECATED: legacy openfn extension block. See `V2OpenfnBlock`. */
   openfn?: V2OpenfnBlock;
   next?: V2NextValue;
 }
@@ -206,6 +214,8 @@ type V2Step = V2TriggerStep | V2JobStep;
 interface V2WorkflowDoc {
   id?: string;
   name?: string | null;
+  /** Spec: WorkflowSpec.start — the entry trigger's step-id. Optional on parse. */
+  start?: string;
   steps: V2Step[];
 }
 
@@ -227,14 +237,14 @@ interface CanonicalEdge {
   disabled?: boolean;
 }
 
-interface CanonicalTriggerStep {
+interface CanonicalTriggerStep extends V2KafkaConfig {
   id: string;
   name: string;
   type: 'webhook' | 'cron' | 'kafka';
   enabled: boolean;
   cron_expression?: string;
+  cron_cursor?: string;
   webhook_reply?: string;
-  openfn?: V2OpenfnBlock;
   next?: string | Record<string, CanonicalEdge>;
 }
 
@@ -252,6 +262,7 @@ type CanonicalStep = CanonicalTriggerStep | CanonicalJobStep;
 interface CanonicalWorkflow {
   id: string;
   name: string;
+  start?: string;
   steps: CanonicalStep[];
 }
 
@@ -271,9 +282,14 @@ const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
     jobStateToCanonical(job, state.edges, jobIdToKey)
   );
 
+  // Spec: WorkflowSpec.start is the entry trigger's step-id. Lightning
+  // workflows are single-trigger in practice; we take the first trigger.
+  const start = triggerSteps[0]?.id;
+
   return {
     id: hyphenate(state.name),
     name: state.name,
+    ...(start ? { start } : {}),
     // Trigger steps first, then job steps — matches Elixir's emit order.
     steps: [...triggerSteps, ...jobSteps],
   };
@@ -299,15 +315,16 @@ const triggerStateToCanonical = (
     base.webhook_reply = trigger.webhook_reply;
   }
 
-  // Lightning-specific extensions (cron_cursor, kafka) live under `openfn:`.
-  const openfn: V2OpenfnBlock = {};
+  // Lightning extension fields live flat at the trigger root (matches the
+  // Elixir emitter at `lib/lightning/workflows/yaml_format/v2.ex`). The spec's
+  // Trigger interface doesn't forbid extra fields and the kitchen-sink
+  // example uses the flat form.
   if (trigger.type === 'cron' && trigger.cron_cursor_job_id) {
     const cursorJob = jobs.find(j => j.id === trigger.cron_cursor_job_id);
-    if (cursorJob) openfn.cron_cursor = hyphenate(cursorJob.name);
+    if (cursorJob) base.cron_cursor = hyphenate(cursorJob.name);
   }
   // Kafka: state has no kafka_configuration today; placeholder for parity.
-
-  if (Object.keys(openfn).length > 0) base.openfn = openfn;
+  // When it lands, hosts/topics/etc. land flat on `base` directly.
 
   const outgoing = edges.filter(e => e.source_trigger_id === trigger.id);
   const next = buildNextField(
@@ -382,17 +399,21 @@ const buildNextField = (
   return next;
 };
 
-// Map Lightning's `condition_type` enum to a JS expression body, per the
-// portability spec. `:always` returns undefined so the emitter omits the
-// `condition:` key entirely.
-const edgeConditionJs = (edge: StateEdge): string | undefined => {
+// Map Lightning's `condition_type` enum to the wire-format condition value.
+// Per `lightning.d.ts:102` the spec accepts the union
+// `'always' | 'on_job_success' | 'on_job_failure' | string`. We emit the
+// literal for the three named values and the user JS body for js_expression.
+// `:always` returns undefined so the emitter omits the `condition:` key
+// entirely (allows single unconditional edges to collapse to the bare-string
+// `next:` shortcut).
+const edgeConditionValue = (edge: StateEdge): string | undefined => {
   switch (edge.condition_type) {
     case 'js_expression':
       return edge.condition_expression || undefined;
     case 'on_job_success':
-      return '!state.errors';
+      return 'on_job_success';
     case 'on_job_failure':
-      return '!!state.errors';
+      return 'on_job_failure';
     case 'always':
     default:
       return undefined;
@@ -401,7 +422,7 @@ const edgeConditionJs = (edge: StateEdge): string | undefined => {
 
 const edgeToCanonical = (edge: StateEdge): CanonicalEdge => {
   const out: CanonicalEdge = {};
-  const condition = edgeConditionJs(edge);
+  const condition = edgeConditionValue(edge);
   if (condition !== undefined) out.condition = condition;
   if (edge.condition_label) out.label = edge.condition_label;
   if (edge.enabled === false) out.disabled = true;
@@ -563,6 +584,9 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
 
 const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
   const enabled = trigger.enabled ?? true;
+  // Backwards-compat: accept the legacy `openfn: { cron_cursor }` shape from
+  // older v2 documents that haven't been re-emitted yet. New documents emit
+  // `cron_cursor:` flat at the trigger root.
   const openfn = trigger.openfn ?? {};
 
   if (trigger.type === 'cron') {
@@ -570,7 +594,7 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
       type: 'cron',
       enabled,
       cron_expression: trigger.cron_expression ?? '',
-      cron_cursor_job: openfn.cron_cursor ?? null,
+      cron_cursor_job: trigger.cron_cursor ?? openfn.cron_cursor ?? null,
       pos: undefined,
     };
     return out;
@@ -618,9 +642,12 @@ const iterateNext = (
   });
 };
 
-// Recognize the canonical JS expressions emitted for Lightning's enum
-// condition_types. Anything else is treated as a `:js_expression` body.
-const conditionTypeFromJs = (
+// Per `lightning.d.ts:102`, `condition` is the union
+// `'always' | 'on_job_success' | 'on_job_failure' | string`. Map the three
+// named literals back to Lightning's `condition_type` enum; anything else
+// (including legacy `'!state.errors'` JS-body emissions from older v2
+// documents) is treated as a JS expression body.
+const conditionTypeFromValue = (
   condition: string | undefined
 ): { condition_type: string; condition_expression?: string } => {
   if (condition === undefined || condition === '') {
@@ -629,12 +656,18 @@ const conditionTypeFromJs = (
   // Strip a single trailing newline so block-literal bodies match the inline
   // canonical strings (`yaml` parses `|` blocks with a trailing `\n`).
   const trimmed = condition.replace(/\n$/, '');
-  if (trimmed === '!state.errors') {
-    return { condition_type: 'on_job_success' };
-  }
-  if (trimmed === '!!state.errors') {
-    return { condition_type: 'on_job_failure' };
-  }
+
+  // Named literals from the spec union.
+  if (trimmed === 'always') return { condition_type: 'always' };
+  if (trimmed === 'on_job_success') return { condition_type: 'on_job_success' };
+  if (trimmed === 'on_job_failure') return { condition_type: 'on_job_failure' };
+
+  // Backwards-compat: Lightning previously emitted these JS bodies for the
+  // named conditions. Accept them so older v2 documents in the wild keep
+  // round-tripping cleanly.
+  if (trimmed === '!state.errors') return { condition_type: 'on_job_success' };
+  if (trimmed === '!!state.errors') return { condition_type: 'on_job_failure' };
+
   return {
     condition_type: 'js_expression',
     condition_expression: condition,
@@ -646,7 +679,7 @@ const nextEntryToSpecEdge = (
   target: string,
   edge: V2EdgeObject
 ): SpecEdge => {
-  const { condition_type, condition_expression } = conditionTypeFromJs(
+  const { condition_type, condition_expression } = conditionTypeFromValue(
     edge.condition
   );
 
