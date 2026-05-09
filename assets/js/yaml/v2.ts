@@ -51,6 +51,7 @@ import type {
   SpecWebhookTrigger,
   StateEdge,
   StateJob,
+  StateKafkaConfiguration,
   StateTrigger,
   WorkflowSpec,
   WorkflowState,
@@ -268,6 +269,81 @@ interface CanonicalWorkflow {
 
 const hyphenate = (value: string): string => value.replace(/\s+/g, '-');
 
+// Kafka config travels flat on the trigger root in YAML
+// (`hosts: [...]`, `topics: [...]`, `connect_timeout: …`, etc.) — matches
+// `lib/lightning/workflows/yaml_format/v2.ex:kafka_config_to_canonical/1`.
+//
+// On state the same data lives under `kafka_configuration` with `_string`
+// forms for hosts/topics (as it ships from Y.Doc).
+const splitCsv = (s: string | null | undefined): string[] =>
+  (s ?? '')
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean);
+
+const kafkaConfigToCanonical = (
+  config: StateKafkaConfiguration
+): V2KafkaConfig => {
+  const out: V2KafkaConfig = {};
+  const hosts = splitCsv(config.hosts_string);
+  if (hosts.length) out.hosts = hosts;
+  const topics = splitCsv(config.topics_string);
+  if (topics.length) out.topics = topics;
+  if (config.initial_offset_reset_policy) {
+    out.initial_offset_reset_policy = config.initial_offset_reset_policy;
+  }
+  if (typeof config.connect_timeout === 'number') {
+    out.connect_timeout = config.connect_timeout;
+  }
+  if (config.group_id) out.group_id = config.group_id;
+  if (config.sasl) out.sasl = config.sasl;
+  if (typeof config.ssl === 'boolean') out.ssl = config.ssl;
+  if (config.username) out.username = config.username;
+  if (config.password) out.password = config.password;
+  return out;
+};
+
+const kafkaConfigFromCanonical = (
+  trigger: V2TriggerStep
+): StateKafkaConfiguration | null => {
+  const fromOpenfn = trigger.openfn?.kafka ?? {};
+  const hosts = trigger.hosts ?? fromOpenfn.hosts ?? [];
+  const topics = trigger.topics ?? fromOpenfn.topics ?? [];
+  const policy =
+    trigger.initial_offset_reset_policy ??
+    fromOpenfn.initial_offset_reset_policy;
+  const timeout = trigger.connect_timeout ?? fromOpenfn.connect_timeout;
+
+  // If nothing kafka-shaped is on the trigger, leave it null so callers can
+  // distinguish "no config emitted" from "config emitted but empty".
+  if (
+    hosts.length === 0 &&
+    topics.length === 0 &&
+    policy === undefined &&
+    timeout === undefined
+  ) {
+    return null;
+  }
+
+  const out: StateKafkaConfiguration = {
+    hosts_string: hosts.join(', '),
+    topics_string: topics.join(', '),
+    initial_offset_reset_policy: policy ?? 'latest',
+    connect_timeout: typeof timeout === 'number' ? timeout : 30,
+  };
+  const groupId = trigger.group_id ?? fromOpenfn.group_id;
+  if (groupId) out.group_id = groupId;
+  const sasl = trigger.sasl ?? fromOpenfn.sasl;
+  if (sasl) out.sasl = sasl;
+  const ssl = trigger.ssl ?? fromOpenfn.ssl;
+  if (typeof ssl === 'boolean') out.ssl = ssl;
+  const username = trigger.username ?? fromOpenfn.username;
+  if (username) out.username = username;
+  const password = trigger.password ?? fromOpenfn.password;
+  if (password) out.password = password;
+  return out;
+};
+
 const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
   const jobIdToKey: Record<string, string> = {};
   state.jobs.forEach(job => {
@@ -323,8 +399,9 @@ const triggerStateToCanonical = (
     const cursorJob = jobs.find(j => j.id === trigger.cron_cursor_job_id);
     if (cursorJob) base.cron_cursor = hyphenate(cursorJob.name);
   }
-  // Kafka: state has no kafka_configuration today; placeholder for parity.
-  // When it lands, hosts/topics/etc. land flat on `base` directly.
+  if (trigger.type === 'kafka' && trigger.kafka_configuration) {
+    Object.assign(base, kafkaConfigToCanonical(trigger.kafka_configuration));
+  }
 
   const outgoing = edges.filter(e => e.source_trigger_id === trigger.id);
   const next = buildNextField(outgoing, jobIdToKey);
@@ -588,9 +665,11 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
     };
     return out;
   }
+  const kafka_configuration = kafkaConfigFromCanonical(trigger);
   const out: SpecKafkaTrigger = {
     type: 'kafka',
     enabled,
+    ...(kafka_configuration ? { kafka_configuration } : {}),
   };
   return out;
 };

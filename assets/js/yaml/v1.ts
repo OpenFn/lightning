@@ -84,6 +84,9 @@ export const convertWorkflowSpecToState = (
         id: uId,
         type: 'kafka',
         enabled,
+        ...(specTrigger.kafka_configuration
+          ? { kafka_configuration: specTrigger.kafka_configuration }
+          : {}),
       };
     }
 
