@@ -246,7 +246,7 @@ defmodule Lightning.VersionControlTest do
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
 
-    test "returns {:error, :branch_used_by_ancestor} when sandbox claims an ancestor's (repo, branch)" do
+    test "returns a changeset error when sandbox claims an ancestor's (repo, branch)" do
       parent = insert(:project)
 
       insert(:project_repo_connection,
@@ -267,10 +267,76 @@ defmodule Lightning.VersionControlTest do
         "accept" => "true"
       }
 
-      assert {:error, :branch_used_by_ancestor} =
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
                VersionControl.create_github_connection(params, user)
 
+      assert {msg, _} = changeset.errors[:branch]
+      assert msg =~ "already linked to another project in the same project family"
+
       # parent's existing connection is the only one in the DB
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "returns a changeset error when a sibling sandbox already uses the (repo, branch)" do
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "someaccount/somerepo",
+        branch: "feature"
+      )
+
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sibling_b.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "feature",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
+               VersionControl.create_github_connection(params, user)
+
+      assert {msg, _} = changeset.errors[:branch]
+      assert msg =~ "already linked to another project in the same project family"
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "DB unique index closes the check-then-insert race even when the application-level guard is bypassed" do
+      # Build two raw structs that have already passed the in-memory guard —
+      # this models the race window in which two concurrent transactions both
+      # SELECT no-row before either INSERTs. With the unique index in place,
+      # exactly one INSERT survives; the other raises Ecto.ConstraintError on
+      # `project_repo_connections_root_repo_branch_index`.
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      build_struct = fn project ->
+        %Lightning.VersionControl.ProjectRepoConnection{
+          project_id: project.id,
+          root_project_id: parent.id,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234",
+          access_token: "token-#{project.id}"
+        }
+      end
+
+      assert {:ok, _} = Repo.insert(build_struct.(sibling_a))
+
+      assert_raise Postgrex.Error,
+                   ~r/project_repo_connections_root_repo_branch/,
+                   fn ->
+                     Repo.insert(build_struct.(sibling_b))
+                   end
+
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
     end
   end
