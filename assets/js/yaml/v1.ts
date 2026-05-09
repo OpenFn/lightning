@@ -241,22 +241,6 @@ export const parseWorkflowTemplate = (code: string): WorkflowSpec => {
   }
 };
 
-// Preserved from the original `util.ts` for parity even though it is not
-// currently referenced. Removing it is out of scope for the v1 extraction.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const humanizeAjvError = (error: ErrorObject): string => {
-  switch (error.keyword) {
-    case 'required':
-      return `Missing required property '${error.params.missingProperty}' at ${error.instancePath}`;
-    case 'additionalProperties':
-      return `Unknown property '${error.params.additionalProperty}' at ${error.instancePath}`;
-    case 'enum':
-      return `Invalid value at ${error.instancePath}. Allowed values are: '${error.params.allowedValues}'`;
-    default:
-      return `${error.message} at ${error.instancePath}`;
-  }
-};
-
 const findActionableAjvError = (
   errors: ErrorObject[]
 ): ErrorObject | undefined => {

@@ -141,7 +141,9 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
 
     if is_binary(root_project_id) and is_binary(repo) and is_binary(branch) do
       if tree_branch_conflict?(root_project_id, repo, branch, self_id) do
-        add_error(changeset, :branch, @tree_branch_error)
+        add_error(changeset, :branch, @tree_branch_error,
+          reason: :tree_branch_conflict
+        )
       else
         changeset
       end

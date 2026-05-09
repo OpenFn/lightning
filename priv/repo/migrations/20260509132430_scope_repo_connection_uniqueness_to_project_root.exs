@@ -13,12 +13,21 @@ defmodule Lightning.Repo.Migrations.ScopeRepoConnectionUniquenessToProjectRoot d
   connections in the same project tree already share `(repo, branch)`, the
   unique index creation will fail; resolve by removing one of the connections
   and re-running the migration.
+
+  `on_delete: :delete_all` matches the existing behaviour on
+  `project_repo_connections.project_id`. Picking `:restrict` instead would
+  block root-project deletion whenever any descendant sandbox still holds a
+  repo connection (because `projects.parent_id` is `:nilify_all` — the
+  sandbox sticks around with `parent_id = NULL` after the root is dropped, so
+  its connection's `root_project_id` reference survives the cascade).
+  Connections are derivative settings; cascading them when the root is gone
+  is the sensible choice.
   """
 
   def up do
     alter table(:project_repo_connections) do
       add :root_project_id,
-          references(:projects, type: :binary_id, on_delete: :restrict)
+          references(:projects, type: :binary_id, on_delete: :delete_all)
     end
 
     flush()

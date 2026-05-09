@@ -181,8 +181,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp maybe_force_branch_error_action(changeset) do
     branch_errors = Keyword.get_values(changeset.errors, :branch)
 
-    if Enum.any?(branch_errors, fn {msg, _} ->
-         msg =~ "already linked to another project in the same project family"
+    if Enum.any?(branch_errors, fn {_msg, opts} ->
+         Keyword.get(opts, :reason) == :tree_branch_conflict
        end) do
       Map.put(changeset, :action, :validate)
     else

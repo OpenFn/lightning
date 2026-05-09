@@ -14,7 +14,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponentTest do
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
 
-  @ancestor_branch_error "this branch is already linked to a parent project; sandboxes must use a different branch"
+  @ancestor_branch_error "this branch is already linked to another project in the same project family; use a different branch"
 
   describe "ancestor branch guard on the new connection form" do
     test "surfaces an inline error and disables the Save button when sandbox claims an ancestor's (repo, branch)",

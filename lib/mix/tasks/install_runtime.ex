@@ -41,6 +41,10 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
     )
   end
 
+  # @openfn/cli is exercised by `test/integration/cli_deploy_test.exs`, which
+  # is `:integration`-tagged and excluded from the default `mix test` run. Bumps
+  # to the pinned version here are not covered by the standard CI signal — run
+  # the integration suite locally before merging a CLI bump.
   def packages do
     ~W(
       @openfn/cli@1.35.1
