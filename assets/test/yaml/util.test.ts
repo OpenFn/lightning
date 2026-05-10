@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import YAML from 'yaml';
 
 import {
@@ -252,16 +252,22 @@ describe('parseWorkflowYAML — format detection + dispatch', () => {
   });
 
   test('rejects an empty document with a workflow validation error', () => {
-    // Empty docs become null after YAML.parse — detectFormat biases v1, v1
-    // schema rejects (missing required `name` / `jobs`). Either a workflow
-    // error or schema error is acceptable; what matters is that this throws.
-    expect(() => parseWorkflowYAML('')).toThrow();
+    // Empty docs become null after YAML.parse — detectFormat biases v1 and
+    // emits a console.warn before the v1 schema rejects. Silence the warn so
+    // test output stays clean. What matters is that this throws.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(() => parseWorkflowYAML('')).toThrow();
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   test('biases v1 when a doc has both `jobs:` and `steps:` (legacy)', () => {
-    // Construct a doc that has both top-level keys. Detect must pick v1.
-    // The v1 schema will then reject it (jobs is empty / no triggers), but
-    // the throw must come from the v1 path — confirmed by the error class.
+    // Construct a doc that has both top-level keys. Detect must pick v1 and
+    // log a warn. The v1 schema then rejects (jobs is empty / no triggers),
+    // but the throw must come from the v1 path — confirmed by the error class.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const ambiguous = `
 name: ambiguous
 jobs: {}
@@ -274,6 +280,8 @@ edges: {}
       parseWorkflowYAML(ambiguous);
     } catch (err) {
       thrown = err;
+    } finally {
+      warnSpy.mockRestore();
     }
     expect(thrown).toBeInstanceOf(SchemaValidationError);
   });

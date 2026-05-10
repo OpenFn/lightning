@@ -348,90 +348,112 @@ describe('YAMLImportPanel', () => {
   // (CLI-aligned portability spec) YAML transparently. The panel itself is
   // format-agnostic; it routes through `parseWorkflowYAML` which auto-detects.
   describe('Format dispatch (v1 + v2)', () => {
+    // Each scenario lists the workflow name and the exact job/trigger names
+    // declared in BOTH the v1 and v2 fixtures (paired in
+    // test/fixtures/portability/{v1,v2}/scenarios/<name>.yaml). Asserting on
+    // the last populated onImport call's content catches a regression that
+    // silently truncates jobs/triggers — the previous `length > 0` check
+    // would have passed even if only the first job came through.
     const SCENARIOS = [
-      'simple-webhook',
-      'cron-with-cursor',
-      'js-expression-edge',
-      'multi-trigger',
-      'kafka-trigger',
-      'branching-jobs',
+      {
+        name: 'simple-webhook',
+        workflow: 'simple webhook',
+        jobs: ['greet'],
+        triggers: ['webhook'],
+      },
+      {
+        name: 'cron-with-cursor',
+        workflow: 'cron with cursor',
+        jobs: ['cursor step'],
+        triggers: ['cron'],
+      },
+      {
+        name: 'js-expression-edge',
+        workflow: 'js expression edge',
+        jobs: ['source step', 'target step'],
+        triggers: ['webhook'],
+      },
+      {
+        name: 'multi-trigger',
+        workflow: 'multi trigger',
+        jobs: ['shared step'],
+        triggers: ['webhook', 'cron'],
+      },
+      {
+        name: 'kafka-trigger',
+        workflow: 'kafka trigger',
+        jobs: ['consume'],
+        triggers: ['kafka'],
+      },
+      {
+        name: 'branching-jobs',
+        workflow: 'branching jobs',
+        jobs: ['fan out', 'branch a', 'branch b'],
+        triggers: ['webhook'],
+      },
     ] as const;
 
+    const lastPopulatedState = (
+      mockFn: ReturnType<typeof vi.fn>
+    ): { jobs: { name: string }[]; triggers: { type: string }[] } | null => {
+      const populated = mockFn.mock.calls.filter(
+        ([state]) => state && state.jobs && state.jobs.length > 0
+      );
+      const last = populated[populated.length - 1];
+      return last ? last[0] : null;
+    };
+
+    const renderAndImport = async (yaml: string) => {
+      const mockStore = createMockStoreContextValue();
+      render(
+        <StoreContext.Provider value={mockStore}>
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
+        </StoreContext.Provider>
+      );
+
+      const textarea = screen.getByPlaceholderText(
+        /Paste your workflow YAML here/i
+      );
+      fireEvent.change(textarea, { target: { value: yaml } });
+
+      await waitFor(
+        () => {
+          const createButton = screen.getByRole('button', { name: /Create/i });
+          expect(createButton).not.toBeDisabled();
+        },
+        { timeout: 600 }
+      );
+    };
+
     test.each(SCENARIOS)(
-      'accepts v1 fixture for %s and previews via onImport',
-      async name => {
-        const mockStore = createMockStoreContextValue();
-        render(
-          <StoreContext.Provider value={mockStore}>
-            <YAMLImportPanel
-              onBack={mockOnBack}
-              onImport={mockOnImport}
-              onSave={mockOnSave}
-            />
-          </StoreContext.Provider>
-        );
+      'accepts v1 fixture for $name and previews via onImport',
+      async ({ name, jobs, triggers }) => {
+        await renderAndImport(readScenario('v1', name));
 
-        const textarea = screen.getByPlaceholderText(
-          /Paste your workflow YAML here/i
+        const state = lastPopulatedState(mockOnImport);
+        expect(state).not.toBeNull();
+        expect(state!.jobs.map(j => j.name).sort()).toEqual([...jobs].sort());
+        expect(state!.triggers.map(t => t.type).sort()).toEqual(
+          [...triggers].sort()
         );
-        fireEvent.change(textarea, {
-          target: { value: readScenario('v1', name) },
-        });
-
-        await waitFor(
-          () => {
-            const createButton = screen.getByRole('button', {
-              name: /Create/i,
-            });
-            expect(createButton).not.toBeDisabled();
-          },
-          { timeout: 600 }
-        );
-
-        // onImport receives a non-empty WorkflowState — the panel only
-        // surfaces a populated state when validation passed.
-        const populatedCalls = mockOnImport.mock.calls.filter(
-          ([state]) => state && state.jobs && state.jobs.length > 0
-        );
-        expect(populatedCalls.length).toBeGreaterThan(0);
       }
     );
 
     test.each(SCENARIOS)(
-      'accepts v2 fixture for %s and previews via onImport',
-      async name => {
-        const mockStore = createMockStoreContextValue();
-        render(
-          <StoreContext.Provider value={mockStore}>
-            <YAMLImportPanel
-              onBack={mockOnBack}
-              onImport={mockOnImport}
-              onSave={mockOnSave}
-            />
-          </StoreContext.Provider>
-        );
+      'accepts v2 fixture for $name and previews via onImport',
+      async ({ name, jobs, triggers }) => {
+        await renderAndImport(readScenario('v2', name));
 
-        const textarea = screen.getByPlaceholderText(
-          /Paste your workflow YAML here/i
+        const state = lastPopulatedState(mockOnImport);
+        expect(state).not.toBeNull();
+        expect(state!.jobs.map(j => j.name).sort()).toEqual([...jobs].sort());
+        expect(state!.triggers.map(t => t.type).sort()).toEqual(
+          [...triggers].sort()
         );
-        fireEvent.change(textarea, {
-          target: { value: readScenario('v2', name) },
-        });
-
-        await waitFor(
-          () => {
-            const createButton = screen.getByRole('button', {
-              name: /Create/i,
-            });
-            expect(createButton).not.toBeDisabled();
-          },
-          { timeout: 600 }
-        );
-
-        const populatedCalls = mockOnImport.mock.calls.filter(
-          ([state]) => state && state.jobs && state.jobs.length > 0
-        );
-        expect(populatedCalls.length).toBeGreaterThan(0);
       }
     );
   });

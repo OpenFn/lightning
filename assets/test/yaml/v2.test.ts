@@ -24,18 +24,26 @@ import { resolve } from 'node:path';
 
 import Ajv from 'ajv';
 import YAML from 'yaml';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import workflowV2Schema from '../../js/yaml/schema/workflow-spec-v2.json';
 import type {
   StateEdge,
-  StateJob,
   StateTrigger,
   WorkflowState,
 } from '../../js/yaml/types';
 import * as v1 from '../../js/yaml/v1';
 import * as v2 from '../../js/yaml/v2';
 import { SchemaValidationError } from '../../js/yaml/workflow-errors';
+
+import {
+  SYNTHETIC_STATES,
+  branchingJobsState,
+  cronWithCursorState,
+  jsExpressionEdgeState,
+  kafkaTriggerState,
+  simpleWebhookState,
+} from './__fixtures__/v2States';
 
 // ── Fixture loading ─────────────────────────────────────────────────────────
 
@@ -63,211 +71,9 @@ const readFixture = (
   return { text: readFileSync(path, 'utf-8'), path };
 };
 
-// ── Synthetic state factories ───────────────────────────────────────────────
+// Synthetic `WorkflowState` factories live in `__fixtures__/v2States.ts` so
+// they can be reused across test files without bloating any single suite.
 //
-// These build `WorkflowState` instances in the shape v2.ts itself produces
-// when serializing. They let us round-trip through v2.ts without depending
-// on the (currently misaligned) on-disk fixtures.
-
-const makeJob = (
-  overrides: Partial<StateJob> & { name: string }
-): StateJob => ({
-  id: `job-${overrides.name}`,
-  adaptor: '@openfn/language-common@latest',
-  body: 'fn(state => state)\n',
-  keychain_credential_id: null,
-  project_credential_id: null,
-  ...overrides,
-});
-
-const baseEdge = (overrides: Partial<StateEdge>): StateEdge => ({
-  id: `edge-${Math.random().toString(36).slice(2, 9)}`,
-  condition_type: 'always',
-  enabled: true,
-  target_job_id: 'job-x',
-  ...overrides,
-});
-
-const simpleWebhookState = (): WorkflowState => {
-  const greet = makeJob({ name: 'greet' });
-  const webhook: StateTrigger = {
-    id: 'trigger-webhook',
-    type: 'webhook',
-    enabled: true,
-    webhook_reply: 'after_completion',
-  };
-  return {
-    id: 'wf-1',
-    name: 'simple webhook',
-    jobs: [greet],
-    triggers: [webhook],
-    edges: [
-      baseEdge({
-        source_trigger_id: webhook.id,
-        target_job_id: greet.id,
-      }),
-    ],
-    positions: null,
-  };
-};
-
-const cronWithCursorState = (): WorkflowState => {
-  const cursor = makeJob({ name: 'cursor step' });
-  const cron: StateTrigger = {
-    id: 'trigger-cron',
-    type: 'cron',
-    enabled: true,
-    cron_expression: '0 6 * * *',
-    cron_cursor_job_id: cursor.id,
-  };
-  return {
-    id: 'wf-2',
-    name: 'cron with cursor',
-    jobs: [cursor],
-    triggers: [cron],
-    edges: [
-      baseEdge({
-        source_trigger_id: cron.id,
-        target_job_id: cursor.id,
-      }),
-    ],
-    positions: null,
-  };
-};
-
-const jsExpressionEdgeState = (): WorkflowState => {
-  const source = makeJob({ name: 'source step' });
-  const target = makeJob({ name: 'target step' });
-  const webhook: StateTrigger = {
-    id: 'trigger-webhook',
-    type: 'webhook',
-    enabled: true,
-    webhook_reply: null,
-  };
-  return {
-    id: 'wf-3',
-    name: 'js expression edge',
-    jobs: [source, target],
-    triggers: [webhook],
-    edges: [
-      baseEdge({
-        source_trigger_id: webhook.id,
-        target_job_id: source.id,
-      }),
-      baseEdge({
-        source_job_id: source.id,
-        target_job_id: target.id,
-        condition_type: 'js_expression',
-        condition_label: 'Only when payload present',
-        condition_expression: '!!state.data && state.data.length > 0\n',
-      }),
-    ],
-    positions: null,
-  };
-};
-
-const multiTriggerState = (): WorkflowState => {
-  const shared = makeJob({ name: 'shared step' });
-  const webhook: StateTrigger = {
-    id: 'trigger-webhook',
-    type: 'webhook',
-    enabled: true,
-    webhook_reply: null,
-  };
-  const cron: StateTrigger = {
-    id: 'trigger-cron',
-    type: 'cron',
-    enabled: true,
-    cron_expression: '*/5 * * * *',
-    cron_cursor_job_id: null,
-  };
-  return {
-    id: 'wf-4',
-    name: 'multi trigger',
-    jobs: [shared],
-    triggers: [webhook, cron],
-    edges: [
-      baseEdge({ source_trigger_id: webhook.id, target_job_id: shared.id }),
-      baseEdge({ source_trigger_id: cron.id, target_job_id: shared.id }),
-    ],
-    positions: null,
-  };
-};
-
-const kafkaTriggerState = (): WorkflowState => {
-  const consume = makeJob({ name: 'consume' });
-  const kafka: StateTrigger = {
-    id: 'trigger-kafka',
-    type: 'kafka',
-    enabled: true,
-    kafka_configuration: {
-      hosts_string: 'broker-a:9092, broker-b:9092',
-      topics_string: 'orders, shipments',
-      ssl: true,
-      sasl: 'scram_sha_256',
-      username: 'svc-orders',
-      password: 'pw-shh',
-      initial_offset_reset_policy: 'earliest',
-      connect_timeout: 30,
-      group_id: 'lightning-orders',
-    },
-  };
-  return {
-    id: 'wf-5',
-    name: 'kafka trigger',
-    jobs: [consume],
-    triggers: [kafka],
-    edges: [
-      baseEdge({
-        source_trigger_id: kafka.id,
-        target_job_id: consume.id,
-      }),
-    ],
-    positions: null,
-  };
-};
-
-const branchingJobsState = (): WorkflowState => {
-  const fanOut = makeJob({ name: 'fan out' });
-  const branchA = makeJob({ name: 'branch a' });
-  const branchB = makeJob({ name: 'branch b' });
-  const webhook: StateTrigger = {
-    id: 'trigger-webhook',
-    type: 'webhook',
-    enabled: true,
-    webhook_reply: null,
-  };
-  return {
-    id: 'wf-6',
-    name: 'branching jobs',
-    jobs: [fanOut, branchA, branchB],
-    triggers: [webhook],
-    edges: [
-      baseEdge({ source_trigger_id: webhook.id, target_job_id: fanOut.id }),
-      baseEdge({
-        source_job_id: fanOut.id,
-        target_job_id: branchA.id,
-        condition_type: 'on_job_success',
-      }),
-      baseEdge({
-        source_job_id: fanOut.id,
-        target_job_id: branchB.id,
-        condition_type: 'on_job_failure',
-      }),
-    ],
-    positions: null,
-  };
-};
-
-const SYNTHETIC_STATES: Array<{ name: string; state: () => WorkflowState }> = [
-  { name: 'simple-webhook', state: simpleWebhookState },
-  { name: 'cron-with-cursor', state: cronWithCursorState },
-  { name: 'js-expression-edge', state: jsExpressionEdgeState },
-  { name: 'multi-trigger', state: multiTriggerState },
-  { name: 'kafka-trigger', state: kafkaTriggerState },
-  { name: 'branching-jobs', state: branchingJobsState },
-];
-
 // ── Round-trip: state → YAML → spec ─────────────────────────────────────────
 
 describe('v2.serializeWorkflow / parseWorkflow round-trip on synthetic state', () => {
@@ -678,6 +484,18 @@ steps:
 // ── detectFormat sanity ─────────────────────────────────────────────────────
 
 describe('v2.detectFormat', () => {
+  // The ambiguous and null/non-object branches log via console.warn. Silence
+  // them so test output stays clean; restore after each test.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
   it('returns v2 for a doc with steps and no jobs', () => {
     expect(v2.detectFormat({ steps: [] })).toBe('v2');
   });
@@ -694,6 +512,9 @@ describe('v2.detectFormat', () => {
 
   it('returns v1 for a doc with both jobs and steps (legacy bias)', () => {
     expect(v2.detectFormat({ jobs: {}, steps: [] })).toBe('v1');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('both `jobs:` and `steps:`')
+    );
   });
 
   it('returns v1 for null / non-object input', () => {
