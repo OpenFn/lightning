@@ -11,8 +11,9 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   use Mix.Task
 
   @default_path "priv/openfn"
+  @cli_version "1.13.2"
 
-  def run(_) do
+  def run(args) do
     Rambo.run("/usr/bin/env", ~w(which node))
     |> case do
       {:error, %{status: 1}} ->
@@ -31,7 +32,7 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
         nil
     end
 
-    package_list = packages() |> Enum.join(" ")
+    package_list = packages(args) |> Enum.join(" ")
 
     Rambo.run(
       "/usr/bin/env",
@@ -41,10 +42,16 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
     )
   end
 
-  def packages do
-    ~W(
-      @openfn/cli@1.13.2
-      @openfn/language-common@latest
-    )
+  def packages(args \\ []) do
+    cli_version =
+      case args do
+        [version | _] when is_binary(version) -> version
+        _ -> @cli_version
+      end
+
+    [
+      "@openfn/cli@" <> cli_version,
+      "@openfn/language-common@latest"
+    ]
   end
 end
