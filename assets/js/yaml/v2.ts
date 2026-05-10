@@ -6,7 +6,7 @@
 //
 // Spec source: https://raw.githubusercontent.com/OpenFn/kit/42d6b38/packages/lexicon/portability.d.ts
 //
-// ## Wire shape (workflow)
+// ## Portability shape (workflow)
 //
 // `steps: Array<Job | Trigger>` — single top-level array combining triggers
 // and jobs. Jobs use `adaptor: string` (singular). Triggers carry
@@ -112,7 +112,7 @@ const isV1TriggersObject = (triggers: unknown): boolean => {
  *
  * Triggers and steps are emitted in the order they appear in the input
  * `state.triggers` / `state.jobs` arrays — triggers first, then jobs — into a
- * single unified `steps:` array on the wire.
+ * single unified `steps:` array in the portability format.
  */
 export const serializeWorkflow = (state: WorkflowState): string => {
   const canonical = workflowStateToCanonical(state);
@@ -151,7 +151,7 @@ export const parseWorkflow = (parsedYaml: unknown): WorkflowSpec => {
   return v2DocToWorkflowSpec(parsed);
 };
 
-// ── v2 wire-shape types ─────────────────────────────────────────────────────
+// ── v2 portability-shape types ──────────────────────────────────────────────
 
 interface V2EdgeObject {
   condition?: string;
@@ -217,7 +217,7 @@ const isTriggerStep = (step: V2Step): step is V2TriggerStep => {
 // ── State → v2 canonical map ────────────────────────────────────────────────
 //
 // The canonical map is the JS object that, when emitted by `emitCanonicalYaml`,
-// reproduces the wire-format v2 YAML. It mirrors the parsed-YAML shape exactly.
+// reproduces the canonical v2 portability format. It mirrors the parsed-YAML shape exactly.
 
 interface CanonicalEdge {
   condition?: string;
@@ -434,7 +434,7 @@ const buildNextField = (
   return next;
 };
 
-// Map Lightning's `condition_type` enum to the wire-format condition value.
+// Map Lightning's `condition_type` enum to the portability format condition value.
 // Per `lightning.d.ts:102` the spec accepts the union
 // `'always' | 'on_job_success' | 'on_job_failure' | string`. We emit the
 // literal verbatim for all three named values (matching the kitchen-sink
@@ -720,8 +720,8 @@ const nextEntryToSpecEdge = (
   const out: SpecEdge = {
     target_job: target,
     condition_type,
-    // v2 wire field is `disabled:` (defaults false). v1/SpecEdge uses the
-    // inverted `enabled` boolean.
+    // v2 portability field is `disabled:` (defaults false). v1/SpecEdge uses
+    // the inverted `enabled` boolean.
     enabled: edge.disabled === true ? false : true,
   };
   if (source.fromTrigger) out.source_trigger = source.fromTrigger;

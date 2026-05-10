@@ -388,8 +388,8 @@ defmodule Lightning.CliDeployTest do
       File.write(config_path, Jason.encode!(config))
 
       # 1. Pull → writes v2 YAML to config.specPath. The CLI's post-pull
-      # validator still expects the v1 wire shape (a known limitation) so
-      # exit code is non-zero, but the YAML is written to disk before
+      # validator still expects the v1 portability shape (a known limitation)
+      # so exit code is non-zero, but the YAML is written to disk before
       # validation runs. Same pattern as the existing 4 pull tests.
       System.cmd(
         @cli_path,

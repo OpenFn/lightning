@@ -37,7 +37,7 @@ export type StateWebhookTrigger = {
  * Mirrors the shape the workflow store hydrates from Y.Doc (which the Elixir
  * `Lightning.Collaboration.WorkflowSerializer` populates from
  * `Triggers.KafkaConfiguration`): hosts and topics live as comma-separated
- * `_string` form on state, and become flat YAML lists at the wire boundary.
+ * `_string` form on state, and become flat lists in the portability format.
  *
  * `connect_timeout` is in seconds (matches the Elixir schema default of 30).
  */

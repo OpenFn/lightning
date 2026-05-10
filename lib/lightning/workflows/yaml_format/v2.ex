@@ -47,7 +47,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   ## Shape
 
-  Workflow on the wire (YAML):
+  Workflow portability shape:
 
       id: <string>
       name: <string>
