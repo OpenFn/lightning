@@ -816,45 +816,6 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns a list of ancestor project IDs for the given project, walking the
-  `parent_id` chain upward via a recursive CTE. The project's own id is **not**
-  included; for a non-sandbox project (`parent_id == nil`) returns `[]`.
-  """
-  @spec ancestor_ids(Project.t() | Ecto.UUID.t()) :: [Ecto.UUID.t()]
-  def ancestor_ids(%Project{parent_id: nil}), do: []
-
-  def ancestor_ids(%Project{id: id, parent_id: parent_id})
-      when is_binary(parent_id) and is_binary(id) do
-    ancestor_ids(id)
-  end
-
-  def ancestor_ids(project_id) when is_binary(project_id) do
-    # Seed the CTE with the parents of the requested project, then recurse
-    # upward via parent_id. The project's own id is intentionally excluded.
-    initial =
-      from(p in Project,
-        where: p.id == ^project_id and not is_nil(p.parent_id),
-        select: %{id: p.parent_id}
-      )
-
-    recursion =
-      from(p in Project,
-        join: a in "project_ancestors",
-        on: a.id == p.id,
-        where: not is_nil(p.parent_id),
-        select: %{id: p.parent_id}
-      )
-
-    "project_ancestors"
-    |> recursive_ctes(true)
-    |> with_cte("project_ancestors",
-      as: ^union_all(initial, ^recursion)
-    )
-    |> select([a], type(a.id, Ecto.UUID))
-    |> Repo.all()
-  end
-
-  @doc """
   Returns the topmost ancestor (root) project id for the given project. For a
   root project (`parent_id == nil`) returns its own id. Returns `nil` if the
   project does not exist.

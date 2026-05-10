@@ -2935,38 +2935,6 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "ancestor_ids/1" do
-    test "returns [] for a project without a parent" do
-      project = insert(:project)
-      assert Projects.ancestor_ids(project) == []
-      assert Projects.ancestor_ids(project.id) == []
-    end
-
-    test "returns the parent's id for a direct sandbox" do
-      parent = insert(:project)
-      sandbox = insert(:project, parent: parent)
-
-      assert Projects.ancestor_ids(sandbox) == [parent.id]
-      assert Projects.ancestor_ids(sandbox.id) == [parent.id]
-    end
-
-    test "walks the full ancestor chain (grandparent → parent)" do
-      grandparent = insert(:project)
-      parent = insert(:project, parent: grandparent)
-      grandchild = insert(:project, parent: parent)
-
-      assert Enum.sort(Projects.ancestor_ids(grandchild)) ==
-               Enum.sort([parent.id, grandparent.id])
-    end
-
-    test "does NOT include the project's own id" do
-      parent = insert(:project)
-      sandbox = insert(:project, parent: parent)
-
-      refute sandbox.id in Projects.ancestor_ids(sandbox)
-    end
-  end
-
   describe "root_id/1" do
     test "returns the project's own id for a root project" do
       project = insert(:project)
