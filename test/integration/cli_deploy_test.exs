@@ -333,18 +333,16 @@ defmodule Lightning.CliDeployTest do
                "console.log('updated webhook job')\nfn(state => state)\n"
     end
 
-    test "round-trip: a v2 YAML pulled from Lightning re-deploys cleanly into a fresh project",
-         %{
-           user: user,
-           config: config,
-           config_path: config_path,
-           tmp_dir: tmp_dir
-         } do
-      # Round-trip test: write a project in the DB, pull it as v2 YAML, then
-      # use @openfn/project (the CLI's library) to parse the v2 YAML and
-      # re-POST as JSON state. Asserts the cross-language round-trip:
-      #   v2 YAML emit (Lightning) → @openfn/project parse → provisioner JSON
-      #   → /api/provision POST → fresh records structurally equivalent.
+    test "round-trip: a v2 project pulled from Lightning re-deploys cleanly into a fresh project",
+         %{user: user, tmp_dir: tmp_dir} do
+      # End-to-end round-trip via the CLI's v2 commands:
+      #   1. `openfn project pull <id>` fetches the v2 portability YAML and
+      #      expands it into a workspace on disk (`openfn.yaml` +
+      #      `projects/<alias>/project.yaml` + per-workflow files).
+      #   2. `openfn project deploy --new --name ...` packages the workspace
+      #      back up and POSTs JSON to `/api/provision` as a new project.
+      # Asserts that the project that lands in the DB is structurally
+      # equivalent to the source.
       #
       # We build a small bespoke project (rather than the canonical fixture)
       # to avoid having to mint extra users — `canonical_project_fixture/0`
@@ -385,89 +383,46 @@ defmodule Lightning.CliDeployTest do
           workflows: [workflow]
         )
 
-      File.write(config_path, Jason.encode!(config))
-
-      # 1. Pull → writes v2 YAML to config.specPath. The CLI's post-pull
-      # validator still expects the v1 portability shape (a known limitation)
-      # so exit code is non-zero, but the YAML is written to disk before
-      # validation runs. Same pattern as the existing 4 pull tests.
-      System.cmd(
-        @cli_path,
-        ["pull", source.id, "-c", config_path],
-        env: @required_env
-      )
-
-      assert File.exists?(config.specPath)
-
-      # 2. Embed a Node script that uses @openfn/project to parse the v2
-      #    YAML and POST the resulting state to /api/provision. The
-      #    @openfn/project library (the same one the CLI's `--beta` deploy
-      #    uses) treats `cli.version: 2` as the v2 marker; Lightning's V2
-      #    emit doesn't include that field today, so we inject it before
-      #    parsing. The library then translates the verbose `next:` map +
-      #    `condition: <literal>` form into the legacy provisioner-shape
-      #    JSON the unchanged `Provisioner.import_document/4` accepts.
-      project_lib =
-        Path.expand(
-          "priv/openfn/lib/node_modules/@openfn/cli/node_modules/@openfn/project/dist/index.js"
-        )
-
-      script_path = Path.join(tmp_dir, "round_trip.mjs")
-      result_path = Path.join(tmp_dir, "round_trip_result.json")
-
-      File.write!(script_path, """
-      import Project from '#{project_lib}';
-      import { readFile, writeFile } from 'fs/promises';
-
-      const [,, yamlPath, endpoint, apiKey, freshName, resultPath] = process.argv;
-
-      let yaml = await readFile(yamlPath, 'utf8');
-      if (!yaml.includes('cli:') && !/^version:/m.test(yaml)) {
-        yaml = 'cli:\\n  version: 2\\n' + yaml;
-      }
-
-      const project = await Project.from('project', yaml);
-      const state = project.serialize('state', { format: 'json' });
-
-      // `serialize('state')` mints a fresh project UUID + nested record
-      // UUIDs from the YAML's stable names. Keep the new id (so this lands
-      // as a brand-new project record) and rename it so we can find it.
-      state.name = freshName;
-
-      const res = await fetch(endpoint + '/api/provision', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + apiKey
-        },
-        body: JSON.stringify(state)
-      });
-
-      const body = await res.text();
-      await writeFile(resultPath, JSON.stringify({ status: res.status, body }));
-      if (!res.ok) process.exit(1);
-      """)
-
       api_token = Accounts.generate_api_token(user)
       endpoint_url = LightningWeb.Endpoint.url()
+      workspace = Path.join(tmp_dir, "round-trip-ws")
+      File.mkdir_p!(workspace)
 
-      System.cmd(
-        "node",
-        [
-          script_path,
-          config.specPath,
-          endpoint_url,
-          api_token,
-          "round-tripped",
-          result_path
-        ],
-        env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
-      )
+      cli_env = [
+        {"OPENFN_ENDPOINT", endpoint_url},
+        {"OPENFN_API_KEY", api_token},
+        {"NODE_OPTIONS", "--dns-result-order=ipv4first"}
+      ]
 
-      result = result_path |> File.read!() |> Jason.decode!()
-      assert result["status"] == 201, "deploy failed: #{result["body"]}"
+      {pull_logs, pull_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "pull", source.id, "--workspace", workspace],
+          env: cli_env
+        )
 
-      # 3. Verify a fresh project landed with structurally equivalent records.
+      assert pull_status == 0,
+             "project pull failed (exit #{pull_status}): #{pull_logs}"
+
+      {deploy_logs, deploy_status} =
+        System.cmd(
+          @cli_path,
+          [
+            "project",
+            "deploy",
+            "--workspace",
+            workspace,
+            "--new",
+            "--name",
+            "round-tripped",
+            "-y"
+          ],
+          env: cli_env
+        )
+
+      assert deploy_status == 0,
+             "project deploy failed (exit #{deploy_status}): #{deploy_logs}"
+
       [_source, deployed] =
         Lightning.Repo.all(Lightning.Projects.Project)
         |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
