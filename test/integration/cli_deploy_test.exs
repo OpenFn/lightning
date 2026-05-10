@@ -435,6 +435,92 @@ defmodule Lightning.CliDeployTest do
 
       assert workflow_summary(source) == workflow_summary(deployed)
     end
+
+    test "deploy updates (v2) to an existing project on a Lightning server",
+         %{user: user, tmp_dir: tmp_dir} do
+      # End-to-end v2 update via the CLI: pull a source project into a
+      # workspace, mutate a job's `.js` file, then `openfn project deploy
+      # <id> -y` (no `--new`) to push the change back. Asserts the source
+      # project's job body was updated in the DB.
+      user
+      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Lightning.Repo.update!()
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_alpha =
+        build(:job,
+          name: "alpha",
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state)"
+        )
+
+      workflow =
+        build(:workflow, name: "rt-update-wf", project: nil)
+        |> with_trigger(trigger)
+        |> with_job(job_alpha)
+        |> with_edge({trigger, job_alpha}, condition_type: :always)
+
+      source =
+        insert(:project,
+          name: "rt-update-source",
+          project_users: [%{user: user, role: :owner}],
+          workflows: [workflow]
+        )
+
+      api_token = Accounts.generate_api_token(user)
+      endpoint_url = LightningWeb.Endpoint.url()
+      workspace = Path.join(tmp_dir, "update-ws")
+      File.mkdir_p!(workspace)
+
+      cli_env = [
+        {"OPENFN_ENDPOINT", endpoint_url},
+        {"OPENFN_API_KEY", api_token},
+        {"NODE_OPTIONS", "--dns-result-order=ipv4first"}
+      ]
+
+      {pull_logs, pull_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "pull", source.id, "--workspace", workspace],
+          env: cli_env
+        )
+
+      assert pull_status == 0,
+             "project pull failed (exit #{pull_status}): #{pull_logs}"
+
+      # Checkout writes each step's expression to its own `.js` file
+      # alongside the workflow YAML. Mutating the `.js` is enough — the
+      # next deploy reads the file back via @openfn/project's `from('fs')`.
+      alpha_js_path =
+        Path.join([workspace, "workflows", "rt-update-wf", "alpha.js"])
+
+      assert File.exists?(alpha_js_path)
+
+      updated_body = "fn(state => ({ ...state, marker: 'v2-update' }))"
+      File.write!(alpha_js_path, updated_body)
+
+      {deploy_logs, deploy_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "deploy", "--workspace", workspace, "-y"],
+          env: cli_env
+        )
+
+      assert deploy_status == 0,
+             "project deploy failed (exit #{deploy_status}): #{deploy_logs}"
+
+      [updated_workflow] =
+        source
+        |> Lightning.Repo.reload()
+        |> Lightning.Repo.preload(workflows: [:jobs])
+        |> Map.get(:workflows)
+
+      updated_alpha =
+        Enum.find(updated_workflow.jobs, &(&1.name == "alpha"))
+
+      assert String.trim_trailing(updated_alpha.body, "\n") == updated_body
+    end
   end
 
   defp workflow_summary(%{workflows: workflows}) do
