@@ -11,8 +11,9 @@
 // `steps: Array<Job | Trigger>` — single top-level array combining triggers
 // and jobs. Jobs use `adaptor: string` (singular). Triggers carry
 // `cron_expression?` and `webhook_reply?` as flat spec-defined fields.
-// Lightning-specific extensions (`cron_cursor`, `kafka`) live under
-// `openfn:` since the spec doesn't define them.
+// Lightning-specific extensions (`cron_cursor`, `kafka` config) also live
+// flat at the trigger root — the spec's Trigger interface doesn't forbid
+// extra fields, and keeping everything flat matches the Elixir emitter.
 //
 // ## Edge shape (`next:`)
 //
@@ -176,18 +177,6 @@ interface V2KafkaConfig {
   [key: string]: unknown;
 }
 
-/**
- * DEPRECATED legacy nested extension block. Lightning now emits `cron_cursor`
- * and kafka config fields flat at the trigger root. Kept here as an
- * accepted-on-parse shape so externally-authored v2 documents that still use
- * the old form keep working.
- */
-interface V2OpenfnBlock {
-  cron_cursor?: string;
-  kafka?: V2KafkaConfig;
-  [key: string]: unknown;
-}
-
 interface V2TriggerStep extends V2KafkaConfig {
   id: string;
   name?: string;
@@ -196,8 +185,6 @@ interface V2TriggerStep extends V2KafkaConfig {
   cron_expression?: string;
   cron_cursor?: string;
   webhook_reply?: string;
-  /** DEPRECATED: legacy openfn extension block. See `V2OpenfnBlock`. */
-  openfn?: V2OpenfnBlock;
   next?: V2NextValue;
 }
 
@@ -306,13 +293,10 @@ const kafkaConfigToCanonical = (
 const kafkaConfigFromCanonical = (
   trigger: V2TriggerStep
 ): StateKafkaConfiguration | null => {
-  const fromOpenfn = trigger.openfn?.kafka ?? {};
-  const hosts = trigger.hosts ?? fromOpenfn.hosts ?? [];
-  const topics = trigger.topics ?? fromOpenfn.topics ?? [];
-  const policy =
-    trigger.initial_offset_reset_policy ??
-    fromOpenfn.initial_offset_reset_policy;
-  const timeout = trigger.connect_timeout ?? fromOpenfn.connect_timeout;
+  const hosts = trigger.hosts ?? [];
+  const topics = trigger.topics ?? [];
+  const policy = trigger.initial_offset_reset_policy;
+  const timeout = trigger.connect_timeout;
 
   // If nothing kafka-shaped is on the trigger, leave it null so callers can
   // distinguish "no config emitted" from "config emitted but empty".
@@ -331,16 +315,11 @@ const kafkaConfigFromCanonical = (
     initial_offset_reset_policy: policy ?? 'latest',
     connect_timeout: typeof timeout === 'number' ? timeout : 30,
   };
-  const groupId = trigger.group_id ?? fromOpenfn.group_id;
-  if (groupId) out.group_id = groupId;
-  const sasl = trigger.sasl ?? fromOpenfn.sasl;
-  if (sasl) out.sasl = sasl;
-  const ssl = trigger.ssl ?? fromOpenfn.ssl;
-  if (typeof ssl === 'boolean') out.ssl = ssl;
-  const username = trigger.username ?? fromOpenfn.username;
-  if (username) out.username = username;
-  const password = trigger.password ?? fromOpenfn.password;
-  if (password) out.password = password;
+  if (trigger.group_id) out.group_id = trigger.group_id;
+  if (trigger.sasl) out.sasl = trigger.sasl;
+  if (typeof trigger.ssl === 'boolean') out.ssl = trigger.ssl;
+  if (trigger.username) out.username = trigger.username;
+  if (trigger.password) out.password = trigger.password;
   return out;
 };
 
@@ -641,17 +620,13 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
 
 const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
   const enabled = trigger.enabled ?? true;
-  // Backwards-compat: accept the legacy `openfn: { cron_cursor }` shape from
-  // older v2 documents that haven't been re-emitted yet. New documents emit
-  // `cron_cursor:` flat at the trigger root.
-  const openfn = trigger.openfn ?? {};
 
   if (trigger.type === 'cron') {
     const out: SpecCronTrigger = {
       type: 'cron',
       enabled,
       cron_expression: trigger.cron_expression ?? '',
-      cron_cursor_job: trigger.cron_cursor ?? openfn.cron_cursor ?? null,
+      cron_cursor_job: trigger.cron_cursor ?? null,
       pos: undefined,
     };
     return out;

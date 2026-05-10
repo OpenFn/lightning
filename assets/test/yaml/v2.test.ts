@@ -12,10 +12,10 @@
  *
  * The wire shape is the unified `steps:` array (triggers AND jobs in one
  * list, distinguished by a `type:` discriminator on triggers). Spec-defined
- * trigger fields (`cron_expression`, `webhook_reply`) are flat on the trigger;
- * Lightning-only extensions (`cron_cursor`, `kafka`) live nested under
- * `openfn:`. This matches the Elixir `Lightning.Workflows.YamlFormat.V2`
- * module and the @openfn/cli lexicon. See
+ * trigger fields (`cron_expression`, `webhook_reply`) and Lightning-only
+ * extensions (`cron_cursor`, `kafka` config) all live flat at the trigger
+ * root. This matches the Elixir `Lightning.Workflows.YamlFormat.V2` module
+ * and the @openfn/cli lexicon. See
  * `test/fixtures/portability/v2/canonical_workflow.yaml` for the spec witness.
  */
 
