@@ -1,10 +1,9 @@
 // Synthetic `WorkflowState` factories for v2 round-trip tests.
 //
-// These build state instances in the shape `v2.serializeWorkflow` consumes,
-// pairing 1:1 with the on-disk fixtures under
-// `test/fixtures/portability/v2/scenarios/`. They let round-trip tests
-// (state → serialize → parse → state) run without depending on the YAML
-// fixtures so the two layers can fail independently.
+// These build state instances in the shape `v2.serializeWorkflow` consumes.
+// They let round-trip tests (state → serialize → parse → state) run
+// without depending on the on-disk YAML fixtures, so the synthetic
+// state-shape layer and the on-disk fixture layer can fail independently.
 
 import type {
   StateEdge,

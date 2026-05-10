@@ -63,8 +63,11 @@ const FIXTURES_ROOT = resolve(
   '../../../../../test/fixtures/portability'
 );
 
-const readScenario = (format: 'v1' | 'v2', name: string): string =>
-  readFileSync(`${FIXTURES_ROOT}/${format}/scenarios/${name}.yaml`, 'utf-8');
+// Kitchen-sink fixture: comprehensive workflow exercising every supported
+// feature in both formats. New features must be added here so regressions
+// in the template loader surface.
+const readKitchenSink = (format: 'v1' | 'v2'): string =>
+  readFileSync(`${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`, 'utf-8');
 
 const makeTemplate = (id: string, name: string, code: string): Template => ({
   id,
@@ -75,15 +78,6 @@ const makeTemplate = (id: string, name: string, code: string): Template => ({
   tags: [],
   workflow_id: null,
 });
-
-const SCENARIOS = [
-  'simple-webhook',
-  'cron-with-cursor',
-  'js-expression-edge',
-  'multi-trigger',
-  'kafka-trigger',
-  'branching-jobs',
-] as const;
 
 describe('TemplatePanel — format dispatch (v1 + v2)', () => {
   let mockOnImport: ReturnType<typeof vi.fn>;
@@ -100,92 +94,86 @@ describe('TemplatePanel — format dispatch (v1 + v2)', () => {
     vi.clearAllMocks();
   });
 
-  test.each(SCENARIOS)(
-    'loads a v1-formatted template (%s) when picked',
-    async name => {
-      const template = makeTemplate(
-        `v1-${name}`,
-        `v1 ${name}`,
-        readScenario('v1', name)
-      );
-      mockState.templates = [template];
+  test('loads a v1-formatted canonical workflow template when picked', async () => {
+    const template = makeTemplate(
+      'v1-canonical',
+      'v1 canonical',
+      readKitchenSink('v1')
+    );
+    mockState.templates = [template];
 
-      const mockStore = createMockStoreContextValue();
-      render(
-        <StoreContext.Provider value={mockStore}>
-          <TemplatePanel
-            onImportClick={mockOnImportClick}
-            onImport={mockOnImport}
-          />
-        </StoreContext.Provider>
-      );
+    const mockStore = createMockStoreContextValue();
+    render(
+      <StoreContext.Provider value={mockStore}>
+        <TemplatePanel
+          onImportClick={mockOnImportClick}
+          onImport={mockOnImport}
+        />
+      </StoreContext.Provider>
+    );
 
-      const card = await screen.findByText(`v1 ${name}`);
-      fireEvent.click(card);
+    const card = await screen.findByText('v1 canonical');
+    fireEvent.click(card);
 
-      await waitFor(() => {
-        expect(mockOnImport).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockOnImport).toHaveBeenCalled();
+    });
 
-      const lastCall =
-        mockOnImport.mock.calls[mockOnImport.mock.calls.length - 1];
-      const state = lastCall[0];
-      expect(state).toBeDefined();
-      expect(Array.isArray(state.jobs)).toBe(true);
-      expect(state.jobs.length).toBeGreaterThan(0);
-      expect(Array.isArray(state.triggers)).toBe(true);
-      expect(state.triggers.length).toBeGreaterThan(0);
-    }
-  );
+    const lastCall =
+      mockOnImport.mock.calls[mockOnImport.mock.calls.length - 1];
+    const state = lastCall[0];
+    expect(state).toBeDefined();
+    expect(Array.isArray(state.jobs)).toBe(true);
+    expect(state.jobs.length).toBeGreaterThan(0);
+    expect(Array.isArray(state.triggers)).toBe(true);
+    expect(state.triggers.length).toBeGreaterThan(0);
+  });
 
-  test.each(SCENARIOS)(
-    'loads a v2-formatted template (%s) when picked',
-    async name => {
-      const template = makeTemplate(
-        `v2-${name}`,
-        `v2 ${name}`,
-        readScenario('v2', name)
-      );
-      mockState.templates = [template];
+  test('loads a v2-formatted canonical workflow template when picked', async () => {
+    const template = makeTemplate(
+      'v2-canonical',
+      'v2 canonical',
+      readKitchenSink('v2')
+    );
+    mockState.templates = [template];
 
-      const mockStore = createMockStoreContextValue();
-      render(
-        <StoreContext.Provider value={mockStore}>
-          <TemplatePanel
-            onImportClick={mockOnImportClick}
-            onImport={mockOnImport}
-          />
-        </StoreContext.Provider>
-      );
+    const mockStore = createMockStoreContextValue();
+    render(
+      <StoreContext.Provider value={mockStore}>
+        <TemplatePanel
+          onImportClick={mockOnImportClick}
+          onImport={mockOnImport}
+        />
+      </StoreContext.Provider>
+    );
 
-      const card = await screen.findByText(`v2 ${name}`);
-      fireEvent.click(card);
+    const card = await screen.findByText('v2 canonical');
+    fireEvent.click(card);
 
-      await waitFor(() => {
-        expect(mockOnImport).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockOnImport).toHaveBeenCalled();
+    });
 
-      const lastCall =
-        mockOnImport.mock.calls[mockOnImport.mock.calls.length - 1];
-      const state = lastCall[0];
-      expect(state).toBeDefined();
-      expect(Array.isArray(state.jobs)).toBe(true);
-      expect(state.jobs.length).toBeGreaterThan(0);
-      expect(Array.isArray(state.triggers)).toBe(true);
-      expect(state.triggers.length).toBeGreaterThan(0);
-    }
-  );
+    const lastCall =
+      mockOnImport.mock.calls[mockOnImport.mock.calls.length - 1];
+    const state = lastCall[0];
+    expect(state).toBeDefined();
+    expect(Array.isArray(state.jobs)).toBe(true);
+    expect(state.jobs.length).toBeGreaterThan(0);
+    expect(Array.isArray(state.triggers)).toBe(true);
+    expect(state.triggers.length).toBeGreaterThan(0);
+  });
 
-  test('produces structurally equivalent state for v1 and v2 of the same scenario', async () => {
+  test('produces structurally equivalent state for v1 and v2 canonical workflows', async () => {
     const v1Template = makeTemplate(
-      'v1-simple',
-      'v1 simple-webhook',
-      readScenario('v1', 'simple-webhook')
+      'v1-canonical',
+      'v1 canonical',
+      readKitchenSink('v1')
     );
     const v2Template = makeTemplate(
-      'v2-simple',
-      'v2 simple-webhook',
-      readScenario('v2', 'simple-webhook')
+      'v2-canonical',
+      'v2 canonical',
+      readKitchenSink('v2')
     );
     mockState.templates = [v1Template, v2Template];
 
@@ -199,11 +187,11 @@ describe('TemplatePanel — format dispatch (v1 + v2)', () => {
       </StoreContext.Provider>
     );
 
-    fireEvent.click(await screen.findByText('v1 simple-webhook'));
+    fireEvent.click(await screen.findByText('v1 canonical'));
     await waitFor(() => expect(mockOnImport).toHaveBeenCalledTimes(1));
     const v1State = mockOnImport.mock.calls[0][0];
 
-    fireEvent.click(await screen.findByText('v2 simple-webhook'));
+    fireEvent.click(await screen.findByText('v2 canonical'));
     await waitFor(() => expect(mockOnImport).toHaveBeenCalledTimes(2));
     const v2State = mockOnImport.mock.calls[1][0];
 

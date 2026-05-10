@@ -33,17 +33,13 @@ import { SchemaValidationError } from '../../js/yaml/workflow-errors';
 
 const FIXTURES_ROOT = resolve(__dirname, '../../../test/fixtures/portability');
 
-const SCENARIOS = [
-  'simple-webhook',
-  'cron-with-cursor',
-  'js-expression-edge',
-  'multi-trigger',
-  'kafka-trigger',
-  'branching-jobs',
-] as const;
-
-const readFixture = (format: 'v1' | 'v2', name: string): string =>
-  readFileSync(`${FIXTURES_ROOT}/${format}/scenarios/${name}.yaml`, 'utf-8');
+// Kitchen-sink fixtures: each format has one comprehensive workflow that
+// exercises every supported feature (multi-trigger, kafka config, cron
+// cursor, webhook reply, JS-expression edge with label + disabled,
+// branching, all condition types). New features must be added here so
+// regressions surface.
+const readKitchenSink = (format: 'v1' | 'v2'): string =>
+  readFileSync(`${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`, 'utf-8');
 
 describe('convertWorkflowSpecToState', () => {
   describe('trigger enabled state', () => {
@@ -194,58 +190,47 @@ describe('convertWorkflowSpecToState', () => {
 // ── Phase 5: format-aware parse dispatch ───────────────────────────────────
 
 describe('parseWorkflowYAML — format detection + dispatch', () => {
-  test.each(SCENARIOS)(
-    'parses the v1 fixture for %s into a v1-shaped WorkflowSpec',
-    name => {
-      const v1Text = readFixture('v1', name);
-      const spec = parseWorkflowYAML(v1Text);
+  test('parses the v1 canonical workflow into a v1-shaped WorkflowSpec', () => {
+    const spec = parseWorkflowYAML(readKitchenSink('v1'));
 
-      expect(spec).toBeDefined();
-      expect(typeof spec.name).toBe('string');
-      expect(spec.jobs).toBeDefined();
-      expect(spec.triggers).toBeDefined();
-      expect(spec.edges).toBeDefined();
-      expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
-    }
-  );
+    expect(spec).toBeDefined();
+    expect(typeof spec.name).toBe('string');
+    expect(spec.jobs).toBeDefined();
+    expect(spec.triggers).toBeDefined();
+    expect(spec.edges).toBeDefined();
+    expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
+  });
 
-  test.each(SCENARIOS)(
-    'parses the v2 fixture for %s into a v1-shaped WorkflowSpec',
-    name => {
-      const v2Text = readFixture('v2', name);
-      const spec = parseWorkflowYAML(v2Text);
+  test('parses the v2 canonical workflow into a v1-shaped WorkflowSpec', () => {
+    const spec = parseWorkflowYAML(readKitchenSink('v2'));
 
-      expect(spec).toBeDefined();
-      expect(typeof spec.name).toBe('string');
-      expect(spec.jobs).toBeDefined();
-      expect(spec.triggers).toBeDefined();
-      expect(spec.edges).toBeDefined();
-      expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
-    }
-  );
+    expect(spec).toBeDefined();
+    expect(typeof spec.name).toBe('string');
+    expect(spec.jobs).toBeDefined();
+    expect(spec.triggers).toBeDefined();
+    expect(spec.edges).toBeDefined();
+    expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
+  });
 
-  test.each(SCENARIOS)(
-    'v1 and v2 fixtures of %s parse to structurally equivalent specs',
-    name => {
-      const v1Spec = parseWorkflowYAML(readFixture('v1', name));
-      const v2Spec = parseWorkflowYAML(readFixture('v2', name));
+  test('v1 and v2 canonical workflows parse to structurally equivalent specs', () => {
+    const v1Spec = parseWorkflowYAML(readKitchenSink('v1'));
+    const v2Spec = parseWorkflowYAML(readKitchenSink('v2'));
 
-      expect(v1Spec.name).toBe(v2Spec.name);
-      expect(Object.keys(v1Spec.jobs).sort()).toEqual(
-        Object.keys(v2Spec.jobs).sort()
-      );
-      expect(Object.keys(v1Spec.triggers).sort()).toEqual(
-        Object.keys(v2Spec.triggers).sort()
-      );
+    expect(v1Spec.name).toBe(v2Spec.name);
+    expect(Object.keys(v1Spec.jobs).sort()).toEqual(
+      Object.keys(v2Spec.jobs).sort()
+    );
+    expect(Object.keys(v1Spec.triggers).sort()).toEqual(
+      Object.keys(v2Spec.triggers).sort()
+    );
 
-      // Both downstream convert to a WorkflowState the same way.
-      const v1State = convertWorkflowSpecToState(v1Spec);
-      const v2State = convertWorkflowSpecToState(v2Spec);
-      expect(v1State.jobs.length).toBe(v2State.jobs.length);
-      expect(v1State.triggers.length).toBe(v2State.triggers.length);
-      expect(v1State.edges.length).toBe(v2State.edges.length);
-    }
-  );
+    // Both downstream convert to a WorkflowState the same way.
+    const v1State = convertWorkflowSpecToState(v1Spec);
+    const v2State = convertWorkflowSpecToState(v2Spec);
+    expect(v1State.jobs.length).toBe(v2State.jobs.length);
+    expect(v1State.triggers.length).toBe(v2State.triggers.length);
+    expect(v1State.edges.length).toBe(v2State.edges.length);
+  });
 
   test('rejects malformed YAML', () => {
     expect(() => parseWorkflowYAML('invalid: [syntax')).toThrow();
@@ -288,36 +273,26 @@ edges: {}
 });
 
 describe('parseWorkflowTemplate — format detection + dispatch', () => {
-  test.each(SCENARIOS)(
-    'parses the v1 template fixture for %s leniently',
-    name => {
-      // v1 templates retain the historic lenient parse — `parseWorkflowTemplate`
-      // returns the YAML.parse'd object as-is for v1 docs.
-      const v1Text = readFixture('v1', name);
-      const spec = parseWorkflowTemplate(v1Text);
+  test('parses the v1 canonical workflow template leniently', () => {
+    // v1 templates retain the historic lenient parse — `parseWorkflowTemplate`
+    // returns the YAML.parse'd object as-is for v1 docs.
+    const spec = parseWorkflowTemplate(readKitchenSink('v1'));
 
-      expect(spec).toBeDefined();
-      expect(
-        (spec as unknown as Record<string, unknown>)['jobs']
-      ).toBeDefined();
-    }
-  );
+    expect(spec).toBeDefined();
+    expect((spec as unknown as Record<string, unknown>)['jobs']).toBeDefined();
+  });
 
-  test.each(SCENARIOS)(
-    'parses the v2 template fixture for %s into a v1-shaped WorkflowSpec',
-    name => {
-      // v2 templates are validated through `v2.parseWorkflow` so the picker
-      // gets a v1-shaped `WorkflowSpec` (jobs/triggers/edges maps).
-      const v2Text = readFixture('v2', name);
-      const spec = parseWorkflowTemplate(v2Text);
+  test('parses the v2 canonical workflow template into a v1-shaped WorkflowSpec', () => {
+    // v2 templates are validated through `v2.parseWorkflow` so the picker
+    // gets a v1-shaped `WorkflowSpec` (jobs/triggers/edges maps).
+    const spec = parseWorkflowTemplate(readKitchenSink('v2'));
 
-      expect(spec).toBeDefined();
-      expect(spec.jobs).toBeDefined();
-      expect(spec.triggers).toBeDefined();
-      expect(spec.edges).toBeDefined();
-      expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
-    }
-  );
+    expect(spec).toBeDefined();
+    expect(spec.jobs).toBeDefined();
+    expect(spec.triggers).toBeDefined();
+    expect(spec.edges).toBeDefined();
+    expect(Object.keys(spec.jobs).length).toBeGreaterThan(0);
+  });
 
   test('handles an empty template string without throwing', () => {
     // YAML.parse('') ⇒ null. Lenient v1 path returns null cast.

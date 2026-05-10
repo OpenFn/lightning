@@ -18,8 +18,11 @@ const FIXTURES_ROOT = resolve(
   '../../../../../test/fixtures/portability'
 );
 
-const readScenario = (format: 'v1' | 'v2', name: string): string =>
-  readFileSync(`${FIXTURES_ROOT}/${format}/scenarios/${name}.yaml`, 'utf-8');
+// Kitchen-sink fixture: comprehensive workflow exercising every supported
+// feature in both formats. New features must be added here so regressions
+// in the YAML import flow surface.
+const readKitchenSink = (format: 'v1' | 'v2'): string =>
+  readFileSync(`${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`, 'utf-8');
 
 // Mock the awareness hook
 vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
@@ -348,50 +351,18 @@ describe('YAMLImportPanel', () => {
   // (CLI-aligned portability spec) YAML transparently. The panel itself is
   // format-agnostic; it routes through `parseWorkflowYAML` which auto-detects.
   describe('Format dispatch (v1 + v2)', () => {
-    // Each scenario lists the workflow name and the exact job/trigger names
-    // declared in BOTH the v1 and v2 fixtures (paired in
-    // test/fixtures/portability/{v1,v2}/scenarios/<name>.yaml). Asserting on
-    // the last populated onImport call's content catches a regression that
-    // silently truncates jobs/triggers — the previous `length > 0` check
-    // would have passed even if only the first job came through.
-    const SCENARIOS = [
-      {
-        name: 'simple-webhook',
-        workflow: 'simple webhook',
-        jobs: ['greet'],
-        triggers: ['webhook'],
-      },
-      {
-        name: 'cron-with-cursor',
-        workflow: 'cron with cursor',
-        jobs: ['cursor step'],
-        triggers: ['cron'],
-      },
-      {
-        name: 'js-expression-edge',
-        workflow: 'js expression edge',
-        jobs: ['source step', 'target step'],
-        triggers: ['webhook'],
-      },
-      {
-        name: 'multi-trigger',
-        workflow: 'multi trigger',
-        jobs: ['shared step'],
-        triggers: ['webhook', 'cron'],
-      },
-      {
-        name: 'kafka-trigger',
-        workflow: 'kafka trigger',
-        jobs: ['consume'],
-        triggers: ['kafka'],
-      },
-      {
-        name: 'branching-jobs',
-        workflow: 'branching jobs',
-        jobs: ['fan out', 'branch a', 'branch b'],
-        triggers: ['webhook'],
-      },
-    ] as const;
+    // The canonical workflow exercises every feature (multi-trigger,
+    // kafka, cron cursor, webhook reply, JS-expression edge, branching).
+    // Asserting on the exact job/trigger names catches regressions that
+    // silently truncate either list.
+    const EXPECTED_JOBS = [
+      'ingest',
+      'load',
+      'maybe skip',
+      'report failure',
+      'transform',
+    ];
+    const EXPECTED_TRIGGERS = ['cron', 'kafka', 'webhook'];
 
     const lastPopulatedState = (
       mockFn: ReturnType<typeof vi.fn>
@@ -429,32 +400,26 @@ describe('YAMLImportPanel', () => {
       );
     };
 
-    test.each(SCENARIOS)(
-      'accepts v1 fixture for $name and previews via onImport',
-      async ({ name, jobs, triggers }) => {
-        await renderAndImport(readScenario('v1', name));
+    test('accepts v1 canonical workflow and previews via onImport', async () => {
+      await renderAndImport(readKitchenSink('v1'));
 
-        const state = lastPopulatedState(mockOnImport);
-        expect(state).not.toBeNull();
-        expect(state!.jobs.map(j => j.name).sort()).toEqual([...jobs].sort());
-        expect(state!.triggers.map(t => t.type).sort()).toEqual(
-          [...triggers].sort()
-        );
-      }
-    );
+      const state = lastPopulatedState(mockOnImport);
+      expect(state).not.toBeNull();
+      expect(state!.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state!.triggers.map(t => t.type).sort()).toEqual(
+        EXPECTED_TRIGGERS
+      );
+    });
 
-    test.each(SCENARIOS)(
-      'accepts v2 fixture for $name and previews via onImport',
-      async ({ name, jobs, triggers }) => {
-        await renderAndImport(readScenario('v2', name));
+    test('accepts v2 canonical workflow and previews via onImport', async () => {
+      await renderAndImport(readKitchenSink('v2'));
 
-        const state = lastPopulatedState(mockOnImport);
-        expect(state).not.toBeNull();
-        expect(state!.jobs.map(j => j.name).sort()).toEqual([...jobs].sort());
-        expect(state!.triggers.map(t => t.type).sort()).toEqual(
-          [...triggers].sort()
-        );
-      }
-    );
+      const state = lastPopulatedState(mockOnImport);
+      expect(state).not.toBeNull();
+      expect(state!.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state!.triggers.map(t => t.type).sort()).toEqual(
+        EXPECTED_TRIGGERS
+      );
+    });
   });
 });

@@ -49,25 +49,15 @@ import {
 
 const FIXTURES_ROOT = resolve(__dirname, '../../../test/fixtures/portability');
 
-const SCENARIOS = [
-  'simple-webhook',
-  'cron-with-cursor',
-  'js-expression-edge',
-  'multi-trigger',
-  'kafka-trigger',
-  'branching-jobs',
-] as const;
-
-const ALL_V2_FIXTURES = ['canonical_workflow', ...SCENARIOS] as const;
-
-const readFixture = (
-  format: 'v1' | 'v2',
-  name: string
+// Kitchen-sink fixtures: each format has one comprehensive workflow that
+// exercises every supported feature (multi-trigger, kafka config, cron
+// cursor, webhook reply, JS-expression edge with label + disabled,
+// branching, all condition types). New features must be added here so
+// regressions surface.
+const readKitchenSink = (
+  format: 'v1' | 'v2'
 ): { text: string; path: string } => {
-  const path =
-    name === 'canonical_workflow'
-      ? `${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`
-      : `${FIXTURES_ROOT}/${format}/scenarios/${name}.yaml`;
+  const path = `${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`;
   return { text: readFileSync(path, 'utf-8'), path };
 };
 
@@ -272,8 +262,8 @@ describe('v2 deep round-trip preserves trigger / edge content', () => {
 // ── On-disk fixture round-trip ──────────────────────────────────────────────
 
 describe('v2 fixture round-trip', () => {
-  it.each(ALL_V2_FIXTURES)('round-trips %s', name => {
-    const { text } = readFixture('v2', name);
+  it('round-trips the canonical workflow', () => {
+    const { text } = readKitchenSink('v2');
     const spec = v2.parseWorkflow(text);
 
     expect(spec).toBeDefined();
@@ -307,45 +297,42 @@ describe('v2 fixture round-trip', () => {
 
 // ── Cross-language fixture parity ───────────────────────────────────────────
 //
-// The v1 and v2 fixture for each scenario describe the same workflow in two
+// The v1 and v2 canonical workflow describe the same workflow in two
 // formats. Parsing them must produce equivalent `WorkflowSpec` content
 // (modulo trigger keying — v1 keys by `type`; v2 step `id` is also the type
 // for triggers, so the keys line up).
 
 describe('cross-language fixture parity', () => {
-  it.each(SCENARIOS)(
-    'v1 and v2 fixtures of %s parse to equivalent specs',
-    name => {
-      const v1Text = readFixture('v1', name).text;
-      const v2Text = readFixture('v2', name).text;
+  it('v1 and v2 canonical workflows parse to equivalent specs', () => {
+    const v1Text = readKitchenSink('v1').text;
+    const v2Text = readKitchenSink('v2').text;
 
-      const v1Spec = v1.parseWorkflowYAML(v1Text);
-      const v2Spec = v2.parseWorkflow(v2Text);
+    const v1Spec = v1.parseWorkflowYAML(v1Text);
+    const v2Spec = v2.parseWorkflow(v2Text);
 
-      expect(v1Spec.name).toBe(v2Spec.name);
-      expect(Object.keys(v1Spec.jobs).sort()).toEqual(
-        Object.keys(v2Spec.jobs).sort()
-      );
-      expect(Object.keys(v1Spec.triggers).sort()).toEqual(
-        Object.keys(v2Spec.triggers).sort()
-      );
+    expect(v1Spec.name).toBe(v2Spec.name);
+    expect(Object.keys(v1Spec.jobs).sort()).toEqual(
+      Object.keys(v2Spec.jobs).sort()
+    );
+    expect(Object.keys(v1Spec.triggers).sort()).toEqual(
+      Object.keys(v2Spec.triggers).sort()
+    );
 
-      Object.entries(v1Spec.jobs).forEach(([key, j1]) => {
-        const j2 = v2Spec.jobs[key];
-        expect(j2).toBeDefined();
-        expect(j2?.name).toBe(j1.name);
-        expect(j2?.adaptor).toBe(j1.adaptor);
-        expect(j2?.body).toBe(j1.body);
-      });
+    Object.entries(v1Spec.jobs).forEach(([key, j1]) => {
+      const j2 = v2Spec.jobs[key];
+      expect(j2).toBeDefined();
+      expect(j2?.name).toBe(j1.name);
+      expect(j2?.adaptor).toBe(j1.adaptor);
+      expect(j2?.body).toBe(j1.body);
+    });
 
-      Object.entries(v1Spec.triggers).forEach(([key, t1]) => {
-        const t2 = v2Spec.triggers[key];
-        expect(t2).toBeDefined();
-        expect(t2?.type).toBe(t1.type);
-        expect(t2?.enabled).toBe(t1.enabled);
-      });
-    }
-  );
+    Object.entries(v1Spec.triggers).forEach(([key, t1]) => {
+      const t2 = v2Spec.triggers[key];
+      expect(t2).toBeDefined();
+      expect(t2?.type).toBe(t1.type);
+      expect(t2?.enabled).toBe(t1.enabled);
+    });
+  });
 });
 
 // ── AJV schema rejection ────────────────────────────────────────────────────
