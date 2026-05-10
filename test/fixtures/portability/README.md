@@ -11,7 +11,6 @@ portability/
 ├── v1/                     Lightning's legacy format (parse-only after Phase 4)
 │   ├── canonical_project.yaml                  ← used by test/integration/cli_deploy_test.exs
 │   ├── canonical_update_project.yaml           ← used by test/integration/cli_deploy_test.exs
-│   ├── webhook_reply_and_cron_cursor_project.yaml ← used by test/integration/cli_deploy_test.exs
 │   ├── canonical_workflow.yaml                 ← v1 representation of the v2 kitchen sink
 │   └── scenarios/                              ← v1 representation of each v2 scenario, paired by filename
 └── v2/                     CLI-aligned portability format

@@ -16,6 +16,7 @@ workflows:
         name: webhook
         enabled: true
         type: webhook
+        webhook_reply: after_completion
         next:
           webhook-job:
             condition: always
@@ -51,6 +52,7 @@ workflows:
         enabled: true
         type: cron
         cron_expression: '0 23 * * *'
+        cron_cursor: some-cronjob
         next:
           some-cronjob:
             condition: always
