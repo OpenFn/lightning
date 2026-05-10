@@ -1,10 +1,4 @@
 # This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
-#
-# TODO(#4718): the "pull a project" assertions below compare `actual_yaml`
-# against `test/fixtures/portability/v2/canonical_project.yaml`, but the
-# Lightning export hasn't been re-emitted since the v2 cutover and the
-# expected fixture and actual output don't yet line up byte-for-byte.
-# Refresh the fixtures when the @openfn/cli integration is exercised next.
 defmodule Lightning.CliDeployTest do
   use LightningWeb.ConnCase, async: false
 
