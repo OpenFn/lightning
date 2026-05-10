@@ -23,13 +23,19 @@ const PLACEHOLDER_EXAMPLE = `# Paste your workflow YAML here, for example:
 # steps:
 #   - id: webhook
 #     type: webhook
+#     webhook_reply: before_start
 #     enabled: true
-#     next: greet
-#   - id: greet
-#     name: greet
+#     next:
+#       say-hello:
+#         condition: always
+#   - id: say-hello
+#     name: Say Hello
 #     adaptor: '@openfn/language-common@latest'
 #     expression: |
-#       fn(state => state)
+#       fn(state => {
+#         console.log("Hello, world!");
+#         return state;
+#       })
 `;
 
 export function YAMLCodeEditor({ value, onChange }: YAMLCodeEditorProps) {

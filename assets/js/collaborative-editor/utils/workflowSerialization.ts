@@ -114,7 +114,7 @@ export function prepareWorkflowForSerialization(
  * - Creating new conversations
  * - Switching between sessions
  *
- * The v2 format is stateless — UUIDs are not preserved on the wire. Steps
+ * The v2 format is a stateless interoperability format; UUIDs are not preserved. Steps
  * are referenced by hyphenated name; the AI Assistant correlates back to
  * persisted records by name.
  *
