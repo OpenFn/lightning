@@ -408,6 +408,28 @@ export function Header({
   );
 
   useKeyboardShortcut(
+    'Control+Shift+Enter, Meta+Shift+Enter',
+    () => {
+      if (isRetryable) {
+        void handleRunClick();
+      } else {
+        handleRunWithCustomInputClick();
+      }
+    },
+    0,
+    {
+      enabled:
+        canRun &&
+        !isRunPanelOpen &&
+        !isIDEOpen &&
+        !isNewWorkflow &&
+        !!projectId &&
+        !!workflowId &&
+        (isRetryable || !!firstTriggerId),
+    }
+  );
+
+  useKeyboardShortcut(
     'Control+s, Meta+s',
     () => {
       void saveWorkflow();

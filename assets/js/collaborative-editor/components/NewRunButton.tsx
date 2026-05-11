@@ -123,6 +123,9 @@ export function NewRunButton({
             >
               <span className="hero-play h-4 w-4" />
               Run with custom input
+              <span className="ml-auto pl-4 opacity-50">
+                <ShortcutKeys keys={['mod', 'shift', 'enter']} />
+              </span>
             </button>
           </MenuItem>
         </MenuItems>
