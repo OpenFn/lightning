@@ -27,6 +27,7 @@ import {
   createMockURLState,
   getURLStateMockValue,
 } from '../__helpers__/urlStateMocks';
+import { createWorkflowYDoc } from '../__helpers__/workflowFactory';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
 
 // =============================================================================
@@ -50,9 +51,52 @@ vi.mock('../../../js/collaborative-editor/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Mock dataclipApi so submitManualRun can be spied on
+const mockSubmitManualRun = vi.fn();
+vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
+  submitManualRun: (...args: unknown[]) => mockSubmitManualRun(...args),
+  searchDataclips: vi.fn(() =>
+    Promise.resolve({
+      data: [],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    })
+  ),
+}));
+
 // =============================================================================
 // TEST HELPERS
 // =============================================================================
+
+/**
+ * Creates a Y.Doc with workflow metadata AND a trigger so firstTriggerId is set.
+ * Used by the Cmd+Enter tests which require canRun + firstTriggerId to be truthy.
+ */
+function createWorkflowYDocWithTrigger(
+  lockVersion: number | null = 1
+): ReturnType<typeof createWorkflowYDoc> & { triggerId: string } {
+  const triggerId = 'trigger-test-1';
+  const ydoc = createWorkflowYDoc({
+    triggers: {
+      [triggerId]: { id: triggerId, type: 'webhook', enabled: true },
+    },
+  });
+
+  // Merge workflow metadata into the doc (createWorkflowYDoc doesn't set it)
+  const workflowMap = ydoc.getMap('workflow');
+  workflowMap.set('id', 'test-workflow-123');
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('lock_version', lockVersion);
+  workflowMap.set('deleted_at', null);
+  workflowMap.set('concurrency', null);
+  workflowMap.set('enable_job_logs', false);
+
+  // createWorkflowYDoc doesn't initialise positions / errors maps
+  ydoc.getMap('positions');
+  ydoc.getMap('errors');
+
+  return Object.assign(ydoc, { triggerId });
+}
 
 interface WrapperOptions {
   permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
@@ -960,6 +1004,203 @@ describe('Header - Guard Condition Interactions', () => {
     await waitFor(() =>
       expect(openGitHubSyncModalSpy).toHaveBeenCalledTimes(1)
     );
+
+    unmount();
+    cleanup();
+  });
+});
+
+// =============================================================================
+// CMD+ENTER / CTRL+ENTER – SUBMIT MANUAL RUN
+// =============================================================================
+
+describe('Header - Submit Manual Run (Cmd+Enter / Ctrl+Enter)', () => {
+  beforeEach(() => {
+    urlState.reset();
+    vi.clearAllMocks();
+    // Default: submitManualRun resolves successfully
+    mockSubmitManualRun.mockResolvedValue({ data: { run_id: 'run-123' } });
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+  });
+
+  /**
+   * Sets up stores with a Y.Doc that already contains a trigger so that
+   * `firstTriggerId` is defined and the shortcut guard passes.
+   */
+  async function createRunSetup(
+    options: WrapperOptions & {
+      isRunPanelOpen?: boolean;
+      isIDEOpen?: boolean;
+    } = {}
+  ) {
+    const {
+      isRunPanelOpen = false,
+      isIDEOpen = false,
+      ...wrapperOptions
+    } = options;
+
+    const ydoc = createWorkflowYDocWithTrigger(
+      wrapperOptions.workflowLockVersion ?? 1
+    );
+
+    const { stores, sessionStore, cleanup, emitSessionContext } =
+      await simulateStoreProviderWithConnection(
+        'test:room',
+        { id: 'user-1', name: 'Test User', color: '#ff0000' },
+        {
+          workflowYDoc: ydoc,
+          sessionContext: {
+            permissions: wrapperOptions.permissions ?? {
+              can_edit_workflow: true,
+              can_run_workflow: true,
+            },
+            latest_snapshot_lock_version:
+              wrapperOptions.latestSnapshotLockVersion ?? 1,
+          },
+          emitSessionContext: true,
+        }
+      );
+
+    // Manually emit sync so isSynced becomes true
+    const provider = sessionStore.getProvider();
+    if (provider) {
+      (provider as any).emit('sync', [true]);
+    }
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    vi.spyOn(stores.workflowStore, 'saveWorkflow').mockResolvedValue(null);
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <KeyboardProvider>
+        <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </SessionContext.Provider>
+      </KeyboardProvider>
+    );
+
+    async function renderAndWait() {
+      const result = render(
+        <Header
+          projectId="project-1"
+          workflowId="workflow-1"
+          isRunPanelOpen={isRunPanelOpen}
+          isIDEOpen={isIDEOpen}
+        >
+          {[<span key="b">Breadcrumb</span>]}
+        </Header>,
+        { wrapper }
+      );
+
+      await act(async () => {
+        emitSessionContext!();
+        await new Promise(resolve => setTimeout(resolve, 150));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+      });
+
+      return result;
+    }
+
+    return { wrapper, stores, emitSessionContext, cleanup, renderAndWait };
+  }
+
+  test('Cmd+Enter submits run when canRun is true (Mac)', async () => {
+    const user = userEvent.setup();
+    const { renderAndWait, cleanup } = await createRunSetup({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+    });
+
+    const { unmount } = await renderAndWait();
+
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await waitFor(() => expect(mockSubmitManualRun).toHaveBeenCalledTimes(1));
+    expect(mockSubmitManualRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflowId: 'workflow-1',
+        projectId: 'project-1',
+        triggerId: 'trigger-test-1',
+      })
+    );
+
+    unmount();
+    cleanup();
+  });
+
+  test('Ctrl+Enter submits run when canRun is true (Windows)', async () => {
+    const user = userEvent.setup();
+    const { renderAndWait, cleanup } = await createRunSetup({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+    });
+
+    const { unmount } = await renderAndWait();
+
+    await user.keyboard('{Control>}{Enter}{/Control}');
+
+    await waitFor(() => expect(mockSubmitManualRun).toHaveBeenCalledTimes(1));
+
+    unmount();
+    cleanup();
+  });
+
+  test('Cmd+Enter does NOT submit run when no run permission', async () => {
+    const user = userEvent.setup();
+    // canRun requires hasEditPermission OR hasRunPermission — both must be false
+    const { renderAndWait, cleanup } = await createRunSetup({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+    });
+
+    const { unmount } = await renderAndWait();
+
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    expect(mockSubmitManualRun).not.toHaveBeenCalled();
+
+    unmount();
+    cleanup();
+  });
+
+  test('Cmd+Enter does NOT submit run when run panel is open', async () => {
+    const user = userEvent.setup();
+    const { renderAndWait, cleanup } = await createRunSetup({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+      isRunPanelOpen: true,
+    });
+
+    const { unmount } = await renderAndWait();
+
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    expect(mockSubmitManualRun).not.toHaveBeenCalled();
+
+    unmount();
+    cleanup();
+  });
+
+  test('Cmd+Enter does NOT submit run when IDE is open', async () => {
+    const user = userEvent.setup();
+    const { renderAndWait, cleanup } = await createRunSetup({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+      isIDEOpen: true,
+    });
+
+    const { unmount } = await renderAndWait();
+
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    expect(mockSubmitManualRun).not.toHaveBeenCalled();
 
     unmount();
     cleanup();
