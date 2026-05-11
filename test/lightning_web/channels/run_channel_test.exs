@@ -1877,7 +1877,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 201, %{message: message}}
+      assert_receive {:webhook_response, 500, %{message: message}}
       assert message =~ "failed"
       assert message =~ "security policy"
     end

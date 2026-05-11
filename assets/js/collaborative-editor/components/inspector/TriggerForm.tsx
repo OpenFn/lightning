@@ -636,7 +636,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                   <input
                                                     id={`${field.name}-error-code`}
                                                     type="number"
-                                                    placeholder="201"
+                                                    placeholder="500"
                                                     value={
                                                       config?.error_code ?? ''
                                                     }
@@ -748,7 +748,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <code className="font-mono">
                                       webhookResponse
                                     </code>{' '}
-                                    in the final run state.{' '}
+                                    in the job code.{' '}
                                     <a
                                       href="https://docs.openfn.org/documentation/build/triggers"
                                       target="_blank"
