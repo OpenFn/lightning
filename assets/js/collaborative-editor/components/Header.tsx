@@ -327,6 +327,24 @@ export function Header({
   }, [provider, projectId, workflowId, isNewWorkflow]);
 
   useKeyboardShortcut(
+    'Control+Enter, Meta+Enter',
+    () => {
+      void handleRunClick();
+    },
+    0,
+    {
+      enabled:
+        canRun &&
+        !isRunPanelOpen &&
+        !isIDEOpen &&
+        !isNewWorkflow &&
+        !!firstTriggerId &&
+        !!projectId &&
+        !!workflowId,
+    }
+  );
+
+  useKeyboardShortcut(
     'Control+s, Meta+s',
     () => {
       void saveWorkflow();
