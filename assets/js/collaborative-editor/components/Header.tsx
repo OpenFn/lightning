@@ -7,6 +7,7 @@ import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { channelRequest } from '../hooks/useChannel';
+import { getCsrfToken } from '../lib/csrf';
 import { useActiveRun } from '../hooks/useHistory';
 import { useSession } from '../hooks/useSession';
 import {
@@ -42,6 +43,7 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
+import { RunRetryButton } from './RunRetryButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from '../../components/Tooltip';
@@ -236,6 +238,12 @@ export function Header({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
+  const followedRunId = params.run ?? null;
+  const isRetryable =
+    !!followedRunId &&
+    !!activeRun &&
+    isFinalState(activeRun.state) &&
+    !!activeRun.steps?.length;
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -296,6 +304,57 @@ export function Header({
     updateSearchParams,
   ]);
 
+  const handleRetryClick = useCallback(async () => {
+    if (!followedRunId || !activeRun?.steps?.length || !projectId) return;
+
+    setIsSubmitting(true);
+    try {
+      await saveWorkflow({ silent: true });
+
+      const firstStep = activeRun.steps[0];
+      const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
+      const csrfToken = getCsrfToken();
+      const response = await fetch(retryUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+        },
+        body: JSON.stringify({ step_id: firstStep.id }),
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || 'Failed to retry run');
+      }
+
+      const result = (await response.json()) as { data: { run_id: string } };
+
+      notifications.success({
+        title: 'Retry started',
+        description: 'Saved latest changes and re-running with previous input',
+      });
+
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({ run: result.data.run_id });
+    } catch (error) {
+      notifications.alert({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    followedRunId,
+    activeRun,
+    projectId,
+    saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
   const handleRunWithCustomInputClick = useCallback(() => {
     if (firstTriggerId) {
       selectNode(firstTriggerId);
@@ -329,7 +388,11 @@ export function Header({
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
-      void handleRunClick();
+      if (isRetryable) {
+        void handleRetryClick();
+      } else {
+        void handleRunClick();
+      }
     },
     0,
     {
@@ -338,9 +401,9 @@ export function Header({
         !isRunPanelOpen &&
         !isIDEOpen &&
         !isNewWorkflow &&
-        !!firstTriggerId &&
         !!projectId &&
-        !!workflowId,
+        !!workflowId &&
+        (isRetryable || !!firstTriggerId),
     }
   );
 
@@ -456,14 +519,28 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
-                <NewRunButton
-                  onClick={handleRunClick}
-                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                  isRunning={isSubmitting || runIsProcessing}
-                />
-              )}
+              {projectId &&
+                workflowId &&
+                !isNewWorkflow &&
+                (isRetryable ? (
+                  <RunRetryButton
+                    isRetryable={true}
+                    isDisabled={!canRun || isRunPanelOpen || isIDEOpen}
+                    isSubmitting={isSubmitting || runIsProcessing}
+                    onRun={handleRunClick}
+                    onRetry={handleRetryClick}
+                    dropdownPosition="down"
+                    showKeyboardShortcuts={true}
+                    disabledTooltip={!canRun ? tooltipMessage : undefined}
+                  />
+                ) : firstTriggerId ? (
+                  <NewRunButton
+                    onClick={handleRunClick}
+                    onRunWithCustomInputClick={handleRunWithCustomInputClick}
+                    disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                    isRunning={isSubmitting || runIsProcessing}
+                  />
+                ) : null)}
               <SaveButton
                 canSave={
                   canSave &&
