@@ -919,13 +919,13 @@ defmodule Lightning.AiAssistant do
     context = build_context(initial_context, opts)
 
     history = build_history(session)
-    meta = session.meta || %{}
 
     ApolloClient.job_chat(
       content,
       context: context,
       history: history,
-      meta: meta
+      meta: apollo_meta(session),
+      metrics_opt_in: metrics_opt_in?(session)
     )
     |> handle_ai_response(session, &build_job_message/1)
   end
@@ -950,12 +950,12 @@ defmodule Lightning.AiAssistant do
 
     context = build_context(initial_context, opts)
     history = build_history(session)
-    meta = session.meta || %{}
 
     case ApolloClient.job_chat_stream(content,
            context: context,
            history: history,
-           meta: meta
+           meta: apollo_meta(session),
+           metrics_opt_in: metrics_opt_in?(session)
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -990,6 +990,23 @@ defmodule Lightning.AiAssistant do
     end)
   end
 
+  defp apollo_meta(session) do
+    session = Repo.preload(session, :user)
+    user = session.user
+
+    (session.meta || %{})
+    |> Map.put("session_id", session.id)
+    |> Map.put("user", %{
+      "id" => user.id,
+      "persona" => User.langfuse_persona(user)
+    })
+  end
+
+  defp metrics_opt_in?(session) do
+    session = Repo.preload(session, :user)
+    User.core_contributor?(session.user)
+  end
+
   @doc """
   Queries the AI service for workflow template generation.
 
@@ -1003,7 +1020,6 @@ defmodule Lightning.AiAssistant do
   - `opts` - Keyword list of options:
     - `:code` - Current YAML to modify (default: uses latest from session)
     - `:errors` - Validation errors from previous workflow attempts
-    - `:meta` - Additional metadata to pass to the AI service (default: session.meta)
 
   ## Returns
 
@@ -1015,7 +1031,6 @@ defmodule Lightning.AiAssistant do
   def query_workflow(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
-    meta = Keyword.get(opts, :meta, session.meta || %{})
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
@@ -1024,7 +1039,8 @@ defmodule Lightning.AiAssistant do
       code: code,
       errors: errors,
       history: build_history(session),
-      meta: meta
+      meta: apollo_meta(session),
+      metrics_opt_in: metrics_opt_in?(session)
     )
     |> handle_ai_response(session, &build_workflow_message/1)
   end
@@ -1039,7 +1055,6 @@ defmodule Lightning.AiAssistant do
   def query_workflow_stream(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
-    meta = Keyword.get(opts, :meta, session.meta || %{})
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
@@ -1047,7 +1062,8 @@ defmodule Lightning.AiAssistant do
            code: code,
            errors: errors,
            history: build_history(session),
-           meta: meta
+           meta: apollo_meta(session),
+           metrics_opt_in: metrics_opt_in?(session)
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1076,7 +1092,9 @@ defmodule Lightning.AiAssistant do
     case ApolloClient.global_chat_stream(content,
            workflow_yaml: workflow_yaml,
            page: page,
-           history: history
+           history: history,
+           meta: apollo_meta(session),
+           metrics_opt_in: metrics_opt_in?(session)
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
