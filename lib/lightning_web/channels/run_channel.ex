@@ -19,6 +19,7 @@ defmodule LightningWeb.RunChannel do
   require Logger
 
   defmodule WebhookResponse do
+    @moduledoc false
     defstruct status: nil, body: nil, step_id: nil, sent_at: nil
   end
 
