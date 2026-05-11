@@ -120,19 +120,15 @@ defmodule LightningWeb.RunChannel do
         # instead of blocking the channel.
         run_with_preloads =
           run
-          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+          |> Repo.preload([:log_lines, work_order: [:workflow]])
 
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        socket =
-          maybe_send_after_completion_response(
-            socket,
-            run_with_preloads,
-            payload["final_state"]
-          )
-
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket
+        |> assign(run: run)
+        |> maybe_send_after_completion_response(payload["final_state"])
+        |> reply_with({:ok, nil})
 
       {:error, changeset} ->
         reply_with(socket, {:error, changeset})
@@ -338,10 +334,11 @@ defmodule LightningWeb.RunChannel do
   defp already_sent?(%WebhookResponse{sent_at: %DateTime{}}), do: true
   defp already_sent?(_), do: false
 
-  defp maybe_send_after_completion_response(socket, run, final_state) do
-    trigger = run.work_order.trigger
+  defp maybe_send_after_completion_response(socket, final_state) do
+    run = Repo.preload(socket.assigns.run, :starting_trigger)
+    trigger = run.starting_trigger
 
-    if trigger.webhook_reply == :after_completion do
+    if trigger && trigger.webhook_reply == :after_completion do
       webhook_response =
         build_webhook_response(
           run,
@@ -424,6 +421,8 @@ defmodule LightningWeb.RunChannel do
   defp default_response_status(:success, %{success_code: code})
        when is_integer(code),
        do: code
+
+  defp default_response_status(:success, _config), do: 201
 
   defp default_response_status(_run_status, %{error_code: code})
        when is_integer(code),

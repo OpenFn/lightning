@@ -1917,6 +1917,46 @@ defmodule LightningWeb.RunChannelTest do
       assert_receive {:webhook_response, 422, %{message: _}}
     end
 
+    test "uses 201 on success when only error_code is configured", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, error_code: 422)
+
+      final_state = %{"data" => "ok"}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, ^final_state}
+    end
+
+    test "does not broadcast for runs with no starting trigger", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      run
+      |> Ecto.Changeset.change(
+        starting_trigger_id: nil,
+        starting_job_id: job.id
+      )
+      |> Repo.update!()
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      refute_receive {:webhook_response, _, _}
+    end
+
     test "captured webhook_response from step:complete overrides config", %{
       socket: socket,
       run: run,
