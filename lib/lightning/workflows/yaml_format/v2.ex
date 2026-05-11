@@ -658,6 +658,11 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       value == "" ->
         "''"
 
+      # Quote strings that would otherwise parse as a YAML number on read
+      # (e.g. "4.0" must stay a string for schema_version).
+      Regex.match?(~r/^-?(\d+\.?\d*|\.\d+)$/, value) ->
+        "'" <> value <> "'"
+
       Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.\/> |]*[a-zA-Z0-9]$/, value) and
           not yaml_reserved?(value) ->
         value

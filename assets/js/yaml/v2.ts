@@ -488,6 +488,9 @@ const RESERVED_YAML = new Set([
 const needsQuoting = (s: string): boolean => {
   if (s === '') return true;
   if (RESERVED_YAML.has(s.toLowerCase())) return true;
+  // Quote strings that would otherwise parse as a YAML number on read
+  // (e.g. "4.0" must stay a string for schema_version).
+  if (/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return true;
   // Mirrors `Lightning.Workflows.YamlFormat.V2.quote_if_needed/1`:
   // ^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$  (and not reserved)
   return !/^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$/.test(s);
