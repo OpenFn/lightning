@@ -746,7 +746,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     To return a custom body or status code from
                                     your job, set{' '}
                                     <code className="font-mono">
-                                      _webhookResponse
+                                      webhookResponse
                                     </code>{' '}
                                     in the final run state.{' '}
                                     <a

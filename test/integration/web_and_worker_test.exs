@@ -811,7 +811,7 @@ defmodule Lightning.WebAndWorkerTest do
           body: """
           fn(state => ({
             ...state,
-            webhook_response: { status: 200, body: { ack: true, received: state.data.value } }
+            webhookResponse: { status: 200, body: { ack: true, received: state.data.value } }
           }));
           """,
           name: "responding-job"
