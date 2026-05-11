@@ -17,11 +17,16 @@ and this project adheres to
 
 ### Added
 
+- Allow users to respond back with custom webhook responses via the
+  `webhookResponse` field in the job state.
+  [#3102](https://github.com/OpenFn/lightning/issues/3102)
+
 ### Changed
 
 ### Fixed
 
 ## [2.16.3] - 2026-05-07
+
 ## [2.16.3-pre3] - 2026-05-07
 
 ### Fixed
