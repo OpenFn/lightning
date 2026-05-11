@@ -1,5 +1,6 @@
 id: a-test-project
 name: a-test-project
+schema_version: '4.0'
 description: |
   This is only a test
 collections:

@@ -250,6 +250,7 @@ type CanonicalStep = CanonicalTriggerStep | CanonicalJobStep;
 interface CanonicalWorkflow {
   id: string;
   name: string;
+  schema_version: string;
   start?: string;
   steps: CanonicalStep[];
 }
@@ -344,6 +345,7 @@ const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
   return {
     id: hyphenate(state.name),
     name: state.name,
+    schema_version: '4.0',
     ...(start ? { start } : {}),
     // Trigger steps first, then job steps — matches Elixir's emit order.
     steps: [...triggerSteps, ...jobSteps],
