@@ -102,8 +102,11 @@ defmodule Lightning.CliDeployTest do
 
       assert actual_state == expected_state_for_comparison
 
-      expected_yaml =
-        File.read!("test/fixtures/portability/v2/canonical_project.yaml")
+      # The provisioner endpoint (`GET /api/provision/yaml`) is hard-wired to
+      # the v1 format for back-compat with deployed CLIs and GitHub sync. So
+      # `openfn pull` always writes v1 YAML to disk, regardless of what the
+      # in-app "Export project as YAML" download emits.
+      expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
 
       actual_yaml = File.read!(config.specPath)
 
