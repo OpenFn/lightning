@@ -28,13 +28,11 @@ and this project adheres to
 
 - `Lightning.Projects.Sandboxes.provision/3` no longer accepts `:collaborators`.
   The sandbox's `project_users` are now derived from the parent project: every
-  parent user is copied with their role preserved, except the parent owner who
-  is demoted to `:admin`, and the actor is set as the sandbox owner. To add a
-  user who is not already on the parent, call
-  `Lightning.Projects.add_project_users/3` after `provision/3` returns — that
-  path goes through the seat-limit check that `:collaborators` previously
-  bypassed.
-  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+  parent user is copied with their role preserved, the parent owner is demoted
+  to `:admin`, and the actor is set as the sandbox owner. To add a user who is
+  not already on the parent, call `Lightning.Projects.add_project_users/3`
+  after `provision/3` returns.
+  [#4744](https://github.com/OpenFn/lightning/issues/4744)
 
 ### Fixed
 
