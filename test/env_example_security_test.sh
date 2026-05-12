@@ -14,7 +14,7 @@ if grep -q 'LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb2dJQkFBS0NBUUVB' "$
 fi
 
 # Test: File should not contain the known real worker secret (even if commented)
-if grep -q 'dECXNlqctXJ/a+1FI4AaeLZY4Rp+Pxo23WmJxC2xew=' "$ENV_FILE"; then
+if grep -q 'dECXNlqctXJ/a+1FI4AaeLZY4Rp+Pxo23WwmJxC2xew=' "$ENV_FILE"; then
   echo "FAIL: $ENV_FILE contains real worker secret"
   exit 1
 fi
