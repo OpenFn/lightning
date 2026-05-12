@@ -615,16 +615,18 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "export_project/2 as yaml (v2 portability format):" do
+  describe "export_project/4 as yaml (v2 portability format):" do
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
 
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v2)
 
-      # v2 emits the spec-required `id` (hyphenated) plus `name`, and omits
-      # empty top-level sections rather than emitting `null`.
+      # v2 emits the spec-required `id` (hyphenated), `name`, and the
+      # portability `schema_version`. Empty top-level sections are omitted
+      # rather than emitted as `null`.
       assert generated_yaml ==
-               "id: newly-created-project\nname: newly-created-project\n"
+               "id: newly-created-project\nname: newly-created-project\nschema_version: '4.0'\n"
     end
 
     test "adds quotes to values with special characters" do
@@ -636,7 +638,8 @@ defmodule Lightning.ProjectsTest do
       workflow_with_good_name =
         insert(:simple_workflow, project: project, name: "workflow 2")
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
 
       # YAML-unsafe values are wrapped in single quotes.
       assert generated_yaml =~ ~s(name: '#{project.name}')
@@ -680,7 +683,8 @@ defmodule Lightning.ProjectsTest do
       )
       |> insert()
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
 
       # Per the portability spec, `condition` IS the JS body. Single-line
       # bodies emit as a quoted scalar; the old `condition: js_expression`
@@ -701,10 +705,10 @@ defmodule Lightning.ProjectsTest do
           """
         )
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
 
       expected_yaml = """
-      name: project_multiline_special
       description: |
         This is a multiline description.
         It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
@@ -720,7 +724,7 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "project_empty_description", description: "")
 
       assert {:ok, generated_yaml} =
-               Projects.export_project(:yaml, project_empty.id)
+               Projects.export_project(:yaml, project_empty.id, nil, :v2)
 
       # v2 elides empty/nil description rather than emitting `description: |`
       # (project name still contains the substring "description").
@@ -732,7 +736,7 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "project_nil_description", description: nil)
 
       assert {:ok, generated_yaml} =
-               Projects.export_project(:yaml, project_nil.id)
+               Projects.export_project(:yaml, project_nil.id, nil, :v2)
 
       refute generated_yaml =~ "description: "
       refute generated_yaml =~ "description:\n"
@@ -763,7 +767,8 @@ defmodule Lightning.ProjectsTest do
       |> with_edge({trigger, job}, condition_type: :always)
       |> insert()
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
 
       # In v2, kafka config fields land flat at the trigger root — no
       # `openfn:` wrapper, no nested `kafka:` block. The spec's `Trigger`
@@ -786,7 +791,8 @@ defmodule Lightning.ProjectsTest do
           description: "This is only a test"
         )
 
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v2)
 
       # Top-level project metadata (id is the hyphenated name; name is the
       # human label).
@@ -817,6 +823,193 @@ defmodule Lightning.ProjectsTest do
 
       # Collections and credentials are exported.
       assert generated_yaml =~ "cannonical-collection"
+    end
+  end
+
+  describe "export_project/4 as yaml (v1 legacy format):" do
+    test "works on project with no workflows" do
+      project = project_fixture(name: "newly-created-project")
+
+      expected_yaml =
+        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
+
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v1)
+
+      assert generated_yaml == expected_yaml
+    end
+
+    test "adds quotes to values with special charaters" do
+      project = insert(:project, name: "project: 1")
+
+      workflow_with_bad_name =
+        insert(:simple_workflow, project: project, name: "workflow: 1")
+
+      workflow_with_good_name =
+        insert(:simple_workflow, project: project, name: "workflow 2")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
+
+      assert generated_yaml =~ ~s(name: '#{project.name}')
+      assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
+      # key is quoted
+      assert generated_yaml =~
+               ~s("#{String.replace(workflow_with_bad_name.name, " ", "-")}")
+
+      refute generated_yaml =~ ~s(name: '#{workflow_with_good_name.name}')
+      assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
+
+      # key is not quoted
+      refute generated_yaml =~
+               ~s("#{String.replace(workflow_with_good_name.name, " ", "-")}")
+    end
+
+    test "js_expressions edge conditions are made multiline" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      js_expression = "!state.data && !state.data"
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job},
+        condition_type: :js_expression,
+        condition_expression: js_expression
+      )
+      |> insert()
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
+
+      assert generated_yaml =~
+               "condition_expression: |\n          #{js_expression}"
+    end
+
+    test "project descriptions with multiline and special characters are correctly represented" do
+      project =
+        insert(:project,
+          name: "project_multiline_special",
+          description: """
+          This is a multiline description.
+          It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+          Also, YAML indicators: *alias, &anchor, ?key, !tag.
+          Line breaks and special characters should be preserved.
+          """
+        )
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
+
+      expected_yaml = """
+      name: project_multiline_special
+      description: |
+        This is a multiline description.
+        It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+        Also, YAML indicators: *alias, &anchor, ?key, !tag.
+        Line breaks and special characters should be preserved.
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
+    test "projects with empty and nil descriptions are correctly represented" do
+      project_empty =
+        insert(:project, name: "project_empty_description", description: "")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_empty.id, nil, :v1)
+
+      expected_yaml = """
+      name: project_empty_description
+      description: |
+      """
+
+      assert generated_yaml =~ expected_yaml
+
+      project_nil =
+        insert(:project, name: "project_nil_description", description: nil)
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_nil.id, nil, :v1)
+
+      expected_yaml = """
+      name: project_nil_description
+      description: null
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
+    test "kafka triggers are included in the export" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :kafka,
+          kafka_configuration: %{
+            hosts: [["localhost", "9092"]],
+            topics: ["dummy"],
+            initial_offset_reset_policy: "earliest"
+          }
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      expected_yaml_trigger = """
+          triggers:
+            kafka:
+              type: kafka
+              enabled: true
+              kafka_configuration:
+                hosts:
+                  - 'localhost:9092'
+                topics:
+                  - dummy
+                initial_offset_reset_policy: earliest
+                connect_timeout: 30
+      """
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
+
+      assert generated_yaml =~ expected_yaml_trigger
+    end
+
+    test "exports canonical project" do
+      project =
+        canonical_project_fixture(
+          name: "a-test-project",
+          description: "This is only a test"
+        )
+
+      expected_yaml =
+        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
+
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v1)
+
+      assert generated_yaml == expected_yaml
     end
   end
 
