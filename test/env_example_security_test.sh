@@ -3,7 +3,13 @@
 
 set -e
 
-ENV_FILE=".env.example"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../.env.example"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "FAIL: $ENV_FILE not found (run from project root or test/ directory)"
+  exit 1
+fi
 
 echo "Testing $ENV_FILE for real secrets..."
 
