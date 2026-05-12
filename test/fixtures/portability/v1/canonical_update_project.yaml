@@ -31,6 +31,7 @@ workflows:
     triggers:
       webhook:
         type: webhook
+        webhook_reply: after_completion
         enabled: true
     edges:
       webhook->webhook-job:
@@ -67,6 +68,7 @@ workflows:
       cron:
         type: cron
         cron_expression: '0 23 * * *'
+        cron_cursor_job: some-cronjob
         enabled: true
     edges:
       cron->some-cronjob:

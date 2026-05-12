@@ -14,7 +14,6 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
   alias Lightning.Config
-  alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects
@@ -33,6 +32,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.YamlFormat.V2
   alias Lightning.WorkOrder
 
   require Logger
@@ -816,6 +816,44 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns the topmost ancestor (root) project id for the given project. For a
+  root project (`parent_id == nil`) returns its own id. Returns `nil` if the
+  project does not exist.
+
+  Used by the GitHub-sync guard to ensure no two projects sharing the same
+  ultimate root claim the same `(repo, branch)` pair.
+  """
+  @spec root_id(Project.t() | Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def root_id(%Project{id: id, parent_id: nil}) when is_binary(id), do: id
+
+  def root_id(%Project{id: id, parent_id: parent_id})
+      when is_binary(parent_id) and is_binary(id) do
+    root_id(id)
+  end
+
+  def root_id(project_id) when is_binary(project_id) do
+    initial =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: a in "project_chain",
+        on: a.parent_id == p.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    "project_chain"
+    |> recursive_ctes(true)
+    |> with_cte("project_chain", as: ^union_all(initial, ^recursion))
+    |> where([c], is_nil(c.parent_id))
+    |> select([c], type(c.id, Ecto.UUID))
+    |> Repo.one()
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking project changes.
 
   ## Examples
@@ -998,7 +1036,7 @@ defmodule Lightning.Projects do
     snapshots =
       if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
 
-    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
+    {:ok, _yaml} = V2.serialize_project(project, snapshots)
   end
 
   @doc """

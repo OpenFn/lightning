@@ -25,16 +25,17 @@ import YAML from 'yaml';
 
 import { CodeViewPanel } from '../../../../js/collaborative-editor/components/inspector/CodeViewPanel';
 import { createMockURLState, getURLStateMockValue } from '../../__helpers__';
-import * as yamlUtil from '../../../../js/yaml/util';
+import * as yamlFormat from '../../../../js/yaml/format';
 
-// Mock yaml/util with simple pass-through
-vi.mock('../../../../js/yaml/util', () => ({
-  convertWorkflowStateToSpec: vi.fn((workflowState: any) => ({
-    name: workflowState.name,
-    jobs: workflowState.jobs || [],
-    triggers: workflowState.triggers || [],
-    edges: workflowState.edges || [],
-  })),
+// Mock the public yaml/format facade — `serializeWorkflow` is the v2-only
+// outbound entry point used by CodeViewPanel after #4718 Phase 4. The mock
+// returns a stable, easy-to-assert YAML stub so the tests stay focused on
+// component behavior, not v2 formatting nuances.
+vi.mock('../../../../js/yaml/format', () => ({
+  serializeWorkflow: vi.fn(
+    (workflowState: any) =>
+      `name: ${workflowState.name}\nsteps: ${workflowState.jobs?.length || 0}\n`
+  ),
 }));
 
 // Mock useWorkflowState hook with state management
@@ -209,11 +210,9 @@ describe('CodeViewPanel', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      vi.mocked(yamlUtil.convertWorkflowStateToSpec).mockImplementationOnce(
-        () => {
-          throw new Error('YAML generation failed');
-        }
-      );
+      vi.mocked(yamlFormat.serializeWorkflow).mockImplementationOnce(() => {
+        throw new Error('YAML generation failed');
+      });
 
       setMockWorkflowState({
         workflow: { id: 'w1', name: 'Test' },

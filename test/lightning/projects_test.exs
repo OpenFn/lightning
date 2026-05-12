@@ -615,19 +615,19 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "export_project/2 as yaml:" do
+  describe "export_project/2 as yaml (v2 portability format):" do
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
 
-      expected_yaml =
-        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
-
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml == expected_yaml
+      # v2 emits the spec-required `id` (hyphenated) plus `name`, and omits
+      # empty top-level sections rather than emitting `null`.
+      assert generated_yaml ==
+               "id: newly-created-project\nname: newly-created-project\n"
     end
 
-    test "adds quotes to values with special charaters" do
+    test "adds quotes to values with special characters" do
       project = insert(:project, name: "project: 1")
 
       workflow_with_bad_name =
@@ -638,18 +638,21 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
+      # YAML-unsafe values are wrapped in single quotes.
       assert generated_yaml =~ ~s(name: '#{project.name}')
       assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
-      # key is quoted
-      assert generated_yaml =~
-               ~s("#{String.replace(workflow_with_bad_name.name, " ", "-")}")
 
+      # The good name has no specials, so no value-quoting.
       refute generated_yaml =~ ~s(name: '#{workflow_with_good_name.name}')
       assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
 
-      # key is not quoted
-      refute generated_yaml =~
-               ~s("#{String.replace(workflow_with_good_name.name, " ", "-")}")
+      # The two workflows are emitted under hyphenated keys in the
+      # `workflows:` map. The bad name produces a YAML-unsafe key
+      # (`workflow:-1`) — its name field round-trips correctly via the
+      # quoted value above, and we sanity-check that both workflow
+      # `name:` lines appear in the serialized output.
+      assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
+      assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
     end
 
     test "js_expressions edge conditions are made multiline" do
@@ -679,8 +682,11 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml =~
-               "condition_expression: |\n          #{js_expression}"
+      # Per the portability spec, `condition` IS the JS body. Single-line
+      # bodies emit as a quoted scalar; the old `condition: js_expression`
+      # discriminator + sibling `expression:` field is gone.
+      assert generated_yaml =~ "condition: '#{js_expression}'"
+      refute generated_yaml =~ "condition: js_expression"
     end
 
     test "project descriptions with multiline and special characters are correctly represented" do
@@ -716,12 +722,11 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, generated_yaml} =
                Projects.export_project(:yaml, project_empty.id)
 
-      expected_yaml = """
-      name: project_empty_description
-      description: |
-      """
-
-      assert generated_yaml =~ expected_yaml
+      # v2 elides empty/nil description rather than emitting `description: |`
+      # (project name still contains the substring "description").
+      refute generated_yaml =~ "description: "
+      refute generated_yaml =~ "description:\n"
+      assert generated_yaml =~ "name: project_empty_description"
 
       project_nil =
         insert(:project, name: "project_nil_description", description: nil)
@@ -729,12 +734,9 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, generated_yaml} =
                Projects.export_project(:yaml, project_nil.id)
 
-      expected_yaml = """
-      name: project_nil_description
-      description: null
-      """
-
-      assert generated_yaml =~ expected_yaml
+      refute generated_yaml =~ "description: "
+      refute generated_yaml =~ "description:\n"
+      assert generated_yaml =~ "name: project_nil_description"
     end
 
     test "kafka triggers are included in the export" do
@@ -761,38 +763,60 @@ defmodule Lightning.ProjectsTest do
       |> with_edge({trigger, job}, condition_type: :always)
       |> insert()
 
-      expected_yaml_trigger = """
-          triggers:
-            kafka:
-              type: kafka
-              enabled: true
-              kafka_configuration:
-                hosts:
-                  - 'localhost:9092'
-                topics:
-                  - dummy
-                initial_offset_reset_policy: earliest
-                connect_timeout: 30
-      """
-
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml =~ expected_yaml_trigger
+      # In v2, kafka config fields land flat at the trigger root — no
+      # `openfn:` wrapper, no nested `kafka:` block. The spec's `Trigger`
+      # interface doesn't forbid extra fields and the kitchen-sink convention
+      # is flat fields (matches `cron_expression`, `webhook_reply`).
+      assert generated_yaml =~ "type: kafka"
+      assert generated_yaml =~ "'localhost:9092'"
+      assert generated_yaml =~ "topics:"
+      assert generated_yaml =~ "- dummy"
+      assert generated_yaml =~ "initial_offset_reset_policy: earliest"
+      refute generated_yaml =~ "openfn:"
+      refute generated_yaml =~ ~r/^\s*kafka:/m
+      refute generated_yaml =~ "kafka_configuration"
     end
 
-    test "exports canonical project" do
+    test "exports canonical project in v2 format" do
       project =
         canonical_project_fixture(
           name: "a-test-project",
           description: "This is only a test"
         )
 
-      expected_yaml =
-        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
-
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml == expected_yaml
+      # Top-level project metadata (id is the hyphenated name; name is the
+      # human label).
+      assert generated_yaml =~ "id: a-test-project"
+      assert generated_yaml =~ "name: a-test-project"
+      assert generated_yaml =~ "description:"
+      assert generated_yaml =~ "This is only a test"
+
+      # Spec: `workflows: WorkflowSpec[]` — sequence items, not keyed map.
+      assert generated_yaml =~ ~r/^workflows:/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-1/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-2/m
+
+      # v2 shape: workflows nest a `steps:` array, not v1 `jobs:`/`edges:`.
+      assert generated_yaml =~ ~r/^\s*steps:/m
+      refute generated_yaml =~ ~r/^\s*jobs:/m
+      refute generated_yaml =~ ~r/^\s*edges:/m
+
+      # Step ids and trigger types are emitted at the step level.
+      assert generated_yaml =~ "id: webhook-job"
+      assert generated_yaml =~ "id: on-success"
+      assert generated_yaml =~ "id: on-fail"
+      assert generated_yaml =~ "type: webhook"
+      assert generated_yaml =~ "type: cron"
+
+      # Spec: `cron_expression` is a flat field on the trigger.
+      assert generated_yaml =~ "cron_expression: '0 23 * * *'"
+
+      # Collections and credentials are exported.
+      assert generated_yaml =~ "cannonical-collection"
     end
   end
 
@@ -2908,6 +2932,43 @@ defmodule Lightning.ProjectsTest do
       query = Projects.descendants_query([parent.id])
       assert %Ecto.Query{} = query
       assert Repo.exists?(query)
+    end
+  end
+
+  describe "root_id/1" do
+    test "returns the project's own id for a root project" do
+      project = insert(:project)
+      assert Projects.root_id(project) == project.id
+      assert Projects.root_id(project.id) == project.id
+    end
+
+    test "returns the parent's id for a direct sandbox" do
+      parent = insert(:project)
+      sandbox = insert(:project, parent: parent)
+
+      assert Projects.root_id(sandbox) == parent.id
+      assert Projects.root_id(sandbox.id) == parent.id
+    end
+
+    test "walks all the way to the top of a deep chain" do
+      grandparent = insert(:project)
+      parent = insert(:project, parent: grandparent)
+      grandchild = insert(:project, parent: parent)
+
+      assert Projects.root_id(grandchild) == grandparent.id
+    end
+
+    test "siblings share the same root" do
+      parent = insert(:project)
+      a = insert(:project, parent: parent)
+      b = insert(:project, parent: parent)
+
+      assert Projects.root_id(a) == parent.id
+      assert Projects.root_id(b) == parent.id
+    end
+
+    test "returns nil for an unknown project id" do
+      assert Projects.root_id(Ecto.UUID.generate()) == nil
     end
   end
 

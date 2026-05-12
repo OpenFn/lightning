@@ -4,11 +4,25 @@
  * Tests state machine, debounced validation, and import flow
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { YAMLImportPanel } from '../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createMockStoreContextValue } from '../../__helpers__';
+
+const FIXTURES_ROOT = resolve(
+  __dirname,
+  '../../../../../test/fixtures/portability'
+);
+
+// Kitchen-sink fixture: comprehensive workflow exercising every supported
+// feature in both formats. New features must be added here so regressions
+// in the YAML import flow surface.
+const readKitchenSink = (format: 'v1' | 'v2'): string =>
+  readFileSync(`${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`, 'utf-8');
 
 // Mock the awareness hook
 vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
@@ -116,7 +130,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -140,7 +154,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -167,7 +181,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: invalidYAML } });
 
@@ -194,7 +208,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: validYAML } });
 
@@ -231,7 +245,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       fireEvent.change(textarea, { target: { value: 'name:' } });
 
@@ -259,7 +273,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
       const createButton = screen.getByRole('button', { name: /Create/i });
 
@@ -312,7 +326,7 @@ describe('YAMLImportPanel', () => {
       );
 
       const textarea = screen.getByPlaceholderText(
-        /Paste your YAML content here/i
+        /Paste your workflow YAML here/i
       );
 
       // Initially disabled
@@ -329,6 +343,82 @@ describe('YAMLImportPanel', () => {
           expect(createButton2).not.toBeDisabled();
         },
         { timeout: 600 }
+      );
+    });
+  });
+
+  // Phase 5 of #4718: import accepts both v1 (legacy Lightning) and v2
+  // (CLI-aligned portability spec) YAML transparently. The panel itself is
+  // format-agnostic; it routes through `parseWorkflowYAML` which auto-detects.
+  describe('Format dispatch (v1 + v2)', () => {
+    // The canonical workflow exercises every feature (multi-trigger,
+    // kafka, cron cursor, webhook reply, JS-expression edge, branching).
+    // Asserting on the exact job/trigger names catches regressions that
+    // silently truncate either list.
+    const EXPECTED_JOBS = [
+      'ingest',
+      'load',
+      'maybe skip',
+      'report failure',
+      'transform',
+    ];
+    const EXPECTED_TRIGGERS = ['cron', 'kafka', 'webhook'];
+
+    const lastPopulatedState = (
+      mockFn: ReturnType<typeof vi.fn>
+    ): { jobs: { name: string }[]; triggers: { type: string }[] } | null => {
+      const populated = mockFn.mock.calls.filter(
+        ([state]) => state && state.jobs && state.jobs.length > 0
+      );
+      const last = populated[populated.length - 1];
+      return last ? last[0] : null;
+    };
+
+    const renderAndImport = async (yaml: string) => {
+      const mockStore = createMockStoreContextValue();
+      render(
+        <StoreContext.Provider value={mockStore}>
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
+        </StoreContext.Provider>
+      );
+
+      const textarea = screen.getByPlaceholderText(
+        /Paste your workflow YAML here/i
+      );
+      fireEvent.change(textarea, { target: { value: yaml } });
+
+      await waitFor(
+        () => {
+          const createButton = screen.getByRole('button', { name: /Create/i });
+          expect(createButton).not.toBeDisabled();
+        },
+        { timeout: 600 }
+      );
+    };
+
+    test('accepts v1 canonical workflow and previews via onImport', async () => {
+      await renderAndImport(readKitchenSink('v1'));
+
+      const state = lastPopulatedState(mockOnImport);
+      expect(state).not.toBeNull();
+      expect(state!.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state!.triggers.map(t => t.type).sort()).toEqual(
+        EXPECTED_TRIGGERS
+      );
+    });
+
+    test('accepts v2 canonical workflow and previews via onImport', async () => {
+      await renderAndImport(readKitchenSink('v2'));
+
+      const state = lastPopulatedState(mockOnImport);
+      expect(state).not.toBeNull();
+      expect(state!.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state!.triggers.map(t => t.type).sort()).toEqual(
+        EXPECTED_TRIGGERS
       );
     });
   });
