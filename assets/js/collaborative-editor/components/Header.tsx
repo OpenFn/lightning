@@ -43,7 +43,6 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
-import { RunRetryButton } from './RunRetryButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from '../../components/Tooltip';
@@ -410,11 +409,7 @@ export function Header({
   useKeyboardShortcut(
     'Control+Shift+Enter, Meta+Shift+Enter',
     () => {
-      if (isRetryable) {
-        void handleRunClick();
-      } else {
-        handleRunWithCustomInputClick();
-      }
+      handleRunWithCustomInputClick();
     },
     0,
     {
@@ -425,7 +420,7 @@ export function Header({
         !isNewWorkflow &&
         !!projectId &&
         !!workflowId &&
-        (isRetryable || !!firstTriggerId),
+        !!firstTriggerId,
     }
   );
 
@@ -541,28 +536,17 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId &&
-                workflowId &&
-                !isNewWorkflow &&
-                (isRetryable ? (
-                  <RunRetryButton
-                    isRetryable={true}
-                    isDisabled={!canRun || isRunPanelOpen || isIDEOpen}
-                    isSubmitting={isSubmitting || runIsProcessing}
-                    onRun={handleRunClick}
-                    onRetry={handleRetryClick}
-                    dropdownPosition="down"
-                    showKeyboardShortcuts={true}
-                    disabledTooltip={!canRun ? tooltipMessage : undefined}
-                  />
-                ) : firstTriggerId ? (
-                  <NewRunButton
-                    onClick={handleRunClick}
-                    onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                    disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                    isRunning={isSubmitting || runIsProcessing}
-                  />
-                ) : null)}
+              {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
+                <NewRunButton
+                  onClick={() => {
+                    void (isRetryable ? handleRetryClick() : handleRunClick());
+                  }}
+                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
+                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  isRunning={isSubmitting || runIsProcessing}
+                  text={isRetryable ? 'Run (retry)' : 'Run'}
+                />
+              )}
               <SaveButton
                 canSave={
                   canSave &&

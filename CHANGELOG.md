@@ -27,9 +27,8 @@ and this project adheres to
 ### Fixed
 
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
-  "run with custom input". When a run is loaded, the primary action switches to
-  retry and the secondary to new work order.
-  [#4736](https://github.com/OpenFn/lightning/issues/4736)
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
 
 - `mix lightning.install_runtime` no longer reports success when Rambo's binary
   fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
