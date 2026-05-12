@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B2C75D34.js"></script>
+    <script defer src="dist/sidebar_items-5BBDE2DC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -175,7 +175,7 @@ HTTP request through a channel.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_request.ex#L12" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_request.ex#L14" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -193,8 +193,13 @@ HTTP request through a channel.</p>
   channel_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   channel_snapshot: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   channel_snapshot_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  client_auth_type: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   client_identity: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  client_webhook_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  client_webhook_auth_method_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   completed_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
+  destination_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  destination_credential_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   request_id: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   started_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
@@ -229,7 +234,7 @@ HTTP request through a channel.</p>
       <h1 class="signature" translate="no">changeset(request, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_request.ex#L39" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_request.ex#L47" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B2C75D34.js"></script>
+    <script defer src="dist/sidebar_items-5BBDE2DC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -195,20 +195,28 @@ credential resolution fails before proxying. Carries request fields and
   __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   channel_request: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   channel_request_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  connect_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   error_message: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   inserted_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
-  latency_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  latency_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  queue_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   request_body_hash: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   request_body_preview: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  request_headers: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  request_body_size: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  request_headers: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">list</a>() | nil,
   request_method: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   request_path: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  request_query_string: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  request_send_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   response_body_hash: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   response_body_preview: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  response_headers: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  response_body_size: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  response_duration_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  response_headers: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">list</a>() | nil,
   response_status: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
-  ttfb_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  reused_connection: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>() | nil,
+  ttfb_us: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   type: :destination_response | :error
 }</pre>
 
@@ -240,7 +248,7 @@ credential resolution fails before proxying. Carries request fields and
       <h1 class="signature" translate="no">changeset(event, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_event.ex#L62" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel_event.ex#L78" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

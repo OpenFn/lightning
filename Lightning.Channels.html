@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B2C75D34.js"></script>
+    <script defer src="dist/sidebar_items-5BBDE2DC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -203,6 +203,16 @@ does not exist or belongs to a different project.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_channel_request_for_project/2" data-no-tooltip="" translate="no">get_channel_request_for_project(project_id, request_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a channel request with preloads, scoped to the given project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_channel_stats_for_project/1" data-no-tooltip="" translate="no">get_channel_stats_for_project(project_id)</a>
 
       </div>
@@ -324,7 +334,7 @@ does not exist or belongs to a different project.</p></div>
       <h1 class="signature" translate="no">delete_channel(channel, list)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L245" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -358,7 +368,7 @@ events cascade automatically, and channel snapshots cascade via
       <h1 class="signature" translate="no">delete_channel_requests_for_project(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L344" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L350" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -387,7 +397,7 @@ on <code class="inline">channel_requests.channel_id</code> before channels are c
       <h1 class="signature" translate="no">delete_expired_requests(project_id, period_days)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L316" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L322" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -480,6 +490,38 @@ referenced by any request and are not the current version.</p>
 does not exist or belongs to a different project.</p>
   </section>
 </section>
+<section class="detail" id="get_channel_request_for_project/2">
+
+  <div class="detail-header">
+    <a href="#get_channel_request_for_project/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_channel_request_for_project(project_id, request_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L463" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_channel_request_for_project(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  <a href="Lightning.Channels.ChannelRequest.html#t:t/0">Lightning.Channels.ChannelRequest.t</a>() | nil</pre>
+
+      </div>
+
+<p>Returns a channel request with preloads, scoped to the given project.</p><p>Returns <code class="inline">nil</code> if the request doesn't exist, belongs to a different project,
+or the ID is not a valid UUID.</p><p>Preloads: <code class="inline">channel_events</code>, <code class="inline">channel</code>, <code class="inline">channel_snapshot</code>,
+<code class="inline">client_webhook_auth_method</code>, and <code class="inline">destination_credential</code> (with its
+<code class="inline">credential</code> for display).</p>
+  </section>
+</section>
 <section class="detail" id="get_channel_stats_for_project/1">
 
   <div class="detail-header">
@@ -536,7 +578,7 @@ method (with project_credential → credential). Returns nil if not found.</p><p
       <h1 class="signature" translate="no">get_or_create_current_snapshot(channel)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L265" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L271" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -639,7 +681,7 @@ filter</li><li><code class="inline">params</code> — Scrivener page params map,
       <h1 class="signature" translate="no">update_channel(channel, attrs, list)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L213" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels.ex#L216" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
