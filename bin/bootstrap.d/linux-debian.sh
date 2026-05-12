@@ -5,6 +5,16 @@
 # Required system packages for native dependency compilation
 REQUIRED_PACKAGES=(build-essential libsodium-dev cmake)
 MISSING_PACKAGES=()
+MISSING_RUST=false
+
+# Rambo ships precompiled binaries only for x86_64 mac/linux/windows.
+# Other architectures (e.g. aarch64/arm64) must build from source via cargo.
+rust_required_for_arch() {
+  case "$(uname -m)" in
+  aarch64 | arm64) return 0 ;;
+  *) return 1 ;;
+  esac
+}
 
 platform_check_dependencies() {
   for package in "${REQUIRED_PACKAGES[@]}"; do
@@ -15,15 +25,19 @@ platform_check_dependencies() {
     fi
   done
 
-  # Check for Rust (optional but recommended for Rambo)
   if command -v rustc &>/dev/null; then
     echo "  Rust: $(rustc --version)"
+  elif rust_required_for_arch; then
+    echo "  Rust: not installed (required on $(uname -m) — rambo has no precompiled binary)"
+    MISSING_RUST=true
   else
     echo "  Rust: not installed (optional)"
   fi
 }
 
 platform_check_status() {
+  local has_failures=false
+
   if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
     echo "Missing system packages:"
     for package in "${MISSING_PACKAGES[@]}"; do
@@ -32,6 +46,22 @@ platform_check_status() {
     echo ""
     echo "To install, run:"
     echo "  sudo apt-get update && sudo apt-get install -y ${MISSING_PACKAGES[*]}"
+    has_failures=true
+  fi
+
+  if [[ "$MISSING_RUST" == true ]]; then
+    [[ "$has_failures" == true ]] && echo ""
+    echo "Missing Rust toolchain (rambo has no precompiled binary for $(uname -m))"
+    echo ""
+    echo "Install via rustup (recommended):"
+    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+    echo ""
+    echo "Or via apt:"
+    echo "  sudo apt-get install -y rustc cargo"
+    has_failures=true
+  fi
+
+  if [[ "$has_failures" == true ]]; then
     echo ""
     echo "Then re-run ./bin/bootstrap"
     exit 1
@@ -62,7 +92,20 @@ platform_setup_environment() {
 }
 
 platform_post_compile_hooks() {
-  # No platform-specific post-compile hooks needed on Linux
-  # Rambo compiles automatically during mix deps.compile
-  :
+  # On architectures without a precompiled rambo binary (e.g. aarch64),
+  # the `:rambo` compiler builds priv/rambo via cargo. If the binary is
+  # missing — typically because an earlier bootstrap ran before Rust was
+  # installed and mix has since cached rambo as "compiled" — force a
+  # rebuild so the rest of bootstrap can actually invoke it.
+  if ! rust_required_for_arch; then
+    return
+  fi
+
+  local rambo_bin="_build/${MIX_ENV:-dev}/lib/rambo/priv/rambo"
+  if [[ -x "$rambo_bin" ]]; then
+    return
+  fi
+
+  echo "Rambo binary missing at $rambo_bin — building via cargo..."
+  (cd deps/rambo && mix compile.rambo)
 }
