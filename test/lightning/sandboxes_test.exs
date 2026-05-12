@@ -1315,7 +1315,7 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "project_users derivation from parent" do
-    test "copies every parent user with their role preserved" do
+    test "copies every parent user with their role preserved, actor stays owner" do
       %{actor: actor, other: other, parent: parent} =
         build_parent_fixture!(:owner)
 
@@ -1327,6 +1327,33 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == other.id and &1.role == :editor)
+             )
+
+      # When the actor is the parent owner, they remain owner on the sandbox.
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "preserves the :viewer role" do
+      actor = insert(:user)
+      viewer = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(parent, viewer, :viewer)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == viewer.id and &1.role == :viewer)
              )
     end
 
@@ -1379,6 +1406,41 @@ defmodule Lightning.Projects.SandboxesTest do
                sandbox.project_users,
                &(&1.user_id == actor.id)
              ) == 1
+    end
+
+    test "superuser actor who is not on the parent becomes sandbox owner" do
+      # :provision_sandbox permits superusers regardless of parent membership;
+      # the sandbox should still inherit the parent's users, with the parent
+      # owner demoted, and the superuser added as the sandbox owner.
+      superuser = insert(:user, role: :superuser)
+      parent_owner = insert(:user)
+      editor = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, parent_owner, :owner)
+      ensure_member!(parent, editor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, superuser, %{name: "sb-superuser"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == superuser.id and &1.role == :owner)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == parent_owner.id and &1.role == :admin)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == editor.id and &1.role == :editor)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
     end
   end
 

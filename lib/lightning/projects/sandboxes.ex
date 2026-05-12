@@ -493,9 +493,6 @@ defmodule Lightning.Projects.Sandboxes do
   defp build_sandbox_project_attributes(parent, actor, name, color, env) do
     owner_membership = %{user_id: actor.id, role: :owner}
 
-    # Copy every parent user except the actor (who is the owner), demoting
-    # any parent owner to :admin. The actor's role on the parent (if any)
-    # is overridden to :owner on the sandbox.
     additional_memberships =
       parent.project_users
       |> Enum.reject(&(&1.user_id == actor.id))
