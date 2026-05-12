@@ -250,6 +250,7 @@ type CanonicalStep = CanonicalTriggerStep | CanonicalJobStep;
 interface CanonicalWorkflow {
   id: string;
   name: string;
+  schema_version: string;
   start?: string;
   steps: CanonicalStep[];
 }
@@ -344,6 +345,7 @@ const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
   return {
     id: hyphenate(state.name),
     name: state.name,
+    schema_version: '4.0',
     ...(start ? { start } : {}),
     // Trigger steps first, then job steps — matches Elixir's emit order.
     steps: [...triggerSteps, ...jobSteps],
@@ -486,6 +488,9 @@ const RESERVED_YAML = new Set([
 const needsQuoting = (s: string): boolean => {
   if (s === '') return true;
   if (RESERVED_YAML.has(s.toLowerCase())) return true;
+  // Quote strings that would otherwise parse as a YAML number on read
+  // (e.g. "4.0" must stay a string for schema_version).
+  if (/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return true;
   // Mirrors `Lightning.Workflows.YamlFormat.V2.quote_if_needed/1`:
   // ^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$  (and not reserved)
   return !/^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$/.test(s);

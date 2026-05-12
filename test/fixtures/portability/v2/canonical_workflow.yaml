@@ -1,5 +1,6 @@
 id: canonical-workflow
 name: canonical workflow
+schema_version: '4.0'
 start: cron
 steps:
   - id: cron

@@ -457,6 +457,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     [
       emit_scalar_field("id", Map.get(workflow_canonical, :id)),
       emit_scalar_field("name", Map.get(workflow_canonical, :name)),
+      emit_scalar_field("schema_version", "4.0"),
       emit_scalar_field("start", Map.get(workflow_canonical, :start)),
       emit_steps(triggers ++ jobs)
     ]
@@ -657,6 +658,11 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       value == "" ->
         "''"
 
+      # Quote strings that would otherwise parse as a YAML number on read
+      # (e.g. "4.0" must stay a string for schema_version).
+      Regex.match?(~r/^-?(\d+\.?\d*|\.\d+)$/, value) ->
+        "'" <> value <> "'"
+
       Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.\/> |]*[a-zA-Z0-9]$/, value) and
           not yaml_reserved?(value) ->
         value
@@ -772,6 +778,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     [
       emit_top_scalar("id", Map.get(project_canonical, :id)),
       emit_top_scalar("name", Map.get(project_canonical, :name)),
+      emit_top_scalar("schema_version", "4.0"),
       emit_top_description(Map.get(project_canonical, :description)),
       emit_collections_array(Map.get(project_canonical, :collections, [])),
       emit_credentials_array(Map.get(project_canonical, :credentials, [])),
