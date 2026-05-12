@@ -255,7 +255,8 @@ interface CanonicalWorkflow {
   steps: CanonicalStep[];
 }
 
-const hyphenate = (value: string): string => value.replace(/\s+/g, '-');
+const hyphenate = (value: string): string =>
+  value.toLowerCase().replace(/\s+/g, '-');
 
 // Kafka config travels flat on the trigger root in YAML
 // (`hosts: [...]`, `topics: [...]`, `connect_timeout: …`, etc.) — matches
