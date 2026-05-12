@@ -544,7 +544,7 @@ export function Header({
                   onRunWithCustomInputClick={handleRunWithCustomInputClick}
                   disabled={!canRun || isRunPanelOpen || isIDEOpen}
                   isRunning={isSubmitting || runIsProcessing}
-                  text={isRetryable ? 'Run (retry)' : 'Run'}
+                  text={isRetryable ? 'Run (Retry)' : 'Run'}
                 />
               )}
               <SaveButton
