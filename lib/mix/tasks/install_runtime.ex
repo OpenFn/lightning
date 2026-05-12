@@ -14,13 +14,21 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   @cli_version "1.35.2"
 
   def run(args) do
-    Rambo.run("/usr/bin/env", ~w(which node))
-    |> case do
-      {:error, %{status: 1}} ->
+    case Rambo.run("/usr/bin/env", ~w(which node)) do
+      {:ok, _} ->
+        :ok
+
+      {:error, %Rambo{status: 1}} ->
         raise "Couldn't find node in the local environment."
 
-      _ ->
-        nil
+      {:error, reason} ->
+        raise """
+        Failed to invoke Rambo while checking for node: #{inspect(reason)}
+
+        The rambo binary may be missing or not executable. On architectures
+        without a precompiled binary (e.g. aarch64/arm64), Rust is required
+        so rambo can be built from source. See ./bin/bootstrap output.
+        """
     end
 
     File.mkdir_p(@default_path)
@@ -34,12 +42,25 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
 
     package_list = packages(args) |> Enum.join(" ")
 
-    Rambo.run(
-      "/usr/bin/env",
-      ["sh", "-c", "npm install --prefix $NODE_PATH --global #{package_list}"],
-      log: true,
-      env: %{"NODE_PATH" => @default_path}
-    )
+    case Rambo.run(
+           "/usr/bin/env",
+           [
+             "sh",
+             "-c",
+             "npm install --prefix $NODE_PATH --global #{package_list}"
+           ],
+           log: true,
+           env: %{"NODE_PATH" => @default_path}
+         ) do
+      {:ok, result} ->
+        result
+
+      {:error, %Rambo{status: status, err: err}} ->
+        raise "npm install failed (status #{status}): #{err}"
+
+      {:error, reason} ->
+        raise "Failed to invoke Rambo for npm install: #{inspect(reason)}"
+    end
   end
 
   def packages(args \\ []) do

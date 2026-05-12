@@ -39,6 +39,17 @@ and this project adheres to
   `(root_project_id, repo, branch)`, closing a check-then-insert race that could
   let two concurrent inserts both pass an in-memory ancestor check at READ
   COMMITTED. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
+  Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
+  path. x86_64 Linux is unchanged.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- `mix lightning.install_runtime` no longer reports success when Rambo's binary
+  fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- `FakeRambo.run/3` guards against the `:fake_rambo_cache` ETS table not yet
+  existing, restoring the intended missing-cache fallback that Cachex 4.x broke
+  by raising `ArgumentError` from `:ets.lookup` instead of returning
+  `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
 
 ## [2.16.3] - 2026-05-07
 
