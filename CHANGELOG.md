@@ -26,13 +26,6 @@ and this project adheres to
 
 ### Fixed
 
-### Security
-
-- `.env.example` no longer contains real RSA private keys and worker secrets as
-  example values. Replaced with generation instructions pointing to
-  `mix lightning.gen_worker_keys`.
-  [#4706](https://github.com/OpenFn/lightning/issues/4706)
-
 - `mix lightning.install_runtime` no longer reports success when Rambo's binary
   fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
@@ -40,6 +33,13 @@ and this project adheres to
   existing, restoring the intended missing-cache fallback that Cachex 4.x broke
   by raising `ArgumentError` from `:ets.lookup` instead of returning
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+
+### Security
+
+- `.env.example` no longer contains real RSA private keys and worker secrets as
+  example values. Replaced with generation instructions pointing to
+  `mix lightning.gen_worker_keys`.
+  [#4706](https://github.com/OpenFn/lightning/issues/4706)
 
 ## [2.16.3] - 2026-05-07
 
