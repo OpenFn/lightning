@@ -23,6 +23,15 @@ and this project adheres to
   `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
   Lightning renders it in the settings view. No-op for OSS Lightning by default.
   [#4725](https://github.com/OpenFn/lightning/issues/4725)
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 
 ### Changed
 
@@ -33,8 +42,20 @@ and this project adheres to
   not already on the parent, call `Lightning.Projects.add_project_users/3`
   after `provision/3` returns.
   [#4744](https://github.com/OpenFn/lightning/issues/4744)
+- `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
+  Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
+  path. x86_64 Linux is unchanged.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
 
 ### Fixed
+
+- `mix lightning.install_runtime` no longer reports success when Rambo's binary
+  fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- `FakeRambo.run/3` guards against the `:fake_rambo_cache` ETS table not yet
+  existing, restoring the intended missing-cache fallback that Cachex 4.x broke
+  by raising `ArgumentError` from `:ets.lookup` instead of returning
+  `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
 
 ## [2.16.3] - 2026-05-07
 
@@ -137,6 +158,11 @@ and this project adheres to
   [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
+- bumped local worker to 1.24.0
+- Channel timing fields are now stored in microseconds (previously milliseconds)
+  and request and response headers are stored as native jsonb on
+  `channel_events`. Handler adapted to Philter 0.3.0 timing map.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)

@@ -6,7 +6,6 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Channels
   alias Lightning.Channels.Channel
-  alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
 
   describe "list_channels_for_project/1" do
@@ -43,21 +42,19 @@ defmodule Lightning.ChannelsTest do
       t1 = ~U[2025-01-01 10:00:00.000000Z]
       t2 = ~U[2025-01-02 12:00:00.000000Z]
 
-      Lightning.Repo.insert!(%ChannelRequest{
-        channel_id: channel.id,
-        channel_snapshot_id: snapshot.id,
-        request_id: "req-stats-1",
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: snapshot,
         state: :success,
         started_at: t1
-      })
+      )
 
-      Lightning.Repo.insert!(%ChannelRequest{
-        channel_id: channel.id,
-        channel_snapshot_id: snapshot.id,
-        request_id: "req-stats-2",
+      insert(:channel_request,
+        channel: channel,
+        channel_snapshot: snapshot,
         state: :success,
         started_at: t2
-      })
+      )
 
       results = Channels.list_channels_for_project_with_stats(project.id)
 
@@ -79,13 +76,12 @@ defmodule Lightning.ChannelsTest do
 
       {:ok, snapshot_b} = Channels.get_or_create_current_snapshot(channel_b)
 
-      Lightning.Repo.insert!(%ChannelRequest{
-        channel_id: channel_b.id,
-        channel_snapshot_id: snapshot_b.id,
-        request_id: "req-stats-3",
+      insert(:channel_request,
+        channel: channel_b,
+        channel_snapshot: snapshot_b,
         state: :success,
         started_at: ~U[2025-06-01 00:00:00.000000Z]
-      })
+      )
 
       results = Channels.list_channels_for_project_with_stats(project.id)
 
@@ -244,6 +240,34 @@ defmodule Lightning.ChannelsTest do
                )
 
       assert audit.actor_id == user.id
+    end
+
+    test "returns {:ok, channel} when submitted with no real changes", %{
+      user: user
+    } do
+      channel = insert(:channel)
+
+      # Pass back the current values — empty changes map. Previously this
+      # crashed with FunctionClauseError because Audit.event/4 returned
+      # :no_changes and that was piped into Multi.insert/3.
+      assert {:ok, unchanged} =
+               Channels.update_channel(
+                 channel,
+                 %{name: channel.name, destination_url: channel.destination_url},
+                 actor: user
+               )
+
+      assert unchanged.id == channel.id
+      assert unchanged.lock_version == channel.lock_version
+
+      # No audit row was written for the no-op save
+      assert [] ==
+               Repo.all(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^channel.id and a.item_type == "channel" and
+                       a.event == "updated"
+               )
     end
 
     test "passing nil for destination_auth_method removes the join record",
@@ -431,6 +455,93 @@ defmodule Lightning.ChannelsTest do
       assert snapshot1.id != snapshot2.id
       assert snapshot2.lock_version == updated.lock_version
       assert snapshot2.name == "updated-name"
+    end
+  end
+
+  describe "get_channel_request_for_project/2" do
+    test "returns channel request with preloads when project matches" do
+      project = insert(:project)
+      user = insert(:user)
+
+      webhook_auth_method =
+        insert(:webhook_auth_method, project: project, auth_type: :api)
+
+      credential =
+        insert(:credential, user: user, name: "dest-cred", schema: "http")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel = insert(:channel, project: project)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          started_at: DateTime.utc_now(),
+          client_webhook_auth_method_id: webhook_auth_method.id,
+          client_auth_type: "api",
+          destination_credential_id: project_credential.id
+        )
+
+      event =
+        insert(:channel_event,
+          channel_request: request,
+          request_path: "/test",
+          latency_us: 100_000
+        )
+
+      result = Channels.get_channel_request_for_project(project.id, request.id)
+
+      assert result.id == request.id
+      assert result.channel.id == channel.id
+      assert result.channel_snapshot.id == snapshot.id
+
+      assert length(result.channel_events) == 1
+      assert hd(result.channel_events).id == event.id
+
+      # Client and destination auth tracking are preloaded (no N+1).
+      assert result.client_webhook_auth_method.id == webhook_auth_method.id
+      assert result.destination_credential.id == project_credential.id
+      assert result.destination_credential.credential.name == "dest-cred"
+    end
+
+    test "returns nil when channel request belongs to a different project" do
+      project_a = insert(:project)
+      project_b = insert(:project)
+      channel = insert(:channel, project: project_a)
+      {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
+
+      assert Channels.get_channel_request_for_project(project_b.id, request.id) ==
+               nil
+    end
+
+    test "returns nil for non-existent request ID" do
+      project = insert(:project)
+
+      assert Channels.get_channel_request_for_project(
+               project.id,
+               Ecto.UUID.generate()
+             ) == nil
+    end
+
+    test "returns nil for invalid UUID" do
+      project = insert(:project)
+
+      assert Channels.get_channel_request_for_project(
+               project.id,
+               "not-a-valid-uuid"
+             ) == nil
     end
   end
 end
