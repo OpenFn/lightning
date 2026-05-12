@@ -194,8 +194,11 @@ defmodule Lightning.Channels do
 
     Multi.new()
     |> Multi.insert(:channel, changeset)
-    |> Multi.insert(:audit, fn %{channel: channel} ->
-      Audit.event("created", channel.id, actor, changeset)
+    |> Multi.run(:audit, fn _repo, %{channel: channel} ->
+      case Audit.event("created", channel.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
     end)
     |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
@@ -215,8 +218,11 @@ defmodule Lightning.Channels do
 
     Multi.new()
     |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
-    |> Multi.insert(:audit, fn %{channel: updated} ->
-      Audit.event("updated", updated.id, actor, changeset)
+    |> Multi.run(:audit, fn _repo, %{channel: updated} ->
+      case Audit.event("updated", updated.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
     end)
     |> Audit.audit_auth_method_changes(changeset, actor)
     |> Repo.transaction()
@@ -440,5 +446,39 @@ defmodule Lightning.Channels do
     end
 
     {total, nil}
+  end
+
+  @doc """
+  Returns a channel request with preloads, scoped to the given project.
+
+  Returns `nil` if the request doesn't exist, belongs to a different project,
+  or the ID is not a valid UUID.
+
+  Preloads: `channel_events`, `channel`, `channel_snapshot`,
+  `client_webhook_auth_method`, and `destination_credential` (with its
+  `credential` for display).
+  """
+  @spec get_channel_request_for_project(Ecto.UUID.t(), String.t()) ::
+          ChannelRequest.t() | nil
+  def get_channel_request_for_project(project_id, request_id) do
+    case Ecto.UUID.cast(request_id) do
+      {:ok, uuid} ->
+        from(cr in ChannelRequest,
+          join: c in Channel,
+          on: cr.channel_id == c.id,
+          where: cr.id == ^uuid and c.project_id == ^project_id,
+          preload: [
+            :channel_events,
+            :channel,
+            :channel_snapshot,
+            :client_webhook_auth_method,
+            destination_credential: :credential
+          ]
+        )
+        |> Repo.one()
+
+      :error ->
+        nil
+    end
   end
 end
