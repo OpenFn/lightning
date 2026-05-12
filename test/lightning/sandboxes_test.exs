@@ -310,8 +310,7 @@ defmodule Lightning.Projects.SandboxesTest do
         Sandboxes.provision(parent, actor, %{
           name: "sandbox-x",
           color: "#abcdef",
-          env: "staging",
-          collaborators: [%{user_id: actor.id, role: :owner}]
+          env: "staging"
         })
 
       sandbox = Repo.preload(sandbox, [:project_users, :project_credentials])
@@ -1178,18 +1177,6 @@ defmodule Lightning.Projects.SandboxesTest do
       assert %{name: [_error_msg]} = errors_on(changeset)
     end
 
-    test "handles foreign key constraint violations in collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      non_existent_user_id = Ecto.UUID.generate()
-
-      assert_raise Ecto.ConstraintError, ~r/foreign_key_constraint/, fn ->
-        Sandboxes.provision(parent, actor, %{
-          name: "test-fk-error",
-          collaborators: [%{user_id: non_existent_user_id, role: :editor}]
-        })
-      end
-    end
-
     test "rolls back transaction on keychain validation failure" do
       %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
 
@@ -1327,19 +1314,13 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "collaborators" do
-    test "adds non-owner collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      other = insert(:user)
+  describe "project_users derivation from parent" do
+    test "copies every parent user with their role preserved" do
+      %{actor: actor, other: other, parent: parent} =
+        build_parent_fixture!(:owner)
 
       {:ok, sandbox} =
-        Sandboxes.provision(parent, actor, %{
-          name: "sb-with-collab",
-          collaborators: [
-            %{user_id: other.id, role: :editor},
-            %{user_id: actor.id, role: :owner}
-          ]
-        })
+        Sandboxes.provision(parent, actor, %{name: "sb-derived"})
 
       sandbox = Repo.preload(sandbox, :project_users)
 
@@ -1347,8 +1328,57 @@ defmodule Lightning.Projects.SandboxesTest do
                sandbox.project_users,
                &(&1.user_id == other.id and &1.role == :editor)
              )
+    end
 
+    test "demotes the parent owner to :admin on the sandbox" do
+      # Actor is :editor on parent so the parent owner is someone else.
+      actor = insert(:user)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :editor)
+      ensure_member!(parent, parent_owner, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-demote-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == parent_owner.id and &1.role == :admin)
+             )
+
+      # The actor is the sandbox owner.
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      # Exactly one owner on the sandbox.
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "actor is sandbox owner even if they had a non-owner role on parent" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-actor-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      # Actor appears exactly once.
+      assert Enum.count(
+               sandbox.project_users,
+               &(&1.user_id == actor.id)
+             ) == 1
     end
   end
 
