@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Apollo AI chat requests now carry optional Langfuse tracking fields
+  (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
+  `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)
+
 ### Changed
 
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
