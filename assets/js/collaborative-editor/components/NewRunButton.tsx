@@ -112,6 +112,11 @@ export function NewRunButton({
           transition data-closed:scale-95 data-closed:transform
           data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
           data-leave:duration-75 data-leave:ease-in"
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+            }
+          }}
         >
           <MenuItem>
             {({ close }) => (
