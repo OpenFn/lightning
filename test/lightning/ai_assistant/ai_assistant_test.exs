@@ -602,7 +602,6 @@ defmodule Lightning.AiAssistantTest do
     end
 
     test "forwards meta and metrics_opt_in to global_chat_stream", %{
-      user: _setup_user,
       project: project,
       workflow: workflow
     } do

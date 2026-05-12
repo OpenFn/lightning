@@ -919,13 +919,14 @@ defmodule Lightning.AiAssistant do
     context = build_context(initial_context, opts)
 
     history = build_history(session)
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     ApolloClient.job_chat(
       content,
       context: context,
       history: history,
-      meta: apollo_meta(session),
-      metrics_opt_in: metrics_opt_in?(session)
+      meta: meta,
+      metrics_opt_in: metrics_opt_in
     )
     |> handle_ai_response(session, &build_job_message/1)
   end
@@ -950,12 +951,13 @@ defmodule Lightning.AiAssistant do
 
     context = build_context(initial_context, opts)
     history = build_history(session)
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     case ApolloClient.job_chat_stream(content,
            context: context,
            history: history,
-           meta: apollo_meta(session),
-           metrics_opt_in: metrics_opt_in?(session)
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -994,17 +996,15 @@ defmodule Lightning.AiAssistant do
     session = Repo.preload(session, :user)
     user = session.user
 
-    (session.meta || %{})
-    |> Map.put("session_id", session.id)
-    |> Map.put("user", %{
-      "id" => user.id,
-      "persona" => User.langfuse_persona(user)
-    })
-  end
+    meta =
+      (session.meta || %{})
+      |> Map.put("session_id", session.id)
+      |> Map.put("user", %{
+        "id" => user.id,
+        "persona" => User.langfuse_persona(user)
+      })
 
-  defp metrics_opt_in?(session) do
-    session = Repo.preload(session, :user)
-    User.core_contributor?(session.user)
+    {meta, User.core_contributor?(user)}
   end
 
   @doc """
@@ -1034,13 +1034,15 @@ defmodule Lightning.AiAssistant do
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
+    {meta, metrics_opt_in} = apollo_meta(session)
+
     ApolloClient.workflow_chat(
       content,
       code: code,
       errors: errors,
       history: build_history(session),
-      meta: apollo_meta(session),
-      metrics_opt_in: metrics_opt_in?(session)
+      meta: meta,
+      metrics_opt_in: metrics_opt_in
     )
     |> handle_ai_response(session, &build_workflow_message/1)
   end
@@ -1058,12 +1060,14 @@ defmodule Lightning.AiAssistant do
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
+    {meta, metrics_opt_in} = apollo_meta(session)
+
     case ApolloClient.workflow_chat_stream(content,
            code: code,
            errors: errors,
            history: build_history(session),
-           meta: apollo_meta(session),
-           metrics_opt_in: metrics_opt_in?(session)
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1089,12 +1093,14 @@ defmodule Lightning.AiAssistant do
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
+    {meta, metrics_opt_in} = apollo_meta(session)
+
     case ApolloClient.global_chat_stream(content,
            workflow_yaml: workflow_yaml,
            page: page,
            history: history,
-           meta: apollo_meta(session),
-           metrics_opt_in: metrics_opt_in?(session)
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
