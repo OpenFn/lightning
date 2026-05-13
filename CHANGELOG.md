@@ -33,6 +33,21 @@ and this project adheres to
   existing, restoring the intended missing-cache fallback that Cachex 4.x broke
   by raising `ArgumentError` from `:ets.lookup` instead of returning
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- The dataclip viewer now renders "Dataclip not found" when the backend returns
+  404, instead of the generic "Failed to load content" message used for all
+  error states. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `GET /projects/:project_id/jobs/:job_id/dataclips` no longer returns a 500
+  when the `limit` query param is missing, empty, non-numeric, or non-integer.
+  It now returns 400 with a clear error and defaults to 10 when the param is
+  absent. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+
+### Security
+
+- `PATCH /projects/:project_id/dataclips/:dataclip_id` now rejects requests
+  where the URL `project_id` and the dataclip's project disagree. Previously, a
+  user with edit access on project A and view access to a dataclip in project B
+  could rename the dataclip via project A's URL scope.
+  [#4746](https://github.com/OpenFn/lightning/pull/4746)
 
 ## [2.16.3] - 2026-05-07
 

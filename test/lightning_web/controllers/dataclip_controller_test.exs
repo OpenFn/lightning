@@ -1,5 +1,5 @@
 defmodule LightningWeb.DataclipControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
   import Lightning.Factories
 
   defp create_steps_dataclips(_context) do
