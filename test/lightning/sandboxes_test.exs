@@ -1185,7 +1185,6 @@ defmodule Lightning.Projects.SandboxesTest do
       ensure_member!(root, actor, :owner)
       l1 = insert(:project, parent: root)
       ensure_member!(l1, actor, :owner)
-      # l2 is at depth 2 — equal to the configured cap.
       l2 = insert(:project, parent: l1)
       ensure_member!(l2, actor, :owner)
 
@@ -1206,7 +1205,6 @@ defmodule Lightning.Projects.SandboxesTest do
       root = insert(:project)
       ensure_member!(root, actor, :owner)
 
-      # l1 is at depth 1 — one below the cap of 2; provisioning produces depth 2.
       l1 = insert(:project, parent: root)
       ensure_member!(l1, actor, :owner)
 

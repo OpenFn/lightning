@@ -167,7 +167,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
          %{conn: conn, user: user} do
       Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 1 end)
 
-      # Cap is 1, so a direct child of root is already at the limit.
       root =
         insert(:project,
           name: "deep-root",
