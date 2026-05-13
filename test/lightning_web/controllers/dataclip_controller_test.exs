@@ -367,6 +367,27 @@ defmodule LightningWeb.DataclipControllerTest do
       # Returns 401 because Projects.get_project! raises for unauthorized access
       assert html_response(conn, 401) =~ "Authorization Error"
     end
+
+    # NOTE: This test currently fails with an unhandled `ArgumentError` because
+    # `String.to_integer/1` in `DataclipController.search/2` is unguarded
+    # (lib/lightning_web/controllers/dataclip_controller.ex:136). Once the
+    # controller validates the `limit` param, it should return 400 instead of
+    # crashing.
+    test "returns 400 when limit is not a positive integer", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      for bad_limit <- ["abc", "", "10.5"] do
+        conn =
+          get(
+            conn,
+            ~p"/projects/#{project}/jobs/#{job}/dataclips?limit=#{bad_limit}"
+          )
+
+        assert response(conn, 400)
+      end
+    end
   end
 
   describe "GET /projects/:project_id/runs/:run_id/dataclip" do
@@ -555,6 +576,34 @@ defmodule LightningWeb.DataclipControllerTest do
 
       # Returns 401 because Projects.get_project! raises for unauthorized access
       assert html_response(conn, 401) =~ "Authorization Error"
+    end
+
+    test "returns 404 when the dataclip belongs to a different project than the URL project_id" do
+      user = insert(:user)
+
+      # Project A: user has :edit_workflow (admin role).
+      project_a =
+        insert(:project, project_users: [%{user: user, role: :admin}])
+
+      # Project B: user is a member (so :view_dataclip passes via membership),
+      # and the dataclip lives here.
+      project_b =
+        insert(:project, project_users: [%{user: user, role: :admin}])
+
+      dataclip_in_b = insert(:dataclip, project: project_b)
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+        |> patch(
+          ~p"/projects/#{project_a}/dataclips/#{dataclip_in_b}",
+          %{name: "Sneaky Rename"}
+        )
+
+      # Post-fix: the controller should refuse to update a dataclip via a
+      # mismatched project URL. Currently this returns 200 with the updated
+      # dataclip — that's the bug under test.
+      assert conn.status == 404
     end
   end
 end
