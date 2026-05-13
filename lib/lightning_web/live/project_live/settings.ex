@@ -1,6 +1,32 @@
 defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
-  Index Liveview for project settings
+  Index LiveView for project settings.
+
+  ## View-extension slots
+
+  Two slots let downstream apps inject LiveComponents into the settings page
+  by registering them in route metadata:
+
+      {"/projects/:project_id/settings", LightningWeb.ProjectLive.Settings, :index,
+       metadata: %{
+         concurrency_input: MyApp.ConcurrencyInputComponent,
+         usage_caps_input: MyApp.UsageCapsInputComponent
+       }}
+
+  Each slot has its own assigns contract, which the component must accept:
+
+    * `:concurrency_input` receives `field` (the `Ecto.Changeset` field for
+      `project.concurrency`), `project`, and `disabled` (a pre-computed
+      boolean — Lightning resolves whether the current user is allowed to
+      edit the value and passes the result through).
+
+    * `:usage_caps_input` receives `project` and `current_user`. The
+      component computes its own permission gate (typically via
+      `Lightning.Projects.Sandboxes.parent_admin?/2`) because cap-editing
+      authority is owned by the downstream billing layer, not by Lightning.
+
+  Slots are optional. Routes that omit a metadata key get a hidden slot —
+  the page renders identically to OSS defaults.
   """
   use LightningWeb, :live_view
 
