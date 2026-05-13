@@ -1541,7 +1541,56 @@ export const createWorkflowStore = () => {
   };
 
   /**
+   * Deduplicate job names within a workflow state.
+   *
+   * If multiple jobs share the same name, appends " 2", " 3", etc.
+   * to make each name unique. The first occurrence keeps its original name.
+   * Skips suffixes that collide with existing names in the workflow.
+   */
+  const deduplicateJobNames = (
+    workflowState: YAMLWorkflowState
+  ): YAMLWorkflowState => {
+    const allOriginalNames = new Set(workflowState.jobs.map(j => j.name));
+    const usedNames = new Set<string>();
+    let hasDuplicates = false;
+
+    const jobs = workflowState.jobs.map(job => {
+      if (!usedNames.has(job.name)) {
+        usedNames.add(job.name);
+        return job;
+      }
+
+      hasDuplicates = true;
+      let counter = 2;
+      while (
+        usedNames.has(`${job.name} ${counter}`) ||
+        allOriginalNames.has(`${job.name} ${counter}`)
+      ) {
+        counter++;
+      }
+      const newName = `${job.name} ${counter}`;
+      usedNames.add(newName);
+      return { ...job, name: newName };
+    });
+
+    if (hasDuplicates) {
+      logger.info('Deduplicated job names', {
+        original: workflowState.jobs.map(j => j.name),
+        deduplicated: jobs.map(j => j.name),
+      });
+      return { ...workflowState, jobs };
+    }
+
+    return workflowState;
+  };
+
+  /**
    * Import workflow from YAML WorkflowState
+   *
+   * Validates workflow name uniqueness via the server and deduplicates
+   * job names client-side before writing to Y.Doc. This is the single
+   * central place for name validation on import, regardless of how the
+   * import was triggered (manual import, template, or AI generation).
    *
    * Uses Pattern 1 (Y.Doc → Observer → Immer):
    * - Single transact() for atomic bulk updates
@@ -1550,18 +1599,32 @@ export const createWorkflowStore = () => {
    *
    * @param workflowState - Parsed YAML workflow state
    */
-  const importWorkflow = (workflowState: YAMLWorkflowState) => {
+  const importWorkflow = async (workflowState: YAMLWorkflowState) => {
     const ydoc = ensureYDoc();
+
+    // Validate workflow name uniqueness via server
+    let validatedState: YAMLWorkflowState;
+    try {
+      validatedState = await validateWorkflowName(workflowState);
+    } catch (error) {
+      // If validation fails, proceed with original name
+      // Server will handle any name conflicts on save
+      logger.warn('Workflow name validation failed, proceeding', error);
+      validatedState = workflowState;
+    }
+
+    // Deduplicate job names client-side
+    validatedState = deduplicateJobNames(validatedState);
 
     try {
       // Use adapter to apply transformations and update Y.Doc
-      YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
+      YAMLStateToYDoc.applyToYDoc(ydoc, validatedState);
 
       logger.info('Workflow imported successfully', {
-        workflowId: workflowState.id,
-        jobs: workflowState.jobs.length,
-        triggers: workflowState.triggers.length,
-        edges: workflowState.edges.length,
+        workflowId: validatedState.id,
+        jobs: validatedState.jobs.length,
+        triggers: validatedState.triggers.length,
+        edges: validatedState.edges.length,
       });
 
       // Note: Observers will automatically trigger Immer updates and notify React

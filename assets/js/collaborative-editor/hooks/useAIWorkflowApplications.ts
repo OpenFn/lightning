@@ -123,7 +123,7 @@ export function useAIWorkflowApplications({
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
   workflowActions: {
-    importWorkflow: (state: YAMLWorkflowState) => void;
+    importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
     doneApplyingWorkflow: (messageId: string) => Promise<void>;
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
@@ -198,7 +198,7 @@ export function useAIWorkflowApplications({
           extractJobCredentials(jobs)
         );
 
-        importWorkflow(workflowStateWithCreds);
+        await importWorkflow(workflowStateWithCreds);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 

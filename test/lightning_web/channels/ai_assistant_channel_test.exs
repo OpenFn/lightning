@@ -3090,4 +3090,114 @@ defmodule LightningWeb.AiAssistantChannelTest do
         )
     end
   end
+
+  describe "global assistant session options" do
+    test "creates workflow_template session with use_global_assistant in meta",
+         %{
+           socket: socket,
+           project: project
+         } do
+      params = %{
+        "project_id" => project.id,
+        "content" => "Help with my workflow",
+        "use_global_assistant" => true,
+        "page" => "/projects/p1/workflows/w1",
+        "code" => "workflow:\n  name: test"
+      }
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+      message_options = session.meta["message_options"]
+
+      assert message_options["use_global_assistant"] == true
+      assert message_options["page"] == "/projects/p1/workflows/w1"
+    end
+
+    test "new_message with use_global_assistant stores options and code",
+         %{
+           socket: socket,
+           project: project,
+           user: user
+         } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          nil,
+          user,
+          "Initial"
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Fix my workflow",
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1/jobs/j1",
+          "code" => "workflow:\n  name: existing"
+        })
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
+
+      reloaded = AiAssistant.get_session!(session.id)
+      message_options = reloaded.meta["message_options"]
+      assert message_options["use_global_assistant"] == true
+      assert message_options["page"] == "/projects/p1/workflows/w1/jobs/j1"
+
+      # Code should be stored on the user message
+      user_msg =
+        Enum.find(reloaded.messages, fn m ->
+          m.role == :user && m.content == "Fix my workflow"
+        end)
+
+      assert user_msg.code == "workflow:\n  name: existing"
+    end
+
+    test "build_message_options includes use_global_assistant and page", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help me",
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1/jobs/j1"
+        })
+
+      assert_reply ref, :ok, %{message: _message}
+
+      updated_session = AiAssistant.get_session!(session.id)
+      message_options = updated_session.meta["message_options"]
+
+      assert message_options["use_global_assistant"] == true
+      assert message_options["page"] == "/projects/p1/workflows/w1/jobs/j1"
+    end
+  end
 end

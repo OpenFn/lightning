@@ -2,7 +2,7 @@
 # benchmarking/channels/run_all.sh
 #
 # Runs all channel proxy load test scenarios in sequence, logging output
-# to a timestamped file. Assumes Lightning and mock sink are already running.
+# to a timestamped file. Assumes Lightning and mock destination are already running.
 # Bails on first failure.
 #
 # Usage:
@@ -68,13 +68,13 @@ echo "  log:         $LOG"
 echo "  csv:         $CSV"
 echo ""
 
-echo -n "Checking mock sink at http://localhost:4001... "
+echo -n "Checking mock destination at http://localhost:4001... "
 if curl -sf http://localhost:4001/ > /dev/null 2>&1; then
   echo "ok"
 else
   echo "FAILED"
-  echo "error: Mock sink is not reachable at http://localhost:4001" >&2
-  echo "Start it first: elixir benchmarking/channels/mock_sink.exs" >&2
+  echo "error: Mock destination is not reachable at http://localhost:4001" >&2
+  echo "Start it first: elixir benchmarking/channels/mock_destination.exs" >&2
   exit 1
 fi
 
@@ -134,14 +134,14 @@ run_scenario() {
 
 # ── Run scenarios ─────────────────────────────────────────────────
 
-# 1. Baseline — hit mock sink directly (no Lightning, no --sname)
+# 1. Baseline — hit mock destination directly (no Lightning, no --sname)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG"
-echo " Scenario: direct_sink" | tee -a "$LOG"
+echo " Scenario: direct_destination" | tee -a "$LOG"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG"
 
 DIRECT_CMD=(
   elixir "$SCRIPT"
-  --scenario direct_sink
+  --scenario direct_destination
   --concurrency "$CONCURRENCY"
   --duration "$DURATION"
   --csv "$CSV"
@@ -155,7 +155,7 @@ if "${DIRECT_CMD[@]}" 2>&1 | tee -a "$LOG"; then
 else
   FAIL=$((FAIL + 1))
   echo "" | tee -a "$LOG"
-  echo "FATAL: scenario 'direct_sink' failed. Stopping." | tee -a "$LOG"
+  echo "FATAL: scenario 'direct_destination' failed. Stopping." | tee -a "$LOG"
   echo "Log: $LOG"
   exit 1
 fi
@@ -166,7 +166,7 @@ run_scenario ramp_up
 run_scenario large_payload  --payload-size 1048576
 run_scenario large_response --response-size 1048576
 run_scenario mixed_methods
-run_scenario slow_sink      --delay 2000
+run_scenario slow_destination      --delay 2000
 
 # ── Summary ───────────────────────────────────────────────────────
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG"

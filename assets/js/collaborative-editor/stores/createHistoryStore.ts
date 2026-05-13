@@ -336,13 +336,10 @@ export const createHistoryStore = (
     });
     notify('handleHistoryUpdated');
 
-    // Fallback cache invalidation: If a run has completed (reached final state)
-    // and there are active subscribers watching it, invalidate the cache to ensure
-    // they get the complete final data on next read.
-    //
-    // This provides a safety net for components that use useRunSteps() without
-    // useFollowRun() - they won't get real-time step updates, but will get
-    // refreshed data when the run completes.
+    // Stale-while-revalidate: If a run has completed (reached final state)
+    // and there are active subscribers watching it, refetch the complete
+    // final data in the background. We keep the existing cache entry visible
+    // so the canvas highlighting doesn't flash/disappear during the refetch.
 
     if ((action === 'run_updated' || action === 'run_created') && run) {
       const currentState = getSnapshot();
@@ -353,11 +350,6 @@ export const createHistoryStore = (
         subscribersForThisRun.size > 0 &&
         isFinalState(run.state)
       ) {
-        state = produce(state, draft => {
-          Reflect.deleteProperty(draft.runStepsCache, run.id);
-        });
-        notify('cacheInvalidated');
-
         void requestRunSteps(run.id);
       }
     }

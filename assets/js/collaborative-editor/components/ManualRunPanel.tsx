@@ -18,6 +18,7 @@ import ExistingView from '../../manual-run-panel/views/ExistingView';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
+import type { RunPanelEntryPoint } from '../types/ui';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
@@ -42,6 +43,7 @@ interface ManualRunPanelProps {
   jobId?: string | null;
   triggerId?: string | null;
   edgeId?: string | null;
+  entryPoint?: RunPanelEntryPoint | null;
   onClose: () => void;
   /** Called when close button is clicked in embedded mode */
   onClosePanel?: () => void;
@@ -70,6 +72,7 @@ export function ManualRunPanel({
   jobId,
   triggerId,
   edgeId,
+  entryPoint = null,
   onClose,
   onClosePanel,
   renderMode = RENDER_MODES.STANDALONE,
@@ -149,7 +152,7 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
@@ -179,11 +182,16 @@ export function ManualRunPanel({
       ? workflow.triggers.find(t => t.id === runContext.id)
       : null;
 
-  const panelTitle = contextJob
-    ? `Run from ${contextJob.name}`
-    : contextTrigger
-      ? `Run from Trigger (${contextTrigger.type})`
-      : 'Run Workflow';
+  let panelTitle: string;
+  if (entryPoint === 'custom-input') {
+    panelTitle = 'Pick a custom input';
+  } else if (contextJob) {
+    panelTitle = `Run from ${contextJob.name}`;
+  } else if (contextTrigger) {
+    panelTitle = `Run from Trigger (${contextTrigger.type})`;
+  } else {
+    panelTitle = 'Run Workflow';
+  }
 
   // For triggers: find first connected job for dataclip fetching
   // (dataclips are associated with jobs, not triggers)
@@ -449,10 +457,17 @@ export function ManualRunPanel({
     25 // RUN_PANEL priority
   );
 
+  // Close the run panel and clear the URL param so the URL→state sync
+  // in WorkflowEditor doesn't immediately reopen it.
+  const closeAfterRun = useCallback(() => {
+    updateSearchParams({ panel: null });
+    onClose();
+  }, [updateSearchParams, onClose]);
+
   // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
   useRunRetryShortcuts({
-    onRun: () => void handleRun(),
-    onRetry: () => void handleRetry(),
+    onRun: () => void handleRun().then(ok => ok && closeAfterRun()),
+    onRetry: () => void handleRetry().then(ok => ok && closeAfterRun()),
     canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
@@ -557,7 +572,7 @@ export function ManualRunPanel({
           { value: 'empty', label: 'Empty', icon: DocumentIcon },
           {
             value: 'custom',
-            label: 'Custom',
+            label: 'New',
             icon: PencilSquareIcon,
           },
           {
@@ -634,13 +649,13 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
-                void handleRun();
+                void handleRun().then(ok => ok && closeAfterRun());
               }}
               onRetry={() => {
-                void handleRetry();
+                void handleRetry().then(ok => ok && closeAfterRun());
               }}
               buttonText={{
-                run: 'Run',
+                run: 'Run From Here',
                 retry: 'Run (Retry)',
                 processing: 'Processing',
               }}

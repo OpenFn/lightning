@@ -105,13 +105,15 @@ config :esbuild,
          js/storybook.js
          js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
+         js/react/components/CollectionPreviewViewer.tsx
          js/job-editor/JobEditor.tsx
          js/workflow-editor/WorkflowEditor.tsx
          js/workflow-store/WorkflowStore.tsx
          js/manual-run-panel/ManualRunPanel.tsx
          js/panel/panels/WorkflowRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
-         js/project-picker/ProjectPicker.tsx
+         js/picker/Picker.tsx
+         js/picker/PickerButton.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js

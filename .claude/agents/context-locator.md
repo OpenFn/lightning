@@ -139,15 +139,3 @@ Total: 12 relevant documents found
 - **Respect personal spaces** - Note when findings are from user-specific
   directories
 
-## What NOT to Do
-
-- Don't analyze document contents deeply
-- Don't make judgments about document quality
-- Don't skip personal directories
-- Don't ignore root-level files
-- Don't ignore old documents
-- Don't change paths or directory structure
-
-Remember: You're a document finder for the .context/ directory. Help users
-quickly discover what historical context and documentation exists in this shared
-team space.

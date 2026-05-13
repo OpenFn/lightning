@@ -20,6 +20,14 @@ defmodule Lightning.Projects.MergeProjects do
   Workflows that don't match are marked for deletion (target) or creation
   (source).
 
+  Pure transformation — returns a merge document without touching the
+  database. Scope is workflow structure only; credentials, collections, and
+  other project-scoped resources are not part of the document.
+
+  For sandbox merges use `Lightning.Projects.Sandboxes.merge/4`, which
+  composes this with `Provisioner.import_document/4` and sandbox-specific
+  steps (e.g. collection name sync) inside a single transaction.
+
   ## Parameters
     * `source_project` - The project with modifications to merge
     * `target_project` - The target project to merge changes onto
@@ -943,6 +951,8 @@ defmodule Lightning.Projects.MergeProjects do
   A workflow is considered diverged when the target project (parent) has changed since the
   sandbox was forked. Specifically, a workflow has diverged if the target's current HEAD
   version is not present in the sandbox's version history.
+
+  Arguments can be reversed to get changes in a sandbox against main.
 
   ## Parameters
     * `source_project` - The sandbox project

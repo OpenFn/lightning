@@ -74,7 +74,7 @@ import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 /**
  * Resolves an adaptor specifier into its package name and version

@@ -844,30 +844,29 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
-      # Current project shown in breadcrumb project picker button
+      # Current project shown in breadcrumb project picker button (React mount point)
       assert view
              |> element(
-               "#breadcrumb-project-picker-trigger",
-               ~r/project-1/
+               "#breadcrumb-project-picker-trigger[data-label='project-1']"
              )
              |> has_element?()
 
       # Project picker is a React component - check data attributes contain correct projects
       html = render(view)
       assert html =~ project_1.name
-      assert html =~ ~s(data-current-project-id="#{project_1.id}")
+      assert html =~ ~s(data-current-id="#{project_1.id}")
 
-      # Projects data is passed as JSON to React component
-      # User's projects (project_1, project_2) should be in data-projects
+      # Projects data is passed as JSON via data-items on the picker mount
+      # User's projects (project_1, project_2) should be in data-items
       assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-projects
+      # Other user's project (project_3) should NOT be in data-items
       refute html =~ project_3.id
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ ~s(data-current-id="#{project_2.id}")
       assert html =~ project_1.id
       refute html =~ project_3.id
 
@@ -6671,6 +6670,294 @@ defmodule LightningWeb.ProjectLiveTest do
                )
       end
     end
+
+    test "preview button appears for each collection row", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+
+      collection_a = insert(:collection, project: project)
+      collection_b = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert has_element?(view, "#preview-collection-#{collection_a.id}-button")
+      assert has_element?(view, "#preview-collection-#{collection_b.id}-button")
+    end
+
+    test "clicking preview button opens modal with collection name and subtitle",
+         %{conn: conn, user: user} do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "preview-key",
+        value: "preview-value"
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> element("#preview-collection-#{collection.id}-button")
+      |> render_click()
+
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+
+      modal_html =
+        view
+        |> element("#preview-collection-#{collection.id}-modal")
+        |> render()
+
+      assert modal_html =~ "Collection Preview: #{collection.name}"
+      assert modal_html =~ "Showing first record"
+    end
+
+    test "preview modal shows item key and value", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "my-key",
+        value: "my-value"
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      html =
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{
+          "collection" => collection.name
+        })
+
+      assert html =~ "Collection Preview: #{collection.name}"
+      assert html =~ "my-key"
+      assert html =~ "my-value"
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "preview modal shows empty state for empty collection", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      html =
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{
+          "collection" => collection.name
+        })
+
+      assert html =~ "This collection is empty."
+      assert html =~ "Collection Preview: #{collection.name}"
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "preview modal closes when reset_action is triggered", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("preview_collection", %{
+        "collection" => collection.name
+      })
+
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+
+      view
+      |> with_target("#collections")
+      |> render_click("reset_action", %{})
+
+      refute has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "all project members can preview a collection", %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{"collection" => collection.name})
+
+        assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+      end
+    end
+
+    test "cannot preview a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("preview_collection", %{
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "cannot edit a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "edit",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "cannot delete a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "delete",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "collections can be sorted by name and used storage", %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user} | _] = setup_project_users(conn, project, [:owner])
+
+      insert(:collection,
+        project: project,
+        name: "Charlie",
+        byte_size_sum: 100
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Alpha",
+        byte_size_sum: 5_000_000_000
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Bravo",
+        byte_size_sum: 2_500_000
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert html =~ "100 B"
+      assert html =~ "2.5 MB"
+      assert html =~ "5 GB"
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='name']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+    end
+  end
+
+  defp collection_row_names(view) do
+    view
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("#collections-table-table tbody tr td:first-child")
+    |> Enum.map(&(Floki.text(&1) |> String.trim()))
   end
 
   defp find_selected_option(html, selector) do
