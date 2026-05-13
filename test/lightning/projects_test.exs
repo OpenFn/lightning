@@ -3000,6 +3000,9 @@ defmodule Lightning.ProjectsTest do
 
   describe "list_workspace_projects/2 depth bound" do
     test "stops walking past max_project_tree_depth" do
+      # `list_workspace_projects/2` starts its CTE at level 1 (the root's
+      # direct children), so with max_project_tree_depth = 3 it reaches
+      # levels 1-3 - i.e. l1, l2, l3 - and stops before l4.
       Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
 
       root = insert(:project)
@@ -3007,7 +3010,6 @@ defmodule Lightning.ProjectsTest do
       l2 = insert(:project, parent: l1)
       l3 = insert(:project, parent: l2)
       l4 = insert(:project, parent: l3)
-      l5 = insert(:project, parent: l4)
 
       %{descendants: descendants} = Projects.list_workspace_projects(root.id)
       ids = Enum.map(descendants, & &1.id)
@@ -3015,8 +3017,7 @@ defmodule Lightning.ProjectsTest do
       assert l1.id in ids
       assert l2.id in ids
       assert l3.id in ids
-      assert l4.id in ids
-      refute l5.id in ids
+      refute l4.id in ids
     end
   end
 
