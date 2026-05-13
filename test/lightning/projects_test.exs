@@ -2953,12 +2953,70 @@ defmodule Lightning.ProjectsTest do
 
       assert Projects.depth_of(l3.id) == 3
     end
+
+    test "caps at max_project_tree_depth for chains deeper than the bound" do
+      # max_sandbox_nesting_depth = 2 so max_project_tree_depth = 3. Build a
+      # chain deeper than the bound to prove `list_ancestors/1` stops walking.
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+
+      # True depth of l4 is 4, but the CTE bound stops at 3.
+      assert Projects.depth_of(l4.id) == 3
+    end
   end
 
   describe "max_project_tree_depth/0" do
     test "returns max_sandbox_nesting_depth + 1 (CTE buffer above legit depth)" do
       assert Projects.max_project_tree_depth() ==
                Lightning.Config.max_sandbox_nesting_depth() + 1
+    end
+  end
+
+  describe "descendants_query/1 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      ids = Projects.descendant_ids([root.id])
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
+    end
+  end
+
+  describe "list_workspace_projects/2 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      %{descendants: descendants} = Projects.list_workspace_projects(root.id)
+      ids = Enum.map(descendants, & &1.id)
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
     end
   end
 
