@@ -100,9 +100,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
           "Failed to enqueue export job. Changeset errors: #{inspect(changeset.errors)}"
         )
 
-        project_file
-        |> Projects.File.mark_failed()
-        |> Repo.update!()
+        mark_project_file_failed(project_file.id)
 
         {:error, changeset}
     end
