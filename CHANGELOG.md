@@ -36,6 +36,11 @@ and this project adheres to
 
 ### Fixed
 
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
 - `mix lightning.install_runtime` no longer reports success when Rambo's binary
   fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
