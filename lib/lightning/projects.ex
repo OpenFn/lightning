@@ -37,18 +37,24 @@ defmodule Lightning.Projects do
 
   require Logger
 
-  # A `parent_id` cycle in the projects table (admin tooling, partial restore)
-  # would loop the recursive CTEs in this module forever. Postgres'
-  # `statement_timeout` is the last line of defence; this bound is the first.
-  # 16 covers every realistic project tree (sandboxes are typically 1-3 deep).
-  @max_project_tree_depth 16
-
   @doc """
   Maximum depth bound applied to every `parent_id` walk in this module's
-  recursive CTEs.
+  recursive CTEs. Derived as `max_sandbox_nesting_depth() + 1` so the CTE
+  bound is always one hop above the deepest legitimate project. A real
+  cycle has no root and exhausts the buffer hop instead of looping until
+  Postgres' `statement_timeout` fires.
   """
   @spec max_project_tree_depth() :: pos_integer()
-  def max_project_tree_depth, do: @max_project_tree_depth
+  def max_project_tree_depth, do: Lightning.Config.max_sandbox_nesting_depth() + 1
+
+  @doc """
+  Depth of a project in the parent tree. Roots return 0, a direct child
+  sandbox returns 1, and so on. Bounded by `max_project_tree_depth/0`.
+  """
+  @spec depth_of(Ecto.UUID.t()) :: non_neg_integer()
+  def depth_of(project_id) when is_binary(project_id) do
+    length(list_ancestors(project_id)) - 1
+  end
 
   defmodule ProjectOverviewRow do
     @moduledoc """
@@ -308,7 +314,7 @@ defmodule Lightning.Projects do
   end
 
   defp list_ancestors(start_id) do
-    max_depth = @max_project_tree_depth
+    max_depth = max_project_tree_depth()
 
     initial =
       from(p in Project,
@@ -804,7 +810,7 @@ defmodule Lightning.Projects do
   """
   @spec descendants_query([Ecto.UUID.t()]) :: Ecto.Query.t()
   def descendants_query(project_ids) when is_list(project_ids) do
-    max_depth = @max_project_tree_depth
+    max_depth = max_project_tree_depth()
 
     initial =
       from(p in Project,
@@ -1600,7 +1606,7 @@ defmodule Lightning.Projects do
             "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
     end
 
-    max_depth = @max_project_tree_depth
+    max_depth = max_project_tree_depth()
 
     descendants_query =
       from(p in Project,

@@ -121,17 +121,21 @@ defmodule Lightning.Projects.Sandboxes do
           {:ok, Project.t()}
           | {:error, :unauthorized | Ecto.Changeset.t() | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    Permissions.can?(
-      :sandboxes,
-      :provision_sandbox,
-      actor,
-      parent
-    )
-    |> if do
-      create_sandbox_from_parent(parent, actor, attrs)
-    else
-      {:error, :unauthorized}
+    cond do
+      not Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) ->
+        {:error, :unauthorized}
+
+      nesting_depth_exceeded?(parent) ->
+        {:error, :nesting_too_deep}
+
+      true ->
+        create_sandbox_from_parent(parent, actor, attrs)
     end
+  end
+
+  defp nesting_depth_exceeded?(%Project{id: parent_id}) do
+    Lightning.Projects.depth_of(parent_id) >=
+      Lightning.Config.max_sandbox_nesting_depth()
   end
 
   @doc """
