@@ -340,6 +340,9 @@ defmodule LightningWeb.Components.DataTables do
   attr :id, :string, required: true
   attr :collections, :list, required: true
   attr :can_create_collection, :boolean, required: true
+  attr :sort_by, :string, default: "name"
+  attr :sort_direction, :atom, default: :asc
+  attr :sort_target, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -355,8 +358,24 @@ defmodule LightningWeb.Components.DataTables do
         <.table id={"#{@id}-table"}>
           <:header>
             <.tr>
-              <.th>Name</.th>
-              <.th>Used Storage (MB)</.th>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_by == "name"}
+                sort_direction={to_string(@sort_direction)}
+                phx_target={@sort_target}
+              >
+                Name
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="byte_size_sum"
+                active={@sort_by == "byte_size_sum"}
+                sort_direction={to_string(@sort_direction)}
+                phx_target={@sort_target}
+              >
+                Used storage
+              </.th>
               <.th><span class="sr-only">Actions</span></.th>
             </.tr>
           </:header>
@@ -364,7 +383,9 @@ defmodule LightningWeb.Components.DataTables do
             <%= for collection <- @collections do %>
               <.tr id={"collection-row-#{collection.id}"}>
                 <.td>{collection.name}</.td>
-                <.td>{div(collection.byte_size_sum, 1_000_000)}</.td>
+                <.td>
+                  {Lightning.Helpers.bytes_to_human(collection.byte_size_sum)}
+                </.td>
                 <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, collection)}
                 </.td>

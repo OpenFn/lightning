@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { cn } from '#/utils/cn';
 
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface RunRetryButtonProps {
   isRetryable: boolean;

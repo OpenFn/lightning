@@ -15,7 +15,7 @@ import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;
@@ -164,6 +164,11 @@ export function AIAssistantPanel({
           ? 'Connecting...'
           : undefined;
 
+  const selectedContextJobId =
+    workflowTemplateContext && 'job_id' in workflowTemplateContext
+      ? workflowTemplateContext.job_id
+      : undefined;
+
   // Load session list when viewing sessions
   useEffect(() => {
     if (!isOpen || view !== 'sessions' || !storeSessionType) return;
@@ -177,7 +182,7 @@ export function AIAssistantPanel({
     isOpen,
     view,
     storeSessionType,
-    workflowTemplateContext?.job_id,
+    selectedContextJobId,
     hasSessionContext,
     loadSessionList,
   ]);
@@ -462,7 +467,7 @@ export function AIAssistantPanel({
         disabledMessage={disabledMessage}
         selectedStepId={selectedStepId}
         selectedRunId={selectedRunId}
-        selectedJobId={workflowTemplateContext?.job_id ?? null}
+        selectedJobId={selectedContextJobId ?? null}
       />
 
       {/* About AI Assistant Modal */}

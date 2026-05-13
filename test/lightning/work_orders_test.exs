@@ -2582,6 +2582,24 @@ defmodule Lightning.WorkOrdersTest do
 
       assert work_order.state == :running
     end
+
+    test "sets the workorders state to running once a run is claimed" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, work_order} = WorkOrders.update_state(run)
+      assert work_order.state == :pending
+
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :claimed))
+
+      {:ok, work_order} = WorkOrders.update_state(run)
+      assert work_order.state == :running
+    end
   end
 
   describe "get_workorders_with_runs/2" do

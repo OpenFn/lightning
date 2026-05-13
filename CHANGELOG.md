@@ -17,28 +17,246 @@ and this project adheres to
 
 ### Added
 
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
+
+### Changed
+
+- `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
+  Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
+  path. x86_64 Linux is unchanged.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy
+  and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+
+### Fixed
+
+- Copy token button on the Personal Access Tokens page now shows a 'Copied!'
+  tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
+- `mix lightning.install_runtime` no longer reports success when Rambo's binary
+  fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- `FakeRambo.run/3` guards against the `:fake_rambo_cache` ETS table not yet
+  existing, restoring the intended missing-cache fallback that Cachex 4.x broke
+  by raising `ArgumentError` from `:ets.lookup` instead of returning
+  `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- AI Assistant: fix an issue where inline code snippets render with extra
+  backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
+
+## [2.16.3] - 2026-05-07
+
+## [2.16.3-pre3] - 2026-05-07
+
+### Fixed
+
+- Runs UI no longer crashes when a step is killed with a worker error type the
+  renderer doesn't recognise (such as `StateTooLargeError`); unknown kill
+  reasons fall back to the resource-budget icon instead.
+  [#4709](https://github.com/OpenFn/lightning/issues/4709)
+- Cron scheduler now attempts all triggers each tick, even if one fails. A
+  single slow or erroring trigger previously aborted the entire batch.
+  [#4716](https://github.com/OpenFn/lightning/issues/4716)
+
+## [2.16.3-pre2] - 2026-05-07
+
+### Added
+
+- Update 'Run' button label to 'Run From Here' in the job inspector panel
+  [#4617](https://github.com/OpenFn/lightning/issues/4617)
+- Split run button in the canvas header. one-click runs instantly, dropdown
+  opens run with custom input.
+  [#4615](https://github.com/OpenFn/lightning/issues/4615)
+- Clearer step panel button design with icon-only secondary buttons for Code and
+  Delete. [#4618](https://github.com/OpenFn/lightning/issues/4618)
+- "Pick a custom input" panel and renamed "New" tab when opening the manual run
+  panel from the canvas Run dropdown.
+  [#4616](https://github.com/OpenFn/lightning/issues/4616)
+
+### Changed
+
+- Patch pheonix to 1.7.23 for CVE-2026-32689
+  [#4712](https://github.com/OpenFn/lightning/issues/4712)
+
+## [2.16.3-pre1] - 2026-05-04
+
+### Changed
+
+- Project Settings, Collections panel: rename the "Used Storage (MB)" column to
+  "Used storage" and render values with autoscaled units (B, KB, MB, GB, TB)
+  instead of integer megabytes. The column is now sortable, alongside the
+  existing Name column. Same change applied on the admin collections index.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Set initial streaming status when sending messages to the AI Assistant
+  [#4630](https://github.com/OpenFn/lightning/pull/4630)
+
+### Fixed
+
+- Sort the workflow list, projects overview, and admin tables chronologically by
+  their date columns. Each previously inverted when timestamps fell on either
+  side of a month boundary in UTC. Affected columns: "Latest Work Order" on the
+  workflow list, "Last Updated" on the support-user projects overview, "Created
+  at" and "Scheduled deletion" on the admin Projects and Users tables.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
+- Sort the adaptor version dropdown per semver. Pre-release versions previously
+  appeared above their corresponding stable release.
+  [#4687](https://github.com/OpenFn/lightning/pull/4687)
+- Collection storage on Project Settings, Collections no longer shows `0` for
+  collections holding less than one megabyte of data. The underlying counter was
+  always correct, the rendering now reflects values at any scale.
+  [#4684](https://github.com/OpenFn/lightning/issues/4684)
+- Prevent crash when an unsupported data type from `credential-schema.json` is
+  loaded for building a credential schema from an adaptor. Fall-back to
+  `:string` type, log warning and alert Sentry.
+  [#4681](https://github.com/OpenFn/lightning/issues/4681)
+
+## [2.16.3-pre] - 2026-04-30
+
+### Added
+
+- Add support for sync v2 protocol
+  [#4523](https://github.com/OpenFn/lightning/issues/4523)
+- Support collections in sandboxes. Collection names are now scoped per project,
+  empty collections are cloned into a sandbox on provision, and collection names
+  (not data) are synchronised when a sandbox is merged back into its parent. The
+  collections API accepts an optional `?project_id=<uuid>` query param to scope
+  a request to a specific project. When the query param is omitted and the name
+  is ambiguous across projects, the API returns 409 with guidance to add
+  `?project_id=`. Existing unscoped calls keep working for unambiguous names.
+  [#3548](https://github.com/OpenFn/lightning/issues/3548)
+- Sandbox-aware Project Settings page. Each tab shows a banner explaining how
+  changes will (or will not) flow on merge: Local (sandbox-only), Editable
+  (syncs on merge), or Inherited (read-only, managed in the parent). The Sandbox
+  Identity panel links back to the parent project, the MFA toggle is read-only,
+  webhook authentication methods are managed from the parent project, and parent
+  project admins cannot be removed from a sandbox. The danger zone inside a
+  sandbox now deletes the sandbox through `Sandboxes.delete_sandbox/2` (matching
+  the Sandboxes page behaviour).
+  [#3398](https://github.com/OpenFn/lightning/issues/3398)
+- Ability to filter work orders and runs via REST API by UUIDs or status; added
+  example curl requests to REST API docs.
+  [#4552](https://github.com/OpenFn/lightning/issues/4552)
+
+### Changed
+
+- Project picker now shows sandbox hierarchy with parent project name (e.g.
+  `root:sandbox`), sandbox accent color, and nested tree view. Sandbox theming
+  removed from sidebar/navbar.
+  [#4510](https://github.com/OpenFn/lightning/issues/4510)
+- Worker plan payload now includes `project_id` so workers can scope callbacks
+  (e.g. the collections API) to the project that owns the run.
+- bumped local worker to 1.24.0
+- Channel timing fields are now stored in microseconds (previously milliseconds)
+  and request and response headers are stored as native jsonb on
+  `channel_events`. Handler adapted to Philter 0.3.0 timing map.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Bumped local worker to 1.24.0
+- Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
+  workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)
+- Sandbox deletion (manual or after merge) is now soft. The sandbox and its
+  descendants are scheduled for purge after the configured grace period
+  (`PURGE_DELETED_AFTER_DAYS`) instead of being hard-deleted immediately, so
+  accidental deletions can be recovered. Scheduled-for-deletion sandboxes remain
+  visible in the parent's sandbox listing with a "Scheduled for deletion" badge
+  and a Cancel-deletion action, so anyone with permission to delete the sandbox
+  can also restore it during the grace window.
+  [#4649](https://github.com/OpenFn/lightning/issues/4649)
+- Updated ws-worker from
+  [`1.24.0` to `1.24.1`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker@1.24.1/packages/ws-worker/CHANGELOG.md?plain=1#L5-L12)
+
+### Fixed
+
+- Only allow auto-completion in relevant input fields
+  [#1553](https://github.com/OpenFn/lightning/issues/1553)
+- Credential form no longer crashes when opening a schema that declares a
+  property `type` as a JSON Schema array (e.g. `["string", "null"]`), as the
+  Browserless adaptor does. The contradictory `null` member in the Browserless
+  schema itself (the field is `required` with `minLength: 1`) is corrected
+  upstream in
+  [`@openfn/language-browserless`](https://github.com/OpenFn/adaptors/pull/1659).
+  [#4647](https://github.com/OpenFn/lightning/issues/4647)
+
+## [2.16.2] - 2026-04-20
+
+## [2.16.2-pre1] - 2026-04-20
+
+### Changed
+
+- When a run is `:claimed` by a worker, set its parent work order to `:running`
+  rather than leaving it in `:pending`.
+  [#4635](https://github.com/OpenFn/lightning/issues/4635)
+
+  When a run is claimed by a worker, there's no stopping it. From the platform's
+  perspective, the parent work order should be moved from `:pending` to
+  `:running`, even though there's an underlying technical difference between the
+  run states `:claimed` and `:started`. As a result, the "Cancel" button on the
+  history view disappears once a run has been claimed.
+
+  This shift is also visible to external consumers: the `/api/workorders`
+  endpoint and workflow channel subscribers will now report `running` where they
+  previously reported `pending` for work orders whose run has been claimed.
+
+### Fixed
+
+- Bump `@openfn/ws-worker` from
+  [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.8/packages/ws-worker/CHANGELOG.md?plain=1#L3-L16)
+
+## [2.16.2-pre] - 2026-04-16
+
+### Added
+
+- Collection preview modal in project settings — click the eye icon on any
+  collection row to see the first record as formatted JSON.
+  [#4528](https://github.com/OpenFn/lightning/issues/4528)
+- Allow users to cancel available runs (runs for work orders in pending state)
+  [#1622](https://github.com/OpenFn/lightning/issues/1622)
+- Add experimental global AI assistant option for users with experimental
+  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
+  [#4517](https://github.com/OpenFn/lightning/pull/4517)
+
 ### Changed
 
 - Bump `@openfn/ws-worker` from
-  [`1.23.1` to `1.23.4`](https://github.com/OpenFn/kit/blob/%40openfn/ws-worker%401.23.4/packages/ws-worker/CHANGELOG.md?plain=1#L3-L26)
+  [`1.23.1` to `1.23.6`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.6/packages/ws-worker/CHANGELOG.md?plain=1#L3-L41)
 - Renamed channel terminology from Source/Sink to Client/Destination across
   schemas, UI, and API. Channels now enforce a single destination credential
   (was previously unbounded) via a dropdown instead of checkboxes.
   [#4581](https://github.com/OpenFn/lightning/issues/4581)
   [#4582](https://github.com/OpenFn/lightning/issues/4582)
   [#4583](https://github.com/OpenFn/lightning/issues/4583)
+- Remove the redirect to "History" when running a run from the canvas. (Stay
+  there to see the run.)
+  [#4198](https://github.com/OpenFn/lightning/issues/4198)
 
 ### Fixed
 
+- Non-map state coming back from the worker would cause a lost run, every time.
+  Rather than losing these runs that return non-map x's, we now wrap them like
+  so `{"value": x}`
+- Flickering/disappearing visualization on
+  [#4198](https://github.com/OpenFn/lightning/issues/4198) fixed in
+  [PR#4628](https://github.com/OpenFn/lightning/pull/4628)
+- AI-generated workflows can now be saved when the workflow name collides with
+  an existing workflow or when jobs have duplicate names
+  [#4607](https://github.com/OpenFn/lightning/issues/4607)
 - Since OTP26, if `SMTP_PROVIDER` is set to `smtp` and `SMTP_TLS` is set to
   `true` or `if_available` this would result in TLS-related failures when trying
   to send emails. This is now fixed for a limited number of use cases (see
   (DEPLOYMENT.md)[https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#mail]
   for details). [#4602](https://github.com/OpenFn/lightning/issues/4602)
-- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
-  so that changes to these trigger fields are properly detected by CLI deploy and
-  sandbox merge
-  [#4596](https://github.com/OpenFn/lightning/issues/4596)
 
 ## [2.16.1] - 2026-04-07
 
@@ -58,13 +276,8 @@ and this project adheres to
   snapshots are also cleaned up after expired requests are removed.
   [#4504](https://github.com/OpenFn/lightning/issues/4504)
 - AI assistant responses now stream in real-time
-- Add experimental global AI assistant option for users with experimental
-  features enabled [#4532](https://github.com/OpenFn/lightning/issues/4532)
-  [#4517](https://github.com/OpenFn/lightning/pull/4517)
 - Allow users to export all collection items as a JSON file.
   [#4527](https://github.com/OpenFn/lightning/issues/4527)
-- Allow users to cancel available runs (runs for work orders in pending state)
-  [#1622](https://github.com/OpenFn/lightning/issues/1622)
 
 ### Changed
 

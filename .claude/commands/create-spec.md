@@ -50,7 +50,7 @@ Ask questions like:
 
 ### 4. Requirements Document Structure
 
-Create a document at `.context/<username>/analysis/<issue-name>-requirements.md` with:
+Create a document at `.context/<username>/analysis/<issue-name>-requirements.md` (see `.claude/agents/context-locator.md` for the `.context/` directory layout) with:
 
 ```markdown
 # [Feature Name] Requirements Analysis
@@ -171,28 +171,6 @@ Before completing:
 - Ensure backend/frontend dependencies are clear
 - List actionable next steps
 - Update status to "Review Complete"
-
-## Key Principles
-
-**Be Thorough:**
-- Don't assume - ask questions and use agents to find answers
-- Document the "why" behind decisions
-- Include code examples from the codebase
-
-**Be Collaborative:**
-- Work iteratively with the user
-- Present options, don't dictate solutions
-- Track progress with TodoWrite
-
-**Be Practical:**
-- Reference existing patterns in the codebase
-- Note when to reuse vs create new
-- Identify dependencies and blockers early
-
-**Be Clear:**
-- Use consistent structure across requirements
-- Mark decisions and open questions clearly
-- Provide concrete next steps
 
 ## Usage
 

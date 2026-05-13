@@ -14,6 +14,22 @@ defmodule LightningWeb.API.ProjectController do
 
       GET /api/projects?page=1&page_size=20
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+
+  ## Sample curl requests
+
+  List all projects:
+
+  ```bash
+  curl http://localhost:4000/api/projects \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Get a single project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
   """
   use LightningWeb, :controller
 
@@ -78,7 +94,8 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with project <- Projects.get_project(id),
+    with %Lightning.Projects.Project{} = project <-
+           Projects.get_project(id),
          :ok <-
            ProjectUsers
            |> Permissions.can(
@@ -87,6 +104,9 @@ defmodule LightningWeb.API.ProjectController do
              project
            ) do
       render(conn, "show.json", project: project, conn: conn)
+    else
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 end

@@ -617,7 +617,7 @@ defmodule Lightning.VersionControlTest do
                VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates GH workflow dispatch event", %{
+    test "creates GH workflow dispatch event using JSON config (default)", %{
       commit_message: commit_message,
       repo_connection: repo_connection,
       snapshots: [snapshot, other_snapshot]
@@ -644,6 +644,39 @@ defmodule Lightning.VersionControlTest do
       assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
+    test "creates GH workflow dispatch event using YAML config (sync_version: true)",
+         %{
+           commit_message: commit_message,
+           repo_connection: repo_connection,
+           snapshots: [snapshot, other_snapshot]
+         } do
+      yaml_connection =
+        repo_connection
+        |> Ecto.Changeset.change(sync_version: true)
+        |> Lightning.Repo.update!()
+
+      expect_create_installation_token(yaml_connection.github_installation_id)
+      expect_get_repo(yaml_connection.repo)
+
+      expect_create_workflow_dispatch_with_request_body(
+        yaml_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: yaml_connection.project_id,
+            apiSecretName: api_secret_name(yaml_connection),
+            branch: yaml_connection.branch,
+            pathToConfig: path_to_config(yaml_connection),
+            commitMessage: commit_message,
+            snapshots: "#{other_snapshot.id} #{snapshot.id}"
+          }
+        }
+      )
+
+      assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
+    end
+
     defp api_secret_name(%{project_id: project_id}) do
       project_id
       |> String.replace("-", "_")
@@ -651,8 +684,7 @@ defmodule Lightning.VersionControlTest do
     end
 
     defp path_to_config(repo_connection) do
-      repo_connection
-      |> ProjectRepoConnection.config_path()
+      ProjectRepoConnection.config_path(repo_connection)
       |> Path.relative_to(".")
     end
   end
@@ -830,6 +862,123 @@ defmodule Lightning.VersionControlTest do
       assert {:ok, ^expected_result} = result
 
       assert log =~ "Failed to fetch a subsequent github repositories page"
+    end
+  end
+
+  describe "config file blob content" do
+    setup do
+      Mox.verify_on_exit!()
+
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo = "someaccount/somerepo"
+      branch = "somebranch"
+      installation_id = "1234"
+
+      base_params = %{
+        "project_id" => project.id,
+        "repo" => repo,
+        "branch" => branch,
+        "github_installation_id" => installation_id,
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      expected_repo = %{"full_name" => repo, "default_branch" => "main"}
+
+      {:ok,
+       project: project,
+       user: user,
+       repo: repo,
+       branch: branch,
+       installation_id: installation_id,
+       base_params: base_params,
+       expected_repo: expected_repo}
+    end
+
+    defp setup_github_mocks(repo, expected_repo) do
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_blob(repo)
+      expect_get_commit(repo, expected_repo["default_branch"])
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, expected_repo["default_branch"])
+      expect_create_blob(repo)
+    end
+
+    test "pushes JSON config blob when sync_version is false (default)", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      setup_github_mocks(repo, expected_repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+        body = Jason.decode!(env.body)
+
+        assert body["content"] =~
+                 "\"statePath\": \"openfn-#{project.id}-state.json\""
+
+        assert body["content"] =~
+                 "\"specPath\": \"openfn-#{project.id}-spec.yaml\""
+
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+      end)
+
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_get_commit(repo, branch)
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, branch)
+      expect_get_public_key(repo)
+      expect_create_repo_secret(repo, secret_name)
+      expect_create_installation_token(installation_id)
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+
+      assert {:ok, _} =
+               VersionControl.create_github_connection(base_params, user)
+    end
+
+    test "pushes YAML config blob when sync_version is true", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      setup_github_mocks(repo, expected_repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+        body = Jason.decode!(env.body)
+        assert body["content"] =~ "project:"
+        assert body["content"] =~ "uuid: #{project.id}"
+        assert body["content"] =~ LightningWeb.Endpoint.url()
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+      end)
+
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_get_commit(repo, branch)
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, branch)
+      expect_get_public_key(repo)
+      expect_create_repo_secret(repo, secret_name)
+      expect_create_installation_token(installation_id)
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+
+      params = Map.put(base_params, "sync_version", "true")
+      assert {:ok, _} = VersionControl.create_github_connection(params, user)
     end
   end
 

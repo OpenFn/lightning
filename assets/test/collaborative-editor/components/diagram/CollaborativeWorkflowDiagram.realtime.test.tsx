@@ -228,6 +228,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
           }
         ),
         _viewRun: vi.fn(),
+        _closeRunViewer: vi.fn(),
       } as any,
       uiStore: {} as any,
     };

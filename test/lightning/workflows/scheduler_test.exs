@@ -2,6 +2,8 @@ defmodule Lightning.Workflows.SchedulerTest do
   @moduledoc false
   use Lightning.DataCase, async: true
 
+  import ExUnit.CaptureLog
+
   alias Lightning.Invocation
   alias Lightning.Repo
   alias Lightning.Run
@@ -213,6 +215,98 @@ defmodule Lightning.Workflows.SchedulerTest do
 
       assert Jason.decode!(new_run.dataclip.body) ==
                old_step.output_dataclip.body
+    end
+  end
+
+  describe "enqueue_cronjobs/1 error isolation" do
+    setup do
+      Mox.verify_on_exit!()
+      :ok
+    end
+
+    test "a raised exception in one edge does not prevent subsequent edges from being processed" do
+      # Failing edge — its UsageLimiter check will raise.
+      failing_job = insert(:job)
+
+      failing_trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: failing_job.workflow
+        })
+
+      failing_edge =
+        insert(:edge, %{
+          workflow: failing_job.workflow,
+          source_trigger: failing_trigger,
+          target_job: failing_job
+        })
+
+      with_snapshot(failing_job.workflow)
+
+      failing_project_id = failing_job.workflow.project_id
+      failing_workflow_id = failing_job.workflow.id
+
+      # Surviving edge — should still create a Run despite the other edge
+      # raising.
+      surviving_job = insert(:job)
+
+      surviving_trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: surviving_job.workflow
+        })
+
+      insert(:edge, %{
+        workflow: surviving_job.workflow,
+        source_trigger: surviving_trigger,
+        target_job: surviving_job
+      })
+
+      with_snapshot(surviving_job.workflow)
+
+      # Raise only when invoked for the failing project; pass for the other.
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: project_id} ->
+          if project_id == failing_project_id do
+            raise RuntimeError, "boom"
+          else
+            :ok
+          end
+        end
+      )
+
+      # Route Lightning.Sentry through the Mox-backed mock for this test.
+      Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+
+      # The scheduler must report the failing edge to Sentry exactly once,
+      # with rich context for triage.
+      Mox.expect(Lightning.MockSentry, :capture_exception, fn error, opts ->
+        assert %RuntimeError{message: "boom"} = error
+        assert opts[:tags][:type] == "scheduler"
+        assert opts[:extra][:edge_id] == failing_edge.id
+        assert opts[:extra][:trigger_id] == failing_trigger.id
+        assert opts[:extra][:job_id] == failing_job.id
+        assert opts[:extra][:workflow_id] == failing_workflow_id
+        assert is_list(opts[:stacktrace])
+        assert opts[:stacktrace] != []
+        :ok
+      end)
+
+      logs = capture_log(fn -> Scheduler.enqueue_cronjobs() end)
+
+      # The surviving edge created a Run; the failing edge did not.
+      runs = Repo.all(Run)
+      assert length(runs) == 1
+      [run] = runs
+      assert run.starting_trigger_id == surviving_trigger.id
+
+      # The failure was logged with the formatted exception.
+      assert logs =~ "Scheduler failed to invoke cronjob"
+      assert logs =~ "boom"
     end
   end
 end

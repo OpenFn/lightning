@@ -445,5 +445,267 @@ defmodule LightningWeb.API.WorkOrdersControllerTest do
       assert error_message =~ "Invalid datetime format for 'inserted_after'"
       assert error_message =~ "123456"
     end
+
+    test "filters work orders by state", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          state: :pending
+        )
+
+      _failed_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          state: :failed
+        )
+
+      conn = get(conn, ~p"/api/work_orders?state=pending")
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 1
+      assert List.first(response["data"])["id"] == pending_wo.id
+    end
+
+    test "filters work orders by multiple comma-separated states", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      pending_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          state: :pending
+        )
+
+      failed_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          state: :failed
+        )
+
+      _success_wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          state: :success
+        )
+
+      conn = get(conn, ~p"/api/work_orders?state=pending,failed")
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 2
+      ids = Enum.map(response["data"], & &1["id"])
+      assert pending_wo.id in ids
+      assert failed_wo.id in ids
+    end
+
+    test "returns error for invalid state filter", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: build(:dataclip)
+      )
+
+      conn = get(conn, ~p"/api/work_orders?state=bogus")
+
+      response = json_response(conn, 400)
+
+      assert %{"error" => error_message} = response
+      assert error_message =~ "Invalid state filter"
+      assert error_message =~ "bogus"
+    end
+
+    test "filters work orders by a single id", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      _workorder2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      conn = get(conn, ~p"/api/work_orders?id=#{workorder1.id}")
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 1
+      assert List.first(response["data"])["id"] == workorder1.id
+    end
+
+    test "filters work orders by an array of ids", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      workorder2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      _workorder3 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      conn =
+        get(
+          conn,
+          "/api/work_orders?id[]=#{workorder1.id}&id[]=#{workorder2.id}"
+        )
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 2
+      ids = Enum.map(response["data"], & &1["id"])
+      assert workorder1.id in ids
+      assert workorder2.id in ids
+    end
+
+    test "filters work orders by comma-separated ids", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      workorder2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      _workorder3 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      conn =
+        get(
+          conn,
+          "/api/work_orders?id=#{workorder1.id},#{workorder2.id}"
+        )
+
+      response = json_response(conn, 200)
+
+      assert length(response["data"]) == 2
+      ids = Enum.map(response["data"], & &1["id"])
+      assert workorder1.id in ids
+      assert workorder2.id in ids
+    end
+  end
+
+  describe "show" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    test "returns a single work order by id", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      conn = get(conn, ~p"/api/work_orders/#{workorder}")
+
+      response = json_response(conn, 200)
+
+      assert response["data"]["id"] == workorder.id
+      assert response["data"]["type"] == "work_orders"
+      assert Map.has_key?(response["data"]["attributes"], "state")
+      assert Map.has_key?(response["data"]["attributes"], "last_activity")
+      assert Map.has_key?(response["data"]["attributes"], "inserted_at")
+      assert Map.has_key?(response["data"]["attributes"], "updated_at")
+    end
+
+    test "returns 404 for non-existent work order", %{conn: conn} do
+      conn = get(conn, ~p"/api/work_orders/#{Ecto.UUID.generate()}")
+
+      assert json_response(conn, 404)
+    end
+
+    test "returns 401 for work order in project user cannot access", %{
+      conn: conn
+    } do
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_trigger = insert(:trigger, workflow: other_workflow)
+
+      other_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: build(:dataclip)
+        )
+
+      conn = get(conn, ~p"/api/work_orders/#{other_workorder}")
+
+      assert json_response(conn, 401)
+    end
   end
 end

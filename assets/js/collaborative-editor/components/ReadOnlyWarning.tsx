@@ -2,7 +2,7 @@ import { cn } from '../../utils/cn';
 import { useIsNewWorkflow } from '../hooks/useSessionContext';
 import { useWorkflowReadOnly } from '../hooks/useWorkflow';
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface ReadOnlyWarningProps {
   id?: string;

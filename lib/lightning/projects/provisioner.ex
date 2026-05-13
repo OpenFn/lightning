@@ -37,7 +37,17 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.WorkflowVersions
 
   @doc """
-  Import a project.
+  Import a project document into the database.
+
+  Upserts the project and the associations carried in the document
+  (workflows, project credentials, collections) inside a single transaction,
+  then fires audit, version-bump, and snapshot side effects.
+
+  Generic pipeline shared by YAML provisioning, CLI deploys, GitHub syncs,
+  and sandbox merges. It only acts on what the document contains —
+  sandbox-specific behaviours (credential cloning, dataclip copying,
+  collection name sync) are composed around this call in
+  `Lightning.Projects.Sandboxes`.
 
   ## Options
     * `:allow_stale` - If true, allows stale operations during import (useful for
@@ -71,6 +81,9 @@ defmodule Lightning.Projects.Provisioner do
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
            :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+           :ok <-
+             disable_triggers_for_soft_deleted_workflows(project_changeset),
+           :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
@@ -597,6 +610,37 @@ defmodule Lightning.Projects.Provisioner do
       )
     else
       changeset
+    end
+  end
+
+  defp notify_kafka_for_soft_deleted_workflows(project_changeset) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.filter(
+      &(&1.action == :update and not is_nil(get_change(&1, :deleted_at)))
+    )
+    |> Enum.map(&get_field(&1, :id))
+    |> Workflows.notify_kafka_triggers_for_workflows()
+  end
+
+  defp disable_triggers_for_soft_deleted_workflows(project_changeset) do
+    deleted_workflow_ids =
+      project_changeset
+      |> get_assoc(:workflows)
+      |> Enum.filter(fn cs ->
+        cs.action == :update and not is_nil(get_change(cs, :deleted_at))
+      end)
+      |> Enum.map(&get_field(&1, :id))
+
+    if deleted_workflow_ids == [] do
+      :ok
+    else
+      from(t in Trigger,
+        where: t.workflow_id in ^deleted_workflow_ids and t.enabled
+      )
+      |> Repo.update_all(set: [enabled: false])
+
+      :ok
     end
   end
 
