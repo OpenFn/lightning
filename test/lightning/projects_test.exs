@@ -2479,6 +2479,30 @@ defmodule Lightning.ProjectsTest do
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
     end
+
+    test "raises when removing the project owner" do
+      owner = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: editor.id, role: :editor}
+          ]
+        )
+
+      owner_project_user =
+        Enum.find(project.project_users, &(&1.user_id == owner.id))
+
+      assert_raise ArgumentError,
+                   "Cannot remove the owner of a project. Transfer ownership first.",
+                   fn ->
+                     Projects.delete_project_user!(owner_project_user)
+                   end
+
+      assert Repo.get(Lightning.Projects.ProjectUser, owner_project_user.id)
+    end
   end
 
   describe "sandboxes (list/create/workspace)" do

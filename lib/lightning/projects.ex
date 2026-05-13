@@ -669,6 +669,11 @@ defmodule Lightning.Projects do
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
 
+    if project_user.role == :owner do
+      raise ArgumentError,
+            "Cannot remove the owner of a project. Transfer ownership first."
+    end
+
     if Project.sandbox?(project_user.project) and
          Lightning.Projects.Sandboxes.parent_admin?(
            project_user.project,
