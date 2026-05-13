@@ -36,6 +36,9 @@ and this project adheres to
 
 ### Fixed
 
+- Copy token button on the Personal Access Tokens page now shows a 'Copied!'
+  tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
 - ExportWorker now marks the ProjectFile as `:failed` when the export process
   errors, preventing records from being stuck permanently as `:in_progress` with
   a nil path. The data retention cron also handles orphaned files with nil paths
