@@ -122,7 +122,11 @@ defmodule Lightning.Channels.HandlerTest do
     end
 
     test "creates ChannelEvent with correct fields", %{state: state} do
-      result = finished_result(status: 200, duration_us: 50_000)
+      result =
+        finished_result(
+          status: 200,
+          timing: %{total_us: 50_000, send_us: 2_000, recv_us: 1_000}
+        )
 
       assert {:ok, _state} = Handler.handle_response_finished(result, state)
 
@@ -132,8 +136,8 @@ defmodule Lightning.Channels.HandlerTest do
       assert event.request_method == state.request_method
       assert event.request_path == "/test/path"
       assert event.response_status == 200
-      assert event.latency_ms == 50
-      assert event.ttfb_ms == 10
+      assert event.latency_us == 50_000
+      assert event.ttfb_us == 10_000
       assert event.error_message == nil
     end
 
@@ -190,6 +194,242 @@ defmodule Lightning.Channels.HandlerTest do
     end
   end
 
+  # ---------------------------------------------------------------
+  # Phase 1a contract tests — Philter 0.3.0 adaptation + new fields
+  # ---------------------------------------------------------------
+  #
+  # These tests define the target interface after:
+  # - D1: New columns on channel_events (body sizes, durations, query string)
+  # - D2: Headers text → jsonb migration
+  # - D4: Handler reads from Philter 0.3.0 result structure
+  #
+  # They will not compile/pass until Phase 1b implements the changes.
+
+  describe "ChannelEvent changeset — new fields" do
+    test "accepts body size fields" do
+      attrs = %{
+        channel_request_id: Ecto.UUID.generate(),
+        type: :destination_response,
+        request_body_size: 1024,
+        response_body_size: 2048
+      }
+
+      changeset = ChannelEvent.changeset(%ChannelEvent{}, attrs)
+      assert changeset.valid?
+      assert changeset.changes.request_body_size == 1024
+      assert changeset.changes.response_body_size == 2048
+    end
+
+    test "accepts per-direction duration fields" do
+      attrs = %{
+        channel_request_id: Ecto.UUID.generate(),
+        type: :destination_response,
+        request_send_us: 3_500,
+        response_duration_us: 8_000
+      }
+
+      changeset = ChannelEvent.changeset(%ChannelEvent{}, attrs)
+      assert changeset.valid?
+      assert changeset.changes.request_send_us == 3_500
+      assert changeset.changes.response_duration_us == 8_000
+    end
+
+    test "accepts request_query_string" do
+      attrs = %{
+        channel_request_id: Ecto.UUID.generate(),
+        type: :destination_response,
+        request_query_string: "page=1&limit=10"
+      }
+
+      changeset = ChannelEvent.changeset(%ChannelEvent{}, attrs)
+      assert changeset.valid?
+      assert changeset.changes.request_query_string == "page=1&limit=10"
+    end
+
+    test "new fields are all nullable" do
+      attrs = %{
+        channel_request_id: Ecto.UUID.generate(),
+        type: :error,
+        error_message: "nxdomain"
+      }
+
+      changeset = ChannelEvent.changeset(%ChannelEvent{}, attrs)
+      assert changeset.valid?
+      refute Map.has_key?(changeset.changes, :request_body_size)
+      refute Map.has_key?(changeset.changes, :response_body_size)
+      refute Map.has_key?(changeset.changes, :request_send_us)
+      refute Map.has_key?(changeset.changes, :response_duration_us)
+      refute Map.has_key?(changeset.changes, :request_query_string)
+    end
+  end
+
+  describe "persist_completion — Philter 0.3.0 fields" do
+    setup %{state: state} do
+      metadata = request_metadata()
+      {:ok, state} = Handler.handle_request_started(metadata, state)
+
+      state =
+        Map.merge(state, %{
+          ttfb_us: 10_000,
+          response_status: 200,
+          response_headers: [{"content-type", "text/plain"}]
+        })
+
+      %{state: state}
+    end
+
+    test "uses timing.total_us for latency_us", %{state: state} do
+      result = philter_result(timing: %{total_us: 50_000, send_us: 2_000})
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.latency_us == 50_000
+    end
+
+    test "persists request_send_us from timing.send_us", %{state: state} do
+      result = philter_result(timing: %{total_us: 50_000, send_us: 3_500})
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.request_send_us == 3_500
+    end
+
+    test "persists response_duration_us from timing.recv_us",
+         %{state: state} do
+      result =
+        philter_result(
+          timing: %{total_us: 50_000, send_us: 2_000, recv_us: 8_000}
+        )
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.response_duration_us == 8_000
+    end
+
+    test "persists body sizes from observations", %{state: state} do
+      result =
+        philter_result(
+          request_observation: %{
+            hash: "req123",
+            size: 1024,
+            body: nil,
+            preview: "request body"
+          },
+          response_observation: %{
+            hash: "resp123",
+            size: 2048,
+            body: nil,
+            preview: "response body"
+          }
+        )
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.request_body_size == 1024
+      assert event.response_body_size == 2048
+    end
+
+    test "persists query string from handler state", %{state: state} do
+      state = Map.put(state, :query_string, "page=1&limit=10")
+      result = philter_result()
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.request_query_string == "page=1&limit=10"
+    end
+
+    test "nil phase timings when collect_timing is disabled", %{state: state} do
+      result =
+        philter_result(timing: %{total_us: 50_000, send_us: nil, recv_us: nil})
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.request_send_us == nil
+      assert event.response_duration_us == nil
+      assert event.latency_us == 50_000
+    end
+  end
+
+  describe "header encoding — native jsonb" do
+    setup %{state: state} do
+      metadata =
+        request_metadata(
+          headers: [
+            {"content-type", "application/json"},
+            {"x-custom", "value"}
+          ]
+        )
+
+      {:ok, state} = Handler.handle_request_started(metadata, state)
+
+      state =
+        Map.merge(state, %{
+          ttfb_us: 10_000,
+          response_status: 200,
+          response_headers: [
+            {"content-type", "text/plain"},
+            {"x-resp", "val"}
+          ]
+        })
+
+      %{state: state}
+    end
+
+    test "request headers round-trip as list without Jason.decode!", %{
+      state: state
+    } do
+      result = philter_result()
+      Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+
+      # After jsonb migration, headers are native lists, not JSON strings
+      assert is_list(event.request_headers)
+
+      assert event.request_headers == [
+               ["content-type", "application/json"],
+               ["x-custom", "value"]
+             ]
+    end
+
+    test "response headers round-trip as list without Jason.decode!", %{
+      state: state
+    } do
+      result = philter_result()
+      Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+
+      assert is_list(event.response_headers)
+
+      assert event.response_headers == [
+               ["content-type", "text/plain"],
+               ["x-resp", "val"]
+             ]
+    end
+
+    test "nil headers remain nil", %{state: state} do
+      state = Map.delete(state, :response_headers)
+
+      result =
+        philter_result(
+          status: nil,
+          error: %Mint.TransportError{reason: :econnrefused}
+        )
+
+      Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      assert event.response_headers == nil
+    end
+  end
+
   # Helpers
 
   defp request_metadata(overrides \\ []) do
@@ -213,9 +453,7 @@ defmodule Lightning.Channels.HandlerTest do
       hash: "abc123",
       size: 100,
       body: nil,
-      preview: "test body",
-      duration_us: 1000,
-      time_to_first_byte_us: 500
+      preview: "test body"
     }
 
     %{
@@ -228,7 +466,42 @@ defmodule Lightning.Channels.HandlerTest do
         Keyword.get(overrides, :upstream_url, "http://localhost:4999"),
       method: Keyword.get(overrides, :method, "GET"),
       status: Keyword.get(overrides, :status, 200),
-      duration_us: Keyword.get(overrides, :duration_us, 10_000)
+      timing:
+        Keyword.get(overrides, :timing, %{
+          total_us: 10_000,
+          send_us: 2_000,
+          recv_us: 1_000
+        })
+    }
+  end
+
+  # Philter 0.3.0 result format:
+  # - Observations are content-only (hash, size, preview, body)
+  # - All timing lives in the top-level timing map
+  defp philter_result(overrides \\ []) do
+    observation = %{
+      hash: "abc123",
+      size: 100,
+      body: nil,
+      preview: "test body"
+    }
+
+    %{
+      request_observation:
+        Keyword.get(overrides, :request_observation, observation),
+      response_observation:
+        Keyword.get(overrides, :response_observation, observation),
+      error: Keyword.get(overrides, :error, nil),
+      upstream_url:
+        Keyword.get(overrides, :upstream_url, "http://localhost:4999"),
+      method: Keyword.get(overrides, :method, "GET"),
+      status: Keyword.get(overrides, :status, 200),
+      timing:
+        Keyword.get(overrides, :timing, %{
+          total_us: 10_000,
+          send_us: 2_000,
+          recv_us: 1_000
+        })
     }
   end
 end
