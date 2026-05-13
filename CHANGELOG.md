@@ -46,9 +46,20 @@ and this project adheres to
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy
+  and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
 
 ### Fixed
 
+- Copy token button on the Personal Access Tokens page now shows a 'Copied!'
+  tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
 - `mix lightning.install_runtime` no longer reports success when Rambo's binary
   fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
@@ -56,6 +67,8 @@ and this project adheres to
   existing, restoring the intended missing-cache fallback that Cachex 4.x broke
   by raising `ArgumentError` from `:ets.lookup` instead of returning
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- AI Assistant: fix an issue where inline code snippets render with extra
+  backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
 
 ## [2.16.3] - 2026-05-07
 
