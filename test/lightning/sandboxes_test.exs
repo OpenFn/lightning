@@ -1479,6 +1479,39 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
     end
+
+    test "still provisions cleanly when the parent has no :owner row" do
+      # The Project changeset normally guarantees exactly one owner, but
+      # `Projects.delete_project_user!/1` (and any direct repo deletion)
+      # bypass that guard. If a parent reaches the ownerless state - admin
+      # tooling, an out-of-band cleanup - provision should still succeed:
+      # the actor becomes the sandbox owner, the parent's remaining users
+      # are copied at their existing roles, no demotion runs because there
+      # is no :owner to demote.
+      actor = insert(:user)
+      editor = insert(:user)
+      parent = insert(:project, name: "ownerless-parent")
+
+      ensure_member!(parent, actor, :admin)
+      ensure_member!(parent, editor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "ownerless-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == editor.id and &1.role == :editor)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
   end
 
   describe "dataclips guards" do
