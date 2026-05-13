@@ -1177,6 +1177,44 @@ defmodule Lightning.Projects.SandboxesTest do
       assert %{name: [_error_msg]} = errors_on(changeset)
     end
 
+    test "rejects when the parent is already at the configured nesting depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+      # l2 is at depth 2 — equal to the configured cap.
+      l2 = insert(:project, parent: l1)
+      ensure_member!(l2, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(l2, actor, %{name: "too-deep"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^l2.id),
+               :count,
+               :id
+             ) == 0
+    end
+
+    test "succeeds when the parent is one level below the nesting cap" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+      # l1 is at depth 1 — one below the cap of 2; provisioning produces depth 2.
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+
+      assert {:ok, %Project{} = sandbox} =
+               Sandboxes.provision(l1, actor, %{name: "just-below"})
+
+      assert sandbox.parent_id == l1.id
+    end
+
     test "rolls back transaction on keychain validation failure" do
       %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
 

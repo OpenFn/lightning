@@ -2933,6 +2933,35 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "depth_of/1" do
+    test "returns 0 for a root project" do
+      root = insert(:project)
+      assert Projects.depth_of(root.id) == 0
+    end
+
+    test "returns 1 for a direct child sandbox" do
+      root = insert(:project)
+      sandbox = insert(:project, parent: root)
+      assert Projects.depth_of(sandbox.id) == 1
+    end
+
+    test "returns the correct depth for a deep chain" do
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+
+      assert Projects.depth_of(l3.id) == 3
+    end
+  end
+
+  describe "max_project_tree_depth/0" do
+    test "returns max_sandbox_nesting_depth + 1 (CTE buffer above legit depth)" do
+      assert Projects.max_project_tree_depth() ==
+               Lightning.Config.max_sandbox_nesting_depth() + 1
+    end
+  end
+
   describe "sandbox facade delegates" do
     test "provision_sandbox/3 creates a child project and sets parent_id" do
       owner = insert(:user)
