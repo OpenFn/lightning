@@ -47,6 +47,52 @@ defmodule Lightning.Helpers do
     |> Timex.Format.Duration.Formatters.Humanized.format()
   end
 
+  @doc """
+  Converts a non-negative byte count into a compact human-readable string,
+  autoscaled to the most natural SI unit (B, KB, MB, GB, TB).
+
+  Values smaller than 1 KB are rendered with no decimal. Larger values are
+  rendered with one decimal place when that decimal is non-zero.
+
+      iex> bytes_to_human(0)
+      "0 B"
+
+      iex> bytes_to_human(900)
+      "900 B"
+
+      iex> bytes_to_human(1_500)
+      "1.5 KB"
+
+      iex> bytes_to_human(2_000_000)
+      "2 MB"
+
+      iex> bytes_to_human(2_500_000)
+      "2.5 MB"
+
+      iex> bytes_to_human(3_200_000_000)
+      "3.2 GB"
+  """
+  @spec bytes_to_human(non_neg_integer()) :: String.t()
+  def bytes_to_human(bytes) when is_integer(bytes) and bytes >= 0 do
+    cond do
+      bytes >= 1_000_000_000_000 -> scale(bytes, 1_000_000_000_000, "TB")
+      bytes >= 1_000_000_000 -> scale(bytes, 1_000_000_000, "GB")
+      bytes >= 1_000_000 -> scale(bytes, 1_000_000, "MB")
+      bytes >= 1_000 -> scale(bytes, 1_000, "KB")
+      true -> "#{bytes} B"
+    end
+  end
+
+  defp scale(bytes, divisor, unit) do
+    rounded = Float.round(bytes / divisor, 1)
+
+    if rounded == trunc(rounded) do
+      "#{trunc(rounded)} #{unit}"
+    else
+      "#{rounded} #{unit}"
+    end
+  end
+
   def actual_deletion_date(
         grace_period,
         cron_expression \\ "4 2 * * *",

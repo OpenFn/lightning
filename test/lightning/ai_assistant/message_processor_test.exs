@@ -259,4 +259,131 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_message.job_id == job.id
     end
   end
+
+  describe "global chat routing" do
+    test "dispatches to global chat when use_global_assistant is true", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "/projects/p1/workflows/w1"
+            }
+          }
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "help with my workflow",
+            user: user,
+            code: "workflow:\n  name: test"
+          },
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "/projects/p1/workflows/w1"
+            }
+          }
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # Stub the Tesla mock to verify it hits the global_chat endpoint
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/services/global_chat/stream"
+
+        body =
+          Jason.encode!(%{
+            "response" => "Global response",
+            "attachments" => [],
+            "usage" => %{}
+          })
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: "event: complete\ndata: #{body}\n\n"
+         }}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+      assert assistant_msg != nil
+      assert assistant_msg.content == "Global response"
+    end
+
+    test "dispatches to workflow chat when use_global_assistant is not set", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # Stub to verify it hits the workflow_chat endpoint (not global_chat)
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+
+        body =
+          Jason.encode!(%{
+            "response" => "Workflow response",
+            "response_yaml" => "workflow:\n  name: new",
+            "usage" => %{}
+          })
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: "event: complete\ndata: #{body}\n\n"
+         }}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+      assert assistant_msg != nil
+      assert assistant_msg.content == "Workflow response"
+    end
+  end
 end

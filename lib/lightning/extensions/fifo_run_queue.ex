@@ -22,10 +22,4 @@ defmodule Lightning.Extensions.FifoRunQueue do
 
     Queue.claim(demand, fifo_runs_query, worker_name, queues)
   end
-
-  @impl true
-  def dequeue(run) do
-    run
-    |> Repo.delete()
-  end
 end

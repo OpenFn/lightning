@@ -235,6 +235,87 @@ jobs:
       - store_test_results:
           path: test/reports/
 
+  # ============================================================================
+  # RUNTIME COMPATIBILITY JOBS - Non-blocking signals about upstream releases.
+  # `test_runtime_latest` re-runs the integration suite against `@latest`
+  # `@openfn/ws-worker` and `@openfn/cli` to catch breaking changes from
+  # upstream releases before they reach a release branch. `flag_outdated_runtime`
+  # is a passive reminder that the pinned versions are behind npm latest.
+  # Neither should be in branch protection's required-status-checks list.
+  # ============================================================================
+  test_runtime_latest:
+    executor: elixir_with_postgres
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - install_node:
+          version: *nodejs_version
+      - run:
+          name: "Install libsodium"
+          command: apt-get update && apt-get install -y libsodium-dev
+      - run:
+          name: "Setup test database"
+          command: sudo -u lightning mix do ecto.create, ecto.migrate
+      - run:
+          name: "Override @openfn/ws-worker to latest"
+          command: cd assets && sudo -u lightning npm install --no-save @openfn/ws-worker@latest
+      - run:
+          name: "Override @openfn/cli to latest"
+          command: sudo -u lightning mix lightning.install_runtime latest
+      - run:
+          name: "Print resolved versions"
+          command: |
+            echo "ws-worker:"
+            cd assets && sudo -u lightning node -e "console.log(require('@openfn/ws-worker/package.json').version)" || true
+            cd ..
+            echo "cli:"
+            sudo -u lightning ./priv/openfn/bin/openfn --version || true
+      - run:
+          name: "Run integration tests against latest worker + CLI"
+          command: sudo -u lightning mix test --only integration
+
+  flag_outdated_runtime:
+    executor: elixir
+    steps:
+      - setup_lightning_user
+      - attach_built_workspace
+      - install_node:
+          version: *nodejs_version
+      - run:
+          name: "Compare pinned versions to npm latest"
+          command: |
+            set -e
+
+            pinned_cli=$(awk -F'"' '/@cli_version/ {print $2; exit}' \
+              lib/mix/tasks/install_runtime.ex)
+            pinned_worker=$(node -p "require('./assets/package.json').devDependencies['@openfn/ws-worker'].replace(/^[\^~]/, '')")
+
+            latest_cli=$(npm view @openfn/cli version)
+            latest_worker=$(npm view @openfn/ws-worker version)
+
+            echo "@openfn/cli       pinned=$pinned_cli   latest=$latest_cli"
+            echo "@openfn/ws-worker pinned=$pinned_worker latest=$latest_worker"
+
+            stale=0
+            if [ "$pinned_cli" != "$latest_cli" ]; then
+              echo "WARNING: @openfn/cli pin $pinned_cli is behind npm latest $latest_cli"
+              stale=1
+            fi
+            if [ "$pinned_worker" != "$latest_worker" ]; then
+              echo "WARNING: @openfn/ws-worker pin $pinned_worker is behind npm latest $latest_worker"
+              stale=1
+            fi
+
+            if [ $stale -eq 1 ]; then
+              echo ""
+              echo "Pinned versions are out of date. Bump @cli_version in"
+              echo "lib/mix/tasks/install_runtime.ex and/or @openfn/ws-worker"
+              echo "in assets/package.json, then re-run CI."
+              exit 1
+            fi
+
+            echo "Pinned versions match npm latest."
+
 workflows:
   pre-flight checks:
     jobs:
@@ -249,4 +330,8 @@ workflows:
       - test_elixir:
           requires: [compile]
       - test_javascript:
+          requires: [compile]
+      - test_runtime_latest:
+          requires: [compile]
+      - flag_outdated_runtime:
           requires: [compile]

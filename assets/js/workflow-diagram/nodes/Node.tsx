@@ -1,7 +1,7 @@
 import { Handle, type NodeProps } from '@xyflow/react';
 import React, { memo } from 'react';
 
-import { Tooltip } from '../../collaborative-editor/components/Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 import { duration } from '../../utils/duration';
 import formatDate from '../../utils/formatDate';
@@ -102,10 +102,12 @@ const Node = ({
     ? !!runData || (!!data?.startInfo && isTriggerNode)
     : true;
 
+  const runState = runData ? (runData.exit_reason ?? 'running') : null;
+
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
     hasErrors(errors),
-    runData?.exit_reason
+    runState
   );
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
@@ -173,8 +175,12 @@ const Node = ({
           )}
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2 pointer-events-auto z-10">
-              {renderIcon(runData.exit_reason ?? 'pending', {
-                tooltip: runData?.error_type ?? 'Step completed successfully',
+              {renderIcon(runState ?? 'pending', {
+                tooltip:
+                  runData?.error_type ??
+                  (runState === 'running'
+                    ? 'Step is running'
+                    : 'Step completed successfully'),
               })}
             </div>
           ) : null}

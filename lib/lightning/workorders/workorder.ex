@@ -26,6 +26,11 @@ defmodule Lightning.WorkOrder do
                   Run.final_states()
                 )
 
+  @doc """
+  Returns all possible states for a work order.
+  """
+  def states, do: @state_values
+
   @derive {Jason.Encoder,
            only: [
              :id,

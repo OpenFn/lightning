@@ -2,14 +2,14 @@ defmodule LightningWeb.ChannelProxyPlug do
   @moduledoc """
   Reverse proxy plug for channels.
 
-  Authenticates the inbound request against the channel's source auth
-  methods, resolves sink credentials, and streams the request upstream
+  Authenticates the inbound request against the channel's client auth
+  methods, resolves destination credentials, and streams the request upstream
   via `Philter.proxy/2`. Request and response events are recorded as
   `ChannelRequest` / `ChannelEvent` records for auditing.
 
   ## Request ID
 
-  An `x-request-id` header is forwarded to the sink for end-to-end
+  An `x-request-id` header is forwarded to the destination for end-to-end
   tracing. If the caller provides one it will be used, but
   `Plug.RequestId` requires it to be between 20 and 200 characters —
   shorter or longer values are discarded and a new ID is generated
@@ -28,7 +28,7 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   require Logger
 
-  defmodule SinkRequest do
+  defmodule DestinationRequest do
     @moduledoc false
     @enforce_keys [
       :channel,
@@ -44,7 +44,8 @@ defmodule LightningWeb.ChannelProxyPlug do
       :forward_path,
       :client_identity,
       :auth_header,
-      source_auth_types: []
+      :destination_credential_id,
+      client_auth_types: []
     ]
   end
 
@@ -69,25 +70,23 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   defp do_proxy(conn, channel_id, rest) do
     with {:ok, channel} <- fetch_channel_with_telemetry(channel_id),
-         :ok <- authenticate_source(conn, channel) do
-      proxy_with_auth(conn, channel, rest)
+         {:ok, matched_auth} <- authenticate_client(conn, channel) do
+      proxy_with_auth(conn, channel, rest, matched_auth)
     else
       :not_found -> error_response(conn, :not_found, "Not Found")
       :unauthorized -> error_response(conn, :unauthorized, "Unauthorized")
     end
   end
 
-  defp proxy_with_auth(conn, channel, rest) do
-    with {:ok, auth_header} <- resolve_sink_auth(channel),
+  defp proxy_with_auth(conn, channel, rest, matched_auth) do
+    with {:ok, auth_header} <- resolve_destination_auth(channel),
          {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
-      source_auth_types =
-        channel.source_auth_methods
-        |> Enum.map(& &1.webhook_auth_method)
-        |> Enum.reject(&is_nil/1)
+      client_auth_types =
+        channel.client_webhook_auth_methods
         |> Enum.map(& &1.auth_type)
         |> Enum.uniq()
 
-      req = %SinkRequest{
+      req = %DestinationRequest{
         channel: channel,
         snapshot: snapshot,
         request_id:
@@ -95,11 +94,12 @@ defmodule LightningWeb.ChannelProxyPlug do
         forward_path: build_forward_path(rest),
         client_identity: get_client_identity(conn),
         auth_header: auth_header,
-        source_auth_types: source_auth_types
+        client_auth_types: client_auth_types,
+        destination_credential_id: destination_credential_id(channel)
       }
 
       conn
-      |> proxy_upstream(req)
+      |> proxy_upstream(req, matched_auth)
       |> halt()
     else
       {:credential_error, reason} ->
@@ -110,19 +110,34 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp authenticate_source(conn, channel) do
-    methods =
-      channel.source_auth_methods
-      |> Enum.map(& &1.webhook_auth_method)
-      |> Enum.reject(&is_nil/1)
-
-    if methods == [] or
-         Auth.valid_key?(conn, methods) or
-         Auth.valid_user?(conn, methods) do
-      :ok
-    else
-      :unauthorized
+  defp destination_credential_id(channel) do
+    case channel.destination_auth_method do
+      %{project_credential_id: id} -> id
+      _ -> nil
     end
+  end
+
+  defp authenticate_client(_conn, %{client_webhook_auth_methods: []}) do
+    {:ok, nil}
+  end
+
+  defp authenticate_client(conn, channel) do
+    methods = channel.client_webhook_auth_methods
+
+    case find_matching_auth_method(conn, methods) do
+      %{} = method -> {:ok, method}
+      nil -> :unauthorized
+    end
+  end
+
+  defp find_matching_auth_method(conn, methods) do
+    Enum.find(methods, fn method ->
+      case method.auth_type do
+        :api -> Auth.valid_key?(conn, [method])
+        :basic -> Auth.valid_user?(conn, [method])
+        _ -> false
+      end
+    end)
   end
 
   defp fetch_channel_with_telemetry(channel_id) do
@@ -138,19 +153,23 @@ defmodule LightningWeb.ChannelProxyPlug do
     )
   end
 
-  defp proxy_upstream(conn, %SinkRequest{} = req) do
-    handler_state = %{
-      channel: req.channel,
-      snapshot: req.snapshot,
-      request_id: req.request_id,
-      started_at: DateTime.utc_now(),
-      request_path: req.forward_path,
-      client_identity: req.client_identity
-    }
+  defp proxy_upstream(conn, %DestinationRequest{} = req, matched_auth) do
+    handler_state =
+      %{
+        channel: req.channel,
+        snapshot: req.snapshot,
+        request_id: req.request_id,
+        started_at: DateTime.utc_now(),
+        request_path: req.forward_path,
+        client_identity: req.client_identity,
+        query_string: conn.query_string,
+        destination_credential_id: req.destination_credential_id
+      }
+      |> put_auth_method(matched_auth)
 
     metadata = %{
       channel_id: req.channel.id,
-      sink_url: req.channel.sink_url,
+      destination_url: req.channel.destination_url,
       path: req.forward_path
     }
 
@@ -160,11 +179,12 @@ defmodule LightningWeb.ChannelProxyPlug do
       fn ->
         result =
           Philter.proxy(conn,
-            upstream: String.trim_trailing(req.channel.sink_url, "/"),
+            upstream: String.trim_trailing(req.channel.destination_url, "/"),
             path: req.forward_path,
             handler: {Lightning.Channels.Handler, handler_state},
-            strip_headers: build_strip_headers(req.source_auth_types),
-            extra_headers: build_extra_headers(conn, req)
+            strip_headers: build_strip_headers(req.client_auth_types),
+            extra_headers: build_extra_headers(conn, req),
+            collect_timing: true
           )
 
         {result, metadata}
@@ -172,7 +192,16 @@ defmodule LightningWeb.ChannelProxyPlug do
     )
   end
 
-  defp build_extra_headers(conn, %SinkRequest{} = req) do
+  defp put_auth_method(state, nil), do: state
+
+  defp put_auth_method(state, %{id: id, auth_type: auth_type}) do
+    Map.merge(state, %{
+      client_webhook_auth_method_id: id,
+      client_auth_type: Atom.to_string(auth_type)
+    })
+  end
+
+  defp build_extra_headers(conn, %DestinationRequest{} = req) do
     xff =
       case Plug.Conn.get_req_header(conn, "x-forwarded-for") do
         [existing] -> "#{existing}, #{:inet.ntoa(conn.remote_ip)}"
@@ -192,8 +221,8 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp build_strip_headers(source_auth_types) do
-    Enum.flat_map(source_auth_types, fn
+  defp build_strip_headers(client_auth_types) do
+    Enum.flat_map(client_auth_types, fn
       :api -> ["x-api-key"]
       :basic -> ["authorization"]
       _ -> []
@@ -221,21 +250,24 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  # --- Sink auth resolution ---
+  # --- Destination auth resolution ---
 
-  defp resolve_sink_auth(channel) do
-    case channel.sink_auth_methods do
-      [] ->
+  defp resolve_destination_auth(channel) do
+    case channel.destination_auth_method do
+      nil ->
         {:ok, nil}
 
-      [%{project_credential: %{credential: credential}}] ->
+      %{project_credential: %{credential: credential}} ->
         with {:ok, body} <-
                Lightning.Credentials.resolve_credential_body(
                  credential,
                  "main"
                ),
              {:ok, header} <-
-               Channels.SinkAuth.build_auth_header(credential.schema, body) do
+               Channels.DestinationAuth.build_auth_header(
+                 credential.schema,
+                 body
+               ) do
           {:ok, header}
         else
           {:error, reason} -> {:credential_error, reason}
@@ -250,7 +282,7 @@ defmodule LightningWeb.ChannelProxyPlug do
 
     case Channels.get_or_create_current_snapshot(channel) do
       {:ok, snapshot} ->
-        req = %SinkRequest{
+        req = %DestinationRequest{
           channel: channel,
           snapshot: snapshot,
           request_id:
@@ -258,7 +290,8 @@ defmodule LightningWeb.ChannelProxyPlug do
             |> Plug.Conn.get_resp_header("x-request-id")
             |> List.first(),
           forward_path: conn.request_path,
-          client_identity: get_client_identity(conn)
+          client_identity: get_client_identity(conn),
+          destination_credential_id: destination_credential_id(channel)
         }
 
         record_credential_error(conn, req, error_message)
@@ -272,7 +305,7 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp record_credential_error(conn, %SinkRequest{} = req, error_message) do
+  defp record_credential_error(conn, %DestinationRequest{} = req, error_message) do
     now = DateTime.utc_now()
 
     with {:ok, channel_request} <-
@@ -282,6 +315,7 @@ defmodule LightningWeb.ChannelProxyPlug do
              channel_snapshot_id: req.snapshot.id,
              request_id: req.request_id,
              client_identity: req.client_identity,
+             destination_credential_id: req.destination_credential_id,
              state: :error,
              started_at: now,
              completed_at: now

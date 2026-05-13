@@ -3,29 +3,76 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   use LightningWeb, :live_component
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Helpers
+  alias Lightning.Policies.Permissions
+  alias LightningWeb.Components.Viewers
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, action: nil, collection: nil, collections: [])}
+    {:ok,
+     assign(socket,
+       action: nil,
+       collection: nil,
+       collections: [],
+       preview_json: nil,
+       current_user: nil,
+       sort_by: "name",
+       sort_direction: :asc
+     )}
   end
 
   @impl true
   def update(
-        %{can_create_collection: _, collections: _, return_to: _, project: _} =
-          assigns,
+        %{
+          can_create_collection: _,
+          return_to: _,
+          project: project,
+          sandbox?: _,
+          current_user: _
+        } = assigns,
         socket
       ) do
+    sort_by = Map.get(socket.assigns, :sort_by, "name")
+    sort_direction = Map.get(socket.assigns, :sort_direction, :asc)
+
+    collections =
+      Collections.list_project_collections(project,
+        order_by: [{sort_direction, String.to_existing_atom(sort_by)}]
+      )
+
     {:ok,
      socket
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign(:collections, collections)}
   end
 
   @impl true
+  def handle_event("sort", %{"by" => field}, socket)
+      when field in ~w(name byte_size_sum) do
+    new_direction =
+      if socket.assigns.sort_by == field do
+        switch_sort_direction(socket.assigns.sort_direction)
+      else
+        :asc
+      end
+
+    collections =
+      Collections.list_project_collections(socket.assigns.project,
+        order_by: [{new_direction, String.to_existing_atom(field)}]
+      )
+
+    {:noreply,
+     socket
+     |> assign(:collections, collections)
+     |> assign(:sort_by, field)
+     |> assign(:sort_direction, new_direction)}
+  end
+
   def handle_event("toggle_action", %{"action" => "new"}, socket) do
     with :ok <- can_create_collection(socket) do
       changeset = Collection.form_changeset(%Collection{}, %{})
@@ -44,9 +91,10 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "edit", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
-
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
+         :ok <- can_access_collection(socket, collection) do
       changeset =
         Collection.form_changeset(collection, %{raw_name: collection.name})
 
@@ -64,10 +112,43 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "delete", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket) do
-      {:ok, collection} = Collections.get_collection(collection_name)
-
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
+         :ok <- can_access_collection(socket, collection) do
       {:noreply, assign(socket, collection: collection, action: :delete)}
+    end
+  end
+
+  def handle_event(
+        "preview_collection",
+        %{"collection" => collection_name},
+        socket
+      ) do
+    with {:ok, collection} <- fetch_project_collection(socket, collection_name),
+         :ok <- can_access_collection(socket, collection) do
+      preview_json =
+        case Collections.get_all(collection, limit: 1, cursor: nil) do
+          [] ->
+            nil
+
+          [item | _] ->
+            item_map = %{
+              key: item.key,
+              value: item.value,
+              created: item.inserted_at,
+              updated: item.updated_at
+            }
+
+            Jason.encode!([item_map], pretty: true)
+        end
+
+      {:noreply,
+       assign(socket,
+         collection: collection,
+         preview_json: preview_json,
+         action: :preview
+       )}
     end
   end
 
@@ -75,9 +156,16 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     {:noreply, assign(socket, action: nil)}
   end
 
-  def handle_event("delete_collection", %{"collection" => collection_id}, socket) do
-    with :ok <- can_create_collection(socket) do
-      case Collections.delete_collection(collection_id) do
+  def handle_event(
+        "delete_collection",
+        %{"collection" => collection_name},
+        socket
+      ) do
+    with :ok <- can_create_collection(socket),
+         {:ok, collection} <-
+           fetch_project_collection(socket, collection_name),
+         :ok <- can_access_collection(socket, collection) do
+      case Collections.delete_collection(collection.id) do
         {:ok, _collection} ->
           {:noreply,
            socket
@@ -160,6 +248,44 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     end
   end
 
+  defp fetch_project_collection(socket, collection_name) do
+    case Collections.get_collection(
+           socket.assigns.project.id,
+           collection_name
+         ) do
+      {:ok, collection} ->
+        {:ok, collection}
+
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Collection not found")
+         |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp can_access_collection(socket, collection) do
+    Permissions.can(
+      Lightning.Policies.Collections,
+      :access_collection,
+      socket.assigns.current_user,
+      collection
+    )
+    |> case do
+      :ok ->
+        :ok
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action")
+         |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp switch_sort_direction(:asc), do: :desc
+  defp switch_sort_direction(:desc), do: :asc
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -175,6 +301,11 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         action_button_target={@myself}
         action_button_disabled={!@can_create_collection}
         action_button_id="open-create-collection-modal-button"
+      />
+      <.sandbox_settings_banner
+        :if={@sandbox?}
+        id="sandbox-banner-collections"
+        variant={:editable}
       />
 
       <.form_modal_component
@@ -197,17 +328,39 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         collection={@collection}
         myself={@myself}
       />
+      <.collection_preview_modal
+        :if={@action == :preview}
+        id={"preview-collection-#{@collection.id}-modal"}
+        collection={@collection}
+        preview_json={@preview_json}
+        myself={@myself}
+      />
 
       <LightningWeb.Components.DataTables.collections_table
         id="collections-table"
         collections={@collections}
         can_create_collection={@can_create_collection}
+        sort_by={@sort_by}
+        sort_direction={@sort_direction}
+        sort_target={@myself}
       >
         <:actions :let={collection}>
-          <div class="text-right">
+          <div class="text-right flex">
+            <.button
+              id={"preview-collection-#{collection.id}-button"}
+              phx-click="preview_collection"
+              phx-value-collection={collection.name}
+              phx-target={@myself}
+              class="table-action"
+              title="Preview collection"
+            >
+              <.icon name="hero-eye" class="h-4 w-4" />
+            </.button>
             <a
               id={"download-collection-#{collection.id}-button"}
-              href={~p"/download/collections/#{collection.name}"}
+              href={
+                ~p"/download/collections/#{collection.project_id}/#{collection.name}"
+              }
               class="table-action"
             >
               Download
@@ -324,6 +477,66 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   attr :id, :string, required: true
   attr :collection, Collection, required: true
+  attr :preview_json, :string
+  attr :myself, :any, required: true
+
+  defp collection_preview_modal(assigns) do
+    ~H"""
+    <.modal
+      id={@id}
+      show={true}
+      width="max-w-3xl"
+      on_close={JS.push("reset_action", target: @myself)}
+    >
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Collection Preview: {@collection.name}
+          </span>
+          <button
+            phx-click="reset_action"
+            phx-target={@myself}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <:subtitle>
+        <p class="text-sm text-gray-500">
+          Showing first record. We recommend
+          <.link
+            href="https://docs.openfn.org/documentation/collections-cli"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link"
+          >
+            using the CLI
+          </.link>
+          to manage collections.
+        </p>
+      </:subtitle>
+      <div class="h-96 rounded-md overflow-hidden">
+        <%= if @preview_json do %>
+          <Viewers.collection_preview_viewer
+            id={"preview-#{@collection.id}"}
+            json={@preview_json}
+          />
+        <% else %>
+          <div class="flex items-center justify-center h-full text-gray-400 text-sm">
+            This collection is empty.
+          </div>
+        <% end %>
+      </div>
+    </.modal>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :collection, Collection, required: true
   attr :myself, :any, required: true
 
   defp collection_deletion_modal(assigns) do
@@ -360,7 +573,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           id={"#{@id}_confirm_button"}
           type="button"
           phx-click="delete_collection"
-          phx-value-collection={@collection.id}
+          phx-value-collection={@collection.name}
           phx-target={@myself}
           theme="danger"
           phx-disable-with="Deleting..."

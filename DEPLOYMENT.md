@@ -142,6 +142,16 @@ variable to one of the following:
 You will also want to set the `EMAIL_ADMIN` environment variable to the email
 address that will be used as the sender for system emails.
 
+If you are planning on using the `smtp` provider, with `TLS` enabled, the
+current implementation has the following contraints:
+
+- Only TLS 1.3 is supported.
+- For the purposes of Server Name Indication (SNI), the hostname provided as the
+  `SMTP_RELAY` is used. This means that the `SMTP_RELAY` value must be present
+  in a SAN `dNSName` on the cert. Practically, this means that TLS is unlikely
+  to work if an IP address, or an internal-only hostname is provided as the
+  `SMTP_RELAY` value.
+
 #### Mailgun
 
 For mailgun, the following environment variables are required:

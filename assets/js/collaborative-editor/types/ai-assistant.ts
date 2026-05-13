@@ -199,7 +199,7 @@ export interface AIAssistantStore {
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
   _appendStreamingChunk: (content: string) => void;
-  _setStreamingStatus: (text: string) => void;
+  setStreamingStatus: (text: string) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;
@@ -216,6 +216,9 @@ export interface MessageOptions {
 
   code?: string;
   errors?: string;
+
+  use_global_assistant?: boolean;
+  page?: string;
 }
 
 /**

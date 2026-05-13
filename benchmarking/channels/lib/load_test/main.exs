@@ -31,15 +31,15 @@ defmodule LoadTest do
     # Start the metrics collector
     {:ok, _} = LoadTest.Metrics.start_link()
 
-    # Pre-flight: verify mock sink is reachable
-    LoadTest.Setup.preflight_sink!(opts)
+    # Pre-flight: verify mock destination is reachable
+    LoadTest.Setup.preflight_destination!(opts)
 
-    direct? = opts[:scenario] == "direct_sink"
+    direct? = opts[:scenario] == "direct_destination"
 
     # Build the target URL
     {channel_url, node} =
       if direct? do
-        {"#{opts[:sink]}/test", nil}
+        {"#{opts[:destination]}/test", nil}
       else
         # Connect to the Lightning BEAM
         node = LoadTest.Setup.connect!(opts)
@@ -54,7 +54,7 @@ defmodule LoadTest do
     # Append query params (?response_size=N&delay=N) when configured
     channel_url = append_query_params(channel_url, opts)
 
-    # Deploy telemetry collector (skip for direct_sink)
+    # Deploy telemetry collector (skip for direct_destination)
     telemetry_ok? =
       if not direct? and node do
         LoadTest.Setup.deploy_telemetry_collector!(node) == :ok

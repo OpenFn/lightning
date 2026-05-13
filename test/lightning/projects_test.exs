@@ -862,6 +862,15 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Project, project_to_delete.id)
       assert Repo.get(Project, not_to_delete.id)
     end
+
+    test "no-ops when the per-project purge target was already cascaded" do
+      missing_id = Ecto.UUID.generate()
+
+      assert :ok =
+               Projects.perform(%Oban.Job{
+                 args: %{"project_id" => missing_id, "type" => "purge_deleted"}
+               })
+    end
   end
 
   describe "Projects.perform/1 for data retention periods" do
@@ -1499,6 +1508,141 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Projects.File, project_file1.id)
       assert Repo.get(Projects.File, project_file2.id)
     end
+
+    test "deletes orphaned project files with nil path" do
+      project =
+        insert(:project, history_retention_period: 7)
+
+      more_days_ago = Date.utc_today() |> Date.add(-8)
+
+      orphaned_file =
+        insert(:project_file,
+          project: project,
+          path: nil,
+          status: :in_progress,
+          inserted_at: DateTime.new!(more_days_ago, ~T[00:00:00])
+        )
+
+      :ok =
+        Projects.perform(%Oban.Job{
+          args: %{"type" => "data_retention"}
+        })
+
+      refute Repo.get(Projects.File, orphaned_file.id)
+    end
+
+    test "deletes channel request history based on started_at" do
+      project = insert(:project, history_retention_period: 7)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      old_event = insert(:channel_event, channel_request: old_request)
+
+      recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      recent_event = insert(:channel_event, channel_request: recent_request)
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Old request and its event should be deleted
+      refute Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
+      refute Repo.get(Lightning.Channels.ChannelEvent, old_event.id)
+
+      # Recent request and its event should remain
+      assert Repo.get(Lightning.Channels.ChannelRequest, recent_request.id)
+      assert Repo.get(Lightning.Channels.ChannelEvent, recent_event.id)
+    end
+
+    test "cleans up orphaned channel snapshots after request deletion" do
+      project = insert(:project, history_retention_period: 7)
+
+      channel =
+        insert(:channel, project: project, lock_version: 2)
+
+      now = Lightning.current_time()
+
+      # Snapshot matching the channel's current lock_version (should never
+      # be deleted, even if no requests reference it)
+      current_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 2)
+
+      # Older snapshot referenced only by an expired request
+      orphan_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 1)
+
+      # Older snapshot still referenced by a recent request
+      referenced_snapshot =
+        insert(:channel_snapshot, channel: channel, lock_version: 0)
+
+      _old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: orphan_snapshot,
+          started_at: Timex.shift(now, days: -8)
+        )
+
+      _recent_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: referenced_snapshot,
+          started_at: Timex.shift(now, days: -6)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      # Orphan snapshot (old lock_version, no remaining requests) is deleted
+      refute Repo.get(Lightning.Channels.ChannelSnapshot, orphan_snapshot.id)
+
+      # Current snapshot is preserved (matches channel lock_version)
+      assert Repo.get(Lightning.Channels.ChannelSnapshot, current_snapshot.id)
+
+      # Referenced snapshot is preserved (still has a recent request)
+      assert Repo.get(
+               Lightning.Channels.ChannelSnapshot,
+               referenced_snapshot.id
+             )
+    end
+
+    test "does not delete channel requests when history_retention_period is nil" do
+      project = insert(:project, history_retention_period: nil)
+      channel = insert(:channel, project: project)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      now = Lightning.current_time()
+
+      old_request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          started_at: Timex.shift(now, days: -30)
+        )
+
+      assert :ok =
+               Projects.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => project.id,
+                   "type" => "data_retention"
+                 }
+               })
+
+      assert Repo.get(Lightning.Channels.ChannelRequest, old_request.id)
+    end
   end
 
   describe "invite_collaborators/3" do
@@ -1833,6 +1977,109 @@ defmodule Lightning.ProjectsTest do
                  collaborators_count: 1
                }
              ] = result
+    end
+
+    test "orders support-user view by last_updated_at chronologically across a UTC month boundary" do
+      # Support users go through the in-memory `Enum.sort_by/3` path. With
+      # `:asc`/`:desc` the comparison walks `DateTime` struct keys
+      # alphabetically (day before month before year), which inverts at month
+      # boundaries. Pin chronological ordering with timestamps that straddle
+      # a month boundary in UTC.
+      user = insert(:user, support_user: true)
+
+      project_april =
+        %{id: april_id} =
+        insert(:project,
+          name: "Project April",
+          allow_support_access: true
+        )
+
+      project_may =
+        %{id: may_id} =
+        insert(:project,
+          name: "Project May",
+          allow_support_access: true
+        )
+
+      insert(:simple_workflow,
+        project: project_april,
+        updated_at: ~U[2026-04-30 23:10:00Z]
+      )
+
+      insert(:simple_workflow,
+        project: project_may,
+        updated_at: ~U[2026-05-01 01:10:00Z]
+      )
+
+      desc =
+        Projects.get_projects_overview(user, order_by: {:last_updated_at, :desc})
+
+      assert [
+               %ProjectOverviewRow{id: ^may_id},
+               %ProjectOverviewRow{id: ^april_id}
+             ] = desc
+
+      asc =
+        Projects.get_projects_overview(user, order_by: {:last_updated_at, :asc})
+
+      assert [
+               %ProjectOverviewRow{id: ^april_id},
+               %ProjectOverviewRow{id: ^may_id}
+             ] = asc
+    end
+
+    test "support-user view sorts projects with no workflows below those with activity" do
+      # Covers the `nil -> 0` branch in the in-memory sort key helper: a
+      # project with no workflows has `last_updated_at: nil`, which should
+      # sort below any project with real activity in descending order.
+      user = insert(:user, support_user: true)
+
+      project_with_activity =
+        %{id: with_id} =
+        insert(:project,
+          name: "With Activity",
+          allow_support_access: true
+        )
+
+      %{id: without_id} =
+        insert(:project,
+          name: "No Activity",
+          allow_support_access: true
+        )
+
+      insert(:simple_workflow,
+        project: project_with_activity,
+        updated_at: ~U[2026-05-01 01:10:00Z]
+      )
+
+      desc =
+        Projects.get_projects_overview(user, order_by: {:last_updated_at, :desc})
+
+      assert [
+               %ProjectOverviewRow{id: ^with_id},
+               %ProjectOverviewRow{id: ^without_id}
+             ] = desc
+    end
+
+    test "support-user view sorts by name when requested" do
+      # Covers the `other -> other` branch in the in-memory sort key helper:
+      # non-DateTime sort keys (here, :name) pass through unchanged so the
+      # default lexicographic compare still applies.
+      user = insert(:user, support_user: true)
+
+      %{id: zebra_id} =
+        insert(:project, name: "Zebra Project", allow_support_access: true)
+
+      %{id: alpha_id} =
+        insert(:project, name: "Alpha Project", allow_support_access: true)
+
+      asc =
+        Projects.get_projects_overview(user, order_by: {:name, :asc})
+
+      assert [
+               %ProjectOverviewRow{id: ^alpha_id},
+               %ProjectOverviewRow{id: ^zebra_id}
+             ] = asc
     end
   end
 
@@ -2538,6 +2785,43 @@ defmodule Lightning.ProjectsTest do
       # Should get both "duplicate" projects in alphabetical order
       names = Enum.map(descendants, & &1.name)
       assert names == ["duplicate", "duplicate", "other"]
+    end
+
+    test "includes descendants with scheduled_deletion set so the listing can offer cancel" do
+      root = insert(:project, name: "root")
+      active = insert(:project, name: "active", parent: root)
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      ids = Enum.map(descendants, & &1.id) |> MapSet.new()
+      assert MapSet.equal?(ids, MapSet.new([active.id, scheduled.id]))
+    end
+
+    test "includes the subtree under a scheduled descendant" do
+      root = insert(:project, name: "root")
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      grandchild = insert(:project, name: "grandchild", parent: scheduled)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      ids = Enum.map(descendants, & &1.id) |> MapSet.new()
+      assert MapSet.equal?(ids, MapSet.new([scheduled.id, grandchild.id]))
     end
 
     test "raises when project doesn't exist" do

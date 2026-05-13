@@ -84,7 +84,7 @@ defmodule Lightning.Projects do
     [user_projects, support_projects]
     |> Enum.concat()
     |> Enum.uniq_by(& &1.id)
-    |> Enum.sort_by(&Map.get(&1, sort_key), sort_direction)
+    |> Enum.sort_by(&overview_sort_key(&1, sort_key), sort_direction)
   end
 
   def get_projects_overview(%User{id: user_id}, opts) do
@@ -94,6 +94,20 @@ defmodule Lightning.Projects do
     |> projects_overview_query()
     |> order_by(^dynamic_order_by(order_by))
     |> Repo.all()
+  end
+
+  # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
+  # on `DateTime` structs orders by struct keys (day before month before year),
+  # not chronologically. Map datetime keys to unix microseconds so the sort
+  # is chronological at month boundaries. The leading sentinel (`0` for nil,
+  # `1` for present) keeps nil rows cleanly separate from a hypothetical
+  # `~U[1970-01-01]` row, so the two can never tie at the comparator.
+  defp overview_sort_key(row, sort_key) do
+    case Map.get(row, sort_key) do
+      nil -> {0, 0}
+      %DateTime{} = dt -> {1, DateTime.to_unix(dt, :microsecond)}
+      other -> {1, other}
+    end
   end
 
   defp projects_overview_query(user_id) do
@@ -135,7 +149,10 @@ defmodule Lightning.Projects do
   def perform(%Oban.Job{
         args: %{"project_id" => project_id, "type" => "purge_deleted"}
       }) do
-    project_id |> get_project!() |> delete_project()
+    case get_project(project_id) do
+      nil -> :ok
+      project -> delete_project(project)
+    end
 
     :ok
   end
@@ -160,6 +177,7 @@ defmodule Lightning.Projects do
       }) do
     project = get_project!(project_id)
     delete_history_for(project)
+    delete_channel_history_for(project)
     wipe_dataclips_for(project)
     remove_expired_files_for(project)
 
@@ -254,6 +272,53 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Preloads the full ancestor chain on a project's `:parent` association,
+  so that `Project.display_name/1` can walk to the root.
+
+  Fetches the entire chain in a single recursive CTE query.
+  """
+  @spec preload_ancestors(Project.t()) :: Project.t()
+  def preload_ancestors(%Project{parent_id: nil} = p), do: p
+
+  def preload_ancestors(%Project{parent: %Project{} = parent} = p) do
+    %{p | parent: preload_ancestors(parent)}
+  end
+
+  def preload_ancestors(%Project{parent_id: parent_id} = p)
+      when is_binary(parent_id) do
+    ancestors_by_id =
+      parent_id
+      |> list_ancestors()
+      |> Map.new(&{&1.id, &1})
+
+    %{p | parent: nest_ancestors(parent_id, ancestors_by_id)}
+  end
+
+  defp list_ancestors(start_id) do
+    initial = from(p in Project, where: p.id == ^start_id)
+
+    recursion =
+      from(p in Project,
+        join: a in "ancestors",
+        on: a.parent_id == p.id
+      )
+
+    from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
+    |> recursive_ctes(true)
+    |> with_cte("ancestors", as: ^union_all(initial, ^recursion))
+    |> Repo.all()
+  end
+
+  defp nest_ancestors(nil, _by_id), do: nil
+
+  defp nest_ancestors(id, by_id) do
+    case Map.get(by_id, id) do
+      nil -> nil
+      project -> %{project | parent: nest_ancestors(project.parent_id, by_id)}
+    end
+  end
+
+  @doc """
   Returns true if `child_project` is a descendant of `parent_project`.
 
   Walks up the parent chain using preloaded `:parent` associations to determine
@@ -318,7 +383,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_user!(id), do: Repo.get!(ProjectUser, id)
+  def get_project_user!(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+    ProjectUser |> Repo.get!(id) |> Repo.preload(include)
+  end
 
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
@@ -573,6 +641,15 @@ defmodule Lightning.Projects do
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
 
+    if Project.sandbox?(project_user.project) and
+         Lightning.Projects.Sandboxes.parent_admin?(
+           project_user.project,
+           project_user.user
+         ) do
+      raise ArgumentError,
+            "Cannot remove a parent project admin from a sandbox"
+    end
+
     Repo.transaction(fn ->
       from(pc in Lightning.Projects.ProjectCredential,
         join: c in Lightning.Credentials.Credential,
@@ -811,6 +888,33 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @doc """
+  Returns all projects the user can access, including sandboxes at any depth.
+
+  Root projects are fetched via the user's project memberships, then all
+  descendants are included using a recursive CTE via `descendant_ids/1`.
+  """
+  @spec get_project_tree_for_user(User.t()) :: [Project.t()]
+  def get_project_tree_for_user(%User{} = user) do
+    roots = get_projects_for_user(user)
+    root_ids = Enum.map(roots, & &1.id)
+
+    case descendant_ids(root_ids) do
+      [] ->
+        roots
+
+      desc_ids ->
+        descendants =
+          from(p in Project,
+            where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
+            order_by: [asc: p.name]
+          )
+          |> Repo.all()
+
+        roots ++ descendants
+    end
+  end
+
   defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
@@ -1020,13 +1124,23 @@ defmodule Lightning.Projects do
           f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
       )
       |> Repo.all()
-      |> Enum.each(fn %{path: object_path} = project_file ->
-        result = Lightning.Storage.delete(object_path)
+      |> Enum.each(fn
+        %{path: nil} = project_file ->
+          Logger.warning(
+            "Deleting orphaned project file #{project_file.id} " <>
+              "for project #{project_file.project_id} " <>
+              "with nil path (likely a failed export)"
+          )
 
-        if match?({:ok, _res}, result) or
-             match?({:error, %{status: 404}}, result) do
           Repo.delete(project_file)
-        end
+
+        %{path: object_path} = project_file ->
+          result = Lightning.Storage.delete(object_path)
+
+          if match?({:ok, _res}, result) or
+               match?({:error, %{status: 404}}, result) do
+            Repo.delete(project_file)
+          end
       end)
     end
 
@@ -1073,6 +1187,16 @@ defmodule Lightning.Projects do
   defp delete_history_for(_project) do
     {:error, :missing_history_retention_period}
   end
+
+  defp delete_channel_history_for(%Project{
+         id: project_id,
+         history_retention_period: period_days
+       })
+       when is_integer(period_days) do
+    Lightning.Channels.delete_expired_requests(project_id, period_days)
+  end
+
+  defp delete_channel_history_for(_project), do: :ok
 
   defp delete_workorders_history(
          project_workorders_query,
@@ -1339,6 +1463,13 @@ defmodule Lightning.Projects do
 
   This is a flat view: only rows where `parent.id == child.parent_id` are returned.
   If we later support arbitrarily deep nesting, switch this to a recursive CTE.
+
+  Intentionally **unfiltered** by `scheduled_deletion`. This function is the
+  recursive walker used by `Lightning.Extensions.ProjectHook.handle_delete_project/1`
+  to cascade hard-deletes through the subtree at purge time. Filtering would
+  skip scheduled descendants and (because the parent FK is `:nilify_all`) leave
+  them as orphan root projects in the database. User-facing surfaces should use
+  `list_workspace_projects/2`, which filters scheduled rows out.
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do

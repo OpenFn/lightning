@@ -66,9 +66,18 @@ export class YAMLStateToYDoc {
 
     // Session.Trigger always requires cron_expression
     // Default to null for non-cron triggers
-    const cronExpression =
-      trigger.type === 'cron' ? trigger.cron_expression : null;
-    triggerMap.set('cron_expression', cronExpression);
+    triggerMap.set('cron_expression', null);
+    triggerMap.set('cron_cursor_job_id', null);
+    triggerMap.set('webhook_reply', null);
+
+    if (trigger.type === 'cron') {
+      triggerMap.set('cron_expression', trigger.cron_expression ?? null);
+      triggerMap.set('cron_cursor_job_id', trigger.cron_cursor_job_id ?? null);
+    }
+
+    if (trigger.type === 'webhook') {
+      triggerMap.set('webhook_reply', trigger.webhook_reply ?? null);
+    }
 
     return triggerMap;
   }

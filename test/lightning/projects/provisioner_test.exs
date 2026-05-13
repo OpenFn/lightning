@@ -324,6 +324,84 @@ defmodule Lightning.Projects.ProvisionerTest do
              } = collection
     end
 
+    test "imports trigger with webhook_reply field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      updated_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "webhook",
+            "webhook_reply" => "after_completion"
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", updated_triggers)
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.webhook_reply == :after_completion
+    end
+
+    test "imports cron trigger with cron_cursor_job_id field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        project_id: project_id,
+        workflows: [%{first_job_id: first_job_id, trigger_id: trigger_id}]
+      } = valid_document()
+
+      cron_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "cron",
+            "cron_expression" => "0 * * * *",
+            "cron_cursor_job_id" => first_job_id
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [Map.put(workflow, "triggers", cron_triggers)])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.id == trigger_id
+      assert trigger.type == :cron
+      assert trigger.cron_cursor_job_id == first_job_id
+    end
+
     test "trigger->firstjob edge is enabled even if params says disabled" do
       Mox.verify_on_exit!()
       user = insert(:user)
@@ -705,6 +783,98 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert project.workflows == [],
              "The soft-deleted workflow should be excluded from the project"
+    end
+
+    test "disables all triggers on a workflow that is soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      extra_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => extra_trigger_id,
+          "type" => "cron",
+          "cron_expression" => "* * * * *",
+          "enabled" => true
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert %{deleted_at: %DateTime{}} =
+               Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, trigger_id).enabled == false
+
+      assert Repo.get!(Lightning.Workflows.Trigger, extra_trigger_id).enabled ==
+               false
+    end
+
+    test "does not disable triggers on workflows that are not soft-deleted",
+         %{
+           project: project,
+           user: user
+         } do
+      %{
+        body: body,
+        workflows: [%{trigger_id: wf1_trigger_id}, %{id: wf2_id}]
+      } = valid_document(project.id, 2)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, wf2_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, wf1_trigger_id).enabled ==
+               true
+    end
+
+    test "fires kafka_trigger_updated for kafka triggers on a workflow soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      alias Lightning.Workflows.Triggers.Events
+      alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+
+      kafka_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: webhook_trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => kafka_trigger_id,
+          "type" => "kafka",
+          "enabled" => true,
+          "kafka_configuration" => %{
+            "hosts" => [["localhost", "9092"]],
+            "topics" => ["topic"],
+            "initial_offset_reset_policy" => "earliest",
+            "connect_timeout" => 30
+          }
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert_receive %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
     end
 
     test "marking a new/changed record for deletion", %{

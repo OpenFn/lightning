@@ -210,6 +210,48 @@ defmodule Lightning.ApolloClient do
     )
   end
 
+  @doc """
+  Queries the Apollo global chat endpoint with SSE streaming.
+
+  The global chat endpoint unifies job and workflow assistance behind
+  an internal router that uses the `page` field to determine context.
+  Streaming events (text chunks, changes, status) are emitted as SSE,
+  followed by a final `complete` event with the full response payload.
+
+  ## Parameters
+
+  - `content` - User's question or request
+  - `opts` - Keyword list of options:
+    - `:workflow_yaml` - Full workflow YAML including job bodies (optional)
+    - `:page` - Current page URL for routing (optional)
+    - `:history` - Previous conversation messages (default: [])
+  """
+  @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
+  def global_chat_stream(content, opts \\ []) do
+    workflow_yaml = Keyword.get(opts, :workflow_yaml)
+    page = Keyword.get(opts, :page)
+    history = Keyword.get(opts, :history, [])
+
+    payload =
+      %{
+        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+        "content" => content,
+        "workflow_yaml" => workflow_yaml,
+        "page" => page,
+        "history" => history,
+        "options" => %{"stream" => true}
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+      |> Jason.encode!()
+
+    stream_client()
+    |> Tesla.post("/services/global_chat/stream", payload,
+      headers: [{"content-type", "application/json"}],
+      opts: [adapter: [response: :stream]]
+    )
+  end
+
   defp client do
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},

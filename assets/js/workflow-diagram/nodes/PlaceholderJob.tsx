@@ -178,6 +178,7 @@ const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
               inputRef?.focus();
             }}
             autoFocus
+            autoComplete="off"
             value={jobName}
             onChange={e => {
               setJobName(e.target.value);

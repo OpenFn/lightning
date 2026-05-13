@@ -693,7 +693,7 @@ export class AIChannelRegistry {
 
     const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { text: string };
-      this.store._setStreamingStatus(typedPayload.text);
+      this.store.setStreamingStatus(typedPayload.text);
     };
 
     const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
@@ -913,6 +913,14 @@ export class AIChannelRegistry {
       if (context.content) {
         params['content'] = context.content;
       }
+    }
+
+    // Global assistant flags (applicable to both session types)
+    if ('use_global_assistant' in context && context.use_global_assistant) {
+      params['use_global_assistant'] = true;
+    }
+    if ('page' in context && context.page) {
+      params['page'] = context.page as string;
     }
 
     return params;

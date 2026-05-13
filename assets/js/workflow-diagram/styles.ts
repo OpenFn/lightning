@@ -166,24 +166,30 @@ export const styleEdge = (edge: Flow.Edge) => {
 const BG_GREEN_100 = '#dcfce7';
 const BG_RED_100 = '#ffe2e2';
 const BG_ORANGE_100 = '#ffedd4';
+const BG_BLUE_100 = '#dbeafe';
 const BORDER_GREEN_600 = '#00a63e';
 const BORDER_RED_600 = '#e7000b';
 const BORDER_ORANGE_600 = '#f54a00';
+const BORDER_BLUE_500 = '#3b82f6';
+
+export type NodeRunState = RunStep['exit_reason'] | 'running';
 
 export const nodeIconStyles = (
   selected?: boolean,
   hasErrors?: boolean,
-  runReason: RunStep['exit_reason'] = null
+  runReason: NodeRunState = null
 ) => {
-  const getNodeBorderColor = (reasons: RunStep['exit_reason']) => {
+  const getNodeBorderColor = (reasons: NodeRunState) => {
     if (reasons === 'success') return BORDER_GREEN_600;
     else if (reasons === 'fail') return BORDER_RED_600;
     else if (reasons === 'crash') return BORDER_ORANGE_600;
+    else if (reasons === 'running') return BORDER_BLUE_500;
   };
-  const getNodeColor = (reasons: RunStep['exit_reason']) => {
+  const getNodeColor = (reasons: NodeRunState) => {
     if (reasons === 'success') return BG_GREEN_100;
     else if (reasons === 'fail') return BG_RED_100;
     else if (reasons === 'crash') return BG_ORANGE_100;
+    else if (reasons === 'running') return BG_BLUE_100;
   };
   const size = 100;
   const primaryColor = selected

@@ -51,6 +51,13 @@ defmodule Lightning.Run do
     :lost
   ]
 
+  @states [:available, :claimed, :started] ++ @final_states
+
+  @doc """
+  Returns all possible states for a run.
+  """
+  def states, do: @states
+
   @doc """
   Returns the list of final states for a run.
   """
@@ -98,15 +105,7 @@ defmodule Lightning.Run do
     embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
-      values:
-        Enum.concat(
-          [
-            :available,
-            :claimed,
-            :started
-          ],
-          @final_states
-        ),
+      values: @states,
       default: :available
 
     field :error_type, :string
@@ -200,6 +199,9 @@ defmodule Lightning.Run do
     {changeset.data |> Map.get(:state), get_field(changeset, :state)}
     |> case do
       {:available, :claimed} ->
+        changeset
+
+      {:available, :cancelled} ->
         changeset
 
       {:available, to} ->
