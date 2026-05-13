@@ -37,6 +37,19 @@ defmodule Lightning.Projects do
 
   require Logger
 
+  # A `parent_id` cycle in the projects table (admin tooling, partial restore)
+  # would loop the recursive CTEs in this module forever. Postgres'
+  # `statement_timeout` is the last line of defence; this bound is the first.
+  # 16 covers every realistic project tree (sandboxes are typically 1-3 deep).
+  @max_project_tree_depth 16
+
+  @doc """
+  Maximum depth bound applied to every `parent_id` walk in this module's
+  recursive CTEs.
+  """
+  @spec max_project_tree_depth() :: pos_integer()
+  def max_project_tree_depth, do: @max_project_tree_depth
+
   defmodule ProjectOverviewRow do
     @moduledoc """
     Represents a summarized view of a project for a user, used in the project overview table.
@@ -295,12 +308,20 @@ defmodule Lightning.Projects do
   end
 
   defp list_ancestors(start_id) do
-    initial = from(p in Project, where: p.id == ^start_id)
+    max_depth = @max_project_tree_depth
+
+    initial =
+      from(p in Project,
+        where: p.id == ^start_id,
+        select: %{id: p.id, parent_id: p.parent_id, depth: 0}
+      )
 
     recursion =
       from(p in Project,
         join: a in "ancestors",
-        on: a.parent_id == p.id
+        on: a.parent_id == p.id,
+        where: a.depth < ^max_depth,
+        select: %{id: p.id, parent_id: p.parent_id, depth: a.depth + 1}
       )
 
     from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
@@ -783,17 +804,20 @@ defmodule Lightning.Projects do
   """
   @spec descendants_query([Ecto.UUID.t()]) :: Ecto.Query.t()
   def descendants_query(project_ids) when is_list(project_ids) do
+    max_depth = @max_project_tree_depth
+
     initial =
       from(p in Project,
         where: p.parent_id in ^project_ids,
-        select: %{id: p.id}
+        select: %{id: p.id, depth: 0}
       )
 
     recursion =
       from(p in Project,
         join: d in "project_descendants",
         on: p.parent_id == d.id,
-        select: %{id: p.id}
+        where: d.depth < ^max_depth,
+        select: %{id: p.id, depth: d.depth + 1}
       )
 
     "project_descendants"
@@ -1576,6 +1600,8 @@ defmodule Lightning.Projects do
             "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
     end
 
+    max_depth = @max_project_tree_depth
+
     descendants_query =
       from(p in Project,
         where: p.parent_id == ^root.id,
@@ -1586,6 +1612,7 @@ defmodule Lightning.Projects do
       from(p in Project,
         join: d in "descendants",
         on: p.parent_id == d.id,
+        where: d.level < ^max_depth,
         select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
       )
 
