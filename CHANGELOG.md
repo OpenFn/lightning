@@ -33,6 +33,9 @@ and this project adheres to
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy
+  and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
 
 ### Fixed
 
