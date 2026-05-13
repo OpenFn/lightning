@@ -1205,6 +1205,7 @@ defmodule Lightning.Projects.SandboxesTest do
       actor = insert(:user)
       root = insert(:project)
       ensure_member!(root, actor, :owner)
+
       # l1 is at depth 1 — one below the cap of 2; provisioning produces depth 2.
       l1 = insert(:project, parent: root)
       ensure_member!(l1, actor, :owner)

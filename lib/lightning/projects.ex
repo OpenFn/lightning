@@ -45,7 +45,8 @@ defmodule Lightning.Projects do
   Postgres' `statement_timeout` fires.
   """
   @spec max_project_tree_depth() :: pos_integer()
-  def max_project_tree_depth, do: Lightning.Config.max_sandbox_nesting_depth() + 1
+  def max_project_tree_depth,
+    do: Lightning.Config.max_sandbox_nesting_depth() + 1
 
   @doc """
   Depth of a project in the parent tree. Roots return 0, a direct child
