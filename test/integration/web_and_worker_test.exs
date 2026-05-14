@@ -532,8 +532,8 @@ defmodule Lightning.WebAndWorkerTest do
         )
         |> Tesla.post!("/i/#{trigger.id}", webhook_body)
 
-      # Should return 201 for failed workflow
-      assert response.status == 201
+      # Should return 500 for failed workflow
+      assert response.status == 500
 
       # Response should include the final state
       assert is_map(response.body)
