@@ -92,7 +92,6 @@ defmodule LightningWeb.ChannelRequestLive.Show do
             <Viewers.wiped_data_viewer
               id="payload-wiped-viewer"
               data_label={:request_response}
-              subject="channel request"
               project_id={@project.id}
               admin_contacts={@admin_contacts}
               can_edit_data_retention={@can_edit_data_retention}
@@ -338,14 +337,14 @@ defmodule LightningWeb.ChannelRequestLive.Show do
           id="response-size-badge"
         />
       </:title_right>
-      <%= cond do %>
-        <% @error_category in [:transport, :credential] -> %>
-          <.response_empty
-            type={@error_category}
-            error_code={@event.error_message}
-            human_message={Helpers.humanize_error(@event.error_message)}
-          />
-        <% @event -> %>
+      <%= if @error_category in [:transport, :credential] do %>
+        <.response_empty
+          type={@error_category}
+          error_code={@event.error_message}
+          human_message={Helpers.humanize_error(@event.error_message)}
+        />
+      <% else %>
+        <%= if @event do %>
           <.sub_section
             :if={@event.response_headers}
             id="resp-headers"
@@ -371,7 +370,7 @@ defmodule LightningWeb.ChannelRequestLive.Show do
               headers={@event.response_headers}
             />
           </.sub_section>
-        <% true -> %>
+        <% end %>
       <% end %>
     </.disclosure_section>
     """

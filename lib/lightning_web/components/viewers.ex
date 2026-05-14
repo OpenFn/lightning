@@ -297,11 +297,6 @@ defmodule LightningWeb.Components.Viewers do
     required: true,
     values: [:input, :output, :request_response]
 
-  attr :subject, :string,
-    default: "step",
-    doc:
-      "Noun used in the body copy ('data for this {subject} has not been retained...')."
-
   attr :project_id, :string, required: true
 
   attr :admin_contacts, :list,
@@ -328,22 +323,13 @@ defmodule LightningWeb.Components.Viewers do
           No {wiped_label(@data_label)} Data here!
         </h3>
         <p class="text-sm">
-          {wiped_label(@data_label)} data for this {@subject} has not been retained in accordance
+          {wiped_label(@data_label)} data for this {wiped_subject(@data_label)} has not been retained in accordance
           with your project's data storage policy.
         </p>
       </div>
       <div class="text-center text-gray-500 text-sm">
         <%= if @can_edit_data_retention do %>
-          <%= if @subject == "step" do %>
-            You can’t rerun this work order, but you can change
-            <.link
-              navigate={~p"/projects/#{@project_id}/settings#data-storage"}
-              class="link"
-            >
-              this policy
-            </.link>
-            for future runs.
-          <% else %>
+          <%= if @data_label == :request_response do %>
             You can change
             <.link
               navigate={~p"/projects/#{@project_id}/settings#data-storage"}
@@ -352,6 +338,15 @@ defmodule LightningWeb.Components.Viewers do
               this policy
             </.link>
             for future requests.
+          <% else %>
+            You can’t rerun this work order, but you can change
+            <.link
+              navigate={~p"/projects/#{@project_id}/settings#data-storage"}
+              class="link"
+            >
+              this policy
+            </.link>
+            for future runs.
           <% end %>
         <% else %>
           Contact one of your
@@ -424,4 +419,8 @@ defmodule LightningWeb.Components.Viewers do
   defp wiped_label(:input), do: "Input"
   defp wiped_label(:output), do: "Output"
   defp wiped_label(:request_response), do: "Request/Response"
+
+  defp wiped_subject(:input), do: "step"
+  defp wiped_subject(:output), do: "step"
+  defp wiped_subject(:request_response), do: "channel request"
 end

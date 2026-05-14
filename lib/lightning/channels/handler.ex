@@ -69,7 +69,7 @@ defmodule Lightning.Channels.Handler do
       started_at: state.started_at
     }
 
-    persist? = Map.get(state, :persist_observations, true)
+    persist? = Map.fetch!(state, :persist_observations)
 
     attrs =
       PersistencePolicy.wipe_request_attrs(attrs, persist_observations: persist?)
@@ -140,7 +140,7 @@ defmodule Lightning.Channels.Handler do
       completed_at: DateTime.utc_now()
     }
 
-    persist? = Map.get(state, :persist_observations, true)
+    persist? = Map.fetch!(state, :persist_observations)
 
     event_attrs =
       PersistencePolicy.wipe_event_attrs(event_attrs,

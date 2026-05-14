@@ -21,7 +21,8 @@ defmodule Lightning.Channels.HandlerTest do
       request_id: Ecto.UUID.generate(),
       started_at: DateTime.utc_now(),
       request_path: "/test/path",
-      client_identity: "127.0.0.1"
+      client_identity: "127.0.0.1",
+      persist_observations: true
     }
 
     %{channel: channel, snapshot: snapshot, state: initial_state}
