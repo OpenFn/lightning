@@ -130,16 +130,18 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
     end
 
-    test "renders a 404 when a provider is missing", %{conn: conn} do
-      response =
+    test "redirects to login when a provider is missing", %{conn: conn} do
+      conn =
         conn
         |> get(Routes.oidc_path(conn, :new, "bar", %{"code" => "callback_code"}))
 
-      assert response.resp_body =~ "Not Found"
-      assert response.status == 404
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
     end
 
-    test "renders an error when a handler returns an error", %{
+    test "redirects to login when a handler returns an error", %{
       conn: conn,
       handler: handler,
       bypass: bypass
@@ -155,15 +157,16 @@ defmodule LightningWeb.OidcControllerTest do
          |> Jason.encode!()}
       )
 
-      response =
+      conn =
         conn
         |> get(
           Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
         )
 
-      assert response.resp_body =~ "invalid_client"
-      assert response.resp_body =~ "No client credentials found"
-      assert response.status == 401
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
     end
   end
 

@@ -10,17 +10,19 @@ defmodule Lightning.AuthProviders.Handler do
   @type t :: %__MODULE__{
           name: String.t(),
           client: OAuth2.Client.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          scope: String.t()
         }
 
   @type opts :: [
           client_id: String.t(),
           client_secret: String.t(),
           redirect_uri: String.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          scope: String.t()
         ]
 
-  defstruct [:name, :client, :wellknown]
+  defstruct [:name, :client, :wellknown, scope: "openid email profile"]
 
   @doc """
   Create a new Provider struct, expects a name and opts:
@@ -41,6 +43,7 @@ defmodule Lightning.AuthProviders.Handler do
 
       :ok ->
         wellknown = opts[:wellknown]
+        scope = opts[:scope] || "openid email profile"
 
         client =
           OAuth2.Client.new(
@@ -54,7 +57,12 @@ defmodule Lightning.AuthProviders.Handler do
           |> OAuth2.Client.put_serializer("application/json", Jason)
 
         {:ok,
-         struct!(__MODULE__, name: name, client: client, wellknown: wellknown)}
+         struct!(__MODULE__,
+           name: name,
+           client: client,
+           wellknown: wellknown,
+           scope: scope
+         )}
     end
   end
 
@@ -80,7 +88,7 @@ defmodule Lightning.AuthProviders.Handler do
 
   @spec authorize_url(handler :: __MODULE__.t()) :: String.t()
   def authorize_url(handler) do
-    OAuth2.Client.authorize_url!(handler.client, scope: "openid email profile")
+    OAuth2.Client.authorize_url!(handler.client, scope: handler.scope)
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::
@@ -88,7 +96,7 @@ defmodule Lightning.AuthProviders.Handler do
   def get_token(handler, code) when is_binary(code) do
     case OAuth2.Client.get_token(handler.client,
            code: code,
-           scope: "openid email profile"
+           scope: handler.scope
          ) do
       {:ok, client} -> {:ok, client.token}
       {:error, %OAuth2.Response{body: body}} -> {:error, body}

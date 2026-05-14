@@ -507,6 +507,23 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
+    github_client_id = env!("GITHUB_CLIENT_ID", :string, nil)
+    github_client_secret = env!("GITHUB_CLIENT_SECRET", :string, nil)
+
+    if github_client_id && github_client_secret do
+      github_redirect_uri =
+        if url_port in [80, 443] do
+          "#{url_scheme}://#{host}/authenticate/github/callback"
+        else
+          "#{url_scheme}://#{host}:#{url_port}/authenticate/github/callback"
+        end
+
+      config :lightning, :github_oauth,
+        client_id: github_client_id,
+        client_secret: github_client_secret,
+        redirect_uri: github_redirect_uri
+    end
+
     if config_env() == :prod do
       unless database_url do
         raise """

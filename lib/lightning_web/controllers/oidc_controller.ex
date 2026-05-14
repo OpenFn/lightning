@@ -31,10 +31,8 @@ defmodule LightningWeb.OidcController do
   """
   def new(conn, %{"provider" => provider, "code" => code}) do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
-         {:ok, token} <- Handler.get_token(handler, code) do
-      userinfo = Handler.get_userinfo(handler, token)
-      email = Map.fetch!(userinfo, "email")
-
+         {:ok, token} <- Handler.get_token(handler, code),
+         {:ok, email} <- fetch_email(handler, token) do
       case Accounts.get_user_by_email(email) do
         nil ->
           conn
@@ -57,6 +55,19 @@ defmodule LightningWeb.OidcController do
             "remember_me" => "true"
           })
       end
+    else
+      {:error, :no_email} ->
+        conn
+        |> put_flash(
+          :error,
+          "Could not retrieve your email from the provider. Please ensure your email address is accessible."
+        )
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: Routes.user_session_path(conn, :new))
     end
   end
 
@@ -69,6 +80,27 @@ defmodule LightningWeb.OidcController do
     broadcast_message(state, %{error: error_message})
     close_browser_window(conn)
   end
+
+  defp fetch_email(handler, token) do
+    userinfo = Handler.get_userinfo(handler, token)
+
+    case extract_email(userinfo) do
+      nil -> {:error, :no_email}
+      email -> {:ok, email}
+    end
+  end
+
+  defp extract_email(userinfo) when is_list(userinfo) do
+    userinfo
+    |> Enum.find(& &1["primary"])
+    |> case do
+      %{"email" => email} when is_binary(email) -> email
+      _ -> nil
+    end
+  end
+
+  defp extract_email(%{"email" => email}) when is_binary(email), do: email
+  defp extract_email(_), do: nil
 
   defp broadcast_message(state, data) do
     [subscription_id, mod, component_id, current_tab] =

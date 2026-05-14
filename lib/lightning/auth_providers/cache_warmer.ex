@@ -20,12 +20,28 @@ defmodule Lightning.AuthProviders.CacheWarmer do
   Executes this cache warmer with a connection.
   """
   def execute(_state) do
-    with %AuthProviders.AuthConfig{name: name} = config <-
-           AuthProviders.get_existing() || :ignore,
-         {:ok, handler} <- AuthProviders.Handler.from_model(config) do
-      {:ok, [{name, handler}]}
-    else
-      _error -> :ignore
+    db_entries =
+      try do
+        with %AuthProviders.AuthConfig{name: name} = config <-
+               AuthProviders.get_existing() || :not_found,
+             {:ok, handler} <- AuthProviders.Handler.from_model(config) do
+          [{name, handler}]
+        else
+          _ -> []
+        end
+      rescue
+        _ -> []
+      end
+
+    github_entries =
+      case Lightning.AuthProviders.GithubHandler.build() do
+        {:ok, handler} -> [{handler.name, handler}]
+        _ -> []
+      end
+
+    case db_entries ++ github_entries do
+      [] -> :ignore
+      entries -> {:ok, entries}
     end
   end
 end
