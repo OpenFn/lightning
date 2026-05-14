@@ -6,15 +6,21 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
 
   ## Usage
 
-      mix lightning.gen_workflow_hash WORKFLOW_UUID
+      mix lightning.gen_workflow_hash WORKFLOW_UUID [--no-hash]
 
   ## Arguments
 
     * `WORKFLOW_UUID` - The UUID of the workflow to hash
 
+  ## Options
+
+    * `--no-hash` - Print the joined pre-hash string instead of the hash.
+      Useful for debugging what's fed into the hash.
+
   ## Examples
 
       mix lightning.gen_workflow_hash 550e8400-e29b-41d4-a716-446655440000
+      mix lightning.gen_workflow_hash 550e8400-e29b-41d4-a716-446655440000 --no-hash
   """
   use Mix.Task
 
@@ -25,18 +31,26 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
 
   @impl Mix.Task
   def run(args) do
-    case args do
-      [workflow_id] ->
-        start_repo()
-        print_hash(workflow_id)
+    {opts, positional, invalid} =
+      OptionParser.parse(args, strict: [hash: :boolean])
 
-      _ ->
+    cond do
+      length(invalid) > 0 ->
+        invalid_opts = Enum.map_join(invalid, ", ", fn {opt, _} -> opt end)
+        Mix.raise("Unknown option(s): #{invalid_opts}")
+
+      length(positional) != 1 ->
         Mix.raise("""
         Expected exactly 1 argument: WORKFLOW_UUID
 
         Usage:
-          mix lightning.gen_workflow_hash WORKFLOW_UUID
+          mix lightning.gen_workflow_hash WORKFLOW_UUID [--no-hash]
         """)
+
+      true ->
+        [workflow_id] = positional
+        start_repo()
+        print_hash(workflow_id, opts)
     end
   end
 
@@ -47,14 +61,14 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
     {:ok, _} = Lightning.Repo.start_link(pool_size: 1)
   end
 
-  defp print_hash(workflow_id) do
+  defp print_hash(workflow_id, opts) do
     case Workflows.get_workflow(workflow_id) do
       nil ->
         Mix.raise("Workflow #{workflow_id} not found")
 
       workflow ->
         workflow
-        |> WorkflowVersions.generate_hash()
+        |> WorkflowVersions.generate_hash(opts)
         |> IO.puts()
     end
   end
