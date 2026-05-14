@@ -452,11 +452,15 @@ defmodule LightningWeb.SandboxLive.Index do
       <LayoutComponents.centered>
         <Components.header
           current_project={@project}
-          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          enable_create_button={
+            @can_create_sandbox and @limit_new_sandbox == :ok and
+              not @nesting_at_limit
+          }
           disabled_button_tooltip={
             create_sandbox_tooltip_message(
               @can_create_sandbox,
-              @limit_new_sandbox
+              @limit_new_sandbox,
+              @nesting_at_limit
             )
           }
         />
@@ -465,9 +469,16 @@ defmodule LightningWeb.SandboxLive.Index do
           root_project={@root_project}
           current_project={@project}
           sandboxes={@sandboxes}
-          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          enable_create_button={
+            @can_create_sandbox and @limit_new_sandbox == :ok and
+              not @nesting_at_limit
+          }
           disabled_button_tooltip={
-            create_sandbox_tooltip_message(@can_create_sandbox, @limit_new_sandbox)
+            create_sandbox_tooltip_message(
+              @can_create_sandbox,
+              @limit_new_sandbox,
+              @nesting_at_limit
+            )
           }
         />
 
@@ -530,6 +541,10 @@ defmodule LightningWeb.SandboxLive.Index do
         project
       )
 
+    nesting_at_limit =
+      Projects.depth_of(project.id) >=
+        Lightning.Config.max_sandbox_nesting_depth()
+
     manage_permissions =
       Lightning.Policies.Sandboxes.check_manage_permissions(
         descendants,
@@ -562,6 +577,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:root_project, root_project)
     |> assign(:sandboxes, sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
+    |> assign(:nesting_at_limit, nesting_at_limit)
   end
 
   defp reset_delete_modal_state(socket) do
@@ -942,12 +958,19 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp create_sandbox_tooltip_message(can_create_sandbox, limiter_result) do
-    case {can_create_sandbox, limiter_result} do
-      {false, _} ->
+  defp create_sandbox_tooltip_message(
+         can_create_sandbox,
+         limiter_result,
+         nesting_at_limit
+       ) do
+    case {can_create_sandbox, limiter_result, nesting_at_limit} do
+      {false, _, _} ->
         "You are not authorized to create sandboxes in this workspace"
 
-      {_, {:error, _, %{text: text}}} ->
+      {_, _, true} ->
+        "Maximum sandbox nesting depth reached (#{Lightning.Config.max_sandbox_nesting_depth()} levels deep)"
+
+      {_, {:error, _, %{text: text}}, _} ->
         text
 
       _other ->

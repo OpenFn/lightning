@@ -163,6 +163,46 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert render(active_badge) =~ "active"
     end
 
+    test "create sandbox button is disabled when the project is at the nesting cap",
+         %{conn: conn, user: user} do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 1 end)
+
+      root =
+        insert(:project,
+          name: "deep-root",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox_at_cap =
+        insert(:project,
+          name: "deep-sb-1",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{sandbox_at_cap.id}/sandboxes")
+
+      assert has_element?(view, "button#create-sandbox-button:disabled")
+      assert render(view) =~ "Maximum sandbox nesting depth reached"
+    end
+
+    test "create sandbox button stays enabled when the project is below the nesting cap",
+         %{conn: conn, user: user} do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 5 end)
+
+      root =
+        insert(:project,
+          name: "shallow-root",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      assert has_element?(view, "button#create-sandbox-button")
+      refute has_element?(view, "button#create-sandbox-button:disabled")
+      refute render(view) =~ "Maximum sandbox nesting depth reached"
+    end
+
     test "create sandbox button is disabled when the limiter returns error", %{
       conn: conn,
       parent: %{id: parent_id} = parent,
