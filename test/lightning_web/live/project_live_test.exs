@@ -22,6 +22,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias LightningWeb.ProjectLive.Settings
 
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
@@ -2174,8 +2175,6 @@ defmodule LightningWeb.ProjectLiveTest do
   end
 
   describe "view-extension slot wrappers" do
-    alias LightningWeb.ProjectLive.Settings
-
     test "concurrency_input_slot/1 forwards project, field, and disabled" do
       project = insert(:project)
       changeset = Lightning.Projects.Project.changeset(project, %{})
