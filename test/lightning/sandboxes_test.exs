@@ -1497,6 +1497,25 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
     end
 
+    test "still provisions cleanly when the parent has only the actor on it" do
+      # Edge case: parent's only project_user is the actor (no other users
+      # to copy). The actor becomes the sandbox owner; no demotion runs
+      # (the actor is already going to be :owner on the sandbox) and the
+      # sandbox ends up with exactly one project_user.
+      actor = insert(:user)
+      parent = insert(:project, name: "solo-parent")
+
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "solo-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert [%{user_id: user_id, role: :owner}] = sandbox.project_users
+      assert user_id == actor.id
+    end
+
     test "still provisions cleanly when the parent has no :owner row" do
       # The Project changeset normally guarantees exactly one owner, but
       # `Projects.delete_project_user!/1` (and any direct repo deletion)
