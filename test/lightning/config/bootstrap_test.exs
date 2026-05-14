@@ -411,16 +411,7 @@ defmodule Lightning.Config.BootstrapTest do
                password: "bar",
                relay: "baz",
                tls: :always,
-               tls_options: [
-                 versions: [:"tlsv1.3"],
-                 verify: :verify_peer,
-                 cacerts: :public_key.cacerts_get(),
-                 server_name_indication: to_charlist("baz"),
-                 depth: 5,
-                 customize_hostname_check: [
-                   match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-                 ]
-               ],
+               tls_options: :tls_certificate_check.options("baz"),
                port: 587
              ]
     end
