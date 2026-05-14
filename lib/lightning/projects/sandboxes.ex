@@ -109,6 +109,7 @@ defmodule Lightning.Projects.Sandboxes do
   ## Returns
   * `{:ok, sandbox_project}` - Successfully created sandbox
   * `{:error, :unauthorized}` - Actor lacks permission on parent
+  * `{:error, :nesting_too_deep}` - Parent is already at `Lightning.Config.max_sandbox_nesting_depth/0`
   * `{:error, changeset}` - Validation or database error
 
   ## Example
@@ -116,6 +117,17 @@ defmodule Lightning.Projects.Sandboxes do
         name: "test-environment",
         color: "#336699"
       })
+
+  ## Concurrency note
+
+  The nesting-depth check runs inside the same `Repo.transaction` as the
+  sandbox insert, but PostgreSQL's default READ COMMITTED isolation does
+  not lock the parent's ancestry. A concurrent committed reparent of
+  `parent` or any of its ancestors between the depth read and the insert
+  could place the new sandbox one level above the cap. Lightning has no
+  reparenting code path today, so this is theoretical; if a re-homing
+  feature ships, this check should be tightened with `SELECT FOR UPDATE`
+  on the ancestor chain.
   """
   @spec provision(Project.t(), User.t(), provision_attrs) ::
           {:ok, Project.t()}
@@ -447,17 +459,6 @@ defmodule Lightning.Projects.Sandboxes do
     sandbox_env = Map.get(attrs, :env)
 
     Repo.transaction(fn ->
-      # Nesting-depth check happens inside the transaction so the depth
-      # read and the sandbox insert share an isolation context.
-      #
-      # Known theoretical race: PostgreSQL's default READ COMMITTED isolation
-      # still permits a concurrent committed reparent of `parent` or any of
-      # its ancestors between the depth read and the insert, which could
-      # place the new sandbox one level above the cap. There is no
-      # reparenting code path in current Lightning, so the race is
-      # theoretical today. If a re-homing feature ever ships, revisit this
-      # with `SELECT FOR UPDATE` on the ancestor chain (see PR review for
-      # the C-full sketch).
       if nesting_depth_exceeded?(parent) do
         Repo.rollback(:nesting_too_deep)
       end
