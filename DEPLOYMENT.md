@@ -65,7 +65,7 @@ Note that for secure deployments, it's recommended to use a combination of
   2, etc. Provision attempts beyond this depth return
   `{:error, :nesting_too_deep}`, and the **Create Sandbox** button on the
   Sandboxes page is disabled with a tooltip when the current project is at
-  the cap. Defaults to 5.
+  the cap. Defaults to 5. Set to `0` to disable sandbox creation entirely.
 
 ### GitHub
 
