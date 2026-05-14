@@ -2181,30 +2181,38 @@ defmodule LightningWeb.ProjectLiveTest do
       form = Phoenix.HTML.FormData.to_form(changeset, [])
       field = form[:concurrency]
 
-      render_component(
-        &Settings.concurrency_input_slot/1,
-        component: LightningWeb.SlotEchoComponent,
-        field: field,
-        project: project,
-        disabled: true
-      )
+      echo =
+        render_component(
+          &Settings.concurrency_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          field: field,
+          project: project,
+          disabled: true
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
 
-      assert_received {:slot_echo,
-                       %{project: ^project, field: ^field, disabled: true}}
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-field-id") == [field.id]
+      assert Floki.attribute(echo, "data-disabled") == ["true"]
     end
 
     test "usage_caps_input_slot/1 forwards project and current_user" do
       project = insert(:project)
       user = insert(:user)
 
-      render_component(
-        &Settings.usage_caps_input_slot/1,
-        component: LightningWeb.SlotEchoComponent,
-        project: project,
-        current_user: user
-      )
+      echo =
+        render_component(
+          &Settings.usage_caps_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          project: project,
+          current_user: user
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
 
-      assert_received {:slot_echo, %{project: ^project, current_user: ^user}}
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-current-user-id") == [user.id]
     end
   end
 
