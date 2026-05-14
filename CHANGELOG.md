@@ -23,16 +23,10 @@ and this project adheres to
   `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
   Lightning renders it in the settings view. No-op for OSS Lightning by default.
   [#4725](https://github.com/OpenFn/lightning/issues/4725)
-- Sandbox nesting depth cap, configurable via the `MAX_SANDBOX_NESTING_DEPTH`
-  env var (default 5). `Sandboxes.provision/3` returns
-  `{:error, :nesting_too_deep}` when the parent is already at the cap, and the
-  **Create Sandbox** button on the Sandboxes page is disabled with a
-  "Maximum sandbox nesting depth reached" tooltip in the same case.
-- Depth bound on every `parent_id`-walking recursive CTE in
-  `Lightning.Projects` (`list_ancestors/1`, `descendants_query/1`,
-  `list_workspace_projects/2`), derived as `max_sandbox_nesting_depth + 1`.
-  Guards against a corrupt `parent_id` cycle (admin tooling, partial restore)
-  looping a query until Postgres' `statement_timeout` fires.
+- Sandbox nesting now caps at 5 levels deep (override with the
+  `MAX_SANDBOX_NESTING_DEPTH` env var). The **Create Sandbox** button is
+  disabled at the cap, and `Sandboxes.provision/3` returns
+  `{:error, :nesting_too_deep}` if a scripted caller tries to bypass it.
 - Channel request detail page, reached by clicking a row in the channel history
   table. Shows a client / destination / timing summary, a nested timing
   visualization with per-phase breakdown and TTFB marker, foldable request and
@@ -52,11 +46,10 @@ and this project adheres to
   not already on the parent, call `Lightning.Projects.add_project_users/3`
   after `provision/3` returns.
   [#4744](https://github.com/OpenFn/lightning/issues/4744)
-- `Lightning.Projects.delete_project_user!/1` now refuses to delete a
-  `project_users` row whose role is `:owner` and raises an `ArgumentError`
-  instructing the caller to transfer ownership first. The settings LiveView
-  already gates this in the UI; the change closes the gap for Mix tasks, IEx,
-  and any future API caller that would otherwise have left a project ownerless.
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError`
+  when called with a project's `:owner` row. The settings UI already
+  prevented this; the guard closes the gap for Mix tasks, IEx, and
+  scripted callers that would otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
