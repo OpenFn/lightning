@@ -63,6 +63,11 @@ and this project adheres to
   when the `limit` query param is missing, empty, non-numeric, or non-integer.
   It now returns 400 with a clear error and defaults to 10 when the param is
   absent. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `mix lightning.install_schemas` now tolerates transient jsdelivr CDN timeouts
+  by retrying each fetch with escalating recv_timeouts, logs and skips packages
+  that genuinely can't be fetched (with the underlying reason), and reports a
+  tally of installed vs. skipped packages instead of aborting the whole task on
+  a single failure. [#4750](https://github.com/OpenFn/lightning/issues/4750)
 
 ### Security
 
