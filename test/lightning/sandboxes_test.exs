@@ -1383,7 +1383,6 @@ defmodule Lightning.Projects.SandboxesTest do
                &(&1.user_id == other.id and &1.role == :editor)
              )
 
-      # When the actor is the parent owner, they remain owner on the sandbox.
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == actor.id and &1.role == :owner)
@@ -1412,7 +1411,6 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "demotes the parent owner to :admin on the sandbox" do
-      # Actor is :editor on parent so the parent owner is someone else.
       actor = insert(:user)
       parent_owner = insert(:user)
       parent = insert(:project)
@@ -1430,13 +1428,11 @@ defmodule Lightning.Projects.SandboxesTest do
                &(&1.user_id == parent_owner.id and &1.role == :admin)
              )
 
-      # The actor is the sandbox owner.
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == actor.id and &1.role == :owner)
              )
 
-      # Exactly one owner on the sandbox.
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
     end
 
@@ -1455,7 +1451,6 @@ defmodule Lightning.Projects.SandboxesTest do
                &(&1.user_id == actor.id and &1.role == :owner)
              )
 
-      # Actor appears exactly once.
       assert Enum.count(
                sandbox.project_users,
                &(&1.user_id == actor.id)
@@ -1463,9 +1458,6 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "superuser actor who is not on the parent becomes sandbox owner" do
-      # :provision_sandbox permits superusers regardless of parent membership;
-      # the sandbox should still inherit the parent's users, with the parent
-      # owner demoted, and the superuser added as the sandbox owner.
       superuser = insert(:user, role: :superuser)
       parent_owner = insert(:user)
       editor = insert(:user)
@@ -1513,13 +1505,9 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "still provisions cleanly when the parent has no :owner row" do
-      # The Project changeset normally guarantees exactly one owner, but
-      # `Projects.delete_project_user!/1` (and any direct repo deletion)
-      # bypass that guard. If a parent reaches the ownerless state - admin
-      # tooling, an out-of-band cleanup - provision should still succeed:
-      # the actor becomes the sandbox owner, the parent's remaining users
-      # are copied at their existing roles, no demotion runs because there
-      # is no :owner to demote.
+      # `Projects.delete_project_user!/1` and direct repo deletions bypass
+      # the Project changeset's single-owner guarantee, so the ownerless
+      # state is reachable in practice.
       actor = insert(:user)
       editor = insert(:user)
       parent = insert(:project, name: "ownerless-parent")
