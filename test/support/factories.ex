@@ -347,8 +347,8 @@ defmodule Lightning.Factories do
     }
   end
 
-  def sync_webhook_response_config_factory do
-    %Lightning.Workflows.Triggers.SyncWebhookResponseConfig{}
+  def webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
   def triggers_kafka_configuration_factory do

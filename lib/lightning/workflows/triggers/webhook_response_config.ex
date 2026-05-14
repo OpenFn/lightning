@@ -1,4 +1,4 @@
-defmodule Lightning.Workflows.Triggers.SyncWebhookResponseConfig do
+defmodule Lightning.Workflows.Triggers.WebhookResponseConfig do
   @moduledoc """
   Embedded schema for the default webhook response sent on run completion.
 

@@ -2158,12 +2158,12 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   defp put_webhook_config(trigger, attrs) do
-    alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
-    config = struct(SyncWebhookResponseConfig, attrs)
+    alias Lightning.Workflows.Triggers.WebhookResponseConfig
+    config = struct(WebhookResponseConfig, attrs)
 
     trigger
     |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_embed(:sync_webhook_response_config, config)
+    |> Ecto.Changeset.put_embed(:webhook_response_config, config)
     |> Repo.update!()
   end
 

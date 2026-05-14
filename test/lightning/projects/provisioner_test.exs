@@ -361,7 +361,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert trigger.webhook_reply == :after_completion
     end
 
-    test "imports trigger with webhook_response field" do
+    test "imports trigger with webhook_response_config field" do
       Mox.verify_on_exit!()
       user = insert(:user)
 
@@ -373,7 +373,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           Map.merge(trigger, %{
             "type" => "webhook",
             "webhook_reply" => "after_completion",
-            "webhook_response" => %{
+            "webhook_response_config" => %{
               "success_code" => 200,
               "error_code" => 500
             }
@@ -400,8 +400,8 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
       assert trigger.webhook_reply == :after_completion
-      assert trigger.sync_webhook_response_config.success_code == 200
-      assert trigger.sync_webhook_response_config.error_code == 500
+      assert trigger.webhook_response_config.success_code == 200
+      assert trigger.webhook_response_config.error_code == 500
     end
 
     test "imports cron trigger with cron_cursor_job_id field" do

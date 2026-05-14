@@ -780,7 +780,7 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml =~ expected_yaml_trigger
     end
 
-    test "webhook_response config is included in the export" do
+    test "webhook_response_config is included in the export" do
       project = insert(:project, name: "project 1")
 
       trigger =
@@ -788,8 +788,8 @@ defmodule Lightning.ProjectsTest do
           type: :webhook,
           enabled: true,
           webhook_reply: :after_completion,
-          sync_webhook_response_config:
-            build(:sync_webhook_response_config,
+          webhook_response_config:
+            build(:webhook_response_config,
               success_code: 200,
               error_code: 500
             )
@@ -808,14 +808,22 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml =~ "webhook_reply: after_completion"
+      expected_trigger_yaml =
+        """
+            triggers:
+              webhook:
+                type: webhook
+                webhook_reply: after_completion
+                webhook_response_config:
+                  success_code: 200
+                  error_code: 500
+                enabled: true
+        """
 
-      assert generated_yaml =~ "webhook_response:"
-      assert generated_yaml =~ "success_code: 200"
-      assert generated_yaml =~ "error_code: 500"
+      assert generated_yaml =~ expected_trigger_yaml
     end
 
-    test "webhook_response is omitted when sync_webhook_response_config is nil" do
+    test "webhook_response_config is omitted when it's is nil" do
       project = insert(:project, name: "project 2")
 
       trigger = build(:trigger, type: :webhook, enabled: true)
@@ -830,7 +838,7 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      refute generated_yaml =~ "webhook_response"
+      refute generated_yaml =~ "webhook_response_config"
     end
 
     test "exports canonical project" do

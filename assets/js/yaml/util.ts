@@ -82,7 +82,7 @@ export const convertWorkflowStateToSpec = (
 
     if (trigger.type === 'webhook') {
       triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
-      const config = trigger.sync_webhook_response_config;
+      const config = trigger.webhook_response_config;
       if (
         config &&
         (config.success_code != null || config.error_code != null)
@@ -198,7 +198,7 @@ export const convertWorkflowSpecToState = (
         type: 'webhook',
         enabled,
         webhook_reply: specTrigger.webhook_reply,
-        sync_webhook_response_config: parseWebhookResponseConfig(
+        webhook_response_config: parseWebhookResponseConfig(
           specTrigger.webhook_response
         ),
       };

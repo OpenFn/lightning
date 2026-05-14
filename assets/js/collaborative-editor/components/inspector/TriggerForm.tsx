@@ -56,15 +56,15 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [hasResponseStatus, setHasResponseStatus] = useState(() => {
-    const cfg = trigger.sync_webhook_response_config;
+    const cfg = trigger.webhook_response_config;
     return cfg != null && (cfg.success_code != null || cfg.error_code != null);
   });
   const [showResponseStatus, setShowResponseStatus] = useState(true);
   const [shownSuccessCode, setShownSuccessCode] = useState(
-    () => trigger.sync_webhook_response_config?.success_code != null
+    () => trigger.webhook_response_config?.success_code != null
   );
   const [shownErrorCode, setShownErrorCode] = useState(
-    () => trigger.sync_webhook_response_config?.error_code != null
+    () => trigger.webhook_response_config?.error_code != null
   );
   const sessionContext = useSessionContext();
   const { provider } = useSession();
@@ -81,7 +81,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   );
 
   useEffect(() => {
-    const cfg = trigger.sync_webhook_response_config;
+    const cfg = trigger.webhook_response_config;
     if (cfg == null) {
       setHasResponseStatus(false);
       setShownSuccessCode(false);
@@ -91,7 +91,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
       setShownSuccessCode(cfg.success_code != null);
       setShownErrorCode(cfg.error_code != null);
     }
-  }, [trigger.sync_webhook_response_config]);
+  }, [trigger.webhook_response_config]);
 
   // Request auth methods when trigger is selected
   useEffect(() => {
@@ -465,7 +465,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </p>
                             {field.state.value === 'after_completion' &&
                               hasResponseConfig(
-                                trigger.sync_webhook_response_config
+                                trigger.webhook_response_config
                               ) && (
                                 <p className="mt-1 text-xs text-amber-600">
                                   Switching to async will clear your response
@@ -502,7 +502,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
 
                               {/* Response Status block */}
                               {hasResponseStatus && (
-                                <form.Field name="sync_webhook_response_config">
+                                <form.Field name="webhook_response_config">
                                   {field => {
                                     const config = field.state.value as {
                                       success_code: number | null;

@@ -24,7 +24,7 @@ const webhookTriggerSchema = baseTriggerSchema.extend({
     .enum(['before_start', 'after_completion'])
     .nullable()
     .default('before_start'),
-  sync_webhook_response_config: z
+  webhook_response_config: z
     .object({
       success_code: z.number().int().nullable().default(null),
       error_code: z.number().int().nullable().default(null),
@@ -56,7 +56,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
     ),
   cron_cursor_job_id: z.string().uuid().nullable().default(null),
   kafka_configuration: z.null().default(null),
-  sync_webhook_response_config: z.null().default(null),
+  webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 
@@ -111,7 +111,7 @@ const kafkaTriggerSchema = baseTriggerSchema.extend({
   cron_expression: z.null().default(null),
   cron_cursor_job_id: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
-  sync_webhook_response_config: z.null().default(null),
+  webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 
@@ -146,7 +146,7 @@ export const createDefaultTrigger = (
         cron_cursor_job_id: null,
         kafka_configuration: null,
         webhook_reply: 'before_start' as const,
-        sync_webhook_response_config: null,
+        webhook_response_config: null,
       };
 
     case 'cron':

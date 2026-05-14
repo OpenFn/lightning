@@ -12,7 +12,7 @@ defmodule Lightning.WebAndWorkerTest do
   alias Lightning.Runtime.RuntimeManager
   alias Lightning.WorkOrders
   alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -744,8 +744,8 @@ defmodule Lightning.WebAndWorkerTest do
       trigger
       |> Ecto.Changeset.change(webhook_reply: :after_completion)
       |> Ecto.Changeset.put_embed(
-        :sync_webhook_response_config,
-        %SyncWebhookResponseConfig{success_code: 200}
+        :webhook_response_config,
+        %WebhookResponseConfig{success_code: 200}
       )
       |> Repo.update!()
 
@@ -783,8 +783,8 @@ defmodule Lightning.WebAndWorkerTest do
       trigger
       |> Ecto.Changeset.change(webhook_reply: :after_completion)
       |> Ecto.Changeset.put_embed(
-        :sync_webhook_response_config,
-        %SyncWebhookResponseConfig{error_code: 500}
+        :webhook_response_config,
+        %WebhookResponseConfig{error_code: 500}
       )
       |> Repo.update!()
 

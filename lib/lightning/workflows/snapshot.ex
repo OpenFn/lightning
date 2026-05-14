@@ -13,7 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
-  alias Lightning.Workflows.Triggers.SyncWebhookResponseConfig
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -65,7 +65,7 @@ defmodule Lightning.Workflows.Snapshot do
         values: [:before_start, :after_completion, :custom],
         default: :before_start
 
-      embeds_one :sync_webhook_response_config, SyncWebhookResponseConfig,
+      embeds_one :webhook_response_config, WebhookResponseConfig,
         on_replace: :update
 
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
@@ -115,7 +115,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   @job_fields Lightning.Workflows.Job.__schema__(:fields) -- [:workflow_id]
   @trigger_fields Lightning.Workflows.Trigger.__schema__(:fields) --
-                    [:workflow_id, :sync_webhook_response_config]
+                    [:workflow_id, :webhook_response_config]
   @edge_fields Lightning.Workflows.Edge.__schema__(:fields) -- [:workflow_id]
 
   defp job_changeset(schema, params) do
@@ -128,9 +128,9 @@ defmodule Lightning.Workflows.Snapshot do
     schema
     |> cast(params, @trigger_fields)
     |> validate_required([:id, :inserted_at, :updated_at])
-    |> cast_embed(:sync_webhook_response_config,
+    |> cast_embed(:webhook_response_config,
       required: false,
-      with: &SyncWebhookResponseConfig.changeset/2
+      with: &WebhookResponseConfig.changeset/2
     )
   end
 

@@ -106,8 +106,7 @@ function transformTrigger(trigger: Trigger) {
       break;
     case 'webhook':
       output.webhook_reply = trigger.webhook_reply ?? 'before_start';
-      output.sync_webhook_response_config =
-        trigger.sync_webhook_response_config ?? null;
+      output.webhook_response_config = trigger.webhook_response_config ?? null;
       break;
   }
   return output;

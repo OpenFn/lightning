@@ -344,7 +344,7 @@ defmodule LightningWeb.RunChannel do
         build_webhook_response(
           run,
           final_state,
-          trigger.sync_webhook_response_config,
+          trigger.webhook_response_config,
           socket.assigns.webhook_response
         )
 

@@ -594,18 +594,19 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } = trigger_json
     end
 
-    test "returns webhook_response when sync_webhook_response_config is set", %{
-      conn: conn,
-      user: user
-    } do
+    test "returns a webhook trigger with webhook_response_config in the response",
+         %{
+           conn: conn,
+           user: user
+         } do
       project = insert(:project, project_users: [%{user_id: user.id}])
 
       trigger =
         build(:trigger,
           type: :webhook,
           webhook_reply: :after_completion,
-          sync_webhook_response_config:
-            build(:sync_webhook_response_config,
+          webhook_response_config:
+            build(:webhook_response_config,
               success_code: 200,
               error_code: 500
             )
@@ -635,14 +636,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "id" => ^trigger_id,
                "type" => "webhook",
                "webhook_reply" => "after_completion",
-               "webhook_response" => %{
+               "webhook_response_config" => %{
                  "success_code" => 200,
                  "error_code" => 500
                }
              } = trigger_json
     end
 
-    test "omits webhook_response when sync_webhook_response_config is nil", %{
+    test "omits webhook_response_config when it is nil", %{
       conn: conn,
       user: user
     } do
@@ -664,7 +665,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "workflows" => [%{"triggers" => [trigger_json]}]
              } = response["data"]
 
-      refute Map.has_key?(trigger_json, "webhook_response")
+      refute Map.has_key?(trigger_json, "webhook_response_config")
     end
 
     test "returns a cron trigger with cron_cursor_job_id in the response", %{

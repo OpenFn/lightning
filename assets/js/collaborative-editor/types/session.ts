@@ -71,7 +71,7 @@ export namespace Session {
     cron_expression: string | null;
     has_auth_method: boolean;
     webhook_reply: 'before_start' | 'after_completion' | null;
-    sync_webhook_response_config: {
+    webhook_response_config: {
       success_code: number | null;
       error_code: number | null;
     } | null;

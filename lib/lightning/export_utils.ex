@@ -15,6 +15,8 @@ defmodule Lightning.ExportUtils do
     :connect_timeout
   ]
 
+  @webhook_reponse_config_fields [:success_code, :error_code]
+
   @ordering_map %{
     project: [
       :name,
@@ -31,7 +33,7 @@ defmodule Lightning.ExportUtils do
     trigger: [
       :type,
       :webhook_reply,
-      :webhook_response,
+      :webhook_response_config,
       :cron_expression,
       :cron_cursor_job,
       :enabled,
@@ -124,7 +126,7 @@ defmodule Lightning.ExportUtils do
       :webhook ->
         base
         |> maybe_put_webhook_reply(trigger.webhook_reply)
-        |> maybe_put_webhook_response(trigger.sync_webhook_response_config)
+        |> maybe_put_webhook_response_config(trigger.webhook_response_config)
     end
   end
 
@@ -134,7 +136,7 @@ defmodule Lightning.ExportUtils do
     Map.put(map, :webhook_reply, Atom.to_string(reply))
   end
 
-  defp maybe_put_webhook_response(map, %{} = config) do
+  defp maybe_put_webhook_response_config(map, %{} = config) do
     webhook_response =
       Map.reject(
         %{
@@ -143,15 +145,21 @@ defmodule Lightning.ExportUtils do
         },
         fn {_k, v} -> is_nil(v) end
       )
+      |> Enum.sort_by(
+        fn {key, _val} ->
+          Enum.find_index(@webhook_reponse_config_fields, &(&1 == key))
+        end,
+        :asc
+      )
 
-    if map_size(webhook_response) > 0 do
-      Map.put(map, :webhook_response, webhook_response)
+    if length(webhook_response) > 0 do
+      Map.put(map, :webhook_response_config, webhook_response)
     else
       map
     end
   end
 
-  defp maybe_put_webhook_response(map, _), do: map
+  defp maybe_put_webhook_response_config(map, _), do: map
 
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
     source_trigger =

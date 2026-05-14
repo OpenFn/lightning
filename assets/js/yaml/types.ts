@@ -29,7 +29,7 @@ export type StateWebhookTrigger = {
   enabled: boolean;
   type: 'webhook';
   webhook_reply: 'before_start' | 'after_completion' | null | undefined;
-  sync_webhook_response_config?: {
+  webhook_response_config?: {
     success_code?: number | null;
     error_code?: number | null;
   } | null;

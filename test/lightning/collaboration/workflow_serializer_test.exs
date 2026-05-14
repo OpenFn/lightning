@@ -762,7 +762,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "cron_cursor_job_id" => nil,
                "kafka_configuration" => nil,
                "webhook_reply" => "before_start",
-               "sync_webhook_response_config" => nil
+               "webhook_response_config" => nil
              } == extracted_trigger
 
       assert is_nil(extracted["positions"])
@@ -985,7 +985,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
                "kafka_configuration" => nil,
                "webhook_reply" => nil,
-               "sync_webhook_response_config" => nil
+               "webhook_response_config" => nil
              } == extracted_trigger
 
       # Positions
@@ -1297,7 +1297,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
                "kafka_configuration" => nil,
                "webhook_reply" => nil,
-               "sync_webhook_response_config" => nil
+               "webhook_response_config" => nil
              } == trigger
     end
 

@@ -229,8 +229,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "type" => trigger.type |> to_string(),
           "webhook_reply" =>
             trigger.webhook_reply && to_string(trigger.webhook_reply),
-          "sync_webhook_response_config" =>
-            case trigger.sync_webhook_response_config do
+          "webhook_response_config" =>
+            case trigger.webhook_response_config do
               nil ->
                 nil
 
@@ -286,10 +286,10 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       trigger
       |> Map.take(
         ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply
-           kafka_configuration sync_webhook_response_config)
+           kafka_configuration webhook_response_config)
       )
       |> normalize_kafka_configuration()
-      |> normalize_sync_webhook_response_config()
+      |> normalize_webhook_response_config()
     end)
   end
 
@@ -313,18 +313,18 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   defp normalize_kafka_configuration(trigger), do: trigger
 
   # Y.Doc serialises numbers as floats; convert integer codes back.
-  defp normalize_sync_webhook_response_config(
-         %{"sync_webhook_response_config" => %{} = config} = trigger
+  defp normalize_webhook_response_config(
+         %{"webhook_response_config" => %{} = config} = trigger
        ) do
     normalized =
       config
       |> normalize_integer_field("success_code")
       |> normalize_integer_field("error_code")
 
-    Map.put(trigger, "sync_webhook_response_config", normalized)
+    Map.put(trigger, "webhook_response_config", normalized)
   end
 
-  defp normalize_sync_webhook_response_config(trigger), do: trigger
+  defp normalize_webhook_response_config(trigger), do: trigger
 
   defp normalize_integer_field(map, key) do
     case Map.fetch(map, key) do
