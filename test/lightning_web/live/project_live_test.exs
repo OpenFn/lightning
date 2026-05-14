@@ -2179,34 +2179,32 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
       changeset = Lightning.Projects.Project.changeset(project, %{})
       form = Phoenix.HTML.FormData.to_form(changeset, [])
+      field = form[:concurrency]
 
-      html =
-        render_component(
-          &Settings.concurrency_input_slot/1,
-          component: LightningWeb.SlotEchoComponent,
-          field: form[:concurrency],
-          project: project,
-          disabled: true
-        )
+      render_component(
+        &Settings.concurrency_input_slot/1,
+        component: LightningWeb.SlotEchoComponent,
+        field: field,
+        project: project,
+        disabled: true
+      )
 
-      assert html =~ ~s(data-project-id="#{project.id}")
-      assert html =~ ~s(data-disabled="true")
+      assert_received {:slot_echo,
+                       %{project: ^project, field: ^field, disabled: true}}
     end
 
     test "usage_caps_input_slot/1 forwards project and current_user" do
       project = insert(:project)
       user = insert(:user)
 
-      html =
-        render_component(
-          &Settings.usage_caps_input_slot/1,
-          component: LightningWeb.SlotEchoComponent,
-          project: project,
-          current_user: user
-        )
+      render_component(
+        &Settings.usage_caps_input_slot/1,
+        component: LightningWeb.SlotEchoComponent,
+        project: project,
+        current_user: user
+      )
 
-      assert html =~ ~s(data-project-id="#{project.id}")
-      assert html =~ ~s(data-current-user-id="#{user.id}")
+      assert_received {:slot_echo, %{project: ^project, current_user: ^user}}
     end
   end
 
