@@ -672,7 +672,8 @@ defmodule Lightning.Config do
   @doc """
   Maximum depth of nested sandboxes. A direct child sandbox is depth 1, a
   sandbox of a sandbox is depth 2, etc. Root projects are depth 0 and not
-  subject to this limit. Defaults to 5.
+  subject to this limit. Defaults to 5. Set to 0 to disable sandbox
+  creation entirely.
   """
   def max_sandbox_nesting_depth do
     impl().max_sandbox_nesting_depth()

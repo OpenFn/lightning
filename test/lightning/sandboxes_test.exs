@@ -1214,6 +1214,23 @@ defmodule Lightning.Projects.SandboxesTest do
       assert sandbox.parent_id == l1.id
     end
 
+    test "rejects every sandbox creation when the cap is set to 0" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(root, actor, %{name: "no-sandboxes"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^root.id),
+               :count,
+               :id
+             ) == 0
+    end
+
     test "rolls back transaction on keychain validation failure" do
       %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
 
