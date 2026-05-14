@@ -54,6 +54,49 @@ defmodule LightningWeb.ProjectLive.Settings do
   on_mount {LightningWeb.Hooks, :limit_mfa}
   on_mount {LightningWeb.Hooks, :limit_retention_periods}
 
+  attr :component, :atom, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :project, Project, required: true
+  attr :disabled, :boolean, required: true
+
+  @doc """
+  View-extension slot wrapper for the project-level concurrency override input.
+  Forwards `field`, `project`, and a pre-computed `disabled` boolean to the
+  registered LiveComponent.
+  """
+  def concurrency_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="concurrency-input-component"
+      field={@field}
+      project={@project}
+      disabled={@disabled}
+    />
+    """
+  end
+
+  attr :component, :atom, required: true
+  attr :project, Project, required: true
+  attr :current_user, User, required: true
+
+  @doc """
+  View-extension slot wrapper for the per-project usage-caps input. Forwards
+  `project` and `current_user` to the registered LiveComponent so the
+  component can run its own permission gate (cap-editing authority lives in
+  the downstream billing layer, not in Lightning).
+  """
+  def usage_caps_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="usage-caps-input-component"
+      project={@project}
+      current_user={@current_user}
+    />
+    """
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns

@@ -1572,6 +1572,13 @@ defmodule Lightning.Projects do
   Uses a recursive CTE to traverse the entire project tree from root to leaves.
   Descendants are sorted as a flat list according to the specified options.
 
+  > #### Depth indexing {: .info}
+  > The recursive CTE starts at level 1 (the root's direct children), unlike
+  > `list_ancestors/1` and `descendants_query/1` which start at depth 0.
+  > With `max_project_tree_depth/0` as the bound, this function reaches one
+  > level shallower than the other two walks. Worth checking when matching
+  > test fixtures against assertions.
+
   ## Options
   - `sort_by`: Field to sort by (`:name`, `:inserted_at`, `:updated_at`). Defaults to `:name`.
   - `sort_order`: Sort direction (`:asc` or `:desc`). Defaults to `:asc`.

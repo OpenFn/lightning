@@ -575,6 +575,20 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "max_sandbox_nesting_depth" do
+    test "defaults to 5" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 5
+    end
+
+    test "can be set to a different value via MAX_SANDBOX_NESTING_DEPTH" do
+      Dotenvy.source([%{"MAX_SANDBOX_NESTING_DEPTH" => "10"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 10
+    end
+  end
+
   describe "claim_work_mem" do
     test "defaults to nil" do
       Dotenvy.source([%{}])

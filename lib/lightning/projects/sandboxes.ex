@@ -119,7 +119,11 @@ defmodule Lightning.Projects.Sandboxes do
   """
   @spec provision(Project.t(), User.t(), provision_attrs) ::
           {:ok, Project.t()}
-          | {:error, :unauthorized | Ecto.Changeset.t() | term()}
+          | {:error,
+             :unauthorized
+             | :nesting_too_deep
+             | Ecto.Changeset.t()
+             | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
     cond do
       not Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) ->

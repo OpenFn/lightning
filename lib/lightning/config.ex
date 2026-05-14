@@ -470,7 +470,7 @@ defmodule Lightning.Config do
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
   @callback max_dataclip_size_bytes() :: non_neg_integer()
-  @callback max_sandbox_nesting_depth() :: pos_integer()
+  @callback max_sandbox_nesting_depth() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
