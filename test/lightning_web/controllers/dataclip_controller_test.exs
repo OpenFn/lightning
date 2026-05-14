@@ -1,5 +1,5 @@
 defmodule LightningWeb.DataclipControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
   import Lightning.Factories
 
   defp create_steps_dataclips(_context) do
@@ -7,32 +7,18 @@ defmodule LightningWeb.DataclipControllerTest do
     project = insert(:project, project_users: [%{user: user}])
 
     credential1 =
-      insert(:credential,
-        name: "My Credential1",
-        body: %{
-          secret: "55"
-        },
-        user: user
-      )
+      insert(:credential, name: "My Credential1", user: user)
+      |> with_body(%{body: %{"secret" => "55", "another_secret" => "bar"}})
 
     credential2 =
-      insert(:credential,
-        name: "My Credential2",
-        body: %{
-          pin: 123_456,
-          looks_like_a_number: "789"
-        },
-        user: user
-      )
+      insert(:credential, name: "My Credential2", user: user)
+      |> with_body(%{
+        body: %{"pin" => 123_456, "looks_like_a_number" => "789"}
+      })
 
     credential3 =
-      insert(:credential,
-        name: "My Credential3",
-        body: %{
-          foo: "bar"
-        },
-        user: user
-      )
+      insert(:credential, name: "My Credential3", user: user)
+      |> with_body(%{body: %{"foo" => "bar"}})
 
     project_credential1 =
       insert(:project_credential, credential: credential1, project: project)
@@ -175,7 +161,7 @@ defmodule LightningWeb.DataclipControllerTest do
       assert body =~ "test payload"
     end
 
-    test "scrubbs lines from step_result dataclip", %{
+    test "scrubs lines from step_result dataclip", %{
       conn: conn,
       step2: selected_step
     } do
@@ -183,23 +169,12 @@ defmodule LightningWeb.DataclipControllerTest do
 
       body = response(conn, 200)
 
-      dataclip_lines = String.split(body, "\n")
-
-      # foo: "bar" is not scrubbed because it is from a following job executed on step3
-      expected_lines = [
-        ~S("integer":***),
-        ~S("another_no":***),
-        ~S("third_no":12***34),
-        ~S("map":{"list":[{"any-key":"some-***s"}]}),
-        ~S("bool":true),
-        ~S("foo":"bar")
-      ]
-
-      Enum.each(dataclip_lines, fn line ->
-        Enum.any?(expected_lines, fn expected_line ->
-          String.contains?(line, expected_line)
-        end)
-      end)
+      assert body =~ ~S("integer": ***)
+      assert body =~ ~S("another_no": ***)
+      assert body =~ ~S("third_no": 12***34)
+      assert body =~ ~S("any-key": "some-***s")
+      assert body =~ ~S("bool": true)
+      assert body =~ ~S("foo": "***")
     end
 
     test "returns 304 when the dataclip is not outdated", %{
@@ -238,7 +213,7 @@ defmodule LightningWeb.DataclipControllerTest do
         |> put_req_header("if-modified-since", last_modified)
         |> get(~p"/dataclip/body/#{dataclip.id}")
 
-      assert response(conn, 200) =~ "some-bars"
+      assert response(conn, 200) =~ ~S("any-key")
       assert get_resp_header(conn, "cache-control") == ["private, max-age=86400"]
       assert get_resp_header(conn, "vary") == ["Accept-Encoding, Cookie"]
 
@@ -260,7 +235,7 @@ defmodule LightningWeb.DataclipControllerTest do
         |> put_req_header("if-modified-since", "invalid-date-format")
         |> get(~p"/dataclip/body/#{dataclip.id}")
 
-      assert response(conn, 200) =~ "some-bars"
+      assert response(conn, 200) =~ ~S("any-key")
     end
 
     test "returns 403 when the user is not part of the dataclip's project", %{
@@ -271,6 +246,49 @@ defmodule LightningWeb.DataclipControllerTest do
       conn = conn |> log_in_user(user) |> get(~p"/dataclip/body/#{dataclip.id}")
 
       assert conn.status == 403
+    end
+
+    test "returns 404 when the dataclip does not exist", %{conn: conn} do
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/dataclip/body/#{Ecto.UUID.generate()}")
+      end)
+    end
+
+    test "returns 200 with \"null\" body when the dataclip body is nil", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user}])
+      dataclip = insert(:dataclip, project: project, type: :global, body: nil)
+
+      conn = get(conn, ~p"/dataclip/body/#{dataclip.id}")
+
+      assert response(conn, 200) == "null"
+    end
+
+    test "does not scrub :global dataclip bodies", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user: user}])
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :global,
+          body: %{"secret_looking_thing" => "hunter2"}
+        )
+
+      conn = get(conn, ~p"/dataclip/body/#{dataclip.id}")
+      body = response(conn, 200)
+
+      assert body =~ "hunter2"
+      refute body =~ "***"
+    end
+
+    test "redirects to login when user is not authenticated", %{
+      output_dataclip: dataclip
+    } do
+      conn = build_conn() |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert redirected_to(conn) == ~p"/users/log_in"
     end
   end
 
@@ -348,6 +366,27 @@ defmodule LightningWeb.DataclipControllerTest do
 
       # Returns 401 because Projects.get_project! raises for unauthorized access
       assert html_response(conn, 401) =~ "Authorization Error"
+    end
+
+    # NOTE: This test currently fails with an unhandled `ArgumentError` because
+    # `String.to_integer/1` in `DataclipController.search/2` is unguarded
+    # (lib/lightning_web/controllers/dataclip_controller.ex:136). Once the
+    # controller validates the `limit` param, it should return 400 instead of
+    # crashing.
+    test "returns 400 when limit is not a positive integer", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      for bad_limit <- ["abc", "", "10.5"] do
+        conn =
+          get(
+            conn,
+            ~p"/projects/#{project}/jobs/#{job}/dataclips?limit=#{bad_limit}"
+          )
+
+        assert response(conn, 400)
+      end
     end
   end
 
@@ -537,6 +576,34 @@ defmodule LightningWeb.DataclipControllerTest do
 
       # Returns 401 because Projects.get_project! raises for unauthorized access
       assert html_response(conn, 401) =~ "Authorization Error"
+    end
+
+    test "returns 404 when the dataclip belongs to a different project than the URL project_id" do
+      user = insert(:user)
+
+      # Project A: user has :edit_workflow (admin role).
+      project_a =
+        insert(:project, project_users: [%{user: user, role: :admin}])
+
+      # Project B: user is a member (so :view_dataclip passes via membership),
+      # and the dataclip lives here.
+      project_b =
+        insert(:project, project_users: [%{user: user, role: :admin}])
+
+      dataclip_in_b = insert(:dataclip, project: project_b)
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+        |> patch(
+          ~p"/projects/#{project_a}/dataclips/#{dataclip_in_b}",
+          %{name: "Sneaky Rename"}
+        )
+
+      # Post-fix: the controller should refuse to update a dataclip via a
+      # mismatched project URL. Currently this returns 200 with the updated
+      # dataclip — that's the bug under test.
+      assert conn.status == 404
     end
   end
 end

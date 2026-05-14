@@ -20,10 +20,86 @@ and this project adheres to
 - Allow users to respond back with custom webhook responses via the
   `webhookResponse` field in the job state.
   [#3102](https://github.com/OpenFn/lightning/issues/3102)
+- New `usage_caps_input` view-extension slot on the project settings page
+  (`/projects/:project_id/settings`). Same pattern as the existing
+  `concurrency_input` slot: downstream apps register a component via
+  `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
+  Lightning renders it in the settings view. No-op for OSS Lightning by default.
+  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+- Sandbox nesting now caps at 5 levels deep (override with the
+  `MAX_SANDBOX_NESTING_DEPTH` env var). The **Create Sandbox** button is
+  disabled at the cap, and `Sandboxes.provision/3` returns
+  `{:error, :nesting_too_deep}` if a scripted caller tries to bypass it.
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 
 ### Changed
 
+- `Lightning.Projects.Sandboxes.provision/3` no longer accepts `:collaborators`.
+  The sandbox's `project_users` are now derived from the parent project: every
+  parent user is copied with their role preserved, the parent owner is demoted
+  to `:admin`, and the actor is set as the sandbox owner. To add a user who is
+  not already on the parent, call `Lightning.Projects.add_project_users/3` after
+  `provision/3` returns.
+  [#4744](https://github.com/OpenFn/lightning/issues/4744)
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
+  called with a project's `:owner` row. The settings UI already prevented this;
+  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
+  otherwise have left a project ownerless.
+- `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
+  Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
+  path. x86_64 Linux is unchanged.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy
+  and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+
 ### Fixed
+
+- Copy token button on the Personal Access Tokens page now shows a 'Copied!'
+  tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
+- `mix lightning.install_runtime` no longer reports success when Rambo's binary
+  fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
+  [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- `FakeRambo.run/3` guards against the `:fake_rambo_cache` ETS table not yet
+  existing, restoring the intended missing-cache fallback that Cachex 4.x broke
+  by raising `ArgumentError` from `:ets.lookup` instead of returning
+  `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- AI Assistant: fix an issue where inline code snippets render with extra
+  backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
+- The dataclip viewer now renders "Dataclip not found" when the backend returns
+  404, instead of the generic "Failed to load content" message used for all
+  error states. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `GET /projects/:project_id/jobs/:job_id/dataclips` no longer returns a 500
+  when the `limit` query param is missing, empty, non-numeric, or non-integer.
+  It now returns 400 with a clear error and defaults to 10 when the param is
+  absent. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `mix lightning.install_schemas` now tolerates transient jsdelivr CDN timeouts
+  by retrying each fetch with escalating recv_timeouts, logs and skips packages
+  that genuinely can't be fetched (with the underlying reason), and reports a
+  tally of installed vs. skipped packages instead of aborting the whole task on
+  a single failure. [#4750](https://github.com/OpenFn/lightning/issues/4750)
+
+### Security
+
+- `PATCH /projects/:project_id/dataclips/:dataclip_id` now rejects requests
+  where the URL `project_id` and the dataclip's project disagree. Previously, a
+  user with edit access on project A and view access to a dataclip in project B
+  could rename the dataclip via project A's URL scope.
+  [#4746](https://github.com/OpenFn/lightning/pull/4746)
 
 ## [2.16.3] - 2026-05-07
 
@@ -126,6 +202,11 @@ and this project adheres to
   [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
+- bumped local worker to 1.24.0
+- Channel timing fields are now stored in microseconds (previously milliseconds)
+  and request and response headers are stored as native jsonb on
+  `channel_events`. Handler adapted to Philter 0.3.0 timing map.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)

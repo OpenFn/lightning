@@ -132,6 +132,8 @@ defmodule LightningWeb.ChannelLive.FormComponent do
           <div class="space-y-6 bg-white">
             <.input field={f[:name]} label="Name" type="text" phx-debounce="300" />
 
+            <.input field={f[:enabled]} label="Enabled" type="toggle" />
+
             <div>
               <.input
                 field={f[:destination_url]}
@@ -175,8 +177,6 @@ defmodule LightningWeb.ChannelLive.FormComponent do
                 </option>
               </select>
             </div>
-
-            <.input field={f[:enabled]} label="Enabled" type="toggle" />
 
             <div>
               <div class="flex items-baseline gap-2 mb-2">

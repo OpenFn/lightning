@@ -1562,6 +1562,28 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Projects.File, project_file2.id)
     end
 
+    test "deletes orphaned project files with nil path" do
+      project =
+        insert(:project, history_retention_period: 7)
+
+      more_days_ago = Date.utc_today() |> Date.add(-8)
+
+      orphaned_file =
+        insert(:project_file,
+          project: project,
+          path: nil,
+          status: :in_progress,
+          inserted_at: DateTime.new!(more_days_ago, ~T[00:00:00])
+        )
+
+      :ok =
+        Projects.perform(%Oban.Job{
+          args: %{"type" => "data_retention"}
+        })
+
+      refute Repo.get(Projects.File, orphaned_file.id)
+    end
+
     test "deletes channel request history based on started_at" do
       project = insert(:project, history_retention_period: 7)
       channel = insert(:channel, project: project)
@@ -2510,6 +2532,30 @@ defmodule Lightning.ProjectsTest do
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
     end
+
+    test "raises when removing the project owner" do
+      owner = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: editor.id, role: :editor}
+          ]
+        )
+
+      owner_project_user =
+        Enum.find(project.project_users, &(&1.user_id == owner.id))
+
+      assert_raise ArgumentError,
+                   "Cannot remove the owner of a project. Transfer ownership first.",
+                   fn ->
+                     Projects.delete_project_user!(owner_project_user)
+                   end
+
+      assert Repo.get(Lightning.Projects.ProjectUser, owner_project_user.id)
+    end
   end
 
   describe "sandboxes (list/create/workspace)" do
@@ -2961,6 +3007,93 @@ defmodule Lightning.ProjectsTest do
       query = Projects.descendants_query([parent.id])
       assert %Ecto.Query{} = query
       assert Repo.exists?(query)
+    end
+  end
+
+  describe "depth_of/1" do
+    test "returns 0 for a root project" do
+      root = insert(:project)
+      assert Projects.depth_of(root.id) == 0
+    end
+
+    test "returns 1 for a direct child sandbox" do
+      root = insert(:project)
+      sandbox = insert(:project, parent: root)
+      assert Projects.depth_of(sandbox.id) == 1
+    end
+
+    test "returns the correct depth for a deep chain" do
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+
+      assert Projects.depth_of(l3.id) == 3
+    end
+
+    test "caps at max_project_tree_depth for chains deeper than the bound" do
+      # max_sandbox_nesting_depth = 2 so max_project_tree_depth = 3. Build a
+      # chain deeper than the bound to prove `list_ancestors/1` stops walking.
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+
+      # True depth of l4 is 4, but the CTE bound stops at 3.
+      assert Projects.depth_of(l4.id) == 3
+    end
+  end
+
+  describe "max_project_tree_depth/0" do
+    test "returns max_sandbox_nesting_depth + 1 (CTE buffer above legit depth)" do
+      assert Projects.max_project_tree_depth() ==
+               Lightning.Config.max_sandbox_nesting_depth() + 1
+    end
+  end
+
+  describe "descendants_query/1 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      ids = Projects.descendant_ids([root.id])
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
+    end
+  end
+
+  describe "list_workspace_projects/2 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      %{descendants: descendants} = Projects.list_workspace_projects(root.id)
+      ids = Enum.map(descendants, & &1.id)
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
     end
   end
 
