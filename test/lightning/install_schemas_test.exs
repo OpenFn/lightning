@@ -8,7 +8,10 @@ defmodule Lightning.InstallSchemasTest do
 
   alias Mix.Tasks.Lightning.InstallSchemas
 
-  @request_options [recv_timeout: 15_000, pool: :default]
+  @registry_request_options [recv_timeout: 15_000, pool: :default]
+  @first_attempt_opts [recv_timeout: 30_000, pool: :default]
+  @second_attempt_opts [recv_timeout: 15_000, pool: :default]
+  @third_attempt_opts [recv_timeout: 5_000, pool: :default]
   @ok_200 {:ok, 200, "headers", :client}
   @ok_400 {:ok, 400, "headers", :client}
 
@@ -17,7 +20,6 @@ defmodule Lightning.InstallSchemasTest do
   describe "install_schemas mix task" do
     setup do
       stub(:hackney)
-
       :ok
     end
 
@@ -27,7 +29,7 @@ defmodule Lightning.InstallSchemasTest do
         "https://registry.npmjs.org/-/user/openfn/package",
         [],
         "",
-        @request_options ->
+        @registry_request_options ->
           @ok_200
       end)
 
@@ -41,7 +43,7 @@ defmodule Lightning.InstallSchemasTest do
         "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
         [],
         "",
-        @request_options ->
+        @first_attempt_opts ->
           @ok_200
       end)
 
@@ -54,7 +56,7 @@ defmodule Lightning.InstallSchemasTest do
         "https://cdn.jsdelivr.net/npm/@openfn/language-primero/configuration-schema.json",
         [],
         "",
-        @request_options ->
+        @first_attempt_opts ->
           @ok_200
       end)
 
@@ -75,11 +77,12 @@ defmodule Lightning.InstallSchemasTest do
       |> expect(:binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
       |> expect(:binwrite, fn _, ~s({"name": "language-primero"}) -> nil end)
 
-      # |> expect(:binwrite, fn _, ~s({"name": "language-common"}) -> nil end)
+      output =
+        capture_io(fn ->
+          InstallSchemas.run([])
+        end)
 
-      capture_io(fn ->
-        InstallSchemas.run([])
-      end)
+      assert output =~ "2 installed, 0 skipped"
     end
 
     test "run fail" do
@@ -93,43 +96,108 @@ defmodule Lightning.InstallSchemasTest do
                    end
     end
 
-    test "persist_schema fail 1" do
+    test "persist_schema retries then succeeds" do
+      # First attempt times out
       expect(:hackney, :request, fn
         :get,
         "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
         [],
         "",
-        @request_options ->
+        @first_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      # Second attempt succeeds
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
+        [],
+        "",
+        @second_attempt_opts ->
           @ok_200
       end)
 
       expect(:hackney, :body, fn :client, _timeout ->
-        {:error, %HTTPoison.Error{}}
+        {:ok, ~s({"name": "language-asana"})}
       end)
 
-      assert_raise RuntimeError, "Unable to access @openfn/language-asana", fn ->
-        InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
-      end
+      File
+      |> expect(:open!, fn "test/fixtures/schemas/asana.json", [:write] ->
+        nil
+      end)
+      |> expect(:close, fn _ -> nil end)
+
+      expect(IO, :binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
+
+      {result, log} =
+        with_log(fn ->
+          InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
+        end)
+
+      assert result == {:installed, "@openfn/language-asana"}
+
+      assert log =~
+               "Transient error fetching @openfn/language-asana (:timeout); retrying with recv_timeout=15000ms"
     end
 
-    test "persist_schema fail 2" do
+    test "persist_schema logs and skips after all retries fail" do
+      # All three attempts time out
       expect(:hackney, :request, fn
         :get,
         "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
         [],
         "",
-        @request_options ->
+        @first_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
+        [],
+        "",
+        @second_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
+        [],
+        "",
+        @third_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      {result, log} =
+        with_log(fn ->
+          InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
+        end)
+
+      assert result == {:skipped, "@openfn/language-asana", :timeout}
+      assert log =~ "Skipping @openfn/language-asana: :timeout after 3 attempts"
+    end
+
+    test "persist_schema HTTP 400" do
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
+        [],
+        "",
+        @first_attempt_opts ->
           @ok_400
       end)
 
       expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, %HTTPoison.Response{status_code: 400}}
+        {:ok, ""}
       end)
 
-      {_result, log} =
+      {result, log} =
         with_log(fn ->
           InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
         end)
+
+      assert {:skipped, "@openfn/language-asana", {:http_status, 400}} = result
 
       assert log =~
                "Unable to fetch @openfn/language-asana configuration schema. status=400"
@@ -141,7 +209,7 @@ defmodule Lightning.InstallSchemasTest do
         "https://registry.npmjs.org/-/user/openfn/package",
         [],
         "",
-        @request_options ->
+        @registry_request_options ->
           @ok_200
       end)
 
@@ -150,7 +218,7 @@ defmodule Lightning.InstallSchemasTest do
       end)
 
       assert_raise RuntimeError,
-                   "Unable to connect to NPM; no adaptors fetched.",
+                   ~r/Unable to connect to NPM; no adaptors fetched: /,
                    fn ->
                      InstallSchemas.fetch_schemas([])
                    end
@@ -162,12 +230,12 @@ defmodule Lightning.InstallSchemasTest do
         "https://registry.npmjs.org/-/user/openfn/package",
         [],
         "",
-        @request_options ->
+        @registry_request_options ->
           @ok_400
       end)
 
       expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, %HTTPoison.Response{status_code: 400}}
+        {:ok, ""}
       end)
 
       assert_raise RuntimeError,
@@ -175,6 +243,87 @@ defmodule Lightning.InstallSchemasTest do
                    fn ->
                      InstallSchemas.fetch_schemas([])
                    end
+    end
+
+    test "run reports skipped packages in the tally" do
+      # Registry returns 3 packages: language-common (excluded), language-asana (succeeds), language-primero (fails all retries)
+      expect(:hackney, :request, fn
+        :get,
+        "https://registry.npmjs.org/-/user/openfn/package",
+        [],
+        "",
+        @registry_request_options ->
+          @ok_200
+      end)
+
+      expect(:hackney, :body, fn :client, _timeout ->
+        {:ok,
+         ~s({"@openfn/language-common": "write", "@openfn/language-asana": "write", "@openfn/language-primero": "write"})}
+      end)
+
+      # language-asana: first attempt succeeds
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-asana/configuration-schema.json",
+        [],
+        "",
+        @first_attempt_opts ->
+          @ok_200
+      end)
+
+      expect(:hackney, :body, fn :client, _timeout ->
+        {:ok, ~s({"name": "language-asana"})}
+      end)
+
+      # language-primero: all three attempts fail
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-primero/configuration-schema.json",
+        [],
+        "",
+        @first_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-primero/configuration-schema.json",
+        [],
+        "",
+        @second_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      expect(:hackney, :request, fn
+        :get,
+        "https://cdn.jsdelivr.net/npm/@openfn/language-primero/configuration-schema.json",
+        [],
+        "",
+        @third_attempt_opts ->
+          {:error, :timeout}
+      end)
+
+      File
+      |> expect(:rm_rf, fn _ -> nil end)
+      |> expect(:mkdir_p, fn _ -> nil end)
+      |> expect(:open!, fn "test/fixtures/schemas/asana.json", [:write] ->
+        nil
+      end)
+      |> expect(:close, fn _ -> nil end)
+
+      expect(IO, :binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
+
+      {output, log} =
+        with_log(fn ->
+          capture_io(fn ->
+            InstallSchemas.run([])
+          end)
+        end)
+
+      assert output =~ "1 installed, 1 skipped"
+
+      assert log =~
+               "Skipping @openfn/language-primero: :timeout after 3 attempts"
     end
 
     test "parse_excluded" do

@@ -16,6 +16,8 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     "language-divoc"
   ]
 
+  @recv_timeouts [30_000, 15_000, 5_000]
+
   @spec run(any) :: any
   def run(args) do
     HTTPoison.start()
@@ -24,14 +26,17 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
     init_schema_dir(dir)
 
-    result =
+    {installed, skipped} =
       args
       |> parse_excluded()
       |> fetch_schemas(&persist_schema(dir, &1))
-      |> Enum.to_list()
+      |> Enum.reduce({0, 0}, fn
+        {:installed, _name}, {ok, skip} -> {ok + 1, skip}
+        {:skipped, _name, _reason}, {ok, skip} -> {ok, skip + 1}
+      end)
 
     Mix.shell().info(
-      "Schemas installation has finished. #{length(result)} installed"
+      "Schemas installation has finished. #{installed} installed, #{skipped} skipped."
     )
   end
 
@@ -78,23 +83,39 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   end
 
   def persist_schema(dir, package_name) do
-    get(
-      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json",
-      [],
-      hackney: [pool: :default],
-      recv_timeout: 15_000
-    )
-    |> case do
-      {:error, _} ->
-        raise "Unable to access #{package_name}"
+    attempt_persist_schema(dir, package_name, @recv_timeouts)
+  end
 
+  defp attempt_persist_schema(dir, package_name, [timeout | rest]) do
+    url =
+      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
+
+    case get(url, [], hackney: [pool: :default], recv_timeout: timeout) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         write_schema(dir, package_name, body)
+        {:installed, package_name}
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         Logger.warning(
           "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
         )
+
+        {:skipped, package_name, {:http_status, status_code}}
+
+      {:error, %HTTPoison.Error{reason: reason}} when rest != [] ->
+        Logger.warning(
+          "Transient error fetching #{package_name} (#{inspect(reason)}); " <>
+            "retrying with recv_timeout=#{hd(rest)}ms"
+        )
+
+        attempt_persist_schema(dir, package_name, rest)
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        Logger.warning(
+          "Skipping #{package_name}: #{inspect(reason)} after #{length(@recv_timeouts)} attempts"
+        )
+
+        {:skipped, package_name, reason}
     end
   end
 
@@ -104,8 +125,8 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       recv_timeout: 15_000
     )
     |> case do
-      {:error, %HTTPoison.Error{}} ->
-        raise "Unable to connect to NPM; no adaptors fetched."
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        raise "Unable to connect to NPM; no adaptors fetched: #{inspect(reason)}"
 
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         excluded = excluded |> Enum.map(&"@openfn/#{&1}")
@@ -122,9 +143,19 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
         |> Task.async_stream(fun,
           ordered: false,
           max_concurrency: 5,
-          timeout: 30_000
+          timeout: 60_000
         )
-        |> Stream.map(fn {:ok, detail} -> detail end)
+        |> Stream.map(fn
+          {:ok, result} ->
+            result
+
+          {:exit, reason} ->
+            Logger.warning(
+              "Schema fetch task exited unexpectedly: #{inspect(reason)}"
+            )
+
+            {:skipped, "unknown", reason}
+        end)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         raise "Unable to access openfn user packages. status=#{status_code}"
