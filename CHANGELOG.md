@@ -57,6 +57,8 @@ and this project adheres to
 - Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
   so that changes to these trigger fields are properly detected by CLI deploy
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+- Bump `@openfn/ws-worker` from
+  [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
 
 ### Fixed
 
