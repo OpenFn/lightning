@@ -2173,6 +2173,44 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "view-extension slot wrappers" do
+    alias LightningWeb.ProjectLive.Settings
+
+    test "concurrency_input_slot/1 forwards project, field, and disabled" do
+      project = insert(:project)
+      changeset = Lightning.Projects.Project.changeset(project, %{})
+      form = Phoenix.HTML.FormData.to_form(changeset, [])
+
+      html =
+        render_component(
+          &Settings.concurrency_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          field: form[:concurrency],
+          project: project,
+          disabled: true
+        )
+
+      assert html =~ ~s(data-project-id="#{project.id}")
+      assert html =~ ~s(data-disabled="true")
+    end
+
+    test "usage_caps_input_slot/1 forwards project and current_user" do
+      project = insert(:project)
+      user = insert(:user)
+
+      html =
+        render_component(
+          &Settings.usage_caps_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          project: project,
+          current_user: user
+        )
+
+      assert html =~ ~s(data-project-id="#{project.id}")
+      assert html =~ ~s(data-current-user-id="#{user.id}")
+    end
+  end
+
   describe "webhook-security" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
