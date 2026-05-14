@@ -42,6 +42,7 @@ defmodule Lightning.Channels.Handler do
 
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
+  alias Lightning.Channels.PersistencePolicy
   alias Lightning.Repo
 
   require Logger
@@ -67,6 +68,11 @@ defmodule Lightning.Channels.Handler do
       state: :pending,
       started_at: state.started_at
     }
+
+    persist? = Map.get(state, :persist_observations, true)
+
+    attrs =
+      PersistencePolicy.wipe_request_attrs(attrs, persist_observations: persist?)
 
     case %ChannelRequest{} |> ChannelRequest.changeset(attrs) |> Repo.insert() do
       {:ok, channel_request} ->
@@ -133,6 +139,13 @@ defmodule Lightning.Channels.Handler do
       state: request_state,
       completed_at: DateTime.utc_now()
     }
+
+    persist? = Map.get(state, :persist_observations, true)
+
+    event_attrs =
+      PersistencePolicy.wipe_event_attrs(event_attrs,
+        persist_observations: persist?
+      )
 
     with {:ok, _event} <-
            %ChannelEvent{}

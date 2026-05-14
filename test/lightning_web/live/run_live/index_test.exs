@@ -642,6 +642,95 @@ defmodule LightningWeb.RunLive.IndexTest do
         live(conn, "/projects/#{project.id}/channels/requests")
       end
     end
+
+    test "request path column shows the path when the event has one",
+         %{conn: conn, project: project, user: user} do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      channel = insert(:channel, project: project, name: "test-channel")
+
+      {:ok, snapshot} =
+        Lightning.Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
+
+      insert(:channel_event,
+        channel_request: request,
+        type: :destination_response,
+        request_path: "/some/upstream/path"
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      doc = Floki.parse_fragment!(html)
+
+      # "Request Path" header is the second column.
+      assert doc
+             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
+             |> Floki.text() =~ "Request Path"
+
+      # The path cell in the row is the second td.
+      assert doc
+             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
+             |> Floki.text()
+             |> String.trim() == "/some/upstream/path"
+    end
+
+    test "request path column shows a dash when the request was wiped (request_path nil)",
+         %{conn: conn, project: project, user: user} do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      project
+      |> Lightning.Projects.Project.changeset(%{retention_policy: :erase_all})
+      |> Lightning.Repo.update!()
+
+      channel = insert(:channel, project: project, name: "test-channel")
+
+      {:ok, snapshot} =
+        Lightning.Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          is_wiped: true,
+          started_at: DateTime.utc_now()
+        )
+
+      insert(:channel_event,
+        channel_request: request,
+        type: :destination_response,
+        request_path: nil
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      doc = Floki.parse_fragment!(html)
+
+      # Column header stays put.
+      assert doc
+             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
+             |> Floki.text() =~ "Request Path"
+
+      # The path cell in the row renders a dash placeholder (not the path).
+      assert doc
+             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
+             |> Floki.text()
+             |> String.trim() == "—"
+    end
   end
 
   describe "filter chips" do

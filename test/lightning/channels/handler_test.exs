@@ -356,6 +356,165 @@ defmodule Lightning.Channels.HandlerTest do
     end
   end
 
+  describe "with persist_observations: false" do
+    setup %{state: state} do
+      state = Map.put(state, :persist_observations, false)
+      %{state: state}
+    end
+
+    test "handle_request_started/2 nil-s client_identity, sets is_wiped: true, populates everything else",
+         %{state: state} do
+      metadata = request_metadata()
+
+      assert {:ok, new_state} = Handler.handle_request_started(metadata, state)
+
+      assert %ChannelRequest{
+               state: :pending,
+               client_identity: nil,
+               is_wiped: true,
+               request_id: request_id,
+               channel_id: channel_id,
+               channel_snapshot_id: snapshot_id
+             } = new_state.channel_request
+
+      assert request_id == state.request_id
+      assert channel_id == state.channel.id
+      assert snapshot_id == state.snapshot.id
+    end
+
+    test "persist_completion nil-s the scrubbed event fields and marks request is_wiped: true",
+         %{state: state} do
+      metadata =
+        request_metadata(
+          headers: [
+            {"content-type", "application/json"},
+            {"x-custom", "value"}
+          ]
+        )
+
+      {:ok, state} = Handler.handle_request_started(metadata, state)
+
+      state =
+        Map.merge(state, %{
+          ttfb_us: 10_000,
+          response_status: 200,
+          response_headers: [{"content-type", "text/plain"}],
+          query_string: "q=foo"
+        })
+
+      result =
+        philter_result(
+          status: 200,
+          timing: %{total_us: 50_000, send_us: 2_000, recv_us: 1_000},
+          request_observation: %{
+            hash: "req-hash",
+            size: 1024,
+            body: nil,
+            preview: "request body"
+          },
+          response_observation: %{
+            hash: "resp-hash",
+            size: 2048,
+            body: nil,
+            preview: "response body"
+          }
+        )
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      channel_request = Repo.one!(ChannelRequest)
+
+      # Wiped flag is recorded on the request, not the event
+      assert channel_request.is_wiped == true
+
+      # Scrubbed PII fields are all nil on the event
+      assert %ChannelEvent{
+               request_path: nil,
+               request_query_string: nil,
+               request_headers: nil,
+               request_body_preview: nil,
+               request_body_hash: nil,
+               response_headers: nil,
+               response_body_preview: nil,
+               response_body_hash: nil
+             } = event
+
+      # Observability fields are populated as normal
+      assert %ChannelEvent{
+               type: :destination_response,
+               request_method: "GET",
+               response_status: 200,
+               latency_us: 50_000,
+               ttfb_us: 10_000,
+               request_body_size: 1024,
+               response_body_size: 2048,
+               error_message: nil
+             } = event
+    end
+
+    test "persist_completion scrubs error events and marks request is_wiped: true",
+         %{state: state} do
+      metadata = request_metadata()
+      {:ok, state} = Handler.handle_request_started(metadata, state)
+
+      result =
+        philter_result(
+          status: nil,
+          error: %Mint.TransportError{reason: :econnrefused}
+        )
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      channel_request = Repo.one!(ChannelRequest)
+
+      assert channel_request.is_wiped == true
+
+      assert %ChannelEvent{
+               type: :error,
+               request_path: nil,
+               request_headers: nil,
+               request_method: "GET"
+             } = event
+
+      assert event.error_message != nil
+    end
+  end
+
+  describe "with persist_observations: true (default)" do
+    test "persist_completion populates payload fields and leaves request is_wiped: false",
+         %{state: state} do
+      metadata = request_metadata()
+      {:ok, state} = Handler.handle_request_started(metadata, state)
+
+      state =
+        Map.merge(state, %{
+          persist_observations: true,
+          ttfb_us: 10_000,
+          response_status: 200,
+          response_headers: [{"content-type", "text/plain"}]
+        })
+
+      result = philter_result(status: 200)
+
+      assert {:ok, _state} = Handler.handle_response_finished(result, state)
+
+      event = Repo.one!(ChannelEvent)
+      channel_request = Repo.one!(ChannelRequest)
+
+      assert channel_request.is_wiped == false
+
+      assert %ChannelEvent{
+               request_path: "/test/path",
+               request_method: "GET",
+               response_status: 200
+             } = event
+
+      assert is_list(event.request_headers)
+    end
+  end
+
   describe "header encoding — native jsonb" do
     setup %{state: state} do
       metadata =

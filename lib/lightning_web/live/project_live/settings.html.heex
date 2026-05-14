@@ -930,7 +930,7 @@
                     Input/Output Data Storage Policy
                   </div>
                   <div class="block mt-1 mb-3">
-                    Should OpenFn store input/output data for workflow runs?
+                    The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data
                     <a
                       target="_blank"
                       href="https://docs.openfn.org/documentation/manage-projects/io-data-storage"
@@ -945,7 +945,7 @@
                   <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
                   <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
                   <%= for {value, text} <- [
-                  {:retain_all, "Retain input/output data for all workflow runs"},
+                  {:retain_all, "Retain all input/output data"},
                   {:erase_all, "Never retain input/output data (zero-persistence)"}
                   ] do %>
                     <div class="relative flex items-start">
@@ -977,7 +977,7 @@
                 >
                   <:message>
                     <p>
-                      When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                      When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored.
                     </p>
                   </:message>
                 </Common.alert>

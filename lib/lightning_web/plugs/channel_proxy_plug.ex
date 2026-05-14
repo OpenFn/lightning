@@ -23,6 +23,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   alias Lightning.Channels
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
+  alias Lightning.Channels.PersistencePolicy
   alias Lightning.Repo
   alias LightningWeb.Auth
 
@@ -163,7 +164,9 @@ defmodule LightningWeb.ChannelProxyPlug do
         request_path: req.forward_path,
         client_identity: req.client_identity,
         query_string: conn.query_string,
-        destination_credential_id: req.destination_credential_id
+        destination_credential_id: req.destination_credential_id,
+        persist_observations:
+          PersistencePolicy.persist_observations?(req.channel.project_id)
       }
       |> put_auth_method(matched_auth)
 
@@ -308,28 +311,40 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp record_credential_error(conn, %DestinationRequest{} = req, error_message) do
     now = DateTime.utc_now()
 
-    with {:ok, channel_request} <-
+    persist? = PersistencePolicy.persist_observations?(req.channel.project_id)
+
+    with request_attrs <-
+           PersistencePolicy.wipe_request_attrs(
+             %{
+               channel_id: req.channel.id,
+               channel_snapshot_id: req.snapshot.id,
+               request_id: req.request_id,
+               client_identity: req.client_identity,
+               destination_credential_id: req.destination_credential_id,
+               state: :error,
+               started_at: now,
+               completed_at: now
+             },
+             persist_observations: persist?
+           ),
+         {:ok, channel_request} <-
            %ChannelRequest{}
-           |> ChannelRequest.changeset(%{
-             channel_id: req.channel.id,
-             channel_snapshot_id: req.snapshot.id,
-             request_id: req.request_id,
-             client_identity: req.client_identity,
-             destination_credential_id: req.destination_credential_id,
-             state: :error,
-             started_at: now,
-             completed_at: now
-           })
+           |> ChannelRequest.changeset(request_attrs)
            |> Repo.insert(),
+         event_attrs <-
+           PersistencePolicy.wipe_event_attrs(
+             %{
+               channel_request_id: channel_request.id,
+               type: :error,
+               request_method: conn.method,
+               request_path: conn.request_path,
+               error_message: error_message
+             },
+             persist_observations: persist?
+           ),
          {:ok, _event} <-
            %ChannelEvent{}
-           |> ChannelEvent.changeset(%{
-             channel_request_id: channel_request.id,
-             type: :error,
-             request_method: conn.method,
-             request_path: conn.request_path,
-             error_message: error_message
-           })
+           |> ChannelEvent.changeset(event_attrs)
            |> Repo.insert() do
       :ok
     else
