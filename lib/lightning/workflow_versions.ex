@@ -21,8 +21,8 @@ defmodule Lightning.WorkflowVersions do
   alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Validators.Hex
-  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
+  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
 
   @type hash :: String.t()
