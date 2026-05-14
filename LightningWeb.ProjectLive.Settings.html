@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-5BBDE2DC.js"></script>
+    <script defer src="dist/sidebar_items-99CB1FD5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -111,7 +111,19 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Index Liveview for project settings</p>
+<p>Index LiveView for project settings.</p><h2 id="module-view-extension-slots" class="section-heading"><a href="#module-view-extension-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">View-extension slots</span></h2><p>Two slots let downstream apps inject LiveComponents into the settings page
+by registering them in route metadata:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="0460774637-1">{</span><span class="s">&quot;/projects/:project_id/settings&quot;</span><span class="p">,</span><span class="w"> </span><span class="nc">LightningWeb.ProjectLive.Settings</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p">,</span><span class="w">
+ </span><span class="ss">metadata</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0460774637-2">%{</span><span class="w">
+   </span><span class="ss">concurrency_input</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.ConcurrencyInputComponent</span><span class="p">,</span><span class="w">
+   </span><span class="ss">usage_caps_input</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.UsageCapsInputComponent</span><span class="w">
+ </span><span class="p" data-group-id="0460774637-2">}</span><span class="p" data-group-id="0460774637-1">}</span></code></pre><p>Each slot has its own assigns contract, which the component must accept:</p><ul><li><p><code class="inline">:concurrency_input</code> receives <code class="inline">field</code> (the <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> field for
+<code class="inline">project.concurrency</code>), <code class="inline">project</code>, and <code class="inline">disabled</code> (a pre-computed
+boolean — Lightning resolves whether the current user is allowed to
+edit the value and passes the result through).</p></li><li><p><code class="inline">:usage_caps_input</code> receives <code class="inline">project</code> and <code class="inline">current_user</code>. The
+component computes its own permission gate (typically via
+<a href="Lightning.Projects.Sandboxes.html#parent_admin?/2"><code class="inline">Lightning.Projects.Sandboxes.parent_admin?/2</code></a>) because cap-editing
+authority is owned by the downstream billing layer, not by Lightning.</p></li></ul><p>Slots are optional. Routes that omit a metadata key get a hidden slot —
+the page renders identically to OSS defaults.</p>
     </section>
 
 </div>
@@ -127,6 +139,18 @@ Lightning
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#concurrency_input_slot/1" data-no-tooltip="" translate="no">concurrency_input_slot(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>View-extension slot wrapper for the project-level concurrency override input.
+Forwards <code class="inline">field</code>, <code class="inline">project</code>, and a pre-computed <code class="inline">disabled</code> boolean to the
+registered LiveComponent.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -148,6 +172,19 @@ Lightning
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#usage_caps_input_slot/1" data-no-tooltip="" translate="no">usage_caps_input_slot(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>View-extension slot wrapper for the per-project usage-caps input. Forwards
+<code class="inline">project</code> and <code class="inline">current_user</code> to the registered LiveComponent so the
+component can run its own permission gate (cap-editing authority lives in
+the downstream billing layer, not in Lightning).</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -162,6 +199,30 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="concurrency_input_slot/1">
+
+  <div class="detail-header">
+    <a href="#concurrency_input_slot/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">concurrency_input_slot(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/settings.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>View-extension slot wrapper for the project-level concurrency override input.
+Forwards <code class="inline">field</code>, <code class="inline">project</code>, and a pre-computed <code class="inline">disabled</code> boolean to the
+registered LiveComponent.</p><h2 id="concurrency_input_slot/1-attributes" class="section-heading"><a href="#concurrency_input_slot/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">component</code> (<code class="inline">:atom</code>) (required)</li><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.3.0/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) (required)</li><li><code class="inline">project</code> (<a href="Lightning.Projects.Project.html"><code class="inline">Lightning.Projects.Project</code></a>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) (required)</li></ul>
+  </section>
+</section>
 <section class="detail" id="render/1">
 
   <div class="detail-header">
@@ -194,7 +255,7 @@ Lightning
       <h1 class="signature" translate="no">support_access_toggle(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/settings.ex#L803" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/settings.ex#L875" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -204,6 +265,31 @@ Lightning
   <section class="docstring">
 
 <h2 id="support_access_toggle/1-attributes" class="section-heading"><a href="#support_access_toggle/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">can_edit_project</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:any</code>) (required)</li></ul>
+  </section>
+</section>
+<section class="detail" id="usage_caps_input_slot/1">
+
+  <div class="detail-header">
+    <a href="#usage_caps_input_slot/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">usage_caps_input_slot(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/project_live/settings.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>View-extension slot wrapper for the per-project usage-caps input. Forwards
+<code class="inline">project</code> and <code class="inline">current_user</code> to the registered LiveComponent so the
+component can run its own permission gate (cap-editing authority lives in
+the downstream billing layer, not in Lightning).</p><h2 id="usage_caps_input_slot/1-attributes" class="section-heading"><a href="#usage_caps_input_slot/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">component</code> (<code class="inline">:atom</code>) (required)</li><li><code class="inline">project</code> (<a href="Lightning.Projects.Project.html"><code class="inline">Lightning.Projects.Project</code></a>) (required)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) (required)</li></ul>
   </section>
 </section>
 
