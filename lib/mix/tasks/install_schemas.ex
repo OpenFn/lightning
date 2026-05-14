@@ -16,7 +16,19 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     "language-divoc"
   ]
 
+  # Descending on purpose: the first attempt is generous to let jsdelivr warm
+  # a cold cache for packages it hasn't served recently. Follow-up attempts
+  # are shorter because we expect a now-warm hit and want to fail fast if not.
   @recv_timeouts [30_000, 15_000, 5_000]
+
+  # hackney error reasons that we treat as transient and worth retrying.
+  # Anything else (e.g. :nxdomain, :econnrefused) is logged with its reason
+  # and skipped immediately rather than retried.
+  @retriable_reasons [:timeout, :closed, :connect_timeout, :checkout_timeout]
+
+  # Outer Task.async_stream timeout. Must comfortably exceed the sum of
+  # @recv_timeouts (50s) plus connect/DNS/body overhead.
+  @async_stream_timeout 75_000
 
   @spec run(any) :: any
   def run(args) do
@@ -102,17 +114,23 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
         {:skipped, package_name, {:http_status, status_code}}
 
-      {:error, %HTTPoison.Error{reason: reason}} when rest != [] ->
+      {:error, %HTTPoison.Error{reason: reason}}
+      when reason in @retriable_reasons and rest != [] ->
+        [next_timeout | _] = rest
+
         Logger.warning(
           "Transient error fetching #{package_name} (#{inspect(reason)}); " <>
-            "retrying with recv_timeout=#{hd(rest)}ms"
+            "retrying with recv_timeout=#{next_timeout}ms"
         )
 
         attempt_persist_schema(dir, package_name, rest)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
+        attempts_used = length(@recv_timeouts) - length(rest)
+
         Logger.warning(
-          "Skipping #{package_name}: #{inspect(reason)} after #{length(@recv_timeouts)} attempts"
+          "Skipping #{package_name}: #{inspect(reason)} after " <>
+            "#{attempts_used} attempt(s)"
         )
 
         {:skipped, package_name, reason}
@@ -131,30 +149,50 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         excluded = excluded |> Enum.map(&"@openfn/#{&1}")
 
-        body
-        |> Jason.decode!()
-        |> Enum.map(fn {name, _} -> name end)
-        |> Enum.filter(fn name ->
-          Regex.match?(~r/@openfn\/language-\w+/, name)
-        end)
-        |> Enum.reject(fn name ->
-          name in excluded
-        end)
-        |> Task.async_stream(fun,
-          ordered: false,
+        names =
+          body
+          |> Jason.decode!()
+          |> Enum.map(fn {name, _} -> name end)
+          |> Enum.filter(fn name ->
+            Regex.match?(~r/@openfn\/language-\w+/, name)
+          end)
+          |> Enum.reject(fn name -> name in excluded end)
+
+        # Wrap fun so a worker crash (raise/exit) becomes a normal {:skipped,
+        # _, _} result instead of taking the caller down via the task link.
+        # ordered: true (the default) lets us zip results against `names` so
+        # the on_timeout: :kill_task path can also recover the package name.
+        safe_fun = fn name ->
+          try do
+            fun.(name)
+          catch
+            kind, reason ->
+              Logger.warning(
+                "Schema fetch worker for #{name} crashed: " <>
+                  "#{inspect({kind, reason})}"
+              )
+
+              {:skipped, name, {kind, reason}}
+          end
+        end
+
+        names
+        |> Task.async_stream(safe_fun,
           max_concurrency: 5,
-          timeout: 60_000
+          timeout: @async_stream_timeout,
+          on_timeout: :kill_task
         )
+        |> Stream.zip(names)
         |> Stream.map(fn
-          {:ok, result} ->
+          {{:ok, result}, _name} ->
             result
 
-          {:exit, reason} ->
+          {{:exit, reason}, name} ->
             Logger.warning(
-              "Schema fetch task exited unexpectedly: #{inspect(reason)}"
+              "Schema fetch task for #{name} killed: #{inspect(reason)}"
             )
 
-            {:skipped, "unknown", reason}
+            {:skipped, name, reason}
         end)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
