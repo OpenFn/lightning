@@ -125,15 +125,10 @@ defmodule Lightning.Projects.Sandboxes do
              | Ecto.Changeset.t()
              | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    cond do
-      not Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) ->
-        {:error, :unauthorized}
-
-      nesting_depth_exceeded?(parent) ->
-        {:error, :nesting_too_deep}
-
-      true ->
-        create_sandbox_from_parent(parent, actor, attrs)
+    if Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) do
+      create_sandbox_from_parent(parent, actor, attrs)
+    else
+      {:error, :unauthorized}
     end
   end
 
@@ -452,6 +447,21 @@ defmodule Lightning.Projects.Sandboxes do
     sandbox_env = Map.get(attrs, :env)
 
     Repo.transaction(fn ->
+      # Nesting-depth check happens inside the transaction so the depth
+      # read and the sandbox insert share an isolation context.
+      #
+      # Known theoretical race: PostgreSQL's default READ COMMITTED isolation
+      # still permits a concurrent committed reparent of `parent` or any of
+      # its ancestors between the depth read and the insert, which could
+      # place the new sandbox one level above the cap. There is no
+      # reparenting code path in current Lightning, so the race is
+      # theoretical today. If a re-homing feature ever ships, revisit this
+      # with `SELECT FOR UPDATE` on the ancestor chain (see PR review for
+      # the C-full sketch).
+      if nesting_depth_exceeded?(parent) do
+        Repo.rollback(:nesting_too_deep)
+      end
+
       parent_with_data = load_parent_associations(parent)
 
       sandbox_attrs =
