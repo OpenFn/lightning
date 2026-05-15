@@ -49,7 +49,7 @@ defmodule LightningWeb.AdaptorIconController do
 
   use LightningWeb, :controller
 
-  alias Lightning.Adaptors.Store
+  alias Lightning.Adaptors
 
   @immutable_cache "public, max-age=31536000, immutable"
 
@@ -59,7 +59,7 @@ defmodule LightningWeb.AdaptorIconController do
         %{"name" => name, "shape" => shape, "sha8" => sha8, "ext" => ext}
       )
       when shape in ~w(square rectangle) do
-    case Store.icon_meta(Lightning.Adaptors, name) do
+    case Adaptors.icon_meta(name) do
       {:error, :not_found} ->
         send_resp(conn, 404, "")
 
@@ -83,7 +83,7 @@ defmodule LightningWeb.AdaptorIconController do
   def show(conn, _params), do: send_resp(conn, 404, "")
 
   defp serve_bytes(conn, name, shape, ext) do
-    case Store.icon(Lightning.Adaptors, name, String.to_existing_atom(shape)) do
+    case Adaptors.icon(name, String.to_existing_atom(shape)) do
       {:ok, path} ->
         conn
         |> put_resp_content_type(content_type_for(ext))
