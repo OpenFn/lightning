@@ -147,7 +147,6 @@ defmodule LightningWeb.API.ProvisioningJSON do
       enabled: channel.enabled,
       destination_credential_id: destination_credential_id(channel)
     }
-    |> drop_keys_with_nil_value()
   end
 
   defp destination_credential_id(%Channel{destination_auth_method: method}) do

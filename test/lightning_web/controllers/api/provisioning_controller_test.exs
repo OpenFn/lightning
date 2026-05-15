@@ -135,11 +135,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                  "id" => ^channel_without_cred_id,
                  "name" => "without-cred",
                  "destination_url" => "https://example.com/b",
-                 "enabled" => false
-               } = channel_without_cred_json
+                 "enabled" => false,
+                 "destination_credential_id" => nil
+               }
              ] = channels_resp
-
-      refute Map.has_key?(channel_without_cred_json, "destination_credential_id")
     end
 
     test "returns a non empty project without credentials", %{
