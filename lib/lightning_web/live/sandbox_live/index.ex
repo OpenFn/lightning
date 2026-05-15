@@ -532,6 +532,7 @@ defmodule LightningWeb.SandboxLive.Index do
       Projects.list_workspace_projects(project.id)
 
     current_user = socket.assigns.current_user
+    limit_new_sandbox = socket.assigns.limit_new_sandbox
 
     can_create_sandbox =
       Permissions.can?(
@@ -562,12 +563,14 @@ defmodule LightningWeb.SandboxLive.Index do
           })
 
         scheduled? = not is_nil(sandbox.scheduled_deletion)
+        restore_blocked_by_limit? = scheduled? and limit_new_sandbox != :ok
 
         sandbox
         |> Map.put(:can_edit, perms.update and not scheduled?)
         |> Map.put(:can_delete, perms.delete and not scheduled?)
         |> Map.put(:can_merge, perms.merge and not scheduled?)
         |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
+        |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
         |> Map.put(:scheduled_for_deletion?, scheduled?)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
@@ -696,6 +699,14 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket) do
     put_flash(socket, :error, "Sandbox not found")
+  end
+
+  defp handle_cancel_deletion_result(
+         {:error, :too_many_sandboxes, %{text: text}},
+         _sandbox,
+         socket
+       ) do
+    put_flash(socket, :error, text)
   end
 
   defp get_merge_target_options(socket, source_sandbox) do

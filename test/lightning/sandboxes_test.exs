@@ -2406,5 +2406,33 @@ defmodule Lightning.Projects.SandboxesTest do
                  actor
                )
     end
+
+    test "refuses to restore when the active sandbox limit is reached" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      message = %Lightning.Extensions.Message{
+        text:
+          "Plan limit reached. In order to restore this you must first delete an active sandbox"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      assert {:error, :too_many_sandboxes, ^message} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      # State unchanged.
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
   end
 end

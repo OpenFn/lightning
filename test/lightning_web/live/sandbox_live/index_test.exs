@@ -1093,6 +1093,60 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Sandbox not found"
     end
 
+    test "Restore button is disabled with a plan-limit tooltip when at limit",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      message = %Lightning.Extensions.Message{
+        text:
+          "Plan limit reached. In order to restore this you must first delete an active sandbox"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(
+               view,
+               "#cancel-deletion-sandbox-#{scheduled.id} button[disabled]"
+             )
+
+      html = render(view)
+
+      assert html =~
+               "Plan limit reached. In order to restore this you must first delete an active sandbox"
+    end
+
+    test "Restore flashes the plan-limit message when the backend rejects",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      message = %Lightning.Extensions.Message{
+        text:
+          "Plan limit reached. In order to restore this you must first delete an active sandbox"
+      }
+
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :cancel_scheduled_sandbox_deletion,
+        fn _sandbox, _actor ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      html =
+        render_click(view, "cancel-sandbox-deletion", %{"id" => scheduled.id})
+
+      assert html =~
+               "Plan limit reached. In order to restore this you must first delete an active sandbox"
+    end
+
     test "tooltip shows the day count when scheduled more than a day out", %{
       conn: conn,
       user: user

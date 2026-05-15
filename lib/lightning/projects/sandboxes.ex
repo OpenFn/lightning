@@ -49,6 +49,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
@@ -364,6 +365,14 @@ defmodule Lightning.Projects.Sandboxes do
   or from a separate scheduling action on the descendant itself. Any row
   whose `scheduled_deletion` is already nil is left alone.
 
+  ## Plan limit
+
+  Restoring a sandbox moves it back into the active count, so the same
+  plan-limit check that gates new sandbox creation also gates restore.
+  When the active-sandbox count is already at the limit, restore is
+  refused with `{:error, :too_many_sandboxes, message}`; the operator
+  needs to delete an active sandbox first.
+
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
   * `actor` - User performing the action (needs `:delete_sandbox` permission)
@@ -372,17 +381,26 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
   * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  * `{:error, :too_many_sandboxes, message}` - Plan limit reached
   """
   @spec cancel_scheduled_sandbox_deletion(
           Project.t() | Ecto.UUID.t(),
           User.t()
         ) ::
-          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | term()}
+          | {:error, :too_many_sandboxes, Lightning.Extensions.Message.t()}
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
-      do_cancel_scheduled_sandbox_deletion(sandbox)
-    else
-      {:error, :unauthorized}
+    cond do
+      not Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) ->
+        {:error, :unauthorized}
+
+      true ->
+        case ProjectLimiter.limit_new_sandbox(sandbox.id) do
+          :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
+          {:error, :too_many_sandboxes, _message} = error -> error
+          {:error, _reason, _message} = error -> error
+        end
     end
   end
 
