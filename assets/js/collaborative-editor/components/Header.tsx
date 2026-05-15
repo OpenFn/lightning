@@ -400,6 +400,8 @@ export function Header({
         !isRunPanelOpen &&
         !isIDEOpen &&
         !isNewWorkflow &&
+        !isSubmitting &&
+        !runIsProcessing &&
         !!projectId &&
         !!workflowId &&
         (isRetryable || !!firstTriggerId),
