@@ -1362,8 +1362,8 @@ defmodule Lightning.Projects.ProvisionerTest do
                Provisioner.import_document(project, user, body)
 
       # Both channels emit "created" and "auth_method_added" audits scoped
-      # to their own item_id — proves the per-channel Multi.put(:channel, ...)
-      # path doesn't collide on the shared `:audit_destination_added` key.
+      # to their own item_id — proves the batched single-Multi path doesn't
+      # collide on shared audit step keys.
       for channel_id <- [channel_a_id, channel_b_id] do
         assert created =
                  Repo.one(
@@ -1454,6 +1454,86 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       # Channel is unchanged in the database
       assert Repo.reload(channel)
+    end
+
+    test "rejects a destination_credential_id from another project", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      other_project = insert(:project)
+      foreign_pc = insert(:project_credential, project: other_project)
+
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => foreign_pc.id
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg =~ "isn't available in this project"
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a job project_credential_id from another project", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      other_project = insert(:project)
+      foreign_pc = insert(:project_credential, project: other_project)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        workflows: [%{first_job_id: first_job_id}]
+      } =
+        valid_document(project_id)
+
+      tainted_jobs =
+        Enum.map(workflow["jobs"], fn job ->
+          if job["id"] == first_job_id do
+            Map.put(job, "project_credential_id", foreign_pc.id)
+          else
+            job
+          end
+        end)
+
+      body = Map.put(body, "workflows", [%{workflow | "jobs" => tainted_jobs}])
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               workflows: [%{jobs: job_errors}]
+             } = flatten_errors(changeset)
+
+      assert Enum.any?(job_errors, fn job_error ->
+               case job_error do
+                 %{project_credential_id: [msg]} ->
+                   msg =~ "isn't available in this project"
+
+                 _ ->
+                   false
+               end
+             end)
     end
 
     test "setting a channel's destination_credential_id replaces the existing auth method",

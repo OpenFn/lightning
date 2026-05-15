@@ -122,9 +122,8 @@ defmodule Lightning.Projects.Provisioner do
   defp build_import_changeset(project, user_or_repo_connection, data) do
     project
     |> preload_dependencies()
-    |> parse_document(data)
+    |> parse_document(data, user_or_repo_connection)
     |> maybe_add_project_user(user_or_repo_connection)
-    |> maybe_add_project_credentials(user_or_repo_connection)
   end
 
   defp audit_workflows(project_changeset, user_or_repo_connection) do
@@ -216,36 +215,27 @@ defmodule Lightning.Projects.Provisioner do
     )
   end
 
-  # Iterates each cast_assoc'd channel changeset, running a per-channel
-  # Multi for audits. Each Multi is independent so the static step names
-  # used by `Channels.Audit.audit_auth_method_changes/3`
-  # (`:audit_destination_added`, etc.) don't collide across channels.
-  #
-  # `Multi.put(:channel, %Channel{id: channel_id})` supplies the channel
-  # under the `:channel` key that the shared audit helper expects.
   defp audit_channels(project_changeset, actor) do
     project_changeset
     |> get_assoc(:channels)
-    |> Enum.reduce_while({:ok, :done}, fn channel_cs, _acc ->
-      case audit_one_channel(channel_cs, actor) do
-        :skip -> {:cont, {:ok, :done}}
-        {:ok, _changes} -> {:cont, {:ok, :done}}
-        {:error, _, reason, _} -> {:halt, {:error, reason}}
-      end
+    |> Enum.reduce(Multi.new(), fn channel_cs, multi ->
+      append_channel_audits(multi, channel_cs, actor)
     end)
+    |> Repo.transaction()
+    |> normalize_txn()
   end
 
-  defp audit_one_channel(channel_cs, actor) do
+  defp append_channel_audits(multi, channel_cs, actor) do
     case classify_channel_audit(channel_cs) do
       :skip ->
-        :skip
+        multi
 
       {event, channel_id} ->
-        Multi.new()
-        |> Multi.put(:channel, %Channel{id: channel_id})
+        channel = %Channel{id: channel_id}
+
+        multi
         |> append_channel_event_audit(event, channel_id, channel_cs, actor)
-        |> ChannelAudit.audit_auth_method_changes(channel_cs, actor)
-        |> Repo.transaction()
+        |> ChannelAudit.audit_auth_method_changes(channel, channel_cs, actor)
     end
   end
 
@@ -270,7 +260,7 @@ defmodule Lightning.Projects.Provisioner do
         multi
 
       %Ecto.Changeset{} = audit_cs ->
-        Multi.insert(multi, :channel_audit, audit_cs)
+        Multi.insert(multi, "channel_audit_#{channel_id}", audit_cs)
     end
   end
 
@@ -313,13 +303,27 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  @spec parse_document(Project.t(), map()) :: Ecto.Changeset.t(Project.t())
-  def parse_document(%Project{} = project, data) when is_map(data) do
-    project
-    |> project_changeset(data)
+  @spec parse_document(
+          Project.t(),
+          map(),
+          User.t() | ProjectRepoConnection.t() | nil
+        ) ::
+          Ecto.Changeset.t(Project.t())
+  def parse_document(project, data, user_or_repo_connection \\ nil)
+
+  def parse_document(%Project{} = project, data, user_or_repo_connection)
+      when is_map(data) do
+    changeset =
+      project
+      |> project_changeset(data)
+      |> maybe_add_project_credentials(user_or_repo_connection)
+
+    valid_pc_ids = valid_project_credential_ids(changeset)
+
+    changeset
     |> cast_assoc(:collections, with: &collection_changeset/2)
-    |> cast_assoc(:channels, with: &channel_changeset/2)
-    |> cast_assoc(:workflows, with: &workflow_changeset/2)
+    |> cast_assoc(:channels, with: &channel_changeset(&1, &2, valid_pc_ids))
+    |> cast_assoc(:workflows, with: &workflow_changeset(&1, &2, valid_pc_ids))
     |> then(fn changeset ->
       case WorkflowUsageLimiter.limit_workflows_activation(
              project,
@@ -341,6 +345,13 @@ defmodule Lightning.Projects.Provisioner do
           add_error(changeset, :id, message)
       end
     end)
+  end
+
+  defp valid_project_credential_ids(changeset) do
+    changeset
+    |> get_assoc(:project_credentials)
+    |> Enum.map(&get_field(&1, :id))
+    |> Enum.reject(&is_nil/1)
   end
 
   defp limit_collection_creation(changeset) do
@@ -499,18 +510,46 @@ defmodule Lightning.Projects.Provisioner do
     |> Collection.validate()
   end
 
-  defp channel_changeset(channel, attrs) do
+  defp channel_changeset(channel, attrs, valid_project_credentials) do
     attrs = maybe_add_destination_auth_param(attrs, channel)
 
     channel
-    |> cast(attrs, [:id, :name, :destination_url, :enabled, :delete])
+    |> cast(attrs, [
+      :id,
+      :name,
+      :destination_url,
+      :enabled,
+      :delete
+    ])
     |> validate_required([:id, :name, :destination_url])
     |> block_channel_deletion()
     |> cast_assoc(:destination_auth_method,
-      with: &ChannelAuthMethod.changeset/2
+      with: fn struct, attrs ->
+        struct
+        |> ChannelAuthMethod.changeset(attrs)
+        |> validate_project_credential_in_project(
+          :project_credential_id,
+          valid_project_credentials
+        )
+      end
     )
     |> validate_extraneous_params()
     |> Channel.validate()
+  end
+
+  defp validate_project_credential_in_project(
+         changeset,
+         field,
+         valid_project_credentials
+       ) do
+    changeset
+    |> validate_change(field, fn _ky, value ->
+      if value in valid_project_credentials do
+        []
+      else
+        [{field, "credential doesnt exist or isn't available in this project"}]
+      end
+    end)
   end
 
   # Channel deletion is intentionally rejected by the provisioner because
@@ -571,20 +610,20 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp workflow_changeset(workflow, attrs) do
+  defp workflow_changeset(workflow, attrs, valid_project_credentials) do
     workflow
     |> cast(attrs, [:id, :name, :delete, :deleted_at])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_soft_delete_workflow()
     |> validate_extraneous_params(ignore: ["version_history"])
-    |> cast_assoc(:jobs, with: &job_changeset/2)
+    |> cast_assoc(:jobs, with: &job_changeset(&1, &2, valid_project_credentials))
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
     |> Workflow.validate()
   end
 
-  defp job_changeset(job, attrs) do
+  defp job_changeset(job, attrs, valid_project_credentials) do
     job
     |> Job.changeset(attrs)
     |> cast(attrs, [:delete])
@@ -592,6 +631,10 @@ defmodule Lightning.Projects.Provisioner do
     |> unique_constraint(:id, name: :jobs_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
+    |> validate_project_credential_in_project(
+      :project_credential_id,
+      valid_project_credentials
+    )
   end
 
   defp trigger_changeset(trigger, attrs) do

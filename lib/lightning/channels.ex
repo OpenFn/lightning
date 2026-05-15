@@ -200,7 +200,9 @@ defmodule Lightning.Channels do
         %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
       end
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -224,7 +226,9 @@ defmodule Lightning.Channels do
         %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
       end
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}

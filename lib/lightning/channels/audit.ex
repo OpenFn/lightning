@@ -3,7 +3,7 @@ defmodule Lightning.Channels.Audit do
   Audit trail for channel CRUD and auth method changes.
 
   Provides `event/5` (via `Lightning.Auditing.Audit`) for basic CRUD events,
-  plus `audit_auth_method_changes/3` which derives fine-grained audit events
+  plus `audit_auth_method_changes/4` which derives fine-grained audit events
   for client and destination auth method additions, removals, and swaps.
   """
   use Lightning.Auditing.Audit,
@@ -19,6 +19,7 @@ defmodule Lightning.Channels.Audit do
     ]
 
   alias Ecto.Multi
+  alias Lightning.Channels.Channel
 
   @doc """
   Appends audit events for auth method changes to the given Multi.
@@ -27,18 +28,18 @@ defmodule Lightning.Channels.Audit do
   `:destination_auth_method`, emitting the appropriate added/removed/changed
   events. No-op when no auth method changes are present.
 
-  Expects the parent Multi to expose the channel under the `:channel` key
-  (e.g. via `Multi.insert(:channel, ...)` or `Multi.put(:channel, ...)`).
+  Step keys are unique per call, so the helper can be composed into a larger Multi any number of
+  times — e.g. once per channel when batching audits across channels.
   """
-  def audit_auth_method_changes(multi, changeset, actor) do
+  def audit_auth_method_changes(multi, %Channel{} = channel, changeset, actor) do
     multi
-    |> audit_client_changes(changeset, actor)
-    |> audit_destination_changes(changeset, actor)
+    |> audit_client_changes(channel, changeset, actor)
+    |> audit_destination_changes(channel, changeset, actor)
   end
 
   # --- Client auth methods (has_many) ---
 
-  defp audit_client_changes(multi, changeset, actor) do
+  defp audit_client_changes(multi, channel, changeset, actor) do
     changes =
       Ecto.Changeset.get_change(changeset, :client_auth_methods, [])
 
@@ -46,8 +47,8 @@ defmodule Lightning.Channels.Audit do
     deleted = Enum.filter(changes, &(&1.action == :delete))
 
     multi
-    |> add_auth_method_audits(:added, inserted, :client, actor)
-    |> add_auth_method_audits(:removed, deleted, :client, actor)
+    |> add_auth_method_audits(:added, inserted, :client, channel, actor)
+    |> add_auth_method_audits(:removed, deleted, :client, channel, actor)
   end
 
   # --- Destination auth method (has_one, on_replace: :delete) ---
@@ -58,7 +59,7 @@ defmodule Lightning.Channels.Audit do
   # 3. Swap (existing → different) → replace produces a delete of old +
   #    insert of new. We emit a single "auth_method_changed" event instead.
 
-  defp audit_destination_changes(multi, changeset, actor) do
+  defp audit_destination_changes(multi, channel, changeset, actor) do
     old = changeset.data |> Map.get(:destination_auth_method)
     has_existing? = old != nil and not match?(%Ecto.Association.NotLoaded{}, old)
 
@@ -71,7 +72,7 @@ defmodule Lightning.Channels.Audit do
         multi
 
       nil when has_existing? ->
-        audit_destination_removed(multi, old, actor)
+        audit_destination_removed(multi, channel, old, actor)
 
       nil ->
         multi
@@ -80,47 +81,54 @@ defmodule Lightning.Channels.Audit do
         old_fields = fields_for_data(old, :destination)
         new_fields = fields_for_changeset(new_cs, :destination)
 
-        Multi.insert(multi, :audit_destination_changed, fn %{channel: channel} ->
+        Multi.insert(
+          multi,
+          unique_key(:audit_destination_changed),
           event("auth_method_changed", channel.id, actor, %{
             before: old_fields,
             after: new_fields
           })
-        end)
+        )
 
       %Ecto.Changeset{action: :insert} = new_cs ->
         fields = fields_for_changeset(new_cs, :destination)
 
-        Multi.insert(multi, :audit_destination_added, fn %{channel: channel} ->
+        Multi.insert(
+          multi,
+          unique_key(:audit_destination_added),
           event("auth_method_added", channel.id, actor, %{
             before: nil,
             after: fields
           })
-        end)
+        )
 
       %Ecto.Changeset{action: :delete} when has_existing? ->
-        audit_destination_removed(multi, old, actor)
+        audit_destination_removed(multi, channel, old, actor)
 
       %Ecto.Changeset{action: :delete} ->
         multi
     end
   end
 
-  defp audit_destination_removed(multi, nil, _actor), do: multi
+  defp audit_destination_removed(multi, _channel, nil, _actor), do: multi
 
-  defp audit_destination_removed(multi, old, actor) do
+  defp audit_destination_removed(multi, channel, old, actor) do
     old_fields = fields_for_data(old, :destination)
 
-    Multi.insert(multi, :audit_destination_removed, fn %{channel: channel} ->
+    Multi.insert(
+      multi,
+      unique_key("audit_destination_removed"),
       event("auth_method_removed", channel.id, actor, %{
         before: old_fields,
         after: nil
       })
-    end)
+    )
   end
 
-  defp add_auth_method_audits(multi, _direction, [], _role, _actor), do: multi
+  defp add_auth_method_audits(multi, _direction, [], _role, _channel, _actor),
+    do: multi
 
-  defp add_auth_method_audits(multi, direction, changesets, role, actor) do
+  defp add_auth_method_audits(multi, direction, changesets, role, channel, actor) do
     {event_name, extract_fields, wrap} =
       case direction do
         :added ->
@@ -130,22 +138,22 @@ defmodule Lightning.Channels.Audit do
           {"auth_method_removed", &fields_for_data(&1.data, role), &{&1, nil}}
       end
 
-    changesets
-    |> Enum.with_index()
-    |> Enum.reduce(multi, fn {cs, idx}, acc ->
+    Enum.reduce(changesets, multi, fn cs, acc ->
       {before, after_val} = wrap.(extract_fields.(cs))
 
       Multi.insert(
         acc,
-        :"audit_#{role}_#{event_name}_#{idx}",
-        fn %{channel: channel} ->
-          event(event_name, channel.id, actor, %{
-            before: before,
-            after: after_val
-          })
-        end
+        unique_key("audit_#{role}_#{event_name}"),
+        event(event_name, channel.id, actor, %{
+          before: before,
+          after: after_val
+        })
       )
     end)
+  end
+
+  defp unique_key(base) do
+    "#{base}_#{System.unique_integer([:positive])}"
   end
 
   # Extract fields from a changeset (for inserts/new records)
