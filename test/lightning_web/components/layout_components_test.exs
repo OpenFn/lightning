@@ -117,6 +117,30 @@ defmodule LightningWeb.LayoutComponentsTest do
 
       refute html =~ "global-project-picker"
     end
+
+    test "items omit sandboxes the user has no access to" do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      parent =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
+
+      visible_sandbox =
+        Lightning.Factories.insert(:project,
+          parent: parent,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      hidden_sandbox = Lightning.Factories.insert(:project, parent: parent)
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      assert html =~ visible_sandbox.id
+      refute html =~ hidden_sandbox.id
+    end
   end
 
   test "menu_item/1 renders custom menu items" do

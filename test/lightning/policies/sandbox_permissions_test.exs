@@ -658,6 +658,34 @@ defmodule Lightning.Policies.SandboxesTest do
                root_project
              ) == []
     end
+
+    test "support user sees every sandbox on a support-access root" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+      sandbox_a = insert(:project, parent: root)
+      sandbox_b = insert(:project, parent: root)
+
+      root = Lightning.Repo.preload(root, :project_users)
+      sandbox_a = Lightning.Repo.preload(sandbox_a, :project_users)
+      sandbox_b = Lightning.Repo.preload(sandbox_b, :project_users)
+
+      assert Sandboxes.visible_sandboxes(
+               [sandbox_a, sandbox_b],
+               support_user,
+               root
+             ) == [sandbox_a, sandbox_b]
+    end
+
+    test "support user sees nothing on a root that does not allow support access" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: false)
+      sandbox = insert(:project, parent: root)
+
+      root = Lightning.Repo.preload(root, :project_users)
+      sandbox = Lightning.Repo.preload(sandbox, :project_users)
+
+      assert Sandboxes.visible_sandboxes([sandbox], support_user, root) == []
+    end
   end
 
   describe "edge cases and private function coverage" do

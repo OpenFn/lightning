@@ -990,26 +990,22 @@ defmodule Lightning.Projects do
   end
 
   defp filter_descendants_for_user(descendants, roots, %User{} = user) do
-    cascading_root_ids = cascading_root_ids_for_user(roots, user)
     project_map = Map.new(roots ++ descendants, &{&1.id, &1})
+    root_lookup = Map.new(roots, &{&1.id, &1})
 
-    Enum.filter(descendants, fn project ->
-      user.role == :superuser or
-        MapSet.member?(cascading_root_ids, root_id_of(project, project_map)) or
-        Enum.any?(project.project_users, &(&1.user_id == user.id))
-    end)
-  end
+    descendants
+    |> Enum.group_by(&root_id_of(&1, project_map))
+    |> Enum.flat_map(fn {root_id, group} ->
+      case Map.fetch(root_lookup, root_id) do
+        {:ok, root} ->
+          Lightning.Policies.Sandboxes.visible_sandboxes(group, user, root)
 
-  defp cascading_root_ids_for_user(roots, %User{} = user) do
-    roots
-    |> Enum.filter(fn root ->
-      (user.support_user and root.allow_support_access) or
-        Enum.any?(
-          root.project_users,
-          &(&1.user_id == user.id and &1.role in [:owner, :admin])
-        )
+        :error ->
+          Enum.filter(group, fn project ->
+            Enum.any?(project.project_users, &(&1.user_id == user.id))
+          end)
+      end
     end)
-    |> MapSet.new(& &1.id)
   end
 
   defp root_id_of(%Project{parent_id: nil, id: id}, _project_map), do: id
