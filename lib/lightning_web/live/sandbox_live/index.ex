@@ -563,7 +563,9 @@ defmodule LightningWeb.SandboxLive.Index do
           })
 
         scheduled? = not is_nil(sandbox.scheduled_deletion)
-        restore_blocked_by_limit? = scheduled? and limit_new_sandbox != :ok
+
+        {restore_blocked_by_limit?, restore_blocked_message} =
+          restore_block_state(scheduled?, limit_new_sandbox)
 
         sandbox
         |> Map.put(:can_edit, perms.update and not scheduled?)
@@ -571,6 +573,7 @@ defmodule LightningWeb.SandboxLive.Index do
         |> Map.put(:can_merge, perms.merge and not scheduled?)
         |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
         |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
+        |> Map.put(:restore_blocked_message, restore_blocked_message)
         |> Map.put(:scheduled_for_deletion?, scheduled?)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
@@ -582,6 +585,11 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:can_create_sandbox, can_create_sandbox)
     |> assign(:nesting_at_limit, nesting_at_limit)
   end
+
+  defp restore_block_state(true, {:error, _reason, %{text: text}}),
+    do: {true, text}
+
+  defp restore_block_state(_scheduled?, _limit), do: {false, nil}
 
   defp reset_delete_modal_state(socket) do
     socket

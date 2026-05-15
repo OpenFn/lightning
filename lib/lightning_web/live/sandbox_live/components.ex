@@ -631,7 +631,7 @@ defmodule LightningWeb.SandboxLive.Components do
           "You are not authorized to cancel deletion of this sandbox"
 
         assigns.sandbox.restore_blocked_by_limit? ->
-          "Plan limit reached. In order to restore this you must first delete an active sandbox"
+          assigns.sandbox.restore_blocked_message
 
         true ->
           false

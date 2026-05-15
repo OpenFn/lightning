@@ -365,10 +365,10 @@ defmodule Lightning.Projects.Sandboxes do
   or from a separate scheduling action on the descendant itself. Any row
   whose `scheduled_deletion` is already nil is left alone.
 
-  ## Plan limit
+  ## Limit
 
   Restoring a sandbox moves it back into the active count, so the same
-  plan-limit check that gates new sandbox creation also gates restore.
+  usage-limit action that gates new sandbox creation also gates restore.
   When the active-sandbox count is already at the limit, restore is
   refused with `{:error, :too_many_sandboxes, message}`; the operator
   needs to delete an active sandbox first.
@@ -381,7 +381,7 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
   * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
-  * `{:error, :too_many_sandboxes, message}` - Plan limit reached
+  * `{:error, :too_many_sandboxes, message}` - Limit reached
   """
   @spec cancel_scheduled_sandbox_deletion(
           Project.t() | Ecto.UUID.t(),

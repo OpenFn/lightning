@@ -1093,12 +1093,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Sandbox not found"
     end
 
-    test "Restore button is disabled with a plan-limit tooltip when at limit",
+    test "Restore button is disabled with the limiter's tooltip when at limit",
          %{conn: conn, parent: parent, scheduled: scheduled} do
-      message = %Lightning.Extensions.Message{
-        text:
-          "Plan limit reached. In order to restore this you must first delete an active sandbox"
-      }
+      message = %Lightning.Extensions.Message{text: "stub-blocked-message"}
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -1115,20 +1112,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                "#cancel-deletion-sandbox-#{scheduled.id} button[disabled]"
              )
 
-      html = render(view)
-
-      assert html =~
-               "Plan limit reached. In order to restore this you must first delete an active sandbox"
+      assert render(view) =~ "stub-blocked-message"
     end
 
-    test "Restore flashes the plan-limit message when the backend rejects",
+    test "Restore flashes the limiter's message when the backend rejects",
          %{conn: conn, parent: parent, scheduled: scheduled} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      message = %Lightning.Extensions.Message{
-        text:
-          "Plan limit reached. In order to restore this you must first delete an active sandbox"
-      }
+      message = %Lightning.Extensions.Message{text: "stub-blocked-message"}
 
       Mimic.expect(
         Lightning.Projects.Sandboxes,
@@ -1143,8 +1134,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       html =
         render_click(view, "cancel-sandbox-deletion", %{"id" => scheduled.id})
 
-      assert html =~
-               "Plan limit reached. In order to restore this you must first delete an active sandbox"
+      assert html =~ "stub-blocked-message"
     end
 
     test "tooltip shows the day count when scheduled more than a day out", %{

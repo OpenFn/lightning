@@ -2416,8 +2416,7 @@ defmodule Lightning.Projects.SandboxesTest do
       {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
 
       message = %Lightning.Extensions.Message{
-        text:
-          "Plan limit reached. In order to restore this you must first delete an active sandbox"
+        text: "Sandbox limit reached"
       }
 
       Mox.stub(
