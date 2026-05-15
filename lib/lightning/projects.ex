@@ -1037,25 +1037,15 @@ defmodule Lightning.Projects do
     descendants
     |> Enum.group_by(&root_id_of(&1, project_map))
     |> Enum.flat_map(fn {root_id, group} ->
-      case Map.fetch(root_lookup, root_id) do
-        {:ok, root} ->
-          visible_sandboxes(group, user, root)
-
-        :error ->
-          Enum.filter(group, fn project ->
-            Enum.any?(project.project_users, &(&1.user_id == user.id))
-          end)
-      end
+      root = Map.fetch!(root_lookup, root_id)
+      visible_sandboxes(group, user, root)
     end)
   end
 
   defp root_id_of(%Project{parent_id: nil, id: id}, _project_map), do: id
 
-  defp root_id_of(%Project{parent_id: parent_id, id: id}, project_map) do
-    case Map.get(project_map, parent_id) do
-      nil -> id
-      parent -> root_id_of(parent, project_map)
-    end
+  defp root_id_of(%Project{parent_id: parent_id}, project_map) do
+    project_map |> Map.fetch!(parent_id) |> root_id_of(project_map)
   end
 
   defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
