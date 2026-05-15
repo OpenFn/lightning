@@ -2430,15 +2430,10 @@ defmodule Lightning.Projects.SandboxesTest do
       assert {:error, :too_many_sandboxes, ^message} =
                Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
 
-      # State unchanged.
       assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
     end
 
     test "permission check runs before the limit check" do
-      # An actor without :delete_sandbox permission should see :unauthorized
-      # even when the usage limiter would also reject. Pins the order so a
-      # later refactor can't accidentally surface a "limit reached" message
-      # to an unauthorised user.
       actor = insert(:user)
       sandbox = insert(:project, name: "no-perm")
 
