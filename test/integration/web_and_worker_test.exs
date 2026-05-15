@@ -839,6 +839,155 @@ defmodule Lightning.WebAndWorkerTest do
       assert response.status == 200
       assert response.body == %{"ack" => true, "received" => 42}
     end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "honours webhook_response in a branching workflow where one leaf sets it",
+         %{uri: uri} do
+      project = insert(:project)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.data.x * 2; return state; });",
+          name: "step-1"
+        )
+
+      job_2 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x * 3; return state; });",
+          name: "step-2"
+        )
+
+      job_3 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x * 5; return state; });",
+          name: "step-3"
+        )
+
+      job_4 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x + 1;
+            state.webhookResponse = {
+              status: 202,
+              body: { from: 'step-4', x: state.x }
+            };
+            return state;
+          });
+          """,
+          name: "step-4"
+        )
+
+      job_5 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x + 100; return state; });",
+          name: "step-5"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job_1)
+        |> with_edge({webhook_trigger, job_1}, condition_type: :always)
+        |> with_job(job_2)
+        |> with_edge({job_1, job_2}, condition_type: :on_job_success)
+        |> with_job(job_3)
+        |> with_edge({job_1, job_3}, condition_type: :on_job_success)
+        |> with_job(job_4)
+        |> with_edge({job_2, job_4}, condition_type: :on_job_success)
+        |> with_job(job_5)
+        |> with_edge({job_2, job_5}, condition_type: :on_job_success)
+        |> with_edge({job_3, job_5}, condition_type: :on_job_success)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"x" => 1})
+
+      # input x=1 → step 1: x=2 → step 2: x=6 → step 4: x=7
+      assert response.status == 202
+      assert response.body == %{"from" => "step-4", "x" => 7}
+
+      %{entries: steps} = Invocation.list_steps_for_project(project)
+      assert Enum.count(steps) == 6
+      assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "responds with webhookResponse even when retention_policy is :erase_all",
+         %{uri: uri} do
+      project = insert(:project, retention_policy: :erase_all)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => ({
+            ...state,
+            webhookResponse: {
+              status: 200,
+              body: { ack: true, received: state.data.value }
+            }
+          }));
+          """,
+          name: "responding-job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"value" => 42})
+
+      assert response.status == 200
+      assert response.body == %{"ack" => true, "received" => 42}
+
+      # Confirm erase_all actually took effect: the step's output dataclip
+      # was persisted with the body wiped. The webhook response made it
+      # back to the caller via the in-memory step:complete capture,
+      # independently of dataclip persistence.
+      %{entries: steps} = Invocation.list_steps_for_project(project)
+      assert [step] = steps
+      assert step.exit_reason == "success"
+
+      step =
+        Repo.preload(step,
+          output_dataclip: Invocation.Query.dataclip_with_body()
+        )
+
+      assert step.output_dataclip.body == nil
+      assert step.output_dataclip.wiped_at != nil
+    end
   end
 
   defp build_tesla_client(uri) do
