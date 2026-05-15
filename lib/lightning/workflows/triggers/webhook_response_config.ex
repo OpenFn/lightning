@@ -7,7 +7,7 @@ defmodule Lightning.Workflows.Triggers.WebhookResponseConfig do
 
   - `success_code` — HTTP status code when the run succeeds. Defaults to 201.
   - `error_code` — HTTP status code for any non-success terminal state
-    (failed, crashed, exception, killed, cancelled). Defaults to 201.
+    (failed, crashed, exception, killed, cancelled). Defaults to 500.
   """
 
   use Ecto.Schema

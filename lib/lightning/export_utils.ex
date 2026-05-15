@@ -15,7 +15,7 @@ defmodule Lightning.ExportUtils do
     :connect_timeout
   ]
 
-  @webhook_reponse_config_fields [:success_code, :error_code]
+  @webhook_response_config_fields [:success_code, :error_code]
 
   @ordering_map %{
     project: [
@@ -147,7 +147,7 @@ defmodule Lightning.ExportUtils do
       )
       |> Enum.sort_by(
         fn {key, _val} ->
-          Enum.find_index(@webhook_reponse_config_fields, &(&1 == key))
+          Enum.find_index(@webhook_response_config_fields, &(&1 == key))
         end,
         :asc
       )
