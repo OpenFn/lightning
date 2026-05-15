@@ -26,6 +26,9 @@ defmodule Lightning.Channels.Audit do
   Inspects the changeset for changes to `:client_auth_methods` and
   `:destination_auth_method`, emitting the appropriate added/removed/changed
   events. No-op when no auth method changes are present.
+
+  Expects the parent Multi to expose the channel under the `:channel` key
+  (e.g. via `Multi.insert(:channel, ...)` or `Multi.put(:channel, ...)`).
   """
   def audit_auth_method_changes(multi, changeset, actor) do
     multi

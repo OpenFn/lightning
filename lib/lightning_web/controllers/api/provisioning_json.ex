@@ -4,6 +4,8 @@ defmodule LightningWeb.API.ProvisioningJSON do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
   import Ecto.Changeset
 
+  alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -39,6 +41,12 @@ defmodule LightningWeb.API.ProvisioningJSON do
     |> Map.put(
       :collections,
       project.collections
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      :channels,
+      project.channels
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
@@ -129,6 +137,24 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Collection{} = collection) do
     %{id: collection.id, name: collection.name}
+  end
+
+  def as_json(%Channel{} = channel) do
+    %{
+      id: channel.id,
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      destination_credential_id: destination_credential_id(channel)
+    }
+    |> drop_keys_with_nil_value()
+  end
+
+  defp destination_credential_id(%Channel{destination_auth_method: method}) do
+    case method do
+      %ChannelAuthMethod{project_credential_id: id} -> id
+      _ -> nil
+    end
   end
 
   defp drop_keys_with_nil_value(map) do

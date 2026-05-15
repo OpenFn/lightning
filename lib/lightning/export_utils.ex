@@ -20,11 +20,13 @@ defmodule Lightning.ExportUtils do
       :name,
       :description,
       :collections,
+      :channels,
       :credentials,
       :globals,
       :workflows
     ],
     collection: [:name],
+    channel: [:name, :destination_url, :enabled, :destination_credential],
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
@@ -360,13 +362,23 @@ defmodule Lightning.ExportUtils do
         Map.put(acc, hyphenate(collection.name), ytree)
       end)
 
+    channels_map =
+      project.channels
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn channel, acc ->
+        ytree = build_channel_yaml_tree(channel, project.project_credentials)
+
+        Map.put(acc, hyphenate(channel.name), ytree)
+      end)
+
     %{
       name: project.name,
       description: project.description,
       node_type: :project,
       workflows: workflows_map,
       credentials: credentials_map,
-      collections: collections_map
+      collections: collections_map,
+      channels: channels_map
     }
   end
 
@@ -394,6 +406,35 @@ defmodule Lightning.ExportUtils do
       node_type: :collection
     }
   end
+
+  defp build_channel_yaml_tree(channel, project_credentials) do
+    project_credential_id = channel_destination_project_credential_id(channel)
+
+    project_credential =
+      project_credential_id &&
+        Enum.find(project_credentials, fn pc ->
+          pc.id == project_credential_id
+        end)
+
+    %{
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      node_type: :channel,
+      destination_credential:
+        project_credential && project_credential_key(project_credential)
+    }
+  end
+
+  defp channel_destination_project_credential_id(%{destination_auth_method: nil}),
+    do: nil
+
+  defp channel_destination_project_credential_id(%{
+         destination_auth_method: %{project_credential_id: id}
+       }),
+       do: id
+
+  defp channel_destination_project_credential_id(_), do: nil
 
   defp build_workflow_yaml_tree(workflow, project_credentials) do
     jobs =
@@ -427,7 +468,8 @@ defmodule Lightning.ExportUtils do
     project =
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
-        collections: []
+        collections: [],
+        channels: [destination_auth_method: :project_credential]
       )
 
     yaml =
@@ -443,7 +485,8 @@ defmodule Lightning.ExportUtils do
     project =
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
-        collections: []
+        collections: [],
+        channels: [destination_auth_method: :project_credential]
       )
 
     yaml =

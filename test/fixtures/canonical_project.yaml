@@ -4,6 +4,7 @@ description: |
 collections:
   cannonical-collection:
     name: cannonical-collection
+channels: null
 credentials:
   cannonical-user@lightning.com-new-credential:
     name: new credential

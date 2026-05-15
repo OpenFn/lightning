@@ -13,6 +13,9 @@ defmodule Lightning.Projects.Provisioner do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Channels.Audit, as: ChannelAudit
+  alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Collections.Collection
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -88,6 +91,8 @@ defmodule Lightning.Projects.Provisioner do
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
              audit_workflows(project_changeset, user_or_repo_connection),
+           {:ok, _changes} <-
+             audit_channels(project_changeset, user_or_repo_connection),
            {:ok, _changes} <-
              update_workflows_version(
                project_changeset,
@@ -211,6 +216,64 @@ defmodule Lightning.Projects.Provisioner do
     )
   end
 
+  # Iterates each cast_assoc'd channel changeset, running a per-channel
+  # Multi for audits. Each Multi is independent so the static step names
+  # used by `Channels.Audit.audit_auth_method_changes/3`
+  # (`:audit_destination_added`, etc.) don't collide across channels.
+  #
+  # `Multi.put(:channel, %Channel{id: channel_id})` supplies the channel
+  # under the `:channel` key that the shared audit helper expects.
+  defp audit_channels(project_changeset, actor) do
+    project_changeset
+    |> get_assoc(:channels)
+    |> Enum.reduce_while({:ok, :done}, fn channel_cs, _acc ->
+      case audit_one_channel(channel_cs, actor) do
+        :skip -> {:cont, {:ok, :done}}
+        {:ok, _changes} -> {:cont, {:ok, :done}}
+        {:error, _, reason, _} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp audit_one_channel(channel_cs, actor) do
+    case classify_channel_audit(channel_cs) do
+      :skip ->
+        :skip
+
+      {event, channel_id} ->
+        Multi.new()
+        |> Multi.put(:channel, %Channel{id: channel_id})
+        |> append_channel_event_audit(event, channel_id, channel_cs, actor)
+        |> ChannelAudit.audit_auth_method_changes(channel_cs, actor)
+        |> Repo.transaction()
+    end
+  end
+
+  defp classify_channel_audit(%{action: :insert} = cs) do
+    {"created", get_field(cs, :id)}
+  end
+
+  defp classify_channel_audit(%{
+         action: :update,
+         data: %{id: id},
+         changes: changes
+       })
+       when changes != %{} do
+    {"updated", id}
+  end
+
+  defp classify_channel_audit(_), do: :skip
+
+  defp append_channel_event_audit(multi, event, channel_id, channel_cs, actor) do
+    case ChannelAudit.event(event, channel_id, actor, channel_cs) do
+      :no_changes ->
+        multi
+
+      %Ecto.Changeset{} = audit_cs ->
+        Multi.insert(multi, :channel_audit, audit_cs)
+    end
+  end
+
   defp create_snapshots(
          project_changeset,
          inserted_workflows,
@@ -255,6 +318,7 @@ defmodule Lightning.Projects.Provisioner do
     project
     |> project_changeset(data)
     |> cast_assoc(:collections, with: &collection_changeset/2)
+    |> cast_assoc(:channels, with: &channel_changeset/2)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
     |> then(fn changeset ->
       case WorkflowUsageLimiter.limit_workflows_activation(
@@ -404,6 +468,7 @@ defmodule Lightning.Projects.Provisioner do
       [
         :project_users,
         :collections,
+        channels: [destination_auth_method: :project_credential],
         project_credentials: [credential: [:user]],
         workflows: {w, [:jobs, :triggers, :edges]}
       ],
@@ -432,6 +497,78 @@ defmodule Lightning.Projects.Provisioner do
     |> maybe_mark_for_deletion()
     |> validate_extraneous_params()
     |> Collection.validate()
+  end
+
+  defp channel_changeset(channel, attrs) do
+    attrs = maybe_add_destination_auth_param(attrs, channel)
+
+    channel
+    |> cast(attrs, [:id, :name, :destination_url, :enabled, :delete])
+    |> validate_required([:id, :name, :destination_url])
+    |> block_channel_deletion()
+    |> cast_assoc(:destination_auth_method,
+      with: &ChannelAuthMethod.changeset/2
+    )
+    |> validate_extraneous_params()
+    |> Channel.validate()
+  end
+
+  # Channel deletion is intentionally rejected by the provisioner because
+  # `channel_requests` rows must be drained first (the `on_delete: :restrict`
+  # FK). Users should delete channels through the dashboard, which handles
+  # request cleanup transactionally.
+  defp block_channel_deletion(changeset) do
+    if get_change(changeset, :delete) == true do
+      add_error(
+        changeset,
+        :delete,
+        "channel deletion is not supported via the provisioning API; " <>
+          "delete from the dashboard instead"
+      )
+    else
+      changeset
+    end
+  end
+
+  defp maybe_add_destination_auth_param(attrs, %Channel{} = channel) do
+    case Map.fetch(attrs, "destination_credential_id") do
+      :error ->
+        attrs
+
+      {:ok, project_credential_id} ->
+        attrs
+        |> Map.delete("destination_credential_id")
+        |> Map.put(
+          "destination_auth_method",
+          build_destination_auth_method_attrs(
+            existing_destination_auth_method(channel),
+            project_credential_id
+          )
+        )
+    end
+  end
+
+  defp existing_destination_auth_method(%Channel{
+         destination_auth_method: %ChannelAuthMethod{} = method
+       }),
+       do: method
+
+  defp existing_destination_auth_method(_), do: nil
+
+  defp build_destination_auth_method_attrs(current, project_credential_id) do
+    case {current, project_credential_id} do
+      {_, nil} ->
+        nil
+
+      {%{id: id, project_credential_id: pc_id}, pc_id} ->
+        %{"id" => id}
+
+      {_, _} ->
+        %{
+          "role" => "destination",
+          "project_credential_id" => project_credential_id
+        }
+    end
   end
 
   defp workflow_changeset(workflow, attrs) do
