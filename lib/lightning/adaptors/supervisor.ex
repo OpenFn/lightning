@@ -5,9 +5,9 @@ defmodule Lightning.Adaptors.Supervisor do
   The entire subsystem boots, crashes, and is supervised as a unit
   under `:rest_for_one`. `Cachex` is the load-bearing root: if it
   crashes, the supervisor restarts it and cascades to its dependents
-  (`Task.Supervisor`, `Invalidator`, `ChannelBroadcaster`, `NodeMonitor`,
-  `Scheduler`) so they re-bind to the fresh Cachex name on the way back
-  up.
+  (`Task.Supervisor`, plus the broadcaster/scheduler children added in
+  later phases) so they re-bind to the fresh Cachex name on the way
+  back up.
 
   No registered name, Cachex table name, PubSub topic, `Task.Supervisor`
   name, or `HighlanderPG` lock key is hardcoded. Every name is derived
@@ -16,16 +16,36 @@ defmodule Lightning.Adaptors.Supervisor do
   `async: true` tests. Production starts exactly one instance under
   `name: Lightning.Adaptors`.
 
-  Strategy is **not** an opt — it is read at runtime via
-  `Lightning.Adaptors.Config.strategy/0`.
+  ## Strategy injection
+
+  The active `Lightning.Adaptors.Strategy` implementation is passed in
+  explicitly via the `:strategy` opt. Tests instantiate an isolated
+  supervisor with `strategy: Lightning.Adaptors.StrategyMock` — no
+  `Application.put_env` mutation, no shared mutable state. The
+  production caller in `lib/lightning/application.ex` passes the
+  default from `Lightning.Adaptors.Config.strategy/0` (resolved from
+  Application env at boot time).
+
+  `strategy/1` and `source/1` expose the per-instance values back to
+  the stateless `Lightning.Adaptors.Store` callers.
   """
 
   use Supervisor
 
+  alias Lightning.Adaptors.Config
+
   @doc """
   Start a supervisor instance.
 
-  The `:name` opt is mandatory; absence raises `KeyError`.
+  Required opts:
+
+    * `:name` — supervisor instance name (atom). Derives every child
+      name via `Module.concat/2`.
+
+  Optional opts:
+
+    * `:strategy` — `Lightning.Adaptors.Strategy` implementation.
+      Defaults to `Lightning.Adaptors.Config.strategy/0`.
   """
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(opts) do
@@ -36,10 +56,15 @@ defmodule Lightning.Adaptors.Supervisor do
   @impl true
   def init(opts) do
     name = Keyword.fetch!(opts, :name)
+    strategy = Keyword.get(opts, :strategy, Config.strategy())
+
+    :persistent_term.put(meta_key(name), %{
+      strategy: strategy,
+      source: source_for(strategy)
+    })
+
     cache = cache_name(name)
     tasks = tasks_name(name)
-    source_topic = source_topic(name)
-    client_topic = client_topic(name)
 
     children = [
       {Cachex, name: cache},
@@ -49,24 +74,45 @@ defmodule Lightning.Adaptors.Supervisor do
         id: Module.concat(name, CacheClear),
         restart: :transient
       ),
-      {Task.Supervisor, name: tasks},
-      {Lightning.Adaptors.Invalidator,
-       name: invalidator_name(name), cache: cache, source_topic: source_topic},
-      {Lightning.Adaptors.ChannelBroadcaster,
-       name: channel_broadcaster_name(name),
-       source_topic: source_topic,
-       client_topic: client_topic},
-      {Lightning.Adaptors.NodeMonitor, name: node_monitor_name(name), sup: name},
-      {HighlanderPG,
-       {Lightning.Adaptors.Scheduler,
-        name: scheduler_name(name),
-        lock_key: lock_key(name),
-        cache: cache,
-        tasks: tasks,
-        source_topic: source_topic}}
+      {Task.Supervisor, name: tasks}
+      # Invalidator, ChannelBroadcaster, NodeMonitor, and Scheduler
+      # are added in later phase-A stories. Cachex + Task.Supervisor
+      # is enough for the Store layer to function.
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)
+  end
+
+  @doc """
+  The active strategy for the supervisor instance named `name`.
+
+  Reads from `:persistent_term` populated at `init/1`. Raises if the
+  supervisor has not been started under that name.
+  """
+  @spec strategy(atom()) :: module()
+  def strategy(name) do
+    :persistent_term.get(meta_key(name)).strategy
+  end
+
+  @doc """
+  The active source (`:npm | :local`) for the supervisor instance
+  named `name`.
+  """
+  @spec source(atom()) :: :npm | :local
+  def source(name) do
+    :persistent_term.get(meta_key(name)).source
+  end
+
+  @doc """
+  Best-effort cleanup of the per-instance `:persistent_term` entry.
+
+  Not called automatically — `:persistent_term.erase/1` triggers a
+  global GC and is expensive enough that we leave it to deliberate
+  teardown paths (e.g. release shutdown).
+  """
+  @spec forget(atom()) :: boolean()
+  def forget(name) do
+    :persistent_term.erase(meta_key(name))
   end
 
   @doc "Cachex table name for the supervisor named `name`."
@@ -122,4 +168,9 @@ defmodule Lightning.Adaptors.Supervisor do
   """
   @spec lock_key(atom()) :: non_neg_integer()
   def lock_key(name), do: :erlang.phash2({:adaptors, name})
+
+  defp meta_key(name), do: {__MODULE__, name}
+
+  defp source_for(Lightning.Adaptors.Local), do: :local
+  defp source_for(_other), do: :npm
 end

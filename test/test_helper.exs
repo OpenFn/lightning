@@ -5,6 +5,8 @@ Mox.defmock(Lightning.AuthProviders.OauthHTTPClient.Mock, for: Tesla.Adapter)
 Mox.defmock(Lightning.MockSentry, for: Lightning.SentryBehaviour)
 Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
+Mox.defmock(Lightning.Adaptors.StrategyMock, for: Lightning.Adaptors.Strategy)
+
 :ok = Application.ensure_started(:ex_machina)
 
 Mimic.copy(:hackney)
