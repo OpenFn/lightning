@@ -43,13 +43,13 @@ and this project adheres to
   The sandbox's `project_users` are now derived from the parent project: every
   parent user is copied with their role preserved, the parent owner is demoted
   to `:admin`, and the actor is set as the sandbox owner. To add a user who is
-  not already on the parent, call `Lightning.Projects.add_project_users/3` after
-  `provision/3` returns.
+  not already on the parent, call `Lightning.Projects.add_project_users/3`
+  after `provision/3` returns.
   [#4744](https://github.com/OpenFn/lightning/issues/4744)
-- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
-  called with a project's `:owner` row. The settings UI already prevented this;
-  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
-  otherwise have left a project ownerless.
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError`
+  when called with a project's `:owner` row. The settings UI already
+  prevented this; the guard closes the gap for Mix tasks, IEx, and
+  scripted callers that would otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
