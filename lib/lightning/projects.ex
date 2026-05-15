@@ -989,6 +989,47 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @doc """
+  Returns the subset of `sandboxes` that `user` is allowed to see.
+
+  A sandbox is visible when:
+
+    * the user is a superuser; or
+    * the user is a support user and the root project is flagged
+      `allow_support_access` (cascading workspace access for support); or
+    * the user is an owner or admin on the root project (cascading
+      workspace control); or
+    * the user has any `project_users` row on the sandbox itself.
+
+  This mirrors how the projects list filters out projects the user is not a
+  member of, and is the single source of truth for sandbox visibility
+  across both the sandboxes list and the global project picker.
+
+  Assumes `root_project.project_users` and each `sandbox.project_users` are
+  preloaded (as ensured by `list_workspace_projects/2`).
+  """
+  @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
+  def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
+    cond do
+      user.role == :superuser ->
+        sandboxes
+
+      user.support_user and root_project.allow_support_access ->
+        sandboxes
+
+      Enum.any?(
+        root_project.project_users,
+        &(&1.user_id == user.id and &1.role in [:owner, :admin])
+      ) ->
+        sandboxes
+
+      true ->
+        Enum.filter(sandboxes, fn sandbox ->
+          Enum.any?(sandbox.project_users, &(&1.user_id == user.id))
+        end)
+    end
+  end
+
   defp filter_descendants_for_user(descendants, roots, %User{} = user) do
     project_map = Map.new(roots ++ descendants, &{&1.id, &1})
     root_lookup = Map.new(roots, &{&1.id, &1})
@@ -998,7 +1039,7 @@ defmodule Lightning.Projects do
     |> Enum.flat_map(fn {root_id, group} ->
       case Map.fetch(root_lookup, root_id) do
         {:ok, root} ->
-          Lightning.Policies.Sandboxes.visible_sandboxes(group, user, root)
+          visible_sandboxes(group, user, root)
 
         :error ->
           Enum.filter(group, fn project ->

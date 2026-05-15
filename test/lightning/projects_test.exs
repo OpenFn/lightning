@@ -697,6 +697,186 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "visible_sandboxes/3" do
+    setup do
+      superuser = insert(:user, role: :superuser)
+      user = insert(:user)
+      other_user = insert(:user)
+
+      root_project = insert(:project)
+      root_project_owner = insert(:user)
+
+      insert(:project_user,
+        user: root_project_owner,
+        project: root_project,
+        role: :owner
+      )
+
+      sandbox = insert(:project, parent: root_project)
+
+      sandbox_with_owner = insert(:project, parent: root_project)
+      sandbox_owner = insert(:user)
+
+      insert(:project_user,
+        user: sandbox_owner,
+        project: sandbox_with_owner,
+        role: :owner
+      )
+
+      sandbox_with_admin = insert(:project, parent: root_project)
+      sandbox_admin = insert(:user)
+
+      insert(:project_user,
+        user: sandbox_admin,
+        project: sandbox_with_admin,
+        role: :admin
+      )
+
+      root_project = Repo.preload(root_project, :project_users)
+      sandbox = Repo.preload(sandbox, :project_users)
+      sandbox_with_owner = Repo.preload(sandbox_with_owner, :project_users)
+      sandbox_with_admin = Repo.preload(sandbox_with_admin, :project_users)
+
+      %{
+        superuser: superuser,
+        user: user,
+        other_user: other_user,
+        root_project: root_project,
+        root_project_owner: root_project_owner,
+        sandbox: sandbox,
+        sandbox_with_owner: sandbox_with_owner,
+        sandbox_owner: sandbox_owner,
+        sandbox_with_admin: sandbox_with_admin,
+        sandbox_admin: sandbox_admin
+      }
+    end
+
+    test "superuser sees every sandbox in the workspace", %{
+      superuser: superuser,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, superuser, root_project) ==
+               sandboxes
+    end
+
+    test "root project owner sees every sandbox in the workspace", %{
+      root_project_owner: owner,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, owner, root_project) ==
+               sandboxes
+    end
+
+    test "root project admin sees every sandbox in the workspace", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :admin)
+
+      root_project = Repo.preload(root_project, :project_users, force: true)
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, user, root_project) ==
+               sandboxes
+    end
+
+    test "root project editor only sees sandboxes they are a member of", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :editor)
+      insert(:project_user, user: user, project: sandbox, role: :viewer)
+
+      root_project = Repo.preload(root_project, :project_users, force: true)
+      sandbox = Repo.preload(sandbox, :project_users, force: true)
+
+      visible =
+        Projects.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          user,
+          root_project
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox.id]
+    end
+
+    test "user with no role on the root sees only sandboxes they belong to",
+         %{
+           sandbox_owner: sandbox_owner,
+           root_project: root_project,
+           sandbox: sandbox,
+           sandbox_with_owner: sandbox_with_owner,
+           sandbox_with_admin: sandbox_with_admin
+         } do
+      visible =
+        Projects.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          sandbox_owner,
+          root_project
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox_with_owner.id]
+    end
+
+    test "user with no role anywhere sees no sandboxes", %{
+      other_user: other_user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      assert Projects.visible_sandboxes(
+               [sandbox, sandbox_with_owner, sandbox_with_admin],
+               other_user,
+               root_project
+             ) == []
+    end
+
+    test "support user sees every sandbox on a support-access root" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+      sandbox_a = insert(:project, parent: root)
+      sandbox_b = insert(:project, parent: root)
+
+      root = Repo.preload(root, :project_users)
+      sandbox_a = Repo.preload(sandbox_a, :project_users)
+      sandbox_b = Repo.preload(sandbox_b, :project_users)
+
+      assert Projects.visible_sandboxes(
+               [sandbox_a, sandbox_b],
+               support_user,
+               root
+             ) == [sandbox_a, sandbox_b]
+    end
+
+    test "support user sees nothing on a root that does not allow support access" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: false)
+      sandbox = insert(:project, parent: root)
+
+      root = Repo.preload(root, :project_users)
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Projects.visible_sandboxes([sandbox], support_user, root) == []
+    end
+  end
+
   describe "export_project/2 as yaml:" do
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
