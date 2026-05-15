@@ -55,17 +55,30 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const { copyText, copyToClipboard } = useCopyToClipboard();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [hasResponseStatus, setHasResponseStatus] = useState(() => {
-    const cfg = trigger.webhook_response_config;
-    return cfg != null && (cfg.success_code != null || cfg.error_code != null);
-  });
   const [showResponseStatus, setShowResponseStatus] = useState(true);
-  const [shownSuccessCode, setShownSuccessCode] = useState(
+  // Transient "user clicked to reveal this row but hasn't typed yet" intent.
+  // Stays sticky once a value is typed so clearing the input doesn't hide the
+  // row; only collapses on explicit remove. Reset on trigger switch, not on
+  // every config edit (so a remote collaborator's change doesn't wipe the
+  // local user's in-progress row).
+  const [forceShowResponseBlock, setForceShowResponseBlock] = useState(false);
+  const [forceShowSuccess, setForceShowSuccess] = useState(
     () => trigger.webhook_response_config?.success_code != null
   );
-  const [shownErrorCode, setShownErrorCode] = useState(
+  const [forceShowError, setForceShowError] = useState(
     () => trigger.webhook_response_config?.error_code != null
   );
+
+  const triggerConfig = trigger.webhook_response_config;
+  const hasResponseStatus =
+    (triggerConfig != null &&
+      (triggerConfig.success_code != null ||
+        triggerConfig.error_code != null)) ||
+    forceShowResponseBlock;
+  const shownSuccessCode =
+    triggerConfig?.success_code != null || forceShowSuccess;
+  const shownErrorCode = triggerConfig?.error_code != null || forceShowError;
+
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
@@ -82,16 +95,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
 
   useEffect(() => {
     const cfg = trigger.webhook_response_config;
-    if (cfg == null) {
-      setHasResponseStatus(false);
-      setShownSuccessCode(false);
-      setShownErrorCode(false);
-    } else {
-      setHasResponseStatus(true);
-      setShownSuccessCode(cfg.success_code != null);
-      setShownErrorCode(cfg.error_code != null);
-    }
-  }, [trigger.webhook_response_config]);
+    setForceShowResponseBlock(false);
+    setForceShowSuccess(cfg?.success_code != null);
+    setForceShowError(cfg?.error_code != null);
+  }, [trigger.id]);
 
   // Request auth methods when trigger is selected
   useEffect(() => {
@@ -551,9 +558,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                               type="button"
                                               title="Remove"
                                               onClick={() => {
-                                                setHasResponseStatus(false);
-                                                setShownSuccessCode(false);
-                                                setShownErrorCode(false);
+                                                setForceShowResponseBlock(
+                                                  false
+                                                );
+                                                setForceShowSuccess(false);
+                                                setForceShowError(false);
                                                 field.handleChange({
                                                   success_code: null,
                                                   error_code: null,
@@ -607,7 +616,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                     type="button"
                                                     title="Remove"
                                                     onClick={() => {
-                                                      setShownSuccessCode(
+                                                      setForceShowSuccess(
                                                         false
                                                       );
                                                       field.handleChange({
@@ -661,7 +670,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                     type="button"
                                                     title="Remove"
                                                     onClick={() => {
-                                                      setShownErrorCode(false);
+                                                      setForceShowError(false);
                                                       field.handleChange({
                                                         ...baseConfig,
                                                         error_code: null,
@@ -684,7 +693,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                     <button
                                                       type="button"
                                                       onClick={() =>
-                                                        setShownSuccessCode(
+                                                        setForceShowSuccess(
                                                           true
                                                         )
                                                       }
@@ -698,7 +707,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                     <button
                                                       type="button"
                                                       onClick={() =>
-                                                        setShownErrorCode(true)
+                                                        setForceShowError(true)
                                                       }
                                                       className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
                                                     >
@@ -721,7 +730,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setHasResponseStatus(true);
+                                    setForceShowResponseBlock(true);
                                     setShowResponseStatus(true);
                                   }}
                                   className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 border border-dashed border-slate-300 rounded-md px-3 py-1.5 w-full transition-colors"

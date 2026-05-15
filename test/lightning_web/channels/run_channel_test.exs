@@ -2155,6 +2155,55 @@ defmodule LightningWeb.RunChannelTest do
       assert message =~ "webhook_response was malformed"
       assert message =~ "body"
     end
+
+    test "malformed webhook_response on failed run uses default error status",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 500, %{message: message}}
+      assert message =~ "webhook_response was malformed"
+    end
+
+    test "malformed webhook_response on failed run uses configured error_code",
+         %{
+           socket: socket,
+           run: run,
+           job: job,
+           trigger: trigger
+         } do
+      put_webhook_config(trigger, error_code: 422)
+
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 422, %{message: message}}
+      assert message =~ "webhook_response was malformed"
+    end
   end
 
   defp put_webhook_config(trigger, attrs) do

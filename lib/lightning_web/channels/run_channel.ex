@@ -394,7 +394,7 @@ defmodule LightningWeb.RunChannel do
       %{webhook_response | status: status, body: body}
     else
       {:error, reason} ->
-        {status, body} = malformed_response(reason)
+        {status, body} = malformed_response(reason, run, config)
         %{webhook_response | status: status, body: body}
     end
   end
@@ -441,8 +441,8 @@ defmodule LightningWeb.RunChannel do
     }
   end
 
-  defp malformed_response(reason) do
-    {201,
+  defp malformed_response(reason, run, config) do
+    {default_response_status(run.state, config),
      %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
   end
 

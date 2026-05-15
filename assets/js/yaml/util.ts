@@ -198,9 +198,7 @@ export const convertWorkflowSpecToState = (
         type: 'webhook',
         enabled,
         webhook_reply: specTrigger.webhook_reply,
-        webhook_response_config: parseWebhookResponseConfig(
-          specTrigger.webhook_response_config
-        ),
+        webhook_response_config: specTrigger.webhook_response_config ?? null,
       };
     } else {
       trigger = {
@@ -265,13 +263,6 @@ export const convertWorkflowSpecToState = (
 
   return workflowState;
 };
-
-function parseWebhookResponseConfig(
-  config: import('./types').WebhookResponseConfig | null | undefined
-): import('./types').WebhookResponseConfig | null {
-  if (!config) return null;
-  return config;
-}
 
 export const extractJobCredentials = (jobs: Workflow.Job[]): JobCredentials => {
   const credentials: JobCredentials = {};
