@@ -47,6 +47,16 @@ defmodule LightningWeb.UserSessionController do
         |> UserAuth.log_in_user(user)
         |> UserAuth.redirect_with_return_to(user_params)
 
+      {:error, :sso_account} ->
+        conn
+        |> put_flash(
+          :error,
+          "This account uses single sign-on. Please log in with your SSO provider."
+        )
+        |> render("new.html",
+          auth_providers: auth_providers()
+        )
+
       _ ->
         conn
         |> put_flash(:error, "Invalid email or password")
