@@ -1367,6 +1367,89 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
+  describe "request telemetry span" do
+    setup do
+      test_pid = self()
+      handler_id = "channel-proxy-test-#{System.unique_integer([:positive])}"
+
+      :ok =
+        :telemetry.attach_many(
+          handler_id,
+          [
+            [:lightning, :channel_proxy, :request, :start],
+            [:lightning, :channel_proxy, :request, :stop]
+          ],
+          fn event, measurements, metadata, _config ->
+            send(test_pid, {:telemetry, event, measurements, metadata})
+          end,
+          nil
+        )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      :ok
+    end
+
+    test "stop metadata carries the real project_id on a successful request",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/observed", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/observed")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
+                      %{duration: duration}, stop_metadata}
+
+      assert is_integer(duration) and duration > 0
+
+      assert %{
+               channel_id: channel_id_in_meta,
+               project_id: project_id_in_meta
+             } = stop_metadata
+
+      assert channel_id_in_meta == channel.id
+      assert project_id_in_meta == channel.project_id
+    end
+
+    test "stop metadata reports project_id=\"unknown\" for an unknown channel",
+         %{conn: conn} do
+      missing_id = "00000000-0000-0000-0000-000000000000"
+
+      resp = get(conn, "/channels/#{missing_id}/whatever")
+
+      assert resp.status == 404
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
+                      _measurements,
+                      %{channel_id: ^missing_id, project_id: "unknown"}}
+    end
+
+    test "start metadata always includes a project_id key", %{
+      bypass: bypass,
+      channel: channel
+    } do
+      # Regression guard: the started counter is tagged by :project_id, so a
+      # missing key would cause Prometheus to silently drop the event.
+      Bypass.expect_once(bypass, "GET", "/start-meta", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/start-meta")
+      |> send_to_endpoint()
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
+                      _measurements, start_metadata}
+
+      assert Map.has_key?(start_metadata, :project_id)
+      assert start_metadata.channel_id == channel.id
+    end
+  end
+
   defp send_to_endpoint(conn) do
     LightningWeb.Endpoint.call(conn, LightningWeb.Endpoint.init([]))
   end

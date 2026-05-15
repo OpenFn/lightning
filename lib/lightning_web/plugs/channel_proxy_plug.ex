@@ -54,14 +54,20 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @impl true
   def call(%Plug.Conn{path_info: ["channels", channel_id | rest]} = conn, _opts) do
-    metadata = %{channel_id: channel_id}
+    start_metadata = %{channel_id: channel_id, project_id: "unknown"}
 
     :telemetry.span(
       [:lightning, :channel_proxy, :request],
-      metadata,
+      start_metadata,
       fn ->
         result = do_proxy(conn, channel_id, rest)
-        {result, metadata}
+
+        stop_metadata = %{
+          channel_id: channel_id,
+          project_id: result.assigns[:channel_project_id] || "unknown"
+        }
+
+        {result, stop_metadata}
       end
     )
   end
@@ -69,12 +75,20 @@ defmodule LightningWeb.ChannelProxyPlug do
   def call(conn, _opts), do: conn
 
   defp do_proxy(conn, channel_id, rest) do
-    with {:ok, channel} <- fetch_channel_with_telemetry(channel_id),
-         {:ok, matched_auth} <- authenticate_client(conn, channel) do
-      proxy_with_auth(conn, channel, rest, matched_auth)
-    else
-      :not_found -> error_response(conn, :not_found, "Not Found")
-      :unauthorized -> error_response(conn, :unauthorized, "Unauthorized")
+    case fetch_channel_with_telemetry(channel_id) do
+      {:ok, channel} ->
+        conn = assign(conn, :channel_project_id, channel.project_id)
+
+        case authenticate_client(conn, channel) do
+          {:ok, matched_auth} ->
+            proxy_with_auth(conn, channel, rest, matched_auth)
+
+          :unauthorized ->
+            error_response(conn, :unauthorized, "Unauthorized")
+        end
+
+      :not_found ->
+        error_response(conn, :not_found, "Not Found")
     end
   end
 
