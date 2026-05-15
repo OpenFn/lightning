@@ -57,6 +57,8 @@ and this project adheres to
 - Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
   so that changes to these trigger fields are properly detected by CLI deploy
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+- Bump `@openfn/ws-worker` from
+  [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
 
 ### Fixed
 
@@ -65,6 +67,9 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list
   is disabled (with the limiter's tooltip) when the active sandbox count is
   already at the limit.
+- `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
 - Copy token button on the Personal Access Tokens page now shows a 'Copied!'
   tooltip on click and no longer causes the icon to flicker
   [#2463](https://github.com/OpenFn/lightning/issues/2463)
