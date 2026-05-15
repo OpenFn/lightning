@@ -101,7 +101,7 @@ export type SpecWebhookTrigger = {
   type: 'webhook';
   enabled: boolean;
   webhook_reply: string | null;
-  webhook_response?: WebhookResponseConfig | null;
+  webhook_response_config?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 

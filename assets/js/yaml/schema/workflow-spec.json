@@ -62,7 +62,7 @@
               "type": ["string", "null"],
               "enum": ["before_start", "after_completion", "custom", null]
             },
-            "webhook_response": {
+            "webhook_response_config": {
               "type": ["object", "null"],
               "properties": {
                 "success_code": { "type": ["integer", "null"] },
