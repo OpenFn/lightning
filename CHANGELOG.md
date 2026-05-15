@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to respond back with custom webhook responses via the
+  `webhookResponse` field in the job state.
+  [#3102](https://github.com/OpenFn/lightning/issues/3102)
 - New `usage_caps_input` view-extension slot on the project settings page
   (`/projects/:project_id/settings`). Same pattern as the existing
   `concurrency_input` slot: downstream apps register a component via
@@ -64,6 +67,14 @@ and this project adheres to
 
 ### Fixed
 
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list is
+  disabled (with the limiter's tooltip) when the active sandbox count is already
+  at the limit.
+- `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
 - Copy token button on the Personal Access Tokens page now shows a 'Copied!'
   tooltip on click and no longer causes the icon to flicker
   [#2463](https://github.com/OpenFn/lightning/issues/2463)

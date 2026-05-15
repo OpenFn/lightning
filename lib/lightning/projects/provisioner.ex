@@ -35,6 +35,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
@@ -644,6 +645,11 @@ defmodule Lightning.Projects.Provisioner do
       :kafka_configuration,
       required: false,
       with: &kafka_config_changeset/2
+    )
+    |> cast_embed(
+      :webhook_response_config,
+      required: false,
+      with: &WebhookResponseConfig.changeset/2
     )
     |> Trigger.validate()
     |> cast(attrs, [:delete])
