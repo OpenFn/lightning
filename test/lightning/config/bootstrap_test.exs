@@ -405,7 +405,9 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      assert get_env(:lightning, Lightning.Mailer) == [
+      config = get_env(:lightning, Lightning.Mailer)
+
+      assert config == [
                adapter: Swoosh.Adapters.SMTP,
                username: "foo",
                password: "bar",
@@ -414,6 +416,12 @@ defmodule Lightning.Config.BootstrapTest do
                tls_options: :tls_certificate_check.options("baz"),
                port: 587
              ]
+
+      tls_options = Keyword.get(config, :tls_options)
+
+      assert {:verify, :verify_peer} in tls_options
+      assert is_list(Keyword.get(tls_options, :cacerts))
+      assert Keyword.has_key?(tls_options, :customize_hostname_check)
     end
   end
 
