@@ -2,41 +2,44 @@ defmodule Lightning.Channels.PromExPlugin do
   @moduledoc """
   PromEx plugin exposing metrics for the Channels HTTP reverse-proxy.
 
-  Two metrics are emitted, both tagged by `project_id`:
+  Telemetry is layered into two spans:
 
-    * `lightning_channel_proxy_requests_started_total` — counter incremented
-      after channel resolution.
-    * `lightning_channel_proxy_request_duration_milliseconds` — distribution
-      of total time spent in the proxy plug. Its `_count` series doubles as
-      the finished-request total, so a separate finished counter is not
-      emitted.
+    * **Outer `:inbound` span** — wraps every `/channels/*` hit, including
+      probes with invalid UUIDs or unknown channel IDs. Tagged by
+      `outcome` (`:resolved | :invalid_uuid | :unknown_channel`) so we can
+      surface edge traffic and scanning behaviour without leaking the raw
+      URL segment into metric labels.
+    * **Inner `:request` span** — opens only after channel resolution
+      succeeds. Tagged by `project_id` (a bounded, trusted value), it
+      tracks real proxy operations: how many start, how long they take,
+      and what their outcome is.
+
+  Metrics emitted:
+
+    * `lightning_channel_proxy_inbound_total{outcome}` — counter on the
+      outer span's `:stop` event. Counts every inbound request, bucketed
+      by outcome.
+    * `lightning_channel_proxy_requests_started_total{project_id}` —
+      counter on the inner span's `:start` event. Started metadata
+      already carries the resolved `project_id`, so no separate counted
+      event is needed.
+    * `lightning_channel_proxy_request_duration_milliseconds{project_id}`
+      — distribution of total time spent in the inner span. Its
+      `_count` series doubles as the finished-request total, so a
+      separate finished counter is not emitted.
 
   Concurrent in-flight requests cannot be derived precisely from these
   counters — request lifetimes (ms) are far shorter than typical scrape
   intervals (s), so any `started − finished` subtraction is ~always zero
-  at scrape boundaries. The dashboard estimates concurrency via Little's
-  Law (`rate(started) × mean_duration`) instead.
-
-  The started counter attaches to a custom
-  `[:lightning, :channel_proxy, :request, :counted]` event rather than
-  the span's `:start` event. This is deliberate: span start metadata is
-  captured before channel lookup, so it cannot carry the resolved
-  `project_id`. The `:counted` event is emitted immediately after the
-  channel is resolved (or in the not-found branch, tagged
-  `project_id="unknown"`), so the started counter and the duration
-  histogram share a consistent label set.
-
-  Requests that fail channel lookup (404 or invalid UUID) are tagged
-  `project_id="unknown"`, which surfaces probing or scanning behaviour.
-  Authentication failures against an existing channel still surface the
-  real `project_id`.
+  at scrape boundaries. 
   """
 
   use PromEx.Plugin
 
   alias Telemetry.Metrics
 
-  @request_counted_event [:lightning, :channel_proxy, :request, :counted]
+  @inbound_stop_event [:lightning, :channel_proxy, :inbound, :stop]
+  @request_start_event [:lightning, :channel_proxy, :request, :start]
   @request_stop_event [:lightning, :channel_proxy, :request, :stop]
 
   @impl true
@@ -46,8 +49,15 @@ defmodule Lightning.Channels.PromExPlugin do
         :lightning_channel_proxy_event_metrics,
         [
           Metrics.counter(
+            [:lightning, :channel_proxy, :inbound, :total],
+            event_name: @inbound_stop_event,
+            description:
+              "Total inbound /channels/* requests, tagged by outcome.",
+            tags: [:outcome]
+          ),
+          Metrics.counter(
             [:lightning, :channel_proxy, :requests, :started, :total],
-            event_name: @request_counted_event,
+            event_name: @request_start_event,
             description: "Total channel proxy requests started.",
             tags: [:project_id]
           ),

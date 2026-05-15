@@ -1376,7 +1376,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         :telemetry.attach_many(
           handler_id,
           [
-            [:lightning, :channel_proxy, :request, :counted],
+            [:lightning, :channel_proxy, :inbound, :stop],
+            [:lightning, :channel_proxy, :request, :start],
             [:lightning, :channel_proxy, :request, :stop]
           ],
           fn event, measurements, metadata, _config ->
@@ -1390,7 +1391,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       :ok
     end
 
-    test "counted and stop both carry the resolved project_id on a successful request",
+    test "resolved channel: outer :inbound :stop and inner :request :start/:stop fire with real UUIDs",
          %{bypass: bypass, channel: channel} do
       Bypass.expect_once(bypass, "GET", "/observed", fn conn ->
         Plug.Conn.send_resp(conn, 200, "ok")
@@ -1402,33 +1403,43 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 200
 
-      # Regression guard for the started/finished label mismatch:
-      # the counted event MUST carry the resolved project_id (not "unknown"),
-      # otherwise the started_total counter is permanently mislabelled and
-      # per-project concurrent connections cannot be derived in Grafana.
-      assert_receive {:telemetry,
-                      [:lightning, :channel_proxy, :request, :counted],
-                      %{count: 1},
-                      %{
-                        channel_id: counted_channel_id,
-                        project_id: counted_project_id
-                      }}
+      expected_channel_id = channel.id
+      expected_project_id = channel.project_id
 
-      assert counted_channel_id == channel.id
-      assert counted_project_id == channel.project_id
+      # Outer span carries outcome + resolved IDs (real UUIDs, never "unknown").
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :inbound, :stop],
+                      _measurements, inbound_meta}
+
+      assert %{
+               outcome: :resolved,
+               status: 200,
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id
+             } = inbound_meta
+
+      # Inner span fires only on the resolved path. :start metadata already
+      # carries the resolved project_id (the whole point of the split).
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
+                      _measurements, start_meta}
+
+      assert %{
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id
+             } = start_meta
 
       assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
-                      %{duration: duration}, stop_metadata}
+                      %{duration: duration}, stop_meta}
 
       assert is_integer(duration) and duration > 0
 
       assert %{
-               channel_id: ^counted_channel_id,
-               project_id: ^counted_project_id
-             } = stop_metadata
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id,
+               status: 200
+             } = stop_meta
     end
 
-    test "counted and stop both report project_id=\"unknown\" for an unknown channel",
+    test "unknown channel: outer :inbound :stop fires with :unknown_channel and no inner events",
          %{conn: conn} do
       missing_id = "00000000-0000-0000-0000-000000000000"
 
@@ -1436,14 +1447,99 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 404
 
-      assert_receive {:telemetry,
-                      [:lightning, :channel_proxy, :request, :counted],
-                      %{count: 1},
-                      %{channel_id: ^missing_id, project_id: "unknown"}}
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :inbound, :stop],
+                      _measurements, inbound_meta}
+
+      assert %{outcome: :unknown_channel, status: 404} = inbound_meta
+      refute Map.has_key?(inbound_meta, :channel_id)
+      refute Map.has_key?(inbound_meta, :project_id)
+
+      # The inner :request span never opens for unknown channels.
+      refute_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
+                      _, _}
+
+      refute_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
+                      _, _}
+    end
+
+    test "invalid UUID: outer :inbound :stop fires with :invalid_uuid and no inner events",
+         %{conn: conn} do
+      resp = get(conn, "/channels/not-a-uuid/whatever")
+
+      assert resp.status == 404
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :inbound, :stop],
+                      _measurements, inbound_meta}
+
+      assert %{outcome: :invalid_uuid, status: 404} = inbound_meta
+      refute Map.has_key?(inbound_meta, :channel_id)
+      refute Map.has_key?(inbound_meta, :project_id)
+
+      refute_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
+                      _, _}
+
+      refute_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
+                      _, _}
+    end
+
+    test "401 unauthorized: outer :inbound and inner :request both fire (auth lives inside inner span)",
+         %{bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "correct-key"
+                )
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("x-api-key", "wrong-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 401
+
+      expected_channel_id = channel.id
+      expected_project_id = channel.project_id
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :inbound, :stop],
+                      _measurements, inbound_meta}
+
+      assert %{
+               outcome: :resolved,
+               status: 401,
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id
+             } = inbound_meta
+
+      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
+                      _measurements, start_meta}
+
+      assert %{
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id
+             } = start_meta
 
       assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
-                      _measurements,
-                      %{channel_id: ^missing_id, project_id: "unknown"}}
+                      _measurements, stop_meta}
+
+      assert %{
+               channel_id: ^expected_channel_id,
+               project_id: ^expected_project_id,
+               status: 401
+             } = stop_meta
     end
   end
 
