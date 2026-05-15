@@ -710,7 +710,7 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp handle_cancel_deletion_result(
-         {:error, :too_many_sandboxes, %{text: text}},
+         {:error, _reason, %{text: text}},
          _sandbox,
          socket
        ) do

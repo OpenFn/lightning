@@ -381,7 +381,7 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
   * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
-  * `{:error, :too_many_sandboxes, message}` - Limit reached
+  * `Lightning.Extensions.UsageLimiting.error()` - Limit reached
   """
   @spec cancel_scheduled_sandbox_deletion(
           Project.t() | Ecto.UUID.t(),
@@ -389,18 +389,15 @@ defmodule Lightning.Projects.Sandboxes do
         ) ::
           {:ok, Project.t()}
           | {:error, :unauthorized | :not_found | term()}
-          | {:error, :too_many_sandboxes, Lightning.Extensions.Message.t()}
+          | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    cond do
-      not Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) ->
-        {:error, :unauthorized}
-
-      true ->
-        case ProjectLimiter.limit_new_sandbox(sandbox.id) do
-          :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
-          {:error, :too_many_sandboxes, _message} = error -> error
-          {:error, _reason, _message} = error -> error
-        end
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      case ProjectLimiter.limit_new_sandbox(sandbox.id) do
+        :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
+        {:error, _reason, _message} = error -> error
+      end
+    else
+      {:error, :unauthorized}
     end
   end
 
