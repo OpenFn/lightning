@@ -11,7 +11,18 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   use Mix.Task
 
   @default_path "priv/openfn"
-  @cli_version "1.35.3"
+
+  # Single source of truth for the `@openfn/cli` version: `assets/package.json`.
+  # Putting it there lets Dependabot track it like any other npm dependency
+  # and open bump PRs when a new release ships.
+  @package_json Path.expand("../../../assets/package.json", __DIR__)
+  @external_resource @package_json
+  @cli_version @package_json
+               |> File.read!()
+               |> Jason.decode!()
+               |> get_in(["devDependencies", "@openfn/cli"])
+               |> String.trim_leading("^")
+               |> String.trim_leading("~")
 
   def run(args) do
     case Rambo.run("/usr/bin/env", ~w(which node)) do
