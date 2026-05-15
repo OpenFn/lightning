@@ -138,8 +138,19 @@ defmodule LightningWeb.LayoutComponentsTest do
         (&LayoutComponents.global_project_picker/1)
         |> render_component(%{current_user: user, current_path: "/projects"})
 
-      assert html =~ visible_sandbox.id
-      refute html =~ hidden_sandbox.id
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+
+      assert parent.id in ids
+      assert visible_sandbox.id in ids
+      refute hidden_sandbox.id in ids
     end
   end
 
