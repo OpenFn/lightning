@@ -64,7 +64,7 @@ describe('NewRunButton - Disabled Prop', () => {
       <NewRunButton onClick={mockOnClick} disabled={false} />
     );
 
-    const playIcon = container.querySelector('.hero-play');
+    const playIcon = container.querySelector('.hero-play-solid');
     expect(playIcon).toBeInTheDocument();
   });
 
