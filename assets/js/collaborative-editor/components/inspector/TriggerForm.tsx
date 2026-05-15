@@ -33,6 +33,16 @@ interface TriggerFormProps {
 
 const logger = _logger.ns('TriggerForm').seal();
 
+function hasResponseConfig(
+  config: {
+    success_code: number | null;
+    error_code: number | null;
+  } | null
+): boolean {
+  if (!config) return false;
+  return config.success_code != null || config.error_code != null;
+}
+
 /**
  * Pure form component for trigger configuration.
  * Handles trigger type, enabled toggle, and type-specific fields
@@ -45,6 +55,30 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const { copyText, copyToClipboard } = useCopyToClipboard();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showResponseStatus, setShowResponseStatus] = useState(true);
+  // Transient "user clicked to reveal this row but hasn't typed yet" intent.
+  // Stays sticky once a value is typed so clearing the input doesn't hide the
+  // row; only collapses on explicit remove. Reset on trigger switch, not on
+  // every config edit (so a remote collaborator's change doesn't wipe the
+  // local user's in-progress row).
+  const [forceShowResponseBlock, setForceShowResponseBlock] = useState(false);
+  const [forceShowSuccess, setForceShowSuccess] = useState(
+    () => trigger.webhook_response_config?.success_code != null
+  );
+  const [forceShowError, setForceShowError] = useState(
+    () => trigger.webhook_response_config?.error_code != null
+  );
+
+  const triggerConfig = trigger.webhook_response_config;
+  const hasResponseStatus =
+    (triggerConfig != null &&
+      (triggerConfig.success_code != null ||
+        triggerConfig.error_code != null)) ||
+    forceShowResponseBlock;
+  const shownSuccessCode =
+    triggerConfig?.success_code != null || forceShowSuccess;
+  const shownErrorCode = triggerConfig?.error_code != null || forceShowError;
+
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
@@ -58,6 +92,13 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const activeTriggerAuthMethods = useWorkflowState(
     state => state.activeTriggerAuthMethods
   );
+
+  useEffect(() => {
+    const cfg = trigger.webhook_response_config;
+    setForceShowResponseBlock(false);
+    setForceShowSuccess(cfg?.success_code != null);
+    setForceShowError(cfg?.error_code != null);
+  }, [trigger.id]);
 
   // Request auth methods when trigger is selected
   useEffect(() => {
@@ -415,18 +456,29 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               )}
                             >
                               <option value="before_start">
-                                Async (default)
+                                Async (Before Start)
                               </option>
-                              <option value="after_completion">Sync</option>
+                              <option value="after_completion">
+                                Sync (After Completion)
+                              </option>
                             </select>
                             <p
                               id={`${field.name}-description`}
                               className="mt-1 text-xs text-slate-500"
                             >
                               {field.state.value === 'after_completion'
-                                ? 'Responds with the final output state after the run completes. (Note that depending on your queue size and the duration of the workflow itself, this could take a long time.)'
+                                ? 'Holds the HTTP connection open and responds when the run completes.'
                                 : 'Responds immediately with the enqueued work order ID.'}
                             </p>
+                            {field.state.value === 'after_completion' &&
+                              hasResponseConfig(
+                                trigger.webhook_response_config
+                              ) && (
+                                <p className="mt-1 text-xs text-amber-600">
+                                  Switching to async will clear your response
+                                  configuration.
+                                </p>
+                              )}
                             {field.state.meta.errors.map(error => (
                               <p
                                 key={error}
@@ -437,6 +489,289 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             ))}
                           </div>
                         )}
+                      </form.Field>
+
+                      {/* Conditional config fields for after_completion */}
+                      <form.Field name="webhook_reply">
+                        {replyField => {
+                          if (replyField.state.value !== 'after_completion') {
+                            return null;
+                          }
+
+                          return (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                              {/* Options header */}
+                              <div className="flex items-center">
+                                <span className="text-sm font-medium text-slate-700">
+                                  Options
+                                </span>
+                              </div>
+
+                              {/* Response Status block */}
+                              {hasResponseStatus && (
+                                <form.Field name="webhook_response_config">
+                                  {field => {
+                                    const config = field.state.value as {
+                                      success_code: number | null;
+                                      error_code: number | null;
+                                    } | null;
+
+                                    const baseConfig = config ?? {
+                                      success_code: null,
+                                      error_code: null,
+                                    };
+
+                                    const inputClass = cn(
+                                      'block w-full px-3 py-2',
+                                      'border rounded-md text-sm',
+                                      'border-slate-300',
+                                      'focus:border-indigo-500 focus:ring-indigo-500',
+                                      'focus:outline-none focus:ring-1',
+                                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                                    );
+
+                                    return (
+                                      <div className="rounded-md border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                                        {/* Response Status header row */}
+                                        <div className="flex items-center px-3 py-2 bg-slate-50 border-b border-slate-200">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setShowResponseStatus(
+                                                !showResponseStatus
+                                              )
+                                            }
+                                            className="flex flex-1 items-center gap-1.5 text-sm font-medium text-slate-700 text-left focus:outline-none"
+                                          >
+                                            <span
+                                              className={cn(
+                                                'h-3.5 w-3.5 transition-transform',
+                                                showResponseStatus
+                                                  ? 'hero-chevron-down-mini'
+                                                  : 'hero-chevron-right-mini'
+                                              )}
+                                            />
+                                            Response Status
+                                          </button>
+                                          {!isReadOnly && (
+                                            <button
+                                              type="button"
+                                              title="Remove"
+                                              onClick={() => {
+                                                setForceShowResponseBlock(
+                                                  false
+                                                );
+                                                setForceShowSuccess(false);
+                                                setForceShowError(false);
+                                                field.handleChange({
+                                                  success_code: null,
+                                                  error_code: null,
+                                                });
+                                              }}
+                                              className="p-0.5 text-slate-400 hover:text-red-500 rounded transition-colors focus:outline-none"
+                                            >
+                                              <span className="hero-x-mark-mini h-3.5 w-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        {/* Response Status content */}
+                                        {showResponseStatus && (
+                                          <div className="p-3 space-y-3">
+                                            {/* Success Status Code row */}
+                                            {shownSuccessCode && (
+                                              <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                  <label
+                                                    htmlFor={`${field.name}-success-code`}
+                                                    className="block text-xs font-medium text-slate-600 mb-1"
+                                                  >
+                                                    Success Status Code
+                                                  </label>
+                                                  <input
+                                                    id={`${field.name}-success-code`}
+                                                    type="number"
+                                                    placeholder="201"
+                                                    value={
+                                                      config?.success_code ?? ''
+                                                    }
+                                                    onChange={e => {
+                                                      const raw =
+                                                        e.target.value;
+                                                      field.handleChange({
+                                                        ...baseConfig,
+                                                        success_code:
+                                                          raw === ''
+                                                            ? null
+                                                            : parseInt(raw, 10),
+                                                      });
+                                                    }}
+                                                    onBlur={field.handleBlur}
+                                                    disabled={isReadOnly}
+                                                    className={inputClass}
+                                                  />
+                                                </div>
+                                                {!isReadOnly && (
+                                                  <button
+                                                    type="button"
+                                                    title="Remove"
+                                                    onClick={() => {
+                                                      setForceShowSuccess(
+                                                        false
+                                                      );
+                                                      field.handleChange({
+                                                        ...baseConfig,
+                                                        success_code: null,
+                                                      });
+                                                    }}
+                                                    className="mb-0.5 p-1.5 text-slate-400 hover:text-red-500 rounded transition-colors"
+                                                  >
+                                                    <span className="hero-trash-mini h-4 w-4" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            )}
+
+                                            {/* Error Status Code row */}
+                                            {shownErrorCode && (
+                                              <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                  <label
+                                                    htmlFor={`${field.name}-error-code`}
+                                                    className="block text-xs font-medium text-slate-600 mb-1"
+                                                  >
+                                                    Error Status Code
+                                                  </label>
+                                                  <input
+                                                    id={`${field.name}-error-code`}
+                                                    type="number"
+                                                    placeholder="500"
+                                                    value={
+                                                      config?.error_code ?? ''
+                                                    }
+                                                    onChange={e => {
+                                                      const raw =
+                                                        e.target.value;
+                                                      field.handleChange({
+                                                        ...baseConfig,
+                                                        error_code:
+                                                          raw === ''
+                                                            ? null
+                                                            : parseInt(raw, 10),
+                                                      });
+                                                    }}
+                                                    onBlur={field.handleBlur}
+                                                    disabled={isReadOnly}
+                                                    className={inputClass}
+                                                  />
+                                                </div>
+                                                {!isReadOnly && (
+                                                  <button
+                                                    type="button"
+                                                    title="Remove"
+                                                    onClick={() => {
+                                                      setForceShowError(false);
+                                                      field.handleChange({
+                                                        ...baseConfig,
+                                                        error_code: null,
+                                                      });
+                                                    }}
+                                                    className="mb-0.5 p-1.5 text-slate-400 hover:text-red-500 rounded transition-colors"
+                                                  >
+                                                    <span className="hero-trash-mini h-4 w-4" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            )}
+
+                                            {/* Add individual status code buttons */}
+                                            {!isReadOnly &&
+                                              (!shownSuccessCode ||
+                                                !shownErrorCode) && (
+                                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                                  {!shownSuccessCode && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setForceShowSuccess(
+                                                          true
+                                                        )
+                                                      }
+                                                      className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                                                    >
+                                                      <span className="hero-plus-mini h-3.5 w-3.5" />
+                                                      Success Status Code
+                                                    </button>
+                                                  )}
+                                                  {!shownErrorCode && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setForceShowError(true)
+                                                      }
+                                                      className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                                                    >
+                                                      <span className="hero-plus-mini h-3.5 w-3.5" />
+                                                      Error Status Code
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }}
+                                </form.Field>
+                              )}
+
+                              {/* Configure Response Status (when not yet added) */}
+                              {!hasResponseStatus && !isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setForceShowResponseBlock(true);
+                                    setShowResponseStatus(true);
+                                  }}
+                                  className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 border border-dashed border-slate-300 rounded-md px-3 py-1.5 w-full transition-colors"
+                                >
+                                  <span className="hero-adjustments-horizontal-mini h-4 w-4" />
+                                  Configure Response Status
+                                </button>
+                              )}
+
+                              {/* Response Body */}
+                              <div>
+                                <p className="text-sm font-medium text-slate-800 mb-1.5">
+                                  Response Body
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  The final run state is returned as the
+                                  response body.
+                                </p>
+                                <div className="mt-2 flex gap-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2">
+                                  <span className="hero-information-circle-mini mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
+                                  <p className="text-xs text-blue-700">
+                                    To return a custom body or status code from
+                                    your job, set{' '}
+                                    <code className="font-mono">
+                                      webhookResponse
+                                    </code>{' '}
+                                    in the job code.{' '}
+                                    <a
+                                      href="https://docs.openfn.org/documentation/build/triggers#webhook-trigger-responses"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="underline hover:text-blue-900"
+                                    >
+                                      Learn more
+                                    </a>
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
                       </form.Field>
                     </div>
                   </div>

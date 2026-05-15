@@ -61,11 +61,11 @@ Note that for secure deployments, it's recommended to use a combination of
 - `MAX_CREDENTIAL_SENSITIVE_VALUES` - the maximum number of sensitive values
   that can be stored in a credential. Defaults to 50.
 - `MAX_SANDBOX_NESTING_DEPTH` - the maximum depth at which sandboxes can be
-  nested. A direct child sandbox is depth 1, a sandbox of a sandbox is depth
-  2, etc. Provision attempts beyond this depth return
+  nested. A direct child sandbox is depth 1, a sandbox of a sandbox is depth 2,
+  etc. Provision attempts beyond this depth return
   `{:error, :nesting_too_deep}`, and the **Create Sandbox** button on the
-  Sandboxes page is disabled with a tooltip when the current project is at
-  the cap. Defaults to 5. Set to `0` to disable sandbox creation entirely.
+  Sandboxes page is disabled with a tooltip when the current project is at the
+  cap. Defaults to 5. Set to `0` to disable sandbox creation entirely.
 
 ### GitHub
 

@@ -780,6 +780,67 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml =~ expected_yaml_trigger
     end
 
+    test "webhook_response_config is included in the export" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true,
+          webhook_reply: :after_completion,
+          webhook_response_config:
+            build(:webhook_response_config,
+              success_code: 200,
+              error_code: 500
+            )
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => state)]
+        )
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      expected_trigger_yaml =
+        """
+            triggers:
+              webhook:
+                type: webhook
+                webhook_reply: after_completion
+                webhook_response_config:
+                  success_code: 200
+                  error_code: 500
+                enabled: true
+        """
+
+      assert generated_yaml =~ expected_trigger_yaml
+    end
+
+    test "webhook_response_config is omitted when it's is nil" do
+      project = insert(:project, name: "project 2")
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job = build(:job, body: ~s[fn(state => state)])
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      refute generated_yaml =~ "webhook_response_config"
+    end
+
     test "exports canonical project" do
       project =
         canonical_project_fixture(
