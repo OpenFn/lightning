@@ -773,6 +773,70 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
+  describe "Sandbox visibility" do
+    setup :register_and_log_in_user
+
+    test "root editor only sees sandboxes they are a project user on", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      visible_sandbox =
+        insert(:project,
+          name: "visible-sandbox",
+          parent: parent,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      hidden_sandbox =
+        insert(:project,
+          name: "hidden-sandbox",
+          parent: parent,
+          project_users: []
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "#edit-sandbox-#{visible_sandbox.id}")
+      refute has_element?(view, "#edit-sandbox-#{hidden_sandbox.id}")
+    end
+
+    test "root owner still sees every sandbox in the workspace", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox_with_pu =
+        insert(:project,
+          name: "with-pu",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox_without_pu =
+        insert(:project,
+          name: "without-pu",
+          parent: parent,
+          project_users: []
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "#edit-sandbox-#{sandbox_with_pu.id}")
+      assert has_element?(view, "#edit-sandbox-#{sandbox_without_pu.id}")
+    end
+  end
+
   describe "Delete sandbox with descendant checking" do
     setup :register_and_log_in_user
 
@@ -1024,6 +1088,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       _ =
         Lightning.Projects.add_project_users(parent, [
+          %{user_id: other_user.id, role: :viewer}
+        ])
+
+      _ =
+        Lightning.Projects.add_project_users(scheduled, [
           %{user_id: other_user.id, role: :viewer}
         ])
 

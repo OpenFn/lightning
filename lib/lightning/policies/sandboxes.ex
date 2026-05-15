@@ -132,6 +132,36 @@ defmodule Lightning.Policies.Sandboxes do
     end
   end
 
+  @doc """
+  Returns the subset of `sandboxes` that `user` is allowed to see.
+
+  A sandbox is visible when the user is a superuser, an owner or admin on
+  the root project (cascading workspace control), or has any `project_users`
+  row on the sandbox itself. This mirrors how the projects list filters out
+  projects the user is not a member of.
+
+  Assumes `root_project.project_users` and each `sandbox.project_users` are
+  preloaded (as ensured by `Projects.list_workspace_projects/2`).
+  """
+  @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
+  def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
+    cond do
+      user.role == :superuser ->
+        sandboxes
+
+      Enum.any?(
+        root_project.project_users,
+        &(&1.user_id == user.id and &1.role in [:owner, :admin])
+      ) ->
+        sandboxes
+
+      true ->
+        Enum.filter(sandboxes, fn sandbox ->
+          Enum.any?(sandbox.project_users, &(&1.user_id == user.id))
+        end)
+    end
+  end
+
   defp has_root_project_permission?(%Project{} = sandbox, %User{} = user) do
     root_project = Projects.root_of(sandbox)
 

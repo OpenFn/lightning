@@ -557,6 +557,109 @@ defmodule Lightning.Policies.SandboxesTest do
     end
   end
 
+  describe "visible_sandboxes/3" do
+    test "superuser sees every sandbox in the workspace", %{
+      superuser: superuser,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Sandboxes.visible_sandboxes(sandboxes, superuser, root_project) ==
+               sandboxes
+    end
+
+    test "root project owner sees every sandbox in the workspace", %{
+      root_project_owner: owner,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Sandboxes.visible_sandboxes(sandboxes, owner, root_project) ==
+               sandboxes
+    end
+
+    test "root project admin sees every sandbox in the workspace", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :admin)
+
+      root_project =
+        Lightning.Repo.preload(root_project, :project_users, force: true)
+
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Sandboxes.visible_sandboxes(sandboxes, user, root_project) ==
+               sandboxes
+    end
+
+    test "root project editor only sees sandboxes they are a member of", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :editor)
+      insert(:project_user, user: user, project: sandbox, role: :viewer)
+
+      root_project =
+        Lightning.Repo.preload(root_project, :project_users, force: true)
+
+      sandbox = Lightning.Repo.preload(sandbox, :project_users, force: true)
+
+      visible =
+        Sandboxes.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          user,
+          root_project
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox.id]
+    end
+
+    test "user with no role on the root sees only sandboxes they belong to",
+         %{
+           sandbox_owner: sandbox_owner,
+           root_project: root_project,
+           sandbox: sandbox,
+           sandbox_with_owner: sandbox_with_owner,
+           sandbox_with_admin: sandbox_with_admin
+         } do
+      visible =
+        Sandboxes.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          sandbox_owner,
+          root_project
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox_with_owner.id]
+    end
+
+    test "user with no role anywhere sees no sandboxes", %{
+      other_user: other_user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      assert Sandboxes.visible_sandboxes(
+               [sandbox, sandbox_with_owner, sandbox_with_admin],
+               other_user,
+               root_project
+             ) == []
+    end
+  end
+
   describe "edge cases and private function coverage" do
     test "authorize returns false for unknown actions", %{
       user: user,

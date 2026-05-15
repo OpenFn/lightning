@@ -534,6 +534,13 @@ defmodule LightningWeb.SandboxLive.Index do
     current_user = socket.assigns.current_user
     limit_new_sandbox = socket.assigns.limit_new_sandbox
 
+    descendants =
+      Lightning.Policies.Sandboxes.visible_sandboxes(
+        descendants,
+        current_user,
+        root_project
+      )
+
     can_create_sandbox =
       Permissions.can?(
         :sandboxes,
