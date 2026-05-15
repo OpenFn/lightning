@@ -571,6 +571,40 @@ defmodule Lightning.ProjectsTest do
       assert ids == Enum.sort([root.id, sandbox.id])
     end
 
+    test "get_project_tree_for_user/1 applies per-root visibility across multiple workspaces" do
+      user = user_fixture()
+
+      admin_root =
+        project_fixture(project_users: [%{user_id: user.id, role: :admin}])
+
+      admin_sandbox = insert(:project, parent: admin_root)
+
+      editor_root =
+        project_fixture(project_users: [%{user_id: user.id, role: :editor}])
+
+      editor_visible =
+        insert(:project,
+          parent: editor_root,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      _editor_hidden = insert(:project, parent: editor_root)
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids ==
+               Enum.sort([
+                 admin_root.id,
+                 admin_sandbox.id,
+                 editor_root.id,
+                 editor_visible.id
+               ])
+    end
+
     test "get_project_user_role/2" do
       user_1 = user_fixture()
       user_2 = user_fixture()

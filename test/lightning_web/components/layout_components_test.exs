@@ -3,6 +3,7 @@ defmodule LightningWeb.LayoutComponentsTest do
   use LightningWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias LightningWeb.LayoutComponents
   alias LightningWeb.Components.Menu
@@ -119,20 +120,18 @@ defmodule LightningWeb.LayoutComponentsTest do
     end
 
     test "items omit sandboxes the user has no access to" do
-      user = Lightning.AccountsFixtures.user_fixture()
+      user = insert(:user)
 
       parent =
-        Lightning.ProjectsFixtures.project_fixture(
-          project_users: [%{user_id: user.id, role: :editor}]
-        )
+        insert(:project, project_users: [%{user: user, role: :editor}])
 
       visible_sandbox =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           parent: parent,
           project_users: [%{user: user, role: :viewer}]
         )
 
-      hidden_sandbox = Lightning.Factories.insert(:project, parent: parent)
+      hidden_sandbox = insert(:project, parent: parent)
 
       html =
         (&LayoutComponents.global_project_picker/1)

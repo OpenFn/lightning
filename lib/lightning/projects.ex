@@ -978,7 +978,7 @@ defmodule Lightning.Projects do
     support_roots
     |> union(^projects_for_user_query(user))
     |> Repo.all()
-    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(& &1.name)
     |> Repo.preload(:project_users)
   end
 
@@ -1010,24 +1010,30 @@ defmodule Lightning.Projects do
   """
   @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
   def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
-    cond do
-      user.role == :superuser ->
-        sandboxes
-
-      user.support_user and root_project.allow_support_access ->
-        sandboxes
-
-      Enum.any?(
-        root_project.project_users,
-        &(&1.user_id == user.id and &1.role in [:owner, :admin])
-      ) ->
-        sandboxes
-
-      true ->
-        Enum.filter(sandboxes, fn sandbox ->
-          Enum.any?(sandbox.project_users, &(&1.user_id == user.id))
-        end)
+    if cascading_visibility?(user, root_project) do
+      sandboxes
+    else
+      Enum.filter(sandboxes, &member?(&1, user))
     end
+  end
+
+  defp cascading_visibility?(%User{role: :superuser}, _root), do: true
+
+  defp cascading_visibility?(
+         %User{support_user: true},
+         %Project{allow_support_access: true}
+       ),
+       do: true
+
+  defp cascading_visibility?(%User{} = user, %Project{} = root) do
+    Enum.any?(
+      root.project_users,
+      &(&1.user_id == user.id and &1.role in [:owner, :admin])
+    )
+  end
+
+  defp member?(%Project{project_users: pus}, %User{id: user_id}) do
+    Enum.any?(pus, &(&1.user_id == user_id))
   end
 
   defp filter_descendants_for_user(descendants, roots, %User{} = user) do
