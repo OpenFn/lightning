@@ -115,6 +115,10 @@ defmodule Lightning.Channels.PersistencePolicyTest do
                "expected #{field} to be dropped, but it was present in #{inspect(result)}"
       end
 
+      # `is_wiped` lives on ChannelRequest, not ChannelEvent — it must not be
+      # injected into event attrs (cast/3 would silently drop it).
+      refute Map.has_key?(result, :is_wiped)
+
       # Status / timing / size / category fields are preserved.
       assert %{
                type: :destination_response,

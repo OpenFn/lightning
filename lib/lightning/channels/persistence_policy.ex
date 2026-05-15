@@ -1,9 +1,10 @@
 defmodule Lightning.Channels.PersistencePolicy do
   @moduledoc """
   Decides whether channel request/event payload fields are persisted, based on
-  the project's `retention_policy`. PII fields are scrubbed (set to nil) before
-  insert when `persist_observations?` is false, and the resulting ChannelEvent
-  is marked `is_wiped: true` so the UI can render the wiped-payload affordance.
+  the project's `retention_policy`. PII fields are dropped from the attrs map
+  before insert when `persist_observations?` is false, and the resulting
+  `ChannelRequest` is marked `is_wiped: true` so the UI can render the
+  wiped-payload affordance.
   """
 
   alias Lightning.Projects
@@ -32,8 +33,6 @@ defmodule Lightning.Channels.PersistencePolicy do
   def wipe_event_attrs(attrs, persist_observations: true), do: attrs
 
   def wipe_event_attrs(attrs, persist_observations: false) do
-    attrs
-    |> Map.drop(@event_fields)
-    |> Map.put(:is_wiped, true)
+    Map.drop(attrs, @event_fields)
   end
 end

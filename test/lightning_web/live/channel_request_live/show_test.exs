@@ -498,6 +498,49 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       refute html =~ ~s(id="resp-body-content")
     end
 
+    @tag role: :editor
+    test "non-admin sees 'contact your admins' copy with admin email tooltip",
+         %{conn: conn, project: project} do
+      admin = insert(:user, email: "admin@example.com")
+      insert(:project_user, project: project, user: admin, role: :admin)
+
+      {request, _channel, _snapshot} =
+        create_channel_request(project, is_wiped: true, client_identity: nil)
+
+      insert(:channel_event,
+        channel_request: request,
+        request_path: nil,
+        request_query_string: nil,
+        request_headers: nil,
+        request_body_preview: nil,
+        request_body_hash: nil,
+        response_headers: nil,
+        response_body_preview: nil,
+        response_body_hash: nil
+      )
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # The combined wiped viewer is rendered.
+      assert html =~ ~s(id="payload-wiped-viewer")
+
+      # The "can NOT edit data retention" branch is shown: the user sees the
+      # "contact your admins" copy and the tooltip carries admin emails.
+      assert html =~ "Contact one of your"
+      assert html =~ "project admins"
+
+      assert html =~
+               ~s(id="zero-persistence-admins-tooltip-payload-wiped-viewer")
+
+      assert html =~ ~s(aria-label="admin@example.com")
+
+      # The editable-branch copy ("change this policy for future requests")
+      # must not leak when the user can't edit the retention policy.
+      refute html =~ "for future requests"
+      refute html =~ ~s(href="/projects/#{project.id}/settings#data-storage")
+    end
+
     test "does not render wiped viewer when channel_request.is_wiped is false",
          %{conn: conn, project: project} do
       {request, _channel, _snapshot} =
