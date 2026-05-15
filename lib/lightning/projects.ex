@@ -927,27 +927,97 @@ defmodule Lightning.Projects do
   @doc """
   Returns all projects the user can access, including sandboxes at any depth.
 
-  Root projects are fetched via the user's project memberships, then all
-  descendants are included using a recursive CTE via `descendant_ids/1`.
+  Root projects are fetched via the user's project memberships (or via
+  `allow_support_access` for support users). Descendants are then included
+  only when the user actually has access to them: superusers see every
+  descendant, owners and admins of the root see every descendant of that
+  root (cascading workspace control), and support users see every
+  descendant of a support-access root. Otherwise the user only sees
+  descendants on which they hold a `project_users` row. This matches the
+  rule applied to the sandboxes list.
   """
   @spec get_project_tree_for_user(User.t()) :: [Project.t()]
   def get_project_tree_for_user(%User{} = user) do
-    roots = get_projects_for_user(user)
-    root_ids = Enum.map(roots, & &1.id)
+    roots = roots_for_user_tree(user)
 
-    case descendant_ids(root_ids) do
+    case roots do
       [] ->
-        roots
+        []
 
-      desc_ids ->
-        descendants =
-          from(p in Project,
-            where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
-            order_by: [asc: p.name]
-          )
-          |> Repo.all()
+      _ ->
+        root_ids = Enum.map(roots, & &1.id)
 
-        roots ++ descendants
+        case descendant_ids(root_ids) do
+          [] ->
+            roots
+
+          desc_ids ->
+            descendants =
+              from(p in Project,
+                where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
+                preload: :project_users,
+                order_by: [asc: p.name]
+              )
+              |> Repo.all()
+
+            visible = filter_descendants_for_user(descendants, roots, user)
+            roots ++ visible
+        end
+    end
+  end
+
+  defp roots_for_user_tree(%User{support_user: true} = user) do
+    support_roots =
+      from(p in Project,
+        where:
+          p.allow_support_access and
+            is_nil(p.scheduled_deletion) and
+            is_nil(p.parent_id)
+      )
+
+    support_roots
+    |> union(^projects_for_user_query(user))
+    |> Repo.all()
+    |> Enum.uniq_by(& &1.id)
+    |> Repo.preload(:project_users)
+  end
+
+  defp roots_for_user_tree(%User{} = user) do
+    user
+    |> projects_for_user_query()
+    |> preload(:project_users)
+    |> Repo.all()
+  end
+
+  defp filter_descendants_for_user(descendants, roots, %User{} = user) do
+    cascading_root_ids = cascading_root_ids_for_user(roots, user)
+    project_map = Map.new(roots ++ descendants, &{&1.id, &1})
+
+    Enum.filter(descendants, fn project ->
+      user.role == :superuser or
+        MapSet.member?(cascading_root_ids, root_id_of(project, project_map)) or
+        Enum.any?(project.project_users, &(&1.user_id == user.id))
+    end)
+  end
+
+  defp cascading_root_ids_for_user(roots, %User{} = user) do
+    roots
+    |> Enum.filter(fn root ->
+      (user.support_user and root.allow_support_access) or
+        Enum.any?(
+          root.project_users,
+          &(&1.user_id == user.id and &1.role in [:owner, :admin])
+        )
+    end)
+    |> MapSet.new(& &1.id)
+  end
+
+  defp root_id_of(%Project{parent_id: nil, id: id}, _project_map), do: id
+
+  defp root_id_of(%Project{parent_id: parent_id, id: id}, project_map) do
+    case Map.get(project_map, parent_id) do
+      nil -> id
+      parent -> root_id_of(parent, project_map)
     end
   end
 

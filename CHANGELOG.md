@@ -70,13 +70,15 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list
   is disabled (with the limiter's tooltip) when the active sandbox count is
   already at the limit.
-- The sandboxes list now hides sandboxes the current user is not a member
-  of. Previously, anyone with access to the parent project could see every
-  descendant sandbox in the list (and, depending on their parent-project
-  role, act on them) even when they were not a `project_users` member of
-  the sandbox itself. Visibility now matches how the projects list works:
-  if you cannot access it, you do not see it. Superusers and root-project
-  owners/admins keep full visibility over the workspace.
+- The sandboxes list and the global project picker now hide sandboxes the
+  current user is not a member of. Previously, anyone with access to the
+  parent project could see every descendant sandbox in the list and the
+  picker dropdown (and, depending on their parent-project role, act on
+  them) even when they were not a `project_users` member of the sandbox
+  itself. Visibility now matches how the projects list works: if you
+  cannot access it, you do not see it. Superusers, root-project
+  owners/admins, and support users on support-access workspaces keep full
+  visibility.
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action

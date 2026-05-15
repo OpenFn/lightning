@@ -489,6 +489,88 @@ defmodule Lightning.ProjectsTest do
       assert [project_1] == Projects.get_projects_for_user(other_user)
     end
 
+    test "get_project_tree_for_user/1 returns empty for a user with no memberships" do
+      user = user_fixture()
+      _other_project = project_fixture()
+
+      assert Projects.get_project_tree_for_user(user) == []
+    end
+
+    test "get_project_tree_for_user/1 cascades for root owners and admins" do
+      owner = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: owner.id, role: :owner}])
+
+      sandbox = insert(:project, parent: root)
+      nested = insert(:project, parent: sandbox)
+
+      ids =
+        owner
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, sandbox.id, nested.id])
+    end
+
+    test "get_project_tree_for_user/1 hides descendants a non-cascading user is not a member of" do
+      editor = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: editor.id, role: :editor}])
+
+      visible_sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: editor, role: :viewer}]
+        )
+
+      _hidden_sandbox = insert(:project, parent: root)
+
+      ids =
+        editor
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, visible_sandbox.id])
+    end
+
+    test "get_project_tree_for_user/1 returns full tree for superusers on their member roots" do
+      superuser = insert(:user, role: :superuser)
+
+      root =
+        project_fixture(
+          project_users: [%{user_id: superuser.id, role: :viewer}]
+        )
+
+      sandbox = insert(:project, parent: root)
+
+      ids =
+        superuser
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, sandbox.id])
+    end
+
+    test "get_project_tree_for_user/1 cascades for support users on support-access roots" do
+      support_user = insert(:user, support_user: true)
+
+      root = insert(:project, allow_support_access: true)
+      sandbox = insert(:project, parent: root)
+
+      ids =
+        support_user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, sandbox.id])
+    end
+
     test "get_project_user_role/2" do
       user_1 = user_fixture()
       user_2 = user_fixture()
