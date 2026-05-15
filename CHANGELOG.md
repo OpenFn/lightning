@@ -60,6 +60,11 @@ and this project adheres to
 
 ### Fixed
 
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list
+  is disabled with a "Plan limit reached..." tooltip when the active count is
+  at the limit.
 - Copy token button on the Personal Access Tokens page now shows a 'Copied!'
   tooltip on click and no longer causes the icon to flicker
   [#2463](https://github.com/OpenFn/lightning/issues/2463)
