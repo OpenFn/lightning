@@ -1,26 +1,24 @@
 defmodule Lightning.Adaptors.NPMTest do
   use ExUnit.Case, async: false
 
-  import Lightning.Adaptors.NPMTestHelpers, only: [build_tarball: 1]
-
   alias Lightning.Adaptors.NPM
 
   @package "@openfn/language-http"
   @latest_version "2.1.0"
 
-  # Two Bypass servers: one stands in for npm registry (which also hosts
-  # the per-package tarball under the same hostname in reality — so the
-  # packument's `dist.tarball` field points at the same Bypass port), and
-  # one for jsDelivr. Embedding the registry Bypass port into the
-  # packument's tarball URL means we don't need a third Bypass instance
-  # just for the tarball CDN.
+  # Three Bypass servers: one for the npm registry, one for jsDelivr,
+  # one for raw.githubusercontent.com. Per-test config installs all three
+  # URLs onto the strategy_opts block.
   setup do
     registry = Bypass.open()
     jsdelivr = Bypass.open()
+    github = Bypass.open()
 
     Application.put_env(:lightning, Lightning.Adaptors.NPM,
       registry_url: "http://localhost:#{registry.port}",
       jsdelivr_url: "http://localhost:#{jsdelivr.port}",
+      github_url: "http://localhost:#{github.port}",
+      github_ref: "main",
       http_timeout: 1_000
     )
 
@@ -42,40 +40,20 @@ defmodule Lightning.Adaptors.NPMTest do
       end
     end)
 
-    %{
-      registry: registry,
-      jsdelivr: jsdelivr,
-      tarball_path: "/#{@package}/-/language-http-#{@latest_version}.tgz",
-      tarball_url:
-        "http://localhost:#{registry.port}/#{@package}/-/language-http-#{@latest_version}.tgz"
-    }
+    %{registry: registry, jsdelivr: jsdelivr, github: github}
   end
 
   describe "fetch_adaptor/1" do
-    test "decodes a packument into the full adaptor_record shape", %{
+    test "decodes a packument into the icon-free adaptor_record shape", %{
       registry: registry,
-      jsdelivr: jsdelivr,
-      tarball_path: tarball_path,
-      tarball_url: tarball_url
+      jsdelivr: jsdelivr
     } do
       schema = %{"type" => "object", "properties" => %{"baseUrl" => %{}}}
       schema_bytes = Jason.encode!(schema)
-
-      tarball =
-        build_tarball([
-          {"package/package.json", "{}"},
-          {"package/assets/square.png", "SQ_PNG_BYTES"},
-          {"package/assets/rectangle.png", "RECT_PNG_BYTES"}
-        ])
-
-      packument = build_packument(tarball_url)
+      packument = build_packument()
 
       Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
         json_resp(conn, 200, packument)
-      end)
-
-      Bypass.expect(registry, "GET", tarball_path, fn conn ->
-        Plug.Conn.resp(conn, 200, tarball)
       end)
 
       Bypass.expect(
@@ -99,15 +77,15 @@ defmodule Lightning.Adaptors.NPMTest do
                latest_version: @latest_version,
                deprecated: false,
                schema_data: ^schema,
-               schema_sha256: ^expected_schema_sha,
-               icon_square_ext: "png",
-               icon_rectangle_ext: "png"
+               schema_sha256: ^expected_schema_sha
              } = record
 
-      assert record.icon_square_sha256 == :crypto.hash(:sha256, "SQ_PNG_BYTES")
+      refute Map.has_key?(record, :icon_square_ext),
+             "fetch_adaptor/1 no longer carries icon fields — the Scheduler joins them"
 
-      assert record.icon_rectangle_sha256 ==
-               :crypto.hash(:sha256, "RECT_PNG_BYTES")
+      refute Map.has_key?(record, :icon_rectangle_ext)
+      refute Map.has_key?(record, :icon_square_sha256)
+      refute Map.has_key?(record, :icon_rectangle_sha256)
 
       refute Map.has_key?(record, :source),
              "strategy must not stamp :source — the Store owns that field"
@@ -118,7 +96,6 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert %{
                integrity: "sha512-abc",
-               tarball_url: ^tarball_url,
                size_bytes: 12_345,
                dependencies: %{"axios" => "^1.5.0"},
                peer_dependencies: %{"@openfn/language-common" => "^2.0.0"},
@@ -136,19 +113,12 @@ defmodule Lightning.Adaptors.NPMTest do
 
     test "degrades to nil schema when jsDelivr returns 5xx", %{
       registry: registry,
-      jsdelivr: jsdelivr,
-      tarball_path: tarball_path,
-      tarball_url: tarball_url
+      jsdelivr: jsdelivr
     } do
-      packument = build_packument(tarball_url)
-      tarball = build_tarball([{"package/package.json", "{}"}])
+      packument = build_packument()
 
       Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
         json_resp(conn, 200, packument)
-      end)
-
-      Bypass.expect(registry, "GET", tarball_path, fn conn ->
-        Plug.Conn.resp(conn, 200, tarball)
       end)
 
       Bypass.expect(jsdelivr, fn conn ->
@@ -159,106 +129,106 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert record.schema_data == nil
       assert record.schema_sha256 == nil
-      # Other fields still present
       assert record.name == @package
-      assert record.latest_version == @latest_version
-    end
-
-    test "leaves icon fields nil when tarball fetch fails", %{
-      registry: registry,
-      jsdelivr: jsdelivr,
-      tarball_path: tarball_path,
-      tarball_url: tarball_url
-    } do
-      packument = build_packument(tarball_url)
-      schema_bytes = Jason.encode!(%{"type" => "object"})
-
-      Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
-        json_resp(conn, 200, packument)
-      end)
-
-      Bypass.expect(registry, "GET", tarball_path, fn conn ->
-        Plug.Conn.resp(conn, 503, "")
-      end)
-
-      Bypass.expect(
-        jsdelivr,
-        "GET",
-        "/npm/#{@package}@#{@latest_version}/configuration-schema.json",
-        fn conn -> Plug.Conn.resp(conn, 200, schema_bytes) end
-      )
-
-      {:ok, record} = NPM.fetch_adaptor(@package)
-
-      assert record.icon_square_ext == nil
-      assert record.icon_square_sha256 == nil
-      assert record.icon_rectangle_ext == nil
-      assert record.icon_rectangle_sha256 == nil
-      # Other fields still present
-      assert record.schema_data != nil
       assert record.latest_version == @latest_version
     end
   end
 
   describe "fetch_icon/2" do
-    test "returns icon bytes + ext from the latest version's tarball", %{
-      registry: registry,
-      tarball_path: tarball_path,
-      tarball_url: tarball_url
-    } do
-      packument = build_packument(tarball_url)
-
-      tarball =
-        build_tarball([
-          {"package/assets/square.png", "PNG_PAYLOAD"},
-          {"package/assets/rectangle.svg", "<svg/>"}
-        ])
-
-      Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
-        json_resp(conn, 200, packument)
-      end)
-
-      Bypass.expect(registry, "GET", tarball_path, fn conn ->
-        Plug.Conn.resp(conn, 200, tarball)
-      end)
+    test "delegates to NPM.GitHub for raw icon bytes", %{github: github} do
+      Bypass.expect(
+        github,
+        "GET",
+        "/OpenFn/adaptors/main/packages/language-http/assets/square.png",
+        fn conn -> Plug.Conn.resp(conn, 200, "PNG_PAYLOAD") end
+      )
 
       assert {:ok, %{data: "PNG_PAYLOAD", ext: "png"}} =
                NPM.fetch_icon(@package, :square)
     end
 
-    test "returns {:error, :not_found} when the packument is 404", %{
-      registry: registry
+    test "returns {:error, :not_found} when both png and svg 404", %{
+      github: github
     } do
-      Bypass.expect(registry, "GET", "/@openfn/language-missing", fn conn ->
-        Plug.Conn.resp(conn, 404, "")
-      end)
+      Bypass.expect(github, fn conn -> Plug.Conn.resp(conn, 404, "") end)
 
       assert {:error, :not_found} =
                NPM.fetch_icon("@openfn/language-missing", :square)
     end
 
-    test "surfaces tarball 5xx as {:error, _}", %{
+    test "surfaces transport failure as {:error, _}", %{github: github} do
+      Bypass.down(github)
+
+      assert {:error, _reason} = NPM.fetch_icon(@package, :square)
+    end
+  end
+
+  describe "fetch_icons/0" do
+    test "lists adaptors then fans out to GitHub raw fetches", %{
       registry: registry,
-      tarball_path: tarball_path,
-      tarball_url: tarball_url
+      github: github
     } do
-      packument = build_packument(tarball_url)
+      Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
+        body = %{
+          "objects" => [
+            %{
+              "package" => %{
+                "name" => "@openfn/language-http",
+                "version" => "2.1.0"
+              }
+            },
+            %{
+              "package" => %{
+                "name" => "@openfn/language-salesforce",
+                "version" => "4.6.3"
+              }
+            }
+          ]
+        }
 
-      Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
-        json_resp(conn, 200, packument)
+        json_resp(conn, 200, body)
       end)
 
-      Bypass.expect(registry, "GET", tarball_path, fn conn ->
-        Plug.Conn.resp(conn, 502, "")
+      Bypass.expect(github, fn conn ->
+        case conn.request_path do
+          "/OpenFn/adaptors/main/packages/language-http/assets/square.png" ->
+            Plug.Conn.resp(conn, 200, "HTTP_SQ")
+
+          "/OpenFn/adaptors/main/packages/language-salesforce/assets/square.png" ->
+            Plug.Conn.resp(conn, 200, "SF_SQ")
+
+          _ ->
+            Plug.Conn.resp(conn, 404, "")
+        end
       end)
 
-      assert {:error, _} = NPM.fetch_icon(@package, :square)
+      {:ok, icons} = NPM.fetch_icons()
+
+      assert %{
+               "@openfn/language-http" => %{
+                 square: %{data: "HTTP_SQ", ext: "png"}
+               },
+               "@openfn/language-salesforce" => %{
+                 square: %{data: "SF_SQ", ext: "png"}
+               }
+             } = icons
+
+      assert icons["@openfn/language-http"].square.sha256 ==
+               :crypto.hash(:sha256, "HTTP_SQ")
+    end
+
+    test "surfaces list_adaptors errors as {:error, _}", %{registry: registry} do
+      Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
+        Plug.Conn.resp(conn, 503, "")
+      end)
+
+      assert {:error, _} = NPM.fetch_icons()
     end
   end
 
   # ==================== Helpers ====================
 
-  defp build_packument(tarball_url) do
+  defp build_packument do
     %{
       "name" => @package,
       "description" => "HTTP adaptor",
@@ -277,12 +247,6 @@ defmodule Lightning.Adaptors.NPMTest do
           "deprecated" => "please upgrade",
           "dist" => %{
             "integrity" => "sha512-old",
-            "tarball" =>
-              String.replace(
-                tarball_url,
-                "language-http-#{@latest_version}.tgz",
-                "language-http-1.0.0.tgz"
-              ),
             "unpackedSize" => 5_000
           }
         },
@@ -291,7 +255,6 @@ defmodule Lightning.Adaptors.NPMTest do
           "peerDependencies" => %{"@openfn/language-common" => "^2.0.0"},
           "dist" => %{
             "integrity" => "sha512-abc",
-            "tarball" => tarball_url,
             "unpackedSize" => 12_345
           }
         }

@@ -64,6 +64,37 @@ defmodule Lightning.Adaptors.Local do
     end
   end
 
+  @impl Lightning.Adaptors.Strategy
+  def fetch_icons do
+    with {:ok, records} <- discover() do
+      icons =
+        Enum.reduce(records, %{}, fn record, acc ->
+          Enum.reduce([:square, :rectangle], acc, fn shape, inner ->
+            case read_icon(record.latest_path, shape) do
+              {:ok, %{data: bytes, ext: ext}} ->
+                entry = %{
+                  data: bytes,
+                  ext: ext,
+                  sha256: :crypto.hash(:sha256, bytes)
+                }
+
+                Map.update(
+                  inner,
+                  record.name,
+                  %{shape => entry},
+                  &Map.put(&1, shape, entry)
+                )
+
+              {:error, _} ->
+                inner
+            end
+          end)
+        end)
+
+      {:ok, icons}
+    end
+  end
+
   defp discover do
     case Config.strategy_opts(__MODULE__)[:path] do
       nil ->
@@ -133,8 +164,6 @@ defmodule Lightning.Adaptors.Local do
   defp build_adaptor_record(record) do
     pkg = record.latest_package_json
     {schema_data, schema_sha256} = read_schema(record.latest_path)
-    {sq_ext, sq_sha} = read_icon_meta(record.latest_path, :square)
-    {rect_ext, rect_sha} = read_icon_meta(record.latest_path, :rectangle)
 
     %{
       name: record.name,
@@ -146,10 +175,6 @@ defmodule Lightning.Adaptors.Local do
       deprecated: false,
       schema_data: schema_data,
       schema_sha256: schema_sha256,
-      icon_square_ext: sq_ext,
-      icon_rectangle_ext: rect_ext,
-      icon_square_sha256: sq_sha,
-      icon_rectangle_sha256: rect_sha,
       versions: Enum.map(record.versions, &build_version_record/1)
     }
   end
@@ -182,15 +207,6 @@ defmodule Lightning.Adaptors.Local do
       {:error, _} ->
         {nil, nil}
     end
-  end
-
-  defp read_icon_meta(dir, shape) do
-    Enum.find_value(@icon_exts, {nil, nil}, fn ext ->
-      case File.read(icon_path(dir, shape, ext)) do
-        {:ok, bytes} -> {ext, :crypto.hash(:sha256, bytes)}
-        {:error, _} -> nil
-      end
-    end)
   end
 
   defp read_icon(dir, shape) do

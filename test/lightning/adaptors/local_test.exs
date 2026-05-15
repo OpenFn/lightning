@@ -151,10 +151,12 @@ defmodule Lightning.Adaptors.LocalTest do
                :crypto.hash(:sha256, Jason.encode!(schema))
                |> Base.encode16(case: :lower)
 
-      assert record.icon_square_ext == "png"
-      assert record.icon_rectangle_ext == "svg"
-      assert record.icon_square_sha256 == :crypto.hash(:sha256, "square-bytes")
-      assert record.icon_rectangle_sha256 == :crypto.hash(:sha256, "<svg/>")
+      refute Map.has_key?(record, :icon_square_ext),
+             "fetch_adaptor/1 no longer carries icon fields — the Scheduler joins them"
+
+      refute Map.has_key?(record, :icon_rectangle_ext)
+      refute Map.has_key?(record, :icon_square_sha256)
+      refute Map.has_key?(record, :icon_rectangle_sha256)
 
       refute Map.has_key?(record, :source),
              "the strategy must not stamp :source — the Store owns that field"
@@ -204,7 +206,7 @@ defmodule Lightning.Adaptors.LocalTest do
       assert record.latest_version == "2.0.0"
     end
 
-    test "returns nil-shaped icon/schema fields when files are absent",
+    test "returns nil-shaped schema fields when files are absent",
          %{root: root} do
       write_package!(root, "bare", "@openfn/language-bare", "1.0.0")
 
@@ -212,10 +214,6 @@ defmodule Lightning.Adaptors.LocalTest do
 
       assert record.schema_data == nil
       assert record.schema_sha256 == nil
-      assert record.icon_square_ext == nil
-      assert record.icon_rectangle_ext == nil
-      assert record.icon_square_sha256 == nil
-      assert record.icon_rectangle_sha256 == nil
     end
 
     test "handles a plain-string repository field", %{root: root} do
@@ -299,6 +297,47 @@ defmodule Lightning.Adaptors.LocalTest do
 
       assert Local.fetch_icon("@openfn/language-missing", :square) ==
                {:error, :not_found}
+    end
+  end
+
+  describe "fetch_icons/0" do
+    test "returns an entry per package per shape including sha256",
+         %{root: root} do
+      http = write_package!(root, "http", "@openfn/language-http", "1.0.0")
+      sf = write_package!(root, "sf", "@openfn/language-salesforce", "2.0.0")
+
+      write_icon!(http, :square, "png", "HTTP_SQ")
+      write_icon!(http, :rectangle, "svg", "<svg/>")
+      write_icon!(sf, :square, "png", "SF_SQ")
+
+      {:ok, map} = Local.fetch_icons()
+
+      assert %{
+               "@openfn/language-http" => %{
+                 square: %{data: "HTTP_SQ", ext: "png", sha256: http_sq_sha},
+                 rectangle: %{data: "<svg/>", ext: "svg"}
+               },
+               "@openfn/language-salesforce" => %{
+                 square: %{data: "SF_SQ", ext: "png"}
+               }
+             } = map
+
+      assert http_sq_sha == :crypto.hash(:sha256, "HTTP_SQ")
+      refute Map.has_key?(map["@openfn/language-salesforce"], :rectangle)
+    end
+
+    test "returns {:ok, %{}} when no packages have icons", %{root: root} do
+      write_package!(root, "bare", "@openfn/language-bare", "1.0.0")
+
+      assert {:ok, %{}} = Local.fetch_icons()
+    end
+
+    test "returns {:error, :no_repo_path} when :path is unset" do
+      Application.delete_env(:lightning, Local)
+
+      assert capture_log(fn ->
+               assert Local.fetch_icons() == {:error, :no_repo_path}
+             end) =~ "not configured"
     end
   end
 

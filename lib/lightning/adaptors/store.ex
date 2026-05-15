@@ -25,10 +25,14 @@ defmodule Lightning.Adaptors.Store do
 
   ## Icons
 
-  `icon/3` deliberately bypasses Cachex: the on-disk
-  `Lightning.Adaptors.IconCache` is itself the cache, and the return
-  value is a `Path.t/0` the controller serves via `send_file/3` (no
-  binary on the BEAM heap).
+  `icon/3` returns a `Path.t/0` the controller serves via `send_file/3`
+  — no binary on the BEAM heap. The on-disk `Lightning.Adaptors.IconCache`
+  is the primary cache: a `cached?/4` hit short-circuits before Cachex
+  is touched. On a disk miss the lazy Strategy fetch is wrapped in
+  `Cachex.fetch/4` on `{:icon_bytes, source, name, shape}` so that
+  concurrent first-callers coalesce onto a single courier; the courier
+  returns `{:ignore, _}` so no entry is committed, and subsequent
+  callers re-read the now-populated file from disk.
   """
 
   alias Lightning.Adaptors.Config
@@ -117,14 +121,19 @@ defmodule Lightning.Adaptors.Store do
   Resolve the on-disk path of one icon variant for an adaptor.
 
   Disk is the cache: a cache-hit on `IconCache.cached?/4` returns the
-  path immediately; a cache-miss fetches bytes via the active Strategy
-  and atomically writes them into the on-disk cache. Returns
-  `{:error, :not_found}` when the icon variant is absent from the
-  adaptor row (the row is the source of truth).
+  path immediately. A cache-miss is routed through `Cachex.fetch/4` on
+  `{:icon_bytes, source, name, shape}` so concurrent first-callers
+  coalesce onto one in-flight Strategy fetch — the courier returns
+  `{:ignore, _}` so no cache entry is committed and the next miss reads
+  the freshly-written file from disk.
+
+  Returns `{:error, :not_found}` when the icon variant is absent from
+  the adaptor row (the row is the source of truth).
   """
   @spec icon(sup(), String.t(), :square | :rectangle) ::
           {:ok, Path.t()} | {:error, :not_found | term()}
   def icon(sup, name, shape) when shape in [:square, :rectangle] do
+    cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
     strategy = AdaptorsSupervisor.strategy(sup)
 
@@ -134,13 +143,28 @@ defmodule Lightning.Adaptors.Store do
       if IconCache.cached?(source, name, shape, ext) do
         {:ok, IconCache.path(source, name, shape, ext)}
       else
-        with {:ok, %{data: bytes, ext: ^ext}} <-
-               strategy.fetch_icon(name, shape),
-             {:ok, _sha256} <-
-               IconCache.write!(source, name, shape, ext, bytes) do
-          {:ok, IconCache.path(source, name, shape, ext)}
-        end
+        cache
+        |> Cachex.fetch(
+          {:icon_bytes, source, name, shape},
+          fn _key -> fetch_icon_bytes(strategy, source, name, shape, ext) end,
+          timeout: Config.cache_timeout_ms()
+        )
+        |> unwrap()
       end
+    end
+  end
+
+  defp fetch_icon_bytes(strategy, source, name, shape, ext) do
+    case strategy.fetch_icon(name, shape) do
+      {:ok, %{data: bytes, ext: ^ext}} ->
+        {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
+        {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
+
+      {:ok, %{ext: other_ext}} ->
+        {:ignore, {:error, {:ext_mismatch, expected: ext, got: other_ext}}}
+
+      {:error, _} = err ->
+        {:ignore, err}
     end
   end
 

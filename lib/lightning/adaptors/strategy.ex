@@ -4,13 +4,19 @@ defmodule Lightning.Adaptors.Strategy do
   mock).
 
   A strategy is the sole boundary between the `Lightning.Adaptors.*`
-  subsystem and the outside world. It defines three callbacks:
+  subsystem and the outside world. It defines four callbacks:
 
     * `c:fetch_adaptor/1` — given a package name, return a structured
       `t:adaptor_record/0` covering version history, integrity hashes,
-      and dependency metadata.
+      and dependency metadata. Icon fields are **not** part of this
+      record any more; the Scheduler stamps them on after joining the
+      bulk icon pipeline.
     * `c:fetch_icon/2` — given a package name and an icon variant,
-      return the raw bytes plus extension.
+      return the raw bytes plus extension. Used by the Store's rare
+      lazy-miss fallback.
+    * `c:fetch_icons/0` — bulk icon fetch for every adaptor known to
+      the strategy. The Scheduler invokes this once per tick in parallel
+      with its per-adaptor fan-out.
     * `c:list_adaptors/0` — the cheap change-signal: one call returning
       `name + latest_version` for every `@openfn/*` package, used by
       the scheduler to diff against the `adaptors` table.
@@ -38,8 +44,8 @@ defmodule Lightning.Adaptors.Strategy do
 
   @typedoc """
   The structured adaptor record returned by `c:fetch_adaptor/1`. Icon
-  hash fields are 32 raw bytes; the `_sha256` field is `nil` iff the
-  matching `_ext` field is `nil`.
+  fields are persisted separately by the Scheduler after joining
+  `c:fetch_icons/0` — they are not stamped onto this record.
   """
   @type adaptor_record :: %{
           name: String.t(),
@@ -51,11 +57,27 @@ defmodule Lightning.Adaptors.Strategy do
           deprecated: boolean(),
           schema_data: map() | nil,
           schema_sha256: String.t() | nil,
-          icon_square_ext: String.t() | nil,
-          icon_rectangle_ext: String.t() | nil,
-          icon_square_sha256: binary() | nil,
-          icon_rectangle_sha256: binary() | nil,
           versions: [version_record()]
+        }
+
+  @typedoc """
+  One icon entry inside the `c:fetch_icons/0` result map.
+  """
+  @type icon_entry :: %{
+          data: binary(),
+          ext: String.t(),
+          sha256: binary()
+        }
+
+  @typedoc """
+  Bulk icon map returned by `c:fetch_icons/0`. Absence of a name or a
+  shape means no icon was found upstream — not an error.
+  """
+  @type icons_map :: %{
+          required(String.t()) => %{
+            optional(:square) => icon_entry(),
+            optional(:rectangle) => icon_entry()
+          }
         }
 
   @doc """
@@ -71,6 +93,18 @@ defmodule Lightning.Adaptors.Strategy do
   @callback fetch_icon(name :: String.t(), :square | :rectangle) ::
               {:ok, %{data: binary(), ext: String.t()}}
               | {:error, term()}
+
+  @doc """
+  Bulk fetch every available icon for every adaptor known to the
+  strategy.
+
+  Returns `{:ok, partial_map}` where absence of a name/shape means no
+  icon was found. A top-level `{:error, term()}` is only returned when
+  the whole pipeline can't proceed (e.g. an upstream `list_adaptors/0`
+  call inside the bulk implementation fails).
+  """
+  @callback fetch_icons() ::
+              {:ok, icons_map()} | {:error, term()}
 
   @doc """
   Cheap change-signal listing: `name + latest_version` for every

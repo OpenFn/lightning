@@ -229,6 +229,201 @@ defmodule Lightning.Adaptors.StoreTest do
     end
   end
 
+  describe "icon/3" do
+    # Each test uses a unique adaptor name so the on-disk cache (shared
+    # default {:tmp, "lightning/adaptor_icons"} path) does not collide
+    # across this `async: true` suite. Directories created here are not
+    # cleaned up — they live under System.tmp_dir! and are namespaced
+    # per-name so they cannot collide.
+    defp unique_name(prefix) do
+      "@openfn/language-#{prefix}-#{System.unique_integer([:positive])}"
+    end
+
+    test "disk hit returns path without calling Strategy", %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+      name = unique_name("disk-hit")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "PRE_WARMED")
+          )
+        )
+
+      {:ok, _} =
+        Lightning.Adaptors.IconCache.write!(
+          source,
+          name,
+          :square,
+          "png",
+          "PRE_WARMED"
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 0, fn _, _ ->
+        :unreachable
+      end)
+
+      assert {:ok, path} = Store.icon(sup, name, :square)
+      assert File.read!(path) == "PRE_WARMED"
+    end
+
+    test "disk miss + Strategy success writes to disk and returns path", %{
+      sup: sup,
+      cache: cache
+    } do
+      source = AdaptorsSupervisor.source(sup)
+      name = unique_name("disk-miss")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "LAZY_BYTES")
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn ^name,
+                                                                 :square ->
+        {:ok, %{data: "LAZY_BYTES", ext: "png"}}
+      end)
+
+      assert {:ok, path} = Store.icon(sup, name, :square)
+      assert File.read!(path) == "LAZY_BYTES"
+
+      # Courier returned {:ignore, _} → no committed entry on the bytes key.
+      assert {:ok, nil} =
+               Cachex.get(cache, {:icon_bytes, source, name, :square})
+    end
+
+    test "Strategy error returns {:error, _} and does not commit", %{
+      sup: sup,
+      cache: cache
+    } do
+      source = AdaptorsSupervisor.source(sup)
+      name = unique_name("err")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "UNUSED")
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn _, _ ->
+        {:error, :upstream_5xx}
+      end)
+
+      assert {:error, :upstream_5xx} = Store.icon(sup, name, :square)
+
+      assert {:ok, nil} =
+               Cachex.get(cache, {:icon_bytes, source, name, :square})
+    end
+
+    test "concurrent first-callers coalesce onto one Strategy fetch", %{
+      sup: sup
+    } do
+      test_pid = self()
+      name = unique_name("coalesce")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "COALESCED")
+          )
+        )
+
+      # Single Mox expectation → if both callers reach the strategy
+      # the second hits "no expectation" and Mox raises.
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn ^name,
+                                                                 :square ->
+        send(test_pid, :fetch_started)
+        # Block long enough for the second caller to also reach the
+        # Cachex courier and coalesce onto this call.
+        Process.sleep(150)
+        {:ok, %{data: "COALESCED", ext: "png"}}
+      end)
+
+      t1 = Task.async(fn -> Store.icon(sup, name, :square) end)
+      assert_receive :fetch_started, 1000
+      t2 = Task.async(fn -> Store.icon(sup, name, :square) end)
+
+      assert {:ok, p1} = Task.await(t1, 5000)
+      assert {:ok, p2} = Task.await(t2, 5000)
+      assert p1 == p2
+      assert File.read!(p1) == "COALESCED"
+    end
+
+    test "different (name, shape) misses fetch in parallel without false coalescing",
+         %{sup: sup} do
+      test_pid = self()
+      name_a = unique_name("parA")
+      name_b = unique_name("parB")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name_a,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "A_BYTES")
+          )
+        )
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: name_b,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "B_BYTES")
+          )
+        )
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_icon,
+        fn ^name_a, :square -> {:ok, %{data: "A_BYTES", ext: "png"}} end
+      )
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_icon,
+        fn ^name_b, :square -> {:ok, %{data: "B_BYTES", ext: "png"}} end
+      )
+
+      t_a =
+        Task.async(fn ->
+          receive do
+            :go -> Store.icon(sup, name_a, :square)
+          end
+        end)
+
+      t_b =
+        Task.async(fn ->
+          receive do
+            :go -> Store.icon(sup, name_b, :square)
+          end
+        end)
+
+      Mox.allow(Lightning.Adaptors.StrategyMock, test_pid, t_a.pid)
+      Mox.allow(Lightning.Adaptors.StrategyMock, test_pid, t_b.pid)
+
+      send(t_a.pid, :go)
+      send(t_b.pid, :go)
+
+      assert {:ok, p1} = Task.await(t_a, 5000)
+      assert {:ok, p2} = Task.await(t_b, 5000)
+
+      assert File.read!(p1) == "A_BYTES"
+      assert File.read!(p2) == "B_BYTES"
+    end
+  end
+
   describe "icon_meta/2" do
     test "unknown adaptor returns {:error, :not_found} and is not cached", %{
       sup: sup,

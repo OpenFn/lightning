@@ -18,9 +18,12 @@ defmodule Lightning.Adaptors.IconCache do
   don't need to keep old versions on disk.
 
   Concurrent first-request fetchers are coalesced upstream by Cachex's
-  courier on `{:icon_bytes, ...}`. The temp-then-rename in `write!/5`
-  is the belt-and-braces guarantee for the file-write step itself:
-  readers never observe a half-written file.
+  courier on `{:icon_bytes, source, name, shape}` inside
+  `Lightning.Adaptors.Store.icon/3` — the courier returns `{:ignore, _}`
+  so no entry is committed, but all in-flight peers receive the courier's
+  result for free. The temp-then-rename in `write!/5` is the belt-and-
+  braces guarantee for the file-write step itself: readers never observe
+  a half-written file.
   """
 
   alias Lightning.Adaptors.Config

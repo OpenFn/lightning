@@ -12,15 +12,36 @@ defmodule Lightning.Adaptors.Scheduler do
   `max(0, last_checked_at + interval - now)` to avoid double-refreshing
   shortly after a deploy. An empty table or an overdue schedule fires
   immediately (`delay = 0`). Interval `0` disables scheduling entirely.
+
+  ## Two-pipeline refresh
+
+  A tick runs two parallel pipelines under the per-instance
+  `Task.Supervisor`:
+
+    * **Pipeline A** — `strategy.fetch_icons/0` for every adaptor.
+    * **Pipeline B** — `strategy.list_adaptors/0` followed by a bounded
+      per-adaptor fan-out (`async_stream_nolink`) calling
+      `strategy.fetch_adaptor/1` only for names whose `latest_version`
+      changed since the last tick.
+
+  Once both pipelines complete the join step merges the icons map into
+  each fetched record, writes the icon bytes to disk via
+  `Lightning.Adaptors.IconCache.write!/5`, and upserts each adaptor in
+  one go. `refresh_package/2` deliberately bypasses the icon pipeline —
+  on-demand single-package refreshes do not refetch icons.
   """
 
   use GenServer
 
   alias Lightning.Adaptors.Config
+  alias Lightning.Adaptors.IconCache
   alias Lightning.Adaptors.Repo, as: AdaptorsRepo
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   require Logger
+
+  @fetch_max_concurrency 8
+  @icons_task_timeout :timer.seconds(60)
 
   @doc """
   Start the Scheduler for the given supervisor instance.
@@ -116,6 +137,11 @@ defmodule Lightning.Adaptors.Scheduler do
   defp do_refresh(state) do
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
+    icons_task =
+      Task.Supervisor.async_nolink(state.tasks, fn ->
+        strategy.fetch_icons()
+      end)
+
     case strategy.list_adaptors() do
       {:ok, upstream} ->
         existing_by_name =
@@ -123,22 +149,143 @@ defmodule Lightning.Adaptors.Scheduler do
           |> AdaptorsRepo.list_adaptors()
           |> Map.new(fn a -> {a.name, a.latest_version} end)
 
-        Enum.each(upstream, fn %{name: name, latest_version: version} ->
-          refresh_one(strategy, name, version, existing_by_name, state)
+        fetched =
+          state.tasks
+          |> Task.Supervisor.async_stream_nolink(
+            upstream,
+            &fetch_if_changed(strategy, &1, existing_by_name, state),
+            max_concurrency: @fetch_max_concurrency,
+            ordered: false,
+            on_timeout: :kill_task
+          )
+          |> Enum.flat_map(fn
+            {:ok, {:fetched, record}} -> [record]
+            {:ok, _} -> []
+            {:exit, _reason} -> []
+          end)
+
+        icons = await_icons(icons_task)
+
+        Enum.each(fetched, fn record ->
+          persist_with_icons(record, icons, state)
         end)
 
       {:error, reason} ->
         Logger.warning("Scheduler: list_adaptors failed: #{inspect(reason)}")
+        _ = await_icons(icons_task)
+        :ok
     end
   end
 
-  defp refresh_one(strategy, name, version, existing_by_name, state) do
+  defp fetch_if_changed(
+         strategy,
+         %{name: name, latest_version: version},
+         existing_by_name,
+         state
+       ) do
     if Map.get(existing_by_name, name) == version do
       AdaptorsRepo.touch_checked_at(name, state.source)
+      :touched
     else
       case strategy.fetch_adaptor(name) do
         {:ok, record} ->
-          record_with_source = Map.put(record, :source, state.source)
+          {:fetched, record}
+
+        {:error, reason} ->
+          Logger.warning(
+            "Scheduler: fetch_adaptor(#{name}) failed: #{inspect(reason)}"
+          )
+
+          {:error, reason}
+      end
+    end
+  end
+
+  defp await_icons(task) do
+    case Task.yield(task, @icons_task_timeout) || Task.shutdown(task) do
+      {:ok, {:ok, map}} when is_map(map) ->
+        map
+
+      {:ok, {:error, reason}} ->
+        Logger.warning(
+          "Scheduler: fetch_icons failed: #{inspect(reason)} — persisting records without icons"
+        )
+
+        %{}
+
+      {:exit, reason} ->
+        Logger.warning(
+          "Scheduler: fetch_icons crashed: #{inspect(reason)} — persisting records without icons"
+        )
+
+        %{}
+
+      nil ->
+        Logger.warning(
+          "Scheduler: fetch_icons timed out — persisting records without icons"
+        )
+
+        %{}
+    end
+  end
+
+  defp persist_with_icons(record, icons, state) do
+    name = record.name
+    package_icons = Map.get(icons, name, %{})
+
+    record_with_icons =
+      record
+      |> Map.put(:source, state.source)
+      |> merge_icon(:square, package_icons, state.source)
+      |> merge_icon(:rectangle, package_icons, state.source)
+
+    try do
+      {:ok, _} = AdaptorsRepo.upsert_adaptor(record_with_icons)
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        state.source_topic,
+        {:changed, name, state.source}
+      )
+    rescue
+      e ->
+        Logger.error(
+          "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
+        )
+
+        :ok
+    end
+  end
+
+  defp merge_icon(record, shape, package_icons, source) do
+    case Map.get(package_icons, shape) do
+      %{data: bytes, ext: ext, sha256: sha} when is_binary(bytes) ->
+        try do
+          {:ok, ^sha} = IconCache.write!(source, record.name, shape, ext, bytes)
+
+          record
+          |> Map.put(:"icon_#{shape}_ext", ext)
+          |> Map.put(:"icon_#{shape}_sha256", sha)
+        rescue
+          e ->
+            Logger.warning(
+              "Scheduler: IconCache.write!(#{record.name}, #{shape}) failed: #{Exception.message(e)}"
+            )
+
+            record
+        end
+
+      _ ->
+        record
+    end
+  end
+
+  defp force_refresh_one(strategy, name, state) do
+    case strategy.fetch_adaptor(name) do
+      {:ok, record} ->
+        record_with_source = Map.put(record, :source, state.source)
+
+        try do
           {:ok, _} = AdaptorsRepo.upsert_adaptor(record_with_source)
 
           Phoenix.PubSub.broadcast(
@@ -147,27 +294,15 @@ defmodule Lightning.Adaptors.Scheduler do
             {:changed, name, state.source}
           )
 
-        {:error, reason} ->
-          Logger.warning(
-            "Scheduler: fetch_adaptor(#{name}) failed: #{inspect(reason)}"
-          )
-      end
-    end
-  end
+          :ok
+        rescue
+          e ->
+            Logger.error(
+              "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
+            )
 
-  defp force_refresh_one(strategy, name, state) do
-    case strategy.fetch_adaptor(name) do
-      {:ok, record} ->
-        record_with_source = Map.put(record, :source, state.source)
-        {:ok, _} = AdaptorsRepo.upsert_adaptor(record_with_source)
-
-        Phoenix.PubSub.broadcast(
-          Lightning.PubSub,
-          state.source_topic,
-          {:changed, name, state.source}
-        )
-
-        :ok
+            {:error, {:upsert_failed, Exception.message(e)}}
+        end
 
       {:error, reason} ->
         {:error, reason}

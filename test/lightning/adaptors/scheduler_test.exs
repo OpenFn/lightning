@@ -24,6 +24,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
 
+    # Default no-op icons stub for tests that don't care about the icons
+    # pipeline. Individual tests override via `expect` when they need to
+    # assert on it.
+    stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn -> {:ok, %{}} end)
+
     {:ok, sup: sup}
   end
 
@@ -73,10 +78,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
       deprecated: false,
       schema_data: nil,
       schema_sha256: nil,
-      icon_square_ext: nil,
-      icon_rectangle_ext: nil,
-      icon_square_sha256: nil,
-      icon_rectangle_sha256: nil,
       versions: [
         %{
           version: "1.0.0",
@@ -352,6 +353,134 @@ defmodule Lightning.Adaptors.SchedulerTest do
     end
   end
 
+  describe "icons pipeline" do
+    test "writes icon bytes to disk and stamps ext+sha256 on the row", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+
+      bytes = "ICON_BYTES"
+      sha = :crypto.hash(:sha256, bytes)
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:ok, adaptor_record()}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:ok,
+         %{
+           "@openfn/language-http" => %{
+             square: %{data: bytes, ext: "png", sha256: sha}
+           }
+         }}
+      end)
+
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      assert_receive {:changed, "@openfn/language-http", ^source}, 2000
+
+      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      assert row.icon_square_ext == "png"
+      assert row.icon_square_sha256 == sha
+      assert row.icon_rectangle_ext == nil
+      assert row.icon_rectangle_sha256 == nil
+
+      icon_path =
+        Lightning.Adaptors.IconCache.path(
+          source,
+          "@openfn/language-http",
+          :square,
+          "png"
+        )
+
+      assert File.exists?(icon_path)
+      assert File.read!(icon_path) == bytes
+      File.rm!(icon_path)
+    end
+
+    test "fetch_icons error: records still persist without icons", %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:ok, adaptor_record()}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:error, :timeout}
+      end)
+
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      assert_receive {:changed, "@openfn/language-http", ^source}, 2000
+
+      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      assert row != nil
+      assert row.icon_square_ext == nil
+      assert row.icon_square_sha256 == nil
+    end
+
+    test "fetches per-adaptor in parallel (multiple concurrent fetch_adaptor calls)",
+         %{sup: sup} do
+      test_pid = self()
+      barrier = :ets.new(:scheduler_test_barrier, [:public, :set])
+      :ets.insert(barrier, {:in_flight, 0})
+      :ets.insert(barrier, {:max_in_flight, 0})
+
+      names =
+        for i <- 1..6,
+            do: %{name: "@openfn/language-pkg#{i}", latest_version: "1.0.0"}
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, names}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn name ->
+        in_flight = :ets.update_counter(barrier, :in_flight, 1)
+
+        :ets.update_element(
+          barrier,
+          :max_in_flight,
+          {2, max_seen(barrier, in_flight)}
+        )
+
+        # Hold long enough that the fan-out has time to overlap.
+        Process.sleep(80)
+        :ets.update_counter(barrier, :in_flight, -1)
+        send(test_pid, {:fetched, name})
+        {:ok, adaptor_record(name: name)}
+      end)
+
+      start_scheduler(sup)
+
+      for _ <- 1..6 do
+        assert_receive {:fetched, _name}, 5_000
+      end
+
+      [{:max_in_flight, max_in_flight}] = :ets.lookup(barrier, :max_in_flight)
+      :ets.delete(barrier)
+
+      assert max_in_flight > 1,
+             "expected concurrent fetch_adaptor calls, saw at most 1 in-flight"
+    end
+  end
+
+  defp max_seen(barrier, current) do
+    [{:max_in_flight, prev}] = :ets.lookup(barrier, :max_in_flight)
+    max(prev, current)
+  end
+
   describe "refresh_package/2" do
     test "fetches and upserts a single adaptor, bypassing diff", %{sup: sup} do
       test_pid = self()
@@ -407,6 +536,44 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert {:error, :not_found} =
                Scheduler.refresh_package(sched_name, "@openfn/language-http")
+    end
+
+    test "does not call fetch_icons (icons only refresh on the periodic tick)",
+         %{sup: sup} do
+      test_pid = self()
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :init_tick_done)
+        {:ok, []}
+      end)
+
+      # Exactly one fetch_icons call — the init tick. If refresh_package
+      # also fetched icons the count would be 2 and Mox would fail.
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn ->
+        send(test_pid, :icons_called)
+        {:ok, %{}}
+      end)
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_adaptor,
+        1,
+        fn "@openfn/language-http" -> {:ok, adaptor_record()} end
+      )
+
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      assert_receive :init_tick_done, 2000
+      assert_receive :icons_called, 2000
+
+      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
+      assert_receive {:changed, "@openfn/language-http", _}, 2000
+
+      # Give any (mistaken) extra fetch_icons call time to happen.
+      Process.sleep(100)
     end
   end
 end
