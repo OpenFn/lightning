@@ -360,3 +360,29 @@ elixir --sname lt --cookie bench \
 The difference tells you exactly what the proxy pipeline (plugs, DB lookup,
 Philter, second HTTP hop) costs per request. The telemetry breakdown further
 decomposes that cost into DB lookup vs upstream proxy vs plug overhead.
+
+## Populating Prometheus for dashboard work
+
+`populate_prometheus.exs` is a separate standalone script that drives realistic
+demo traffic into the channel proxy so the WIP Grafana dashboard at
+[`observability/channel-proxy-dashboard.json`](../../observability/channel-proxy-dashboard.json)
+has multi-project, multi-shape data to render. It is **not** a benchmark — no
+telemetry collection, no CSV, no percentile maths. It creates two
+`channels-demo-*` projects with 2 channels each (idempotent), then dispatches a
+weighted mix of happy / slow / unknown-channel / upstream-error requests on a
+coarse sine-wave rate envelope.
+
+```bash
+# Terminal A — Lightning
+iex --sname lightning --cookie bench -S mix phx.server
+
+# Terminal B — Mock destination
+elixir benchmarking/channels/mock_destination.exs
+
+# Terminal C — Populate (15-minute default; --duration 30 for a quick check)
+elixir --sname populate --cookie bench \
+  benchmarking/channels/populate_prometheus.exs
+```
+
+The user `demo@openfn.org` must already exist — the script halts otherwise.
+Re-running the script is safe: it reuses existing projects and channels by name.
