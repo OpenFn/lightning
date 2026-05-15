@@ -43,13 +43,13 @@ and this project adheres to
   The sandbox's `project_users` are now derived from the parent project: every
   parent user is copied with their role preserved, the parent owner is demoted
   to `:admin`, and the actor is set as the sandbox owner. To add a user who is
-  not already on the parent, call `Lightning.Projects.add_project_users/3`
-  after `provision/3` returns.
+  not already on the parent, call `Lightning.Projects.add_project_users/3` after
+  `provision/3` returns.
   [#4744](https://github.com/OpenFn/lightning/issues/4744)
-- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError`
-  when called with a project's `:owner` row. The settings UI already
-  prevented this; the guard closes the gap for Mix tasks, IEx, and
-  scripted callers that would otherwise have left a project ownerless.
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
+  called with a project's `:owner` row. The settings UI already prevented this;
+  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
+  otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
@@ -62,7 +62,6 @@ and this project adheres to
 
 ### Fixed
 
-<<<<<<< HEAD
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
@@ -502,12 +501,6 @@ and this project adheres to
   [#4437](https://github.com/OpenFn/lightning/issues/4437)
 - Remove Keychain from the credential type picker grid
   [#4453](https://github.com/OpenFn/lightning/issues/4453)
-=======
-- Fixed issue with `Sandboxes` menu item not visible for users without
-  experimental features enabled
-  [#4367](https://github.com/OpenFn/lightning/issues/4367)
-
->>>>>>> 89968aaece (remove condition to check for expereimental feature enable (#4391))
 
 ## [2.15.14] - 2026-02-13
 
@@ -537,6 +530,8 @@ and this project adheres to
   [#4383](https://github.com/OpenFn/lightning/issues/4383)
 
 ## [2.15.13] - 2026-02-06
+
+## [2.15.13-pre1] - 2026-02-05
 
 ### Fixed
 
