@@ -368,6 +368,126 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
+  describe "non-UTF-8 body handling (issue #4541)" do
+    # `response_body_preview` and `request_body_preview` are stored as :text
+    # (UTF-8 only). When an upstream returns binary content (gzip, image, PDF,
+    # ...) the bytes can't be persisted as text. Rather than failing the whole
+    # insert, we drop the offending preview to nil and persist everything else
+    # — headers, hash, size, timing.
+
+    test "non-UTF-8 response body is dropped from preview; rest of event persisted",
+         %{bypass: bypass, channel: channel} do
+      # `0x8b` is the second byte of the gzip magic number — exactly the byte
+      # Postgres rejected in the dev reproduction. We send it raw so Finch
+      # cannot transparently decompress it.
+      raw_bytes = <<0x1F, 0x8B, 0x08, 0x00, 0xFF, 0xFE>>
+
+      Bypass.expect_once(bypass, "GET", "/binary", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/octet-stream")
+        |> Plug.Conn.send_resp(200, raw_bytes)
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/binary")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      # The request itself succeeded — only the body preview is unstorable.
+      assert request.state == :success
+      assert request.completed_at != nil
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.type == :destination_response
+      assert event.request_method == "GET"
+      assert event.request_path == "/binary"
+      assert event.response_status == 200
+
+      # Body preview dropped because it isn't valid UTF-8.
+      assert event.response_body_preview == nil
+
+      # Hash and size are still recorded so the audit log can show that a body
+      # was returned, even though the bytes couldn't be persisted as text.
+      assert is_binary(event.response_body_hash)
+      assert event.response_body_size == byte_size(raw_bytes)
+
+      # Headers and timing persist as usual.
+      assert is_list(event.request_headers) and event.request_headers != []
+      assert is_list(event.response_headers) and event.response_headers != []
+      assert is_integer(event.latency_us) and event.latency_us > 0
+    end
+
+    test "non-UTF-8 request body is dropped from preview; rest of event persisted",
+         %{bypass: bypass, channel: channel} do
+      raw_bytes = <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>>
+
+      Bypass.expect_once(bypass, "POST", "/upload", fn conn ->
+        Plug.Conn.send_resp(conn, 201, "ok")
+      end)
+
+      resp =
+        conn(:post, "/channels/#{channel.id}/upload", raw_bytes)
+        |> Plug.Conn.put_req_header("content-type", "application/octet-stream")
+        |> Plug.Conn.put_req_header("content-length", "#{byte_size(raw_bytes)}")
+        |> send_to_endpoint()
+
+      assert resp.status == 201
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :success
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.request_method == "POST"
+      assert event.request_body_preview == nil
+      assert is_binary(event.request_body_hash)
+      assert event.request_body_size == byte_size(raw_bytes)
+    end
+
+    test "valid UTF-8 body is preserved unchanged",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/json", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, ~s({"hello":"world"}))
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/json")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
+        )
+
+      assert event.response_body_preview == ~s({"hello":"world"})
+    end
+  end
+
   describe "handler persistence" do
     test "creates ChannelRequest and ChannelEvent on successful proxy", %{
       conn: conn,
@@ -396,7 +516,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert event.type == :destination_response
       assert event.response_status == 200
-      assert event.latency_ms != nil
+      assert event.latency_us != nil
       assert event.request_method == "GET"
       assert event.request_path == "/persisted"
     end
@@ -866,10 +986,9 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         )
 
       # The handler redacts authorization headers before persisting
-      headers = Jason.decode!(event.request_headers)
-
+      # Headers are native jsonb arrays, no JSON decoding needed
       auth_header =
-        Enum.find(headers, fn [k, _v] -> k == "authorization" end)
+        Enum.find(event.request_headers, fn [k, _v] -> k == "authorization" end)
 
       assert auth_header == ["authorization", "[REDACTED]"]
     end
@@ -982,6 +1101,269 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 200
+    end
+  end
+
+  # ---------------------------------------------------------------
+  # Phase 1a contract tests — query string + client auth tracking
+  # ---------------------------------------------------------------
+  #
+  # These tests define the target interface after:
+  # - D1: request_query_string on channel_events
+  # - D3: client_webhook_auth_method_id and client_auth_type on channel_requests
+  # - D4: Proxy plug passes query string and auth info into handler state
+  #
+  # They will not compile/pass until Phase 1b implements the changes.
+
+  describe "query string persistence" do
+    test "persists query string on channel event", %{
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/search", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "results")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/search?q=foo&page=2")
+      |> send_to_endpoint()
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
+        )
+
+      assert event.request_query_string == "q=foo&page=2"
+    end
+
+    test "empty query string when no params", %{
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/plain", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/plain")
+      |> send_to_endpoint()
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
+        )
+
+      assert event.request_query_string == ""
+    end
+  end
+
+  describe "client auth tracking" do
+    test "persists auth method ID and type for API key auth", %{bypass: bypass} do
+      channel =
+        create_client_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "track-me"}
+        ])
+
+      auth_method =
+        channel
+        |> Lightning.Repo.preload(client_webhook_auth_methods: [])
+        |> Map.get(:client_webhook_auth_methods)
+        |> hd()
+
+      Bypass.expect_once(bypass, "GET", "/tracked", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/tracked")
+      |> put_req_header("x-api-key", "track-me")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.client_webhook_auth_method_id == auth_method.id
+      assert request.client_auth_type == "api"
+    end
+
+    test "persists auth method ID and type for Basic auth", %{bypass: bypass} do
+      channel =
+        create_client_auth_channel(bypass, [
+          %{auth_type: :basic, username: "user", password: "pass"}
+        ])
+
+      auth_method =
+        channel
+        |> Lightning.Repo.preload(client_webhook_auth_methods: [])
+        |> Map.get(:client_webhook_auth_methods)
+        |> hd()
+
+      Bypass.expect_once(bypass, "GET", "/tracked", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      encoded = Base.encode64("user:pass")
+
+      conn(:get, "/channels/#{channel.id}/tracked")
+      |> put_req_header("authorization", "Basic #{encoded}")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.client_webhook_auth_method_id == auth_method.id
+      assert request.client_auth_type == "basic"
+    end
+
+    test "nil auth method when no client auth configured", %{
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/open", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/open")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.client_webhook_auth_method_id == nil
+      assert request.client_auth_type == nil
+    end
+  end
+
+  describe "destination auth tracking" do
+    test "persists destination_credential_id on successful proxy with destination auth",
+         %{bypass: bypass} do
+      channel =
+        create_destination_auth_channel(bypass, "http", %{
+          "access_token" => "tok-123"
+        })
+
+      project_credential_id =
+        channel
+        |> Lightning.Repo.preload(destination_auth_method: :project_credential)
+        |> get_in([
+          Access.key(:destination_auth_method),
+          Access.key(:project_credential_id)
+        ])
+
+      Bypass.expect_once(bypass, "GET", "/dest-track", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/dest-track")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == project_credential_id
+      refute is_nil(project_credential_id)
+    end
+
+    test "persists destination_credential_id even when credential resolution fails",
+         %{bypass: _bypass} do
+      # Channel with a destination auth method but credential missing auth
+      # fields — destination auth resolution fails, but we still know which
+      # credential was configured.
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "bad-cred", user: user)
+        |> with_body(%{body: %{"baseUrl" => "https://example.com"}})
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://localhost:9999",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == project_credential.id
+      assert request.state == :error
+    end
+
+    test "destination_credential_id is nil when no destination auth configured",
+         %{bypass: bypass, channel: channel} do
+      Bypass.expect_once(bypass, "GET", "/no-dest-auth", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/no-dest-auth")
+      |> send_to_endpoint()
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.destination_credential_id == nil
+    end
+  end
+
+  describe "collect_timing integration" do
+    test "persists per-direction timing after successful proxy", %{
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/timed", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      conn(:get, "/channels/#{channel.id}/timed")
+      |> send_to_endpoint()
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent,
+            join: r in ChannelRequest,
+            on: r.id == e.channel_request_id,
+            where: r.channel_id == ^channel.id
+          )
+        )
+
+      # With collect_timing: true, Philter populates timing.send_us
+      # which the handler persists as request_send_us
+      assert is_integer(event.request_send_us)
+      assert event.request_send_us >= 0
     end
   end
 

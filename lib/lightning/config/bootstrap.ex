@@ -322,6 +322,10 @@ defmodule Lightning.Config.Bootstrap do
            env!("MAX_DATACLIP_SIZE_MB", :integer, 10) * 1_000_000
 
     config :lightning,
+           :max_sandbox_nesting_depth,
+           env!("MAX_SANDBOX_NESTING_DEPTH", :integer, 5)
+
+    config :lightning,
            :queue_result_retention_period,
            env!("QUEUE_RESULT_RETENTION_PERIOD_MINUTES", :integer, 60)
 
