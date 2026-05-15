@@ -4,11 +4,10 @@ defmodule Lightning.Channels.PromExPluginTest do
   alias Lightning.Channels.PromExPlugin
 
   @started_name [:lightning, :channel_proxy, :requests, :started, :total]
-  @finished_name [:lightning, :channel_proxy, :requests, :finished, :total]
   @duration_name [:lightning, :channel_proxy, :request, :duration, :milliseconds]
 
   describe "event_metrics/1" do
-    test "returns exactly one Event group containing the three channel-proxy metrics" do
+    test "returns exactly one Event group containing the two channel-proxy metrics" do
       assert [
                %PromEx.MetricTypes.Event{
                  group_name: :lightning_channel_proxy_event_metrics,
@@ -17,7 +16,7 @@ defmodule Lightning.Channels.PromExPluginTest do
              ] = PromExPlugin.event_metrics([])
 
       assert Enum.map(metrics, & &1.name) |> Enum.sort() ==
-               Enum.sort([@started_name, @finished_name, @duration_name])
+               Enum.sort([@started_name, @duration_name])
     end
 
     test "every metric is tagged by :project_id only" do
@@ -34,17 +33,11 @@ defmodule Lightning.Channels.PromExPluginTest do
       [%{metrics: metrics}] = PromExPlugin.event_metrics([])
 
       started = find_metric(metrics, @started_name)
-      finished = find_metric(metrics, @finished_name)
 
       assert %Telemetry.Metrics.Counter{
                event_name: [:lightning, :channel_proxy, :request, :counted],
                tags: [:project_id]
              } = started
-
-      assert %Telemetry.Metrics.Counter{
-               event_name: [:lightning, :channel_proxy, :request, :stop],
-               tags: [:project_id]
-             } = finished
     end
 
     test "duration is a distribution on the stop event with non-empty buckets" do
