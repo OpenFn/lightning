@@ -26,14 +26,18 @@ defmodule Lightning.Channels.PromExPluginTest do
       assert Enum.all?(metrics, fn metric -> metric.tags == [:project_id] end)
     end
 
-    test "started and finished are counters wired to the request span events" do
+    test "started listens to :counted (not :start) so project_id is resolved" do
+      # Regression guard: if started_total were attached to the span's :start
+      # event, the project_id tag would always be "unknown" (start metadata is
+      # captured before channel lookup). It must attach to :counted, which is
+      # emitted post-resolution.
       [%{metrics: metrics}] = PromExPlugin.event_metrics([])
 
       started = find_metric(metrics, @started_name)
       finished = find_metric(metrics, @finished_name)
 
       assert %Telemetry.Metrics.Counter{
-               event_name: [:lightning, :channel_proxy, :request, :start],
+               event_name: [:lightning, :channel_proxy, :request, :counted],
                tags: [:project_id]
              } = started
 

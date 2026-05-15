@@ -1367,7 +1367,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
-  describe "request telemetry span" do
+  describe "request telemetry" do
     setup do
       test_pid = self()
       handler_id = "channel-proxy-test-#{System.unique_integer([:positive])}"
@@ -1376,7 +1376,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         :telemetry.attach_many(
           handler_id,
           [
-            [:lightning, :channel_proxy, :request, :start],
+            [:lightning, :channel_proxy, :request, :counted],
             [:lightning, :channel_proxy, :request, :stop]
           ],
           fn event, measurements, metadata, _config ->
@@ -1390,7 +1390,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       :ok
     end
 
-    test "stop metadata carries the real project_id on a successful request",
+    test "counted and stop both carry the resolved project_id on a successful request",
          %{bypass: bypass, channel: channel} do
       Bypass.expect_once(bypass, "GET", "/observed", fn conn ->
         Plug.Conn.send_resp(conn, 200, "ok")
@@ -1402,21 +1402,33 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 200
 
+      # Regression guard for the started/finished label mismatch:
+      # the counted event MUST carry the resolved project_id (not "unknown"),
+      # otherwise the started_total counter is permanently mislabelled and
+      # per-project concurrent connections cannot be derived in Grafana.
+      assert_receive {:telemetry,
+                      [:lightning, :channel_proxy, :request, :counted],
+                      %{count: 1},
+                      %{
+                        channel_id: counted_channel_id,
+                        project_id: counted_project_id
+                      }}
+
+      assert counted_channel_id == channel.id
+      assert counted_project_id == channel.project_id
+
       assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
                       %{duration: duration}, stop_metadata}
 
       assert is_integer(duration) and duration > 0
 
       assert %{
-               channel_id: channel_id_in_meta,
-               project_id: project_id_in_meta
+               channel_id: ^counted_channel_id,
+               project_id: ^counted_project_id
              } = stop_metadata
-
-      assert channel_id_in_meta == channel.id
-      assert project_id_in_meta == channel.project_id
     end
 
-    test "stop metadata reports project_id=\"unknown\" for an unknown channel",
+    test "counted and stop both report project_id=\"unknown\" for an unknown channel",
          %{conn: conn} do
       missing_id = "00000000-0000-0000-0000-000000000000"
 
@@ -1424,29 +1436,14 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
       assert resp.status == 404
 
+      assert_receive {:telemetry,
+                      [:lightning, :channel_proxy, :request, :counted],
+                      %{count: 1},
+                      %{channel_id: ^missing_id, project_id: "unknown"}}
+
       assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :stop],
                       _measurements,
                       %{channel_id: ^missing_id, project_id: "unknown"}}
-    end
-
-    test "start metadata always includes a project_id key", %{
-      bypass: bypass,
-      channel: channel
-    } do
-      # Regression guard: the started counter is tagged by :project_id, so a
-      # missing key would cause Prometheus to silently drop the event.
-      Bypass.expect_once(bypass, "GET", "/start-meta", fn conn ->
-        Plug.Conn.send_resp(conn, 200, "ok")
-      end)
-
-      conn(:get, "/channels/#{channel.id}/start-meta")
-      |> send_to_endpoint()
-
-      assert_receive {:telemetry, [:lightning, :channel_proxy, :request, :start],
-                      _measurements, start_metadata}
-
-      assert Map.has_key?(start_metadata, :project_id)
-      assert start_metadata.channel_id == channel.id
     end
   end
 

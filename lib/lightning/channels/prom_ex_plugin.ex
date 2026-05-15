@@ -4,8 +4,8 @@ defmodule Lightning.Channels.PromExPlugin do
 
   Three metrics are emitted, all tagged by `project_id`:
 
-    * `lightning_channel_proxy_requests_started_total` — counter incremented on
-      every request entering the proxy plug.
+    * `lightning_channel_proxy_requests_started_total` — counter incremented
+      after channel resolution.
     * `lightning_channel_proxy_requests_finished_total` — counter incremented
       on every request leaving the proxy plug.
     * `lightning_channel_proxy_request_duration_milliseconds` — distribution
@@ -13,6 +13,15 @@ defmodule Lightning.Channels.PromExPlugin do
 
   Concurrent open connections can be derived in Grafana as
   `requests_started_total - requests_finished_total` per project.
+
+  The started counter attaches to a custom
+  `[:lightning, :channel_proxy, :request, :counted]` event rather than the
+  span's `:start` event. This is deliberate: span start metadata is
+  captured before channel lookup, so it cannot carry the resolved
+  `project_id`. The `:counted` event is emitted immediately after the
+  channel is resolved (or in the not-found branch, tagged
+  `project_id="unknown"`), so the started and finished counters share a
+  consistent label set.
 
   Requests that fail channel lookup (404 or invalid UUID) are tagged
   `project_id="unknown"`, which surfaces probing or scanning behaviour.
@@ -24,7 +33,7 @@ defmodule Lightning.Channels.PromExPlugin do
 
   alias Telemetry.Metrics
 
-  @request_start_event [:lightning, :channel_proxy, :request, :start]
+  @request_counted_event [:lightning, :channel_proxy, :request, :counted]
   @request_stop_event [:lightning, :channel_proxy, :request, :stop]
 
   @impl true
@@ -35,7 +44,7 @@ defmodule Lightning.Channels.PromExPlugin do
         [
           Metrics.counter(
             [:lightning, :channel_proxy, :requests, :started, :total],
-            event_name: @request_start_event,
+            event_name: @request_counted_event,
             description: "Total channel proxy requests started.",
             tags: [:project_id]
           ),

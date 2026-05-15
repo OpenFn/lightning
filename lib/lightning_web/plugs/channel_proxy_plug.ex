@@ -54,7 +54,7 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @impl true
   def call(%Plug.Conn{path_info: ["channels", channel_id | rest]} = conn, _opts) do
-    start_metadata = %{channel_id: channel_id, project_id: "unknown"}
+    start_metadata = %{channel_id: channel_id}
 
     :telemetry.span(
       [:lightning, :channel_proxy, :request],
@@ -76,16 +76,26 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   defp handle_request(conn, channel_id, rest) do
     with {:ok, channel} <- fetch_channel_with_telemetry(channel_id),
+         :ok = emit_request_counted(channel.project_id, channel_id),
          conn = assign(conn, :channel_project_id, channel.project_id),
          {:ok, conn, matched_auth} <- authenticate_client(conn, channel) do
       forward_request(conn, channel, rest, matched_auth)
     else
       :not_found ->
+        emit_request_counted("unknown", channel_id)
         error_response(conn, :not_found, "Not Found")
 
       {:unauthorized, conn} ->
         error_response(conn, :unauthorized, "Unauthorized")
     end
+  end
+
+  defp emit_request_counted(project_id, channel_id) do
+    :telemetry.execute(
+      [:lightning, :channel_proxy, :request, :counted],
+      %{count: 1},
+      %{project_id: project_id, channel_id: channel_id}
+    )
   end
 
   defp forward_request(conn, channel, rest, matched_auth) do
