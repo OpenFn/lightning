@@ -621,20 +621,35 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, :map, required: true
 
   defp sandbox_actions(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    disabled? =
+      not assigns.sandbox.can_cancel_deletion or
+        assigns.sandbox.restore_blocked_by_limit?
+
+    tooltip =
+      cond do
+        not assigns.sandbox.can_cancel_deletion ->
+          "You are not authorized to cancel deletion of this sandbox"
+
+        assigns.sandbox.restore_blocked_by_limit? ->
+          assigns.sandbox.restore_blocked_message
+
+        true ->
+          false
+      end
+
+    assigns = assign(assigns, disabled?: disabled?, tooltip: tooltip)
+
     ~H"""
     <div id={"cancel-deletion-sandbox-#{@sandbox.id}"} class="flex-shrink-0 ml-4">
       <.button
         theme="secondary"
         type="button"
-        disabled={not @sandbox.can_cancel_deletion}
-        tooltip={
-          not @sandbox.can_cancel_deletion &&
-            "You are not authorized to cancel deletion of this sandbox"
-        }
+        disabled={@disabled?}
+        tooltip={@tooltip}
         phx-click={
-          if @sandbox.can_cancel_deletion,
-            do: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id}),
-            else: %JS{}
+          if @disabled?,
+            do: %JS{},
+            else: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id})
         }
       >
         Restore

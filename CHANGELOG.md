@@ -65,6 +65,11 @@ and this project adheres to
 
 ### Fixed
 
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list
+  is disabled (with the limiter's tooltip) when the active sandbox count is
+  already at the limit.
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
