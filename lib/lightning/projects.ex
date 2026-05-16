@@ -297,17 +297,27 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns the **root ancestor** of a project by walking up `parent_id` links.
+  Returns the **root ancestor** of a project.
 
-  Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
+  Uses `preload_ancestors/1` (one recursive CTE) and then walks the loaded
+  `:parent` chain in memory, so the cost is one round trip regardless of
+  how deep `project` sits in its workspace. The returned root carries
+  `parent: nil` (it has no parent in the database); intermediate ancestors
+  remain on the chain in case the caller wants them.
   """
   @spec root_of(Project.t()) :: Project.t()
-  def root_of(%Project{} = p) do
-    case p.parent_id do
-      nil -> p
-      pid -> root_of(Repo.get!(Project, pid))
-    end
+  def root_of(%Project{parent_id: nil} = project), do: project
+
+  def root_of(%Project{} = project) do
+    project
+    |> preload_ancestors()
+    |> walk_to_root()
   end
+
+  defp walk_to_root(%Project{parent: %Project{} = parent}),
+    do: walk_to_root(parent)
+
+  defp walk_to_root(%Project{} = project), do: project
 
   @doc """
   Preloads the full ancestor chain on a project's `:parent` association,
@@ -1244,7 +1254,7 @@ defmodule Lightning.Projects do
   @spec visible_to_user?(Project.t(), User.t()) :: boolean()
   def visible_to_user?(%Project{} = project, %User{} = user) do
     pu_query = project_users_for_user_query(user)
-    root = ancestor_root(project)
+    root = root_of(project)
 
     project = Repo.preload(project, project_users: pu_query)
 
@@ -1255,19 +1265,6 @@ defmodule Lightning.Projects do
 
     cascading_visibility?(user, root) or member?(project, user)
   end
-
-  defp ancestor_root(%Project{parent_id: nil} = project), do: project
-
-  defp ancestor_root(%Project{} = project) do
-    project
-    |> preload_ancestors()
-    |> walk_to_root()
-  end
-
-  defp walk_to_root(%Project{parent: %Project{} = parent}),
-    do: walk_to_root(parent)
-
-  defp walk_to_root(%Project{} = project), do: project
 
   defp assert_project_users_loaded!(
          %Project{project_users: %Ecto.Association.NotLoaded{}},
