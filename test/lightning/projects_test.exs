@@ -569,6 +569,38 @@ defmodule Lightning.ProjectsTest do
       assert ids == Enum.sort([root.id, sandbox.id])
     end
 
+    test "get_project_tree_for_user/1 prunes an active descendant whose intermediate ancestor was scheduled for deletion outside the cascade" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      middle = insert(:project, parent: root)
+
+      active_leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      Repo.update_all(
+        from(p in Project, where: p.id == ^middle.id),
+        set: [
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        ]
+      )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == [root.id]
+      refute middle.id in ids
+      refute active_leaf.id in ids
+    end
+
     test "get_project_tree_for_user/1 prunes the subtree under a scheduled ancestor" do
       user = user_fixture()
 
