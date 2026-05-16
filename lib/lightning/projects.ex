@@ -986,10 +986,12 @@ defmodule Lightning.Projects do
             Enum.map(roots, &as_access_root/1)
 
           desc_ids ->
+            pu_for_user = project_users_for_user_query(user)
+
             descendants =
               from(p in Project,
                 where: p.id in ^desc_ids,
-                preload: :project_users,
+                preload: [project_users: ^pu_for_user],
                 order_by: [asc: p.name]
               )
               |> Repo.all()
@@ -1000,6 +1002,10 @@ defmodule Lightning.Projects do
               reparent_for_picker(visible, roots, descendants)
         end
     end
+  end
+
+  defp project_users_for_user_query(%User{id: user_id}) do
+    from(pu in ProjectUser, where: pu.user_id == ^user_id)
   end
 
   defp as_access_root(%Project{} = project),
@@ -1063,11 +1069,13 @@ defmodule Lightning.Projects do
   end
 
   defp roots_for_user_tree(%User{} = user) do
+    pu_for_user = project_users_for_user_query(user)
+
     candidates =
       user
       |> candidate_roots_query()
       |> Repo.all()
-      |> Repo.preload(:project_users)
+      |> Repo.preload(project_users: pu_for_user)
       |> Enum.sort_by(& &1.name)
 
     candidate_id_set = MapSet.new(candidates, & &1.id)
