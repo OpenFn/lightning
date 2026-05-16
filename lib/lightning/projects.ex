@@ -1046,16 +1046,16 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp active_descendants_query(project_ids) do
+  defp active_descendants_query(root_ids) do
     max_depth = max_project_tree_depth()
 
-    initial =
+    direct_children =
       from(p in Project,
-        where: p.parent_id in ^project_ids and is_nil(p.scheduled_deletion),
+        where: p.parent_id in ^root_ids and is_nil(p.scheduled_deletion),
         select: %{id: p.id, depth: 0}
       )
 
-    recursion =
+    next_level_down =
       from(p in Project,
         join: d in "active_project_descendants",
         on: p.parent_id == d.id,
@@ -1066,7 +1066,7 @@ defmodule Lightning.Projects do
     "active_project_descendants"
     |> recursive_ctes(true)
     |> with_cte("active_project_descendants",
-      as: ^union_all(initial, ^recursion)
+      as: ^union_all(direct_children, ^next_level_down)
     )
     |> select([d], type(d.id, Ecto.UUID))
   end
@@ -1131,44 +1131,54 @@ defmodule Lightning.Projects do
   end
 
   defp ancestor_ids_by_starting_id(starting_ids) do
-    case MapSet.size(starting_ids) do
-      0 ->
-        %{}
-
-      _ ->
-        ids = MapSet.to_list(starting_ids)
-        max_depth = max_project_tree_depth()
-
-        initial =
-          from(p in Project,
-            where: p.id in ^ids,
-            select: %{starting_id: p.id, ancestor_id: p.parent_id, depth: 0}
-          )
-
-        recursion =
-          from(p in Project,
-            join: a in "ancestor_walk",
-            on: a.ancestor_id == p.id,
-            where: not is_nil(a.ancestor_id) and a.depth < ^max_depth,
-            select: %{
-              starting_id: a.starting_id,
-              ancestor_id: p.parent_id,
-              depth: a.depth + 1
-            }
-          )
-
-        "ancestor_walk"
-        |> recursive_ctes(true)
-        |> with_cte("ancestor_walk", as: ^union_all(initial, ^recursion))
-        |> where([a], not is_nil(a.ancestor_id))
-        |> select(
-          [a],
-          {type(a.starting_id, Ecto.UUID), type(a.ancestor_id, Ecto.UUID)}
-        )
-        |> Repo.all()
-        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-        |> Map.new(fn {id, ancs} -> {id, MapSet.new(ancs)} end)
+    if MapSet.size(starting_ids) == 0 do
+      %{}
+    else
+      starting_ids
+      |> MapSet.to_list()
+      |> ancestor_pairs_query()
+      |> Repo.all()
+      |> group_ancestors_by_starting_id()
     end
+  end
+
+  defp ancestor_pairs_query(starting_ids) do
+    max_depth = max_project_tree_depth()
+
+    starting_rows =
+      from(p in Project,
+        where: p.id in ^starting_ids,
+        select: %{starting_id: p.id, ancestor_id: p.parent_id, depth: 0}
+      )
+
+    next_ancestor_up =
+      from(p in Project,
+        join: a in "ancestor_walk",
+        on: a.ancestor_id == p.id,
+        where: not is_nil(a.ancestor_id) and a.depth < ^max_depth,
+        select: %{
+          starting_id: a.starting_id,
+          ancestor_id: p.parent_id,
+          depth: a.depth + 1
+        }
+      )
+
+    "ancestor_walk"
+    |> recursive_ctes(true)
+    |> with_cte("ancestor_walk",
+      as: ^union_all(starting_rows, ^next_ancestor_up)
+    )
+    |> where([a], not is_nil(a.ancestor_id))
+    |> select(
+      [a],
+      {type(a.starting_id, Ecto.UUID), type(a.ancestor_id, Ecto.UUID)}
+    )
+  end
+
+  defp group_ancestors_by_starting_id(pairs) do
+    pairs
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, ancestors} -> {id, MapSet.new(ancestors)} end)
   end
 
   @doc """
