@@ -972,36 +972,39 @@ defmodule Lightning.Projects do
   """
   @spec get_project_tree_for_user(User.t()) :: [Project.t()]
   def get_project_tree_for_user(%User{} = user) do
-    roots = roots_for_user_tree(user)
-
-    case roots do
+    case roots_for_user_tree(user) do
       [] ->
         []
 
-      _ ->
-        root_ids = Enum.map(roots, & &1.id)
-
-        case Repo.all(active_descendants_query(root_ids)) do
-          [] ->
-            Enum.map(roots, &as_access_root/1)
-
-          desc_ids ->
-            pu_for_user = project_users_for_user_query(user)
-
-            descendants =
-              from(p in Project,
-                where: p.id in ^desc_ids,
-                preload: [project_users: ^pu_for_user],
-                order_by: [asc: p.name]
-              )
-              |> Repo.all()
-
-            visible = filter_descendants_for_user(descendants, roots, user)
-
-            Enum.map(roots, &as_access_root/1) ++
-              reparent_for_picker(visible, roots, descendants)
-        end
+      roots ->
+        descendants = load_active_descendants(roots, user)
+        visible = filter_descendants_for_user(descendants, roots, user)
+        shape_for_picker(roots, visible, descendants)
     end
+  end
+
+  defp load_active_descendants(roots, %User{} = user) do
+    root_ids = Enum.map(roots, & &1.id)
+
+    case Repo.all(active_descendants_query(root_ids)) do
+      [] ->
+        []
+
+      desc_ids ->
+        pu_for_user = project_users_for_user_query(user)
+
+        from(p in Project,
+          where: p.id in ^desc_ids,
+          preload: [project_users: ^pu_for_user],
+          order_by: [asc: p.name]
+        )
+        |> Repo.all()
+    end
+  end
+
+  defp shape_for_picker(roots, visible_descendants, all_descendants) do
+    Enum.map(roots, &as_access_root/1) ++
+      reparent_visible_descendants(visible_descendants, roots, all_descendants)
   end
 
   defp project_users_for_user_query(%User{id: user_id}) do
@@ -1011,7 +1014,7 @@ defmodule Lightning.Projects do
   defp as_access_root(%Project{} = project),
     do: %Project{project | parent_id: nil}
 
-  defp reparent_for_picker(visible_descendants, roots, all_descendants) do
+  defp reparent_visible_descendants(visible_descendants, roots, all_descendants) do
     project_map = Map.new(roots ++ all_descendants, &{&1.id, &1})
 
     visible_id_set =
@@ -1069,22 +1072,37 @@ defmodule Lightning.Projects do
   end
 
   defp roots_for_user_tree(%User{} = user) do
-    pu_for_user = project_users_for_user_query(user)
-
-    candidates =
-      user
-      |> candidate_roots_query()
-      |> Repo.all()
-      |> Repo.preload(project_users: pu_for_user)
-      |> Enum.sort_by(& &1.name)
-
+    candidates = load_candidate_roots(user)
     candidate_id_set = MapSet.new(candidates, & &1.id)
     ancestors_by_candidate = ancestor_ids_by_starting_id(candidate_id_set)
 
-    Enum.reject(candidates, fn p ->
-      ancestors = Map.get(ancestors_by_candidate, p.id, MapSet.new())
-      not MapSet.disjoint?(ancestors, candidate_id_set)
-    end)
+    Enum.reject(
+      candidates,
+      &shadowed_by_candidate_ancestor?(
+        &1,
+        ancestors_by_candidate,
+        candidate_id_set
+      )
+    )
+  end
+
+  defp load_candidate_roots(%User{} = user) do
+    pu_for_user = project_users_for_user_query(user)
+
+    user
+    |> candidate_roots_query()
+    |> Repo.all()
+    |> Repo.preload(project_users: pu_for_user)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp shadowed_by_candidate_ancestor?(
+         %Project{id: id},
+         ancestors_by_candidate,
+         candidate_id_set
+       ) do
+    ancestors = Map.get(ancestors_by_candidate, id, MapSet.new())
+    not MapSet.disjoint?(ancestors, candidate_id_set)
   end
 
   defp candidate_roots_query(%User{support_user: true} = user) do
