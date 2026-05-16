@@ -12,6 +12,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   alias Lightning.AiAssistant
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
@@ -23,12 +25,20 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   @impl true
   def mount(params, _session, %{assigns: %{project: project}} = socket) do
+    project_with_ancestors = Projects.preload_ancestors(project)
+    is_sandbox? = Project.sandbox?(project)
+    root = if is_sandbox?, do: walk_to_root(project_with_ancestors), else: nil
+
     {:ok,
      socket
      |> assign(workflow_assigns(params, project))
      |> assign(
        active_menu_item: :overview,
        project: project,
+       project_display_name: Project.display_name(project_with_ancestors),
+       project_is_sandbox: is_sandbox?,
+       root_project_id: root && root.id,
+       root_project_name: root && root.name,
        show_credential_modal: false,
        credential_schema: nil,
        credential_to_edit: nil,
@@ -37,6 +47,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
+
+  defp walk_to_root(%Project{parent: %Project{} = parent}),
+    do: walk_to_root(parent)
+
+  defp walk_to_root(%Project{} = project), do: project
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -181,25 +196,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
       data-project-name={@project.name}
-      data-project-display-name={
-        Lightning.Projects.Project.display_name(
-          Lightning.Projects.preload_ancestors(@project)
-        )
-      }
-      data-project-is-sandbox={
-        to_string(Lightning.Projects.Project.sandbox?(@project))
-      }
+      data-project-display-name={@project_display_name}
+      data-project-is-sandbox={to_string(@project_is_sandbox)}
       data-project-color={@project.color}
-      data-root-project-id={
-        if Lightning.Projects.Project.sandbox?(@project),
-          do: Lightning.Projects.root_of(@project).id,
-          else: nil
-      }
-      data-root-project-name={
-        if Lightning.Projects.Project.sandbox?(@project),
-          do: Lightning.Projects.root_of(@project).name,
-          else: nil
-      }
+      data-root-project-id={@root_project_id}
+      data-root-project-name={@root_project_name}
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
       data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
