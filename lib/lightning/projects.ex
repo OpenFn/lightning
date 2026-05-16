@@ -1231,21 +1231,43 @@ defmodule Lightning.Projects do
 
   Walks the parent chain to locate the workspace root and applies the
   cascading rule there; falls back to direct `project_users` membership on
-  `project` itself. Loads `:project_users` on the root and on `project` if
-  not already preloaded, so callers can pass any `%Project{}` fetched from
-  the database without arranging preloads first.
+  `project` itself. The ancestor walk uses a single recursive CTE
+  (`preload_ancestors/1`) and the `:project_users` preload is scoped to the
+  current user, so the call costs three round trips at most regardless of
+  how deep `project` sits. Pass any `%Project{}` fetched from the database;
+  preloads are arranged internally.
+
+  Suited to single-record authorization (a `:view_sandbox` policy check on
+  one project fetched by id). For bulk filtering use `visible_sandboxes/3`
+  instead with `:project_users` already preloaded.
   """
   @spec visible_to_user?(Project.t(), User.t()) :: boolean()
   def visible_to_user?(%Project{} = project, %User{} = user) do
-    root =
-      project
-      |> root_of()
-      |> Repo.preload(:project_users)
+    pu_query = project_users_for_user_query(user)
+    root = ancestor_root(project)
 
-    project = Repo.preload(project, :project_users)
+    project = Repo.preload(project, project_users: pu_query)
+
+    root =
+      if project.id == root.id,
+        do: project,
+        else: Repo.preload(root, project_users: pu_query)
 
     cascading_visibility?(user, root) or member?(project, user)
   end
+
+  defp ancestor_root(%Project{parent_id: nil} = project), do: project
+
+  defp ancestor_root(%Project{} = project) do
+    project
+    |> preload_ancestors()
+    |> walk_to_root()
+  end
+
+  defp walk_to_root(%Project{parent: %Project{} = parent}),
+    do: walk_to_root(parent)
+
+  defp walk_to_root(%Project{} = project), do: project
 
   defp assert_project_users_loaded!(
          %Project{project_users: %Ecto.Association.NotLoaded{}},
