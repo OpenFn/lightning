@@ -726,7 +726,8 @@ defmodule LightningWeb.SandboxLive.Index do
 
     socket.assigns.workspace_projects
     |> Enum.reject(fn potential_target ->
-      potential_target.id == source_sandbox.id or
+      not is_nil(potential_target.scheduled_deletion) or
+        potential_target.id == source_sandbox.id or
         Projects.descendant_of?(potential_target, source_sandbox, root_project)
     end)
     |> Enum.filter(fn project ->

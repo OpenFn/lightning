@@ -571,6 +571,34 @@ defmodule Lightning.ProjectsTest do
       assert ids == Enum.sort([root.id, sandbox.id])
     end
 
+    test "get_project_tree_for_user/1 prunes the subtree under a scheduled ancestor" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      scheduled_branch =
+        insert(:project, parent: root, scheduled_deletion: now)
+
+      _scheduled_leaf =
+        insert(:project,
+          parent: scheduled_branch,
+          scheduled_deletion: now
+        )
+
+      active_branch = insert(:project, parent: root)
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, active_branch.id])
+    end
+
     test "get_project_tree_for_user/1 applies per-root visibility across multiple workspaces" do
       user = user_fixture()
 

@@ -2610,6 +2610,42 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute no_membership_sandbox.id in target_ids
     end
 
+    test "merge target options exclude sandboxes scheduled for deletion", %{
+      conn: conn,
+      user: user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sibling =
+        insert(:project,
+          name: "sibling-active",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      scheduled_sibling =
+        insert(:project,
+          name: "sibling-scheduled",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      target_ids =
+        :sys.get_state(view.pid).socket.assigns.merge_target_options
+        |> Enum.map(& &1.value)
+
+      assert parent.id in target_ids
+      assert sibling.id in target_ids
+      refute scheduled_sibling.id in target_ids
+    end
+
     test "checks for divergence when opening merge modal with default target",
          %{
            conn: conn,

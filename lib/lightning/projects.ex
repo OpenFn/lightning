@@ -947,14 +947,14 @@ defmodule Lightning.Projects do
       _ ->
         root_ids = Enum.map(roots, & &1.id)
 
-        case descendant_ids(root_ids) do
+        case Repo.all(active_descendants_query(root_ids)) do
           [] ->
             roots
 
           desc_ids ->
             descendants =
               from(p in Project,
-                where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
+                where: p.id in ^desc_ids,
                 preload: :project_users,
                 order_by: [asc: p.name]
               )
@@ -964,6 +964,32 @@ defmodule Lightning.Projects do
             roots ++ visible
         end
     end
+  end
+
+  defp active_descendants_query(project_ids) do
+    max_depth = max_project_tree_depth()
+
+    initial =
+      from(p in Project,
+        where:
+          p.parent_id in ^project_ids and is_nil(p.scheduled_deletion),
+        select: %{id: p.id, depth: 0}
+      )
+
+    recursion =
+      from(p in Project,
+        join: d in "active_project_descendants",
+        on: p.parent_id == d.id,
+        where: d.depth < ^max_depth and is_nil(p.scheduled_deletion),
+        select: %{id: p.id, depth: d.depth + 1}
+      )
+
+    "active_project_descendants"
+    |> recursive_ctes(true)
+    |> with_cte("active_project_descendants",
+      as: ^union_all(initial, ^recursion)
+    )
+    |> select([d], type(d.id, Ecto.UUID))
   end
 
   defp roots_for_user_tree(%User{support_user: true} = user) do
@@ -1607,8 +1633,10 @@ defmodule Lightning.Projects do
   recursive walker used by `Lightning.Extensions.ProjectHook.handle_delete_project/1`
   to cascade hard-deletes through the subtree at purge time. Filtering would
   skip scheduled descendants and (because the parent FK is `:nilify_all`) leave
-  them as orphan root projects in the database. User-facing surfaces should use
-  `list_workspace_projects/2`, which filters scheduled rows out.
+  them as orphan root projects in the database. User-facing surfaces should
+  use `list_workspace_projects/2` (which returns the full workspace and lets
+  the caller decide what to display: the sandboxes list shows scheduled rows
+  in a separate "Recently Deleted" section, the picker filters them out).
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
