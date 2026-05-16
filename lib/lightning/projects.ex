@@ -71,6 +71,24 @@ defmodule Lightning.Projects do
     ]
   end
 
+  defmodule ProjectTreeItem do
+    @moduledoc """
+    A node in a user-visible project tree. Carries only the fields needed
+    to render the tree, with `parent_id` shaped for display (`nil` at the
+    user's access roots, the nearest visible ancestor for descendants).
+    Not a persistable record.
+    """
+
+    @type t :: %__MODULE__{
+            id: Ecto.UUID.t(),
+            name: String.t(),
+            color: String.t() | nil,
+            parent_id: Ecto.UUID.t() | nil
+          }
+
+    defstruct [:id, :name, :color, :parent_id]
+  end
+
   defdelegate subscribe, to: Events
 
   def get_projects_overview(user, opts \\ [])
@@ -947,7 +965,8 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns the projects the user can access shaped as a tree for UI display.
+  Returns the user-visible project tree as a list of `ProjectTreeItem`s
+  ready for a hierarchical render (walk by grouping on `parent_id`).
 
   The user's *access roots* are the topmost projects they can reach: every
   project they hold a `project_users` row on (any depth), plus, for support
@@ -960,15 +979,12 @@ defmodule Lightning.Projects do
   support-access root see the entire subtree; otherwise the user only sees
   descendants on which they hold a `project_users` row.
 
-  The returned projects have their `parent_id` reshaped to the user-visible
-  parent rather than the actual parent: every access root is exposed with
-  `parent_id: nil`, and every visible descendant points to its nearest
-  visible ancestor (intermediate ancestors the user cannot see are elided).
-  This lets callers like the global project picker render the tree with a
-  plain `Enum.group_by(&1.parent_id)` walk without losing children whose
-  real parent is hidden.
+  `parent_id` on the returned items is the *visible* parent: `nil` at each
+  access root, and the nearest visible ancestor for descendants whose real
+  parent is hidden. The result is not a list of persistable records; see
+  `ProjectTreeItem`.
   """
-  @spec get_project_tree_for_user(User.t()) :: [Project.t()]
+  @spec get_project_tree_for_user(User.t()) :: [ProjectTreeItem.t()]
   def get_project_tree_for_user(%User{} = user) do
     case roots_for_user_tree(user) do
       [] ->
@@ -1001,18 +1017,24 @@ defmodule Lightning.Projects do
   end
 
   defp shape_for_picker(roots, visible_descendants, all_descendants) do
-    Enum.map(roots, &as_access_root/1) ++
-      reparent_visible_descendants(visible_descendants, roots, all_descendants)
+    Enum.map(roots, &as_access_root_item/1) ++
+      descendant_tree_items(visible_descendants, roots, all_descendants)
   end
 
   defp project_users_for_user_query(%User{id: user_id}) do
     from(pu in ProjectUser, where: pu.user_id == ^user_id)
   end
 
-  defp as_access_root(%Project{} = project),
-    do: %Project{project | parent_id: nil}
+  defp as_access_root_item(%Project{} = project) do
+    %ProjectTreeItem{
+      id: project.id,
+      name: project.name,
+      color: project.color,
+      parent_id: nil
+    }
+  end
 
-  defp reparent_visible_descendants(visible_descendants, roots, all_descendants) do
+  defp descendant_tree_items(visible_descendants, roots, all_descendants) do
     project_map = Map.new(roots ++ all_descendants, &{&1.id, &1})
 
     visible_id_set =
@@ -1021,10 +1043,13 @@ defmodule Lightning.Projects do
       |> MapSet.new(& &1.id)
 
     Enum.map(visible_descendants, fn p ->
-      parent_id =
-        nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set)
-
-      %Project{p | parent_id: parent_id}
+      %ProjectTreeItem{
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        parent_id:
+          nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set)
+      }
     end)
   end
 
