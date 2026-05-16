@@ -1094,6 +1094,61 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "visible_to_user?/2" do
+    test "true when the user is a root owner (cascading)" do
+      owner = insert(:user)
+      root = insert(:project, project_users: [%{user: owner, role: :owner}])
+      sandbox = insert(:project, parent: root)
+
+      assert Projects.visible_to_user?(sandbox, owner)
+    end
+
+    test "true when the user has a direct project_users row on the sandbox" do
+      user = insert(:user)
+      root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      assert Projects.visible_to_user?(sandbox, user)
+    end
+
+    test "false when the user has no role anywhere in the workspace" do
+      user = insert(:user)
+      root = insert(:project)
+      sandbox = insert(:project, parent: root)
+
+      refute Projects.visible_to_user?(sandbox, user)
+    end
+
+    test "false when the user is a non-cascading root editor with no row on the sandbox" do
+      user = insert(:user)
+      root = insert(:project, project_users: [%{user: user, role: :editor}])
+      sandbox = insert(:project, parent: root)
+
+      refute Projects.visible_to_user?(sandbox, user)
+    end
+
+    test "true for a support user on a support-access root" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+      sandbox = insert(:project, parent: root)
+
+      assert Projects.visible_to_user?(sandbox, support_user)
+    end
+
+    test "false for a support user on a root that does not allow support access" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: false)
+      sandbox = insert(:project, parent: root)
+
+      refute Projects.visible_to_user?(sandbox, support_user)
+    end
+  end
+
   describe "export_project/2 as yaml:" do
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")

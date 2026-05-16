@@ -557,6 +557,35 @@ defmodule Lightning.Policies.SandboxesTest do
     end
   end
 
+  describe "view_sandbox permissions" do
+    test "root owner can view any sandbox in their workspace", %{
+      root_project_owner: owner,
+      sandbox: sandbox
+    } do
+      assert Sandboxes |> Permissions.can?(:view_sandbox, owner, sandbox)
+    end
+
+    test "user with a direct project_users row on the sandbox can view it", %{
+      sandbox_owner: sandbox_owner,
+      sandbox_with_owner: sandbox
+    } do
+      assert Sandboxes |> Permissions.can?(:view_sandbox, sandbox_owner, sandbox)
+    end
+
+    test "user with no role on the workspace cannot view its sandboxes", %{
+      other_user: other_user,
+      sandbox: sandbox
+    } do
+      refute Sandboxes |> Permissions.can?(:view_sandbox, other_user, sandbox)
+    end
+
+    test "non-cascading editor on the root cannot view a sandbox they are not a member of",
+         %{root_project: root_project, sandbox: sandbox, user: user} do
+      insert(:project_user, user: user, project: root_project, role: :editor)
+      refute Sandboxes |> Permissions.can?(:view_sandbox, user, sandbox)
+    end
+  end
+
   describe "edge cases and private function coverage" do
     test "authorize returns false for unknown actions", %{
       user: user,

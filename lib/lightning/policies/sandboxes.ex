@@ -20,6 +20,7 @@ defmodule Lightning.Policies.Sandboxes do
           | :update_sandbox
           | :provision_sandbox
           | :merge_sandbox
+          | :view_sandbox
 
   @doc """
   Authorize sandbox operations based on user role and project hierarchy.
@@ -41,10 +42,15 @@ defmodule Lightning.Policies.Sandboxes do
   - Editor/admin/owner on the target project
   - Superuser
 
+  ### `:view_sandbox`
+  User can view a sandbox if they pass the same visibility rule as the
+  sandboxes list and the global project picker (delegated to
+  `Lightning.Projects.visible_to_user?/2`).
+
   ## Parameters
   - `action` - The action being attempted
   - `user` - The user attempting the action
-  - `project` - The sandbox project (for delete/update), parent project (for provision),
+  - `project` - The sandbox project (for delete/update/view), parent project (for provision),
     or target project (for merge)
   """
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
@@ -78,6 +84,10 @@ defmodule Lightning.Policies.Sandboxes do
       true ->
         false
     end
+  end
+
+  def authorize(:view_sandbox, %User{} = user, %Project{} = sandbox) do
+    Projects.visible_to_user?(sandbox, user)
   end
 
   def authorize(_action, _user, _project), do: false

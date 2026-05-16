@@ -878,17 +878,11 @@ defmodule Lightning.Projects do
   """
   @spec list_descendants(Ecto.UUID.t()) :: [Project.t()]
   def list_descendants(project_id) when is_binary(project_id) do
-    case descendant_ids([project_id]) do
-      [] ->
-        []
-
-      ids ->
-        from(p in Project,
-          where: p.id in ^ids,
-          order_by: [asc: p.name]
-        )
-        |> Repo.all()
-    end
+    from(p in Project,
+      where: p.id in subquery(descendants_query([project_id])),
+      order_by: [asc: p.name]
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -1229,6 +1223,28 @@ defmodule Lightning.Projects do
     else
       Enum.filter(sandboxes, &member?(&1, user))
     end
+  end
+
+  @doc """
+  Returns `true` when `user` is allowed to see `project` under the same rule
+  applied by `visible_sandboxes/3`.
+
+  Walks the parent chain to locate the workspace root and applies the
+  cascading rule there; falls back to direct `project_users` membership on
+  `project` itself. Loads `:project_users` on the root and on `project` if
+  not already preloaded, so callers can pass any `%Project{}` fetched from
+  the database without arranging preloads first.
+  """
+  @spec visible_to_user?(Project.t(), User.t()) :: boolean()
+  def visible_to_user?(%Project{} = project, %User{} = user) do
+    root =
+      project
+      |> root_of()
+      |> Repo.preload(:project_users)
+
+    project = Repo.preload(project, :project_users)
+
+    cascading_visibility?(user, root) or member?(project, user)
   end
 
   defp assert_project_users_loaded!(
