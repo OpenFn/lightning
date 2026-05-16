@@ -3497,6 +3497,46 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "list_descendants/1" do
+    test "returns [] for a project with no children" do
+      project = insert(:project)
+      assert Projects.list_descendants(project.id) == []
+    end
+
+    test "returns every descendant of the subtree root, ordered by name" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "alpha", parent: root)
+      grandchild = insert(:project, name: "bravo", parent: child)
+
+      assert Projects.list_descendants(root.id) |> Enum.map(& &1.id) ==
+               [child.id, grandchild.id]
+    end
+
+    test "does not include the subtree root itself" do
+      root = insert(:project)
+      _child = insert(:project, parent: root)
+
+      refute root.id in Enum.map(Projects.list_descendants(root.id), & &1.id)
+    end
+
+    test "returns scheduled-for-deletion descendants alongside active ones" do
+      root = insert(:project)
+      active = insert(:project, name: "active", parent: root)
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      ids =
+        Projects.list_descendants(root.id) |> Enum.map(& &1.id) |> Enum.sort()
+
+      assert ids == Enum.sort([active.id, scheduled.id])
+    end
+  end
+
   describe "depth_of/1" do
     test "returns 0 for a root project" do
       root = insert(:project)

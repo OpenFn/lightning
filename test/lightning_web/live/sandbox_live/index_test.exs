@@ -835,6 +835,42 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert has_element?(view, "#edit-sandbox-#{sandbox_with_pu.id}")
       assert has_element?(view, "#edit-sandbox-#{sandbox_without_pu.id}")
     end
+
+    test "handlers reject a hidden sandbox id dispatched via a crafted event",
+         %{conn: conn, user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden_sandbox =
+        insert(:project,
+          name: "hidden-sandbox",
+          parent: parent,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_users: []
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      for event <- ~w(open-delete-modal cancel-sandbox-deletion open-merge-modal) do
+        html = render_hook(view, event, %{"id" => hidden_sandbox.id})
+        assert html =~ "Sandbox not found"
+      end
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.confirm_delete_open?
+      refute assigns.merge_modal_open?
+
+      {:ok, _edit_view, edit_html} =
+        live(
+          conn,
+          ~p"/projects/#{parent.id}/sandboxes/#{hidden_sandbox.id}/edit"
+        )
+
+      assert edit_html =~ "Sandbox not found"
+    end
   end
 
   describe "Delete sandbox with descendant checking" do
