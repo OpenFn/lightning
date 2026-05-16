@@ -1002,7 +1002,8 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp as_access_root(%Project{} = project), do: %Project{project | parent_id: nil}
+  defp as_access_root(%Project{} = project),
+    do: %Project{project | parent_id: nil}
 
   defp reparent_for_picker(visible_descendants, roots, all_descendants) do
     project_map = Map.new(roots ++ all_descendants, &{&1.id, &1})
@@ -1027,8 +1028,11 @@ defmodule Lightning.Projects do
       parent_id
     else
       case Map.get(project_map, parent_id) do
-        nil -> nil
-        parent -> nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
+        nil ->
+          nil
+
+        parent ->
+          nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
       end
     end
   end
@@ -1038,8 +1042,7 @@ defmodule Lightning.Projects do
 
     initial =
       from(p in Project,
-        where:
-          p.parent_id in ^project_ids and is_nil(p.scheduled_deletion),
+        where: p.parent_id in ^project_ids and is_nil(p.scheduled_deletion),
         select: %{id: p.id, depth: 0}
       )
 

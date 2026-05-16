@@ -541,9 +541,7 @@ defmodule Lightning.ProjectsTest do
       superuser = insert(:user, role: :superuser)
 
       root =
-        project_fixture(
-          project_users: [%{user_id: superuser.id, role: :viewer}]
-        )
+        project_fixture(project_users: [%{user_id: superuser.id, role: :viewer}])
 
       sandbox = insert(:project, parent: root)
 
