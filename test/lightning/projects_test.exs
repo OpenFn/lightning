@@ -1070,6 +1070,28 @@ defmodule Lightning.ProjectsTest do
 
       assert Projects.visible_sandboxes([sandbox], support_user, root) == []
     end
+
+    test "raises ArgumentError when the root project's project_users are not preloaded" do
+      user = insert(:user)
+      root = insert(:project)
+      sandbox = insert(:project, parent: root) |> Repo.preload(:project_users)
+
+      assert_raise ArgumentError,
+                   ~r/project_users.*preloaded.*root_project/,
+                   fn ->
+                     Projects.visible_sandboxes([sandbox], user, root)
+                   end
+    end
+
+    test "raises ArgumentError when a sandbox's project_users are not preloaded" do
+      user = insert(:user)
+      root = insert(:project) |> Repo.preload(:project_users)
+      sandbox = insert(:project, parent: root)
+
+      assert_raise ArgumentError, ~r/project_users.*preloaded.*sandbox/, fn ->
+        Projects.visible_sandboxes([sandbox], user, root)
+      end
+    end
   end
 
   describe "export_project/2 as yaml:" do

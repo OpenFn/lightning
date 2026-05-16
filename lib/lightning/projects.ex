@@ -1177,12 +1177,26 @@ defmodule Lightning.Projects do
   """
   @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
   def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
+    assert_project_users_loaded!(root_project, "root_project")
+    Enum.each(sandboxes, &assert_project_users_loaded!(&1, "sandbox"))
+
     if cascading_visibility?(user, root_project) do
       sandboxes
     else
       Enum.filter(sandboxes, &member?(&1, user))
     end
   end
+
+  defp assert_project_users_loaded!(
+         %Project{project_users: %Ecto.Association.NotLoaded{}},
+         label
+       ) do
+    raise ArgumentError,
+          "visible_sandboxes/3 requires :project_users to be preloaded on " <>
+            "the #{label}; see the function docstring"
+  end
+
+  defp assert_project_users_loaded!(%Project{}, _label), do: :ok
 
   defp cascading_visibility?(%User{role: :superuser}, _root), do: true
 
