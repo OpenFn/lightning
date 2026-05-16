@@ -20,14 +20,16 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   alias LightningWeb.Channels.WorkflowJSON
 
   on_mount({LightningWeb.Hooks, :project_scope})
-  on_mount {LightningWeb.Hooks, :check_limits}
-  on_mount {LightningWeb.Hooks, :check_legacy_preference}
+  on_mount({LightningWeb.Hooks, :check_limits})
+  on_mount({LightningWeb.Hooks, :check_legacy_preference})
 
   @impl true
   def mount(params, _session, %{assigns: %{project: project}} = socket) do
     project_with_ancestors = Projects.preload_ancestors(project)
     is_sandbox? = Project.sandbox?(project)
-    root = if is_sandbox?, do: walk_to_root(project_with_ancestors), else: nil
+
+    root =
+      if is_sandbox?, do: Projects.root_of(project_with_ancestors), else: nil
 
     {:ok,
      socket
@@ -47,11 +49,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
-
-  defp walk_to_root(%Project{parent: %Project{} = parent}),
-    do: walk_to_root(parent)
-
-  defp walk_to_root(%Project{} = project), do: project
 
   @impl true
   def handle_params(params, _url, socket) do
