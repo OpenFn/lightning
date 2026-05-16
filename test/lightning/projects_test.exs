@@ -660,19 +660,46 @@ defmodule Lightning.ProjectsTest do
       root =
         project_fixture(project_users: [%{user_id: user.id, role: :owner}])
 
+      middle = insert(:project, parent: root)
+
       grandchild =
         insert(:project,
-          parent: insert(:project, parent: root),
+          parent: middle,
           project_users: [%{user: user, role: :viewer}]
         )
 
-      ids =
-        user
-        |> Projects.get_project_tree_for_user()
-        |> Enum.map(& &1.id)
+      projects = Projects.get_project_tree_for_user(user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
 
-      assert root.id in ids
-      assert grandchild.id in ids
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == grandchild.id)) == 1
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[middle.id].parent_id == root.id
+      assert by_id[grandchild.id].parent_id == middle.id
+    end
+
+    test "get_project_tree_for_user/1 shadows a sandbox membership under a support-access root for a support user" do
+      support_user = insert(:user, support_user: true)
+
+      root = insert(:project, allow_support_access: true)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: support_user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(support_user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == sandbox.id)) == 1
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[sandbox.id].parent_id == root.id
     end
 
     test "get_project_tree_for_user/1 applies per-root visibility across multiple workspaces" do

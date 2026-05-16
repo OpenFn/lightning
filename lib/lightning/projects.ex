@@ -1068,9 +1068,11 @@ defmodule Lightning.Projects do
       |> Enum.sort_by(& &1.name)
 
     candidate_id_set = MapSet.new(candidates, & &1.id)
+    ancestors_by_candidate = ancestor_ids_by_starting_id(candidate_id_set)
 
     Enum.reject(candidates, fn p ->
-      has_candidate_ancestor?(p.parent_id, candidate_id_set)
+      ancestors = Map.get(ancestors_by_candidate, p.id, MapSet.new())
+      not MapSet.disjoint?(ancestors, candidate_id_set)
     end)
   end
 
@@ -1099,16 +1101,44 @@ defmodule Lightning.Projects do
     )
   end
 
-  defp has_candidate_ancestor?(nil, _candidate_id_set), do: false
+  defp ancestor_ids_by_starting_id(starting_ids) do
+    case MapSet.size(starting_ids) do
+      0 ->
+        %{}
 
-  defp has_candidate_ancestor?(parent_id, candidate_id_set) do
-    if MapSet.member?(candidate_id_set, parent_id) do
-      true
-    else
-      case Repo.get(Project, parent_id) do
-        nil -> false
-        parent -> has_candidate_ancestor?(parent.parent_id, candidate_id_set)
-      end
+      _ ->
+        ids = MapSet.to_list(starting_ids)
+        max_depth = max_project_tree_depth()
+
+        initial =
+          from(p in Project,
+            where: p.id in ^ids,
+            select: %{starting_id: p.id, ancestor_id: p.parent_id, depth: 0}
+          )
+
+        recursion =
+          from(p in Project,
+            join: a in "ancestor_walk",
+            on: a.ancestor_id == p.id,
+            where: not is_nil(a.ancestor_id) and a.depth < ^max_depth,
+            select: %{
+              starting_id: a.starting_id,
+              ancestor_id: p.parent_id,
+              depth: a.depth + 1
+            }
+          )
+
+        "ancestor_walk"
+        |> recursive_ctes(true)
+        |> with_cte("ancestor_walk", as: ^union_all(initial, ^recursion))
+        |> where([a], not is_nil(a.ancestor_id))
+        |> select(
+          [a],
+          {type(a.starting_id, Ecto.UUID), type(a.ancestor_id, Ecto.UUID)}
+        )
+        |> Repo.all()
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        |> Map.new(fn {id, ancs} -> {id, MapSet.new(ancs)} end)
     end
   end
 
@@ -1129,7 +1159,10 @@ defmodule Lightning.Projects do
   across both the sandboxes list and the global project picker.
 
   Assumes `root_project.project_users` and each `sandbox.project_users` are
-  preloaded (as ensured by `list_workspace_projects/2`).
+  preloaded. Both call sites take care of this:
+  `list_workspace_projects/2` preloads `:project_users` on every row it
+  returns, and `get_project_tree_for_user/1` preloads on every candidate
+  root and on the active descendant fetch.
   """
   @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
   def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
