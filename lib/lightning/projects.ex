@@ -852,6 +852,30 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns every descendant project of `project_id`, ordered by name.
+
+  Unlike `list_workspace_projects/2`, the input is treated as the subtree
+  root: only its descendants are returned, not the absolute root of the
+  workspace. Used by surfaces that need to communicate which projects a
+  cascading action (such as a merge) will affect, regardless of whether
+  the current viewer can otherwise see them.
+  """
+  @spec list_descendants(Ecto.UUID.t()) :: [Project.t()]
+  def list_descendants(project_id) when is_binary(project_id) do
+    case descendant_ids([project_id]) do
+      [] ->
+        []
+
+      ids ->
+        from(p in Project,
+          where: p.id in ^ids,
+          order_by: [asc: p.name]
+        )
+        |> Repo.all()
+    end
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking project changes.
 
   ## Examples
@@ -925,16 +949,26 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns all projects the user can access, including sandboxes at any depth.
+  Returns the projects the user can access shaped as a tree for UI display.
 
-  Root projects are fetched via the user's project memberships (or via
-  `allow_support_access` for support users). Descendants are then included
-  only when the user actually has access to them: superusers see every
-  descendant, owners and admins of the root see every descendant of that
-  root (cascading workspace control), and support users see every
-  descendant of a support-access root. Otherwise the user only sees
-  descendants on which they hold a `project_users` row. This matches the
-  rule applied to the sandboxes list.
+  The user's *access roots* are the topmost projects they can reach: every
+  project they hold a `project_users` row on (any depth), plus, for support
+  users, every workspace root flagged `allow_support_access`. A membership
+  on a deep sandbox without membership on its ancestors is therefore a
+  legitimate access root.
+
+  Descendants below each access root are filtered by `visible_sandboxes/3`:
+  superusers, owners and admins of the access root, and support users on a
+  support-access root see the entire subtree; otherwise the user only sees
+  descendants on which they hold a `project_users` row.
+
+  The returned projects have their `parent_id` reshaped to the user-visible
+  parent rather than the actual parent: every access root is exposed with
+  `parent_id: nil`, and every visible descendant points to its nearest
+  visible ancestor (intermediate ancestors the user cannot see are elided).
+  This lets callers like the global project picker render the tree with a
+  plain `Enum.group_by(&1.parent_id)` walk without losing children whose
+  real parent is hidden.
   """
   @spec get_project_tree_for_user(User.t()) :: [Project.t()]
   def get_project_tree_for_user(%User{} = user) do
@@ -949,7 +983,7 @@ defmodule Lightning.Projects do
 
         case Repo.all(active_descendants_query(root_ids)) do
           [] ->
-            roots
+            Enum.map(roots, &as_access_root/1)
 
           desc_ids ->
             descendants =
@@ -961,8 +995,41 @@ defmodule Lightning.Projects do
               |> Repo.all()
 
             visible = filter_descendants_for_user(descendants, roots, user)
-            roots ++ visible
+
+            Enum.map(roots, &as_access_root/1) ++
+              reparent_for_picker(visible, roots, descendants)
         end
+    end
+  end
+
+  defp as_access_root(%Project{} = project), do: %Project{project | parent_id: nil}
+
+  defp reparent_for_picker(visible_descendants, roots, all_descendants) do
+    project_map = Map.new(roots ++ all_descendants, &{&1.id, &1})
+
+    visible_id_set =
+      roots
+      |> Enum.concat(visible_descendants)
+      |> MapSet.new(& &1.id)
+
+    Enum.map(visible_descendants, fn p ->
+      parent_id =
+        nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set)
+
+      %Project{p | parent_id: parent_id}
+    end)
+  end
+
+  defp nearest_visible_ancestor_id(nil, _project_map, _visible_ids), do: nil
+
+  defp nearest_visible_ancestor_id(parent_id, project_map, visible_ids) do
+    if MapSet.member?(visible_ids, parent_id) do
+      parent_id
+    else
+      case Map.get(project_map, parent_id) do
+        nil -> nil
+        parent -> nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
+      end
     end
   end
 
@@ -992,7 +1059,22 @@ defmodule Lightning.Projects do
     |> select([d], type(d.id, Ecto.UUID))
   end
 
-  defp roots_for_user_tree(%User{support_user: true} = user) do
+  defp roots_for_user_tree(%User{} = user) do
+    candidates =
+      user
+      |> candidate_roots_query()
+      |> Repo.all()
+      |> Repo.preload(:project_users)
+      |> Enum.sort_by(& &1.name)
+
+    candidate_id_set = MapSet.new(candidates, & &1.id)
+
+    Enum.reject(candidates, fn p ->
+      has_candidate_ancestor?(p.parent_id, candidate_id_set)
+    end)
+  end
+
+  defp candidate_roots_query(%User{support_user: true} = user) do
     support_roots =
       from(p in Project,
         where:
@@ -1001,18 +1083,33 @@ defmodule Lightning.Projects do
             is_nil(p.parent_id)
       )
 
-    support_roots
-    |> union(^projects_for_user_query(user))
-    |> Repo.all()
-    |> Enum.sort_by(& &1.name)
-    |> Repo.preload(:project_users)
+    membership_projects =
+      from(p in Project,
+        join: pu in assoc(p, :project_users),
+        where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion)
+      )
+
+    support_roots |> union(^membership_projects)
   end
 
-  defp roots_for_user_tree(%User{} = user) do
-    user
-    |> projects_for_user_query()
-    |> preload(:project_users)
-    |> Repo.all()
+  defp candidate_roots_query(%User{} = user) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion)
+    )
+  end
+
+  defp has_candidate_ancestor?(nil, _candidate_id_set), do: false
+
+  defp has_candidate_ancestor?(parent_id, candidate_id_set) do
+    if MapSet.member?(candidate_id_set, parent_id) do
+      true
+    else
+      case Repo.get(Project, parent_id) do
+        nil -> false
+        parent -> has_candidate_ancestor?(parent.parent_id, candidate_id_set)
+      end
+    end
   end
 
   @doc """

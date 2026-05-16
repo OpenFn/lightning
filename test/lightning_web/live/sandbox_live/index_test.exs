@@ -1983,6 +1983,36 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       descendant_ids = Enum.map(assigns.merge_descendants, & &1.id)
       refute root.id in descendant_ids
     end
+
+    test "merge modal lists descendants the current viewer cannot otherwise see",
+         %{conn: conn, user: user, root: root, child1: child1} do
+      hidden_grandchild =
+        insert(:project,
+          name: "hidden-grandchild",
+          parent: child1,
+          project_users: []
+        )
+
+      visible_grandchild =
+        insert(:project,
+          name: "visible-grandchild",
+          parent: child1,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      descendant_ids =
+        :sys.get_state(view.pid).socket.assigns.merge_descendants
+        |> Enum.map(& &1.id)
+
+      assert visible_grandchild.id in descendant_ids
+      assert hidden_grandchild.id in descendant_ids
+    end
   end
 
   describe "collection sync on merge" do

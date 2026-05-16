@@ -218,8 +218,7 @@ defmodule LightningWeb.SandboxLive.Index do
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants =
-            get_all_descendants(sandbox, socket.assigns.workspace_projects)
+          descendants = Projects.list_descendants(sandbox.id)
 
           merge_changeset =
             merge_changeset(%{
@@ -746,32 +745,6 @@ defmodule LightningWeb.SandboxLive.Index do
     case Enum.find(project.project_users, &(&1.user_id == user.id)) do
       nil -> nil
       pu -> pu.role
-    end
-  end
-
-  defp get_all_descendants(sandbox, workspace_projects) do
-    project_map = Map.new(workspace_projects, &{&1.id, &1})
-
-    workspace_projects
-    |> Enum.filter(fn project ->
-      descendant_of?(project.parent_id, sandbox.id, project_map)
-    end)
-    |> Enum.sort_by(& &1.name)
-  end
-
-  defp descendant_of?(nil, _ancestor_id, _project_map), do: false
-
-  defp descendant_of?(parent_id, ancestor_id, _project_map)
-       when parent_id == ancestor_id,
-       do: true
-
-  defp descendant_of?(parent_id, ancestor_id, project_map) do
-    case Map.get(project_map, parent_id) do
-      nil ->
-        false
-
-      parent ->
-        descendant_of?(parent.parent_id, ancestor_id, project_map)
     end
   end
 

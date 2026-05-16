@@ -119,6 +119,77 @@ defmodule LightningWeb.LayoutComponentsTest do
       refute html =~ "global-project-picker"
     end
 
+    test "items nest a visible sandbox under its nearest visible ancestor when intermediates are hidden" do
+      user = insert(:user)
+
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden_middle =
+        insert(:project, name: "hidden-middle", parent: root)
+
+      nested_member =
+        insert(:project,
+          name: "nested-member",
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert root.id in ids
+      assert nested_member.id in ids
+      refute hidden_middle.id in ids
+
+      assert depth_by_id[root.id] == 0
+      assert depth_by_id[nested_member.id] == 1
+    end
+
+    test "items surface a sandbox the user is a direct member of when the user has no role on its root" do
+      user = insert(:user)
+      absolute_root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: absolute_root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert ids == [sandbox.id]
+      assert depth_by_id[sandbox.id] == 0
+    end
+
     test "items omit sandboxes the user has no access to" do
       user = insert(:user)
 

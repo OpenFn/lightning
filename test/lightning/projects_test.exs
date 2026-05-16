@@ -599,6 +599,82 @@ defmodule Lightning.ProjectsTest do
       assert ids == Enum.sort([root.id, active_branch.id])
     end
 
+    test "get_project_tree_for_user/1 surfaces a sandbox the user is a direct member of, even with no role on its absolute root" do
+      user = user_fixture()
+
+      root = insert(:project, name: "absolute-root")
+      _middle = insert(:project, name: "middle", parent: root)
+
+      sandbox =
+        insert(:project,
+          name: "deep-sandbox",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      leaf =
+        insert(:project,
+          name: "deep-leaf",
+          parent: sandbox,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([sandbox.id, leaf.id])
+      refute root.id in ids
+    end
+
+    test "get_project_tree_for_user/1 reparents a visible descendant onto its nearest visible ancestor when intermediates are hidden" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :editor}])
+
+      hidden_middle = insert(:project, parent: root)
+
+      nested_member =
+        insert(:project,
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(user)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Map.has_key?(by_id, root.id)
+      assert Map.has_key?(by_id, nested_member.id)
+      refute Map.has_key?(by_id, hidden_middle.id)
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[nested_member.id].parent_id == root.id
+    end
+
+    test "get_project_tree_for_user/1 prefers the topmost membership when the user belongs to both root and descendant" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      grandchild =
+        insert(:project,
+          parent: insert(:project, parent: root),
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+
+      assert root.id in ids
+      assert grandchild.id in ids
+    end
+
     test "get_project_tree_for_user/1 applies per-root visibility across multiple workspaces" do
       user = user_fixture()
 
