@@ -50,6 +50,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
@@ -239,32 +240,38 @@ defmodule Lightning.Projects.Sandboxes do
 
   @doc """
   Returns `true` when `user` has an `:admin` or `:owner` role on any ancestor
-  of `project`, walking the parent chain.
+  of `project`.
 
   Used to enforce the parent-admin floor rule: a user who is admin/owner on
   any ancestor project cannot be removed from, or downgraded within, a
-  sandbox descended from that project.
+  sandbox descended from that project. Costs two round trips regardless of
+  how deep `project` sits in its workspace — one recursive CTE to collect
+  ancestor ids via `Lightning.Projects.preload_ancestors/1`, and one
+  `EXISTS` against `project_users` for the role check.
   """
   @spec parent_admin?(Project.t(), User.t()) :: boolean()
+  def parent_admin?(%Project{parent_id: nil}, _user), do: false
+
   def parent_admin?(%Project{} = project, %User{} = user) do
-    project
-    |> ancestors()
-    |> Enum.any?(fn ancestor ->
-      Lightning.Projects.get_project_user_role(user, ancestor) in [
-        :admin,
-        :owner
-      ]
-    end)
+    ancestor_ids =
+      project
+      |> Lightning.Projects.preload_ancestors()
+      |> collect_ancestor_ids([])
+
+    from(pu in ProjectUser,
+      where:
+        pu.user_id == ^user.id and
+          pu.project_id in ^ancestor_ids and
+          pu.role in [:owner, :admin]
+    )
+    |> Repo.exists?()
   end
 
-  defp ancestors(%Project{parent_id: nil}), do: []
-
-  defp ancestors(%Project{parent_id: parent_id}) do
-    case Lightning.Projects.get_project(parent_id) do
-      nil -> []
-      %Project{} = parent -> [parent | ancestors(parent)]
-    end
+  defp collect_ancestor_ids(%Project{parent: %Project{} = parent}, acc) do
+    collect_ancestor_ids(parent, [parent.id | acc])
   end
+
+  defp collect_ancestor_ids(%Project{}, acc), do: acc
 
   @doc """
   Deletes a sandbox and all its descendant projects.
