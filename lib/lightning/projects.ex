@@ -856,9 +856,7 @@ defmodule Lightning.Projects do
 
   Unlike `list_workspace_projects/2`, the input is treated as the subtree
   root: only its descendants are returned, not the absolute root of the
-  workspace. Used by surfaces that need to communicate which projects a
-  cascading action (such as a merge) will affect, regardless of whether
-  the current viewer can otherwise see them.
+  workspace.
   """
   @spec list_descendants(Ecto.UUID.t()) :: [Project.t()]
   def list_descendants(project_id) when is_binary(project_id) do
@@ -1193,15 +1191,8 @@ defmodule Lightning.Projects do
       workspace control); or
     * the user has any `project_users` row on the sandbox itself.
 
-  This mirrors how the projects list filters out projects the user is not a
-  member of, and is the single source of truth for sandbox visibility
-  across both the sandboxes list and the global project picker.
-
   Assumes `root_project.project_users` and each `sandbox.project_users` are
-  preloaded. Both call sites take care of this:
-  `list_workspace_projects/2` preloads `:project_users` on every row it
-  returns, and `get_project_tree_for_user/1` preloads on every candidate
-  root and on the active descendant fetch.
+  preloaded; raises `ArgumentError` otherwise.
   """
   @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
   def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
