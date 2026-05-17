@@ -7,6 +7,13 @@ defmodule Lightning.Policies.Sandboxes do
   involved in the action, never inherited from an ancestor and never
   granted by user type (the `:user`/`:superuser` enum has no bearing
   on public-surface authorization).
+
+  Note that the **source-side** gate for the Merge button in the
+  sandboxes list is enforced by `manage_authority/2` in this module
+  (`:owner`/`:admin` on the source sandbox), not by the
+  `:merge_sandbox` policy clause. The policy itself only governs the
+  target-side check (`:editor`+ on the target project). Both gates must
+  hold for a merge to succeed.
   """
   @behaviour Bodyguard.Policy
 
