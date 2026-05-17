@@ -3958,6 +3958,42 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "display_name_within_access_root/2" do
+    test "returns the project name alone when access_root is the project itself" do
+      project = insert(:project, name: "acme-workspace")
+
+      assert Projects.display_name_within_access_root(project, project) ==
+               "acme-workspace"
+    end
+
+    test "joins names from the access root down to the project, stopping at the root" do
+      root = insert(:project, name: "acme-workspace")
+      middle = insert(:project, name: "acme-staging", parent: root)
+      leaf = insert(:project, name: "acme-staging-dev", parent: middle)
+
+      assert Projects.display_name_within_access_root(leaf, root) ==
+               "acme-workspace/acme-staging/acme-staging-dev"
+    end
+
+    test "truncates at a deeper access root, hiding ancestors above it" do
+      root = insert(:project, name: "hidden-root")
+      access = insert(:project, name: "user-access-root", parent: root)
+      leaf = insert(:project, name: "leaf", parent: access)
+
+      assert Projects.display_name_within_access_root(leaf, access) ==
+               "user-access-root/leaf"
+    end
+
+    test "falls back to the full ancestor chain when access_root is not in the project's chain" do
+      root = insert(:project, name: "acme-workspace")
+      project = insert(:project, name: "acme-staging", parent: root)
+      unrelated = insert(:project, name: "beta-workspace")
+
+      assert Projects.display_name_within_access_root(project, unrelated) ==
+               "acme-workspace/acme-staging"
+    end
+  end
+
   describe "subscribe/0" do
     test "delivers project lifecycle events to the calling process" do
       assert :ok = Projects.subscribe()
