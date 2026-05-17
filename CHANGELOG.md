@@ -70,19 +70,20 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list
   is disabled (with the limiter's tooltip) when the active sandbox count is
   already at the limit.
-- Sandboxes now follow a fork model on every public surface: a sandbox is
-  an independent project, and visibility, navigation, and action
-  authority are decided by direct `project_users` membership on that
-  sandbox (or `support_user` plus `allow_support_access` on the sandbox
-  itself). Cascading authority from a parent project has been removed,
-  and the `:user`/`:superuser` enum no longer grants any access on
-  public surfaces — root admins/owners with no row on a descendant
-  sandbox and superusers with no row on a project must now be added
-  explicitly. Sandbox provisioning still seeds the new sandbox's
-  membership from the parent at creation time, so existing workflows
-  carry over; later toggles of `allow_support_access` on a parent no
-  longer affect its descendants. The admin space (`/settings/...`)
-  remains the parallel surface where superuser status applies.
+- Sandboxes are now independent projects on every public surface.
+  Visibility, navigation, and action authority are decided by direct
+  `project_users` membership on the sandbox itself (or `support_user`
+  with `allow_support_access` on the sandbox). Authority no longer
+  cascades from a parent project, and `user.role` (`:user` /
+  `:superuser`) does not grant any access on public surfaces. The
+  Merge button on a sandbox now requires `:admin` or `:owner` on the
+  source (it previously required `:editor`+), aligning the merge gate
+  with the cascade scheduling it triggers. The merge confirmation
+  modal no longer names descendants, only counts them. Sandbox
+  provisioning still seeds membership from the parent at creation, so
+  existing collaborators carry over; later changes to a parent's
+  membership or `allow_support_access` flag no longer affect existing
+  descendants.
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action

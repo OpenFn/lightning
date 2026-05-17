@@ -382,7 +382,7 @@ defmodule Lightning.Policies.SandboxesTest do
       end
     end
 
-    test "editor on a sandbox gets merge but not update/delete on that sandbox",
+    test "editor on a sandbox gets no manage privileges (merge requires admin/owner)",
          %{
            root_project: root_project,
            sandboxes: sandboxes,
@@ -402,10 +402,7 @@ defmodule Lightning.Policies.SandboxesTest do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, user, root_project)
 
-      assert %{update: false, delete: false, merge: true} =
-               permissions[target_sandbox.id]
-
-      for sandbox <- sandboxes, sandbox.id != target_sandbox.id do
+      for sandbox <- sandboxes do
         assert %{update: false, delete: false, merge: false} =
                  permissions[sandbox.id]
       end

@@ -389,8 +389,7 @@ defmodule LightningWeb.SandboxLive.Components do
             <:message>
               It can be restored from the sandbox list for {grace_period_label()}, then permanently removed.
               <div :if={@descendant_count == 1} class="mt-2">
-                Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be deleted.
+                Its child sandbox will also be deleted.
               </div>
               <div :if={@descendant_count > 1} class="mt-2">
                 Its {@descendant_count} child sandboxes will also be deleted.

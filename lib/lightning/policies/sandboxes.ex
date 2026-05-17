@@ -87,18 +87,11 @@ defmodule Lightning.Policies.Sandboxes do
           &(&1.user_id == user.id and &1.role in [:owner, :admin])
         )
 
-      is_editor_plus_here? =
-        is_owner_or_admin_here? or
-          Enum.any?(
-            sandbox.project_users,
-            &(&1.user_id == user.id and &1.role == :editor)
-          )
-
       {sandbox.id,
        %{
          update: is_owner_or_admin_here?,
          delete: is_owner_or_admin_here?,
-         merge: is_editor_plus_here?
+         merge: is_owner_or_admin_here?
        }}
     end)
   end

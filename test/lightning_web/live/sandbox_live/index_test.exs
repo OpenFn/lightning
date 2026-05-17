@@ -2545,11 +2545,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert remaining_job.body == "job1_modified()"
     end
 
-    test "editor on root can see and use merge button", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
+    test "editor on a sandbox cannot use the merge button (merge requires admin/owner on the source)",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
       editor_user = insert(:user)
       insert(:project_user, user: editor_user, project: parent, role: :editor)
 
@@ -2565,7 +2566,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
       test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
 
-      assert test_sandbox.can_merge == true
+      assert test_sandbox.can_merge == false
       assert test_sandbox.can_edit == false
       assert test_sandbox.can_delete == false
     end
@@ -2589,15 +2590,16 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       parent: parent,
       sandbox: sandbox
     } do
-      # A user who is editor on root but viewer on a specific target
-      # should be blocked at server-side enforcement
-      editor_user = insert(:user)
-      insert(:project_user, user: editor_user, project: parent, role: :editor)
+      # An admin on the source sandbox who is only a viewer on a specific
+      # target should be blocked at server-side enforcement when they try
+      # to merge into that target.
+      actor = insert(:user)
+      insert(:project_user, user: actor, project: parent, role: :editor)
 
       insert(:project_user,
-        user: editor_user,
+        user: actor,
         project: sandbox,
-        role: :editor
+        role: :admin
       )
 
       # Create a target project where this user is only a viewer
@@ -2606,11 +2608,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "restricted-target",
           parent: parent,
           project_users: [
-            %{user: editor_user, role: :viewer}
+            %{user: actor, role: :viewer}
           ]
         )
 
-      conn = log_in_user(conn, editor_user)
+      conn = log_in_user(conn, actor)
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
       # Open merge modal
@@ -2633,13 +2635,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
            parent: parent,
            sandbox: sandbox
          } do
-      editor_user = insert(:user)
-      insert(:project_user, user: editor_user, project: parent, role: :editor)
+      actor = insert(:user)
+      insert(:project_user, user: actor, project: parent, role: :editor)
 
       insert(:project_user,
-        user: editor_user,
+        user: actor,
         project: sandbox,
-        role: :editor
+        role: :admin
       )
 
       # Create another sandbox where user is only a viewer
@@ -2648,11 +2650,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "viewer-only-sandbox",
           parent: parent,
           project_users: [
-            %{user: editor_user, role: :viewer}
+            %{user: actor, role: :viewer}
           ]
         )
 
-      # Create a sandbox where the editor has no membership at all
+      # Create a sandbox where the actor has no membership at all
       no_membership_sandbox =
         insert(:project,
           name: "no-membership-sandbox",
@@ -2660,7 +2662,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           project_users: []
         )
 
-      conn = log_in_user(conn, editor_user)
+      conn = log_in_user(conn, actor)
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
       # Open merge modal
