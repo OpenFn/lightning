@@ -72,15 +72,18 @@ defmodule Lightning.Policies.Sandboxes do
   queries.
 
   Returns a map of `sandbox_id => boolean` where the boolean is `true`
-  when `user` has `:owner` or `:admin` on that sandbox — the role
+  when `user` has `:owner` or `:admin` on that sandbox. That is the role
   required to update, delete, or merge it (and, by extension, to cancel
   a scheduled deletion).
 
   Each `sandbox.project_users` must be preloaded (as ensured by
-  `Projects.list_workspace_projects/2`).
+  `Projects.list_workspace_projects/2`); the function raises
+  `ArgumentError` otherwise.
   """
   @spec manage_authority([Project.t()], User.t()) :: %{binary() => boolean()}
   def manage_authority(sandboxes, %User{} = user) do
+    Enum.each(sandboxes, &assert_project_users_loaded!/1)
+
     Map.new(sandboxes, fn sandbox ->
       can_manage? =
         Enum.any?(
@@ -91,4 +94,14 @@ defmodule Lightning.Policies.Sandboxes do
       {sandbox.id, can_manage?}
     end)
   end
+
+  defp assert_project_users_loaded!(%Project{
+         project_users: %Ecto.Association.NotLoaded{}
+       }) do
+    raise ArgumentError,
+          "manage_authority/2 requires :project_users to be preloaded on " <>
+            "every sandbox; see the function docstring"
+  end
+
+  defp assert_project_users_loaded!(%Project{}), do: :ok
 end

@@ -1209,12 +1209,10 @@ defmodule Lightning.Projects do
   membership list (seeded from the parent at provision time).
 
   Assumes each `sandbox.project_users` is preloaded; raises
-  `ArgumentError` otherwise. The `root_project` argument is unused and
-  preserved only for source compatibility with call sites that still
-  pass it.
+  `ArgumentError` otherwise.
   """
-  @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
-  def visible_sandboxes(sandboxes, %User{} = user, %Project{} = _root_project) do
+  @spec visible_sandboxes([Project.t()], User.t()) :: [Project.t()]
+  def visible_sandboxes(sandboxes, %User{} = user) do
     Enum.each(sandboxes, &assert_project_users_loaded!(&1, "sandbox"))
     Enum.filter(sandboxes, &accessible?(&1, user))
   end
@@ -1224,7 +1222,7 @@ defmodule Lightning.Projects do
          label
        ) do
     raise ArgumentError,
-          "visible_sandboxes/3 requires :project_users to be preloaded on " <>
+          "visible_sandboxes/2 requires :project_users to be preloaded on " <>
             "the #{label}; see the function docstring"
   end
 

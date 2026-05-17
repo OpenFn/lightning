@@ -441,5 +441,14 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes.authorize(:update_sandbox, "not_a_user", insert(:project))
       refute Sandboxes.authorize(:provision_sandbox, nil, nil)
     end
+
+    test "manage_authority/2 raises when a sandbox's project_users are not preloaded" do
+      user = insert(:user)
+      sandbox = insert(:sandbox)
+
+      assert_raise ArgumentError, ~r/project_users.*preloaded/, fn ->
+        Sandboxes.manage_authority([sandbox], user)
+      end
+    end
   end
 end

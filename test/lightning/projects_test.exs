@@ -954,26 +954,24 @@ defmodule Lightning.ProjectsTest do
 
     test "superuser role alone returns no sandboxes", %{
       superuser: superuser,
-      root_project: root_project,
       sandbox: sandbox,
       sandbox_with_owner: sandbox_with_owner,
       sandbox_with_admin: sandbox_with_admin
     } do
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, superuser, root_project) == []
+      assert Projects.visible_sandboxes(sandboxes, superuser) == []
     end
 
     test "root project owner with no row on a sandbox does not see it", %{
       root_project_owner: owner,
-      root_project: root_project,
       sandbox: sandbox,
       sandbox_with_owner: sandbox_with_owner,
       sandbox_with_admin: sandbox_with_admin
     } do
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, owner, root_project) == []
+      assert Projects.visible_sandboxes(sandboxes, owner) == []
     end
 
     test "root project admin with no row on a sandbox does not see it", %{
@@ -984,11 +982,9 @@ defmodule Lightning.ProjectsTest do
       sandbox_with_admin: sandbox_with_admin
     } do
       insert(:project_user, user: user, project: root_project, role: :admin)
-
-      root_project = Repo.preload(root_project, :project_users, force: true)
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, user, root_project) == []
+      assert Projects.visible_sandboxes(sandboxes, user) == []
     end
 
     test "root project editor only sees sandboxes they are a member of", %{
@@ -1001,14 +997,12 @@ defmodule Lightning.ProjectsTest do
       insert(:project_user, user: user, project: root_project, role: :editor)
       insert(:project_user, user: user, project: sandbox, role: :viewer)
 
-      root_project = Repo.preload(root_project, :project_users, force: true)
       sandbox = Repo.preload(sandbox, :project_users, force: true)
 
       visible =
         Projects.visible_sandboxes(
           [sandbox, sandbox_with_owner, sandbox_with_admin],
-          user,
-          root_project
+          user
         )
 
       assert Enum.map(visible, & &1.id) == [sandbox.id]
@@ -1017,7 +1011,6 @@ defmodule Lightning.ProjectsTest do
     test "user with no role on the root sees only sandboxes they belong to",
          %{
            sandbox_owner: sandbox_owner,
-           root_project: root_project,
            sandbox: sandbox,
            sandbox_with_owner: sandbox_with_owner,
            sandbox_with_admin: sandbox_with_admin
@@ -1025,8 +1018,7 @@ defmodule Lightning.ProjectsTest do
       visible =
         Projects.visible_sandboxes(
           [sandbox, sandbox_with_owner, sandbox_with_admin],
-          sandbox_owner,
-          root_project
+          sandbox_owner
         )
 
       assert Enum.map(visible, & &1.id) == [sandbox_with_owner.id]
@@ -1034,15 +1026,13 @@ defmodule Lightning.ProjectsTest do
 
     test "user with no role anywhere sees no sandboxes", %{
       other_user: other_user,
-      root_project: root_project,
       sandbox: sandbox,
       sandbox_with_owner: sandbox_with_owner,
       sandbox_with_admin: sandbox_with_admin
     } do
       assert Projects.visible_sandboxes(
                [sandbox, sandbox_with_owner, sandbox_with_admin],
-               other_user,
-               root_project
+               other_user
              ) == []
     end
 
@@ -1056,15 +1046,11 @@ defmodule Lightning.ProjectsTest do
       sandbox_b =
         insert(:project, parent: root, allow_support_access: true)
 
-      root = Repo.preload(root, :project_users)
       sandbox_a = Repo.preload(sandbox_a, :project_users)
       sandbox_b = Repo.preload(sandbox_b, :project_users)
 
-      assert Projects.visible_sandboxes(
-               [sandbox_a, sandbox_b],
-               support_user,
-               root
-             ) == [sandbox_a, sandbox_b]
+      assert Projects.visible_sandboxes([sandbox_a, sandbox_b], support_user) ==
+               [sandbox_a, sandbox_b]
     end
 
     test "support user does not see a sandbox whose own allow_support_access is false, even when the root allows it" do
@@ -1074,19 +1060,18 @@ defmodule Lightning.ProjectsTest do
       sandbox =
         insert(:project, parent: root, allow_support_access: false)
 
-      root = Repo.preload(root, :project_users)
       sandbox = Repo.preload(sandbox, :project_users)
 
-      assert Projects.visible_sandboxes([sandbox], support_user, root) == []
+      assert Projects.visible_sandboxes([sandbox], support_user) == []
     end
 
     test "raises ArgumentError when a sandbox's project_users are not preloaded" do
       user = insert(:user)
-      root = insert(:project) |> Repo.preload(:project_users)
+      root = insert(:project)
       sandbox = insert(:project, parent: root)
 
       assert_raise ArgumentError, ~r/project_users.*preloaded.*sandbox/, fn ->
-        Projects.visible_sandboxes([sandbox], user, root)
+        Projects.visible_sandboxes([sandbox], user)
       end
     end
   end
