@@ -165,30 +165,32 @@ describe('Picker search', () => {
 });
 
 describe('Picker navigation', () => {
-  let hrefSetter: ReturnType<typeof vi.fn>;
-  let originalLocation: Location;
+  let clickedAnchors: HTMLAnchorElement[];
+  let clickSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    hrefSetter = vi.fn();
-    originalLocation = window.location;
-    delete (window as unknown as { location?: Location }).location;
-    (window as unknown as { location: unknown }).location = {
-      pathname: '/',
-      search: '',
-      hash: '',
-      get href() {
-        return '';
-      },
-      set href(value: string) {
-        hrefSetter(value);
-      },
-    };
+    clickedAnchors = [];
+    clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clickedAnchors.push(this);
+      });
   });
 
   afterEach(() => {
-    (window as unknown as { location: Location }).location = originalLocation;
+    clickSpy.mockRestore();
     closePicker();
   });
+
+  function lastNavigation() {
+    expect(clickedAnchors).toHaveLength(1);
+    const a = clickedAnchors[0];
+    return {
+      href: a.getAttribute('href'),
+      phxLink: a.getAttribute('data-phx-link'),
+      phxLinkState: a.getAttribute('data-phx-link-state'),
+    };
+  }
 
   test('navigates to the server-provided href on click', () => {
     mountPicker([item('target', 'target', 0, { href: '/projects/target/w' })]);
@@ -201,7 +203,11 @@ describe('Picker navigation', () => {
       targetOption.click();
     });
 
-    expect(hrefSetter).toHaveBeenCalledWith('/projects/target/w');
+    expect(lastNavigation()).toEqual({
+      href: '/projects/target/w',
+      phxLink: 'redirect',
+      phxLinkState: 'push',
+    });
   });
 
   test('uses data-view-all-href for the view-all row', () => {
@@ -221,12 +227,11 @@ describe('Picker navigation', () => {
       viewAll.click();
     });
 
-    expect(hrefSetter).toHaveBeenCalledWith('/somewhere');
+    expect(lastNavigation().href).toBe('/somewhere');
   });
 
   test('preserves the current hash when item has sameSection=true', () => {
-    (window as unknown as { location: { hash: string } }).location.hash =
-      '#credentials';
+    window.location.hash = '#credentials';
 
     mountPicker([
       item('target', 'target', 0, {
@@ -243,14 +248,11 @@ describe('Picker navigation', () => {
       option.click();
     });
 
-    expect(hrefSetter).toHaveBeenCalledWith(
-      '/projects/target/settings#credentials'
-    );
+    expect(lastNavigation().href).toBe('/projects/target/settings#credentials');
   });
 
   test('drops the hash when item has sameSection=false', () => {
-    (window as unknown as { location: { hash: string } }).location.hash =
-      '#some-anchor';
+    window.location.hash = '#some-anchor';
 
     mountPicker([
       item('target', 'target', 0, {
@@ -267,12 +269,11 @@ describe('Picker navigation', () => {
       option.click();
     });
 
-    expect(hrefSetter).toHaveBeenCalledWith('/projects/target/history');
+    expect(lastNavigation().href).toBe('/projects/target/history');
   });
 
   test('does not preserve hash for the view-all row', () => {
-    (window as unknown as { location: { hash: string } }).location.hash =
-      '#credentials';
+    window.location.hash = '#credentials';
 
     render(
       <Picker
@@ -290,7 +291,7 @@ describe('Picker navigation', () => {
       viewAll.click();
     });
 
-    expect(hrefSetter).toHaveBeenCalledWith('/projects');
+    expect(lastNavigation().href).toBe('/projects');
   });
 });
 
