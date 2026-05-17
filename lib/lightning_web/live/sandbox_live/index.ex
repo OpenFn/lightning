@@ -552,38 +552,46 @@ defmodule LightningWeb.SandboxLive.Index do
       Projects.depth_of(project.id) >=
         Lightning.Config.max_sandbox_nesting_depth()
 
-    decorated_with_authority =
-      [root_project | descendants]
-      |> Lightning.Policies.Sandboxes.manage_authority(current_user)
-      |> then(fn authority ->
-        Enum.map([root_project | descendants], fn p ->
-          can_manage? = Map.get(authority, p.id, false)
-          scheduled? = not is_nil(p.scheduled_deletion)
+    authority =
+      Lightning.Policies.Sandboxes.manage_authority(
+        [root_project | descendants],
+        current_user
+      )
 
-          {restore_blocked_by_limit?, restore_blocked_message} =
-            restore_block_state(scheduled?, limit_new_sandbox)
-
-          p
-          |> Map.put(:can_edit, can_manage? and not scheduled?)
-          |> Map.put(:can_delete, can_manage? and not scheduled?)
-          |> Map.put(:can_merge, can_manage? and not scheduled?)
-          |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
-          |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
-          |> Map.put(:restore_blocked_message, restore_blocked_message)
-          |> Map.put(:scheduled_for_deletion?, scheduled?)
-          |> Map.put(:is_current, project.id == p.id)
-        end)
-      end)
-
-    [decorated_root | sandboxes] = decorated_with_authority
+    decorate = &decorate_for_render(&1, authority, project, limit_new_sandbox)
+    decorated_root = decorate.(root_project)
+    decorated_sandboxes = Enum.map(descendants, decorate)
 
     socket
     |> assign(:workspace_projects, [root_project | descendants])
-    |> assign(:workspace_tree, decorated_with_authority)
+    |> assign(:workspace_tree, [decorated_root | decorated_sandboxes])
     |> assign(:root_project, decorated_root)
-    |> assign(:sandboxes, sandboxes)
+    |> assign(:sandboxes, decorated_sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
     |> assign(:nesting_at_limit, nesting_at_limit)
+  end
+
+  defp decorate_for_render(
+         sandbox,
+         authority,
+         current_project,
+         limit_new_sandbox
+       ) do
+    can_manage? = Map.get(authority, sandbox.id, false)
+    scheduled? = not is_nil(sandbox.scheduled_deletion)
+
+    {restore_blocked_by_limit?, restore_blocked_message} =
+      restore_block_state(scheduled?, limit_new_sandbox)
+
+    sandbox
+    |> Map.put(:can_edit, can_manage? and not scheduled?)
+    |> Map.put(:can_delete, can_manage? and not scheduled?)
+    |> Map.put(:can_merge, can_manage? and not scheduled?)
+    |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
+    |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
+    |> Map.put(:restore_blocked_message, restore_blocked_message)
+    |> Map.put(:scheduled_for_deletion?, scheduled?)
+    |> Map.put(:is_current, current_project.id == sandbox.id)
   end
 
   defp restore_block_state(true, {:error, _reason, %{text: text}}),
