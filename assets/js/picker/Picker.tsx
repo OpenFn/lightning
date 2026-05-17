@@ -210,7 +210,15 @@ export function Picker(props: PickerProps) {
   }, [openPicker, openEvent]);
 
   const go = (href: string, sameSection = false) => {
-    window.location.href = href + (sameSection ? window.location.hash : '');
+    const fullHref = href + (sameSection ? window.location.hash : '');
+    const a = document.createElement('a');
+    a.href = fullHref;
+    a.setAttribute('data-phx-link', 'redirect');
+    a.setAttribute('data-phx-link-state', 'push');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleInputKeyDown = useCallback(
