@@ -1052,6 +1052,7 @@ defmodule Lightning.Projects do
     if MapSet.member?(visible_ids, parent_id) do
       parent_id
     else
+      # Parent chain is fully in project_map by the active-descendants CTE; fetch! fails loud if that ever breaks.
       parent = Map.fetch!(project_map, parent_id)
       nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
     end
