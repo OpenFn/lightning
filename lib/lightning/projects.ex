@@ -965,8 +965,8 @@ defmodule Lightning.Projects do
 
   The user's *access roots* are the topmost projects they can reach: every
   project they hold a `project_users` row on (any depth), plus, for support
-  users, every project flagged `allow_support_access`. A membership on a
-  deep sandbox without membership on its ancestors is therefore a
+  users, every workspace root flagged `allow_support_access`. A membership
+  on a deep sandbox without membership on its ancestors is therefore a
   legitimate access root.
 
   Descendants are filtered by the same per-project rule: each descendant
