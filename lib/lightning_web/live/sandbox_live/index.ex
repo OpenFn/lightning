@@ -104,7 +104,10 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_delete do
-          descendants = Projects.list_descendants(sandbox.id)
+          descendants =
+            sandbox.id
+            |> Projects.list_descendants()
+            |> Enum.reject(&(not is_nil(&1.scheduled_deletion)))
 
           {:noreply,
            socket
@@ -215,7 +218,10 @@ defmodule LightningWeb.SandboxLive.Index do
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants = Projects.list_descendants(sandbox.id)
+          descendants =
+            sandbox.id
+            |> Projects.list_descendants()
+            |> Enum.reject(&(not is_nil(&1.scheduled_deletion)))
 
           merge_changeset =
             merge_changeset(%{

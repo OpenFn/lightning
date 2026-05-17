@@ -67,23 +67,24 @@ and this project adheres to
 
 - Restoring a sandbox now respects the workspace's active sandbox limit.
   `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
-  action as new sandbox creation, and the Restore button in the sandbox list
-  is disabled (with the limiter's tooltip) when the active sandbox count is
-  already at the limit.
-- Sandboxes are now independent projects on every public surface.
-  Visibility, navigation, and action authority are decided by direct
-  `project_users` membership on the sandbox itself (or `support_user`
-  with `allow_support_access` on the sandbox). Authority no longer
-  cascades from a parent project, and `user.role` (`:user` /
-  `:superuser`) does not grant any access on public surfaces. The
-  Merge button on a sandbox now requires `:admin` or `:owner` on the
-  source (it previously required `:editor`+), aligning the merge gate
-  with the cascade scheduling it triggers. The merge confirmation
-  modal no longer names descendants, only counts them. Sandbox
-  provisioning still seeds membership from the parent at creation, so
-  existing collaborators carry over; later changes to a parent's
-  membership or `allow_support_access` flag no longer affect existing
-  descendants.
+  action as new sandbox creation, and the Restore button in the sandbox list is
+  disabled (with the limiter's tooltip) when the active sandbox count is already
+  at the limit.
+- Sandboxes are now independent projects on every public surface. Visibility,
+  navigation, and action authority are decided by direct `project_users`
+  membership on the sandbox itself (or `support_user` with
+  `allow_support_access` on the sandbox). Authority no longer cascades from a
+  parent project, and `user.role` (`:user` / `:superuser`) does not grant any
+  access on public surfaces. Sandbox provisioning still seeds membership from
+  the parent at creation, so existing collaborators carry over; later changes to
+  a parent's membership or `allow_support_access` flag no longer affect existing
+  descendants. The merge confirmation modal no longer names descendants, only
+  counts them. [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- The Merge button on a sandbox now requires `:admin` or `:owner` on the source
+  sandbox. Previously `:editor`+ was enough to open the merge flow even though
+  the cascade-scheduling step it triggers has always required admin/owner, which
+  meant editors could initiate a merge that silently failed to clean up the
+  source. The button gate now matches the action that runs after submit.
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action

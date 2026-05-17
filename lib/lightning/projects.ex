@@ -1239,21 +1239,23 @@ defmodule Lightning.Projects do
   Falls back to `project` if no ancestor is accessible to `user`.
   """
   @spec access_root_for_user(Project.t(), User.t()) :: Project.t()
+  def access_root_for_user(%Project{parent_id: nil} = project, %User{}),
+    do: project
+
   def access_root_for_user(%Project{} = project, %User{} = user) do
     chain =
       project
       |> preload_ancestors()
-      |> chain_top_down()
+      |> chain_top_down([])
       |> Repo.preload(project_users: project_users_for_user_query(user))
 
     Enum.find(chain, project, &accessible?(&1, user))
   end
 
-  defp chain_top_down(%Project{parent: %Project{} = parent} = p) do
-    chain_top_down(parent) ++ [%{p | parent: nil}]
-  end
+  defp chain_top_down(%Project{parent: %Project{} = parent} = p, acc),
+    do: chain_top_down(parent, [%{p | parent: nil} | acc])
 
-  defp chain_top_down(%Project{} = p), do: [p]
+  defp chain_top_down(%Project{} = p, acc), do: [p | acc]
 
   @doc """
   Returns `project.name` with ancestor names prepended (joined by `/`),
