@@ -505,6 +505,7 @@ defmodule LightningWeb.SandboxLive.Components do
                 {@root_project.name}
               </h3>
               <.badge
+                :if={has_environment?(@root_project) or not Project.sandbox?(@root_project)}
                 id={"env-badge-#{@root_project.id}"}
                 env={
                   if has_environment?(@root_project),
