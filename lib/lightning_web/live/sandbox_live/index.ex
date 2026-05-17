@@ -40,16 +40,10 @@ defmodule LightningWeb.SandboxLive.Index do
   def handle_params(
         %{"id" => id},
         _uri,
-        %{
-          assigns: %{
-            sandboxes: sandboxes,
-            project: project,
-            live_action: live_action
-          }
-        } = socket
+        %{assigns: %{project: project, live_action: live_action}} = socket
       )
       when live_action == :edit do
-    case Enum.find(sandboxes, &(&1.id == id)) do
+    case find_managed_sandbox(socket, id) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -104,7 +98,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-delete-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case find_managed_sandbox(socket, sandbox_id) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -188,7 +182,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"id" => sandbox_id},
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case find_managed_sandbox(socket, sandbox_id) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -210,7 +204,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case find_managed_sandbox(socket, sandbox_id) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -532,6 +526,15 @@ defmodule LightningWeb.SandboxLive.Index do
       </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
+  end
+
+  defp find_managed_sandbox(socket, id) do
+    %{root_project: root, sandboxes: sandboxes} = socket.assigns
+
+    cond do
+      root && root.id == id && not is_nil(root.parent_id) -> root
+      true -> Enum.find(sandboxes, &(&1.id == id))
+    end
   end
 
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
