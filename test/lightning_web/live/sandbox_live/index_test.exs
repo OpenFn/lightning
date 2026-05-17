@@ -384,6 +384,32 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute html =~ "Its child sandbox will also be deleted."
     end
 
+    test "delete modal descendant count excludes children already scheduled for deletion",
+         %{conn: conn, parent: parent, sb1: sb1, user: user} do
+      _active_child =
+        insert(:project,
+          name: "active-child",
+          parent: sb1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _scheduled_child =
+        insert(:project,
+          name: "scheduled-child",
+          parent: sb1,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
+
+      html = render(view)
+      assert html =~ "Its child sandbox will also be deleted."
+      refute html =~ "child sandboxes will also be deleted"
+    end
+
     test "confirm-delete result paths: ok, unauthorized, not_found, generic error",
          %{conn: conn, parent: parent, sb1: sb1, sb2: sb2, user: user} do
       {:ok, view, _} =

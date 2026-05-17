@@ -104,16 +104,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_delete do
-          descendants =
-            sandbox.id
-            |> Projects.list_descendants()
-            |> Enum.reject(&(not is_nil(&1.scheduled_deletion)))
-
           {:noreply,
            socket
            |> assign(:confirm_delete_open?, true)
            |> assign(:confirm_delete_sandbox, sandbox)
-           |> assign(:confirm_delete_descendants, descendants)
+           |> assign(:confirm_delete_descendants, active_descendants(sandbox.id))
            |> assign(:confirm_delete_input, "")
            |> assign(:confirm_changeset, confirm_changeset(sandbox))}
         else
@@ -218,10 +213,7 @@ defmodule LightningWeb.SandboxLive.Index do
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants =
-            sandbox.id
-            |> Projects.list_descendants()
-            |> Enum.reject(&(not is_nil(&1.scheduled_deletion)))
+          descendants = active_descendants(sandbox.id)
 
           merge_changeset =
             merge_changeset(%{
@@ -575,6 +567,16 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:sandboxes, decorated_sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
     |> assign(:nesting_at_limit, nesting_at_limit)
+  end
+
+  # Descendants used by the delete and merge confirmation modals to count
+  # how many child sandboxes the destructive action will newly schedule for
+  # deletion. Filters out descendants already scheduled for deletion so the
+  # user is not warned about projects that are already on track for removal.
+  defp active_descendants(sandbox_id) do
+    sandbox_id
+    |> Projects.list_descendants()
+    |> Enum.filter(&is_nil(&1.scheduled_deletion))
   end
 
   defp decorate_for_render(
