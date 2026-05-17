@@ -16,18 +16,18 @@ Three terminals:
 
 ```bash
 # Terminal 1 — Mock destination (simulates the downstream HTTP service)
-elixir benchmarking/channels/mock_destination.exs
+elixir tooling/benchmarking/channels/mock_destination.exs
 
 # Terminal 2 — Lightning (as a named node)
 iex --sname lightning --cookie bench -S mix phx.server
 
 # Terminal 3 — Load test (single scenario)
 elixir --sname loadtest --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario happy_path --concurrency 20 --duration 30
 
 # Or run all scenarios in sequence:
-benchmarking/channels/run_all.sh --duration 30 --concurrency 20
+tooling/benchmarking/channels/run_all.sh --duration 30 --concurrency 20
 ```
 
 The load test will automatically create a "load-test" project and channel
@@ -37,7 +37,7 @@ report results.
 ## File Structure
 
 ```
-benchmarking/channels/
+tooling/benchmarking/channels/
 ├── load_test.exs              # Entry point (~20 lines): Mix.install, loads modules, calls main()
 ├── mock_destination.exs       # Standalone mock HTTP destination server
 ├── run_all.sh                 # Runs all 7 scenarios in sequence
@@ -64,7 +64,7 @@ A standalone Bandit HTTP server that accepts all requests and responds according
 to the configured mode.
 
 ```bash
-elixir benchmarking/channels/mock_destination.exs [options]
+elixir tooling/benchmarking/channels/mock_destination.exs [options]
 ```
 
 ### Options
@@ -116,16 +116,16 @@ curl "http://localhost:4001/test?delay=500&response_size=5000"
 
 ```bash
 # Default: fast 200 responses
-elixir benchmarking/channels/mock_destination.exs
+elixir tooling/benchmarking/channels/mock_destination.exs
 
 # Simulate flaky upstream
-elixir benchmarking/channels/mock_destination.exs --mode mixed
+elixir tooling/benchmarking/channels/mock_destination.exs --mode mixed
 
 # Large response bodies (5MB)
-elixir benchmarking/channels/mock_destination.exs --body-size 5000000
+elixir tooling/benchmarking/channels/mock_destination.exs --body-size 5000000
 
 # Require authentication
-elixir benchmarking/channels/mock_destination.exs --mode auth
+elixir tooling/benchmarking/channels/mock_destination.exs --mode auth
 
 # Slow responses via query param (no restart needed)
 curl "http://localhost:4001/test?delay=2000"
@@ -139,7 +139,7 @@ telemetry timing breakdown.
 
 ```bash
 elixir --sname loadtest --cookie COOKIE \
-  benchmarking/channels/load_test.exs [options]
+  tooling/benchmarking/channels/load_test.exs [options]
 ```
 
 **Important:** Must be run as a named Erlang node (`--sname`) so it can connect
@@ -179,31 +179,31 @@ to the Lightning BEAM for channel setup, memory sampling, and telemetry.
 ```bash
 # Basic throughput test
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --concurrency 20 --duration 30
 
 # Memory test with 1MB payloads
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario large_payload --payload-size 1048576 --duration 30
 
 # Ramp up to 50 VUs with CSV output
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario ramp_up --concurrency 50 --duration 60 --csv results.csv
 
 # Slow upstream latency test (delay applied via query param, no destination restart)
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario slow_destination --delay 2000 --concurrency 10 --duration 30
 
 # Baseline: hit mock destination directly (no Lightning needed, no --sname required)
-elixir benchmarking/channels/load_test.exs \
+elixir tooling/benchmarking/channels/load_test.exs \
   --scenario direct_destination --concurrency 20 --duration 10
 
 # Large response test with explicit response size
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario large_response --response-size 1048576 --duration 30
 ```
 
@@ -214,7 +214,7 @@ appending CSV rows for each scenario. Assumes Lightning and mock destination are
 already running. Bails on first failure.
 
 ```bash
-benchmarking/channels/run_all.sh [options]
+tooling/benchmarking/channels/run_all.sh [options]
 ```
 
 ### Options
@@ -242,13 +242,13 @@ benchmarking/channels/run_all.sh [options]
 
 ```bash
 # Quick smoke test (10s per scenario, 5 VUs)
-benchmarking/channels/run_all.sh --duration 10 --concurrency 5
+tooling/benchmarking/channels/run_all.sh --duration 10 --concurrency 5
 
 # Full run with defaults (30s per scenario, 20 VUs)
-benchmarking/channels/run_all.sh
+tooling/benchmarking/channels/run_all.sh
 
 # Custom node/cookie
-benchmarking/channels/run_all.sh --sname mynode --cookie mysecret
+tooling/benchmarking/channels/run_all.sh --sname mynode --cookie mysecret
 ```
 
 Results are written to `/tmp/channel-bench-results/`:
@@ -348,15 +348,41 @@ Run both and compare:
 
 ```bash
 # Baseline (no Lightning needed)
-elixir benchmarking/channels/load_test.exs \
+elixir tooling/benchmarking/channels/load_test.exs \
   --scenario direct_destination --concurrency 20 --duration 10
 
 # Through proxy
 elixir --sname lt --cookie bench \
-  benchmarking/channels/load_test.exs \
+  tooling/benchmarking/channels/load_test.exs \
   --scenario happy_path --concurrency 20 --duration 10
 ```
 
 The difference tells you exactly what the proxy pipeline (plugs, DB lookup,
 Philter, second HTTP hop) costs per request. The telemetry breakdown further
 decomposes that cost into DB lookup vs upstream proxy vs plug overhead.
+
+## Populating Prometheus for dashboard work
+
+`populate_prometheus.exs` is a separate standalone script that drives realistic
+demo traffic into the channel proxy so the WIP Grafana dashboard at
+[`observability/channel-proxy-dashboard.json`](../../observability/channel-proxy-dashboard.json)
+has multi-project, multi-shape data to render. It is **not** a benchmark — no
+telemetry collection, no CSV, no percentile maths. It creates two
+`channels-demo-*` projects with 2 channels each (idempotent), then dispatches a
+weighted mix of happy / slow / unknown-channel / upstream-error requests on a
+coarse sine-wave rate envelope.
+
+```bash
+# Terminal A — Lightning
+iex --sname lightning --cookie bench -S mix phx.server
+
+# Terminal B — Mock destination
+elixir tooling/benchmarking/channels/mock_destination.exs
+
+# Terminal C — Populate (15-minute default; --duration 30 for a quick check)
+elixir --sname populate --cookie bench \
+  tooling/benchmarking/channels/populate_prometheus.exs
+```
+
+The user `demo@openfn.org` must already exist — the script halts otherwise.
+Re-running the script is safe: it reuses existing projects and channels by name.

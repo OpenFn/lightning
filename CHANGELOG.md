@@ -39,6 +39,16 @@ and this project adheres to
   auth method and the destination project credential on every proxied request.
   Feature-gated behind experimental features.
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
+  plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
+  every `/channels/*` hit, tagged with
+  `:resolved | :invalid_uuid | :unknown_channel`), and
+  `lightning_channel_proxy_requests_started_total`
+  - `lightning_channel_proxy_request_duration_milliseconds` (tagged with
+    `project_id`) on resolved requests. A self-contained Prometheus + Grafana
+    stack and example dashboard for local development ships in
+    `tooling/observability/`.
+    [#4508](https://github.com/OpenFn/lightning/issues/4508)
 
 ### Changed
 
@@ -65,6 +75,9 @@ and this project adheres to
 
 ### Fixed
 
+- Drop the PromEx `oban_queue_poll_metrics` group, which crashes on boot against
+  our named `Lightning.Oban` supervisor (waiting on upstream
+  [PromEx #278](https://github.com/akoutmos/prom_ex/pull/278)).
 - Restoring a sandbox now respects the workspace's active sandbox limit.
   `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
   action as new sandbox creation, and the Restore button in the sandbox list is
