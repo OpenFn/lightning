@@ -83,16 +83,14 @@ defmodule LightningWeb.SandboxLive.Components do
     <div class="space-y-8">
       <div class="space-y-3">
         <.restricted_parent_card :if={not is_nil(@root_project.parent_id)} />
-        <div>
-          <%= if is_nil(@root_project.parent_id) do %>
-            <.root_project_card
-              root_project={@root_project}
-              is_current={@current_project.id == @root_project.id}
-            />
-          <% else %>
-            <.sandbox_card sandbox={@root_project} />
-          <% end %>
-        </div>
+        <%= if is_nil(@root_project.parent_id) do %>
+          <.root_project_card
+            root_project={@root_project}
+            is_current={@current_project.id == @root_project.id}
+          />
+        <% else %>
+          <.sandbox_card sandbox={@root_project} />
+        <% end %>
         <div>
           <%= if Enum.empty?(@active_sandboxes) and Enum.empty?(@scheduled_sandboxes) do %>
             <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
