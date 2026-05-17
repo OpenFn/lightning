@@ -569,10 +569,6 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:nesting_at_limit, nesting_at_limit)
   end
 
-  # Descendants used by the delete and merge confirmation modals to count
-  # how many child sandboxes the destructive action will newly schedule for
-  # deletion. Filters out descendants already scheduled for deletion so the
-  # user is not warned about projects that are already on track for removal.
   defp active_descendants(sandbox_id) do
     sandbox_id
     |> Projects.list_descendants()

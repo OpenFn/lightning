@@ -1228,16 +1228,7 @@ defmodule Lightning.Projects do
 
   defp assert_project_users_loaded!(%Project{}, _label), do: :ok
 
-  @doc """
-  Returns the topmost ancestor of `project` (including `project` itself)
-  that `user` is allowed to see, walking up the parent chain.
-
-  Used by surfaces that render a workspace tree for a sandbox-only member
-  (e.g. the sandboxes list page) so they show the user's effective root,
-  not the absolute root they have no membership on.
-
-  Falls back to `project` if no ancestor is accessible to `user`.
-  """
+  @doc "Topmost ancestor of `project` that `user` can see; falls back to `project`."
   @spec access_root_for_user(Project.t(), User.t()) :: Project.t()
   def access_root_for_user(%Project{parent_id: nil} = project, %User{}),
     do: project
@@ -1249,10 +1240,6 @@ defmodule Lightning.Projects do
     end
   end
 
-  # Returns the project and its ancestors top-down (root first, project
-  # last) in a single round trip. Each row has `:project_users` preloaded
-  # via a LEFT JOIN scoped to `user_id`, so callers can check membership
-  # without a second query.
   defp ancestor_chain_with_user_membership(project_id, user_id) do
     max_depth = max_project_tree_depth()
 
@@ -1283,17 +1270,7 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @doc """
-  Returns `project.name` with ancestor names prepended (joined by `/`),
-  stopping at `access_root` so ancestors above the user's effective root
-  do not leak into the rendered name.
-
-  When `access_root` is `project` itself, returns just `project.name`.
-  When `project` is a descendant of `access_root`, returns names from
-  `access_root` down to `project`. When `access_root` is not in
-  `project`'s ancestor chain (a misuse), the full ancestor chain is
-  returned.
-  """
+  @doc "Display name from `access_root` down to `project`, joined by `/`."
   @spec display_name_within_access_root(Project.t(), Project.t()) :: String.t()
   def display_name_within_access_root(
         %Project{} = project,
