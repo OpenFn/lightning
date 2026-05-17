@@ -1048,8 +1048,6 @@ defmodule Lightning.Projects do
     end)
   end
 
-  defp nearest_visible_ancestor_id(nil, _project_map, _visible_ids), do: nil
-
   defp nearest_visible_ancestor_id(parent_id, project_map, visible_ids) do
     if MapSet.member?(visible_ids, parent_id) do
       parent_id
