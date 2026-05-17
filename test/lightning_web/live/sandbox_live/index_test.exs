@@ -1621,6 +1621,26 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ child1.name
     end
 
+    test "merge modal descendant count excludes children already scheduled for deletion",
+         %{conn: conn, root: root, child1: child1, grandchild1: grandchild1} do
+      Repo.update_all(
+        from(p in Project, where: p.id == ^grandchild1.id),
+        set: [
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        ]
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "Its child sandbox will also be deleted."
+      refute html =~ "Its 2 child sandboxes will also be deleted."
+    end
+
     test "merge modal shows correct dropdown options", %{
       conn: conn,
       root: root,
