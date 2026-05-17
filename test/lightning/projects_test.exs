@@ -496,22 +496,21 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_tree_for_user(user) == []
     end
 
-    test "get_project_tree_for_user/1 cascades for root owners and admins" do
+    test "get_project_tree_for_user/1 does not cascade visibility from a root owner to descendants the owner has no row on" do
       owner = user_fixture()
 
       root =
         project_fixture(project_users: [%{user_id: owner.id, role: :owner}])
 
-      sandbox = insert(:project, parent: root)
-      nested = insert(:project, parent: sandbox)
+      _sandbox = insert(:project, parent: root)
+      _nested = insert(:project, parent: insert(:project, parent: root))
 
       ids =
         owner
         |> Projects.get_project_tree_for_user()
         |> Enum.map(& &1.id)
-        |> Enum.sort()
 
-      assert ids == Enum.sort([root.id, sandbox.id, nested.id])
+      assert ids == [root.id]
     end
 
     test "get_project_tree_for_user/1 hides descendants a non-cascading user is not a member of" do
@@ -537,28 +536,32 @@ defmodule Lightning.ProjectsTest do
       assert ids == Enum.sort([root.id, visible_sandbox.id])
     end
 
-    test "get_project_tree_for_user/1 returns full tree for superusers on their member roots" do
+    test "get_project_tree_for_user/1 ignores superuser role and shows only projects with direct membership" do
       superuser = insert(:user, role: :superuser)
 
       root =
         project_fixture(project_users: [%{user_id: superuser.id, role: :viewer}])
 
-      sandbox = insert(:project, parent: root)
+      _sandbox = insert(:project, parent: root)
 
       ids =
         superuser
         |> Projects.get_project_tree_for_user()
         |> Enum.map(& &1.id)
-        |> Enum.sort()
 
-      assert ids == Enum.sort([root.id, sandbox.id])
+      assert ids == [root.id]
     end
 
-    test "get_project_tree_for_user/1 cascades for support users on support-access roots" do
+    test "get_project_tree_for_user/1 shows support users only the projects whose own allow_support_access is true" do
       support_user = insert(:user, support_user: true)
 
       root = insert(:project, allow_support_access: true)
-      sandbox = insert(:project, parent: root)
+
+      flagged_sandbox =
+        insert(:project, parent: root, allow_support_access: true)
+
+      _unflagged_sandbox =
+        insert(:project, parent: root, allow_support_access: false)
 
       ids =
         support_user
@@ -566,7 +569,7 @@ defmodule Lightning.ProjectsTest do
         |> Enum.map(& &1.id)
         |> Enum.sort()
 
-      assert ids == Enum.sort([root.id, sandbox.id])
+      assert ids == Enum.sort([root.id, flagged_sandbox.id])
     end
 
     test "get_project_tree_for_user/1 prunes an active descendant whose intermediate ancestor was scheduled for deletion outside the cascade" do
@@ -618,7 +621,11 @@ defmodule Lightning.ProjectsTest do
           scheduled_deletion: now
         )
 
-      active_branch = insert(:project, parent: root)
+      active_branch =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: user, role: :viewer}]
+        )
 
       ids =
         user
@@ -684,7 +691,7 @@ defmodule Lightning.ProjectsTest do
       assert by_id[nested_member.id].parent_id == root.id
     end
 
-    test "get_project_tree_for_user/1 prefers the topmost membership when the user belongs to both root and descendant" do
+    test "get_project_tree_for_user/1 reparents a directly-visible grandchild onto the root when the intermediate is hidden" do
       user = user_fixture()
 
       root =
@@ -704,10 +711,10 @@ defmodule Lightning.ProjectsTest do
 
       assert Enum.count(ids, &(&1 == root.id)) == 1
       assert Enum.count(ids, &(&1 == grandchild.id)) == 1
+      refute Map.has_key?(by_id, middle.id)
 
       assert by_id[root.id].parent_id == nil
-      assert by_id[middle.id].parent_id == root.id
-      assert by_id[grandchild.id].parent_id == middle.id
+      assert by_id[grandchild.id].parent_id == root.id
     end
 
     test "get_project_tree_for_user/1 shadows a sandbox membership under a support-access root for a support user" do
@@ -732,13 +739,13 @@ defmodule Lightning.ProjectsTest do
       assert by_id[sandbox.id].parent_id == root.id
     end
 
-    test "get_project_tree_for_user/1 applies per-root visibility across multiple workspaces" do
+    test "get_project_tree_for_user/1 surfaces only directly-accessible projects across multiple workspaces" do
       user = user_fixture()
 
       admin_root =
         project_fixture(project_users: [%{user_id: user.id, role: :admin}])
 
-      admin_sandbox = insert(:project, parent: admin_root)
+      _admin_sandbox = insert(:project, parent: admin_root)
 
       editor_root =
         project_fixture(project_users: [%{user_id: user.id, role: :editor}])
@@ -760,7 +767,6 @@ defmodule Lightning.ProjectsTest do
       assert ids ==
                Enum.sort([
                  admin_root.id,
-                 admin_sandbox.id,
                  editor_root.id,
                  editor_visible.id
                ])
@@ -946,7 +952,7 @@ defmodule Lightning.ProjectsTest do
       }
     end
 
-    test "superuser sees every sandbox in the workspace", %{
+    test "superuser role alone returns no sandboxes", %{
       superuser: superuser,
       root_project: root_project,
       sandbox: sandbox,
@@ -955,11 +961,10 @@ defmodule Lightning.ProjectsTest do
     } do
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, superuser, root_project) ==
-               sandboxes
+      assert Projects.visible_sandboxes(sandboxes, superuser, root_project) == []
     end
 
-    test "root project owner sees every sandbox in the workspace", %{
+    test "root project owner with no row on a sandbox does not see it", %{
       root_project_owner: owner,
       root_project: root_project,
       sandbox: sandbox,
@@ -968,11 +973,10 @@ defmodule Lightning.ProjectsTest do
     } do
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, owner, root_project) ==
-               sandboxes
+      assert Projects.visible_sandboxes(sandboxes, owner, root_project) == []
     end
 
-    test "root project admin sees every sandbox in the workspace", %{
+    test "root project admin with no row on a sandbox does not see it", %{
       user: user,
       root_project: root_project,
       sandbox: sandbox,
@@ -984,8 +988,7 @@ defmodule Lightning.ProjectsTest do
       root_project = Repo.preload(root_project, :project_users, force: true)
       sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
 
-      assert Projects.visible_sandboxes(sandboxes, user, root_project) ==
-               sandboxes
+      assert Projects.visible_sandboxes(sandboxes, user, root_project) == []
     end
 
     test "root project editor only sees sandboxes they are a member of", %{
@@ -1043,11 +1046,15 @@ defmodule Lightning.ProjectsTest do
              ) == []
     end
 
-    test "support user sees every sandbox on a support-access root" do
+    test "support user sees a sandbox whose own allow_support_access is true" do
       support_user = insert(:user, support_user: true)
       root = insert(:project, allow_support_access: true)
-      sandbox_a = insert(:project, parent: root)
-      sandbox_b = insert(:project, parent: root)
+
+      sandbox_a =
+        insert(:project, parent: root, allow_support_access: true)
+
+      sandbox_b =
+        insert(:project, parent: root, allow_support_access: true)
 
       root = Repo.preload(root, :project_users)
       sandbox_a = Repo.preload(sandbox_a, :project_users)
@@ -1060,27 +1067,17 @@ defmodule Lightning.ProjectsTest do
              ) == [sandbox_a, sandbox_b]
     end
 
-    test "support user sees nothing on a root that does not allow support access" do
+    test "support user does not see a sandbox whose own allow_support_access is false, even when the root allows it" do
       support_user = insert(:user, support_user: true)
-      root = insert(:project, allow_support_access: false)
-      sandbox = insert(:project, parent: root)
+      root = insert(:project, allow_support_access: true)
+
+      sandbox =
+        insert(:project, parent: root, allow_support_access: false)
 
       root = Repo.preload(root, :project_users)
       sandbox = Repo.preload(sandbox, :project_users)
 
       assert Projects.visible_sandboxes([sandbox], support_user, root) == []
-    end
-
-    test "raises ArgumentError when the root project's project_users are not preloaded" do
-      user = insert(:user)
-      root = insert(:project)
-      sandbox = insert(:project, parent: root) |> Repo.preload(:project_users)
-
-      assert_raise ArgumentError,
-                   ~r/project_users.*preloaded.*root_project/,
-                   fn ->
-                     Projects.visible_sandboxes([sandbox], user, root)
-                   end
     end
 
     test "raises ArgumentError when a sandbox's project_users are not preloaded" do
@@ -1091,61 +1088,6 @@ defmodule Lightning.ProjectsTest do
       assert_raise ArgumentError, ~r/project_users.*preloaded.*sandbox/, fn ->
         Projects.visible_sandboxes([sandbox], user, root)
       end
-    end
-  end
-
-  describe "visible_to_user?/2" do
-    test "true when the user is a root owner (cascading)" do
-      owner = insert(:user)
-      root = insert(:project, project_users: [%{user: owner, role: :owner}])
-      sandbox = insert(:project, parent: root)
-
-      assert Projects.visible_to_user?(sandbox, owner)
-    end
-
-    test "true when the user has a direct project_users row on the sandbox" do
-      user = insert(:user)
-      root = insert(:project)
-
-      sandbox =
-        insert(:project,
-          parent: root,
-          project_users: [%{user: user, role: :viewer}]
-        )
-
-      assert Projects.visible_to_user?(sandbox, user)
-    end
-
-    test "false when the user has no role anywhere in the workspace" do
-      user = insert(:user)
-      root = insert(:project)
-      sandbox = insert(:project, parent: root)
-
-      refute Projects.visible_to_user?(sandbox, user)
-    end
-
-    test "false when the user is a non-cascading root editor with no row on the sandbox" do
-      user = insert(:user)
-      root = insert(:project, project_users: [%{user: user, role: :editor}])
-      sandbox = insert(:project, parent: root)
-
-      refute Projects.visible_to_user?(sandbox, user)
-    end
-
-    test "true for a support user on a support-access root" do
-      support_user = insert(:user, support_user: true)
-      root = insert(:project, allow_support_access: true)
-      sandbox = insert(:project, parent: root)
-
-      assert Projects.visible_to_user?(sandbox, support_user)
-    end
-
-    test "false for a support user on a root that does not allow support access" do
-      support_user = insert(:user, support_user: true)
-      root = insert(:project, allow_support_access: false)
-      sandbox = insert(:project, parent: root)
-
-      refute Projects.visible_to_user?(sandbox, support_user)
     end
   end
 

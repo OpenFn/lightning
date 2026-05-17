@@ -806,7 +806,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#edit-sandbox-#{hidden_sandbox.id}")
     end
 
-    test "root owner still sees every sandbox in the workspace", %{
+    test "root owner only sees sandboxes they have a direct row on", %{
       conn: conn,
       user: user
     } do
@@ -833,7 +833,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
       assert has_element?(view, "#edit-sandbox-#{sandbox_with_pu.id}")
-      assert has_element?(view, "#edit-sandbox-#{sandbox_without_pu.id}")
+      refute has_element?(view, "#edit-sandbox-#{sandbox_without_pu.id}")
     end
 
     test "handlers reject a hidden sandbox id dispatched via a crafted event",
@@ -2441,7 +2441,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       with_version(parent_workflow)
 
       # Create sandbox from parent (at this point, parent only has job1)
-      sandbox = insert(:project, name: "Sandbox", parent: parent)
+      sandbox =
+        insert(:project,
+          name: "Sandbox",
+          parent: parent,
+          project_users: [%{user: owner_user, role: :owner}]
+        )
 
       sandbox_workflow =
         insert(:workflow,

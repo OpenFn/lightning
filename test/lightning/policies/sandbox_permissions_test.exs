@@ -74,7 +74,7 @@ defmodule Lightning.Policies.SandboxesTest do
   end
 
   describe "provision_sandbox permissions" do
-    test "root project owners can provision sandboxes in their workspace", %{
+    test "owners on the parent project can provision sandboxes", %{
       root_project_owner: owner,
       root_project: root_project
     } do
@@ -82,7 +82,7 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:provision_sandbox, owner, root_project)
     end
 
-    test "root project admins can provision sandboxes in their workspace", %{
+    test "admins on the parent project can provision sandboxes", %{
       root_project: root_project,
       user: user
     } do
@@ -95,23 +95,20 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:provision_sandbox, user, root_project)
     end
 
-    test "superusers can provision sandboxes in any workspace", %{
-      superuser: superuser,
+    test "editors on the parent project can provision sandboxes", %{
       root_project: root_project,
-      other_root_project: other_root_project
+      user: user
     } do
-      assert Sandboxes
-             |> Permissions.can?(:provision_sandbox, superuser, root_project)
+      insert(:project_user, user: user, project: root_project, role: :editor)
+
+      root_project =
+        Lightning.Repo.preload(root_project, :project_users, force: true)
 
       assert Sandboxes
-             |> Permissions.can?(
-               :provision_sandbox,
-               superuser,
-               other_root_project
-             )
+             |> Permissions.can?(:provision_sandbox, user, root_project)
     end
 
-    test "regular project users cannot provision sandboxes", %{
+    test "viewers on the parent project cannot provision sandboxes", %{
       root_project: root_project,
       user: user
     } do
@@ -124,7 +121,7 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:provision_sandbox, user, root_project)
     end
 
-    test "users without project access cannot provision sandboxes", %{
+    test "users with no role on the parent cannot provision sandboxes", %{
       user: user,
       root_project: root_project,
       other_root_project: other_root_project
@@ -135,24 +132,17 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes
              |> Permissions.can?(:provision_sandbox, user, other_root_project)
     end
+
+    test "superuser role alone does not grant provision authority", %{
+      superuser: superuser,
+      root_project: root_project
+    } do
+      refute Sandboxes
+             |> Permissions.can?(:provision_sandbox, superuser, root_project)
+    end
   end
 
   describe "delete_sandbox permissions" do
-    test "superusers can delete any sandbox", %{
-      superuser: superuser,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner,
-      other_sandbox: other_sandbox
-    } do
-      assert Sandboxes |> Permissions.can?(:delete_sandbox, superuser, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:delete_sandbox, superuser, sandbox_with_owner)
-
-      assert Sandboxes
-             |> Permissions.can?(:delete_sandbox, superuser, other_sandbox)
-    end
-
     test "sandbox owners can delete their own sandbox", %{
       sandbox_owner: owner,
       sandbox_with_owner: sandbox
@@ -165,39 +155,6 @@ defmodule Lightning.Policies.SandboxesTest do
       sandbox_with_admin: sandbox
     } do
       assert Sandboxes |> Permissions.can?(:delete_sandbox, admin, sandbox)
-    end
-
-    test "root project owners can delete any sandbox in their workspace", %{
-      root_project_owner: owner,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner
-    } do
-      assert Sandboxes |> Permissions.can?(:delete_sandbox, owner, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:delete_sandbox, owner, sandbox_with_owner)
-    end
-
-    test "root project admins can delete any sandbox in their workspace", %{
-      root_project: root_project,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner,
-      user: user
-    } do
-      insert(:project_user, user: user, project: root_project, role: :admin)
-
-      sandbox =
-        Lightning.Repo.preload(sandbox, [parent: :project_users], force: true)
-
-      sandbox_with_owner =
-        Lightning.Repo.preload(sandbox_with_owner, [parent: :project_users],
-          force: true
-        )
-
-      assert Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:delete_sandbox, user, sandbox_with_owner)
     end
 
     test "regular users cannot delete sandboxes they don't own", %{
@@ -223,36 +180,31 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
     end
 
-    test "root project viewers cannot delete sandboxes in the workspace", %{
-      root_project: root_project,
+    test "sandbox editors cannot delete sandboxes", %{
       sandbox: sandbox,
       user: user
     } do
-      insert(:project_user, user: user, project: root_project, role: :viewer)
+      insert(:project_user, user: user, project: sandbox, role: :editor)
+      sandbox = Lightning.Repo.preload(sandbox, :project_users, force: true)
+      refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
+    end
 
-      sandbox =
-        Lightning.Repo.preload(sandbox, [parent: :project_users], force: true)
+    test "role on the parent project does not grant delete authority on a sandbox",
+         %{root_project: root_project, sandbox: sandbox, user: user} do
+      insert(:project_user, user: user, project: root_project, role: :admin)
 
       refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
+    end
+
+    test "superuser role alone does not grant delete authority", %{
+      superuser: superuser,
+      sandbox: sandbox
+    } do
+      refute Sandboxes |> Permissions.can?(:delete_sandbox, superuser, sandbox)
     end
   end
 
   describe "update_sandbox permissions" do
-    test "superusers can update any sandbox", %{
-      superuser: superuser,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner,
-      other_sandbox: other_sandbox
-    } do
-      assert Sandboxes |> Permissions.can?(:update_sandbox, superuser, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:update_sandbox, superuser, sandbox_with_owner)
-
-      assert Sandboxes
-             |> Permissions.can?(:update_sandbox, superuser, other_sandbox)
-    end
-
     test "sandbox owners can update their own sandbox", %{
       sandbox_owner: owner,
       sandbox_with_owner: sandbox
@@ -265,39 +217,6 @@ defmodule Lightning.Policies.SandboxesTest do
       sandbox_with_admin: sandbox
     } do
       assert Sandboxes |> Permissions.can?(:update_sandbox, admin, sandbox)
-    end
-
-    test "root project owners can update any sandbox in their workspace", %{
-      root_project_owner: owner,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner
-    } do
-      assert Sandboxes |> Permissions.can?(:update_sandbox, owner, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:update_sandbox, owner, sandbox_with_owner)
-    end
-
-    test "root project admins can update any sandbox in their workspace", %{
-      root_project: root_project,
-      sandbox: sandbox,
-      sandbox_with_owner: sandbox_with_owner,
-      user: user
-    } do
-      insert(:project_user, user: user, project: root_project, role: :admin)
-
-      sandbox =
-        Lightning.Repo.preload(sandbox, [parent: :project_users], force: true)
-
-      sandbox_with_owner =
-        Lightning.Repo.preload(sandbox_with_owner, [parent: :project_users],
-          force: true
-        )
-
-      assert Sandboxes |> Permissions.can?(:update_sandbox, user, sandbox)
-
-      assert Sandboxes
-             |> Permissions.can?(:update_sandbox, user, sandbox_with_owner)
     end
 
     test "regular users cannot update sandboxes they don't own", %{
@@ -323,17 +242,18 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes |> Permissions.can?(:update_sandbox, user, sandbox)
     end
 
-    test "root project viewers cannot update sandboxes in the workspace", %{
-      root_project: root_project,
-      sandbox: sandbox,
-      user: user
-    } do
-      insert(:project_user, user: user, project: root_project, role: :viewer)
-
-      sandbox =
-        Lightning.Repo.preload(sandbox, [parent: :project_users], force: true)
+    test "role on the parent project does not grant update authority on a sandbox",
+         %{root_project: root_project, sandbox: sandbox, user: user} do
+      insert(:project_user, user: user, project: root_project, role: :admin)
 
       refute Sandboxes |> Permissions.can?(:update_sandbox, user, sandbox)
+    end
+
+    test "superuser role alone does not grant update authority", %{
+      superuser: superuser,
+      sandbox: sandbox
+    } do
+      refute Sandboxes |> Permissions.can?(:update_sandbox, superuser, sandbox)
     end
   end
 
@@ -385,7 +305,7 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:merge_sandbox, user, root_project)
     end
 
-    test "users without project access cannot merge sandboxes", %{
+    test "users with no role on the target cannot merge sandboxes", %{
       root_project: root_project,
       user: user
     } do
@@ -393,20 +313,12 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:merge_sandbox, user, root_project)
     end
 
-    test "superusers can merge sandboxes into any project", %{
+    test "superuser role alone does not grant merge authority", %{
       superuser: superuser,
-      root_project: root_project,
-      other_root_project: other_root_project
+      root_project: root_project
     } do
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:merge_sandbox, superuser, root_project)
-
-      assert Sandboxes
-             |> Permissions.can?(
-               :merge_sandbox,
-               superuser,
-               other_root_project
-             )
     end
   end
 
@@ -426,26 +338,12 @@ defmodule Lightning.Policies.SandboxesTest do
       %{sandboxes: sandboxes}
     end
 
-    test "superuser gets full permissions on all sandboxes", %{
-      superuser: superuser,
-      root_project: root_project,
-      sandboxes: sandboxes
-    } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, superuser, root_project)
-
-      assert map_size(permissions) == 4
-
-      for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
-      end
-    end
-
-    test "root project owner gets full permissions on all sandboxes in workspace",
+    test "sandbox owner gets full privileges on their own sandbox and nothing on the others",
          %{
-           root_project_owner: owner,
+           sandbox_owner: owner,
            root_project: root_project,
-           sandboxes: sandboxes
+           sandboxes: sandboxes,
+           sandbox_with_owner: owned_sandbox
          } do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, owner, root_project)
@@ -453,11 +351,67 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        if sandbox.id == owned_sandbox.id do
+          assert %{update: true, delete: true, merge: true} =
+                   permissions[sandbox.id]
+        else
+          assert %{update: false, delete: false, merge: false} =
+                   permissions[sandbox.id]
+        end
       end
     end
 
-    test "root project admin gets full permissions on all sandboxes in workspace",
+    test "sandbox admin gets full privileges on their own sandbox and nothing on the others",
+         %{
+           sandbox_admin: admin,
+           root_project: root_project,
+           sandboxes: sandboxes,
+           sandbox_with_admin: admin_sandbox
+         } do
+      permissions =
+        Sandboxes.check_manage_permissions(sandboxes, admin, root_project)
+
+      for sandbox <- sandboxes do
+        if sandbox.id == admin_sandbox.id do
+          assert %{update: true, delete: true, merge: true} =
+                   permissions[sandbox.id]
+        else
+          assert %{update: false, delete: false, merge: false} =
+                   permissions[sandbox.id]
+        end
+      end
+    end
+
+    test "editor on a sandbox gets merge but not update/delete on that sandbox",
+         %{
+           root_project: root_project,
+           sandboxes: sandboxes,
+           sandbox: target_sandbox,
+           user: user
+         } do
+      insert(:project_user, user: user, project: target_sandbox, role: :editor)
+
+      target_sandbox =
+        Lightning.Repo.preload(target_sandbox, :project_users, force: true)
+
+      sandboxes =
+        Enum.map(sandboxes, fn s ->
+          if s.id == target_sandbox.id, do: target_sandbox, else: s
+        end)
+
+      permissions =
+        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
+
+      assert %{update: false, delete: false, merge: true} =
+               permissions[target_sandbox.id]
+
+      for sandbox <- sandboxes, sandbox.id != target_sandbox.id do
+        assert %{update: false, delete: false, merge: false} =
+                 permissions[sandbox.id]
+      end
+    end
+
+    test "role on the root project does not cascade into bulk privileges on sandboxes",
          %{
            root_project: root_project,
            sandboxes: sandboxes,
@@ -471,54 +425,13 @@ defmodule Lightning.Policies.SandboxesTest do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, user, root_project)
 
-      assert map_size(permissions) == 4
-
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert %{update: false, delete: false, merge: false} =
+                 permissions[sandbox.id]
       end
     end
 
-    test "sandbox owner gets permissions only on their own sandbox", %{
-      sandbox_owner: owner,
-      root_project: root_project,
-      sandboxes: sandboxes,
-      sandbox_with_owner: owned_sandbox
-    } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, owner, root_project)
-
-      assert map_size(permissions) == 4
-
-      for sandbox <- sandboxes do
-        if sandbox.id == owned_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
-        else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
-        end
-      end
-    end
-
-    test "sandbox admin gets permissions only on their own sandbox", %{
-      sandbox_admin: admin,
-      root_project: root_project,
-      sandboxes: sandboxes,
-      sandbox_with_admin: admin_sandbox
-    } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, admin, root_project)
-
-      assert map_size(permissions) == 4
-
-      for sandbox <- sandboxes do
-        if sandbox.id == admin_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
-        else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
-        end
-      end
-    end
-
-    test "regular user gets no permissions on any sandbox", %{
+    test "user with no role anywhere gets no privileges", %{
       user: user,
       root_project: root_project,
       sandboxes: sandboxes
@@ -526,67 +439,28 @@ defmodule Lightning.Policies.SandboxesTest do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, user, root_project)
 
-      assert map_size(permissions) == 4
-
       for sandbox <- sandboxes do
         assert %{update: false, delete: false, merge: false} =
                  permissions[sandbox.id]
       end
     end
 
-    test "root project editor gets merge but not update/delete on all sandboxes",
-         %{
-           root_project: root_project,
-           sandboxes: sandboxes,
-           user: user
-         } do
-      insert(:project_user, user: user, project: root_project, role: :editor)
-
-      root_project =
-        Lightning.Repo.preload(root_project, :project_users, force: true)
-
+    test "superuser role alone does not cascade into bulk privileges", %{
+      superuser: superuser,
+      root_project: root_project,
+      sandboxes: sandboxes
+    } do
       permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
-
-      assert map_size(permissions) == 4
+        Sandboxes.check_manage_permissions(sandboxes, superuser, root_project)
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
+        assert %{update: false, delete: false, merge: false} =
                  permissions[sandbox.id]
       end
     end
   end
 
-  describe "view_sandbox permissions" do
-    test "root owner can view any sandbox in their workspace", %{
-      root_project_owner: owner,
-      sandbox: sandbox
-    } do
-      assert Sandboxes |> Permissions.can?(:view_sandbox, owner, sandbox)
-    end
-
-    test "user with a direct project_users row on the sandbox can view it", %{
-      sandbox_owner: sandbox_owner,
-      sandbox_with_owner: sandbox
-    } do
-      assert Sandboxes |> Permissions.can?(:view_sandbox, sandbox_owner, sandbox)
-    end
-
-    test "user with no role on the workspace cannot view its sandboxes", %{
-      other_user: other_user,
-      sandbox: sandbox
-    } do
-      refute Sandboxes |> Permissions.can?(:view_sandbox, other_user, sandbox)
-    end
-
-    test "non-cascading editor on the root cannot view a sandbox they are not a member of",
-         %{root_project: root_project, sandbox: sandbox, user: user} do
-      insert(:project_user, user: user, project: root_project, role: :editor)
-      refute Sandboxes |> Permissions.can?(:view_sandbox, user, sandbox)
-    end
-  end
-
-  describe "edge cases and private function coverage" do
+  describe "edge cases" do
     test "authorize returns false for unknown actions", %{
       user: user,
       sandbox: sandbox
@@ -600,72 +474,6 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes.authorize(:delete_sandbox, user, "not_a_project")
       refute Sandboxes.authorize(:update_sandbox, "not_a_user", insert(:project))
       refute Sandboxes.authorize(:provision_sandbox, nil, nil)
-    end
-
-    test "has_root_project_permission? private function coverage", %{
-      root_project: root_project,
-      user: user
-    } do
-      sandbox = insert(:sandbox, parent: root_project)
-
-      refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
-
-      insert(:project_user, user: user, project: root_project, role: :viewer)
-
-      sandbox =
-        Lightning.Repo.preload(sandbox, [parent: :project_users], force: true)
-
-      refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
-    end
-
-    test "provision_sandbox with editor role is allowed", %{
-      root_project: root_project,
-      user: user
-    } do
-      insert(:project_user, user: user, project: root_project, role: :editor)
-
-      root_project =
-        Lightning.Repo.preload(root_project, :project_users, force: true)
-
-      assert Sandboxes
-             |> Permissions.can?(:provision_sandbox, user, root_project)
-    end
-
-    test "sandbox management with editor role", %{
-      sandbox: sandbox,
-      user: user
-    } do
-      insert(:project_user, user: user, project: sandbox, role: :editor)
-      sandbox = Lightning.Repo.preload(sandbox, :project_users, force: true)
-      refute Sandboxes |> Permissions.can?(:delete_sandbox, user, sandbox)
-      refute Sandboxes |> Permissions.can?(:update_sandbox, user, sandbox)
-    end
-
-    test "check_manage_permissions with mixed roles", %{
-      root_project: root_project,
-      sandbox: sandbox1,
-      sandbox_with_owner: sandbox2
-    } do
-      user = insert(:user)
-      insert(:project_user, user: user, project: root_project, role: :editor)
-
-      insert(:project_user, user: user, project: sandbox1, role: :editor)
-
-      root_project =
-        Lightning.Repo.preload(root_project, :project_users, force: true)
-
-      sandbox1 = Lightning.Repo.preload(sandbox1, :project_users, force: true)
-
-      sandboxes = [sandbox1, sandbox2]
-
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
-
-      # Editor on root gets merge but not update/delete
-      for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
-                 permissions[sandbox.id]
-      end
     end
   end
 end

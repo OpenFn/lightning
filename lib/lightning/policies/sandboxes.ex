@@ -45,11 +45,19 @@ defmodule Lightning.Policies.Sandboxes do
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
 
   def authorize(:provision_sandbox, %User{} = user, %Project{} = parent_project) do
-    Projects.get_project_user_role(user, parent_project) in [:owner, :admin, :editor]
+    Projects.get_project_user_role(user, parent_project) in [
+      :owner,
+      :admin,
+      :editor
+    ]
   end
 
   def authorize(:merge_sandbox, %User{} = user, %Project{} = target_project) do
-    Projects.get_project_user_role(user, target_project) in [:owner, :admin, :editor]
+    Projects.get_project_user_role(user, target_project) in [
+      :owner,
+      :admin,
+      :editor
+    ]
   end
 
   def authorize(action, %User{} = user, %Project{} = sandbox)
