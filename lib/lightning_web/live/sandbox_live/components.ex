@@ -568,7 +568,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0 opacity-60"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
@@ -612,7 +612,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
