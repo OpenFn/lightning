@@ -24,12 +24,17 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   on_mount({LightningWeb.Hooks, :check_legacy_preference})
 
   @impl true
-  def mount(params, _session, %{assigns: %{project: project}} = socket) do
-    project_with_ancestors = Projects.preload_ancestors(project)
-    is_sandbox? = Project.sandbox?(project)
+  def mount(
+        params,
+        _session,
+        %{assigns: %{project: project, access_root: access_root}} = socket
+      ) do
+    project_with_ancestors =
+      project
+      |> Projects.preload_ancestors()
+      |> truncate_parent_chain(access_root.id)
 
-    root =
-      if is_sandbox?, do: Projects.root_of(project_with_ancestors), else: nil
+    is_sandbox? = Project.sandbox?(project)
 
     {:ok,
      socket
@@ -39,8 +44,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        project: project,
        project_display_name: Project.display_name(project_with_ancestors),
        project_is_sandbox: is_sandbox?,
-       root_project_id: root && root.id,
-       root_project_name: root && root.name,
+       root_project_id: if(is_sandbox?, do: access_root.id),
+       root_project_name: if(is_sandbox?, do: access_root.name),
        show_credential_modal: false,
        credential_schema: nil,
        credential_to_edit: nil,
@@ -49,6 +54,18 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
+
+  defp truncate_parent_chain(%Project{id: id} = project, id),
+    do: %{project | parent: nil}
+
+  defp truncate_parent_chain(
+         %Project{parent: %Project{} = parent} = project,
+         access_root_id
+       ),
+       do: %{project | parent: truncate_parent_chain(parent, access_root_id)}
+
+  defp truncate_parent_chain(%Project{} = project, _access_root_id),
+    do: project
 
   @impl true
   def handle_params(params, _url, socket) do
