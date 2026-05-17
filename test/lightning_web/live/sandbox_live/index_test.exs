@@ -347,6 +347,43 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#confirm-delete-sandbox")
     end
 
+    test "delete modal shows singular descendant copy when the sandbox has one child",
+         %{conn: conn, parent: parent, sb1: sb1, user: user} do
+      _only_child =
+        insert(:project,
+          name: "only-child",
+          parent: sb1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
+
+      html = render(view)
+      assert html =~ "Its child sandbox will also be deleted."
+      refute html =~ "child sandboxes will also be deleted"
+    end
+
+    test "delete modal shows plural descendant copy with count when the sandbox has multiple children",
+         %{conn: conn, parent: parent, sb1: sb1, user: user} do
+      for n <- 1..3 do
+        insert(:project,
+          name: "child-#{n}",
+          parent: sb1,
+          project_users: [%{user: user, role: :owner}]
+        )
+      end
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
+
+      html = render(view)
+      assert html =~ "Its 3 child sandboxes will also be deleted."
+      refute html =~ "Its child sandbox will also be deleted."
+    end
+
     test "confirm-delete result paths: ok, unauthorized, not_found, generic error",
          %{conn: conn, parent: parent, sb1: sb1, sb2: sb2, user: user} do
       {:ok, view, _} =
