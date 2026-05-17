@@ -3849,6 +3849,88 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "access_root_for_user/2" do
+    test "returns the project itself when the user has direct membership on it" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      assert Projects.access_root_for_user(project, user).id == project.id
+    end
+
+    test "returns the topmost accessible ancestor when the user is on the root and on a descendant" do
+      user = insert(:user)
+      root = insert(:project, project_users: [%{user: user, role: :owner}])
+      middle = insert(:project, parent: root)
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == root.id
+    end
+
+    test "returns the deepest ancestor the user has access to when intermediates are hidden" do
+      user = insert(:user)
+      root = insert(:project)
+
+      middle =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == middle.id
+    end
+
+    test "falls back to the project itself when no ancestor is accessible" do
+      user = insert(:user)
+      root = insert(:project)
+      middle = insert(:project, parent: root)
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == leaf.id
+    end
+
+    test "honors support users via per-project allow_support_access" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+
+      leaf =
+        insert(:project,
+          parent: root,
+          allow_support_access: true
+        )
+
+      assert Projects.access_root_for_user(leaf, support_user).id == root.id
+    end
+
+    test "does not surface an ancestor whose allow_support_access is false to a support user" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: false)
+
+      leaf =
+        insert(:project,
+          parent: root,
+          allow_support_access: true
+        )
+
+      assert Projects.access_root_for_user(leaf, support_user).id == leaf.id
+    end
+  end
+
   describe "subscribe/0" do
     test "delivers project lifecycle events to the calling process" do
       assert :ok = Projects.subscribe()

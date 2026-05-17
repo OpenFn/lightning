@@ -76,17 +76,21 @@ defmodule Lightning.Projects do
     A node in a user-visible project tree. Carries only the fields needed
     to render the tree, with `parent_id` shaped for display (`nil` at the
     user's access roots, the nearest visible ancestor for descendants).
-    Not a persistable record.
+    `sandbox?` reflects the underlying DB shape (true when the project has
+    a real `parent_id` in the database, regardless of where the user's
+    access root sits) so the picker can pick the right icon for a sandbox
+    surfaced as an access root. Not a persistable record.
     """
 
     @type t :: %__MODULE__{
             id: Ecto.UUID.t(),
             name: String.t(),
             color: String.t() | nil,
-            parent_id: Ecto.UUID.t() | nil
+            parent_id: Ecto.UUID.t() | nil,
+            sandbox?: boolean()
           }
 
-    defstruct [:id, :name, :color, :parent_id]
+    defstruct [:id, :name, :color, :parent_id, :sandbox?]
   end
 
   defdelegate subscribe, to: Events
@@ -1025,7 +1029,8 @@ defmodule Lightning.Projects do
       id: project.id,
       name: project.name,
       color: project.color,
-      parent_id: nil
+      parent_id: nil,
+      sandbox?: not is_nil(project.parent_id)
     }
   end
 
@@ -1043,7 +1048,8 @@ defmodule Lightning.Projects do
         name: p.name,
         color: p.color,
         parent_id:
-          nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set)
+          nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set),
+        sandbox?: true
       }
     end)
   end
@@ -1221,6 +1227,33 @@ defmodule Lightning.Projects do
   end
 
   defp assert_project_users_loaded!(%Project{}, _label), do: :ok
+
+  @doc """
+  Returns the topmost ancestor of `project` (including `project` itself)
+  that `user` is allowed to see, walking up the parent chain.
+
+  Used by surfaces that render a workspace tree for a sandbox-only member
+  (e.g. the sandboxes list page) so they show the user's effective root,
+  not the absolute root they have no membership on.
+
+  Falls back to `project` if no ancestor is accessible to `user`.
+  """
+  @spec access_root_for_user(Project.t(), User.t()) :: Project.t()
+  def access_root_for_user(%Project{} = project, %User{} = user) do
+    chain =
+      project
+      |> preload_ancestors()
+      |> chain_top_down()
+      |> Repo.preload(project_users: project_users_for_user_query(user))
+
+    Enum.find(chain, project, &accessible?(&1, user))
+  end
+
+  defp chain_top_down(%Project{parent: %Project{} = parent} = p) do
+    chain_top_down(parent) ++ [%{p | parent: nil}]
+  end
+
+  defp chain_top_down(%Project{} = p), do: [p]
 
   defp accessible?(%Project{} = project, %User{} = user) do
     member?(project, user) or support_access?(project, user)

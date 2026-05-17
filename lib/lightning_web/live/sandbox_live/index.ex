@@ -442,7 +442,10 @@ defmodule LightningWeb.SandboxLive.Index do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                current_user={@current_user}
+              />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
               </LayoutComponents.breadcrumb>
@@ -531,14 +534,19 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
-    %{root: root_project, descendants: descendants} =
-      Projects.list_workspace_projects(project.id)
-
     current_user = socket.assigns.current_user
     limit_new_sandbox = socket.assigns.limit_new_sandbox
 
+    root_project =
+      project
+      |> Projects.access_root_for_user(current_user)
+      |> Repo.preload(:project_users)
+
     descendants =
-      Projects.visible_sandboxes(descendants, current_user)
+      root_project.id
+      |> Projects.list_descendants()
+      |> Repo.preload([:parent, :project_users])
+      |> Projects.visible_sandboxes(current_user)
 
     can_create_sandbox =
       Permissions.can?(

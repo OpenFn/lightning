@@ -305,7 +305,7 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker project={@project} />
+        <.breadcrumb_project_picker project={@project} current_user={@current_user} />
         <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
@@ -356,12 +356,23 @@ defmodule LightningWeb.LayoutComponents do
   LiveView pages and the collaborative editor.
   """
   attr :project, Lightning.Projects.Project, required: true
+  attr :current_user, Lightning.Accounts.User, default: nil
 
   def breadcrumb_project_picker(assigns) do
     alias Lightning.Projects
     alias Lightning.Projects.Project
 
     project = Projects.preload_ancestors(assigns.project)
+
+    project =
+      case assigns[:current_user] do
+        %Lightning.Accounts.User{} = user ->
+          access_root_id = Projects.access_root_for_user(project, user).id
+          truncate_parent_chain(project, access_root_id)
+
+        _ ->
+          project
+      end
 
     assigns =
       assigns
@@ -388,6 +399,25 @@ defmodule LightningWeb.LayoutComponents do
     </li>
     """
   end
+
+  defp truncate_parent_chain(
+         %Lightning.Projects.Project{id: id} = project,
+         id
+       ),
+       do: %{project | parent: nil}
+
+  defp truncate_parent_chain(
+         %Lightning.Projects.Project{
+           parent: %Lightning.Projects.Project{} = parent
+         } =
+           project,
+         access_root_id
+       ) do
+    %{project | parent: truncate_parent_chain(parent, access_root_id)}
+  end
+
+  defp truncate_parent_chain(%Lightning.Projects.Project{} = project, _id),
+    do: project
 
   attr :path, :string, default: nil
   slot :label
@@ -490,7 +520,8 @@ defmodule LightningWeb.LayoutComponents do
         depth: depth,
         color: project.color,
         href: href,
-        sameSection: same_section
+        sameSection: same_section,
+        isSandbox: project.sandbox?
       }
 
       walk_project_tree(project.id, by_parent, depth + 1, label, path, [

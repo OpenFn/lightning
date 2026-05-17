@@ -399,13 +399,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         end
       )
 
-      Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
-        assert id == parent.id
+      parent_id = parent.id
 
-        %{
-          root: parent,
-          descendants: [sb2]
-        }
+      Mimic.stub(Lightning.Projects, :list_descendants, fn
+        ^parent_id -> [sb2]
+        _ -> []
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
@@ -908,6 +906,35 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert edit_html =~ "Sandbox not found"
     end
+
+    test "sandbox-only member sees their access root, not the absolute workspace root",
+         %{conn: conn, user: user} do
+      hidden_root =
+        insert(:project,
+          name: "hidden-workspace",
+          project_users: []
+        )
+
+      access_root =
+        insert(:project,
+          name: "user-access-root",
+          parent: hidden_root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      visible_leaf =
+        insert(:project,
+          name: "visible-leaf",
+          parent: access_root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{access_root.id}/sandboxes")
+
+      refute html =~ hidden_root.name
+      assert html =~ access_root.name
+      assert html =~ visible_leaf.name
+    end
   end
 
   describe "Delete sandbox with descendant checking" do
@@ -1003,9 +1030,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         end
       )
 
-      Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
-        assert id == parent.id
-        %{root: parent, descendants: []}
+      parent_id = parent.id
+
+      Mimic.stub(Lightning.Projects, :list_descendants, fn
+        ^parent_id -> []
+        _ -> []
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
