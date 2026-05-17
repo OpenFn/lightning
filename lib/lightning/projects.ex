@@ -1054,13 +1054,8 @@ defmodule Lightning.Projects do
     if MapSet.member?(visible_ids, parent_id) do
       parent_id
     else
-      case Map.get(project_map, parent_id) do
-        nil ->
-          nil
-
-        parent ->
-          nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
-      end
+      parent = Map.fetch!(project_map, parent_id)
+      nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
     end
   end
 
