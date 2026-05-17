@@ -82,6 +82,7 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div class="space-y-8">
       <div class="space-y-3">
+        <.restricted_parent_card :if={not is_nil(@root_project.parent_id)} />
         <div>
           <.root_project_card
             root_project={@root_project}
@@ -484,6 +485,26 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
+  defp restricted_parent_card(assigns) do
+    ~H"""
+    <div
+      id="restricted-parent-card"
+      class="block rounded-xl border border-dashed border-gray-200 bg-gray-50 overflow-hidden select-none"
+      aria-disabled="true"
+    >
+      <div class="flex items-stretch">
+        <div class="w-3 flex-shrink-0 bg-gray-300"></div>
+        <div class="flex-1 px-4 py-3 flex items-center min-w-0">
+          <.icon name="hero-lock-closed" class="h-4 w-4 text-gray-400 mr-2 shrink-0" />
+          <span class="text-sm font-medium text-gray-500 truncate">
+            Restricted parent project
+          </span>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :root_project, Project, required: true
   attr :is_current, :boolean, required: true
 
@@ -505,7 +526,10 @@ defmodule LightningWeb.SandboxLive.Components do
                 {@root_project.name}
               </h3>
               <.badge
-                :if={has_environment?(@root_project) or not Project.sandbox?(@root_project)}
+                :if={
+                  has_environment?(@root_project) or
+                    not Project.sandbox?(@root_project)
+                }
                 id={"env-badge-#{@root_project.id}"}
                 env={
                   if has_environment?(@root_project),
