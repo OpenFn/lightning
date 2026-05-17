@@ -110,10 +110,13 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_delete do
+          descendants = Projects.list_descendants(sandbox.id)
+
           {:noreply,
            socket
            |> assign(:confirm_delete_open?, true)
            |> assign(:confirm_delete_sandbox, sandbox)
+           |> assign(:confirm_delete_descendants, descendants)
            |> assign(:confirm_delete_input, "")
            |> assign(:confirm_changeset, confirm_changeset(sandbox))}
         else
@@ -487,6 +490,7 @@ defmodule LightningWeb.SandboxLive.Index do
           sandbox={@confirm_delete_sandbox}
           changeset={@confirm_changeset}
           root_project={@root_project}
+          descendants={@confirm_delete_descendants}
         />
 
         <Components.merge_modal
@@ -587,6 +591,7 @@ defmodule LightningWeb.SandboxLive.Index do
     socket
     |> assign(:confirm_delete_open?, false)
     |> assign(:confirm_delete_sandbox, nil)
+    |> assign(:confirm_delete_descendants, [])
     |> assign(:confirm_delete_input, "")
     |> assign(:confirm_changeset, empty_confirm_changeset())
   end

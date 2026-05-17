@@ -132,10 +132,13 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
   attr :root_project, Project, required: true
+  attr :descendants, :list, default: []
 
   def confirm_delete_modal(assigns) do
     assigns =
-      assign(assigns, :confirm_form, to_form(assigns.changeset, as: :confirm))
+      assigns
+      |> assign(:confirm_form, to_form(assigns.changeset, as: :confirm))
+      |> assign(:descendant_count, length(assigns.descendants))
 
     ~H"""
     <.modal
@@ -163,7 +166,13 @@ defmodule LightningWeb.SandboxLive.Components do
 
       <section class="space-y-4">
         <p class="text-gray-700">
-          Deleting a sandbox removes it (along with its descendants) from OpenFn.
+          Deleting a sandbox removes it from OpenFn.
+          <span :if={@descendant_count == 1}>
+            Its child sandbox will also be deleted.
+          </span>
+          <span :if={@descendant_count > 1}>
+            Its {@descendant_count} child sandboxes will also be deleted.
+          </span>
         </p>
 
         <p class="text-gray-700">
