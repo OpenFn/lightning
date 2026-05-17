@@ -3849,6 +3849,21 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "subscribe/0" do
+    test "delivers project lifecycle events to the calling process" do
+      assert :ok = Projects.subscribe()
+
+      project = insert(:project)
+      Lightning.Projects.Events.project_created(project)
+
+      assert_receive %Lightning.Projects.Events.ProjectCreated{project: ^project}
+
+      Lightning.Projects.Events.project_deleted(project)
+
+      assert_receive %Lightning.Projects.Events.ProjectDeleted{project: ^project}
+    end
+  end
+
   defp build_parent_chain(project) do
     case project.parent do
       nil ->
