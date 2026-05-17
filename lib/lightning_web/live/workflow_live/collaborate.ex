@@ -29,11 +29,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         _session,
         %{assigns: %{project: project, access_root: access_root}} = socket
       ) do
-    project_with_ancestors =
-      project
-      |> Projects.preload_ancestors()
-      |> truncate_parent_chain(access_root.id)
-
     is_sandbox? = Project.sandbox?(project)
 
     {:ok,
@@ -42,7 +37,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      |> assign(
        active_menu_item: :overview,
        project: project,
-       project_display_name: Project.display_name(project_with_ancestors),
+       project_display_name:
+         Projects.display_name_within_access_root(project, access_root),
        project_is_sandbox: is_sandbox?,
        root_project_id: if(is_sandbox?, do: access_root.id),
        root_project_name: if(is_sandbox?, do: access_root.name),
@@ -54,18 +50,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        ai_assistant_enabled: AiAssistant.enabled?()
      )}
   end
-
-  defp truncate_parent_chain(%Project{id: id} = project, id),
-    do: %{project | parent: nil}
-
-  defp truncate_parent_chain(
-         %Project{parent: %Project{} = parent} = project,
-         access_root_id
-       ),
-       do: %{project | parent: truncate_parent_chain(parent, access_root_id)}
-
-  defp truncate_parent_chain(%Project{} = project, _access_root_id),
-    do: project
 
   @impl true
   def handle_params(params, _url, socket) do

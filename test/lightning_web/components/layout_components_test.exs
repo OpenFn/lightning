@@ -104,7 +104,7 @@ defmodule LightningWeb.LayoutComponentsTest do
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
-      assert html =~ ~s(data-label="parent-project/my-sandbox")
+      assert html =~ ~s(data-label="my-sandbox")
       assert html =~ ~s(data-is-sandbox="true")
       assert html =~ ~s(data-color="#E33D63")
     end

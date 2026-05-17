@@ -1255,6 +1255,40 @@ defmodule Lightning.Projects do
 
   defp chain_top_down(%Project{} = p), do: [p]
 
+  @doc """
+  Returns `project.name` with ancestor names prepended (joined by `/`),
+  stopping at `access_root` so ancestors above the user's effective root
+  do not leak into the rendered name.
+
+  When `access_root` is `project` itself, returns just `project.name`.
+  When `project` is a descendant of `access_root`, returns names from
+  `access_root` down to `project`. When `access_root` is not in
+  `project`'s ancestor chain (a misuse), the full ancestor chain is
+  returned.
+  """
+  @spec display_name_within_access_root(Project.t(), Project.t()) :: String.t()
+  def display_name_within_access_root(
+        %Project{} = project,
+        %Project{id: access_root_id}
+      ) do
+    project
+    |> preload_ancestors()
+    |> truncate_parent_chain(access_root_id)
+    |> Project.display_name()
+  end
+
+  defp truncate_parent_chain(%Project{id: id} = project, id),
+    do: %{project | parent: nil}
+
+  defp truncate_parent_chain(
+         %Project{parent: %Project{} = parent} = project,
+         access_root_id
+       ),
+       do: %{project | parent: truncate_parent_chain(parent, access_root_id)}
+
+  defp truncate_parent_chain(%Project{} = project, _access_root_id),
+    do: project
+
   defp accessible?(%Project{} = project, %User{} = user) do
     member?(project, user) or support_access?(project, user)
   end

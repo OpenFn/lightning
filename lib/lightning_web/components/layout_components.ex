@@ -363,26 +363,26 @@ defmodule LightningWeb.LayoutComponents do
     alias Lightning.Projects
     alias Lightning.Projects.Project
 
-    project = Projects.preload_ancestors(assigns.project)
-
-    project =
+    access_root =
       case {assigns[:access_root], assigns[:current_user]} do
-        {%Project{id: access_root_id}, _} ->
-          truncate_parent_chain(project, access_root_id)
+        {%Project{} = ar, _} ->
+          ar
 
         {nil, %Lightning.Accounts.User{} = user} ->
-          access_root_id = Projects.access_root_for_user(project, user).id
-          truncate_parent_chain(project, access_root_id)
+          Projects.access_root_for_user(assigns.project, user)
 
         _ ->
-          project
+          assigns.project
       end
 
     assigns =
       assigns
-      |> assign(:label, Project.display_name(project))
-      |> assign(:is_sandbox, to_string(Project.sandbox?(project)))
-      |> assign(:color, project.color)
+      |> assign(
+        :label,
+        Projects.display_name_within_access_root(assigns.project, access_root)
+      )
+      |> assign(:is_sandbox, to_string(Project.sandbox?(assigns.project)))
+      |> assign(:color, assigns.project.color)
 
     ~H"""
     <li class="mr-3">
@@ -403,25 +403,6 @@ defmodule LightningWeb.LayoutComponents do
     </li>
     """
   end
-
-  defp truncate_parent_chain(
-         %Lightning.Projects.Project{id: id} = project,
-         id
-       ),
-       do: %{project | parent: nil}
-
-  defp truncate_parent_chain(
-         %Lightning.Projects.Project{
-           parent: %Lightning.Projects.Project{} = parent
-         } =
-           project,
-         access_root_id
-       ) do
-    %{project | parent: truncate_parent_chain(parent, access_root_id)}
-  end
-
-  defp truncate_parent_chain(%Lightning.Projects.Project{} = project, _id),
-    do: project
 
   attr :path, :string, default: nil
   slot :label
