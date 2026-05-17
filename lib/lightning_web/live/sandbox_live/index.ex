@@ -548,32 +548,22 @@ defmodule LightningWeb.SandboxLive.Index do
       Projects.depth_of(project.id) >=
         Lightning.Config.max_sandbox_nesting_depth()
 
-    manage_permissions =
-      Lightning.Policies.Sandboxes.check_manage_permissions(
-        descendants,
-        current_user,
-        root_project
-      )
+    manage_authority =
+      Lightning.Policies.Sandboxes.manage_authority(descendants, current_user)
 
     sandboxes =
       Enum.map(descendants, fn sandbox ->
-        perms =
-          Map.get(manage_permissions, sandbox.id, %{
-            update: false,
-            delete: false,
-            merge: false
-          })
-
+        can_manage? = Map.get(manage_authority, sandbox.id, false)
         scheduled? = not is_nil(sandbox.scheduled_deletion)
 
         {restore_blocked_by_limit?, restore_blocked_message} =
           restore_block_state(scheduled?, limit_new_sandbox)
 
         sandbox
-        |> Map.put(:can_edit, perms.update and not scheduled?)
-        |> Map.put(:can_delete, perms.delete and not scheduled?)
-        |> Map.put(:can_merge, perms.merge and not scheduled?)
-        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
+        |> Map.put(:can_edit, can_manage? and not scheduled?)
+        |> Map.put(:can_delete, can_manage? and not scheduled?)
+        |> Map.put(:can_merge, can_manage? and not scheduled?)
+        |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
         |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
         |> Map.put(:restore_blocked_message, restore_blocked_message)
         |> Map.put(:scheduled_for_deletion?, scheduled?)

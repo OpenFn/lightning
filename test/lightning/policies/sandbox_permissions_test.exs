@@ -322,7 +322,7 @@ defmodule Lightning.Policies.SandboxesTest do
     end
   end
 
-  describe "check_manage_permissions/3 bulk operation" do
+  describe "manage_authority/2 bulk operation" do
     setup %{
       root_project: root_project,
       sandbox: sandbox1,
@@ -338,57 +338,39 @@ defmodule Lightning.Policies.SandboxesTest do
       %{sandboxes: sandboxes}
     end
 
-    test "sandbox owner gets full privileges on their own sandbox and nothing on the others",
-         %{
-           sandbox_owner: owner,
-           root_project: root_project,
-           sandboxes: sandboxes,
-           sandbox_with_owner: owned_sandbox
-         } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, owner, root_project)
+    test "sandbox owner can manage their own sandbox and no others", %{
+      sandbox_owner: owner,
+      sandboxes: sandboxes,
+      sandbox_with_owner: owned_sandbox
+    } do
+      authority = Sandboxes.manage_authority(sandboxes, owner)
 
-      assert map_size(permissions) == 4
+      assert map_size(authority) == 4
 
       for sandbox <- sandboxes do
-        if sandbox.id == owned_sandbox.id do
-          assert %{update: true, delete: true, merge: true} =
-                   permissions[sandbox.id]
-        else
-          assert %{update: false, delete: false, merge: false} =
-                   permissions[sandbox.id]
-        end
+        expected = sandbox.id == owned_sandbox.id
+        assert authority[sandbox.id] == expected
       end
     end
 
-    test "sandbox admin gets full privileges on their own sandbox and nothing on the others",
-         %{
-           sandbox_admin: admin,
-           root_project: root_project,
-           sandboxes: sandboxes,
-           sandbox_with_admin: admin_sandbox
-         } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, admin, root_project)
+    test "sandbox admin can manage their own sandbox and no others", %{
+      sandbox_admin: admin,
+      sandboxes: sandboxes,
+      sandbox_with_admin: admin_sandbox
+    } do
+      authority = Sandboxes.manage_authority(sandboxes, admin)
 
       for sandbox <- sandboxes do
-        if sandbox.id == admin_sandbox.id do
-          assert %{update: true, delete: true, merge: true} =
-                   permissions[sandbox.id]
-        else
-          assert %{update: false, delete: false, merge: false} =
-                   permissions[sandbox.id]
-        end
+        expected = sandbox.id == admin_sandbox.id
+        assert authority[sandbox.id] == expected
       end
     end
 
-    test "editor on a sandbox gets no manage privileges (merge requires admin/owner)",
-         %{
-           root_project: root_project,
-           sandboxes: sandboxes,
-           sandbox: target_sandbox,
-           user: user
-         } do
+    test "editor on a sandbox cannot manage it", %{
+      sandboxes: sandboxes,
+      sandbox: target_sandbox,
+      user: user
+    } do
       insert(:project_user, user: user, project: target_sandbox, role: :editor)
 
       target_sandbox =
@@ -399,16 +381,14 @@ defmodule Lightning.Policies.SandboxesTest do
           if s.id == target_sandbox.id, do: target_sandbox, else: s
         end)
 
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
+      authority = Sandboxes.manage_authority(sandboxes, user)
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        refute authority[sandbox.id]
       end
     end
 
-    test "role on the root project does not cascade into bulk privileges on sandboxes",
+    test "role on the root project does not cascade into manage authority over its sandboxes",
          %{
            root_project: root_project,
            sandboxes: sandboxes,
@@ -416,43 +396,32 @@ defmodule Lightning.Policies.SandboxesTest do
          } do
       insert(:project_user, user: user, project: root_project, role: :admin)
 
-      root_project =
-        Lightning.Repo.preload(root_project, :project_users, force: true)
-
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
+      authority = Sandboxes.manage_authority(sandboxes, user)
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        refute authority[sandbox.id]
       end
     end
 
-    test "user with no role anywhere gets no privileges", %{
+    test "user with no role anywhere has no manage authority", %{
       user: user,
-      root_project: root_project,
       sandboxes: sandboxes
     } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
+      authority = Sandboxes.manage_authority(sandboxes, user)
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        refute authority[sandbox.id]
       end
     end
 
-    test "superuser role alone does not cascade into bulk privileges", %{
+    test "superuser role alone does not grant manage authority", %{
       superuser: superuser,
-      root_project: root_project,
       sandboxes: sandboxes
     } do
-      permissions =
-        Sandboxes.check_manage_permissions(sandboxes, superuser, root_project)
+      authority = Sandboxes.manage_authority(sandboxes, superuser)
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        refute authority[sandbox.id]
       end
     end
   end

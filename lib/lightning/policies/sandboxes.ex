@@ -68,31 +68,27 @@ defmodule Lightning.Policies.Sandboxes do
   def authorize(_action, _user, _project), do: false
 
   @doc """
-  Bulk permission check for multiple sandboxes to avoid N+1 queries.
+  Bulk manage-authority check for multiple sandboxes, avoiding N+1
+  queries.
 
-  Returns a map: sandbox_id => %{update: boolean, delete: boolean, merge: boolean}
+  Returns a map of `sandbox_id => boolean` where the boolean is `true`
+  when `user` has `:owner` or `:admin` on that sandbox — the role
+  required to update, delete, or merge it (and, by extension, to cancel
+  a scheduled deletion).
 
-  Assumes each `sandbox.project_users` is preloaded (as ensured by
+  Each `sandbox.project_users` must be preloaded (as ensured by
   `Projects.list_workspace_projects/2`).
   """
-  @spec check_manage_permissions([Project.t()], User.t(), Project.t()) ::
-          %{
-            binary() => %{update: boolean(), delete: boolean(), merge: boolean()}
-          }
-  def check_manage_permissions(sandboxes, %User{} = user, _root_project) do
+  @spec manage_authority([Project.t()], User.t()) :: %{binary() => boolean()}
+  def manage_authority(sandboxes, %User{} = user) do
     Map.new(sandboxes, fn sandbox ->
-      is_owner_or_admin_here? =
+      can_manage? =
         Enum.any?(
           sandbox.project_users,
           &(&1.user_id == user.id and &1.role in [:owner, :admin])
         )
 
-      {sandbox.id,
-       %{
-         update: is_owner_or_admin_here?,
-         delete: is_owner_or_admin_here?,
-         merge: is_owner_or_admin_here?
-       }}
+      {sandbox.id, can_manage?}
     end)
   end
 end
