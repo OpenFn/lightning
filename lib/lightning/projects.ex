@@ -965,14 +965,14 @@ defmodule Lightning.Projects do
 
   The user's *access roots* are the topmost projects they can reach: every
   project they hold a `project_users` row on (any depth), plus, for support
-  users, every workspace root flagged `allow_support_access`. A membership
-  on a deep sandbox without membership on its ancestors is therefore a
+  users, every project flagged `allow_support_access`. A membership on a
+  deep sandbox without membership on its ancestors is therefore a
   legitimate access root.
 
-  Descendants below each access root are filtered by `visible_sandboxes/3`:
-  superusers, owners and admins of the access root, and support users on a
-  support-access root see the entire subtree; otherwise the user only sees
-  descendants on which they hold a `project_users` row.
+  Descendants are filtered by the same per-project rule: each descendant
+  is included only when the user has a `project_users` row on it or is a
+  support user and that descendant carries `allow_support_access: true`.
+  Authority does not cascade from a parent project to its descendants.
 
   `parent_id` on the returned items is the *visible* parent: `nil` at each
   access root, and the nearest visible ancestor for descendants whose real

@@ -70,15 +70,19 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list
   is disabled (with the limiter's tooltip) when the active sandbox count is
   already at the limit.
-- The sandboxes list and the global project picker now hide sandboxes the
-  current user is not a member of. Previously, anyone with access to the
-  parent project could see every descendant sandbox in the list and the
-  picker dropdown (and, depending on their parent-project role, act on
-  them) even when they were not a `project_users` member of the sandbox
-  itself. Visibility now matches how the projects list works: if you
-  cannot access it, you do not see it. Superusers, root-project
-  owners/admins, and support users on support-access workspaces keep full
-  visibility.
+- Sandboxes now follow a fork model on every public surface: a sandbox is
+  an independent project, and visibility, navigation, and action
+  authority are decided by direct `project_users` membership on that
+  sandbox (or `support_user` plus `allow_support_access` on the sandbox
+  itself). Cascading authority from a parent project has been removed,
+  and the `:user`/`:superuser` enum no longer grants any access on
+  public surfaces — root admins/owners with no row on a descendant
+  sandbox and superusers with no row on a project must now be added
+  explicitly. Sandbox provisioning still seeds the new sandbox's
+  membership from the parent at creation time, so existing workflows
+  carry over; later toggles of `allow_support_access` on a parent no
+  longer affect its descendants. The admin space (`/settings/...`)
+  remains the parallel surface where superuser status applies.
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action

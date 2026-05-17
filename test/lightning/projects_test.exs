@@ -513,7 +513,7 @@ defmodule Lightning.ProjectsTest do
       assert ids == [root.id]
     end
 
-    test "get_project_tree_for_user/1 hides descendants a non-cascading user is not a member of" do
+    test "get_project_tree_for_user/1 hides descendants the user has no project_users row on" do
       editor = user_fixture()
 
       root =
