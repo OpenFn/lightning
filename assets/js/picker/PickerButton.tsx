@@ -36,7 +36,7 @@ export function PickerButton(props: PickerButtonProps) {
   const openEvent = props['data-open-event'];
   const isSandbox = props['data-is-sandbox'] === 'true';
   const accentIcon = props['data-accent-icon'] || icon;
-  const color = props['data-color'] || null;
+  const color = props['data-color'] || '#4f39f6';
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,7 +56,7 @@ export function PickerButton(props: PickerButtonProps) {
           'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400',
         isSandbox && 'text-white border border-transparent hover:opacity-90'
       )}
-      style={isSandbox && color ? { backgroundColor: color } : undefined}
+      style={isSandbox ? { backgroundColor: color } : undefined}
     >
       <span
         className={cn(
