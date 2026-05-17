@@ -1234,10 +1234,9 @@ defmodule Lightning.Projects do
     do: project
 
   def access_root_for_user(%Project{} = project, %User{} = user) do
-    case ancestor_chain_with_user_membership(project.id, user.id) do
-      [] -> project
-      chain -> Enum.find(chain, project, &accessible?(&1, user))
-    end
+    project.id
+    |> ancestor_chain_with_user_membership(user.id)
+    |> Enum.find(project, &accessible?(&1, user))
   end
 
   defp ancestor_chain_with_user_membership(project_id, user_id) do
