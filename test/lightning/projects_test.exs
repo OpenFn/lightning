@@ -717,6 +717,33 @@ defmodule Lightning.ProjectsTest do
       assert by_id[grandchild.id].parent_id == root.id
     end
 
+    test "get_project_tree_for_user/1 reparents past two consecutive hidden intermediates" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      hidden_a = insert(:project, parent: root)
+      hidden_b = insert(:project, parent: hidden_a)
+
+      deep_visible =
+        insert(:project,
+          parent: hidden_b,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == deep_visible.id)) == 1
+      refute Map.has_key?(by_id, hidden_a.id)
+      refute Map.has_key?(by_id, hidden_b.id)
+
+      assert by_id[deep_visible.id].parent_id == root.id
+    end
+
     test "get_project_tree_for_user/1 shadows a sandbox membership under a support-access root for a support user" do
       support_user = insert(:user, support_user: true)
 

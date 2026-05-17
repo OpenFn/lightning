@@ -8,12 +8,24 @@ defmodule Lightning.Policies.Sandboxes do
   granted by user type (the `:user`/`:superuser` enum has no bearing
   on public-surface authorization).
 
-  Note that the **source-side** gate for the Merge button in the
-  sandboxes list is enforced by `manage_authority/2` in this module
-  (`:owner`/`:admin` on the source sandbox), not by the
-  `:merge_sandbox` policy clause. The policy itself only governs the
-  target-side check (`:editor`+ on the target project). Both gates must
-  hold for a merge to succeed.
+  ## Two-sided merge gate
+
+  Merge has two distinct gates that must both hold for a merge to succeed:
+
+    * **Source side**, enforced by `manage_authority/2` in this module
+      (`:owner`/`:admin` on the source sandbox). Called from
+      `SandboxLive.Index` when building each sandbox card so the Merge
+      button can be disabled in the workspace list.
+
+    * **Target side**, enforced by the `:merge_sandbox` clause of
+      `authorize/3`  (`:editor`+ on the target project). Called from
+      `SandboxLive.Index` when the user submits the merge form to
+      confirm the target the user picked is one they can write into.
+
+  The split exists because the two gates check different projects: the
+  source side governs "can this user retire this sandbox" (it cascades
+  the source's scheduled deletion through descendants), and the target
+  side governs "can this user write changes into the target."
   """
   @behaviour Bodyguard.Policy
 
