@@ -43,6 +43,7 @@ Lightning.Channels.ChannelRequest.html
 Lightning.Channels.ChannelSnapshot.html
 Lightning.Channels.DestinationAuth.html
 Lightning.Channels.Handler.html
+Lightning.Channels.PromExPlugin.html
 Lightning.Channels.SearchParams.html
 Lightning.Channels.html
 Lightning.Collaborate.html
@@ -449,8 +450,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-37B12A14.js
-dist/sidebar_items-6D755A8C.js
+dist/search_data-965D0ACE.js
+dist/sidebar_items-D50E2806.js
 index.html
 provisioning.html
 readme.html

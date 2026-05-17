@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-6D755A8C.js"></script>
+    <script defer src="dist/sidebar_items-D50E2806.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -127,7 +127,15 @@ Captures richer request metadata (query string, body sizes, per-direction
 durations, Finch phase timings) and attributes both the matched client webhook
 auth method and the destination project credential on every proxied request.
 Feature-gated behind experimental features.
-<a href="https://github.com/OpenFn/lightning/issues/4541">#4541</a></li></ul><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li><a href="Lightning.Projects.Sandboxes.html#provision/3"><code class="inline">Lightning.Projects.Sandboxes.provision/3</code></a> no longer accepts <code class="inline">:collaborators</code>.
+<a href="https://github.com/OpenFn/lightning/issues/4541">#4541</a></li><li>Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
+plugin. Emits <code class="inline">lightning_channel_proxy_inbound_total{outcome}</code> (counter on
+every <code class="inline">/channels/*</code> hit, tagged with
+<code class="inline">:resolved | :invalid_uuid | :unknown_channel</code>), and
+<code class="inline">lightning_channel_proxy_requests_started_total</code><ul><li><code class="inline">lightning_channel_proxy_request_duration_milliseconds</code> (tagged with
+<code class="inline">project_id</code>) on resolved requests. A self-contained Prometheus + Grafana
+stack and example dashboard for local development ships in
+<code class="inline">tooling/observability/</code>.
+<a href="https://github.com/OpenFn/lightning/issues/4508">#4508</a></li></ul></li></ul><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li><a href="Lightning.Projects.Sandboxes.html#provision/3"><code class="inline">Lightning.Projects.Sandboxes.provision/3</code></a> no longer accepts <code class="inline">:collaborators</code>.
 The sandbox's <code class="inline">project_users</code> are now derived from the parent project: every
 parent user is copied with their role preserved, the parent owner is demoted
 to <code class="inline">:admin</code>, and the actor is set as the sandbox owner. To add a user who is
@@ -142,11 +150,13 @@ path. x86_64 Linux is unchanged.
 <a href="https://github.com/OpenFn/lightning/pull/4735">#4735</a></li><li>Include <code class="inline">webhook_reply</code> and <code class="inline">cron_cursor_job_id</code> in the workflow version hash
 so that changes to these trigger fields are properly detected by CLI deploy
 and sandbox merge <a href="https://github.com/OpenFn/lightning/issues/4596">#4596</a></li><li>Bump <code class="inline">@openfn/ws-worker</code> from
-<a href="https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250"><code class="inline">1.24.2</code> to <code class="inline">1.25.0</code></a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Restoring a sandbox now respects the workspace's active sandbox limit.
+<a href="https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250"><code class="inline">1.24.2</code> to <code class="inline">1.25.0</code></a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Drop the PromEx <code class="inline">oban_queue_poll_metrics</code> group, which crashes on boot against
+our named <code class="inline">Lightning.Oban</code> supervisor (waiting on upstream
+<a href="https://github.com/akoutmos/prom_ex/pull/278">PromEx #278</a>).</li><li>Restoring a sandbox now respects the workspace's active sandbox limit.
 <code class="inline">Sandboxes.cancel_scheduled_sandbox_deletion/2</code> runs the same usage-limit
-action as new sandbox creation, and the Restore button in the sandbox list
-is disabled (with the limiter's tooltip) when the active sandbox count is
-already at the limit.</li><li><code class="inline">Cmd/Ctrl+Enter</code> now runs the workflow directly; <code class="inline">Cmd/Ctrl+Shift+Enter</code> opens
+action as new sandbox creation, and the Restore button in the sandbox list is
+disabled (with the limiter's tooltip) when the active sandbox count is already
+at the limit.</li><li><code class="inline">Cmd/Ctrl+Enter</code> now runs the workflow directly; <code class="inline">Cmd/Ctrl+Shift+Enter</code> opens
 &quot;run with custom input&quot;. When a retryable run is loaded, the primary action
 switches to retry. <a href="https://github.com/OpenFn/lightning/issues/4736">#4736</a></li><li>Copy token button on the Personal Access Tokens page now shows a 'Copied!'
 tooltip on click and no longer causes the icon to flicker
@@ -1109,20 +1119,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="6771542397-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="6771542397-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="3442323095-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="3442323095-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="6771542397-2">(</span><span class="k" data-group-id="6771542397-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="3442323095-2">(</span><span class="k" data-group-id="3442323095-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="6771542397-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="6771542397-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6771542397-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="6771542397-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6771542397-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="6771542397-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6771542397-7">(</span><span class="k" data-group-id="6771542397-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="6771542397-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="6771542397-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="6771542397-10">(</span><span class="n">workflow</span><span class="p" data-group-id="6771542397-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="3442323095-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="3442323095-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3442323095-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="3442323095-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3442323095-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="3442323095-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3442323095-7">(</span><span class="k" data-group-id="3442323095-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="3442323095-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="3442323095-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="3442323095-10">(</span><span class="n">workflow</span><span class="p" data-group-id="3442323095-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="6771542397-8">end</span><span class="p" data-group-id="6771542397-7">)</span><span class="w">
+    </span><span class="k" data-group-id="3442323095-8">end</span><span class="p" data-group-id="3442323095-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="6771542397-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="6771542397-11">}</span><span class="w">
-</span><span class="k" data-group-id="6771542397-3">end</span><span class="p" data-group-id="6771542397-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-75" class="section-heading"><a href="#added-75" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="3442323095-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="3442323095-11">}</span><span class="w">
+</span><span class="k" data-group-id="3442323095-3">end</span><span class="p" data-group-id="3442323095-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-75" class="section-heading"><a href="#added-75" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-85" class="section-heading"><a href="#changed-85" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-111" class="section-heading"><a href="#fixed-111" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -1571,7 +1581,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7559257610-1">(</span><span class="p" data-group-id="7559257610-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="1898076577-1">(</span><span class="p" data-group-id="1898076577-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-113" class="section-heading"><a href="#added-113" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error
