@@ -108,6 +108,37 @@ defmodule LightningWeb.LayoutComponentsTest do
       assert html =~ ~s(data-is-sandbox="true")
       assert html =~ ~s(data-color="#E33D63")
     end
+
+    test "uses the access_root attr to truncate the displayed ancestor chain" do
+      root = insert(:project, name: "acme-workspace")
+      sandbox = insert(:project, name: "acme-staging", parent: root)
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: sandbox, access_root: sandbox})
+
+      assert html =~ ~s(data-label="acme-staging")
+      refute html =~ "acme-workspace/acme-staging"
+    end
+
+    test "derives access_root from current_user when access_root is not passed" do
+      user = insert(:user)
+      root = insert(:project, name: "acme-workspace")
+
+      sandbox =
+        insert(:project,
+          name: "acme-staging",
+          parent: root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: sandbox, current_user: user})
+
+      assert html =~ ~s(data-label="acme-staging")
+      refute html =~ "acme-workspace/acme-staging"
+    end
   end
 
   describe "global_project_picker/1" do
