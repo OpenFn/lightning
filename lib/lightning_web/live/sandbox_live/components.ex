@@ -494,9 +494,8 @@ defmodule LightningWeb.SandboxLive.Components do
     >
       <div class="flex items-stretch">
         <div class="w-3 flex-shrink-0 bg-gray-300"></div>
-        <div class="flex-1 px-4 py-3 flex items-center min-w-0">
-          <.icon name="hero-lock-closed" class="h-4 w-4 text-gray-400 mr-2 shrink-0" />
-          <span class="text-sm font-medium text-gray-500 truncate">
+        <div class="flex-1 px-4 py-4 flex items-center min-w-0">
+          <span class="text-base font-medium text-gray-500 truncate">
             Restricted parent project
           </span>
         </div>
