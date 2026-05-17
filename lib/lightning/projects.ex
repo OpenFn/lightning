@@ -702,15 +702,6 @@ defmodule Lightning.Projects do
             "Cannot remove the owner of a project. Transfer ownership first."
     end
 
-    if Project.sandbox?(project_user.project) and
-         Lightning.Projects.Sandboxes.parent_admin?(
-           project_user.project,
-           project_user.user
-         ) do
-      raise ArgumentError,
-            "Cannot remove a parent project admin from a sandbox"
-    end
-
     Repo.transaction(fn ->
       from(pc in Lightning.Projects.ProjectCredential,
         join: c in Lightning.Credentials.Credential,
@@ -996,7 +987,7 @@ defmodule Lightning.Projects do
 
       roots ->
         descendants = load_active_descendants(roots, user)
-        visible = filter_descendants_for_user(descendants, roots, user)
+        visible = filter_descendants_for_user(descendants, user)
         shape_for_picker(roots, visible, descendants)
     end
   end
@@ -1211,59 +1202,21 @@ defmodule Lightning.Projects do
   @doc """
   Returns the subset of `sandboxes` that `user` is allowed to see.
 
-  A sandbox is visible when:
+  A sandbox is visible when the user has a `project_users` row on that
+  sandbox, or is a support user on a sandbox flagged
+  `allow_support_access`. Visibility does not cascade from a parent
+  project; each sandbox is an independent project with its own
+  membership list (seeded from the parent at provision time).
 
-    * the user is a superuser; or
-    * the user is a support user and the root project is flagged
-      `allow_support_access` (cascading workspace access for support); or
-    * the user is an owner or admin on the root project (cascading
-      workspace control); or
-    * the user has any `project_users` row on the sandbox itself.
-
-  Assumes `root_project.project_users` and each `sandbox.project_users` are
-  preloaded; raises `ArgumentError` otherwise.
+  Assumes each `sandbox.project_users` is preloaded; raises
+  `ArgumentError` otherwise. The `root_project` argument is unused and
+  preserved only for source compatibility with call sites that still
+  pass it.
   """
   @spec visible_sandboxes([Project.t()], User.t(), Project.t()) :: [Project.t()]
-  def visible_sandboxes(sandboxes, %User{} = user, %Project{} = root_project) do
-    assert_project_users_loaded!(root_project, "root_project")
+  def visible_sandboxes(sandboxes, %User{} = user, %Project{} = _root_project) do
     Enum.each(sandboxes, &assert_project_users_loaded!(&1, "sandbox"))
-
-    if cascading_visibility?(user, root_project) do
-      sandboxes
-    else
-      Enum.filter(sandboxes, &member?(&1, user))
-    end
-  end
-
-  @doc """
-  Returns `true` when `user` is allowed to see `project` under the same rule
-  applied by `visible_sandboxes/3`.
-
-  Walks the parent chain to locate the workspace root and applies the
-  cascading rule there; falls back to direct `project_users` membership on
-  `project` itself. The ancestor walk uses a single recursive CTE
-  (`preload_ancestors/1`) and the `:project_users` preload is scoped to the
-  current user, so the call costs three round trips at most regardless of
-  how deep `project` sits. Pass any `%Project{}` fetched from the database;
-  preloads are arranged internally.
-
-  Suited to single-record authorization (a `:view_sandbox` policy check on
-  one project fetched by id). For bulk filtering use `visible_sandboxes/3`
-  instead with `:project_users` already preloaded.
-  """
-  @spec visible_to_user?(Project.t(), User.t()) :: boolean()
-  def visible_to_user?(%Project{} = project, %User{} = user) do
-    pu_query = project_users_for_user_query(user)
-    root = root_of(project)
-
-    project = Repo.preload(project, project_users: pu_query)
-
-    root =
-      if project.id == root.id,
-        do: project,
-        else: Repo.preload(root, project_users: pu_query)
-
-    cascading_visibility?(user, root) or member?(project, user)
+    Enum.filter(sandboxes, &accessible?(&1, user))
   end
 
   defp assert_project_users_loaded!(
@@ -1277,45 +1230,24 @@ defmodule Lightning.Projects do
 
   defp assert_project_users_loaded!(%Project{}, _label), do: :ok
 
-  defp cascading_visibility?(%User{role: :superuser}, _root), do: true
+  defp accessible?(%Project{} = project, %User{} = user) do
+    member?(project, user) or support_access?(project, user)
+  end
 
-  defp cascading_visibility?(
-         %User{support_user: true},
-         %Project{allow_support_access: true}
+  defp support_access?(
+         %Project{allow_support_access: true},
+         %User{support_user: true}
        ),
        do: true
 
-  defp cascading_visibility?(%User{} = user, %Project{} = root) do
-    Enum.any?(
-      root.project_users,
-      &(&1.user_id == user.id and &1.role in [:owner, :admin])
-    )
-  end
+  defp support_access?(_project, _user), do: false
 
   defp member?(%Project{project_users: pus}, %User{id: user_id}) do
     Enum.any?(pus, &(&1.user_id == user_id))
   end
 
-  defp filter_descendants_for_user(descendants, roots, %User{} = user) do
-    project_map = Map.new(roots ++ descendants, &{&1.id, &1})
-    root_lookup = Map.new(roots, &{&1.id, &1})
-
-    descendants
-    |> Enum.group_by(&ancestor_root_id(&1, project_map, root_lookup))
-    |> Enum.flat_map(fn {root_id, group} ->
-      root = Map.fetch!(root_lookup, root_id)
-      visible_sandboxes(group, user, root)
-    end)
-  end
-
-  defp ancestor_root_id(%Project{id: id} = project, project_map, root_lookup) do
-    if Map.has_key?(root_lookup, id) do
-      id
-    else
-      project_map
-      |> Map.fetch!(project.parent_id)
-      |> ancestor_root_id(project_map, root_lookup)
-    end
+  defp filter_descendants_for_user(descendants, %User{} = user) do
+    Enum.filter(descendants, &accessible?(&1, user))
   end
 
   defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do

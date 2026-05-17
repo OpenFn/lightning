@@ -627,18 +627,14 @@
                   remove_user_tooltip(
                     project_user,
                     @current_user,
-                    @can_remove_project_user,
-                    @project,
-                    @sandbox?
+                    @can_remove_project_user
                   )
                 }
                 disabled={
                   !user_removable?(
                     project_user,
                     @current_user,
-                    @can_remove_project_user,
-                    @project,
-                    @sandbox?
+                    @can_remove_project_user
                   )
                 }
               >
@@ -664,9 +660,7 @@
               user_removable?(
                 project_user,
                 @current_user,
-                @can_remove_project_user,
-                @project,
-                @sandbox?
+                @can_remove_project_user
               )
             }
             id={"remove_#{project_user.id}_modal"}
