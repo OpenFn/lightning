@@ -1243,19 +1243,45 @@ defmodule Lightning.Projects do
     do: project
 
   def access_root_for_user(%Project{} = project, %User{} = user) do
-    chain =
-      project
-      |> preload_ancestors()
-      |> chain_top_down([])
-      |> Repo.preload(project_users: project_users_for_user_query(user))
-
-    Enum.find(chain, project, &accessible?(&1, user))
+    case ancestor_chain_with_user_membership(project.id, user.id) do
+      [] -> project
+      chain -> Enum.find(chain, project, &accessible?(&1, user))
+    end
   end
 
-  defp chain_top_down(%Project{parent: %Project{} = parent} = p, acc),
-    do: chain_top_down(parent, [%{p | parent: nil} | acc])
+  # Returns the project and its ancestors top-down (root first, project
+  # last) in a single round trip. Each row has `:project_users` preloaded
+  # via a LEFT JOIN scoped to `user_id`, so callers can check membership
+  # without a second query.
+  defp ancestor_chain_with_user_membership(project_id, user_id) do
+    max_depth = max_project_tree_depth()
 
-  defp chain_top_down(%Project{} = p, acc), do: [p | acc]
+    seed =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, depth: 0}
+      )
+
+    step_up =
+      from(p in Project,
+        join: walked in "ancestor_walk",
+        on: walked.id == p.id,
+        where: walked.depth < ^max_depth and not is_nil(p.parent_id),
+        select: %{id: p.parent_id, depth: walked.depth + 1}
+      )
+
+    from(p in Project,
+      join: a in "ancestor_walk",
+      on: a.id == p.id,
+      left_join: pu in ProjectUser,
+      on: pu.project_id == p.id and pu.user_id == ^user_id,
+      order_by: [desc: a.depth],
+      preload: [project_users: pu]
+    )
+    |> with_cte("ancestor_walk", as: ^union_all(seed, ^step_up))
+    |> recursive_ctes(true)
+    |> Repo.all()
+  end
 
   @doc """
   Returns `project.name` with ancestor names prepended (joined by `/`),
