@@ -217,7 +217,7 @@ defmodule Lightning.MixProject do
         "README.md": [title: "Lightning"],
         "RUNNINGLOCAL.md": [title: "Running Locally"],
         "DEPLOYMENT.md": [title: "Deployment"],
-        "benchmarking/README.md": [
+        "tooling/benchmarking/README.md": [
           title: "Benchmarking",
           filename: "benchmarking.md"
         ],
