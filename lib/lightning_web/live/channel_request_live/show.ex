@@ -45,6 +45,7 @@ defmodule LightningWeb.ChannelRequestLive.Show do
               <LayoutComponents.breadcrumb_project_picker
                 project={@project}
                 current_user={@current_user}
+                access_root={@access_root}
               />
               <LayoutComponents.breadcrumb_items items={[
                 {"History", ~p"/projects/#{@project}/history"},

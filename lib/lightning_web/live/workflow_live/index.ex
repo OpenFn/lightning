@@ -42,6 +42,7 @@ defmodule LightningWeb.WorkflowLive.Index do
               <LayoutComponents.breadcrumb_project_picker
                 project={@project}
                 current_user={@current_user}
+                access_root={@access_root}
               />
               <LayoutComponents.breadcrumb>
                 <:label>{@page_title}</:label>

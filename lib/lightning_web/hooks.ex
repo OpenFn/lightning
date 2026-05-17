@@ -55,11 +55,15 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
+        access_root =
+          Lightning.Projects.access_root_for_user(project, current_user)
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
          |> assign(:project_user, project_user)
          |> assign(:project, project)
+         |> assign(:access_root, access_root)
          |> assign(:projects, projects)}
 
       true ->

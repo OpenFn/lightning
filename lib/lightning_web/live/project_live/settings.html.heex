@@ -13,6 +13,7 @@
           <LayoutComponents.breadcrumb_project_picker
             project={@project}
             current_user={@current_user}
+            access_root={@access_root}
           />
           <LayoutComponents.breadcrumb>
             <:label>{@page_title}</:label>
@@ -611,6 +612,7 @@
           project_users={@project_users}
           collaborators={@collaborators_to_invite}
           current_user={@current_user}
+          access_root={@access_root}
         />
         <LightningWeb.Components.DataTables.collaborators_table
           id="collaborators"

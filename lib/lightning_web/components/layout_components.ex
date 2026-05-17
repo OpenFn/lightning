@@ -305,7 +305,7 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker project={@project} current_user={@current_user} />
+        <.breadcrumb_project_picker project={@project} current_user={@current_user} access_root={@access_root} />
         <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
@@ -357,6 +357,7 @@ defmodule LightningWeb.LayoutComponents do
   """
   attr :project, Lightning.Projects.Project, required: true
   attr :current_user, Lightning.Accounts.User, default: nil
+  attr :access_root, Lightning.Projects.Project, default: nil
 
   def breadcrumb_project_picker(assigns) do
     alias Lightning.Projects
@@ -365,8 +366,11 @@ defmodule LightningWeb.LayoutComponents do
     project = Projects.preload_ancestors(assigns.project)
 
     project =
-      case assigns[:current_user] do
-        %Lightning.Accounts.User{} = user ->
+      case {assigns[:access_root], assigns[:current_user]} do
+        {%Project{id: access_root_id}, _} ->
+          truncate_parent_chain(project, access_root_id)
+
+        {nil, %Lightning.Accounts.User{} = user} ->
           access_root_id = Projects.access_root_for_user(project, user).id
           truncate_parent_chain(project, access_root_id)
 

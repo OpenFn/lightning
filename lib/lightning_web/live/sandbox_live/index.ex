@@ -445,6 +445,7 @@ defmodule LightningWeb.SandboxLive.Index do
               <LayoutComponents.breadcrumb_project_picker
                 project={@project}
                 current_user={@current_user}
+                access_root={@access_root}
               />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
@@ -537,10 +538,7 @@ defmodule LightningWeb.SandboxLive.Index do
     current_user = socket.assigns.current_user
     limit_new_sandbox = socket.assigns.limit_new_sandbox
 
-    root_project =
-      project
-      |> Projects.access_root_for_user(current_user)
-      |> Repo.preload(:project_users)
+    root_project = Repo.preload(socket.assigns.access_root, :project_users)
 
     descendants =
       root_project.id
