@@ -43,7 +43,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{assigns: %{project: project, live_action: live_action}} = socket
       )
       when live_action == :edit do
-    case find_managed_sandbox(socket, id) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -98,7 +98,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-delete-modal", %{"id" => sandbox_id}, socket) do
-    case find_managed_sandbox(socket, sandbox_id) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -182,7 +182,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"id" => sandbox_id},
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    case find_managed_sandbox(socket, sandbox_id) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -204,7 +204,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
-    case find_managed_sandbox(socket, sandbox_id) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -528,15 +528,6 @@ defmodule LightningWeb.SandboxLive.Index do
     """
   end
 
-  defp find_managed_sandbox(socket, id) do
-    %{root_project: root, sandboxes: sandboxes} = socket.assigns
-
-    cond do
-      root && root.id == id && not is_nil(root.parent_id) -> root
-      true -> Enum.find(sandboxes, &(&1.id == id))
-    end
-  end
-
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
     current_user = socket.assigns.current_user
     limit_new_sandbox = socket.assigns.limit_new_sandbox
@@ -588,6 +579,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
     socket
     |> assign(:workspace_projects, [root_project | descendants])
+    |> assign(:workspace_tree, decorated_with_authority)
     |> assign(:root_project, decorated_root)
     |> assign(:sandboxes, sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
