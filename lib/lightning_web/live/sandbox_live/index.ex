@@ -747,8 +747,7 @@ defmodule LightningWeb.SandboxLive.Index do
         Projects.descendant_of?(potential_target, source_sandbox, root_project)
     end)
     |> Enum.filter(fn project ->
-      user_role_on_project(project, current_user) in [:owner, :admin, :editor] or
-        current_user.role == :superuser
+      user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
       %{
