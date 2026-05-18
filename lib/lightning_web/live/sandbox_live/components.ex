@@ -82,7 +82,6 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div class="space-y-8">
       <div class="space-y-3">
-        <.restricted_parent_card :if={not is_nil(@root_project.parent_id)} />
         <%= if is_nil(@root_project.parent_id) do %>
           <.root_project_card
             root_project={@root_project}
@@ -484,25 +483,6 @@ defmodule LightningWeb.SandboxLive.Components do
         Selected: {@current}
       </p>
     </fieldset>
-    """
-  end
-
-  defp restricted_parent_card(assigns) do
-    ~H"""
-    <div
-      id="restricted-parent-card"
-      class="block rounded-xl border border-dashed border-gray-200 bg-gray-50 overflow-hidden select-none"
-      aria-disabled="true"
-    >
-      <div class="flex items-stretch">
-        <div class="w-3 flex-shrink-0 bg-gray-300"></div>
-        <div class="flex-1 px-4 py-4 flex items-center min-w-0">
-          <span class="text-base font-medium text-gray-500 truncate">
-            Restricted parent project
-          </span>
-        </div>
-      </div>
-    </div>
     """
   end
 
