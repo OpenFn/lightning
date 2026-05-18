@@ -28,7 +28,11 @@ defmodule LightningWeb.ChannelLive.Index do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                current_user={@current_user}
+                access_root={@access_root}
+              />
               <LayoutComponents.breadcrumb>
                 <:label>{@page_title}</:label>
               </LayoutComponents.breadcrumb>

@@ -33,9 +33,16 @@ export interface PickerItem {
   /**
    * Optional hero icon class for the row (e.g. `hero-credit-card`).
    * When absent, falls back to the project-style default:
-   * `hero-folder` at depth 0 and `hero-beaker` for nested items.
+   * `hero-folder` for root projects and `hero-beaker` for sandboxes.
    */
   icon?: string;
+  /**
+   * Whether the underlying project is structurally a sandbox (has a
+   * real `parent_id` in the database). Drives the default icon
+   * independently of the row's display depth, so a sandbox surfaced as
+   * a user's access root still renders with the sandbox icon.
+   */
+  isSandbox?: boolean;
 }
 
 interface PickerProps {
@@ -203,7 +210,15 @@ export function Picker(props: PickerProps) {
   }, [openPicker, openEvent]);
 
   const go = (href: string, sameSection = false) => {
-    window.location.href = href + (sameSection ? window.location.hash : '');
+    const fullHref = href + (sameSection ? window.location.hash : '');
+    const a = document.createElement('a');
+    a.href = fullHref;
+    a.setAttribute('data-phx-link', 'redirect');
+    a.setAttribute('data-phx-link-state', 'push');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleInputKeyDown = useCallback(
@@ -316,7 +331,7 @@ export function Picker(props: PickerProps) {
               const isNested = item.depth > 0;
               const indentPx = item.depth * 10;
               const itemIcon =
-                item.icon ?? (isNested ? 'hero-beaker' : 'hero-folder');
+                item.icon ?? (item.isSandbox ? 'hero-beaker' : 'hero-folder');
 
               return (
                 <li

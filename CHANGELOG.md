@@ -105,6 +105,14 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list is
   disabled (with the limiter's tooltip) when the active sandbox count is already
   at the limit.
+- Sandboxes no longer appear in the sandboxes list, the project picker, or via
+  the sandbox URL unless the user has access
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- The Merge button on a sandbox now requires admin or owner on the source
+  sandbox (or admin/owner on the root project)
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandbox policies no longer treat `User.role: :superuser` as a project-access
+  bypass [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)

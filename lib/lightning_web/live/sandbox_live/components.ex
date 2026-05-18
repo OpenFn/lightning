@@ -82,12 +82,14 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div class="space-y-8">
       <div class="space-y-3">
-        <div>
+        <%= if is_nil(@root_project.parent_id) do %>
           <.root_project_card
             root_project={@root_project}
             is_current={@current_project.id == @root_project.id}
           />
-        </div>
+        <% else %>
+          <.sandbox_card sandbox={@root_project} />
+        <% end %>
         <div>
           <%= if Enum.empty?(@active_sandboxes) and Enum.empty?(@scheduled_sandboxes) do %>
             <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
@@ -132,10 +134,13 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
   attr :root_project, Project, required: true
+  attr :descendants, :list, default: []
 
   def confirm_delete_modal(assigns) do
     assigns =
-      assign(assigns, :confirm_form, to_form(assigns.changeset, as: :confirm))
+      assigns
+      |> assign(:confirm_form, to_form(assigns.changeset, as: :confirm))
+      |> assign(:descendant_count, length(assigns.descendants))
 
     ~H"""
     <.modal
@@ -163,7 +168,13 @@ defmodule LightningWeb.SandboxLive.Components do
 
       <section class="space-y-4">
         <p class="text-gray-700">
-          Deleting a sandbox removes it (along with its descendants) from OpenFn.
+          Deleting a sandbox removes it from OpenFn.
+          <span :if={@descendant_count == 1}>
+            Its child sandbox will also be deleted.
+          </span>
+          <span :if={@descendant_count > 1}>
+            Its {@descendant_count} child sandboxes will also be deleted.
+          </span>
         </p>
 
         <p class="text-gray-700">
@@ -389,8 +400,7 @@ defmodule LightningWeb.SandboxLive.Components do
             <:message>
               It can be restored from the sandbox list for {grace_period_label()}, then permanently removed.
               <div :if={@descendant_count == 1} class="mt-2">
-                Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be deleted.
+                Its child sandbox will also be deleted.
               </div>
               <div :if={@descendant_count > 1} class="mt-2">
                 Its {@descendant_count} child sandboxes will also be deleted.
@@ -497,6 +507,10 @@ defmodule LightningWeb.SandboxLive.Components do
                 {@root_project.name}
               </h3>
               <.badge
+                :if={
+                  has_environment?(@root_project) or
+                    not Project.sandbox?(@root_project)
+                }
                 id={"env-badge-#{@root_project.id}"}
                 env={
                   if has_environment?(@root_project),
@@ -532,7 +546,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0 opacity-60"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
@@ -576,7 +590,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">

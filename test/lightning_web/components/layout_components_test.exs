@@ -3,6 +3,7 @@ defmodule LightningWeb.LayoutComponentsTest do
   use LightningWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias LightningWeb.LayoutComponents
   alias LightningWeb.Components.Menu
@@ -103,9 +104,40 @@ defmodule LightningWeb.LayoutComponentsTest do
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
-      assert html =~ ~s(data-label="parent-project/my-sandbox")
+      assert html =~ ~s(data-label="my-sandbox")
       assert html =~ ~s(data-is-sandbox="true")
       assert html =~ ~s(data-color="#E33D63")
+    end
+
+    test "uses the access_root attr to truncate the displayed ancestor chain" do
+      root = insert(:project, name: "acme-workspace")
+      sandbox = insert(:project, name: "acme-staging", parent: root)
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: sandbox, access_root: sandbox})
+
+      assert html =~ ~s(data-label="acme-staging")
+      refute html =~ "acme-workspace/acme-staging"
+    end
+
+    test "derives access_root from current_user when access_root is not passed" do
+      user = insert(:user)
+      root = insert(:project, name: "acme-workspace")
+
+      sandbox =
+        insert(:project,
+          name: "acme-staging",
+          parent: root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{project: sandbox, current_user: user})
+
+      assert html =~ ~s(data-label="acme-staging")
+      refute html =~ "acme-workspace/acme-staging"
     end
   end
 
@@ -116,6 +148,110 @@ defmodule LightningWeb.LayoutComponentsTest do
         |> render_component(%{})
 
       refute html =~ "global-project-picker"
+    end
+
+    test "items nest a visible sandbox under its nearest visible ancestor when intermediates are hidden" do
+      user = insert(:user)
+
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden_middle =
+        insert(:project, name: "hidden-middle", parent: root)
+
+      nested_member =
+        insert(:project,
+          name: "nested-member",
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert root.id in ids
+      assert nested_member.id in ids
+      refute hidden_middle.id in ids
+
+      assert depth_by_id[root.id] == 0
+      assert depth_by_id[nested_member.id] == 1
+    end
+
+    test "items surface a sandbox the user is a direct member of when the user has no role on its root" do
+      user = insert(:user)
+      absolute_root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: absolute_root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert ids == [sandbox.id]
+      assert depth_by_id[sandbox.id] == 0
+    end
+
+    test "items omit sandboxes the user has no access to" do
+      user = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user: user, role: :editor}])
+
+      visible_sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      hidden_sandbox = insert(:project, parent: parent)
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+
+      assert parent.id in ids
+      assert visible_sandbox.id in ids
+      refute hidden_sandbox.id in ids
     end
   end
 
