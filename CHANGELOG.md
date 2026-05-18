@@ -106,21 +106,13 @@ and this project adheres to
   disabled (with the limiter's tooltip) when the active sandbox count is already
   at the limit.
 - Sandboxes no longer appear in the sandboxes list, the project picker, or via
-  the sandbox URL unless the user is a direct member (or a support user with the
-  sandbox's own `allow_support_access` enabled).
+  the sandbox URL unless the user has access
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - The Merge button on a sandbox now requires admin or owner on the source
-  sandbox (or admin/owner on the root project). Previously an editor on the root
-  project could click Merge, but the cleanup that retires the source sandbox
-  requires admin/owner, so the merge would sync data into the target while
-  leaving the source in place. The button now matches the action it triggers.
+  sandbox (or admin/owner on the root project)
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - Sandbox policies no longer treat `User.role: :superuser` as a project-access
-  bypass. Superuser is a user type for global user-management screens, not a
-  project role; this aligns sandbox policies with
-  `Lightning.Policies.ProjectUsers`, which already ignores the user type when
-  deciding project access.
-  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+  bypass [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
