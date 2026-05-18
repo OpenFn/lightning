@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.4-pre] - 2026-05-18
+
+### Added
+
 - Apollo AI chat requests now carry optional Langfuse tracking fields
   (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
   `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)
