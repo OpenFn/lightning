@@ -355,7 +355,8 @@ defmodule Lightning.CliDeployTest do
     Map.merge(state, %{
       workflows: workflows,
       project_credentials: credentials,
-      collections: collections
+      collections: collections,
+      channels: []
     })
   end
 
