@@ -17,6 +17,17 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.4-pre] - 2026-05-18
+
+### Added
+
+- Apollo AI chat requests now carry optional Langfuse tracking fields
+  (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
+  `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)
 - Allow users to respond back with custom webhook responses via the
   `webhookResponse` field in the job state.
   [#3102](https://github.com/OpenFn/lightning/issues/3102)
@@ -39,6 +50,10 @@ and this project adheres to
   auth method and the destination project credential on every proxied request.
   Feature-gated behind experimental features.
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Support channels in the provisioner API
+  [#4522](https://github.com/OpenFn/lightning/issues/4522)
+- Do not persist channel request/response data when project has zero-persistence
+  enabled [#4622](https://github.com/OpenFn/lightning/issues/4622)
 - Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
   plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
   every `/channels/*` hit, tagged with
@@ -72,6 +87,13 @@ and this project adheres to
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
 - Bump `@openfn/ws-worker` from
   [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
+- Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. OTP
+  trusted CA certificates will now be used (usualy the OS CA store), failing
+  which the library's bundled CA store will be used; use
+  `tls_certificate_check`'s `override_trusted_authorities/1` to customise
+  [#4755](https://github.com/OpenFn/lightning/issues/4755)
+- Removed `Duplicate` button from Sandbox UI
+  [#4767](https://github.com/OpenFn/lightning/pull/4767)
 
 ### Fixed
 

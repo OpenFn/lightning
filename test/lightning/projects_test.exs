@@ -1108,7 +1108,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture(name: "newly-created-project")
 
       expected_yaml =
-        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
+        "name: newly-created-project\ndescription: null\ncollections: null\nchannels: null\ncredentials: null\nworkflows: null"
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
@@ -1266,6 +1266,55 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml =~ expected_yaml_trigger
+    end
+
+    test "channels are included in the export with their destination credential" do
+      user = insert(:user, email: "channel-user@lightning.com")
+      credential = insert(:credential, name: "channel-cred", user: user)
+
+      project = insert(:project, name: "project-with-channel")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          name: "my-channel",
+          destination_url: "https://example.com/destination",
+          enabled: true
+        )
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: project_credential
+      )
+
+      channel_only_name =
+        insert(:channel,
+          project: project,
+          name: "no-cred-channel",
+          destination_url: "https://example.com/other",
+          enabled: false
+        )
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ """
+             channels:
+               my-channel:
+                 name: my-channel
+                 destination_url: 'https://example.com/destination'
+                 enabled: true
+                 destination_credential: channel-user@lightning.com-channel-cred
+               no-cred-channel:
+                 name: #{channel_only_name.name}
+                 destination_url: 'https://example.com/other'
+                 enabled: false
+                 destination_credential: null
+             """
     end
 
     test "webhook_response_config is included in the export" do

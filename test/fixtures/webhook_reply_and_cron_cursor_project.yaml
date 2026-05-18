@@ -1,6 +1,7 @@
 name: webhook-reply-and-cron-cursor-project
 description: null
 collections: null
+channels: null
 credentials: null
 workflows:
   cron-cursor-workflow:

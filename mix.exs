@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.3",
+      version: "2.16.4-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -152,6 +152,7 @@ defmodule Lightning.MixProject do
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      {:tls_certificate_check, "~> 1.32"},
       philter_dep(),
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}

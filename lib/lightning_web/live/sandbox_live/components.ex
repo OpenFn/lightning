@@ -703,16 +703,6 @@ defmodule LightningWeb.SandboxLive.Components do
       />
 
       <.action_button
-        id={"duplicate-sandbox-#{@sandbox.id}"}
-        icon_type="heroicon"
-        icon_name="hero-clipboard-document"
-        label="Duplicate (coming soon)"
-        disabled={true}
-        icon_class="text-slate-300"
-        button_class="cursor-not-allowed"
-      />
-
-      <.action_button
         id={"edit-sandbox-#{@sandbox.id}"}
         icon_type="heroicon"
         icon_name="hero-pencil-square"

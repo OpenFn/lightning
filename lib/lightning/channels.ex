@@ -13,6 +13,7 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Channels.PersistencePolicy
   alias Lightning.Channels.SearchParams
   alias Lightning.Config
   alias Lightning.Projects.Project
@@ -200,7 +201,9 @@ defmodule Lightning.Channels do
         %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
       end
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -224,7 +227,9 @@ defmodule Lightning.Channels do
         %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
       end
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
@@ -479,6 +484,63 @@ defmodule Lightning.Channels do
 
       :error ->
         nil
+    end
+  end
+
+  @doc """
+  Records a destination credential resolution failure as a `ChannelRequest` +
+  `ChannelEvent` pair, atomically.
+
+  The caller provides raw attribute maps for the request and event; this
+  function applies the project's zero-persistence policy before insert. When
+  the project's `retention_policy` is `:erase_all`, PII fields are dropped
+  from both maps and the request is marked `is_wiped: true`.
+
+  The event's `:channel_request_id` is set automatically from the inserted
+  request — callers should omit it.
+
+  Returns `:ok` either way: insert failures are logged but never propagate,
+  so callers can respond with the same HTTP status regardless of persistence
+  outcome.
+  """
+  @spec record_destination_credential_error(Channel.t(), map(), map()) :: :ok
+  def record_destination_credential_error(
+        %Channel{} = channel,
+        req_attrs,
+        event_attrs
+      ) do
+    persist? = PersistencePolicy.persist_observations?(channel.project_id)
+
+    req_attrs =
+      PersistencePolicy.wipe_request_attrs(req_attrs,
+        persist_observations: persist?
+      )
+
+    Multi.new()
+    |> Multi.insert(
+      :request,
+      ChannelRequest.changeset(%ChannelRequest{}, req_attrs)
+    )
+    |> Multi.insert(:event, fn %{request: request} ->
+      event_attrs =
+        event_attrs
+        |> Map.put(:channel_request_id, request.id)
+        |> PersistencePolicy.wipe_event_attrs(persist_observations: persist?)
+
+      ChannelEvent.changeset(%ChannelEvent{}, event_attrs)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} ->
+        :ok
+
+      {:error, _step, changeset, _changes} ->
+        Logger.warning(
+          "Failed to record credential error for channel #{channel.id}: " <>
+            "#{inspect(changeset.errors)}"
+        )
+
+        :ok
     end
   end
 end

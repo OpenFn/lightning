@@ -76,6 +76,71 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              ]
     end
 
+    test "returns a project with channels", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{name: "dest-cred", body: %{}, user_id: user.id},
+          project: project
+        )
+
+      %{id: channel_with_cred_id} =
+        channel_with_cred =
+        insert(:channel,
+          project: project,
+          name: "with-cred",
+          destination_url: "https://example.com/a",
+          enabled: true
+        )
+
+      insert(:channel_auth_method,
+        channel: channel_with_cred,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: project_credential
+      )
+
+      %{id: channel_without_cred_id} =
+        insert(:channel,
+          project: project,
+          name: "without-cred",
+          destination_url: "https://example.com/b",
+          enabled: false
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"channels" => channels_resp} = response["data"]
+
+      expected_pc_id = project_credential.id
+
+      assert [
+               %{
+                 "id" => ^channel_with_cred_id,
+                 "name" => "with-cred",
+                 "destination_url" => "https://example.com/a",
+                 "enabled" => true,
+                 "destination_credential_id" => ^expected_pc_id
+               },
+               %{
+                 "id" => ^channel_without_cred_id,
+                 "name" => "without-cred",
+                 "destination_url" => "https://example.com/b",
+                 "enabled" => false,
+                 "destination_credential_id" => nil
+               }
+             ] = channels_resp
+    end
+
     test "returns a non empty project without credentials", %{
       conn: conn,
       user: user

@@ -69,6 +69,8 @@ defmodule Lightning.ApolloClient do
     - `:context` - Job context including expression code and adaptor info (default: %{})
     - `:history` - Previous conversation messages for context (default: [])
     - `:meta` - Additional metadata like session IDs or user preferences (default: %{})
+    - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
+      on the Apollo side. Omitted from the wire payload when not supplied.
 
   ## Returns
 
@@ -82,15 +84,20 @@ defmodule Lightning.ApolloClient do
     context = Keyword.get(opts, :context, %{})
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
+    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
 
-    payload = %{
-      "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
-      "content" => content,
-      "context" => context,
-      "history" => history,
-      "meta" => meta,
-      "suggest_code" => true
-    }
+    payload =
+      %{
+        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+        "content" => content,
+        "context" => context,
+        "history" => history,
+        "meta" => meta,
+        "suggest_code" => true,
+        "metrics_opt_in" => metrics_opt_in
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
 
     client()
     |> Tesla.post("/services/job_chat", payload)
@@ -111,6 +118,8 @@ defmodule Lightning.ApolloClient do
     - `:errors` - Optional validation errors from previous workflow attempts
     - `:history` - Previous conversation messages for context (default: [])
     - `:meta` - Additional metadata (default: %{})
+    - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
+      on the Apollo side. Omitted from the wire payload when not supplied.
 
   ## Returns
 
@@ -125,6 +134,7 @@ defmodule Lightning.ApolloClient do
     errors = Keyword.get(opts, :errors)
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
+    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
 
     payload =
       %{
@@ -133,7 +143,8 @@ defmodule Lightning.ApolloClient do
         "existing_yaml" => code,
         "errors" => errors,
         "history" => history,
-        "meta" => meta
+        "meta" => meta,
+        "metrics_opt_in" => metrics_opt_in
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
       |> Enum.into(%{})
@@ -151,23 +162,34 @@ defmodule Lightning.ApolloClient do
   The stream emits Anthropic-formatted events (`content_block_delta`, etc.)
   followed by a final `complete` event containing the full response payload
   (same shape as the synchronous `job_chat/2` response).
+
+  ## Options
+
+  Accepts the same options as `job_chat/2`, including `:metrics_opt_in` which,
+  when supplied, enables Langfuse metrics tracking on the Apollo side. Omitted
+  from the wire payload when not supplied.
   """
   @spec job_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def job_chat_stream(content, opts \\ []) do
     context = Keyword.get(opts, :context, %{})
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
+    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
 
     payload =
-      Jason.encode!(%{
+      %{
         "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
         "content" => content,
         "context" => context,
         "history" => history,
         "meta" => meta,
         "suggest_code" => true,
-        "stream" => true
-      })
+        "stream" => true,
+        "metrics_opt_in" => metrics_opt_in
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+      |> Jason.encode!()
 
     stream_client()
     |> Tesla.post("/services/job_chat/stream", payload,
@@ -181,6 +203,12 @@ defmodule Lightning.ApolloClient do
 
   Same as `workflow_chat/2` but connects to Apollo's streaming endpoint.
   See `job_chat_stream/2` for details on the stream format.
+
+  ## Options
+
+  Accepts the same options as `workflow_chat/2`, including `:metrics_opt_in`
+  which, when supplied, enables Langfuse metrics tracking on the Apollo side.
+  Omitted from the wire payload when not supplied.
   """
   @spec workflow_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def workflow_chat_stream(content, opts \\ []) do
@@ -188,6 +216,7 @@ defmodule Lightning.ApolloClient do
     errors = Keyword.get(opts, :errors)
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
+    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
 
     payload =
       %{
@@ -197,7 +226,8 @@ defmodule Lightning.ApolloClient do
         "errors" => errors,
         "history" => history,
         "meta" => meta,
-        "stream" => true
+        "stream" => true,
+        "metrics_opt_in" => metrics_opt_in
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
       |> Enum.into(%{})
@@ -225,12 +255,18 @@ defmodule Lightning.ApolloClient do
     - `:workflow_yaml` - Full workflow YAML including job bodies (optional)
     - `:page` - Current page URL for routing (optional)
     - `:history` - Previous conversation messages (default: [])
+    - `:meta` - Optional metadata map (e.g. session IDs, Langfuse keys).
+      Omitted from the wire payload when not supplied.
+    - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
+      on the Apollo side. Omitted from the wire payload when not supplied.
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
     history = Keyword.get(opts, :history, [])
+    meta = Keyword.get(opts, :meta)
+    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
 
     payload =
       %{
@@ -239,6 +275,8 @@ defmodule Lightning.ApolloClient do
         "workflow_yaml" => workflow_yaml,
         "page" => page,
         "history" => history,
+        "meta" => meta,
+        "metrics_opt_in" => metrics_opt_in,
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
