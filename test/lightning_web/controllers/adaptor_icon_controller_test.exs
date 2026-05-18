@@ -12,14 +12,10 @@ defmodule LightningWeb.AdaptorIconControllerTest do
 
   setup :verify_on_exit!
 
-  setup do
-    start_supervised!(
-      {AdaptorsSupervisor,
-       name: Lightning.Adaptors, strategy: Lightning.Adaptors.StrategyMock}
-    )
-
-    :ok
-  end
+  # The production `Lightning.Adaptors.Supervisor` is started in
+  # `application.ex` under the name `Lightning.Adaptors` and — in test —
+  # uses `Lightning.Adaptors.StrategyMock` (see `config/test.exs`). No
+  # per-test supervisor start is needed.
 
   # ---------------------------------------------------------------------------
   # Helpers
@@ -458,6 +454,39 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       result = AdaptorIconController.show(conn, params)
 
       assert result.status == 404
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Full router pipeline — proves route + pipe + controller resolves.
+  # The matrix above already covers the controller's behaviour by direct call.
+  # ---------------------------------------------------------------------------
+
+  describe "GET /adaptors/icons/... (full router pipeline)" do
+    test "200 on sha match", %{conn: conn} do
+      name = unique_adaptor_name()
+      bytes = "router pipeline bytes"
+      sha256 = :crypto.hash(:sha256, bytes)
+      sha8 = sha256 |> binary_part(0, 4) |> Base.encode16(case: :lower)
+
+      insert_adaptor(name, %{
+        icon_square_ext: "png",
+        icon_square_sha256: sha256
+      })
+
+      write_icon(name, :square, "png", bytes)
+
+      encoded = URI.encode(name, &URI.char_unreserved?/1)
+      conn = get(conn, "/adaptors/icons/#{encoded}/square-#{sha8}.png")
+
+      assert conn.status == 200
+      assert conn.resp_body == bytes
+    end
+
+    test "404 on unknown adaptor", %{conn: conn} do
+      conn = get(conn, "/adaptors/icons/nope/square-aabbccdd.png")
+
+      assert conn.status == 404
     end
   end
 

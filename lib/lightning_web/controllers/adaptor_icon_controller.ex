@@ -53,7 +53,28 @@ defmodule LightningWeb.AdaptorIconController do
 
   @immutable_cache "public, max-age=31536000, immutable"
 
+  # Router-shaped params: a single `:filename` segment of the form
+  # `<shape>-<sha8>.<ext>` because Phoenix path matchers permit only one
+  # dynamic segment per path component. We split here and delegate to the
+  # 4-key clause below, which is also what the unit tests call directly.
+  @filename_regex ~r/\A(?<shape>[a-z]+)-(?<sha8>[A-Fa-f0-9]+)\.(?<ext>[A-Za-z0-9]+)\z/
+
   @doc false
+  def show(conn, %{"name" => name, "filename" => filename}) do
+    case Regex.named_captures(@filename_regex, filename) do
+      %{"shape" => shape, "sha8" => sha8, "ext" => ext} ->
+        show(conn, %{
+          "name" => name,
+          "shape" => shape,
+          "sha8" => sha8,
+          "ext" => ext
+        })
+
+      _ ->
+        send_resp(conn, 404, "")
+    end
+  end
+
   def show(
         conn,
         %{"name" => name, "shape" => shape, "sha8" => sha8, "ext" => ext}
