@@ -21,9 +21,7 @@ defmodule LightningWeb.ChannelProxyPlug do
   import Phoenix.Controller, only: [json: 2]
 
   alias Lightning.Channels
-  alias Lightning.Channels.ChannelEvent
-  alias Lightning.Channels.ChannelRequest
-  alias Lightning.Repo
+  alias Lightning.Channels.PersistencePolicy
   alias LightningWeb.Auth
 
   require Logger
@@ -201,7 +199,9 @@ defmodule LightningWeb.ChannelProxyPlug do
         request_path: req.forward_path,
         client_identity: req.client_identity,
         query_string: conn.query_string,
-        destination_credential_id: req.destination_credential_id
+        destination_credential_id: req.destination_credential_id,
+        persist_observations:
+          PersistencePolicy.persist_observations?(req.channel.project_id)
       }
       |> put_auth_method(matched_auth)
 
@@ -317,19 +317,36 @@ defmodule LightningWeb.ChannelProxyPlug do
 
     case Channels.get_or_create_current_snapshot(channel) do
       {:ok, snapshot} ->
-        req = %DestinationRequest{
-          channel: channel,
-          snapshot: snapshot,
+        now = DateTime.utc_now()
+
+        req_attrs = %{
+          channel_id: channel.id,
+          channel_snapshot_id: snapshot.id,
           request_id:
             conn
             |> Plug.Conn.get_resp_header("x-request-id")
             |> List.first(),
-          forward_path: conn.request_path,
           client_identity: get_client_identity(conn),
-          destination_credential_id: destination_credential_id(channel)
+          destination_credential_id: destination_credential_id(channel),
+          state: :error,
+          started_at: now,
+          completed_at: now
         }
 
-        record_credential_error(conn, req, error_message)
+        event_attrs = %{
+          type: :error,
+          request_method: conn.method,
+          request_path: conn.request_path,
+          error_message: error_message
+        }
+
+        Channels.record_destination_credential_error(
+          channel,
+          req_attrs,
+          event_attrs
+        )
+
+        error_response(conn, :bad_gateway, "Bad Gateway")
 
       {:error, _} ->
         Logger.error(
@@ -338,44 +355,6 @@ defmodule LightningWeb.ChannelProxyPlug do
 
         error_response(conn, :bad_gateway, "Bad Gateway")
     end
-  end
-
-  defp record_credential_error(conn, %DestinationRequest{} = req, error_message) do
-    now = DateTime.utc_now()
-
-    with {:ok, channel_request} <-
-           %ChannelRequest{}
-           |> ChannelRequest.changeset(%{
-             channel_id: req.channel.id,
-             channel_snapshot_id: req.snapshot.id,
-             request_id: req.request_id,
-             client_identity: req.client_identity,
-             destination_credential_id: req.destination_credential_id,
-             state: :error,
-             started_at: now,
-             completed_at: now
-           })
-           |> Repo.insert(),
-         {:ok, _event} <-
-           %ChannelEvent{}
-           |> ChannelEvent.changeset(%{
-             channel_request_id: channel_request.id,
-             type: :error,
-             request_method: conn.method,
-             request_path: conn.request_path,
-             error_message: error_message
-           })
-           |> Repo.insert() do
-      :ok
-    else
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to record credential error for channel #{req.channel.id}: " <>
-            "#{inspect(changeset.errors)}"
-        )
-    end
-
-    error_response(conn, :bad_gateway, "Bad Gateway")
   end
 
   defp error_response(conn, status, message) do

@@ -33,6 +33,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         state: Map.get(attrs, :state, :success),
         client_identity: Map.get(attrs, :client_identity, "192.168.1.1"),
         client_auth_type: Map.get(attrs, :client_auth_type, "api"),
+        is_wiped: Map.get(attrs, :is_wiped, false),
         started_at: Map.get(attrs, :started_at, ~U[2026-04-10 10:00:00.000000Z]),
         completed_at:
           Map.get(attrs, :completed_at, ~U[2026-04-10 10:00:00.350000Z])
@@ -449,6 +450,114 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       assert html =~ "binaryhash123"
       # Should NOT render a body preview <pre> block
       refute html =~ ~s({"status":"ok"})
+    end
+  end
+
+  describe "detail page — wiped (zero-persistence) event" do
+    setup [:register_and_log_in_user, :create_project_for_current_user]
+    setup :enable_experimental_features
+
+    @tag role: :admin
+    test "renders a single combined wiped viewer with channel-request copy",
+         %{conn: conn, project: project} do
+      {request, _channel, _snapshot} =
+        create_channel_request(project, is_wiped: true, client_identity: nil)
+
+      insert(:channel_event,
+        channel_request: request,
+        request_path: nil,
+        request_query_string: nil,
+        request_headers: nil,
+        request_body_preview: nil,
+        request_body_hash: nil,
+        response_headers: nil,
+        response_body_preview: nil,
+        response_body_hash: nil
+      )
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # One combined viewer replaces the side-by-side request/response cards.
+      assert html =~ ~s(id="payload-wiped-viewer")
+      assert html =~ "No Request/Response Data here!"
+      assert html =~ "Request/Response data for this channel request"
+
+      # Channel-flavoured policy link.
+      assert html =~ "for future requests"
+      # The "rerun this work order" copy is workflow-only and must not leak.
+      refute html =~ "rerun this work order"
+
+      # The Request and Response disclosure sections — and their size badges —
+      # are not rendered when the request is wiped.
+      refute html =~ ~s(id="request-section")
+      refute html =~ ~s(id="response-section")
+      refute html =~ ~s(id="req-headers-content")
+      refute html =~ ~s(id="req-body-content")
+      refute html =~ ~s(id="resp-headers-content")
+      refute html =~ ~s(id="resp-body-content")
+    end
+
+    @tag role: :editor
+    test "non-admin sees 'contact your admins' copy with admin email tooltip",
+         %{conn: conn, project: project} do
+      admin = insert(:user, email: "admin@example.com")
+      insert(:project_user, project: project, user: admin, role: :admin)
+
+      {request, _channel, _snapshot} =
+        create_channel_request(project, is_wiped: true, client_identity: nil)
+
+      insert(:channel_event,
+        channel_request: request,
+        request_path: nil,
+        request_query_string: nil,
+        request_headers: nil,
+        request_body_preview: nil,
+        request_body_hash: nil,
+        response_headers: nil,
+        response_body_preview: nil,
+        response_body_hash: nil
+      )
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      # The combined wiped viewer is rendered.
+      assert html =~ ~s(id="payload-wiped-viewer")
+
+      # The "can NOT edit data retention" branch is shown: the user sees the
+      # "contact your admins" copy and the tooltip carries admin emails.
+      assert html =~ "Contact one of your"
+      assert html =~ "project admins"
+
+      assert html =~
+               ~s(id="zero-persistence-admins-tooltip-payload-wiped-viewer")
+
+      assert html =~ ~s(aria-label="admin@example.com")
+
+      # The editable-branch copy ("change this policy for future requests")
+      # must not leak when the user can't edit the retention policy.
+      refute html =~ "for future requests"
+      refute html =~ ~s(href="/projects/#{project.id}/settings#data-storage")
+    end
+
+    test "does not render wiped viewer when channel_request.is_wiped is false",
+         %{conn: conn, project: project} do
+      {request, _channel, _snapshot} =
+        create_channel_request(project, is_wiped: false)
+
+      insert(:channel_event, channel_request: request)
+
+      {:ok, view, _html} = live(conn, detail_path(project, request))
+      html = render(view)
+
+      refute html =~ ~s(id="payload-wiped-viewer")
+      refute html =~ "data for this channel request has not been retained"
+
+      # Sub-sections render normally (the sub_section component emits an
+      # `id="<id>-content"` div).
+      assert html =~ ~s(id="req-headers-content")
+      assert html =~ ~s(id="resp-headers-content")
     end
   end
 

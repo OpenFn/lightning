@@ -2794,7 +2794,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      assert html =~
+               "The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?"
 
       # retain_all is the default
       assert ["checked"] ==
@@ -2823,7 +2825,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "heads-up-description"
 
       # 3 radio buttons descriptions
-      assert "Retain input/output data for all workflow runs" =
+      assert "Retain all input/output data" =
                view
                |> element(~s{label#[for="retain_all"]})
                |> render()
@@ -2890,7 +2892,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored." =
                view
                |> element("#heads-up-description")
                |> render()

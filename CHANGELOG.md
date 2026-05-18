@@ -39,6 +39,8 @@ and this project adheres to
   auth method and the destination project credential on every proxied request.
   Feature-gated behind experimental features.
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Do not persist channel request/response data when project has zero-persistence
+  enabled [#4622](https://github.com/OpenFn/lightning/issues/4622)
 - Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
   plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
   every `/channels/*` hit, tagged with
