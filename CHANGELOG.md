@@ -83,17 +83,11 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list is
   disabled (with the limiter's tooltip) when the active sandbox count is already
   at the limit.
-- Sandboxes no longer appear on a user's sandboxes list, in the global project
-  picker, or via the sandbox URL unless the user has a direct `project_users`
-  row on that sandbox (or is a support user and the sandbox's own
-  `allow_support_access` flag is on). Previously, a role on a parent project
-  would surface every sandbox underneath, even sandboxes the user was never
-  explicitly added to. Sandbox provisioning still seeds membership from the
-  parent at creation, so the team that creates a sandbox carries over; only the
-  cross-surface visibility is tightened. The merge confirmation modal now shows
-  a count of nested sandboxes that will also be retired instead of listing them
-  by name, which previously could expose names of descendants the current user
-  otherwise can't see. [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandboxes no longer appear in the sandboxes list, the project picker, or via
+  the sandbox URL unless the user is a direct member (or a support user with the
+  sandbox's own `allow_support_access` enabled). The merge confirmation modal
+  now shows a descendant count instead of naming them.
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
