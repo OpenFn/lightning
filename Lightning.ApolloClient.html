@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-2E0E7B32.js"></script>
+    <script defer src="dist/sidebar_items-8849314D.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -312,7 +312,7 @@ provide more targeted and relevant assistance.</p>
       <h1 class="signature" translate="no">global_chat_stream(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L230" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L264" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -330,7 +330,9 @@ provide more targeted and relevant assistance.</p>
 <p>Queries the Apollo global chat endpoint with SSE streaming.</p><p>The global chat endpoint unifies job and workflow assistance behind
 an internal router that uses the <code class="inline">page</code> field to determine context.
 Streaming events (text chunks, changes, status) are emitted as SSE,
-followed by a final <code class="inline">complete</code> event with the full response payload.</p><h2 id="global_chat_stream/2-parameters" class="section-heading"><a href="#global_chat_stream/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:workflow_yaml</code> - Full workflow YAML including job bodies (optional)</li><li><code class="inline">:page</code> - Current page URL for routing (optional)</li><li><code class="inline">:history</code> - Previous conversation messages (default: [])</li></ul></li></ul>
+followed by a final <code class="inline">complete</code> event with the full response payload.</p><h2 id="global_chat_stream/2-parameters" class="section-heading"><a href="#global_chat_stream/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:workflow_yaml</code> - Full workflow YAML including job bodies (optional)</li><li><code class="inline">:page</code> - Current page URL for routing (optional)</li><li><code class="inline">:history</code> - Previous conversation messages (default: [])</li><li><code class="inline">:meta</code> - Optional metadata map (e.g. session IDs, Langfuse keys).
+Omitted from the wire payload when not supplied.</li><li><code class="inline">:metrics_opt_in</code> - Optional boolean enabling Langfuse metrics tracking
+on the Apollo side. Omitted from the wire payload when not supplied.</li></ul></li></ul>
   </section>
 </section>
 <section class="detail" id="job_chat/2">
@@ -345,7 +347,7 @@ followed by a final <code class="inline">complete</code> event with the full res
       <h1 class="signature" translate="no">job_chat(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L83" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -362,7 +364,8 @@ followed by a final <code class="inline">complete</code> event with the full res
 
 <p>Requests AI assistance for job-specific coding tasks and debugging.</p><p>Sends user queries along with job context (expression code and adaptor) to the
 Apollo job_chat service. The AI provides targeted assistance for coding tasks,
-error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_chat/2-parameters" class="section-heading"><a href="#job_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request for assistance</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:context</code> - Job context including expression code and adaptor info (default: %{})</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata like session IDs or user preferences (default: %{})</li></ul></li></ul><h2 id="job_chat/2-returns" class="section-heading"><a href="#job_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;history&quot;</code> - Updated conversation including AI response</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li><li><code class="inline">&quot;meta&quot;</code> - Updated metadata</li></ul>
+error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_chat/2-parameters" class="section-heading"><a href="#job_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request for assistance</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:context</code> - Job context including expression code and adaptor info (default: %{})</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata like session IDs or user preferences (default: %{})</li><li><code class="inline">:metrics_opt_in</code> - Optional boolean enabling Langfuse metrics tracking
+on the Apollo side. Omitted from the wire payload when not supplied.</li></ul></li></ul><h2 id="job_chat/2-returns" class="section-heading"><a href="#job_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;history&quot;</code> - Updated conversation including AI response</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li><li><code class="inline">&quot;meta&quot;</code> - Updated metadata</li></ul>
   </section>
 </section>
 <section class="detail" id="job_chat_stream/2">
@@ -377,7 +380,7 @@ error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_c
       <h1 class="signature" translate="no">job_chat_stream(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L156" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L173" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -396,7 +399,9 @@ error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_c
 returning the response body as a lazy <a href="https://hexdocs.pm/elixir/Stream.html"><code class="inline">Stream</code></a> of parsed SSE data strings.
 Each element is a raw JSON string that must be decoded with <a href="https://hexdocs.pm/jason/1.4.5/Jason.html#decode!/1"><code class="inline">Jason.decode!/1</code></a>.</p><p>The stream emits Anthropic-formatted events (<code class="inline">content_block_delta</code>, etc.)
 followed by a final <code class="inline">complete</code> event containing the full response payload
-(same shape as the synchronous <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> response).</p>
+(same shape as the synchronous <a href="#job_chat/2"><code class="inline">job_chat/2</code></a> response).</p><h2 id="job_chat_stream/2-options" class="section-heading"><a href="#job_chat_stream/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><p>Accepts the same options as <a href="#job_chat/2"><code class="inline">job_chat/2</code></a>, including <code class="inline">:metrics_opt_in</code> which,
+when supplied, enables Langfuse metrics tracking on the Apollo side. Omitted
+from the wire payload when not supplied.</p>
   </section>
 </section>
 <section class="detail" id="test/0">
@@ -441,7 +446,7 @@ ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-r
       <h1 class="signature" translate="no">workflow_chat(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L132" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -458,7 +463,8 @@ ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-r
 
 <p>Generates or improves workflow templates using AI assistance.</p><p>Sends requests to the Apollo workflow_chat service to create complete workflow
 YAML definitions from natural language descriptions. Can also iteratively improve
-existing workflows based on validation errors or user feedback.</p><h2 id="workflow_chat/2-parameters" class="section-heading"><a href="#workflow_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - Natural language description of desired workflow functionality</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:code</code> - Optional existing workflow YAML to modify or improve</li><li><code class="inline">:errors</code> - Optional validation errors from previous workflow attempts</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata (default: %{})</li></ul></li></ul><h2 id="workflow_chat/2-returns" class="section-heading"><a href="#workflow_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;response&quot;</code> - Human-readable explanation of the generated workflow</li><li><code class="inline">&quot;response_yaml&quot;</code> - Complete workflow YAML definition</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li></ul>
+existing workflows based on validation errors or user feedback.</p><h2 id="workflow_chat/2-parameters" class="section-heading"><a href="#workflow_chat/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - Natural language description of desired workflow functionality</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:code</code> - Optional existing workflow YAML to modify or improve</li><li><code class="inline">:errors</code> - Optional validation errors from previous workflow attempts</li><li><code class="inline">:history</code> - Previous conversation messages for context (default: [])</li><li><code class="inline">:meta</code> - Additional metadata (default: %{})</li><li><code class="inline">:metrics_opt_in</code> - Optional boolean enabling Langfuse metrics tracking
+on the Apollo side. Omitted from the wire payload when not supplied.</li></ul></li></ul><h2 id="workflow_chat/2-returns" class="section-heading"><a href="#workflow_chat/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;response&quot;</code> - Human-readable explanation of the generated workflow</li><li><code class="inline">&quot;response_yaml&quot;</code> - Complete workflow YAML definition</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li></ul>
   </section>
 </section>
 <section class="detail" id="workflow_chat_stream/2">
@@ -473,7 +479,7 @@ existing workflows based on validation errors or user feedback.</p><h2 id="workf
       <h1 class="signature" translate="no">workflow_chat_stream(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L214" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -489,7 +495,9 @@ existing workflows based on validation errors or user feedback.</p><h2 id="workf
       </div>
 
 <p>Generates or improves workflow templates with SSE streaming.</p><p>Same as <a href="#workflow_chat/2"><code class="inline">workflow_chat/2</code></a> but connects to Apollo's streaming endpoint.
-See <a href="#job_chat_stream/2"><code class="inline">job_chat_stream/2</code></a> for details on the stream format.</p>
+See <a href="#job_chat_stream/2"><code class="inline">job_chat_stream/2</code></a> for details on the stream format.</p><h2 id="workflow_chat_stream/2-options" class="section-heading"><a href="#workflow_chat_stream/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><p>Accepts the same options as <a href="#workflow_chat/2"><code class="inline">workflow_chat/2</code></a>, including <code class="inline">:metrics_opt_in</code>
+which, when supplied, enables Langfuse metrics tracking on the Apollo side.
+Omitted from the wire payload when not supplied.</p>
   </section>
 </section>
 
