@@ -21,6 +21,15 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
   @debounce_ms 250
 
   @doc """
+  Leading-edge coalesce window in milliseconds.
+
+  Exposed so integration tests can compute receive timeouts off the
+  authoritative value rather than hard-coding a duplicate.
+  """
+  @spec debounce_ms() :: pos_integer()
+  def debounce_ms, do: @debounce_ms
+
+  @doc """
   Start the ChannelBroadcaster linked to the calling process.
 
   Required opts:

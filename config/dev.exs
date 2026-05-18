@@ -131,6 +131,18 @@ config :lightning, :is_resettable_demo, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
 
+# Lightning.Adaptors.NPM upstream URLs — explicit override for clarity in dev.
+# Each key is read by a single sub-module:
+#   * registry_url → NPM.Registry  (npm search + packument)
+#   * jsdelivr_url → NPM.Schema    (configuration-schema.json fetch)
+#   * github_url   → NPM.GitHub    (raw icon GETs)
+#   * github_ref   → NPM.GitHub    (git ref under OpenFn/adaptors)
+config :lightning, Lightning.Adaptors.NPM,
+  registry_url: "https://registry.npmjs.org",
+  github_url: "https://raw.githubusercontent.com",
+  github_ref: "main",
+  jsdelivr_url: "https://cdn.jsdelivr.net"
+
 config :git_hooks,
   # In local dev (with a real .git repo) we auto-install hooks.
   # In Docker builds the .git directory is not present (or incomplete),
