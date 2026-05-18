@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-D50E2806.js"></script>
+    <script defer src="dist/sidebar_items-2E0E7B32.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -533,6 +533,19 @@ channel's configuration, created when a request is proxied.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Philter handler that persists every proxied Channel request.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Channels.PersistencePolicy.html" translate="no">Lightning.Channels.PersistencePolicy</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Decides whether channel request/event payload fields are persisted, based on
+the project's <code class="inline">retention_policy</code>. PII fields are dropped from the attrs map
+before insert when <code class="inline">persist_observations?</code> is false, and the resulting
+<code class="inline">ChannelRequest</code> is marked <code class="inline">is_wiped: true</code> so the UI can render the
+wiped-payload affordance.</p></div>
 
 </div>
 <div class="summary-row">

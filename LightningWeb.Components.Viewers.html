@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-D50E2806.js"></script>
+    <script defer src="dist/sidebar_items-2E0E7B32.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -189,7 +189,7 @@ class will help with scrolling.</p></section>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#wiped_dataclip_viewer/1" data-no-tooltip="" translate="no">wiped_dataclip_viewer(assigns)</a>
+        <a href="#wiped_data_viewer/1" data-no-tooltip="" translate="no">wiped_data_viewer(assigns)</a>
 
       </div>
 
@@ -321,8 +321,8 @@ class will help with scrolling.</p></section>
 <p>Renders out a log line stream</p><p>Internally it uses the <code class="inline">LogLineHighlight</code> hook to highlight the log line
 with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading"><a href="#log_viewer/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="6457520081-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="6457520081-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="6457520081-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="6457520081-2">}</span><span class="w">
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="8802340148-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="8802340148-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="8802340148-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="8802340148-2">}</span><span class="w">
 </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading"><a href="#log_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">logs_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">selected_step_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) - for checking log filter preference. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
@@ -348,17 +348,17 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
 <h2 id="step_dataclip_viewer/1-attributes" class="section-heading"><a href="#step_dataclip_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<a href="Lightning.Invocation.Dataclip.html"><code class="inline">Lightning.Invocation.Dataclip</code></a>)</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul>
   </section>
 </section>
-<section class="detail" id="wiped_dataclip_viewer/1">
+<section class="detail" id="wiped_data_viewer/1">
 
   <div class="detail-header">
-    <a href="#wiped_dataclip_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#wiped_data_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">wiped_dataclip_viewer(assigns)</h1>
+      <h1 class="signature" translate="no">wiped_data_viewer(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L310" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -367,7 +367,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
 
   <section class="docstring">
 
-<h2 id="wiped_dataclip_viewer/1-attributes" class="section-heading"><a href="#wiped_dataclip_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul><h2 id="wiped_dataclip_viewer/1-slots" class="section-heading"><a href="#wiped_dataclip_viewer/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">footer</code></li></ul>
+<h2 id="wiped_data_viewer/1-attributes" class="section-heading"><a href="#wiped_data_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">data_label</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, <code class="inline">:output</code>, or <code class="inline">:request_response</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul><h2 id="wiped_data_viewer/1-slots" class="section-heading"><a href="#wiped_data_viewer/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">footer</code></li></ul>
   </section>
 </section>
 
