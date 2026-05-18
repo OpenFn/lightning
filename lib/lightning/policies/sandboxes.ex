@@ -48,7 +48,12 @@ defmodule Lightning.Policies.Sandboxes do
   the sandbox under.
 
   ### `:merge_sandbox`
-  User must be editor/admin/owner on the target project.
+  This check authorises the **target side** of a merge: the user must be
+  editor/admin/owner on the target project (the project being merged
+  *into*). The merge flow also requires admin/owner on the **source
+  sandbox** itself, enforced by `check_manage_permissions/3` (button
+  gate) and by the post-merge cleanup, which calls `:delete_sandbox`
+  to retire the source and so requires admin/owner there.
 
   ## Parameters
   - `action` - The action being attempted
