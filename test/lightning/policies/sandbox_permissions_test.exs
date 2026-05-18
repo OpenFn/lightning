@@ -437,7 +437,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == true
       end
     end
 
@@ -453,7 +453,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == true
       end
     end
 
@@ -474,7 +474,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == true
       end
     end
 
@@ -491,9 +491,9 @@ defmodule Lightning.Policies.SandboxesTest do
 
       for sandbox <- sandboxes do
         if sandbox.id == owned_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == true
         else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == false
         end
       end
     end
@@ -511,9 +511,9 @@ defmodule Lightning.Policies.SandboxesTest do
 
       for sandbox <- sandboxes do
         if sandbox.id == admin_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == true
         else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == false
         end
       end
     end
@@ -529,8 +529,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
 
@@ -551,8 +550,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
   end
@@ -635,8 +633,7 @@ defmodule Lightning.Policies.SandboxesTest do
       # Editor on root, editor on sandbox: no manage rights without admin/owner
       # on the sandbox itself (or root cascade).
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
   end
