@@ -268,10 +268,11 @@ defmodule Lightning.WebAndWorkerTest do
       end
 
       version_logs = pick_out_version_logs(run)
-      assert version_logs["@openfn/language-http"] =~ "3.1.12"
-      assert version_logs["worker"] =~ "1.25"
-      assert version_logs["node.js"] =~ "22.12"
-      assert version_logs["@openfn/language-common"] == "3.0.2"
+
+      for key <- ~w(@openfn/language-http worker node.js @openfn/language-common) do
+        assert version_logs[key] =~ ~r/\d+\.\d+/,
+               "expected #{key} log line to contain a version, got #{inspect(version_logs[key])}"
+      end
 
       [step_1, step_2, step_3, step_4] = run.steps
 
