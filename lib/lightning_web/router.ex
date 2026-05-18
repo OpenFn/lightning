@@ -229,6 +229,8 @@ defmodule LightningWeb.Router do
 
       live "/settings/audit", AuditLive.Index, :index
 
+      live "/settings/maintenance", MaintenanceLive.Index, :index
+
       live "/settings/authentication", AuthProvidersLive.Index, :edit
       live "/settings/authentication/new", AuthProvidersLive.Index, :new
 
