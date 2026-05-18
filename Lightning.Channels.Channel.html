@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8849314D.js"></script>
+    <script defer src="dist/sidebar_items-CAF03E7A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -151,6 +151,16 @@ requests from a client endpoint to a destination URL.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#validate/1" data-no-tooltip="" translate="no">validate(changeset)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Shared validation rules for a channel changeset.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -193,6 +203,7 @@ requests from a client endpoint to a destination URL.</p>
   channel_snapshots: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   client_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   client_webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   destination_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   destination_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   destination_url: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
@@ -234,7 +245,7 @@ requests from a client endpoint to a destination URL.</p>
       <h1 class="signature" translate="no">changeset(channel, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L51" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L52" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -244,6 +255,30 @@ requests from a client endpoint to a destination URL.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="validate/1">
+
+  <div class="detail-header">
+    <a href="#validate/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate(changeset)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/channel.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Shared validation rules for a channel changeset.</p><p>Used by <a href="#changeset/2"><code class="inline">changeset/2</code></a> and by callers (such as the provisioner) that
+build a channel changeset with a different shape of input fields but
+need the same business-rule validations.</p>
   </section>
 </section>
 

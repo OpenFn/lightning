@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8849314D.js"></script>
+    <script defer src="dist/sidebar_items-CAF03E7A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -143,7 +143,7 @@ ahead of time in the case of new records.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#parse_document/2" data-no-tooltip="" translate="no">parse_document(project, data)</a>
+        <a href="#parse_document/3" data-no-tooltip="" translate="no">parse_document(project, data, user_or_repo_connection \\ nil)</a>
 
       </div>
 
@@ -195,7 +195,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">import_document(project, user_or_repo_connection, data, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L70" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -230,17 +230,19 @@ collection name sync) are composed around this call in
 merge operations where concurrent modifications are expected). Defaults to false.</li></ul>
   </section>
 </section>
-<section class="detail" id="parse_document/2">
+<section class="detail" id="parse_document/3">
+
+    <span id="parse_document/2"></span>
 
   <div class="detail-header">
-    <a href="#parse_document/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#parse_document/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">parse_document(project, data)</h1>
+      <h1 class="signature" translate="no">parse_document(project, data, user_or_repo_connection \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L255" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L313" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -251,8 +253,13 @@ merge operations where concurrent modifications are expected). Defaults to false
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> parse_document(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())</pre>
+          <pre translate="no"><span class="attribute">@spec</span> parse_document(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
+  | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>()
+  | nil
+) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())</pre>
 
       </div>
 
@@ -271,7 +278,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">preload_dependencies(project, snapshots \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L398" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L473" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -302,7 +309,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">validate_extraneous_params(changeset, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L600" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L780" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

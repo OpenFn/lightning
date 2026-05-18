@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8849314D.js"></script>
+    <script defer src="dist/sidebar_items-CAF03E7A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,7 +112,7 @@ Lightning
 
     <section id="moduledoc">
 <p>Audit trail for channel CRUD and auth method changes.</p><p>Provides <a href="#event/5"><code class="inline">event/5</code></a> (via <a href="Lightning.Auditing.Audit.html"><code class="inline">Lightning.Auditing.Audit</code></a>) for basic CRUD events,
-plus <a href="#audit_auth_method_changes/3"><code class="inline">audit_auth_method_changes/3</code></a> which derives fine-grained audit events
+plus <a href="#audit_auth_method_changes/4"><code class="inline">audit_auth_method_changes/4</code></a> which derives fine-grained audit events
 for client and destination auth method additions, removals, and swaps.</p>
     </section>
 
@@ -132,7 +132,7 @@ for client and destination auth method additions, removals, and swaps.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#audit_auth_method_changes/3" data-no-tooltip="" translate="no">audit_auth_method_changes(multi, changeset, actor)</a>
+        <a href="#audit_auth_method_changes/4" data-no-tooltip="" translate="no">audit_auth_method_changes(multi, channel, changeset, actor)</a>
 
       </div>
 
@@ -188,17 +188,17 @@ for client and destination auth method additions, removals, and swaps.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="audit_auth_method_changes/3">
+<section class="detail" id="audit_auth_method_changes/4">
 
   <div class="detail-header">
-    <a href="#audit_auth_method_changes/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#audit_auth_method_changes/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">audit_auth_method_changes(multi, changeset, actor)</h1>
+      <h1 class="signature" translate="no">audit_auth_method_changes(multi, channel, changeset, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/channels/audit.ex#L34" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -209,7 +209,8 @@ for client and destination auth method additions, removals, and swaps.</p>
 
 <p>Appends audit events for auth method changes to the given Multi.</p><p>Inspects the changeset for changes to <code class="inline">:client_auth_methods</code> and
 <code class="inline">:destination_auth_method</code>, emitting the appropriate added/removed/changed
-events. No-op when no auth method changes are present.</p>
+events. No-op when no auth method changes are present.</p><p>Step keys are unique per call, so the helper can be composed into a larger Multi any number of
+times — e.g. once per channel when batching audits across channels.</p>
   </section>
 </section>
 <section class="detail" id="base_query/0">
