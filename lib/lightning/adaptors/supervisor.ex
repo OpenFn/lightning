@@ -16,6 +16,14 @@ defmodule Lightning.Adaptors.Supervisor do
   `async: true` tests. Production starts exactly one instance under
   `name: Lightning.Adaptors`.
 
+  ## Cluster-singleton Scheduler
+
+  The `Lightning.Adaptors.Scheduler` is wrapped in `HighlanderPG`
+  (`pg_try_advisory_lock` on `lock_key/1`) so exactly one node in a
+  multi-node deployment runs the refresh tick. The inner Scheduler
+  registers under `{:global, global_scheduler_name(name)}`; callers on
+  any node hit the leader transparently via Erlang distribution.
+
   ## Strategy injection
 
   The active `Lightning.Adaptors.Strategy` implementation is passed in
@@ -46,6 +54,10 @@ defmodule Lightning.Adaptors.Supervisor do
 
     * `:strategy` — `Lightning.Adaptors.Strategy` implementation.
       Defaults to `Lightning.Adaptors.Config.strategy/0`.
+
+    * `:lock_key` — explicit `HighlanderPG` advisory-lock key. Defaults
+      to `lock_key(name)`. Override only in integration tests where
+      multiple supervisor instances must compete for the same lock.
   """
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(opts) do
@@ -57,6 +69,7 @@ defmodule Lightning.Adaptors.Supervisor do
   def init(opts) do
     name = Keyword.fetch!(opts, :name)
     strategy = Keyword.get(opts, :strategy, Config.strategy())
+    lock_key = Keyword.get(opts, :lock_key, lock_key(name))
 
     :persistent_term.put(meta_key(name), %{
       strategy: strategy,
@@ -68,14 +81,25 @@ defmodule Lightning.Adaptors.Supervisor do
     source_topic = source_topic(name)
     client_topic = client_topic(name)
 
+    scheduler_child =
+      %{
+        id: Lightning.Adaptors.Scheduler,
+        start:
+          {Lightning.Adaptors.Scheduler, :start_link,
+           [
+             [
+               name: global_scheduler_name(name),
+               sup: name,
+               lock_key: lock_key,
+               cache: cache,
+               tasks: tasks,
+               source_topic: source_topic
+             ]
+           ]}
+      }
+
     children = [
       {Cachex, name: cache},
-      # One-shot clear immediately after Cachex starts (§6.5a). Sits
-      # under :rest_for_one so a Cachex restart also re-runs this.
-      Supervisor.child_spec({Task, fn -> Cachex.clear(cache) end},
-        id: Module.concat(name, CacheClear),
-        restart: :transient
-      ),
       {Task.Supervisor, name: tasks},
       {Lightning.Adaptors.Invalidator,
        name: invalidator_name(name), source_topic: source_topic, cache: cache},
@@ -85,13 +109,14 @@ defmodule Lightning.Adaptors.Supervisor do
        source_topic: source_topic,
        client_topic: client_topic,
        sup: name},
-      {Lightning.Adaptors.Scheduler,
-       name: scheduler_name(name),
-       sup: name,
-       lock_key: lock_key(name),
-       cache: cache,
-       tasks: tasks,
-       source_topic: source_topic}
+      Supervisor.child_spec(
+        {HighlanderPG,
+         child: scheduler_child,
+         repo: Lightning.Repo,
+         name: lock_key,
+         sup_name: highlander_name(name)},
+        id: highlander_name(name)
+      )
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)
@@ -150,9 +175,34 @@ defmodule Lightning.Adaptors.Supervisor do
   @spec node_monitor_name(atom()) :: atom()
   def node_monitor_name(name), do: Module.concat(name, NodeMonitor)
 
-  @doc "`Scheduler` GenServer name for the supervisor named `name`."
+  @doc """
+  Local `Scheduler` GenServer name for the supervisor named `name`.
+
+  The inner Scheduler is actually registered globally — see
+  `global_scheduler_name/1`. This atom form is retained as the
+  child-spec `id` and for derived module names.
+  """
   @spec scheduler_name(atom()) :: atom()
   def scheduler_name(name), do: Module.concat(name, Scheduler)
+
+  @doc """
+  `:global`-registered Scheduler name for the supervisor named `name`.
+
+  The HighlanderPG-wrapped Scheduler registers itself under this name so
+  callers on any node reach the leader via Erlang distribution. Pass the
+  return value to `GenServer.call/3` directly.
+  """
+  @spec global_scheduler_name(atom()) :: {:global, atom()}
+  def global_scheduler_name(name), do: {:global, scheduler_name(name)}
+
+  @doc """
+  `HighlanderPG` supervisor name for the supervisor named `name`.
+
+  Used as the child-spec id and the `:sup_name` for introspection
+  (`HighlanderPG.which_children/1`, etc.).
+  """
+  @spec highlander_name(atom()) :: atom()
+  def highlander_name(name), do: Module.concat(name, HighlanderPG)
 
   @doc """
   Source-side PubSub topic for the supervisor named `name`.
@@ -178,7 +228,9 @@ defmodule Lightning.Adaptors.Supervisor do
   Derived as `:erlang.phash2({:adaptors, name})` so each supervisor
   instance leases its `HighlanderPG`-wrapped `Scheduler` against a
   distinct `int4` key — two concurrent test supervisors with different
-  names cannot collide on advisory locks.
+  names cannot collide on advisory locks. The §12.7 integration test
+  overrides `:lock_key` on `start_link/1` to force two supervisors to
+  compete for the same lock.
   """
   @spec lock_key(atom()) :: non_neg_integer()
   def lock_key(name), do: :erlang.phash2({:adaptors, name})

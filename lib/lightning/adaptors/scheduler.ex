@@ -4,9 +4,13 @@ defmodule Lightning.Adaptors.Scheduler do
   source's ledger via the configured strategy, persists through
   `Lightning.Adaptors.Repo`, and broadcasts `{:changed, name, source}`.
 
-  Wrapped by `HighlanderPG` in production so only one node in the cluster
-  runs the scheduler at a time. Peer nodes react via
-  `Lightning.Adaptors.Invalidator` and `Lightning.Adaptors.ChannelBroadcaster`.
+  Wrapped by `HighlanderPG` so only one node in the cluster runs the
+  Scheduler at a time. The inner GenServer registers under
+  `{:global, Lightning.Adaptors.Supervisor.global_scheduler_name(name)}`,
+  so callers on any node reach the leader transparently via Erlang
+  distribution. Peer nodes react to refreshes via
+  `Lightning.Adaptors.Invalidator` and
+  `Lightning.Adaptors.ChannelBroadcaster`.
 
   Smart-init timing: the first tick is scheduled at
   `max(0, last_checked_at + interval - now)` to avoid double-refreshing
@@ -61,12 +65,11 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   @doc """
-  Trigger an immediate refresh tick on the leader node.
+  Trigger an immediate refresh tick.
 
-  Returns `{:error, :not_leader}` when HighlanderPG routes to a
-  non-leader (returned by the HighlanderPG wrapper, not this GenServer).
+  Routes via `:global` to the leader-held GenServer.
   """
-  @spec refresh_now(atom()) :: :ok | {:error, :not_leader}
+  @spec refresh_now(GenServer.server()) :: :ok | {:error, term()}
   def refresh_now(scheduler_name) do
     GenServer.call(scheduler_name, :refresh_now)
   end
@@ -74,11 +77,11 @@ defmodule Lightning.Adaptors.Scheduler do
   @doc """
   Force a single-adaptor refresh, bypassing the diff. 30-second timeout.
 
-  Returns `{:error, :not_leader}` from HighlanderPG on non-leaders;
-  `{:error, :not_found}` or `{:error, term()}` from a failed strategy fetch.
+  Returns `{:error, :not_found}` or `{:error, term()}` from a failed
+  strategy fetch.
   """
-  @spec refresh_package(atom(), String.t()) ::
-          :ok | {:error, :not_leader | :not_found | term()}
+  @spec refresh_package(GenServer.server(), String.t()) ::
+          :ok | {:error, :not_found | term()}
   def refresh_package(scheduler_name, name) do
     GenServer.call(scheduler_name, {:refresh_package, name}, 30_000)
   end

@@ -135,20 +135,44 @@ defmodule Lightning.Adaptors.SupervisorTest do
   end
 
   describe "init/1 (child spec list)" do
-    # The Supervisor's children (`Invalidator`, `ChannelBroadcaster`,
-    # `NodeMonitor`, `Scheduler`) and the `HighlanderPG` dep are
-    # authored by sibling PRDs in later batches. Until they exist, we
-    # cannot call `init/1` directly — `Supervisor.init/2` normalises
-    # `{Module, opts}` child specs by calling `Module.child_spec/1`
-    # against each, which would crash on the missing modules.
-    #
-    # The shape of the child list is exercised end-to-end by the §12.7
-    # integration tests once all sibling modules land.
+    # End-to-end boot (Cachex / Task.Supervisor / Invalidator /
+    # NodeMonitor / ChannelBroadcaster / HighlanderPG-wrapped Scheduler)
+    # is covered by `Lightning.Adaptors.SupervisorIntegrationTest`,
+    # which needs `Lightning.DataCase` and a real Postgres connection
+    # (HighlanderPG opens its own dedicated connection on `Lightning.Repo`).
 
     test "init/1 requires the :name opt" do
       assert_raise KeyError, ~r/key :name not found/, fn ->
         AdaptorsSupervisor.init([])
       end
+    end
+  end
+
+  describe "derived names for HighlanderPG-wrapped Scheduler" do
+    test "global_scheduler_name/1 returns the {:global, atom()} pair" do
+      assert AdaptorsSupervisor.global_scheduler_name(Lightning.Adaptors) ==
+               {:global, Lightning.Adaptors.Scheduler}
+    end
+
+    test "global_scheduler_name/1 differs between instances" do
+      a = :"AdaptorsA_#{System.unique_integer([:positive])}"
+      b = :"AdaptorsB_#{System.unique_integer([:positive])}"
+
+      assert AdaptorsSupervisor.global_scheduler_name(a) !=
+               AdaptorsSupervisor.global_scheduler_name(b)
+    end
+
+    test "highlander_name/1 concatenates `HighlanderPG`" do
+      assert AdaptorsSupervisor.highlander_name(Lightning.Adaptors) ==
+               Lightning.Adaptors.HighlanderPG
+    end
+
+    test "highlander_name/1 differs between instances" do
+      a = :"AdaptorsA_#{System.unique_integer([:positive])}"
+      b = :"AdaptorsB_#{System.unique_integer([:positive])}"
+
+      assert AdaptorsSupervisor.highlander_name(a) !=
+               AdaptorsSupervisor.highlander_name(b)
     end
   end
 end

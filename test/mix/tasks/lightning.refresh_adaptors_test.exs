@@ -20,20 +20,11 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
       assert_received {:mix_shell, :info, [_]}
     end
 
-    test "exits 1 on {:error, :not_leader}" do
-      stub(Lightning.Adaptors, :refresh_now, fn -> {:error, :not_leader} end)
-
-      assert catch_exit(Mix.Tasks.Lightning.RefreshAdaptors.run([])) ==
-               {:shutdown, 1}
-
-      assert_received {:mix_shell, :error, [_]}
-    end
-
-    test "exits 3 on other error" do
+    test "exits 2 on other error" do
       stub(Lightning.Adaptors, :refresh_now, fn -> {:error, :network_down} end)
 
       assert catch_exit(Mix.Tasks.Lightning.RefreshAdaptors.run([])) ==
-               {:shutdown, 3}
+               {:shutdown, 2}
 
       assert_received {:mix_shell, :error, [_]}
     end
@@ -47,24 +38,9 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
       assert_received {:mix_shell, :info, [_]}
     end
 
-    test "exits 2 on {:error, :not_found}" do
+    test "exits 1 on {:error, :not_found}" do
       stub(Lightning.Adaptors, :refresh_package, fn _pkg ->
         {:error, :not_found}
-      end)
-
-      assert catch_exit(
-               Mix.Tasks.Lightning.RefreshAdaptors.run([
-                 "--name",
-                 "@openfn/language-http"
-               ])
-             ) == {:shutdown, 2}
-
-      assert_received {:mix_shell, :error, [_]}
-    end
-
-    test "exits 1 on {:error, :not_leader}" do
-      stub(Lightning.Adaptors, :refresh_package, fn _pkg ->
-        {:error, :not_leader}
       end)
 
       assert catch_exit(
@@ -77,7 +53,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
       assert_received {:mix_shell, :error, [_]}
     end
 
-    test "exits 3 on other error" do
+    test "exits 2 on other error" do
       stub(Lightning.Adaptors, :refresh_package, fn _pkg ->
         {:error, :timeout}
       end)
@@ -87,7 +63,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
                  "--name",
                  "@openfn/language-http"
                ])
-             ) == {:shutdown, 3}
+             ) == {:shutdown, 2}
 
       assert_received {:mix_shell, :error, [_]}
     end

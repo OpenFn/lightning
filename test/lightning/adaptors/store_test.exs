@@ -384,17 +384,15 @@ defmodule Lightning.Adaptors.StoreTest do
           )
         )
 
-      expect(
-        Lightning.Adaptors.StrategyMock,
-        :fetch_icon,
-        fn ^name_a, :square -> {:ok, %{data: "A_BYTES", ext: "png"}} end
-      )
-
-      expect(
-        Lightning.Adaptors.StrategyMock,
-        :fetch_icon,
-        fn ^name_b, :square -> {:ok, %{data: "B_BYTES", ext: "png"}} end
-      )
+      # Single multi-clause expectation with count: 2 — Mox routes by
+      # pattern within one slot, so the two parallel courier calls can
+      # arrive in either order. Two separate `expect/3` calls would
+      # queue FIFO and crash with FunctionClauseError when the task
+      # arrival order doesn't match the expectation insertion order.
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 2, fn
+        ^name_a, :square -> {:ok, %{data: "A_BYTES", ext: "png"}}
+        ^name_b, :square -> {:ok, %{data: "B_BYTES", ext: "png"}}
+      end)
 
       t_a =
         Task.async(fn ->

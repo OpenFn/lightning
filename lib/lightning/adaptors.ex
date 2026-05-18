@@ -62,20 +62,24 @@ defmodule Lightning.Adaptors do
 
   def resolve_version(_name, version), do: {:ok, version}
 
-  @spec refresh_now() :: :ok | {:error, :not_leader}
+  @spec refresh_now() :: :ok | {:error, term()}
   def refresh_now, do: refresh_now(@sup)
 
-  @spec refresh_now(atom()) :: :ok | {:error, :not_leader}
+  @spec refresh_now(atom()) :: :ok | {:error, term()}
   def refresh_now(sup),
-    do: Scheduler.refresh_now(AdaptorsSupervisor.scheduler_name(sup))
+    do: Scheduler.refresh_now(AdaptorsSupervisor.global_scheduler_name(sup))
 
-  @spec refresh_package(String.t()) :: :ok | {:error, :not_leader | term()}
+  @spec refresh_package(String.t()) :: :ok | {:error, :not_found | term()}
   def refresh_package(name) when is_binary(name), do: refresh_package(@sup, name)
 
   @spec refresh_package(atom(), String.t()) ::
-          :ok | {:error, :not_leader | term()}
+          :ok | {:error, :not_found | term()}
   def refresh_package(sup, name) when is_binary(name),
-    do: Scheduler.refresh_package(AdaptorsSupervisor.scheduler_name(sup), name)
+    do:
+      Scheduler.refresh_package(
+        AdaptorsSupervisor.global_scheduler_name(sup),
+        name
+      )
 
   @doc false
   def icon_meta(name), do: icon_meta(@sup, name)

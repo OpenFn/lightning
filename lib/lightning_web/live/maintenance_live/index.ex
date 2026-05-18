@@ -37,8 +37,8 @@ defmodule LightningWeb.MaintenanceLive.Index do
           :ok ->
             put_flash(socket, :info, "Adaptor refresh queued.")
 
-          {:error, :not_leader} ->
-            put_flash(socket, :error, "Refresh must run on the leader node.")
+          {:error, reason} ->
+            put_flash(socket, :error, "Refresh failed: #{inspect(reason)}")
         end
 
       {:noreply, socket}

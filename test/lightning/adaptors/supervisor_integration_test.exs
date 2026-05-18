@@ -9,32 +9,51 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
 
   use Lightning.DataCase, async: false
 
+  import Eventually
+
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   # Children with their *registered* names. We look up live PIDs by name
   # (Process.whereis/1) rather than by child id from which_children/1,
   # because module-based child specs share child ids like `Cachex` or
   # `Lightning.Adaptors.Invalidator` — those don't carry the per-instance
-  # name we derive in the Supervisor.
-  defp named_children(sup) do
+  # name we derive in the Supervisor. The Scheduler is registered via
+  # `:global` (HighlanderPG-wrapped) so it needs a `:global.whereis_name/1`
+  # lookup instead.
+  defp local_named_children(sup) do
     %{
       cache: AdaptorsSupervisor.cache_name(sup),
       tasks: AdaptorsSupervisor.tasks_name(sup),
       invalidator: AdaptorsSupervisor.invalidator_name(sup),
       node_monitor: AdaptorsSupervisor.node_monitor_name(sup),
-      broadcaster: AdaptorsSupervisor.channel_broadcaster_name(sup),
-      scheduler: AdaptorsSupervisor.scheduler_name(sup)
+      broadcaster: AdaptorsSupervisor.channel_broadcaster_name(sup)
     }
   end
 
-  defp pids_by_role(sup) do
-    sup
-    |> named_children()
-    |> Enum.map(fn {role, registered_name} ->
-      {role, Process.whereis(registered_name)}
-    end)
-    |> Map.new()
+  defp scheduler_pid(sup) do
+    {:global, global_name} = AdaptorsSupervisor.global_scheduler_name(sup)
+
+    case :global.whereis_name(global_name) do
+      :undefined -> nil
+      pid -> pid
+    end
   end
+
+  defp pids_by_role(sup) do
+    locals =
+      sup
+      |> local_named_children()
+      |> Enum.map(fn {role, registered_name} ->
+        {role, Process.whereis(registered_name)}
+      end)
+      |> Map.new()
+
+    Map.put(locals, :scheduler, scheduler_pid(sup))
+  end
+
+  # HighlanderPG polls every 300ms by default; allow ~3s for the
+  # wrapped child to acquire the advisory lock and register globally.
+  @scheduler_wait_ms 3_000
 
   setup do
     sup = :"test_full_boot_#{System.unique_integer([:positive])}"
@@ -52,30 +71,32 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
 
       children = Supervisor.which_children(pid)
 
-      # Cachex + CacheClear Task + Task.Supervisor + Invalidator +
-      # NodeMonitor + ChannelBroadcaster + Scheduler = 7.
-      assert length(children) == 7
+      # Cachex + Task.Supervisor + Invalidator + NodeMonitor +
+      # ChannelBroadcaster + HighlanderPG(Scheduler) = 6.
+      assert length(children) == 6
+
+      ids = Enum.map(children, fn {id, _pid, _type, _mods} -> id end)
+      assert AdaptorsSupervisor.highlander_name(sup) in ids
 
       Enum.each(children, fn {_id, child_pid, _type, _mods} ->
-        # CacheClear is restart: :transient and may have already exited
-        # cleanly by the time which_children/1 runs — that surfaces as
-        # :undefined here, which is healthy.
-        assert is_pid(child_pid) or child_pid == :undefined,
+        assert is_pid(child_pid),
                "unexpected child pid shape: #{inspect(child_pid)}"
 
-        if is_pid(child_pid) do
-          assert Process.alive?(child_pid),
-                 "child pid #{inspect(child_pid)} is not alive"
-        end
+        assert Process.alive?(child_pid),
+               "child pid #{inspect(child_pid)} is not alive"
       end)
 
-      # Every long-lived registered child is up under its derived name.
-      pids = pids_by_role(sup)
-
-      Enum.each(pids, fn {role, role_pid} ->
-        assert is_pid(role_pid), "expected #{role} to be registered and alive"
-        assert Process.alive?(role_pid)
+      # Locally-registered children are up under their derived names.
+      Enum.each(local_named_children(sup), fn {role, registered_name} ->
+        pid = Process.whereis(registered_name)
+        assert is_pid(pid), "expected #{role} to be registered and alive"
+        assert Process.alive?(pid)
       end)
+
+      # The HighlanderPG-wrapped Scheduler registers globally once it
+      # acquires the advisory lock — give it up to ~3s to do so.
+      assert_eventually(is_pid(scheduler_pid(sup)), @scheduler_wait_ms)
+      assert Process.alive?(scheduler_pid(sup))
     end
 
     test "exposes the per-instance strategy and source via :persistent_term",
@@ -95,6 +116,10 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
       start_supervised!(
         {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.Local}
       )
+
+      # Block until the HighlanderPG-wrapped Scheduler has registered
+      # globally so we have a baseline pid to compare against.
+      assert_eventually(is_pid(scheduler_pid(sup)), @scheduler_wait_ms)
 
       before = pids_by_role(sup)
 
@@ -128,7 +153,10 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
 
   # Polls `pids_by_role/1` until the children we expect to be restarted
   # show new PIDs, or we hit the deadline. Returns the post-restart map.
-  defp wait_for_restart(sup, before, deadline_ms \\ 1_000) do
+  # The Scheduler restart goes through HighlanderPG (lock + poll cycle),
+  # so allow a slightly longer deadline than for the locally-registered
+  # children alone.
+  defp wait_for_restart(sup, before, deadline_ms \\ 3_000) do
     start = System.monotonic_time(:millisecond)
     roles_expected = [:invalidator, :broadcaster, :scheduler]
     do_wait_for_restart(sup, before, roles_expected, start, deadline_ms)

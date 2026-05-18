@@ -66,14 +66,17 @@ defmodule Lightning.AdaptorsTest do
       Keyword.put(original_env, :refresh_interval, 99_999_999)
     )
 
-    # Stop the supervisor's auto-started Scheduler so we can start a
-    # replacement under the controlled interval without name collision.
-    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Scheduler)
+    # Stop the supervisor's auto-started HighlanderPG (and its wrapped
+    # Scheduler) so we can start a replacement under the controlled
+    # interval without name collision. The test-owned Scheduler registers
+    # directly under the same `{:global, …}` name production callers use.
+    :ok =
+      Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
     pid =
       start_supervised!({
         Scheduler,
-        name: AdaptorsSupervisor.scheduler_name(sup),
+        name: AdaptorsSupervisor.global_scheduler_name(sup),
         sup: sup,
         lock_key: AdaptorsSupervisor.lock_key(sup),
         cache: AdaptorsSupervisor.cache_name(sup),
@@ -184,7 +187,9 @@ defmodule Lightning.AdaptorsTest do
   end
 
   describe "refresh_now/1" do
-    test "delegates to Scheduler.refresh_now via scheduler_name/1", %{sup: sup} do
+    test "delegates to Scheduler.refresh_now via global_scheduler_name/1", %{
+      sup: sup
+    } do
       test_pid = self()
 
       # list_adaptors is called by the background Task that :tick spawns.
@@ -205,7 +210,7 @@ defmodule Lightning.AdaptorsTest do
   end
 
   describe "refresh_package/2" do
-    test "delegates to Scheduler.refresh_package via scheduler_name/1", %{
+    test "delegates to Scheduler.refresh_package via global_scheduler_name/1", %{
       sup: sup
     } do
       stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _name ->

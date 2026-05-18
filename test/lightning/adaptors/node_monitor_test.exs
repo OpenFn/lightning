@@ -23,9 +23,11 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
     nm_pid = Process.whereis(nm_name)
     Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), nm_pid)
 
-    # Scheduler is auto-started too; let it hit the Repo under the
-    # current test process's sandbox connection.
-    sched_pid = Process.whereis(AdaptorsSupervisor.scheduler_name(sup))
+    # Scheduler is auto-started too (wrapped in HighlanderPG, registered
+    # via :global). It may not be up yet at setup time — HighlanderPG
+    # polls at 300ms — so this is best-effort.
+    {:global, global_sched_name} = AdaptorsSupervisor.global_scheduler_name(sup)
+    sched_pid = :global.whereis_name(global_sched_name)
 
     if is_pid(sched_pid),
       do: Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), sched_pid)

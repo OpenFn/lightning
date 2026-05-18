@@ -7,7 +7,6 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptors do
 
     * Dev re-scan — force a re-scan after adding local adaptors
     * Ops force-pull — pull latest metadata without waiting for the scheduler tick
-    * Debug in terminal — confirm the leader node holds the HighlanderPG lease
 
   ## Usage
 
@@ -18,15 +17,16 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptors do
   adaptors. The second form calls `Lightning.Adaptors.refresh_package/1`
   to force a single-adaptor refresh, bypassing the ledger diff.
 
-  Both forms block until completion. The active strategy and source are
-  resolved by the running supervisor — strategy is never set on the CLI.
+  Both forms block until completion. The Scheduler is wrapped in
+  `HighlanderPG` and registered globally, so the call routes through
+  Erlang distribution to whichever node currently holds the lease — the
+  CLI can be run from any node in the cluster.
 
   ## Exit codes
 
     * `0` — success
-    * `1` — not the HighlanderPG leader; run from the leader node or wait for the next tick
-    * `2` — package name not found (possible typo)
-    * `3` — other error
+    * `1` — package name not found (possible typo)
+    * `2` — other error
   """
 
   use Mix.Task
@@ -47,20 +47,13 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptors do
       :ok ->
         Mix.shell().info("Adaptors refreshed successfully.")
 
-      {:error, :not_leader} ->
-        Mix.shell().error(
-          "Not the leader node. Run from the node that holds the HighlanderPG lease, or wait."
-        )
-
-        exit({:shutdown, 1})
-
       {:error, :not_found} ->
         Mix.shell().error("Package not found. Check the name and try again.")
-        exit({:shutdown, 2})
+        exit({:shutdown, 1})
 
       {:error, reason} ->
         Mix.shell().error("Refresh failed: #{inspect(reason)}")
-        exit({:shutdown, 3})
+        exit({:shutdown, 2})
     end
   end
 end

@@ -36,10 +36,16 @@ defmodule Lightning.Adaptors.SchedulerTest do
     {:ok, sup: sup}
   end
 
-  # Replace the supervisor's inert auto-started Scheduler with one under
-  # test ownership at a controlled refresh interval. Application env is
-  # restored immediately after start_supervised!/1 returns because the
-  # Scheduler captures interval_ms in init/1.
+  # Replace the supervisor's inert auto-started (HighlanderPG-wrapped)
+  # Scheduler with a controlled one under test ownership. Application
+  # env is restored immediately after start_supervised!/1 returns
+  # because the Scheduler captures interval_ms in init/1.
+  #
+  # The test-owned Scheduler bypasses HighlanderPG entirely: we
+  # register the GenServer directly under the same `{:global, …}` name
+  # the production wrapper would, so test code can call it via
+  # `AdaptorsSupervisor.global_scheduler_name/1` exactly as production
+  # callers do.
   defp start_scheduler(sup, opts \\ []) do
     interval = Keyword.get(opts, :interval, 99_999_999)
     original_env = Application.get_env(:lightning, Lightning.Adaptors, [])
@@ -50,17 +56,19 @@ defmodule Lightning.Adaptors.SchedulerTest do
       Keyword.put(original_env, :refresh_interval, interval)
     )
 
-    sched_name = AdaptorsSupervisor.scheduler_name(sup)
+    global_name = AdaptorsSupervisor.global_scheduler_name(sup)
     source_topic = AdaptorsSupervisor.source_topic(sup)
 
-    # Stop the supervisor's auto-started Scheduler so we can start a
-    # replacement under the controlled interval without name collision.
-    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Scheduler)
+    # Stop the supervisor's auto-started HighlanderPG (and its wrapped
+    # Scheduler) so we can start a replacement under the controlled
+    # interval without name collision.
+    :ok =
+      Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
     pid =
       start_supervised!({
         Scheduler,
-        name: sched_name,
+        name: global_name,
         sup: sup,
         lock_key: AdaptorsSupervisor.lock_key(sup),
         cache: AdaptorsSupervisor.cache_name(sup),
@@ -117,7 +125,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
     end
 
     test "raises when :sup is missing", %{sup: sup} do
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
       assert_raise KeyError, ~r/key :sup not found/, fn ->
         Scheduler.start_link(
@@ -131,7 +139,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
     end
 
     test "raises when :lock_key is missing", %{sup: sup} do
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
       assert_raise KeyError, ~r/key :lock_key not found/, fn ->
         Scheduler.start_link(
@@ -144,11 +152,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
       end
     end
 
-    test "registers under :name", %{sup: sup} do
+    test "registers under :global with global_scheduler_name/1", %{sup: sup} do
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
       start_scheduler(sup)
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
-      assert is_pid(Process.whereis(sched_name))
+      {:global, global_name} = AdaptorsSupervisor.global_scheduler_name(sup)
+      assert is_pid(:global.whereis_name(global_name))
     end
   end
 
@@ -209,7 +217,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       # With a recently-inserted adaptor, max_checked_at is "now", so the smart-
       # init delay is ~99,999 seconds. Trigger an explicit tick via refresh_now.
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       Scheduler.refresh_now(sched_name)
 
       assert_receive :list_adaptors_called, 2000
@@ -247,7 +255,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       start_scheduler(sup)
 
       # Trigger an explicit tick since smart-init delay is large (recent checked_at).
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       Scheduler.refresh_now(sched_name)
 
       assert_receive :list_adaptors_called, 2000
@@ -314,23 +322,18 @@ defmodule Lightning.Adaptors.SchedulerTest do
          ]}
       end)
 
-      expect(
-        Lightning.Adaptors.StrategyMock,
-        :fetch_adaptor,
-        1,
-        fn "@openfn/bad-adaptor" ->
+      # Single multi-clause expectation — Mox routes by pattern within
+      # one slot, so Scheduler's async_stream_nolink can fan out to the
+      # two adaptors in either order. Two separate `expect/4` calls
+      # would dispatch FIFO and crash with FunctionClauseError when the
+      # task arrival order doesn't match the expectation insertion order.
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 2, fn
+        "@openfn/bad-adaptor" ->
           {:error, :not_found}
-        end
-      )
 
-      expect(
-        Lightning.Adaptors.StrategyMock,
-        :fetch_adaptor,
-        1,
-        fn "@openfn/good-adaptor" ->
+        "@openfn/good-adaptor" ->
           {:ok, adaptor_record(name: "@openfn/good-adaptor")}
-        end
-      )
+      end)
 
       :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
       start_scheduler(sup)
@@ -355,7 +358,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # Wait for init tick.
       assert_receive :tick_ran, 2000
 
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       assert :ok = Scheduler.refresh_now(sched_name)
 
       assert_receive :tick_ran, 2000
@@ -516,7 +519,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # Drain the init tick (table is empty → delay 0 → fires immediately).
       assert_receive :init_tick_done, 2000
 
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
       assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
@@ -541,7 +544,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # Drain init tick before calling refresh_package.
       assert_receive :init_tick_done, 2000
 
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
       assert {:error, :not_found} =
                Scheduler.refresh_package(sched_name, "@openfn/language-http")
@@ -577,7 +580,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert_receive :init_tick_done, 2000
       assert_receive :icons_called, 2000
 
-      sched_name = AdaptorsSupervisor.scheduler_name(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
       assert_receive {:changed, "@openfn/language-http", _}, 2000
 
