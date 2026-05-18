@@ -77,15 +77,13 @@ and this project adheres to
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
 - Bump `@openfn/ws-worker` from
   [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
-<<<<<<< HEAD
 - Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. OTP
   trusted CA certificates will now be used (usualy the OS CA store), failing
   which the library's bundled CA store will be used; use
   `tls_certificate_check`'s `override_trusted_authorities/1` to customise
   [#4755](https://github.com/OpenFn/lightning/issues/4755)
-=======
-- Removed `Duplicate` button from Sandbox UI.
->>>>>>> 86f6c8c12b (remove duplicate button)
+- Removed `Duplicate` button from Sandbox UI
+  [#4767](https://github.com/OpenFn/lightning/pull/4767)
 
 ### Fixed
 
