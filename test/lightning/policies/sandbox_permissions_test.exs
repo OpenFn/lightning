@@ -534,7 +534,7 @@ defmodule Lightning.Policies.SandboxesTest do
       end
     end
 
-    test "root project editor gets merge but not update/delete on all sandboxes",
+    test "root project editor gets no manage rights without an admin/owner row on the sandbox",
          %{
            root_project: root_project,
            sandboxes: sandboxes,
@@ -551,7 +551,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
+        assert %{update: false, delete: false, merge: false} =
                  permissions[sandbox.id]
       end
     end
@@ -632,9 +632,10 @@ defmodule Lightning.Policies.SandboxesTest do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, user, root_project)
 
-      # Editor on root gets merge but not update/delete
+      # Editor on root, editor on sandbox: no manage rights without admin/owner
+      # on the sandbox itself (or root cascade).
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
+        assert %{update: false, delete: false, merge: false} =
                  permissions[sandbox.id]
       end
     end

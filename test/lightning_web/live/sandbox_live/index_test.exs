@@ -2657,11 +2657,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert remaining_job.body == "job1_modified()"
     end
 
-    test "editor on root can see and use merge button", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
+    test "editor on root and editor on sandbox cannot use the merge button (merge requires admin/owner on the source)",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
       editor_user = insert(:user)
       insert(:project_user, user: editor_user, project: parent, role: :editor)
 
@@ -2677,7 +2678,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
       test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
 
-      assert test_sandbox.can_merge == true
+      assert test_sandbox.can_merge == false
       assert test_sandbox.can_edit == false
       assert test_sandbox.can_delete == false
     end

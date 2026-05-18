@@ -5,9 +5,15 @@ defmodule Lightning.Policies.Sandboxes do
   Sandboxes have different authorization rules than regular projects:
   - Sandbox owners/admins can manage their own sandboxes
   - Root project owners/admins can manage any sandbox in their workspace
-  - Editors (and above) on the root project can merge sandboxes
   - Editors (and above) on the parent project can provision sandboxes
   - Superusers can manage any sandbox anywhere
+
+  Destructive actions on a sandbox (delete, update, merge) are scoped to
+  admin/owner on the sandbox itself (or the root cascade above). This
+  matches the rest of Lightning, where destructive actions are admin/owner
+  scoped, and it keeps the merge button on the sandboxes list aligned with
+  the cleanup step that runs after merge submission (which calls
+  `:delete_sandbox` and so requires admin/owner on the source).
   """
   @behaviour Bodyguard.Policy
 
@@ -103,13 +109,6 @@ defmodule Lightning.Policies.Sandboxes do
         &(&1.user_id == user.id and &1.role in [:owner, :admin])
       )
 
-    is_root_editor_plus =
-      is_root_owner_or_admin or
-        Enum.any?(
-          root_project.project_users,
-          &(&1.user_id == user.id and &1.role == :editor)
-        )
-
     has_full_privileges = is_superuser or is_root_owner_or_admin
 
     if has_full_privileges do
@@ -126,7 +125,7 @@ defmodule Lightning.Policies.Sandboxes do
          %{
            update: is_owner_or_admin_here?,
            delete: is_owner_or_admin_here?,
-           merge: is_root_editor_plus
+           merge: is_owner_or_admin_here?
          }}
       end)
     end
