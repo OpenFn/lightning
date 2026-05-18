@@ -22,7 +22,8 @@ defmodule Lightning.Channels.ChannelRequest do
           destination_credential_id: Ecto.UUID.t() | nil,
           state: :pending | :success | :failed | :timeout | :error,
           started_at: DateTime.t(),
-          completed_at: DateTime.t() | nil
+          completed_at: DateTime.t() | nil,
+          is_wiped: boolean()
         }
 
   schema "channel_requests" do
@@ -35,6 +36,7 @@ defmodule Lightning.Channels.ChannelRequest do
 
     field :started_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
+    field :is_wiped, :boolean, default: false
 
     belongs_to :channel, Channel
     belongs_to :channel_snapshot, ChannelSnapshot
@@ -56,7 +58,8 @@ defmodule Lightning.Channels.ChannelRequest do
       :destination_credential_id,
       :state,
       :started_at,
-      :completed_at
+      :completed_at,
+      :is_wiped
     ])
     |> validate_required([
       :channel_id,

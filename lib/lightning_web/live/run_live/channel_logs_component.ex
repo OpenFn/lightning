@@ -160,7 +160,7 @@ defmodule LightningWeb.RunLive.ChannelLogsComponent do
                   </.link>
                 </.td>
                 <.td class="text-sm text-gray-700">
-                  {source_event_path(entry)}
+                  {source_event_path(entry) || "—"}
                 </.td>
                 <.td class="text-sm text-gray-700">
                   <.link
