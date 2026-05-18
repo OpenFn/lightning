@@ -83,22 +83,17 @@ and this project adheres to
   action as new sandbox creation, and the Restore button in the sandbox list is
   disabled (with the limiter's tooltip) when the active sandbox count is already
   at the limit.
-- Sandboxes are now independent projects on every public surface. Visibility,
-  navigation, and action authority are decided by direct `project_users`
-  membership on the sandbox itself (or `support_user` with
-  `allow_support_access` on the sandbox). Authority no longer cascades from a
-  parent project, and `user.role` (`:user` / `:superuser`) does not grant any
-  access on public surfaces. Sandbox provisioning still seeds membership from
-  the parent at creation, so existing collaborators carry over; later changes to
-  a parent's membership or `allow_support_access` flag no longer affect existing
-  descendants. The merge confirmation modal no longer names descendants, only
-  counts them. [#4762](https://github.com/OpenFn/lightning/issues/4762)
-- The Merge button on a sandbox now requires `:admin` or `:owner` on the source
-  sandbox. Previously `:editor`+ was enough to open the merge flow even though
-  the cascade-scheduling step it triggers has always required admin/owner, which
-  meant editors could initiate a merge that silently failed to clean up the
-  source. The button gate now matches the action that runs after submit.
-  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandboxes no longer appear on a user's sandboxes list, in the global project
+  picker, or via the sandbox URL unless the user has a direct `project_users`
+  row on that sandbox (or is a support user and the sandbox's own
+  `allow_support_access` flag is on). Previously, a role on a parent project
+  would surface every sandbox underneath, even sandboxes the user was never
+  explicitly added to. Sandbox provisioning still seeds membership from the
+  parent at creation, so the team that creates a sandbox carries over; only the
+  cross-surface visibility is tightened. The merge confirmation modal now shows
+  a count of nested sandboxes that will also be retired instead of listing them
+  by name, which previously could expose names of descendants the current user
+  otherwise can't see. [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
   switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)

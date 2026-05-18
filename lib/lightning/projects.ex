@@ -706,6 +706,15 @@ defmodule Lightning.Projects do
             "Cannot remove the owner of a project. Transfer ownership first."
     end
 
+    if Project.sandbox?(project_user.project) and
+         Lightning.Projects.Sandboxes.parent_admin?(
+           project_user.project,
+           project_user.user
+         ) do
+      raise ArgumentError,
+            "Cannot remove a parent project admin from a sandbox"
+    end
+
     Repo.transaction(fn ->
       from(pc in Lightning.Projects.ProjectCredential,
         join: c in Lightning.Credentials.Credential,

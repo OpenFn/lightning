@@ -21,7 +21,8 @@ defmodule LightningWeb.ProjectLive.Settings do
       edit the value and passes the result through).
 
     * `:usage_caps_input` receives `project` and `current_user`. The
-      component computes its own permission gate because cap-editing
+      component computes its own permission gate (typically via
+      `Lightning.Projects.Sandboxes.parent_admin?/2`) because cap-editing
       authority is owned by the downstream billing layer, not by Lightning.
 
   Slots are optional. Routes that omit a metadata key get a hidden slot —
@@ -40,6 +41,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
@@ -637,7 +639,9 @@ defmodule LightningWeb.ProjectLive.Settings do
     if user_removable?(
          project_user,
          assigns.current_user,
-         assigns.can_remove_project_user
+         assigns.can_remove_project_user,
+         assigns.project,
+         assigns.sandbox?
        ) do
       Projects.delete_project_user!(project_user)
 
@@ -814,7 +818,9 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp remove_user_tooltip(
          project_user,
          current_user,
-         can_remove_project_user
+         can_remove_project_user,
+         project,
+         sandbox?
        ) do
     cond do
       !can_remove_project_user ->
@@ -826,6 +832,9 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_user.role == :owner ->
         "You cannot remove an owner"
 
+      sandbox? and parent_admin?(project, project_user) ->
+        "Cannot remove a user who is admin or owner on the parent project"
+
       true ->
         ""
     end
@@ -834,11 +843,17 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp user_removable?(
          project_user,
          current_user,
-         can_remove_project_user
+         can_remove_project_user,
+         project,
+         sandbox?
        ) do
     can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
   end
+
+  defp parent_admin?(project, %{user: %User{} = user}),
+    do: Sandboxes.parent_admin?(project, user)
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)
