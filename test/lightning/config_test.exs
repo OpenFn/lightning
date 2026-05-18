@@ -241,4 +241,37 @@ defmodule Lightning.Configtest do
   defp extract_from_config(config, key) do
     Application.get_env(:lightning, config) |> Keyword.get(key)
   end
+
+  describe "max_sandbox_nesting_depth/0" do
+    test "defaults to 5 when no config is set" do
+      with_max_sandbox_nesting_depth(nil, fn ->
+        assert API.max_sandbox_nesting_depth() == 5
+      end)
+    end
+
+    test "returns the configured value when set" do
+      with_max_sandbox_nesting_depth(10, fn ->
+        assert API.max_sandbox_nesting_depth() == 10
+      end)
+    end
+  end
+
+  defp with_max_sandbox_nesting_depth(value, fun) do
+    prev = Application.get_env(:lightning, :max_sandbox_nesting_depth)
+
+    try do
+      if is_nil(value) do
+        Application.delete_env(:lightning, :max_sandbox_nesting_depth)
+      else
+        Application.put_env(:lightning, :max_sandbox_nesting_depth, value)
+      end
+
+      fun.()
+    after
+      case prev do
+        nil -> Application.delete_env(:lightning, :max_sandbox_nesting_depth)
+        _ -> Application.put_env(:lightning, :max_sandbox_nesting_depth, prev)
+      end
+    end
+  end
 end

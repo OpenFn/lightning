@@ -49,6 +49,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
@@ -70,18 +71,21 @@ defmodule Lightning.Projects.Sandboxes do
   ## Optional
   * `:color` - UI color hex string (e.g. `"#336699"`)
   * `:env` - Environment identifier (e.g. `"staging"`, `"dev"`)
-  * `:collaborators` - List of `%{user_id: UUID, role: :admin | :editor | :viewer}`
-    Note: `:owner` roles and duplicate users are automatically filtered out
   * `:dataclip_ids` - UUIDs of dataclips to copy (only copies named dataclips
     of types `:global`, `:saved_input`, or `:http_request`)
+
+  The sandbox's `project_users` are derived from the parent project: every
+  parent user is copied across with their role preserved, except the parent
+  owner who is demoted to `:admin`. The `actor` is then set as the sandbox
+  owner (replacing any other role they may have had on the parent). To add
+  a user to the sandbox who is not on the parent, call
+  `Lightning.Projects.add_project_users/3` after provision returns — that
+  path goes through the seat-limit check.
   """
   @type provision_attrs :: %{
           required(:name) => String.t(),
           optional(:color) => String.t() | nil,
           optional(:env) => String.t() | nil,
-          optional(:collaborators) => [
-            %{user_id: Ecto.UUID.t(), role: :admin | :editor | :viewer}
-          ],
           optional(:dataclip_ids) => [Ecto.UUID.t()]
         }
 
@@ -106,30 +110,44 @@ defmodule Lightning.Projects.Sandboxes do
   ## Returns
   * `{:ok, sandbox_project}` - Successfully created sandbox
   * `{:error, :unauthorized}` - Actor lacks permission on parent
+  * `{:error, :nesting_too_deep}` - Parent is already at `Lightning.Config.max_sandbox_nesting_depth/0`
   * `{:error, changeset}` - Validation or database error
 
   ## Example
       {:ok, sandbox} = Sandboxes.provision(parent_project, user, %{
         name: "test-environment",
-        color: "#336699",
-        collaborators: [%{user_id: other_user.id, role: :editor}]
+        color: "#336699"
       })
+
+  ## Concurrency note
+
+  The nesting-depth check runs inside the same `Repo.transaction` as the
+  sandbox insert, but PostgreSQL's default READ COMMITTED isolation does
+  not lock the parent's ancestry. A concurrent committed reparent of
+  `parent` or any of its ancestors between the depth read and the insert
+  could place the new sandbox one level above the cap. Lightning has no
+  reparenting code path today, so this is theoretical; if a re-homing
+  feature ships, this check should be tightened with `SELECT FOR UPDATE`
+  on the ancestor chain.
   """
   @spec provision(Project.t(), User.t(), provision_attrs) ::
           {:ok, Project.t()}
-          | {:error, :unauthorized | Ecto.Changeset.t() | term()}
+          | {:error,
+             :unauthorized
+             | :nesting_too_deep
+             | Ecto.Changeset.t()
+             | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    Permissions.can?(
-      :sandboxes,
-      :provision_sandbox,
-      actor,
-      parent
-    )
-    |> if do
+    if Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) do
       create_sandbox_from_parent(parent, actor, attrs)
     else
       {:error, :unauthorized}
     end
+  end
+
+  defp nesting_depth_exceeded?(%Project{id: parent_id}) do
+    Lightning.Projects.depth_of(parent_id) >=
+      Lightning.Config.max_sandbox_nesting_depth()
   end
 
   @doc """
@@ -347,6 +365,14 @@ defmodule Lightning.Projects.Sandboxes do
   or from a separate scheduling action on the descendant itself. Any row
   whose `scheduled_deletion` is already nil is left alone.
 
+  ## Limit
+
+  Restoring a sandbox moves it back into the active count, so the same
+  usage-limit action that gates new sandbox creation also gates restore.
+  When the active-sandbox count is already at the limit, restore is
+  refused with `{:error, :too_many_sandboxes, message}`; the operator
+  needs to delete an active sandbox first.
+
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
   * `actor` - User performing the action (needs `:delete_sandbox` permission)
@@ -355,15 +381,21 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
   * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  * `Lightning.Extensions.UsageLimiting.error()` - Limit reached
   """
   @spec cancel_scheduled_sandbox_deletion(
           Project.t() | Ecto.UUID.t(),
           User.t()
         ) ::
-          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | term()}
+          | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
-      do_cancel_scheduled_sandbox_deletion(sandbox)
+      case ProjectLimiter.limit_new_sandbox(sandbox.id) do
+        :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
+        {:error, _reason, _message} = error -> error
+      end
     else
       {:error, :unauthorized}
     end
@@ -440,9 +472,12 @@ defmodule Lightning.Projects.Sandboxes do
     sandbox_name = Map.fetch!(attrs, :name)
     sandbox_color = Map.get(attrs, :color)
     sandbox_env = Map.get(attrs, :env)
-    collaborators = Map.get(attrs, :collaborators, [])
 
     Repo.transaction(fn ->
+      if nesting_depth_exceeded?(parent) do
+        Repo.rollback(:nesting_too_deep)
+      end
+
       parent_with_data = load_parent_associations(parent)
 
       sandbox_attrs =
@@ -451,8 +486,7 @@ defmodule Lightning.Projects.Sandboxes do
           actor,
           sandbox_name,
           sandbox_color,
-          sandbox_env,
-          collaborators
+          sandbox_env
         )
 
       case create_empty_sandbox(parent_with_data, sandbox_attrs) do
@@ -485,25 +519,21 @@ defmodule Lightning.Projects.Sandboxes do
         triggers: [:webhook_auth_methods],
         edges: []
       ],
-      project_credentials: [:credential]
+      project_credentials: [:credential],
+      project_users: []
     )
   end
 
-  defp build_sandbox_project_attributes(
-         parent,
-         actor,
-         name,
-         color,
-         env,
-         collaborators
-       ) do
+  defp build_sandbox_project_attributes(parent, actor, name, color, env) do
     owner_membership = %{user_id: actor.id, role: :owner}
 
     additional_memberships =
-      collaborators
-      |> List.wrap()
-      |> Enum.reject(&(&1.user_id == actor.id or &1.role == :owner))
-      |> Enum.uniq_by(& &1.user_id)
+      parent.project_users
+      |> Enum.reject(&(&1.user_id == actor.id))
+      |> Enum.map(fn pu ->
+        role = if pu.role == :owner, do: :admin, else: pu.role
+        %{user_id: pu.user_id, role: role}
+      end)
 
     parent
     |> Map.take(@cloned_project_fields)

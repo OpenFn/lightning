@@ -120,52 +120,75 @@ defmodule LightningWeb.DataclipController do
              conn.assigns.current_user,
              project
            ) do
-      # Build query string from params
-      query_params =
-        %{
-          "query" => params["query"],
-          "type" => params["type"],
-          "before" => params["before"],
-          "after" => params["after"],
-          "named_only" => params["named_only"]
-        }
-        |> Enum.reject(fn {_, v} -> is_nil(v) end)
-        |> Enum.into(%{})
+      case parse_limit(params["limit"]) do
+        {:ok, limit} ->
+          # Build query string from params
+          query_params =
+            %{
+              "query" => params["query"],
+              "type" => params["type"],
+              "before" => params["before"],
+              "after" => params["after"],
+              "named_only" => params["named_only"]
+            }
+            |> Enum.reject(fn {_, v} -> is_nil(v) end)
+            |> Enum.into(%{})
 
-      query_string = URI.encode_query(query_params)
-      limit = Map.get(params, "limit", "10") |> String.to_integer()
+          query_string = URI.encode_query(query_params)
 
-      case NewManualRun.search_selectable_dataclips(
-             job_id,
-             query_string,
-             limit,
-             0
-           ) do
-        {:ok,
-         %{
-           dataclips: dataclips,
-           next_cron_run_dataclip_id: next_cron_run_dataclip_id
-         }} ->
-          # Check if user can edit dataclips
-          can_edit_dataclip =
-            Permissions.can?(
-              :project_users,
-              :edit_workflow,
-              conn.assigns.current_user,
-              project
-            )
+          case NewManualRun.search_selectable_dataclips(
+                 job_id,
+                 query_string,
+                 limit,
+                 0
+               ) do
+            {:ok,
+             %{
+               dataclips: dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             }} ->
+              # Check if user can edit dataclips
+              can_edit_dataclip =
+                Permissions.can?(
+                  :project_users,
+                  :edit_workflow,
+                  conn.assigns.current_user,
+                  project
+                )
 
-          json(conn, %{
-            data: dataclips,
-            next_cron_run_dataclip_id: next_cron_run_dataclip_id,
-            can_edit_dataclip: can_edit_dataclip
-          })
+              json(conn, %{
+                data: dataclips,
+                next_cron_run_dataclip_id: next_cron_run_dataclip_id,
+                can_edit_dataclip: can_edit_dataclip
+              })
 
-        {:error, changeset} ->
-          {:error, changeset}
+            {:error, changeset} ->
+              {:error, changeset}
+          end
+
+        :error ->
+          conn
+          |> put_status(400)
+          |> json(%{error: "limit must be a positive integer"})
       end
     end
   end
+
+  defp parse_limit(nil), do: {:ok, 10}
+
+  defp parse_limit(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} when n > 0 -> {:ok, n}
+      _ -> :error
+    end
+  end
+
+  defp parse_limit(_), do: :error
+
+  defp check_dataclip_in_project(%{project_id: project_id}, %{id: project_id}),
+    do: :ok
+
+  defp check_dataclip_in_project(_dataclip, _project), do: {:error, :not_found}
 
   @doc """
   Get dataclip for a specific run and job.
@@ -213,7 +236,8 @@ defmodule LightningWeb.DataclipController do
     project = Projects.get_project!(project_id)
     dataclip = Invocation.get_dataclip!(dataclip_id)
 
-    with :ok <-
+    with :ok <- check_dataclip_in_project(dataclip, project),
+         :ok <-
            Permissions.can(
              :project_users,
              :edit_workflow,

@@ -52,7 +52,7 @@ export function NewRunButton({
   const icon = isRunning ? (
     <span className="hero-arrow-path h-4 w-4 animate-spin" />
   ) : (
-    <span className="hero-play h-4 w-4" />
+    <span className="hero-play-solid h-4 w-4" />
   );
 
   const splitButtonClasses =
@@ -112,18 +112,34 @@ export function NewRunButton({
           transition data-closed:scale-95 data-closed:transform
           data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
           data-leave:duration-75 data-leave:ease-in"
+          // Prevent @headless/ui from stealing shortcut from useKeyboard handler
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+            }
+          }}
         >
           <MenuItem>
-            <button
-              type="button"
-              onClick={onRunWithCustomInputClick}
-              className="flex items-center gap-2 w-full text-left px-4 py-2
+            {({ close }) => (
+              <Tooltip
+                content={<ShortcutKeys keys={['mod', 'shift', 'enter']} />}
+                side="bottom"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRunWithCustomInputClick();
+                    close();
+                  }}
+                  className="flex items-center gap-2 w-full text-left px-4 py-2
               text-sm text-gray-700 data-focus:bg-gray-100
               data-focus:outline-hidden"
-            >
-              <span className="hero-play h-4 w-4" />
-              Run with custom input
-            </button>
+                >
+                  <span className="hero-play h-4 w-4" />
+                  Run with custom input
+                </button>
+              </Tooltip>
+            )}
           </MenuItem>
         </MenuItems>
       </Menu>

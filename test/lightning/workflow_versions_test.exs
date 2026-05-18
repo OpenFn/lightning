@@ -7,6 +7,7 @@ defmodule Lightning.WorkflowVersionsTest do
   alias Lightning.Repo
   alias Lightning.WorkflowVersions
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
 
   @a "aaaaaaaaaaaa"
   @b "bbbbbbbbbbbb"
@@ -514,6 +515,45 @@ defmodule Lightning.WorkflowVersionsTest do
       hash2 = WorkflowVersions.generate_hash(workflow)
 
       refute hash1 == hash2
+    end
+
+    test "hash changes when webhook_response_config changes" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_reply: :before_start
+        )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(
+          webhook_response_config: %WebhookResponseConfig{success_code: 200}
+        )
+        |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      trigger
+      |> Ecto.Changeset.change(
+        webhook_response_config: %{
+          success_code: 200,
+          error_code: 502
+        }
+      )
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash3 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+      refute hash2 == hash3
     end
 
     test "hash changes when cron_cursor_job_id changes" do
