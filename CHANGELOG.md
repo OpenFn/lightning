@@ -82,6 +82,8 @@ and this project adheres to
   which the library's bundled CA store will be used; use
   `tls_certificate_check`'s `override_trusted_authorities/1` to customise
   [#4755](https://github.com/OpenFn/lightning/issues/4755)
+- Removed `Duplicate` button from Sandbox UI
+  [#4767](https://github.com/OpenFn/lightning/pull/4767)
 
 ### Fixed
 
