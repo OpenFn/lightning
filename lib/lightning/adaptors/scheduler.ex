@@ -98,6 +98,12 @@ defmodule Lightning.Adaptors.Scheduler do
         time_until_next_ms(AdaptorsRepo.max_checked_at(source), interval_ms)
 
       Process.send_after(self(), :tick, delay)
+
+      Logger.info(
+        "Adaptors[#{source}]: scheduler started interval=#{interval_ms}ms next_tick_in=#{delay}ms"
+      )
+    else
+      Logger.info("Adaptors[#{source}]: scheduler started interval=0 (disabled)")
     end
 
     {:ok,
@@ -124,17 +130,21 @@ defmodule Lightning.Adaptors.Scheduler do
 
   @impl true
   def handle_call(:refresh_now, _from, state) do
+    Logger.info("Adaptors[#{state.source}]: refresh_now requested")
     send(self(), :tick)
     {:reply, :ok, state}
   end
 
   def handle_call({:refresh_package, name}, _from, state) do
+    Logger.info("Adaptors[#{state.source}]: refresh_package(#{name}) requested")
+
     strategy = AdaptorsSupervisor.strategy(state.sup)
     result = force_refresh_one(strategy, name, state)
     {:reply, result, state}
   end
 
   defp do_refresh(state) do
+    started_at = System.monotonic_time(:millisecond)
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
     icons_task =
@@ -149,7 +159,7 @@ defmodule Lightning.Adaptors.Scheduler do
           |> AdaptorsRepo.list_adaptors()
           |> Map.new(fn a -> {a.name, a.latest_version} end)
 
-        fetched =
+        {fetched, changed, errors} =
           state.tasks
           |> Task.Supervisor.async_stream_nolink(
             upstream,
@@ -158,21 +168,40 @@ defmodule Lightning.Adaptors.Scheduler do
             ordered: false,
             on_timeout: :kill_task
           )
-          |> Enum.flat_map(fn
-            {:ok, {:fetched, record}} -> [record]
-            {:ok, _} -> []
-            {:exit, _reason} -> []
+          |> Enum.reduce({[], 0, 0}, fn
+            {:ok, {:fetched, record}}, {acc, c, e} -> {[record | acc], c + 1, e}
+            {:ok, :touched}, {acc, c, e} -> {acc, c, e}
+            {:ok, {:error, _reason}}, {acc, c, e} -> {acc, c, e + 1}
+            {:exit, _reason}, {acc, c, e} -> {acc, c, e + 1}
           end)
 
         icons = await_icons(icons_task)
 
-        Enum.each(fetched, fn record ->
-          persist_with_icons(record, icons, state)
-        end)
+        persisted =
+          fetched
+          |> Enum.map(fn record -> persist_with_icons(record, icons, state) end)
+          |> Enum.count(&(&1 == :ok))
+
+        listed = length(upstream)
+        touched = listed - changed - errors
+        duration_ms = System.monotonic_time(:millisecond) - started_at
+
+        Logger.info(
+          "Adaptors[#{state.source}]: refresh tick listed=#{listed} " <>
+            "changed=#{changed} touched=#{touched} fetched=#{persisted} " <>
+            "icons=#{map_size(icons)} errors=#{errors} duration=#{duration_ms}ms"
+        )
 
       {:error, reason} ->
         Logger.warning("Scheduler: list_adaptors failed: #{inspect(reason)}")
         _ = await_icons(icons_task)
+        duration_ms = System.monotonic_time(:millisecond) - started_at
+
+        Logger.info(
+          "Adaptors[#{state.source}]: refresh tick listed=0 changed=0 " <>
+            "touched=0 fetched=0 icons=0 errors=1 duration=#{duration_ms}ms"
+        )
+
         :ok
     end
   end
@@ -189,6 +218,10 @@ defmodule Lightning.Adaptors.Scheduler do
     else
       case strategy.fetch_adaptor(name) do
         {:ok, record} ->
+          Logger.debug(
+            "Adaptors[#{state.source}]: fetched #{name}@#{record.version}"
+          )
+
           {:fetched, record}
 
         {:error, reason} ->
@@ -247,13 +280,16 @@ defmodule Lightning.Adaptors.Scheduler do
         state.source_topic,
         {:changed, name, state.source}
       )
+
+      Logger.debug("Adaptors[#{state.source}]: persisted #{name}")
+      :ok
     rescue
       e ->
         Logger.error(
           "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
         )
 
-        :ok
+        :error
     end
   end
 
@@ -294,6 +330,10 @@ defmodule Lightning.Adaptors.Scheduler do
             {:changed, name, state.source}
           )
 
+          Logger.info(
+            "Adaptors[#{state.source}]: refresh_package(#{name}) ok version=#{record.version}"
+          )
+
           :ok
         rescue
           e ->
@@ -305,6 +345,10 @@ defmodule Lightning.Adaptors.Scheduler do
         end
 
       {:error, reason} ->
+        Logger.warning(
+          "Scheduler: refresh_package(#{name}) strategy fetch failed: #{inspect(reason)}"
+        )
+
         {:error, reason}
     end
   end
