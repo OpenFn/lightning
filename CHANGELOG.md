@@ -59,10 +59,11 @@ and this project adheres to
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
 - Bump `@openfn/ws-worker` from
   [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
-- Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. CA
-  certificates now come from the library's bundled store instead of the OS trust
-  store; use `tls_certificate_check`'s `override_trusted_authorities/1` to
-  customise [#4755](https://github.com/OpenFn/lightning/issues/4755)
+- Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. OTP
+  trusted CA certificates will now be used (usualy the OS CA store), failing
+  which the library's bundled CA store will be used; use
+  `tls_certificate_check`'s `override_trusted_authorities/1` to customise
+  [#4755](https://github.com/OpenFn/lightning/issues/4755)
 
 ### Fixed
 
