@@ -483,4 +483,34 @@ defmodule Lightning.Accounts.UserTest do
                :superuser
     end
   end
+
+  describe "core_contributor?/1" do
+    test "true for @openfn.org email" do
+      assert User.core_contributor?(%User{email: "alice@openfn.org"})
+    end
+
+    test "case-insensitive" do
+      assert User.core_contributor?(%User{email: "Bob@OpenFN.ORG"})
+    end
+
+    test "false for other domains" do
+      refute User.core_contributor?(%User{email: "alice@example.com"})
+    end
+
+    test "false for nil/empty email" do
+      refute User.core_contributor?(%User{email: nil})
+      refute User.core_contributor?(%User{email: ""})
+    end
+  end
+
+  describe "langfuse_persona/1" do
+    test "core-contributor for @openfn user" do
+      assert User.langfuse_persona(%User{email: "x@openfn.org"}) ==
+               "core-contributor"
+    end
+
+    test "user for everyone else" do
+      assert User.langfuse_persona(%User{email: "x@example.com"}) == "user"
+    end
+  end
 end

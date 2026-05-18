@@ -479,6 +479,187 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
+  describe "query/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+          :streaming_timeout -> 120_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "core-contributor user sends metrics_opt_in true and persona core-contributor",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "history" => [
+               %{"role" => "user", "content" => "hi"},
+               %{"role" => "assistant", "content" => "hello"}
+             ]
+           }
+         }}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
+    end
+
+    test "non-openfn user sends metrics_opt_in false and persona user",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "ext@example.com")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == false
+        assert decoded["meta"]["user"]["persona"] == "user"
+        assert decoded["meta"]["user"]["id"] == user.id
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "history" => [
+               %{"role" => "user", "content" => "hi"},
+               %{"role" => "assistant", "content" => "hello"}
+             ]
+           }
+         }}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
+    end
+
+    test "preserves existing session.meta keys (rag echo regression guard)",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          meta: %{"rag" => %{"search_results" => ["x"]}}
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["meta"]["rag"] == %{"search_results" => ["x"]}
+        assert decoded["meta"]["session_id"] == session.id
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "history" => [
+               %{"role" => "user", "content" => "hi"},
+               %{"role" => "assistant", "content" => "hello"}
+             ]
+           }
+         }}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
+    end
+  end
+
+  describe "query_global_stream/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+          :streaming_timeout -> 120_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "forwards meta and metrics_opt_in to global_chat_stream", %{
+      project: project,
+      workflow: workflow
+    } do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{"rag" => %{"search_results" => ["y"]}},
+          messages: [
+            %{
+              role: :user,
+              content: "help",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "ok",
+          "attachments" => [],
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{
+                                               method: :post,
+                                               url: url,
+                                               body: body
+                                             },
+                                             _opts ->
+        assert url =~ "/services/global_chat/stream"
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+        assert decoded["meta"]["rag"] == %{"search_results" => ["y"]}
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _updated_session} =
+               AiAssistant.query_global_stream(session, "help")
+    end
+  end
+
   describe "create_session/4" do
     test "creates a new session", %{
       user: user,
