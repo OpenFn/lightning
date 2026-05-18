@@ -15,8 +15,12 @@ defmodule Lightning.Adaptors.SchedulerTest do
   setup :set_mox_global
   setup :verify_on_exit!
 
-  # Each test owns an isolated supervisor. The Scheduler is started per-test
-  # (not in setup) so Mox expectations can be registered before init fires.
+  # Each test owns an isolated supervisor. The supervisor starts its own
+  # Scheduler as part of the :rest_for_one child list, but with the
+  # test-env `refresh_interval: 0` it's an inert no-op. Individual tests
+  # call `start_scheduler/2` to replace it with a controlled-interval
+  # Scheduler under `start_supervised!/1` (so Mox expectations can be
+  # registered before init fires).
   setup do
     sup = :"sched_test_#{System.unique_integer([:positive])}"
 
@@ -32,9 +36,10 @@ defmodule Lightning.Adaptors.SchedulerTest do
     {:ok, sup: sup}
   end
 
-  # Start the Scheduler with a controlled refresh interval.
-  # Application env is restored immediately after start_supervised!/1 returns
-  # because the scheduler captures interval_ms in init/1.
+  # Replace the supervisor's inert auto-started Scheduler with one under
+  # test ownership at a controlled refresh interval. Application env is
+  # restored immediately after start_supervised!/1 returns because the
+  # Scheduler captures interval_ms in init/1.
   defp start_scheduler(sup, opts \\ []) do
     interval = Keyword.get(opts, :interval, 99_999_999)
     original_env = Application.get_env(:lightning, Lightning.Adaptors, [])
@@ -47,6 +52,10 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
     sched_name = AdaptorsSupervisor.scheduler_name(sup)
     source_topic = AdaptorsSupervisor.source_topic(sup)
+
+    # Stop the supervisor's auto-started Scheduler so we can start a
+    # replacement under the controlled interval without name collision.
+    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Scheduler)
 
     pid =
       start_supervised!({

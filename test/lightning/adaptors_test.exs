@@ -66,6 +66,10 @@ defmodule Lightning.AdaptorsTest do
       Keyword.put(original_env, :refresh_interval, 99_999_999)
     )
 
+    # Stop the supervisor's auto-started Scheduler so we can start a
+    # replacement under the controlled interval without name collision.
+    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Scheduler)
+
     pid =
       start_supervised!({
         Scheduler,
@@ -100,26 +104,12 @@ defmodule Lightning.AdaptorsTest do
   end
 
   describe "packages/0 delegates to packages(Lightning.Adaptors)" do
-    setup do
-      # Both the global setup and this describe setup use AdaptorsSupervisor,
-      # which has a fixed default child-spec id (Lightning.Adaptors.Supervisor).
-      # ExUnit's DynamicSupervisor would reject the second registration as
-      # {:already_started, first_pid} if the ids collide, so we override the id
-      # to make this child distinct from the one in the global setup.
-      start_supervised!(
-        Supervisor.child_spec(
-          {AdaptorsSupervisor,
-           [name: Lightning.Adaptors, strategy: Lightning.Adaptors.StrategyMock]},
-          id: :packages_0_facade_test
-        )
-      )
-
-      :ok
-    end
-
     test "packages/0 and packages(Lightning.Adaptors) return identical results" do
-      # Both forms resolve to Store.packages(Lightning.Adaptors); equality is
-      # always guaranteed regardless of cache state.
+      # The production `Lightning.Adaptors.Supervisor` is started under the
+      # name `Lightning.Adaptors` in `application.ex`; in test it uses
+      # `Lightning.Adaptors.StrategyMock` per `config/test.exs`. Both forms
+      # resolve to `Store.packages(Lightning.Adaptors)`; equality is always
+      # guaranteed regardless of cache state.
       assert Adaptors.packages() == Adaptors.packages(Lightning.Adaptors)
     end
   end

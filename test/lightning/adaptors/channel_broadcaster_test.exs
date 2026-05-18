@@ -8,29 +8,30 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
 
   use ExUnit.Case, async: true
 
-  alias Lightning.Adaptors.ChannelBroadcaster
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   setup do
     sup = :"cb_test_#{System.unique_integer([:positive])}"
 
+    # The supervisor's :rest_for_one child list starts the
+    # ChannelBroadcaster automatically — registered under
+    # `channel_broadcaster_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
+
+    # Stop the auto-started Invalidator — these tests pre-populate the
+    # Cachex `{:packages, source}` key directly to exercise the
+    # ChannelBroadcaster's `:flush` path in isolation. The Invalidator
+    # subscribes to the same source_topic and would race the broadcaster
+    # by deleting the cached entry before the flush window expires.
+    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Invalidator)
 
     source_topic = AdaptorsSupervisor.source_topic(sup)
     client_topic = AdaptorsSupervisor.client_topic(sup)
     cb_name = AdaptorsSupervisor.channel_broadcaster_name(sup)
     cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
-
-    start_supervised!(
-      {ChannelBroadcaster,
-       name: cb_name,
-       source_topic: source_topic,
-       client_topic: client_topic,
-       sup: sup}
-    )
 
     packages = [%{name: "@openfn/language-http", latest_version: "1.0.0"}]
     Cachex.put!(cache, {:packages, source}, {:ok, packages})

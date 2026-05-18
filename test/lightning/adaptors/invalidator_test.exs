@@ -1,23 +1,19 @@
 defmodule Lightning.Adaptors.InvalidatorTest do
   use ExUnit.Case, async: true
 
-  alias Lightning.Adaptors.Invalidator
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   setup do
     sup = :"inv_test_#{System.unique_integer([:positive])}"
 
+    # The supervisor's :rest_for_one child list starts the Invalidator
+    # automatically — registered under `invalidator_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
 
     cache = AdaptorsSupervisor.cache_name(sup)
-    source_topic = AdaptorsSupervisor.source_topic(sup)
     inv_name = AdaptorsSupervisor.invalidator_name(sup)
-
-    start_supervised!(
-      {Invalidator, name: inv_name, source_topic: source_topic, cache: cache}
-    )
 
     {:ok, sup: sup, cache: cache, inv_name: inv_name}
   end

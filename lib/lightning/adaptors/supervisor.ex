@@ -65,6 +65,8 @@ defmodule Lightning.Adaptors.Supervisor do
 
     cache = cache_name(name)
     tasks = tasks_name(name)
+    source_topic = source_topic(name)
+    client_topic = client_topic(name)
 
     children = [
       {Cachex, name: cache},
@@ -74,10 +76,22 @@ defmodule Lightning.Adaptors.Supervisor do
         id: Module.concat(name, CacheClear),
         restart: :transient
       ),
-      {Task.Supervisor, name: tasks}
-      # Invalidator, ChannelBroadcaster, NodeMonitor, and Scheduler
-      # are added in later phase-A stories. Cachex + Task.Supervisor
-      # is enough for the Store layer to function.
+      {Task.Supervisor, name: tasks},
+      {Lightning.Adaptors.Invalidator,
+       name: invalidator_name(name), source_topic: source_topic, cache: cache},
+      {Lightning.Adaptors.NodeMonitor, name: node_monitor_name(name), sup: name},
+      {Lightning.Adaptors.ChannelBroadcaster,
+       name: channel_broadcaster_name(name),
+       source_topic: source_topic,
+       client_topic: client_topic,
+       sup: name},
+      {Lightning.Adaptors.Scheduler,
+       name: scheduler_name(name),
+       sup: name,
+       lock_key: lock_key(name),
+       cache: cache,
+       tasks: tasks,
+       source_topic: source_topic}
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)

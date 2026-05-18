@@ -148,6 +148,7 @@ defmodule Lightning.Application do
         LightningWeb.WorkerPresence,
         adaptor_registry_childspec,
         adaptor_service_childspec,
+        {Lightning.Adaptors.Supervisor, name: Lightning.Adaptors},
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),

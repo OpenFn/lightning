@@ -3,7 +3,6 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
 
   import Mox
 
-  alias Lightning.Adaptors.NodeMonitor
   alias Lightning.Adaptors.Repo, as: AdaptorsRepo
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
@@ -12,6 +11,8 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
   setup do
     sup = :"nm_test_#{System.unique_integer([:positive])}"
 
+    # The supervisor's :rest_for_one child list starts the NodeMonitor
+    # automatically — registered under `node_monitor_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
@@ -19,10 +20,15 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
     cache = AdaptorsSupervisor.cache_name(sup)
     nm_name = AdaptorsSupervisor.node_monitor_name(sup)
 
-    start_supervised!({NodeMonitor, name: nm_name, sup: sup})
-
     nm_pid = Process.whereis(nm_name)
     Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), nm_pid)
+
+    # Scheduler is auto-started too; let it hit the Repo under the
+    # current test process's sandbox connection.
+    sched_pid = Process.whereis(AdaptorsSupervisor.scheduler_name(sup))
+
+    if is_pid(sched_pid),
+      do: Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), sched_pid)
 
     {:ok, sup: sup, cache: cache, nm_name: nm_name}
   end
