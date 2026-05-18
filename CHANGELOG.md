@@ -85,8 +85,7 @@ and this project adheres to
   at the limit.
 - Sandboxes no longer appear in the sandboxes list, the project picker, or via
   the sandbox URL unless the user is a direct member (or a support user with the
-  sandbox's own `allow_support_access` enabled). The merge confirmation modal
-  now shows a descendant count instead of naming them.
+  sandbox's own `allow_support_access` enabled).
   [#4762](https://github.com/OpenFn/lightning/issues/4762)
 - `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
   "run with custom input". When a retryable run is loaded, the primary action
