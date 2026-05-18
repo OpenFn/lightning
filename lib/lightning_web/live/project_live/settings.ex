@@ -1,6 +1,32 @@
 defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
-  Index Liveview for project settings
+  Index LiveView for project settings.
+
+  ## View-extension slots
+
+  Two slots let downstream apps inject LiveComponents into the settings page
+  by registering them in route metadata:
+
+      {"/projects/:project_id/settings", LightningWeb.ProjectLive.Settings, :index,
+       metadata: %{
+         concurrency_input: MyApp.ConcurrencyInputComponent,
+         usage_caps_input: MyApp.UsageCapsInputComponent
+       }}
+
+  Each slot has its own assigns contract, which the component must accept:
+
+    * `:concurrency_input` receives `field` (the `Ecto.Changeset` field for
+      `project.concurrency`), `project`, and `disabled` (a pre-computed
+      boolean — Lightning resolves whether the current user is allowed to
+      edit the value and passes the result through).
+
+    * `:usage_caps_input` receives `project` and `current_user`. The
+      component computes its own permission gate (typically via
+      `Lightning.Projects.Sandboxes.parent_admin?/2`) because cap-editing
+      authority is owned by the downstream billing layer, not by Lightning.
+
+  Slots are optional. Routes that omit a metadata key get a hidden slot —
+  the page renders identically to OSS defaults.
   """
   use LightningWeb, :live_view
 
@@ -27,6 +53,49 @@ defmodule LightningWeb.ProjectLive.Settings do
   on_mount {LightningWeb.Hooks, :limit_github_sync}
   on_mount {LightningWeb.Hooks, :limit_mfa}
   on_mount {LightningWeb.Hooks, :limit_retention_periods}
+
+  attr :component, :atom, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :project, Project, required: true
+  attr :disabled, :boolean, required: true
+
+  @doc """
+  View-extension slot wrapper for the project-level concurrency override input.
+  Forwards `field`, `project`, and a pre-computed `disabled` boolean to the
+  registered LiveComponent.
+  """
+  def concurrency_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="concurrency-input-component"
+      field={@field}
+      project={@project}
+      disabled={@disabled}
+    />
+    """
+  end
+
+  attr :component, :atom, required: true
+  attr :project, Project, required: true
+  attr :current_user, User, required: true
+
+  @doc """
+  View-extension slot wrapper for the per-project usage-caps input. Forwards
+  `project` and `current_user` to the registered LiveComponent so the
+  component can run its own permission gate (cap-editing authority lives in
+  the downstream billing layer, not in Lightning).
+  """
+  def usage_caps_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="usage-caps-input-component"
+      project={@project}
+      current_user={@current_user}
+    />
+    """
+  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -165,14 +234,16 @@ defmodule LightningWeb.ProjectLive.Settings do
     project_users = Projects.get_project_users!(socket.assigns.project.id)
     auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
 
-    concurrency_input_component =
+    route_metadata =
       socket.router
       |> Phoenix.Router.route_info(
         "GET",
         ~p"/projects/:project_id/settings",
         nil
       )
-      |> Map.get(:concurrency_input)
+
+    concurrency_input_component = Map.get(route_metadata, :concurrency_input)
+    usage_caps_input_component = Map.get(route_metadata, :usage_caps_input)
 
     socket
     |> assign(
@@ -180,6 +251,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_users: project_users,
       webhook_auth_methods: auth_methods,
       concurrency_input_component: concurrency_input_component,
+      usage_caps_input_component: usage_caps_input_component,
       show_collaborators_modal: false,
       show_invite_collaborators_modal: false,
       active_modal: nil,

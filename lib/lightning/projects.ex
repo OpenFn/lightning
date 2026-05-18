@@ -37,6 +37,26 @@ defmodule Lightning.Projects do
 
   require Logger
 
+  @doc """
+  Maximum depth bound applied to every `parent_id` walk in this module's
+  recursive CTEs. Derived as `max_sandbox_nesting_depth() + 1` so the CTE
+  bound is always one hop above the deepest legitimate project. A real
+  cycle has no root and exhausts the buffer hop instead of looping until
+  Postgres' `statement_timeout` fires.
+  """
+  @spec max_project_tree_depth() :: pos_integer()
+  def max_project_tree_depth,
+    do: Lightning.Config.max_sandbox_nesting_depth() + 1
+
+  @doc """
+  Depth of a project in the parent tree. Roots return 0, a direct child
+  sandbox returns 1, and so on. Bounded by `max_project_tree_depth/0`.
+  """
+  @spec depth_of(Ecto.UUID.t()) :: non_neg_integer()
+  def depth_of(project_id) when is_binary(project_id) do
+    length(list_ancestors(project_id)) - 1
+  end
+
   defmodule ProjectOverviewRow do
     @moduledoc """
     Represents a summarized view of a project for a user, used in the project overview table.
@@ -295,12 +315,20 @@ defmodule Lightning.Projects do
   end
 
   defp list_ancestors(start_id) do
-    initial = from(p in Project, where: p.id == ^start_id)
+    max_depth = max_project_tree_depth()
+
+    initial =
+      from(p in Project,
+        where: p.id == ^start_id,
+        select: %{id: p.id, parent_id: p.parent_id, depth: 0}
+      )
 
     recursion =
       from(p in Project,
         join: a in "ancestors",
-        on: a.parent_id == p.id
+        on: a.parent_id == p.id,
+        where: a.depth < ^max_depth,
+        select: %{id: p.id, parent_id: p.parent_id, depth: a.depth + 1}
       )
 
     from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
@@ -641,6 +669,11 @@ defmodule Lightning.Projects do
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
 
+    if project_user.role == :owner do
+      raise ArgumentError,
+            "Cannot remove the owner of a project. Transfer ownership first."
+    end
+
     if Project.sandbox?(project_user.project) and
          Lightning.Projects.Sandboxes.parent_admin?(
            project_user.project,
@@ -783,17 +816,20 @@ defmodule Lightning.Projects do
   """
   @spec descendants_query([Ecto.UUID.t()]) :: Ecto.Query.t()
   def descendants_query(project_ids) when is_list(project_ids) do
+    max_depth = max_project_tree_depth()
+
     initial =
       from(p in Project,
         where: p.parent_id in ^project_ids,
-        select: %{id: p.id}
+        select: %{id: p.id, depth: 0}
       )
 
     recursion =
       from(p in Project,
         join: d in "project_descendants",
         on: p.parent_id == d.id,
-        select: %{id: p.id}
+        where: d.depth < ^max_depth,
+        select: %{id: p.id, depth: d.depth + 1}
       )
 
     "project_descendants"
@@ -1576,17 +1612,20 @@ defmodule Lightning.Projects do
             "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
     end
 
+    max_depth = max_project_tree_depth()
+
     descendants_query =
       from(p in Project,
         where: p.parent_id == ^root.id,
-        select: %{id: p.id, parent_id: p.parent_id, level: 1}
+        select: %{id: p.id, parent_id: p.parent_id, depth: 0}
       )
 
     recursive_query =
       from(p in Project,
         join: d in "descendants",
         on: p.parent_id == d.id,
-        select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
+        where: d.depth < ^max_depth,
+        select: %{id: p.id, parent_id: p.parent_id, depth: d.depth + 1}
       )
 
     order_by_clause =

@@ -195,10 +195,9 @@
             >
               <div class="grid grid-cols md:col-span-2">
                 <div class="flex items-center gap-x-4 justify-between">
-                  <.live_component
+                  <.concurrency_input_slot
                     :if={assigns[:concurrency_input_component]}
-                    module={assigns[:concurrency_input_component]}
-                    id="concucurrency-input-component"
+                    component={@concurrency_input_component}
                     field={f[:concurrency]}
                     project={@project}
                     disabled={not @can_edit_project}
@@ -239,6 +238,13 @@
               </div>
             </.form>
           </div>
+
+          <.usage_caps_input_slot
+            :if={assigns[:usage_caps_input_component]}
+            component={@usage_caps_input_component}
+            project={@project}
+            current_user={@current_user}
+          />
 
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>

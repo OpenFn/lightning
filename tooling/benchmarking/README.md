@@ -18,10 +18,10 @@ Execute the following steps to run a benchmark on Lightning:
    internal telemetry data:
 
    ```elixir
-     filepath = Path.join("benchmarking", "load_test_data.csv")
+     filepath = Path.join("tooling/benchmarking", "load_test_data.csv")
      output_file = File.open!(filepath, [:append])
 
-     c "benchmarking/load_test_production_spans.exs"
+     c "tooling/benchmarking/load_test_production_spans.exs"
 
      LoadTestingPrep.init(output_file)
    ```
@@ -34,10 +34,10 @@ Execute the following steps to run a benchmark on Lightning:
    can provide it via `WEBHOOK_URL`.
 
 5. In another terminal (do not stop the Lightning server) run the
-   `benchmarking/script.js` file using the following command
+   `tooling/benchmarking/script.js` file using the following command
 
    ```bash
-   k6 run benchmarking/script.js
+   k6 run tooling/benchmarking/script.js
    ```
 
    If the script exits successfully, this means the app met the defined
@@ -49,14 +49,14 @@ Execute the following steps to run a benchmark on Lightning:
    values only), (e.g. 2 KB):
 
    ```bash
-   k6 run -e PAYLOAD_SIZE_KB=2 benchmarking/script.js
+   k6 run -e PAYLOAD_SIZE_KB=2 tooling/benchmarking/script.js
    ```
 
    To collect the benchmarking data in a CSV file, run the previous command with
    the `--out filename` option.
 
    ```bash
-   k6 run --out csv=test_results.csv benchmarking/script.js
+   k6 run --out csv=test_results.csv tooling/benchmarking/script.js
    ```
 
 6. In the iex session, close the output file:
@@ -84,7 +84,7 @@ Memory: 16 GB
 #### Results with 50kb payloads
 
 ```
-k6 run -e PAYLOAD_SIZE=10 benchmarking/script.js                         Node 18.17.1 k6 0.43.1 07:40:29
+k6 run -e PAYLOAD_SIZE=10 tooling/benchmarking/script.js                         Node 18.17.1 k6 0.43.1 07:40:29
 
           /\      |‾‾| /‾‾/   /‾‾/
      /\  /  \     |  |/  /   /  /
@@ -93,7 +93,7 @@ k6 run -e PAYLOAD_SIZE=10 benchmarking/script.js                         Node 18
   / __________ \  |__| \__\ \_____/ .io
 
   execution: local
-     script: benchmarking/script.js
+     script: tooling/benchmarking/script.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 50 max VUs, 2m50s max duration (incl. graceful stop):
@@ -129,7 +129,7 @@ webhookRequests ✓ [======================================] 00/50 VUs  2m20s  0
 
 ## Run load tests for a hypothetical cold chain system
 
-`benchmarking/sample_cold_chain_monitoring_script.js` contains a k6 script that
+`tooling/benchmarking/sample_cold_chain_monitoring_script.js` contains a k6 script that
 can be used to simulate data from a hypothetical cold chain system. It requires a
 custom job to be created (an example of which can be found at the top of the
 script file).
@@ -137,5 +137,5 @@ script file).
 The test can be excuted as follows (`WEBHOOK_URL` is not optional):
 
 ```bash
-   WEBHOOK_URL=... k6 run benchmarking/sample_cold_chain_monitoring_script.js
+   WEBHOOK_URL=... k6 run tooling/benchmarking/sample_cold_chain_monitoring_script.js
 ```

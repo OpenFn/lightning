@@ -431,33 +431,6 @@ export function WorkflowEditor({
     collapseCreateWorkflowPanel();
   };
 
-  useKeyboardShortcut(
-    'Control+Enter, Meta+Enter',
-    () => {
-      if (isRunPanelOpen) {
-        return;
-      }
-
-      if (currentNode.type === 'job' && currentNode.node) {
-        openRunPanel({ jobId: currentNode.node.id });
-      } else if (currentNode.type === 'trigger' && currentNode.node) {
-        openRunPanel({ triggerId: currentNode.node.id });
-      } else {
-        const firstTrigger = workflow.triggers[0];
-        if (firstTrigger?.id) {
-          openRunPanel({
-            triggerId: firstTrigger.id,
-            entryPoint: 'custom-input',
-          });
-        }
-      }
-    },
-    0,
-    {
-      enabled: !isIDEOpen && !isRunPanelOpen,
-    }
-  );
-
   /**
    * Keyboard shortcuts for new workflow creation panels.
    *

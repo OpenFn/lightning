@@ -17,6 +17,19 @@ and this project adheres to
 
 ### Added
 
+- Allow users to respond back with custom webhook responses via the
+  `webhookResponse` field in the job state.
+  [#3102](https://github.com/OpenFn/lightning/issues/3102)
+- New `usage_caps_input` view-extension slot on the project settings page
+  (`/projects/:project_id/settings`). Same pattern as the existing
+  `concurrency_input` slot: downstream apps register a component via
+  `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
+  Lightning renders it in the settings view. No-op for OSS Lightning by default.
+  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+- Sandbox nesting now caps at 5 levels deep (override with the
+  `MAX_SANDBOX_NESTING_DEPTH` env var). The **Create Sandbox** button is
+  disabled at the cap, and `Sandboxes.provision/3` returns
+  `{:error, :nesting_too_deep}` if a scripted caller tries to bypass it.
 - Channel request detail page, reached by clicking a row in the channel history
   table. Shows a client / destination / timing summary, a nested timing
   visualization with per-phase breakdown and TTFB marker, foldable request and
@@ -28,9 +41,30 @@ and this project adheres to
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
 - Do not persist channel request/response data when project has zero-persistence
   enabled [#4622](https://github.com/OpenFn/lightning/issues/4622)
+- Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
+  plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
+  every `/channels/*` hit, tagged with
+  `:resolved | :invalid_uuid | :unknown_channel`), and
+  `lightning_channel_proxy_requests_started_total`
+  - `lightning_channel_proxy_request_duration_milliseconds` (tagged with
+    `project_id`) on resolved requests. A self-contained Prometheus + Grafana
+    stack and example dashboard for local development ships in
+    `tooling/observability/`.
+    [#4508](https://github.com/OpenFn/lightning/issues/4508)
 
 ### Changed
 
+- `Lightning.Projects.Sandboxes.provision/3` no longer accepts `:collaborators`.
+  The sandbox's `project_users` are now derived from the parent project: every
+  parent user is copied with their role preserved, the parent owner is demoted
+  to `:admin`, and the actor is set as the sandbox owner. To add a user who is
+  not already on the parent, call `Lightning.Projects.add_project_users/3` after
+  `provision/3` returns.
+  [#4744](https://github.com/OpenFn/lightning/issues/4744)
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
+  called with a project's `:owner` row. The settings UI already prevented this;
+  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
+  otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
@@ -38,9 +72,22 @@ and this project adheres to
 - Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
   so that changes to these trigger fields are properly detected by CLI deploy
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+- Bump `@openfn/ws-worker` from
+  [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
 
 ### Fixed
 
+- Drop the PromEx `oban_queue_poll_metrics` group, which crashes on boot against
+  our named `Lightning.Oban` supervisor (waiting on upstream
+  [PromEx #278](https://github.com/akoutmos/prom_ex/pull/278)).
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list is
+  disabled (with the limiter's tooltip) when the active sandbox count is already
+  at the limit.
+- `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
 - Copy token button on the Personal Access Tokens page now shows a 'Copied!'
   tooltip on click and no longer causes the icon to flicker
   [#2463](https://github.com/OpenFn/lightning/issues/2463)

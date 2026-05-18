@@ -52,49 +52,68 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @impl true
   def call(%Plug.Conn{path_info: ["channels", channel_id | rest]} = conn, _opts) do
-    metadata = %{channel_id: channel_id}
-
     :telemetry.span(
-      [:lightning, :channel_proxy, :request],
-      metadata,
-      fn ->
-        result = do_proxy(conn, channel_id, rest)
-        {result, metadata}
-      end
+      [:lightning, :channel_proxy, :inbound],
+      %{},
+      fn -> dispatch(conn, channel_id, rest) end
     )
   end
 
   def call(conn, _opts), do: conn
 
-  defp do_proxy(conn, channel_id, rest) do
-    with {:ok, channel} <- fetch_channel_with_telemetry(channel_id),
-         {:ok, matched_auth} <- authenticate_client(conn, channel) do
-      proxy_with_auth(conn, channel, rest, matched_auth)
+  defp dispatch(conn, channel_id, rest) do
+    with {:ok, uuid} <- Ecto.UUID.cast(channel_id),
+         {:ok, channel} <- fetch_channel_with_telemetry(uuid) do
+      conn = handle_resolved(conn, channel, rest)
+
+      {conn,
+       %{
+         outcome: :resolved,
+         status: conn.status,
+         channel_id: channel.id,
+         project_id: channel.project_id
+       }}
     else
-      :not_found -> error_response(conn, :not_found, "Not Found")
-      :unauthorized -> error_response(conn, :unauthorized, "Unauthorized")
+      :error ->
+        conn = error_response(conn, :not_found, "Not Found")
+        {conn, %{outcome: :invalid_uuid, status: conn.status}}
+
+      :not_found ->
+        conn = error_response(conn, :not_found, "Not Found")
+        {conn, %{outcome: :unknown_channel, status: conn.status}}
     end
   end
 
-  defp proxy_with_auth(conn, channel, rest, matched_auth) do
+  defp handle_resolved(conn, channel, rest) do
+    :telemetry.span(
+      [:lightning, :channel_proxy, :request],
+      %{channel_id: channel.id, project_id: channel.project_id},
+      fn ->
+        conn = assign(conn, :channel_project_id, channel.project_id)
+
+        result =
+          case authenticate_client(conn, channel) do
+            {:ok, conn, matched_auth} ->
+              forward_request(conn, channel, rest, matched_auth)
+
+            {:unauthorized, conn} ->
+              error_response(conn, :unauthorized, "Unauthorized")
+          end
+
+        {result,
+         %{
+           channel_id: channel.id,
+           project_id: channel.project_id,
+           status: result.status
+         }}
+      end
+    )
+  end
+
+  defp forward_request(conn, channel, rest, matched_auth) do
     with {:ok, auth_header} <- resolve_destination_auth(channel),
          {:ok, snapshot} <- Channels.get_or_create_current_snapshot(channel) do
-      client_auth_types =
-        channel.client_webhook_auth_methods
-        |> Enum.map(& &1.auth_type)
-        |> Enum.uniq()
-
-      req = %DestinationRequest{
-        channel: channel,
-        snapshot: snapshot,
-        request_id:
-          conn |> Plug.Conn.get_resp_header("x-request-id") |> List.first(),
-        forward_path: build_forward_path(rest),
-        client_identity: get_client_identity(conn),
-        auth_header: auth_header,
-        client_auth_types: client_auth_types,
-        destination_credential_id: destination_credential_id(channel)
-      }
+      req = build_destination_request(conn, channel, rest, auth_header, snapshot)
 
       conn
       |> proxy_upstream(req, matched_auth)
@@ -108,6 +127,25 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
+  defp build_destination_request(conn, channel, rest, auth_header, snapshot) do
+    client_auth_types =
+      channel.client_webhook_auth_methods
+      |> Enum.map(& &1.auth_type)
+      |> Enum.uniq()
+
+    %DestinationRequest{
+      channel: channel,
+      snapshot: snapshot,
+      request_id:
+        conn |> Plug.Conn.get_resp_header("x-request-id") |> List.first(),
+      forward_path: build_forward_path(rest),
+      client_identity: get_client_identity(conn),
+      auth_header: auth_header,
+      client_auth_types: client_auth_types,
+      destination_credential_id: destination_credential_id(channel)
+    }
+  end
+
   defp destination_credential_id(channel) do
     case channel.destination_auth_method do
       %{project_credential_id: id} -> id
@@ -115,16 +153,16 @@ defmodule LightningWeb.ChannelProxyPlug do
     end
   end
 
-  defp authenticate_client(_conn, %{client_webhook_auth_methods: []}) do
-    {:ok, nil}
+  defp authenticate_client(conn, %{client_webhook_auth_methods: []}) do
+    {:ok, conn, nil}
   end
 
   defp authenticate_client(conn, channel) do
     methods = channel.client_webhook_auth_methods
 
     case find_matching_auth_method(conn, methods) do
-      %{} = method -> {:ok, method}
-      nil -> :unauthorized
+      %{} = method -> {:ok, conn, method}
+      nil -> {:unauthorized, conn}
     end
   end
 
@@ -138,14 +176,14 @@ defmodule LightningWeb.ChannelProxyPlug do
     end)
   end
 
-  defp fetch_channel_with_telemetry(channel_id) do
-    metadata = %{channel_id: channel_id}
+  defp fetch_channel_with_telemetry(uuid) do
+    metadata = %{channel_id: uuid}
 
     :telemetry.span(
       [:lightning, :channel_proxy, :fetch_channel],
       metadata,
       fn ->
-        result = fetch_channel(channel_id)
+        result = fetch_channel(uuid)
         {result, metadata}
       end
     )
@@ -230,12 +268,9 @@ defmodule LightningWeb.ChannelProxyPlug do
     |> Enum.uniq()
   end
 
-  defp fetch_channel(id) do
-    with {:ok, uuid} <- Ecto.UUID.cast(id),
-         %Channels.Channel{enabled: true} = channel <-
-           Channels.get_channel_with_auth(uuid) do
-      {:ok, channel}
-    else
+  defp fetch_channel(uuid) do
+    case Channels.get_channel_with_auth(uuid) do
+      %Channels.Channel{enabled: true} = channel -> {:ok, channel}
       _ -> :not_found
     end
   end
