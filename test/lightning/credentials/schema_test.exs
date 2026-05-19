@@ -2,6 +2,7 @@ defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
   import ExUnit.CaptureLog
+  import Lightning.Factories
   import Mox
 
   alias Lightning.Credentials
@@ -14,6 +15,15 @@ defmodule Lightning.Credentials.SchemaTest do
     Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
     Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
     :ok
+  end
+
+  defp seed_adaptor_schema(name) do
+    schema_data =
+      Path.join(["test", "fixtures", "schemas", "#{name}.json"])
+      |> File.read!()
+      |> Jason.decode!()
+
+    insert(:adaptor, name: name, source: :npm, schema_data: schema_data)
   end
 
   setup do
@@ -302,6 +312,11 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   describe "validate/2" do
+    setup do
+      Enum.each(~w(godata postgresql http dhis2), &seed_adaptor_schema/1)
+      :ok
+    end
+
     test "successfully validates field with json schema email format" do
       schema = Credentials.get_schema("godata")
 

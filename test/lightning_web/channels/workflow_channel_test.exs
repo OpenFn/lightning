@@ -88,6 +88,19 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
+    setup do
+      # The production Adaptors.Supervisor's Cachex persists across tests;
+      # clear it so each test's seeded Adaptors.Repo rows are visible.
+      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
+      Cachex.clear(cache)
+
+      # Seed Adaptors.Repo rows so packages/0 returns a non-empty list.
+      # Individual tests insert additional rows for icon-meta assertions.
+      insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
+      insert(:adaptor, name: "@openfn/language-http", source: :npm)
+      :ok
+    end
+
     test "handles multiple concurrent requests independently", %{
       socket: socket
     } do
@@ -143,15 +156,24 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_binary(record.icon_urls.rectangle)
     end
 
-    test "request_adaptors emits nil icon_urls when no Adaptors.Repo row exists",
+    test "request_adaptors emits nil icon_urls when row has no icon meta",
          %{socket: socket} do
       name = "@openfn/language-dhis2"
+
+      insert(:adaptor,
+        name: name,
+        source: :npm,
+        icon_square_ext: nil,
+        icon_square_sha256: nil,
+        icon_rectangle_ext: nil,
+        icon_rectangle_sha256: nil
+      )
 
       ref = push(socket, "request_adaptors", %{})
       assert_reply ref, :ok, %{adaptors: adaptors}
 
       record = Enum.find(adaptors, &(&1.name == name))
-      assert record, "expected legacy registry to include #{name}"
+      assert record, "expected packages/0 to include #{name}"
       assert record.icon_urls == %{square: nil, rectangle: nil}
     end
 

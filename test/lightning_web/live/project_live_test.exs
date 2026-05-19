@@ -881,6 +881,14 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
+    setup do
+      # Credential creation flows render the JsonSchemaBodyComponent
+      # which calls `Credentials.get_schema/1` — now backed by
+      # `Lightning.Adaptors.schema/1`.
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project}/settings", on_error: :raise)

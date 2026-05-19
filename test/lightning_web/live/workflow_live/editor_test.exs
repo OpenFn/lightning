@@ -16,6 +16,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   setup :create_project_for_current_user
   setup :create_workflow
 
+  # `WorkflowLive.EditorPane` resolves `@latest` via
+  # `Lightning.Adaptors.PackageName.to_wire/1`, which reads
+  # `Repo.get_adaptor/2` directly (async-safe).
+  setup do
+    insert(:adaptor,
+      name: "@openfn/language-common",
+      source: :npm,
+      latest_version: "1.6.2"
+    )
+
+    :ok
+  end
+
   test "can edit a jobs body", %{
     project: project,
     workflow: workflow,

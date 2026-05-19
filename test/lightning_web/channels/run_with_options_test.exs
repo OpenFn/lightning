@@ -1,5 +1,5 @@
 defmodule LightningWeb.RunWithOptionsTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   import Lightning.Factories
 
@@ -9,6 +9,23 @@ defmodule LightningWeb.RunWithOptionsTest do
   alias LightningWeb.RunWithOptions
 
   describe "rendering a run" do
+    setup do
+      # Clear the production Adaptors.Supervisor Cachex so each test's seeded
+      # rows are visible (Cachex persists across DB-sandbox boundaries).
+      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
+      Cachex.clear(cache)
+
+      # Seed @openfn/language-common so `@latest` resolves to a concrete
+      # semver via `Lightning.Adaptors.PackageName.to_wire/1`.
+      insert(:adaptor,
+        name: "@openfn/language-common",
+        source: :npm,
+        latest_version: "1.6.2"
+      )
+
+      :ok
+    end
+
     test "renders a workflow using a snapshot" do
       user = insert(:user)
 
@@ -109,13 +126,24 @@ defmodule LightningWeb.RunWithOptionsTest do
                expected_result
     end
 
-    @tag :tmp_dir
-    test "renders adaptors with @local when local_daptors_repo is configured", %{
-      tmp_dir: tmp_dir
-    } do
-      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+    test "renders adaptors with @local when :local strategy source is active" do
+      prev = Application.get_env(:lightning, Lightning.Adaptors, [])
+
+      Application.put_env(
+        :lightning,
+        Lightning.Adaptors,
+        Keyword.put(prev, :strategy, Lightning.Adaptors.Local)
+      )
+
+      on_exit(fn ->
+        Application.put_env(:lightning, Lightning.Adaptors, prev)
       end)
+
+      insert(:adaptor,
+        name: "@openfn/language-common",
+        source: :local,
+        latest_version: "local"
+      )
 
       user = insert(:user)
 

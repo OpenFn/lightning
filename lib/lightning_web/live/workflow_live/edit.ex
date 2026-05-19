@@ -3837,11 +3837,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp maybe_add_default_adaptor(job_param) do
     if Map.keys(job_param) == ["id"] do
-      job_param
-      |> Map.put(
-        "adaptor",
-        Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
-      )
+      Map.put(job_param, "adaptor", %Job{}.adaptor)
     else
       job_param
     end

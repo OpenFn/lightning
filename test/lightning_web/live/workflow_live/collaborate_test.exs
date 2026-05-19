@@ -901,6 +901,14 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   end
 
   describe "credential modal interactions" do
+    # `Credentials.get_schema/1` now reads through
+    # `Lightning.Adaptors.schema/1`; seed the `http` fixture so the
+    # JsonSchemaBodyComponent renders without raising.
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
 

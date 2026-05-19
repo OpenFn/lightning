@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("request_adaptors", _payload, socket) do
     async_task(socket, "request_adaptors", fn ->
       adaptors =
-        Lightning.AdaptorRegistry.all()
+        list_all_packages()
         |> Enum.map(&with_icon_urls/1)
 
       %{adaptors: adaptors}
@@ -124,7 +124,7 @@ defmodule LightningWeb.WorkflowChannel do
         |> Lightning.Repo.all()
         |> Enum.sort()
 
-      all_adaptors = Lightning.AdaptorRegistry.all()
+      all_adaptors = list_all_packages()
 
       project_adaptors =
         all_adaptors
@@ -843,6 +843,13 @@ defmodule LightningWeb.WorkflowChannel do
     end)
 
     {:noreply, socket}
+  end
+
+  defp list_all_packages do
+    case Lightning.Adaptors.packages() do
+      {:ok, pkgs} -> pkgs
+      {:error, _} -> []
+    end
   end
 
   defp with_icon_urls(adaptor) do
