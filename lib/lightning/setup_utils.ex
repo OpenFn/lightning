@@ -10,6 +10,7 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Workflows
@@ -41,6 +42,7 @@ defmodule Lightning.SetupUtils do
   @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],
           projects: [atom | %{:id => any, optional(any) => any}, ...],
+          sandboxes: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
           workflows: [atom | %{:id => any, optional(any) => any}, ...],
           workorders: [atom | %{:id => any, optional(any) => any}, ...]
@@ -92,17 +94,17 @@ defmodule Lightning.SetupUtils do
 
   defp create_demo_sandboxes(openhie_project, dhis2_project, admin) do
     {:ok, openhie_dev} =
-      Lightning.Projects.Sandboxes.provision(openhie_project, admin, %{
+      Sandboxes.provision(openhie_project, admin, %{
         name: "openhie-dev"
       })
 
     {:ok, dhis2_dev} =
-      Lightning.Projects.Sandboxes.provision(dhis2_project, admin, %{
+      Sandboxes.provision(dhis2_project, admin, %{
         name: "dhis2-dev"
       })
 
     {:ok, dhis2_feature_x} =
-      Lightning.Projects.Sandboxes.provision(dhis2_dev, admin, %{
+      Sandboxes.provision(dhis2_dev, admin, %{
         name: "dhis2-feature-x"
       })
 
