@@ -96,7 +96,10 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("request_adaptors", _payload, socket) do
     async_task(socket, "request_adaptors", fn ->
-      adaptors = Lightning.AdaptorRegistry.all()
+      adaptors =
+        Lightning.AdaptorRegistry.all()
+        |> Enum.map(&with_icon_urls/1)
+
       %{adaptors: adaptors}
     end)
   end
@@ -829,6 +832,23 @@ defmodule LightningWeb.WorkflowChannel do
     end)
 
     {:noreply, socket}
+  end
+
+  defp with_icon_urls(adaptor) do
+    Map.put(adaptor, :icon_urls, icon_urls_for(adaptor.name))
+  end
+
+  defp icon_urls_for(name) do
+    case Lightning.Adaptors.icon_meta(name) do
+      {:ok, meta} ->
+        %{
+          square: LightningWeb.AdaptorIconURL.build(name, meta, :square),
+          rectangle: LightningWeb.AdaptorIconURL.build(name, meta, :rectangle)
+        }
+
+      {:error, :not_found} ->
+        %{square: nil, rectangle: nil}
+    end
   end
 
   defp handle_async_event("request_run_steps", socket_ref, reply) do
