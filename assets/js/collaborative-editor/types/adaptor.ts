@@ -22,11 +22,17 @@ export const AdaptorVersionSchema = z.object({
 /**
  * Single adaptor schema with all its versions
  */
+export const AdaptorIconUrlsSchema = z.object({
+  square: z.string().nullable(),
+  rectangle: z.string().nullable(),
+});
+
 export const AdaptorSchema = z.object({
   name: z.string(),
   versions: z.array(AdaptorVersionSchema),
   repo: z.string(),
   latest: z.string(),
+  icon_urls: AdaptorIconUrlsSchema,
 });
 
 /**

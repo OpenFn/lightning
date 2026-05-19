@@ -11,6 +11,7 @@ import { StoreContext } from '../contexts/StoreProvider';
 import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
 import type { Adaptor } from '../types/adaptor';
 import type { Job } from '../types/workflow';
+import { extractPackageName } from '../utils/adaptorUtils';
 
 /**
  * Main hook for accessing the AdaptorStore instance
@@ -93,6 +94,38 @@ const getAdaptorPackageName = (adaptor: string | undefined): string | null => {
   if (!adaptor) return null;
   const match = adaptor.match(/^(@[^@]+)@/);
   return match ? match[1] : null;
+};
+
+/**
+ * Hook to read an adaptor's square-shape icon URL from the AdaptorStore.
+ *
+ * Accepts a full adaptor specifier (with or without version suffix). When no
+ * StoreProvider is mounted (e.g. the LiveView workflow-editor path), returns
+ * `null` rather than throwing so consumers fall back to their string label.
+ */
+export const useAdaptorIconUrl = (
+  adaptor: string | null | undefined
+): string | null => {
+  const context = useContext(StoreContext);
+  const adaptorStore = context?.adaptorStore ?? null;
+
+  const packageName = adaptor ? extractPackageName(adaptor) : null;
+
+  const selectIconUrl = useMemo(() => {
+    if (!adaptorStore) return () => null;
+    return adaptorStore.withSelector(state => {
+      if (!packageName) return null;
+      const found = state.adaptors.find(a => a.name === packageName);
+      return found?.icon_urls?.square ?? null;
+    });
+  }, [adaptorStore, packageName]);
+
+  const noopSubscribe = useMemo(() => () => () => {}, []);
+
+  return useSyncExternalStore(
+    adaptorStore?.subscribe ?? noopSubscribe,
+    selectIconUrl
+  );
 };
 
 /**
