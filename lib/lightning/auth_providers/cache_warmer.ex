@@ -39,7 +39,13 @@ defmodule Lightning.AuthProviders.CacheWarmer do
         _ -> []
       end
 
-    case db_entries ++ github_entries do
+    google_entries =
+      case Lightning.AuthProviders.GoogleHandler.build() do
+        {:ok, handler} -> [{handler.name, handler}]
+        _ -> []
+      end
+
+    case db_entries ++ github_entries ++ google_entries do
       [] -> :ignore
       entries -> {:ok, entries}
     end

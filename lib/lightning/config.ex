@@ -120,6 +120,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def google_oauth(key) do
+      Application.get_env(:lightning, :google_oauth, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
     def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
@@ -461,6 +467,7 @@ defmodule Lightning.Config do
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
   @callback github_oauth(key :: atom()) :: any()
+  @callback google_oauth(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_alternate_storage_enabled?() :: boolean()
@@ -616,6 +623,10 @@ defmodule Lightning.Config do
 
   def github_oauth(key) do
     impl().github_oauth(key)
+  end
+
+  def google_oauth(key) do
+    impl().google_oauth(key)
   end
 
   def cors_origin do
