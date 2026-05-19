@@ -81,6 +81,17 @@ defmodule Lightning.Adaptors do
         name
       )
 
+  @spec refresh_icons() ::
+          {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
+          | {:error, term()}
+  def refresh_icons, do: refresh_icons(@sup)
+
+  @spec refresh_icons(atom()) ::
+          {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
+          | {:error, term()}
+  def refresh_icons(sup),
+    do: Scheduler.refresh_icons(AdaptorsSupervisor.global_scheduler_name(sup))
+
   @doc false
   def icon_meta(name), do: icon_meta(@sup, name)
 

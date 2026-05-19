@@ -86,6 +86,21 @@ defmodule Lightning.Adaptors.Scheduler do
     GenServer.call(scheduler_name, {:refresh_package, name}, 30_000)
   end
 
+  @doc """
+  Refresh icons only, against every source-scoped adaptor row.
+
+  Runs `strategy.fetch_icons/0` and re-applies any shape whose `sha256`
+  differs from what is on the row. Adaptor metadata and version rows
+  are not touched. Returns `{:ok, %{updated: n, unchanged: m}}` on
+  success or `{:error, reason}` if the bulk fetch fails.
+  """
+  @spec refresh_icons(GenServer.server()) ::
+          {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
+          | {:error, term()}
+  def refresh_icons(scheduler_name) do
+    GenServer.call(scheduler_name, :refresh_icons, 120_000)
+  end
+
   @impl true
   def init(opts) do
     sup = Keyword.fetch!(opts, :sup)
@@ -146,6 +161,32 @@ defmodule Lightning.Adaptors.Scheduler do
     {:reply, result, state}
   end
 
+  def handle_call(:refresh_icons, _from, state) do
+    Logger.info("Adaptors[#{state.source}]: refresh_icons requested")
+    strategy = AdaptorsSupervisor.strategy(state.sup)
+
+    case strategy.fetch_icons() do
+      {:ok, icons} ->
+        existing = AdaptorsRepo.list_adaptors(state.source)
+        result = reapply_icons(existing, icons, state)
+
+        Logger.info(
+          "Adaptors[#{state.source}]: refresh_icons done " <>
+            "rows=#{length(existing)} icons=#{map_size(icons)} " <>
+            "updated=#{result.updated} unchanged=#{result.unchanged}"
+        )
+
+        {:reply, {:ok, result}, state}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Adaptors[#{state.source}]: refresh_icons strategy fetch failed: #{inspect(reason)}"
+        )
+
+        {:reply, {:error, reason}, state}
+    end
+  end
+
   defp do_refresh(state) do
     started_at = System.monotonic_time(:millisecond)
     strategy = AdaptorsSupervisor.strategy(state.sup)
@@ -185,6 +226,8 @@ defmodule Lightning.Adaptors.Scheduler do
           |> Enum.map(fn record -> persist_with_icons(record, icons, state) end)
           |> Enum.count(&(&1 == :ok))
 
+        healed = heal_missing_icons(icons, state)
+
         listed = length(upstream)
         touched = listed - changed - errors
         duration_ms = System.monotonic_time(:millisecond) - started_at
@@ -192,7 +235,8 @@ defmodule Lightning.Adaptors.Scheduler do
         Logger.info(
           "Adaptors[#{state.source}]: refresh tick listed=#{listed} " <>
             "changed=#{changed} touched=#{touched} fetched=#{persisted} " <>
-            "icons=#{map_size(icons)} errors=#{errors} duration=#{duration_ms}ms"
+            "icons=#{map_size(icons)} healed=#{healed} " <>
+            "errors=#{errors} duration=#{duration_ms}ms"
         )
 
       {:error, reason} ->
@@ -316,6 +360,92 @@ defmodule Lightning.Adaptors.Scheduler do
 
       _ ->
         record
+    end
+  end
+
+  # Top up icons on rows that currently have NULL on at least one shape.
+  # Runs after the main upsert pass on every tick — cheap, scoped to
+  # rows with gaps, and self-correcting after a strategy outage or a
+  # past bug like the one that left every row iconless.
+  defp heal_missing_icons(icons, _state) when map_size(icons) == 0, do: 0
+
+  defp heal_missing_icons(icons, state) do
+    state.source
+    |> AdaptorsRepo.list_missing_icons()
+    |> Enum.reduce(0, fn row, acc ->
+      package_icons = Map.get(icons, row.name, %{})
+
+      case apply_icons_to_existing(row, package_icons, state) do
+        :updated -> acc + 1
+        :unchanged -> acc
+      end
+    end)
+  end
+
+  defp reapply_icons(existing_rows, icons, state) do
+    Enum.reduce(existing_rows, %{updated: 0, unchanged: 0}, fn row, acc ->
+      package_icons = Map.get(icons, row.name, %{})
+
+      case apply_icons_to_existing(row, package_icons, state) do
+        :updated -> %{acc | updated: acc.updated + 1}
+        :unchanged -> %{acc | unchanged: acc.unchanged + 1}
+      end
+    end)
+  end
+
+  # `row` is either an Adaptor struct (from list_adaptors/1) or a lean
+  # map (from list_missing_icons/1) — both expose :name and the icon
+  # sha256 fields, which is all we need.
+  defp apply_icons_to_existing(_row, package_icons, _state)
+       when map_size(package_icons) == 0,
+       do: :unchanged
+
+  defp apply_icons_to_existing(row, package_icons, state) do
+    changes =
+      [:square, :rectangle]
+      |> Enum.reduce(%{}, fn shape, acc ->
+        accumulate_icon_change(acc, shape, row, package_icons, state)
+      end)
+
+    if map_size(changes) > 0 do
+      {1, _} = AdaptorsRepo.update_icons(row.name, state.source, changes)
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        state.source_topic,
+        {:changed, row.name, state.source}
+      )
+
+      :updated
+    else
+      :unchanged
+    end
+  end
+
+  defp accumulate_icon_change(acc, shape, row, package_icons, state) do
+    sha_key = :"icon_#{shape}_sha256"
+    ext_key = :"icon_#{shape}_ext"
+
+    with %{data: bytes, ext: ext, sha256: sha} <- Map.get(package_icons, shape),
+         true <- is_binary(bytes),
+         true <- Map.get(row, sha_key) != sha do
+      try do
+        {:ok, ^sha} = IconCache.write!(state.source, row.name, shape, ext, bytes)
+
+        acc
+        |> Map.put(ext_key, ext)
+        |> Map.put(sha_key, sha)
+      rescue
+        e ->
+          Logger.warning(
+            "Scheduler: IconCache.write!(#{row.name}, #{shape}) failed: " <>
+              Exception.message(e)
+          )
+
+          acc
+      end
+    else
+      _ -> acc
     end
   end
 

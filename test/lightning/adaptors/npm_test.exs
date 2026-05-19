@@ -139,7 +139,7 @@ defmodule Lightning.Adaptors.NPMTest do
       Bypass.expect(
         github,
         "GET",
-        "/OpenFn/adaptors/main/packages/language-http/assets/square.png",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
         fn conn -> Plug.Conn.resp(conn, 200, "PNG_PAYLOAD") end
       )
 
@@ -191,10 +191,10 @@ defmodule Lightning.Adaptors.NPMTest do
 
       Bypass.expect(github, fn conn ->
         case conn.request_path do
-          "/OpenFn/adaptors/main/packages/language-http/assets/square.png" ->
+          "/OpenFn/adaptors/main/packages/http/assets/square.png" ->
             Plug.Conn.resp(conn, 200, "HTTP_SQ")
 
-          "/OpenFn/adaptors/main/packages/language-salesforce/assets/square.png" ->
+          "/OpenFn/adaptors/main/packages/salesforce/assets/square.png" ->
             Plug.Conn.resp(conn, 200, "SF_SQ")
 
           _ ->

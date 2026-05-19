@@ -50,6 +50,30 @@ defmodule LightningWeb.MaintenanceLive.Index do
     end
   end
 
+  def handle_event("refresh_icons", _params, socket) do
+    if superuser?(socket) do
+      socket =
+        case Lightning.Adaptors.refresh_icons() do
+          {:ok, %{updated: updated, unchanged: unchanged}} ->
+            put_flash(
+              socket,
+              :info,
+              "Icon refresh complete — #{updated} updated, #{unchanged} unchanged."
+            )
+
+          {:error, reason} ->
+            put_flash(socket, :error, "Icon refresh failed: #{inspect(reason)}")
+        end
+
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:nav, :no_access)
+       |> push_navigate(to: "/projects")}
+    end
+  end
+
   defp superuser?(socket) do
     Permissions.can?(
       Users,

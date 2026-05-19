@@ -26,6 +26,28 @@
           Run
         </.button>
       </div>
+
+      <div
+        id="refresh-icons-card"
+        class="bg-white shadow-xs rounded-lg border border-gray-200 p-6 flex items-start justify-between gap-6"
+      >
+        <div class="flex flex-col">
+          <h2 class="text-lg font-semibold text-secondary-900">
+            Refresh Adaptor Icons
+          </h2>
+          <p class="mt-1 text-sm text-secondary-600">
+            Re-fetch icons for every adaptor and replace rows whose icon has
+            changed. Does not touch adaptor metadata or version history.
+          </p>
+        </div>
+        <.button
+          theme="primary"
+          phx-click="refresh_icons"
+          id="refresh-icons-button"
+        >
+          Run
+        </.button>
+      </div>
     </div>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

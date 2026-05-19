@@ -311,6 +311,101 @@ defmodule Lightning.Adaptors.RepoTest do
     end
   end
 
+  describe "list_missing_icons/1" do
+    test "returns rows where either icon shape sha256 is nil" do
+      {:ok, _} = AdaptorRepo.upsert_adaptor(adaptor_record(name: "@openfn/a"))
+
+      {:ok, _} =
+        AdaptorRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/b",
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "x")
+          )
+        )
+
+      {:ok, _} =
+        AdaptorRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/c",
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "y"),
+            icon_rectangle_ext: "png",
+            icon_rectangle_sha256: :crypto.hash(:sha256, "z")
+          )
+        )
+
+      names =
+        AdaptorRepo.list_missing_icons(:npm)
+        |> Enum.map(& &1.name)
+        |> Enum.sort()
+
+      assert names == ["@openfn/a", "@openfn/b"]
+    end
+
+    test "is source-scoped" do
+      {:ok, _} =
+        AdaptorRepo.upsert_adaptor(
+          adaptor_record(name: "@openfn/x", source: :local)
+        )
+
+      assert AdaptorRepo.list_missing_icons(:npm) == []
+      assert [%{name: "@openfn/x"}] = AdaptorRepo.list_missing_icons(:local)
+    end
+  end
+
+  describe "update_icons/3" do
+    test "writes only icon columns and bumps :updated_at" do
+      {:ok, before} = AdaptorRepo.upsert_adaptor(adaptor_record())
+      Process.sleep(5)
+      sha = :crypto.hash(:sha256, "PNG")
+
+      assert {1, nil} =
+               AdaptorRepo.update_icons(before.name, :npm, %{
+                 icon_square_ext: "png",
+                 icon_square_sha256: sha
+               })
+
+      after_row = AdaptorRepo.get_adaptor(before.name, :npm)
+
+      assert after_row.icon_square_ext == "png"
+      assert after_row.icon_square_sha256 == sha
+      assert after_row.latest_version == before.latest_version
+      assert DateTime.compare(after_row.updated_at, before.updated_at) == :gt
+    end
+
+    test "ignores keys outside the icon set" do
+      {:ok, before} = AdaptorRepo.upsert_adaptor(adaptor_record())
+
+      AdaptorRepo.update_icons(before.name, :npm, %{
+        latest_version: "9.9.9",
+        icon_square_ext: "svg",
+        icon_square_sha256: :crypto.hash(:sha256, "S")
+      })
+
+      after_row = AdaptorRepo.get_adaptor(before.name, :npm)
+      assert after_row.latest_version == before.latest_version
+      assert after_row.icon_square_ext == "svg"
+    end
+
+    test "leaves version rows untouched" do
+      {:ok, before} =
+        AdaptorRepo.upsert_adaptor(
+          adaptor_record(
+            versions: [version_record("1.0.0"), version_record("2.0.0")]
+          )
+        )
+
+      AdaptorRepo.update_icons(before.name, :npm, %{
+        icon_square_ext: "png",
+        icon_square_sha256: :crypto.hash(:sha256, "P")
+      })
+
+      versions = AdaptorRepo.list_versions(before.name, :npm)
+      assert length(versions) == 2
+    end
+  end
+
   defp adaptor_record(overrides \\ []) do
     overrides = Map.new(overrides)
 

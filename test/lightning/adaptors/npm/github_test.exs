@@ -38,7 +38,7 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
       Bypass.expect(
         bypass,
         "GET",
-        "/OpenFn/adaptors/main/packages/language-http/assets/square.png",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
         fn conn -> Plug.Conn.resp(conn, 200, "SQUARE_PNG_BYTES") end
       )
 
@@ -49,10 +49,10 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
     test "falls back to svg when png is missing", %{bypass: bypass} do
       Bypass.expect(bypass, fn conn ->
         case conn.request_path do
-          "/OpenFn/adaptors/main/packages/language-http/assets/rectangle.png" ->
+          "/OpenFn/adaptors/main/packages/http/assets/rectangle.png" ->
             Plug.Conn.resp(conn, 404, "")
 
-          "/OpenFn/adaptors/main/packages/language-http/assets/rectangle.svg" ->
+          "/OpenFn/adaptors/main/packages/http/assets/rectangle.svg" ->
             Plug.Conn.resp(conn, 200, "<svg/>")
 
           path ->
@@ -96,11 +96,13 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
                GitHub.fetch_one("@openfn/language-http", :square)
     end
 
-    test "strips the @openfn/ scope from the URL path", %{bypass: bypass} do
+    test "strips the @openfn/language- prefix from the URL path", %{
+      bypass: bypass
+    } do
       Bypass.expect(
         bypass,
         "GET",
-        "/OpenFn/adaptors/main/packages/language-salesforce/assets/square.png",
+        "/OpenFn/adaptors/main/packages/salesforce/assets/square.png",
         fn conn -> Plug.Conn.resp(conn, 200, "OK") end
       )
 
@@ -118,7 +120,7 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
       Bypass.expect(
         bypass,
         "GET",
-        "/OpenFn/adaptors/v2/packages/language-http/assets/square.png",
+        "/OpenFn/adaptors/v2/packages/http/assets/square.png",
         fn conn -> Plug.Conn.resp(conn, 200, "REF_BYTES") end
       )
 
@@ -133,16 +135,16 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
     } do
       Bypass.expect(bypass, fn conn ->
         case conn.request_path do
-          "/OpenFn/adaptors/main/packages/language-http/assets/square.png" ->
+          "/OpenFn/adaptors/main/packages/http/assets/square.png" ->
             Plug.Conn.resp(conn, 200, "HTTP_SQ")
 
-          "/OpenFn/adaptors/main/packages/language-http/assets/rectangle.png" ->
+          "/OpenFn/adaptors/main/packages/http/assets/rectangle.png" ->
             Plug.Conn.resp(conn, 200, "HTTP_RECT")
 
-          "/OpenFn/adaptors/main/packages/language-salesforce/assets/square.png" ->
+          "/OpenFn/adaptors/main/packages/salesforce/assets/square.png" ->
             Plug.Conn.resp(conn, 200, "SF_SQ")
 
-          "/OpenFn/adaptors/main/packages/language-salesforce/assets/rectangle.png" ->
+          "/OpenFn/adaptors/main/packages/salesforce/assets/rectangle.png" ->
             Plug.Conn.resp(conn, 200, "SF_RECT")
 
           _ ->
@@ -174,7 +176,7 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
          %{bypass: bypass} do
       Bypass.expect(bypass, fn conn ->
         case conn.request_path do
-          "/OpenFn/adaptors/main/packages/language-http/assets/square.png" ->
+          "/OpenFn/adaptors/main/packages/http/assets/square.png" ->
             Plug.Conn.resp(conn, 200, "ONLY_SQ")
 
           _ ->

@@ -196,6 +196,62 @@ defmodule Lightning.Adaptors.Repo do
   end
 
   @doc """
+  Lean list of source-scoped adaptors that are missing at least one icon
+  shape. Returns only the fields the Scheduler needs to decide whether to
+  re-apply the bulk icon fetch result.
+  """
+  @spec list_missing_icons(source()) :: [
+          %{
+            name: String.t(),
+            icon_square_sha256: binary() | nil,
+            icon_rectangle_sha256: binary() | nil
+          }
+        ]
+  def list_missing_icons(source) do
+    Lightning.Repo.all(
+      from a in Adaptor,
+        where:
+          a.source == ^source and
+            (is_nil(a.icon_square_sha256) or is_nil(a.icon_rectangle_sha256)),
+        select: %{
+          name: a.name,
+          icon_square_sha256: a.icon_square_sha256,
+          icon_rectangle_sha256: a.icon_rectangle_sha256
+        }
+    )
+  end
+
+  @doc """
+  Update only the icon columns for a single `(name, source)` row.
+
+  `attrs` may include any subset of `:icon_square_ext`,
+  `:icon_square_sha256`, `:icon_rectangle_ext`, `:icon_rectangle_sha256`.
+  `updated_at` is advanced so callers can observe the change.
+
+  Sidesteps `upsert_adaptor/1` deliberately: that helper rewrites the
+  `adaptor_versions` rows in the same transaction, which is the wrong
+  thing to do for an icon-only fix-up.
+  """
+  @spec update_icons(String.t(), source(), map()) :: {integer(), nil}
+  def update_icons(name, source, attrs) when is_map(attrs) do
+    allowed =
+      attrs
+      |> Map.take([
+        :icon_square_ext,
+        :icon_square_sha256,
+        :icon_rectangle_ext,
+        :icon_rectangle_sha256
+      ])
+      |> Map.put(:updated_at, DateTime.utc_now())
+      |> Enum.into([])
+
+    Lightning.Repo.update_all(
+      from(a in Adaptor, where: a.name == ^name and a.source == ^source),
+      set: allowed
+    )
+  end
+
+  @doc """
   Maximum `checked_at` seen for `source`, or `nil` when the table is
   empty for that source. Backs the Scheduler's smart-init timing.
   """

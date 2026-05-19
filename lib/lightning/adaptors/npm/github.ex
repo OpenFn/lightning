@@ -25,6 +25,8 @@ defmodule Lightning.Adaptors.NPM.GitHub do
 
   alias Lightning.Adaptors.Config
 
+  require Logger
+
   @default_github_url "https://raw.githubusercontent.com"
   @default_github_ref "main"
   @default_http_timeout :timer.seconds(30)
@@ -33,6 +35,7 @@ defmodule Lightning.Adaptors.NPM.GitHub do
 
   @icon_exts ~w(png svg)
   @scope_prefix "@openfn/"
+  @language_prefix "language-"
 
   @doc """
   Fetch a single icon for `(name, shape)`.
@@ -87,21 +90,22 @@ defmodule Lightning.Adaptors.NPM.GitHub do
     work =
       for name <- names, shape <- [:square, :rectangle], do: {name, shape}
 
-    results =
+    {results, counts} =
       work
       |> Task.async_stream(
         fn {name, shape} ->
           case do_fetch_one(client, name, shape) do
             {:ok, %{data: bytes, ext: ext}} ->
               {name, shape,
-               %{
-                 data: bytes,
-                 ext: ext,
-                 sha256: :crypto.hash(:sha256, bytes)
-               }}
+               {:ok,
+                %{
+                  data: bytes,
+                  ext: ext,
+                  sha256: :crypto.hash(:sha256, bytes)
+                }}}
 
-            _ ->
-              {name, shape, nil}
+            {:error, reason} ->
+              {name, shape, {:error, reason}}
           end
         end,
         max_concurrency: max_concurrency(),
@@ -109,11 +113,24 @@ defmodule Lightning.Adaptors.NPM.GitHub do
         on_timeout: :kill_task,
         ordered: false
       )
-      |> Enum.reduce(%{}, fn
-        {:ok, {_name, _shape, nil}}, acc -> acc
-        {:ok, {name, shape, entry}}, acc -> put_entry(acc, name, shape, entry)
-        {:exit, _reason}, acc -> acc
+      |> Enum.reduce({%{}, %{ok: 0, not_found: 0, error: 0}}, fn
+        {:ok, {name, shape, {:ok, entry}}}, {acc, c} ->
+          {put_entry(acc, name, shape, entry), Map.update!(c, :ok, &(&1 + 1))}
+
+        {:ok, {_name, _shape, {:error, :not_found}}}, {acc, c} ->
+          {acc, Map.update!(c, :not_found, &(&1 + 1))}
+
+        {:ok, {_name, _shape, {:error, _reason}}}, {acc, c} ->
+          {acc, Map.update!(c, :error, &(&1 + 1))}
+
+        {:exit, _reason}, {acc, c} ->
+          {acc, Map.update!(c, :error, &(&1 + 1))}
       end)
+
+    Logger.info(
+      "NPM.GitHub: fetch_all names=#{length(names)} pairs=#{length(work)} " <>
+        "ok=#{counts.ok} not_found=#{counts.not_found} errors=#{counts.error}"
+    )
 
     {:ok, results}
   end
@@ -130,15 +147,33 @@ defmodule Lightning.Adaptors.NPM.GitHub do
 
       case Tesla.get(client, path) do
         {:ok, %Tesla.Env{status: 200, body: body}} when is_binary(body) ->
+          Logger.debug(fn ->
+            "NPM.GitHub: GET #{path} → 200 (#{byte_size(body)}B) " <>
+              "name=#{name} shape=#{shape}"
+          end)
+
           {:halt, {:ok, %{data: body, ext: ext}}}
 
         {:ok, %Tesla.Env{status: 404}} ->
+          Logger.debug(fn ->
+            "NPM.GitHub: GET #{path} → 404 name=#{name} shape=#{shape}"
+          end)
+
           {:cont, {:error, :not_found}}
 
         {:ok, %Tesla.Env{status: status}} ->
+          Logger.debug(fn ->
+            "NPM.GitHub: GET #{path} → #{status} name=#{name} shape=#{shape}"
+          end)
+
           {:halt, {:error, {:http_status, status}}}
 
         {:error, reason} ->
+          Logger.debug(fn ->
+            "NPM.GitHub: GET #{path} → transport error #{inspect(reason)} " <>
+              "name=#{name} shape=#{shape}"
+          end)
+
           {:halt, {:error, reason}}
       end
     end)
@@ -148,6 +183,7 @@ defmodule Lightning.Adaptors.NPM.GitHub do
     "/OpenFn/adaptors/#{github_ref()}/packages/#{name_suffix}/assets/#{shape}.#{ext}"
   end
 
+  defp strip_scope(@scope_prefix <> @language_prefix <> rest), do: rest
   defp strip_scope(@scope_prefix <> rest), do: rest
   defp strip_scope(name), do: name
 

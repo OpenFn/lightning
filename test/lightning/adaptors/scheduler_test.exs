@@ -443,6 +443,59 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert row.icon_square_sha256 == nil
     end
 
+    test "self-heals iconless rows on the periodic tick", %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+
+      # Pre-seed a row that already matches the listed latest_version
+      # (so the diff path will :touch instead of :fetch). Without
+      # self-heal this row would stay iconless forever.
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-stale")
+        )
+
+      bytes = "STALE_ICON"
+      sha = :crypto.hash(:sha256, bytes)
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-stale", latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:ok,
+         %{
+           "@openfn/language-stale" => %{
+             square: %{data: bytes, ext: "png", sha256: sha}
+           }
+         }}
+      end)
+
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      # The pre-seeded row pushes max_checked_at to "now", so init
+      # delay = full interval — drive the tick explicitly.
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      :ok = Scheduler.refresh_now(sched_name)
+
+      assert_receive {:changed, "@openfn/language-stale", ^source}, 2000
+
+      row = AdaptorsRepo.get_adaptor("@openfn/language-stale", source)
+      assert row.icon_square_ext == "png"
+      assert row.icon_square_sha256 == sha
+
+      icon_path =
+        Lightning.Adaptors.IconCache.path(
+          source,
+          "@openfn/language-stale",
+          :square,
+          "png"
+        )
+
+      File.rm(icon_path)
+    end
+
     test "fetches per-adaptor in parallel (multiple concurrent fetch_adaptor calls)",
          %{sup: sup} do
       test_pid = self()
@@ -586,6 +639,110 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       # Give any (mistaken) extra fetch_icons call time to happen.
       Process.sleep(100)
+    end
+  end
+
+  describe "refresh_icons/1" do
+    test "updates rows whose shape sha256 differs from the fetched icon", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-empty")
+        )
+
+      old_sha = :crypto.hash(:sha256, "OLD")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-current",
+            icon_square_ext: "png",
+            icon_square_sha256: old_sha
+          )
+        )
+
+      new_bytes = "NEW_BYTES"
+      new_sha = :crypto.hash(:sha256, new_bytes)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:ok,
+         %{
+           "@openfn/language-empty" => %{
+             square: %{data: new_bytes, ext: "png", sha256: new_sha}
+           },
+           "@openfn/language-current" => %{
+             square: %{data: new_bytes, ext: "png", sha256: new_sha}
+           }
+         }}
+      end)
+
+      # interval: 0 disables the init tick so refresh_icons is the only
+      # path that calls fetch_icons.
+      start_scheduler(sup, interval: 0)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{updated: 2, unchanged: 0}} =
+               Scheduler.refresh_icons(sched_name)
+
+      empty = AdaptorsRepo.get_adaptor("@openfn/language-empty", source)
+      assert empty.icon_square_ext == "png"
+      assert empty.icon_square_sha256 == new_sha
+
+      current = AdaptorsRepo.get_adaptor("@openfn/language-current", source)
+      assert current.icon_square_sha256 == new_sha
+
+      for name <- ["@openfn/language-empty", "@openfn/language-current"] do
+        Lightning.Adaptors.IconCache.path(source, name, :square, "png")
+        |> File.rm()
+      end
+    end
+
+    test "leaves rows whose shape sha256 already matches unchanged", %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+      sha = :crypto.hash(:sha256, "SAME")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-same",
+            icon_square_ext: "png",
+            icon_square_sha256: sha
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:ok,
+         %{
+           "@openfn/language-same" => %{
+             square: %{data: "SAME", ext: "png", sha256: sha}
+           }
+         }}
+      end)
+
+      start_scheduler(sup, interval: 0)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{updated: 0, unchanged: 1}} =
+               Scheduler.refresh_icons(sched_name)
+
+      _ = source
+    end
+
+    test "surfaces a strategy fetch error as {:error, reason}", %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+        {:error, :upstream_down}
+      end)
+
+      start_scheduler(sup, interval: 0)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:error, :upstream_down} = Scheduler.refresh_icons(sched_name)
     end
   end
 end

@@ -1,7 +1,13 @@
 defmodule LightningWeb.MaintenanceLive.IndexTest do
-  use LightningWeb.ConnCase, async: true
+  # async: false because the icon-refresh test stubs Lightning.Adaptors.StrategyMock
+  # globally, which the singleton Scheduler GenServer (not in the test pid's
+  # caller chain) needs to see.
+  use LightningWeb.ConnCase, async: false
 
+  import Mox
   import Phoenix.LiveViewTest
+
+  setup :set_mox_global
 
   describe "Index as a regular user" do
     setup :register_and_log_in_user
@@ -40,6 +46,31 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
                live,
                "p[role=alert][phx-value-key=info]",
                "Adaptor refresh queued."
+             )
+    end
+
+    test "renders the Refresh Adaptor Icons card", %{conn: conn} do
+      {:ok, live, html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert html =~ "Refresh Adaptor Icons"
+      assert has_element?(live, "#refresh-icons-button")
+    end
+
+    test "clicking the icons button reports the refresh result", %{conn: conn} do
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn -> {:ok, %{}} end)
+
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      live
+      |> element("#refresh-icons-button")
+      |> render_click()
+
+      assert has_element?(
+               live,
+               "p[role=alert][phx-value-key=info]",
+               "Icon refresh complete"
              )
     end
   end
