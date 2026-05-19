@@ -97,8 +97,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker
                 project={@project}
-                current_user={@current_user}
-                access_root={@access_root}
+                label={@project_label}
               />
               <LayoutComponents.breadcrumb_items items={[
                 {"Workflows", "/projects/#{@project.id}/w"}

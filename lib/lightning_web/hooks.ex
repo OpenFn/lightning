@@ -58,12 +58,19 @@ defmodule LightningWeb.Hooks do
         access_root =
           Lightning.Projects.access_root_for_user(project, current_user)
 
+        project_label =
+          Lightning.Projects.display_name_within_access_root(
+            project,
+            access_root
+          )
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
          |> assign(:project_user, project_user)
          |> assign(:project, project)
          |> assign(:access_root, access_root)
+         |> assign(:project_label, project_label)
          |> assign(:projects, projects)}
 
       true ->
