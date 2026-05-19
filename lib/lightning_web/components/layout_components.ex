@@ -305,7 +305,7 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker project={@project} current_user={@current_user} access_root={@access_root} />
+        <.breadcrumb_project_picker project={@project} label={@project_label} />
         <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
@@ -356,32 +356,15 @@ defmodule LightningWeb.LayoutComponents do
   LiveView pages and the collaborative editor.
   """
   attr :project, Lightning.Projects.Project, required: true
-  attr :current_user, Lightning.Accounts.User, default: nil
-  attr :access_root, Lightning.Projects.Project, default: nil
+  attr :label, :string, required: true
 
   def breadcrumb_project_picker(assigns) do
-    alias Lightning.Projects
-    alias Lightning.Projects.Project
-
-    access_root =
-      case {assigns[:access_root], assigns[:current_user]} do
-        {%Project{} = ar, _} ->
-          ar
-
-        {nil, %Lightning.Accounts.User{} = user} ->
-          Projects.access_root_for_user(assigns.project, user)
-
-        _ ->
-          assigns.project
-      end
-
     assigns =
       assigns
       |> assign(
-        :label,
-        Projects.display_name_within_access_root(assigns.project, access_root)
+        :is_sandbox,
+        to_string(Lightning.Projects.Project.sandbox?(assigns.project))
       )
-      |> assign(:is_sandbox, to_string(Project.sandbox?(assigns.project)))
       |> assign(:color, assigns.project.color)
 
     ~H"""

@@ -62,21 +62,16 @@ defmodule LightningWeb.LayoutComponentsTest do
   end
 
   describe "breadcrumb_project_picker/1" do
-    test "renders ReactComponent mount point for a root project" do
+    test "renders the ReactComponent mount point for a root project" do
       project = %Lightning.Projects.Project{
         id: Ecto.UUID.generate(),
         name: "my-project",
-        parent_id: nil,
-        parent: %Ecto.Association.NotLoaded{
-          __field__: :parent,
-          __owner__: Lightning.Projects.Project,
-          __cardinality__: :one
-        }
+        parent_id: nil
       }
 
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: project})
+        |> render_component(%{project: project, label: "my-project"})
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
@@ -84,7 +79,7 @@ defmodule LightningWeb.LayoutComponentsTest do
       assert html =~ ~s(data-is-sandbox="false")
     end
 
-    test "renders ReactComponent mount point with sandbox data" do
+    test "renders the ReactComponent mount point for a sandbox" do
       parent = %Lightning.Projects.Project{
         id: Ecto.UUID.generate(),
         name: "parent-project"
@@ -100,44 +95,16 @@ defmodule LightningWeb.LayoutComponentsTest do
 
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: project})
+        |> render_component(%{
+          project: project,
+          label: "parent-project/my-sandbox"
+        })
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
-      assert html =~ ~s(data-label="my-sandbox")
+      assert html =~ ~s(data-label="parent-project/my-sandbox")
       assert html =~ ~s(data-is-sandbox="true")
       assert html =~ ~s(data-color="#E33D63")
-    end
-
-    test "uses the access_root attr to truncate the displayed ancestor chain" do
-      root = insert(:project, name: "acme-workspace")
-      sandbox = insert(:project, name: "acme-staging", parent: root)
-
-      html =
-        (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: sandbox, access_root: sandbox})
-
-      assert html =~ ~s(data-label="acme-staging")
-      refute html =~ "acme-workspace/acme-staging"
-    end
-
-    test "derives access_root from current_user when access_root is not passed" do
-      user = insert(:user)
-      root = insert(:project, name: "acme-workspace")
-
-      sandbox =
-        insert(:project,
-          name: "acme-staging",
-          parent: root,
-          project_users: [%{user: user, role: :admin}]
-        )
-
-      html =
-        (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: sandbox, current_user: user})
-
-      assert html =~ ~s(data-label="acme-staging")
-      refute html =~ "acme-workspace/acme-staging"
     end
   end
 

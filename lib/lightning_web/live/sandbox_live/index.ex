@@ -436,8 +436,7 @@ defmodule LightningWeb.SandboxLive.Index do
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker
                 project={@project}
-                current_user={@current_user}
-                access_root={@access_root}
+                label={@project_label}
               />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>

@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- The breadcrumb project picker now shows the full ancestor path on the project
+  settings page (previously it collapsed to the sandbox's own name).
+  [#4769](https://github.com/OpenFn/lightning/issues/4769)
+
 ## [2.16.4-pre] - 2026-05-18
 
 ### Added
