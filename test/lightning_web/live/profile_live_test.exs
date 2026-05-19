@@ -820,4 +820,104 @@ defmodule LightningWeb.ProfileLiveTest do
       refute has_element?(view, "#gdpr-banner")
     end
   end
+
+  describe "Identities Component" do
+    setup do
+      handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+
+      wellknown = %Lightning.AuthProviders.WellKnown{
+        authorization_endpoint: "https://example.com/authorize",
+        token_endpoint: "https://example.com/token",
+        userinfo_endpoint: "https://example.com/userinfo"
+      }
+
+      {:ok, handler} =
+        Lightning.AuthProviders.Handler.new(handler_name,
+          wellknown: wellknown,
+          client_id: "id",
+          client_secret: "secret",
+          redirect_uri: "http://localhost/callback_url"
+        )
+
+      Lightning.AuthProviders.create_handler(handler)
+      on_exit(fn -> Lightning.AuthProviders.remove_handler(handler) end)
+
+      {:ok, handler: handler}
+    end
+
+    test "renders Link button when provider is not linked", %{
+      conn: conn,
+      handler: handler
+    } do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      assert has_element?(view, "#link-#{handler.name}-button")
+      refute has_element?(view, "#unlink-#{handler.name}-button")
+    end
+
+    test "renders Unlink button when provider is linked", %{
+      conn: conn,
+      handler: handler
+    } do
+      user = user_fixture()
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "abc"
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      assert has_element?(view, "#unlink-#{handler.name}-button")
+      refute has_element?(view, "#link-#{handler.name}-button")
+    end
+
+    test "unlink event removes the identity", %{conn: conn, handler: handler} do
+      user = user_fixture()
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "abc"
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      view
+      |> element("#unlink-#{handler.name}-button")
+      |> render_click()
+
+      assert Lightning.Accounts.list_user_identities(user) == []
+    end
+
+    test "unlink is refused for SSO-only user with only one identity", %{
+      conn: conn,
+      handler: handler
+    } do
+      user = insert(:user, hashed_password: nil)
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "abc"
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      html =
+        view
+        |> element("#unlink-#{handler.name}-button")
+        |> render_click()
+
+      assert html =~ "Set a password"
+      assert [_] = Lightning.Accounts.list_user_identities(user)
+    end
+  end
 end

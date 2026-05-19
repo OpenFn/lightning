@@ -10,6 +10,8 @@ defmodule LightningWeb.OidcController do
 
   action_fallback LightningWeb.FallbackController
 
+  @link_intent_session_key :sso_link_intent_provider
+
   plug :fetch_current_user
 
   @doc """
@@ -27,16 +29,40 @@ defmodule LightningWeb.OidcController do
   end
 
   @doc """
+  Initiates an SSO link flow for an already-authenticated user. The
+  provider is recorded in the session and the user is redirected to the
+  provider's authorize URL. On callback the controller links the resulting
+  identity to the current account rather than logging in.
+  """
+  def link(conn, %{"provider" => provider}) do
+    with {:ok, handler} <- AuthProviders.get_handler(provider) do
+      if conn.assigns.current_user do
+        conn
+        |> put_session(@link_intent_session_key, provider)
+        |> redirect(external: Handler.authorize_url(handler))
+      else
+        redirect(conn, to: Routes.user_session_path(conn, :new))
+      end
+    end
+  end
+
+  @doc """
   Once the user has completed the authorization flow from above, they are
   returned here, and the authorization code is used to log them in.
   """
   def new(conn, %{"provider" => provider, "code" => code}) do
+    {link_intent, conn} = pop_link_intent(conn)
+
     with {:ok, handler} <- AuthProviders.get_handler(provider),
          {:ok, token} <- Handler.get_token(handler, code),
          userinfo <- Handler.get_userinfo(handler, token),
          {:ok, email} <- fetch_email(userinfo),
          {:ok, uid} <- fetch_uid(userinfo) do
-      handle_sso_login(conn, provider, uid, email, userinfo)
+      if link_intent == provider && conn.assigns.current_user do
+        handle_sso_link(conn, conn.assigns.current_user, provider, uid)
+      else
+        handle_sso_login(conn, provider, uid, email, userinfo)
+      end
     else
       {:error, :no_email} ->
         conn
@@ -44,12 +70,12 @@ defmodule LightningWeb.OidcController do
           :error,
           "Could not retrieve your email from the provider. Please ensure your email address is accessible."
         )
-        |> redirect(to: Routes.user_session_path(conn, :new))
+        |> redirect(to: failure_redirect(conn, link_intent))
 
       {:error, _reason} ->
         conn
         |> put_flash(:error, "Authentication failed")
-        |> redirect(to: Routes.user_session_path(conn, :new))
+        |> redirect(to: failure_redirect(conn, link_intent))
     end
   end
 
@@ -61,6 +87,45 @@ defmodule LightningWeb.OidcController do
   def new(conn, %{"error" => error_message, "state" => state}) do
     broadcast_message(state, %{error: error_message})
     close_browser_window(conn)
+  end
+
+  defp handle_sso_link(conn, %User{} = current_user, provider, uid) do
+    case Accounts.get_user_by_identity(provider, uid) do
+      %User{id: id} when id == current_user.id ->
+        conn
+        |> put_flash(
+          :info,
+          "Your #{display_name(provider)} account is already linked."
+        )
+        |> redirect(to: ~p"/profile")
+
+      %User{} ->
+        conn
+        |> put_flash(
+          :error,
+          "This #{display_name(provider)} identity is already linked to a different account."
+        )
+        |> redirect(to: ~p"/profile")
+
+      nil ->
+        case Accounts.link_user_identity(current_user, provider, uid) do
+          {:ok, _identity} ->
+            conn
+            |> put_flash(
+              :info,
+              "Linked your #{display_name(provider)} account."
+            )
+            |> redirect(to: ~p"/profile")
+
+          {:error, _reason} ->
+            conn
+            |> put_flash(
+              :error,
+              "Could not link your #{display_name(provider)} account. Please try again."
+            )
+            |> redirect(to: ~p"/profile")
+        end
+    end
   end
 
   defp handle_sso_login(conn, provider, uid, email, userinfo) do
@@ -153,6 +218,23 @@ defmodule LightningWeb.OidcController do
   end
 
   defp extract_name(_), do: %{first_name: "", last_name: ""}
+
+  defp pop_link_intent(conn) do
+    case get_session(conn, @link_intent_session_key) do
+      nil -> {nil, conn}
+      provider -> {provider, delete_session(conn, @link_intent_session_key)}
+    end
+  end
+
+  defp failure_redirect(conn, link_intent) do
+    if link_intent && conn.assigns.current_user do
+      ~p"/profile"
+    else
+      Routes.user_session_path(conn, :new)
+    end
+  end
+
+  defp display_name(provider), do: String.capitalize(provider)
 
   defp broadcast_message(state, data) do
     [subscription_id, mod, component_id, current_tab] =

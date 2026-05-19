@@ -217,6 +217,66 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns the SSO identities linked to a user, ordered by provider name.
+  """
+  def list_user_identities(%User{id: user_id}) do
+    from(i in UserIdentity,
+      where: i.user_id == ^user_id,
+      order_by: [asc: i.provider]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a user's identity for a given provider, or `nil` if not linked.
+  """
+  def get_user_identity(%User{id: user_id}, provider) do
+    Repo.get_by(UserIdentity, user_id: user_id, provider: provider)
+  end
+
+  @doc """
+  Removes the SSO identity for the given user and provider.
+
+  Refuses to remove the last identity for an SSO-only user (no password set),
+  since that would lock them out. Such users can set a password by going
+  through the password reset flow first.
+
+  Returns:
+    * `{:ok, identity}` when the identity is removed
+    * `{:error, :not_linked}` when the user has no identity for the provider
+    * `{:error, :would_lock_out}` when removing would leave an SSO-only user
+      with no way to log in
+  """
+  def unlink_user_identity(%User{} = user, provider) do
+    case get_user_identity(user, provider) do
+      nil ->
+        {:error, :not_linked}
+
+      %UserIdentity{} = identity ->
+        if can_remove_identity?(user, identity) do
+          Repo.delete(identity)
+        else
+          {:error, :would_lock_out}
+        end
+    end
+  end
+
+  defp can_remove_identity?(%User{hashed_password: hp}, _identity)
+       when is_binary(hp),
+       do: true
+
+  defp can_remove_identity?(%User{} = user, %UserIdentity{id: identity_id}) do
+    other_count =
+      from(i in UserIdentity,
+        where: i.user_id == ^user.id and i.id != ^identity_id,
+        select: count(i.id)
+      )
+      |> Repo.one()
+
+    other_count > 0
+  end
+
+  @doc """
   Registers a brand-new user via SSO.
 
   The user is created without a password and confirmed immediately.
