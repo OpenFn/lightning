@@ -75,16 +75,38 @@ defmodule Lightning.SetupUtils do
         %{user_id: admin.id, role: :owner}
       ])
 
+    sandboxes = create_demo_sandboxes(openhie_project, dhis2_project, admin)
+
     %{
       jobs: openhie_jobs ++ dhis2_jobs,
       users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
+      sandboxes: sandboxes,
       workflows: [openhie_workflow, dhis2_workflow],
       workorders: [
         openhie_workorder,
         failure_dhis2_workorder
       ]
     }
+  end
+
+  defp create_demo_sandboxes(openhie_project, dhis2_project, admin) do
+    {:ok, openhie_dev} =
+      Lightning.Projects.Sandboxes.provision(openhie_project, admin, %{
+        name: "openhie-dev"
+      })
+
+    {:ok, dhis2_dev} =
+      Lightning.Projects.Sandboxes.provision(dhis2_project, admin, %{
+        name: "dhis2-dev"
+      })
+
+    {:ok, dhis2_feature_x} =
+      Lightning.Projects.Sandboxes.provision(dhis2_dev, admin, %{
+        name: "dhis2-feature-x"
+      })
+
+    [openhie_dev, dhis2_dev, dhis2_feature_x]
   end
 
   defp to_log_lines(log) do

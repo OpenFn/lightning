@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- `Lightning.SetupUtils.setup_demo/1` now seeds three sandboxes (one nested)
+  under the existing demo projects.
+  [#4774](https://github.com/OpenFn/lightning/issues/4774)
+
 ### Changed
 
 ### Fixed

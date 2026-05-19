@@ -608,9 +608,11 @@ defmodule Lightning.SetupUtilsTest do
 
     test "all initial data gets wiped out of database" do
       assert Lightning.Accounts.list_users() |> Enum.count() > 0
-      assert Lightning.Projects.list_projects() |> Enum.count() == 2
-      assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
-      assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      # 2 root projects + 3 demo sandboxes
+      assert Lightning.Projects.list_projects() |> Enum.count() == 5
+      # 2 root workflows + 3 cloned into the demo sandboxes
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 5
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 14
       assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
@@ -630,9 +632,11 @@ defmodule Lightning.SetupUtilsTest do
 
     test "all initial data gets wiped out of database except superusers" do
       assert Lightning.Accounts.list_users() |> Enum.count() > 1
-      assert Lightning.Projects.list_projects() |> Enum.count() == 2
-      assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
-      assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+      # 2 root projects + 3 demo sandboxes
+      assert Lightning.Projects.list_projects() |> Enum.count() == 5
+      # 2 root workflows + 3 cloned into the demo sandboxes
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 5
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 14
       assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 5
 
       assert Repo.all(Lightning.Invocation.LogLine)
