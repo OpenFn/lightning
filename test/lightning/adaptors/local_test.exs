@@ -300,7 +300,7 @@ defmodule Lightning.Adaptors.LocalTest do
     end
   end
 
-  describe "fetch_icons/0" do
+  describe "fetch_icons/1" do
     test "returns an entry per package per shape including sha256",
          %{root: root} do
       http = write_package!(root, "http", "@openfn/language-http", "1.0.0")
@@ -310,7 +310,7 @@ defmodule Lightning.Adaptors.LocalTest do
       write_icon!(http, :rectangle, "svg", "<svg/>")
       write_icon!(sf, :square, "png", "SF_SQ")
 
-      {:ok, map} = Local.fetch_icons()
+      {:ok, map} = Local.fetch_icons([])
 
       assert %{
                "@openfn/language-http" => %{
@@ -329,14 +329,14 @@ defmodule Lightning.Adaptors.LocalTest do
     test "returns {:ok, %{}} when no packages have icons", %{root: root} do
       write_package!(root, "bare", "@openfn/language-bare", "1.0.0")
 
-      assert {:ok, %{}} = Local.fetch_icons()
+      assert {:ok, %{}} = Local.fetch_icons([])
     end
 
     test "returns {:error, :no_repo_path} when :path is unset" do
       Application.delete_env(:lightning, Local)
 
       assert capture_log(fn ->
-               assert Local.fetch_icons() == {:error, :no_repo_path}
+               assert Local.fetch_icons([]) == {:error, :no_repo_path}
              end) =~ "not configured"
     end
   end

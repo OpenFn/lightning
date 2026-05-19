@@ -12,12 +12,13 @@ defmodule Lightning.Adaptors.NPM do
     * `c:fetch_adaptor/1` — packument fetch + per-version decode and
       latest-version schema retrieval via jsDelivr. Icon fields are
       **not** stamped here; the Scheduler joins them on after a bulk
-      `c:fetch_icons/0` pass.
+      `c:fetch_icons/1` pass.
     * `c:fetch_icon/2` — single icon raw GET against
       `raw.githubusercontent.com`, used by the Store's rare lazy-miss
       fallback.
-    * `c:fetch_icons/0` — bulk fan-out over the search listing, one
-      HTTP request per `(name, shape)`.
+    * `c:fetch_icons/1` — bulk fan-out over the search listing, one
+      HTTP request per `(name, shape)`. Threads `:prior_etags` from
+      the caller down into the per-request `If-None-Match` headers.
 
   ## HTTP
 
@@ -34,8 +35,8 @@ defmodule Lightning.Adaptors.NPM do
   bounded by `http_timeout`. No retry, no backoff, no circuit-breaker —
   transient failures (5xx, timeout, nxdomain) of the *primary* request
   (`packument` for `fetch_adaptor/1`, `search` for `list_adaptors/0` and
-  `fetch_icons/0`) surface as `{:error, term()}` unchanged. Schema and
-  icon fetches inside `fetch_adaptor/1` and `fetch_icons/0` are
+  `fetch_icons/1`) surface as `{:error, term()}` unchanged. Schema and
+  icon fetches inside `fetch_adaptor/1` and `fetch_icons/1` are
   best-effort: a single icon miss degrades that entry to absence rather
   than failing the whole record.
 
@@ -86,10 +87,12 @@ defmodule Lightning.Adaptors.NPM do
   end
 
   @impl Lightning.Adaptors.Strategy
-  def fetch_icons do
+  def fetch_icons(opts \\ []) when is_list(opts) do
+    prior_etags = Keyword.get(opts, :prior_etags, %{})
+
     with {:ok, listing} <- Registry.list_adaptors() do
       names = Enum.map(listing, & &1.name)
-      GitHub.fetch_all(names)
+      GitHub.fetch_all(names, prior_etags)
     end
   end
 end

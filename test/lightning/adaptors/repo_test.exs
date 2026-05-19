@@ -388,6 +388,27 @@ defmodule Lightning.Adaptors.RepoTest do
       assert after_row.icon_square_ext == "svg"
     end
 
+    test "writes icon etag columns alongside ext/sha256" do
+      {:ok, before} = AdaptorRepo.upsert_adaptor(adaptor_record())
+      sha = :crypto.hash(:sha256, "PNG")
+
+      assert {1, nil} =
+               AdaptorRepo.update_icons(before.name, :npm, %{
+                 icon_square_ext: "png",
+                 icon_square_sha256: sha,
+                 icon_square_etag: ~s("abc123")
+               })
+
+      after_row = AdaptorRepo.get_adaptor(before.name, :npm)
+
+      assert %{
+               icon_square_ext: "png",
+               icon_square_sha256: ^sha,
+               icon_square_etag: ~s("abc123"),
+               icon_rectangle_etag: nil
+             } = after_row
+    end
+
     test "leaves version rows untouched" do
       {:ok, before} =
         AdaptorRepo.upsert_adaptor(
@@ -424,6 +445,8 @@ defmodule Lightning.Adaptors.RepoTest do
       icon_rectangle_ext: nil,
       icon_square_sha256: nil,
       icon_rectangle_sha256: nil,
+      icon_square_etag: nil,
+      icon_rectangle_etag: nil,
       versions: [version_record("1.0.0")]
     }
     |> Map.merge(overrides)

@@ -22,7 +22,7 @@ defmodule Lightning.Adaptors.Scheduler do
   A tick runs two parallel pipelines under the per-instance
   `Task.Supervisor`:
 
-    * **Pipeline A** — `strategy.fetch_icons/0` for every adaptor.
+    * **Pipeline A** — `strategy.fetch_icons/1` for every adaptor.
     * **Pipeline B** — `strategy.list_adaptors/0` followed by a bounded
       per-adaptor fan-out (`async_stream_nolink`) calling
       `strategy.fetch_adaptor/1` only for names whose `latest_version`
@@ -89,7 +89,7 @@ defmodule Lightning.Adaptors.Scheduler do
   @doc """
   Refresh icons only, against every source-scoped adaptor row.
 
-  Runs `strategy.fetch_icons/0` and re-applies any shape whose `sha256`
+  Runs `strategy.fetch_icons/1` and re-applies any shape whose `sha256`
   differs from what is on the row. Adaptor metadata and version rows
   are not touched. Returns `{:ok, %{updated: n, unchanged: m}}` on
   success or `{:error, reason}` if the bulk fetch fails.
@@ -165,9 +165,11 @@ defmodule Lightning.Adaptors.Scheduler do
     Logger.info("Adaptors[#{state.source}]: refresh_icons requested")
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
-    case strategy.fetch_icons() do
+    existing = AdaptorsRepo.list_adaptors(state.source)
+    prior_etags = prior_etags_from_rows(existing)
+
+    case strategy.fetch_icons(prior_etags: prior_etags) do
       {:ok, icons} ->
-        existing = AdaptorsRepo.list_adaptors(state.source)
         result = reapply_icons(existing, icons, state)
 
         Logger.info(
@@ -191,18 +193,21 @@ defmodule Lightning.Adaptors.Scheduler do
     started_at = System.monotonic_time(:millisecond)
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
+    # Single DB round-trip serves both the icons-task input (prior etags)
+    # and the version diff used below to decide which adaptors to fetch.
+    existing_rows = AdaptorsRepo.list_adaptors(state.source)
+    prior_etags = prior_etags_from_rows(existing_rows)
+
+    existing_by_name =
+      Map.new(existing_rows, fn a -> {a.name, a.latest_version} end)
+
     icons_task =
       Task.Supervisor.async_nolink(state.tasks, fn ->
-        strategy.fetch_icons()
+        strategy.fetch_icons(prior_etags: prior_etags)
       end)
 
     case strategy.list_adaptors() do
       {:ok, upstream} ->
-        existing_by_name =
-          state.source
-          |> AdaptorsRepo.list_adaptors()
-          |> Map.new(fn a -> {a.name, a.latest_version} end)
-
         {fetched, changed, errors} =
           state.tasks
           |> Task.Supervisor.async_stream_nolink(
@@ -227,6 +232,7 @@ defmodule Lightning.Adaptors.Scheduler do
           |> Enum.count(&(&1 == :ok))
 
         healed = heal_missing_icons(icons, state)
+        not_modified = count_not_modified(icons)
 
         listed = length(upstream)
         touched = listed - changed - errors
@@ -236,6 +242,7 @@ defmodule Lightning.Adaptors.Scheduler do
           "Adaptors[#{state.source}]: refresh tick listed=#{listed} " <>
             "changed=#{changed} touched=#{touched} fetched=#{persisted} " <>
             "icons=#{map_size(icons)} healed=#{healed} " <>
+            "not_modified=#{not_modified} " <>
             "errors=#{errors} duration=#{duration_ms}ms"
         )
 
@@ -342,13 +349,14 @@ defmodule Lightning.Adaptors.Scheduler do
 
   defp merge_icon(record, shape, package_icons, source) do
     case Map.get(package_icons, shape) do
-      %{data: bytes, ext: ext, sha256: sha} when is_binary(bytes) ->
+      %{data: bytes, ext: ext, sha256: sha} = entry when is_binary(bytes) ->
         try do
           {:ok, ^sha} = IconCache.write!(source, record.name, shape, ext, bytes)
 
           record
           |> Map.put(:"icon_#{shape}_ext", ext)
           |> Map.put(:"icon_#{shape}_sha256", sha)
+          |> maybe_put_etag(shape, Map.get(entry, :etag))
         rescue
           e ->
             Logger.warning(
@@ -358,9 +366,24 @@ defmodule Lightning.Adaptors.Scheduler do
             record
         end
 
+      :not_modified ->
+        # Upstream confirmed unchanged — leave row's existing icon and
+        # etag in place. Counted in the tick summary via
+        # count_not_modified/1.
+        record
+
       _ ->
         record
     end
+  end
+
+  # Stamp the etag onto the record only when the strategy supplied one
+  # (NPM 200 entries always have the key; Local omits it). A nil etag is
+  # not stamped — we preserve whatever was already on the row.
+  defp maybe_put_etag(record, _shape, nil), do: record
+
+  defp maybe_put_etag(record, shape, etag) when is_binary(etag) do
+    Map.put(record, :"icon_#{shape}_etag", etag)
   end
 
   # Top up icons on rows that currently have NULL on at least one shape.
@@ -425,27 +448,65 @@ defmodule Lightning.Adaptors.Scheduler do
   defp accumulate_icon_change(acc, shape, row, package_icons, state) do
     sha_key = :"icon_#{shape}_sha256"
     ext_key = :"icon_#{shape}_ext"
+    etag_key = :"icon_#{shape}_etag"
 
-    with %{data: bytes, ext: ext, sha256: sha} <- Map.get(package_icons, shape),
-         true <- is_binary(bytes),
-         true <- Map.get(row, sha_key) != sha do
-      try do
-        {:ok, ^sha} = IconCache.write!(state.source, row.name, shape, ext, bytes)
+    case Map.get(package_icons, shape) do
+      %{data: bytes, ext: ext, sha256: sha} = entry when is_binary(bytes) ->
+        if Map.get(row, sha_key) == sha do
+          # Same bytes already on disk; the etag may still need
+          # refreshing if the strategy gave us a new (non-nil) value
+          # that differs from what we have. nil never clobbers.
+          maybe_accumulate_etag(acc, etag_key, row, Map.get(entry, :etag))
+        else
+          accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state,
+            sha_key: sha_key,
+            ext_key: ext_key,
+            etag_key: etag_key
+          )
+        end
+
+      :not_modified ->
+        # 304 confirmed — nothing to write, etag already current.
+        acc
+
+      _ ->
+        acc
+    end
+  end
+
+  defp accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state,
+         sha_key: sha_key,
+         ext_key: ext_key,
+         etag_key: etag_key
+       ) do
+    try do
+      {:ok, ^sha} = IconCache.write!(state.source, row.name, shape, ext, bytes)
+
+      acc
+      |> Map.put(ext_key, ext)
+      |> Map.put(sha_key, sha)
+      |> maybe_accumulate_etag(etag_key, row, Map.get(entry, :etag))
+    rescue
+      e ->
+        Logger.warning(
+          "Scheduler: IconCache.write!(#{row.name}, #{shape}) failed: " <>
+            Exception.message(e)
+        )
 
         acc
-        |> Map.put(ext_key, ext)
-        |> Map.put(sha_key, sha)
-      rescue
-        e ->
-          Logger.warning(
-            "Scheduler: IconCache.write!(#{row.name}, #{shape}) failed: " <>
-              Exception.message(e)
-          )
+    end
+  end
 
-          acc
-      end
+  # nil → preserve existing etag on the row (do not clobber).
+  # value matching the row's current etag → no-op (avoid no-op write).
+  # value differing → emit the change.
+  defp maybe_accumulate_etag(acc, _etag_key, _row, nil), do: acc
+
+  defp maybe_accumulate_etag(acc, etag_key, row, etag) when is_binary(etag) do
+    if Map.get(row, etag_key) == etag do
+      acc
     else
-      _ -> acc
+      Map.put(acc, etag_key, etag)
     end
   end
 
@@ -484,6 +545,46 @@ defmodule Lightning.Adaptors.Scheduler do
 
         {:error, reason}
     end
+  end
+
+  # Project a list of adaptor rows to the prior-etag map shape expected
+  # by `Strategy.fetch_icons/1`: `%{name => %{shape => etag}}`. Rows
+  # whose etags are both nil are skipped entirely (no empty inner map);
+  # within a row, only shapes with a non-nil etag are kept. The consumer
+  # treats absence as "no prior etag, send no If-None-Match", so an empty
+  # entry would be wasteful but harmless — we drop it for clarity.
+  @spec prior_etags_from_rows([map()]) :: %{
+          String.t() => %{optional(:square | :rectangle) => String.t()}
+        }
+  defp prior_etags_from_rows(rows) do
+    Enum.reduce(rows, %{}, fn row, acc ->
+      inner =
+        %{}
+        |> maybe_put_shape_etag(:square, Map.get(row, :icon_square_etag))
+        |> maybe_put_shape_etag(:rectangle, Map.get(row, :icon_rectangle_etag))
+
+      if map_size(inner) == 0 do
+        acc
+      else
+        Map.put(acc, row.name, inner)
+      end
+    end)
+  end
+
+  defp maybe_put_shape_etag(map, _shape, nil), do: map
+
+  defp maybe_put_shape_etag(map, shape, etag) when is_binary(etag),
+    do: Map.put(map, shape, etag)
+
+  # Count :not_modified sentinels across all shapes in the icons map.
+  # Used in the tick summary log.
+  defp count_not_modified(icons) do
+    Enum.reduce(icons, 0, fn {_name, shapes}, acc ->
+      Enum.reduce(shapes, acc, fn
+        {_shape, :not_modified}, n -> n + 1
+        {_shape, _}, n -> n
+      end)
+    end)
   end
 
   defp time_until_next_ms(nil, _interval_ms), do: 0

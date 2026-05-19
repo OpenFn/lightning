@@ -31,7 +31,9 @@ defmodule Lightning.Adaptors.SchedulerTest do
     # Default no-op icons stub for tests that don't care about the icons
     # pipeline. Individual tests override via `expect` when they need to
     # assert on it.
-    stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn -> {:ok, %{}} end)
+    stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+      {:ok, %{}}
+    end)
 
     {:ok, sup: sup}
   end
@@ -382,7 +384,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, adaptor_record()}
       end)
 
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok,
          %{
            "@openfn/language-http" => %{
@@ -427,7 +429,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, adaptor_record()}
       end)
 
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:error, :timeout}
       end)
 
@@ -461,7 +463,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, [%{name: "@openfn/language-stale", latest_version: "1.0.0"}]}
       end)
 
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn opts ->
+        # Row has no etags pre-seeded, so it is omitted from the
+        # prior-etags map entirely (no empty inner map).
+        assert Keyword.get(opts, :prior_etags) == %{}
+
         {:ok,
          %{
            "@openfn/language-stale" => %{
@@ -615,7 +621,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       # Exactly one fetch_icons call — the init tick. If refresh_package
       # also fetched icons the count would be 2 and Mox would fail.
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn _opts ->
         send(test_pid, :icons_called)
         {:ok, %{}}
       end)
@@ -667,7 +673,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       new_bytes = "NEW_BYTES"
       new_sha = :crypto.hash(:sha256, new_bytes)
 
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok,
          %{
            "@openfn/language-empty" => %{
@@ -701,26 +707,29 @@ defmodule Lightning.Adaptors.SchedulerTest do
       end
     end
 
-    test "leaves rows whose shape sha256 already matches unchanged", %{sup: sup} do
+    test "leaves rows whose shape sha256 already matches unchanged, passing prior etag",
+         %{sup: sup} do
       source = AdaptorsSupervisor.source(sup)
       sha = :crypto.hash(:sha256, "SAME")
+      etag = ~s("prior-etag-1")
 
       {:ok, _} =
         AdaptorsRepo.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-same",
             icon_square_ext: "png",
-            icon_square_sha256: sha
+            icon_square_sha256: sha,
+            icon_square_etag: etag
           )
         )
 
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
-        {:ok,
-         %{
-           "@openfn/language-same" => %{
-             square: %{data: "SAME", ext: "png", sha256: sha}
-           }
-         }}
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn opts ->
+        # Strategy receives the prior etag for this row's shape.
+        assert Keyword.get(opts, :prior_etags) == %{
+                 "@openfn/language-same" => %{square: etag}
+               }
+
+        {:ok, %{"@openfn/language-same" => %{square: :not_modified}}}
       end)
 
       start_scheduler(sup, interval: 0)
@@ -730,11 +739,213 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 0, unchanged: 1}} =
                Scheduler.refresh_icons(sched_name)
 
-      _ = source
+      row = AdaptorsRepo.get_adaptor("@openfn/language-same", source)
+      assert row.icon_square_sha256 == sha
+      assert row.icon_square_etag == etag
+    end
+
+    test "applies new etag when shape sha256 changes", %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+      old_sha = :crypto.hash(:sha256, "OLD")
+      new_bytes = "NEW"
+      new_sha = :crypto.hash(:sha256, new_bytes)
+      old_etag = ~s("etag-A")
+      new_etag = ~s("etag-B")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-rotated",
+            icon_square_ext: "png",
+            icon_square_sha256: old_sha,
+            icon_square_etag: old_etag
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok,
+         %{
+           "@openfn/language-rotated" => %{
+             square: %{
+               data: new_bytes,
+               ext: "png",
+               sha256: new_sha,
+               etag: new_etag
+             }
+           }
+         }}
+      end)
+
+      start_scheduler(sup, interval: 0)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{updated: 1, unchanged: 0}} =
+               Scheduler.refresh_icons(sched_name)
+
+      row = AdaptorsRepo.get_adaptor("@openfn/language-rotated", source)
+      assert row.icon_square_sha256 == new_sha
+      assert row.icon_square_etag == new_etag
+
+      Lightning.Adaptors.IconCache.path(
+        source,
+        "@openfn/language-rotated",
+        :square,
+        "png"
+      )
+      |> File.rm()
+    end
+
+    test "preserves existing etag when fetched entry's etag is nil or missing",
+         %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+      old_sha = :crypto.hash(:sha256, "OLD")
+      new_bytes_a = "NEW_A"
+      new_sha_a = :crypto.hash(:sha256, new_bytes_a)
+      new_bytes_b = "NEW_B"
+      new_sha_b = :crypto.hash(:sha256, new_bytes_b)
+      prior_etag = ~s("etag-A")
+
+      # Two rows: one returns 200 with etag: nil (NPM-style), the other
+      # returns 200 with the :etag key entirely absent (Local-style).
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-nil-etag",
+            icon_square_ext: "png",
+            icon_square_sha256: old_sha,
+            icon_square_etag: prior_etag
+          )
+        )
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-no-etag-key",
+            icon_square_ext: "png",
+            icon_square_sha256: old_sha,
+            icon_square_etag: prior_etag
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok,
+         %{
+           "@openfn/language-nil-etag" => %{
+             square: %{
+               data: new_bytes_a,
+               ext: "png",
+               sha256: new_sha_a,
+               etag: nil
+             }
+           },
+           "@openfn/language-no-etag-key" => %{
+             square: %{data: new_bytes_b, ext: "png", sha256: new_sha_b}
+           }
+         }}
+      end)
+
+      start_scheduler(sup, interval: 0)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{updated: 2, unchanged: 0}} =
+               Scheduler.refresh_icons(sched_name)
+
+      row_a = AdaptorsRepo.get_adaptor("@openfn/language-nil-etag", source)
+      assert row_a.icon_square_sha256 == new_sha_a
+      assert row_a.icon_square_etag == prior_etag
+
+      row_b = AdaptorsRepo.get_adaptor("@openfn/language-no-etag-key", source)
+      assert row_b.icon_square_sha256 == new_sha_b
+      assert row_b.icon_square_etag == prior_etag
+
+      for name <- ["@openfn/language-nil-etag", "@openfn/language-no-etag-key"] do
+        Lightning.Adaptors.IconCache.path(source, name, :square, "png")
+        |> File.rm()
+      end
+    end
+
+    test "mixed 304 and 200: unchanged row preserves its etag verbatim",
+         %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+      stale_old_sha = :crypto.hash(:sha256, "STALE_OLD")
+      stale_new_bytes = "STALE_NEW"
+      stale_new_sha = :crypto.hash(:sha256, stale_new_bytes)
+      stale_old_etag = ~s("etag-stale-old")
+      stale_new_etag = ~s("etag-stale-new")
+
+      current_sha = :crypto.hash(:sha256, "CURRENT_BYTES")
+      current_etag = ~s("etag-current")
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-stale-etag",
+            icon_square_ext: "png",
+            icon_square_sha256: stale_old_sha,
+            icon_square_etag: stale_old_etag
+          )
+        )
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-current-etag",
+            icon_square_ext: "png",
+            icon_square_sha256: current_sha,
+            icon_square_etag: current_etag
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn opts ->
+        # Both rows contribute prior etags.
+        assert Keyword.get(opts, :prior_etags) == %{
+                 "@openfn/language-stale-etag" => %{square: stale_old_etag},
+                 "@openfn/language-current-etag" => %{square: current_etag}
+               }
+
+        {:ok,
+         %{
+           "@openfn/language-stale-etag" => %{
+             square: %{
+               data: stale_new_bytes,
+               ext: "png",
+               sha256: stale_new_sha,
+               etag: stale_new_etag
+             }
+           },
+           "@openfn/language-current-etag" => %{square: :not_modified}
+         }}
+      end)
+
+      start_scheduler(sup, interval: 0)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{updated: 1, unchanged: 1}} =
+               Scheduler.refresh_icons(sched_name)
+
+      stale_row = AdaptorsRepo.get_adaptor("@openfn/language-stale-etag", source)
+      assert stale_row.icon_square_sha256 == stale_new_sha
+      assert stale_row.icon_square_etag == stale_new_etag
+
+      current_row =
+        AdaptorsRepo.get_adaptor("@openfn/language-current-etag", source)
+
+      assert current_row.icon_square_sha256 == current_sha
+      assert current_row.icon_square_etag == current_etag
+
+      Lightning.Adaptors.IconCache.path(
+        source,
+        "@openfn/language-stale-etag",
+        :square,
+        "png"
+      )
+      |> File.rm()
     end
 
     test "surfaces a strategy fetch error as {:error, reason}", %{sup: sup} do
-      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn ->
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:error, :upstream_down}
       end)
 

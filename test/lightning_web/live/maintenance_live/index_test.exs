@@ -58,7 +58,9 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
     end
 
     test "clicking the icons button reports the refresh result", %{conn: conn} do
-      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn -> {:ok, %{}} end)
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
 
       {:ok, live, _html} =
         live(conn, ~p"/settings/maintenance", on_error: :raise)

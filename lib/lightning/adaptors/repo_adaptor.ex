@@ -32,6 +32,8 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
           icon_rectangle_ext: String.t() | nil,
           icon_square_sha256: binary() | nil,
           icon_rectangle_sha256: binary() | nil,
+          icon_square_etag: String.t() | nil,
+          icon_rectangle_etag: String.t() | nil,
           checked_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -56,6 +58,8 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
     field :icon_rectangle_ext, :string
     field :icon_square_sha256, :binary
     field :icon_rectangle_sha256, :binary
+    field :icon_square_etag, :string
+    field :icon_rectangle_etag, :string
     field :checked_at, :utc_datetime_usec
 
     timestamps()
@@ -65,7 +69,8 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
   @optional ~w(description homepage repository license deprecated
                schema_data schema_sha256
                icon_square_ext icon_rectangle_ext
-               icon_square_sha256 icon_rectangle_sha256)a
+               icon_square_sha256 icon_rectangle_sha256
+               icon_square_etag icon_rectangle_etag)a
 
   @doc """
   Build a changeset for upserting a single adaptor row.

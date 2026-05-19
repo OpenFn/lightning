@@ -225,7 +225,8 @@ defmodule Lightning.Adaptors.Repo do
   Update only the icon columns for a single `(name, source)` row.
 
   `attrs` may include any subset of `:icon_square_ext`,
-  `:icon_square_sha256`, `:icon_rectangle_ext`, `:icon_rectangle_sha256`.
+  `:icon_square_sha256`, `:icon_rectangle_ext`, `:icon_rectangle_sha256`,
+  `:icon_square_etag`, `:icon_rectangle_etag`.
   `updated_at` is advanced so callers can observe the change.
 
   Sidesteps `upsert_adaptor/1` deliberately: that helper rewrites the
@@ -240,7 +241,9 @@ defmodule Lightning.Adaptors.Repo do
         :icon_square_ext,
         :icon_square_sha256,
         :icon_rectangle_ext,
-        :icon_rectangle_sha256
+        :icon_rectangle_sha256,
+        :icon_square_etag,
+        :icon_rectangle_etag
       ])
       |> Map.put(:updated_at, DateTime.utc_now())
       |> Enum.into([])

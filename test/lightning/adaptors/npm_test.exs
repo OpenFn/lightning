@@ -163,7 +163,7 @@ defmodule Lightning.Adaptors.NPMTest do
     end
   end
 
-  describe "fetch_icons/0" do
+  describe "fetch_icons/1" do
     test "lists adaptors then fans out to GitHub raw fetches", %{
       registry: registry,
       github: github
@@ -202,7 +202,7 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       end)
 
-      {:ok, icons} = NPM.fetch_icons()
+      {:ok, icons} = NPM.fetch_icons([])
 
       assert %{
                "@openfn/language-http" => %{
@@ -222,7 +222,7 @@ defmodule Lightning.Adaptors.NPMTest do
         Plug.Conn.resp(conn, 503, "")
       end)
 
-      assert {:error, _} = NPM.fetch_icons()
+      assert {:error, _} = NPM.fetch_icons([])
     end
   end
 

@@ -14,9 +14,10 @@ defmodule Lightning.Adaptors.Strategy do
     * `c:fetch_icon/2` — given a package name and an icon variant,
       return the raw bytes plus extension. Used by the Store's rare
       lazy-miss fallback.
-    * `c:fetch_icons/0` — bulk icon fetch for every adaptor known to
+    * `c:fetch_icons/1` — bulk icon fetch for every adaptor known to
       the strategy. The Scheduler invokes this once per tick in parallel
-      with its per-adaptor fan-out.
+      with its per-adaptor fan-out. Accepts a keyword list of options;
+      see the callback docs for `:prior_etags`.
     * `c:list_adaptors/0` — the cheap change-signal: one call returning
       `name + latest_version` for every `@openfn/*` package, used by
       the scheduler to diff against the `adaptors` table.
@@ -45,7 +46,7 @@ defmodule Lightning.Adaptors.Strategy do
   @typedoc """
   The structured adaptor record returned by `c:fetch_adaptor/1`. Icon
   fields are persisted separately by the Scheduler after joining
-  `c:fetch_icons/0` — they are not stamped onto this record.
+  `c:fetch_icons/1` — they are not stamped onto this record.
   """
   @type adaptor_record :: %{
           name: String.t(),
@@ -61,22 +62,40 @@ defmodule Lightning.Adaptors.Strategy do
         }
 
   @typedoc """
-  One icon entry inside the `c:fetch_icons/0` result map.
+  Fresh-fetch icon entry inside the `c:fetch_icons/1` result map. The
+  optional `:etag` field carries the upstream-provided cache validator
+  (verbatim from the HTTP response) and is `nil` when the upstream
+  didn't supply one — strategies without a transport-level validator
+  (e.g. `Lightning.Adaptors.Local`) omit the key entirely.
   """
   @type icon_entry :: %{
-          data: binary(),
-          ext: String.t(),
-          sha256: binary()
+          required(:data) => binary(),
+          required(:ext) => String.t(),
+          required(:sha256) => binary(),
+          optional(:etag) => String.t() | nil
         }
 
   @typedoc """
-  Bulk icon map returned by `c:fetch_icons/0`. Absence of a name or a
-  shape means no icon was found upstream — not an error.
+  Per-shape value inside the `c:fetch_icons/1` result map. Either a
+  fresh `t:icon_entry/0` (200 response) or the `:not_modified` sentinel
+  (304 response — upstream confirmed unchanged; only ever returned when
+  the caller supplied a prior etag via the `:prior_etags` option).
+  """
+  @type icon_shape_value :: icon_entry() | :not_modified
+
+  @typedoc """
+  Bulk icon map returned by `c:fetch_icons/1`. Three branches matter:
+
+    * shape **entirely absent** — upstream had no such icon for this
+      package;
+    * shape present as `:not_modified` — upstream confirmed the icon
+      is unchanged since the prior etag was issued;
+    * shape present as a map — apply the bytes (a fresh fetch).
   """
   @type icons_map :: %{
           required(String.t()) => %{
-            optional(:square) => icon_entry(),
-            optional(:rectangle) => icon_entry()
+            optional(:square) => icon_shape_value(),
+            optional(:rectangle) => icon_shape_value()
           }
         }
 
@@ -98,12 +117,24 @@ defmodule Lightning.Adaptors.Strategy do
   Bulk fetch every available icon for every adaptor known to the
   strategy.
 
-  Returns `{:ok, partial_map}` where absence of a name/shape means no
-  icon was found. A top-level `{:error, term()}` is only returned when
-  the whole pipeline can't proceed (e.g. an upstream `list_adaptors/0`
-  call inside the bulk implementation fails).
+  Returns `{:ok, partial_map}` where each per-shape slot is either
+  absent (no icon upstream), a fresh `t:icon_entry/0` (200), or the
+  `:not_modified` sentinel (304 — only when a prior etag was sent).
+  A top-level `{:error, term()}` is only returned when the whole
+  pipeline can't proceed (e.g. an upstream `list_adaptors/0` call
+  inside the bulk implementation fails).
+
+  ## Options
+
+    * `:prior_etags` — a map of the form
+      `%{name => %{optional(:square | :rectangle) => etag_string}}`
+      whose values are sent as `If-None-Match` per `(name, shape)`.
+      Defaults to `%{}`. Unknown keys in the keyword list are
+      ignored. Strategies without a transport-level cache validator
+      (e.g. `Lightning.Adaptors.Local`) ignore this option entirely
+      and never return `:not_modified`.
   """
-  @callback fetch_icons() ::
+  @callback fetch_icons(opts :: keyword()) ::
               {:ok, icons_map()} | {:error, term()}
 
   @doc """

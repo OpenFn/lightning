@@ -129,7 +129,7 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
     end
   end
 
-  describe "fetch_all/1" do
+  describe "fetch_all/2" do
     test "returns an entry per package per shape including sha256", %{
       bypass: bypass
     } do
@@ -153,10 +153,13 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
       end)
 
       {:ok, map} =
-        GitHub.fetch_all([
-          "@openfn/language-http",
-          "@openfn/language-salesforce"
-        ])
+        GitHub.fetch_all(
+          [
+            "@openfn/language-http",
+            "@openfn/language-salesforce"
+          ],
+          %{}
+        )
 
       assert %{
                "@openfn/language-http" => %{
@@ -185,10 +188,13 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
       end)
 
       {:ok, map} =
-        GitHub.fetch_all([
-          "@openfn/language-http",
-          "@openfn/language-missing"
-        ])
+        GitHub.fetch_all(
+          [
+            "@openfn/language-http",
+            "@openfn/language-missing"
+          ],
+          %{}
+        )
 
       assert Map.keys(map) == ["@openfn/language-http"]
       assert Map.keys(map["@openfn/language-http"]) == [:square]
@@ -200,12 +206,185 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
       Bypass.down(bypass)
 
       assert {:ok, map} =
-               GitHub.fetch_all([
-                 "@openfn/language-http",
-                 "@openfn/language-salesforce"
-               ])
+               GitHub.fetch_all(
+                 [
+                   "@openfn/language-http",
+                   "@openfn/language-salesforce"
+                 ],
+                 %{}
+               )
 
       assert map == %{}
+    end
+
+    test "sends If-None-Match when a prior etag is supplied", %{bypass: bypass} do
+      etag = ~s(W/"abc")
+
+      Bypass.expect(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
+        fn conn ->
+          assert Plug.Conn.get_req_header(conn, "if-none-match") == [etag]
+          Plug.Conn.resp(conn, 304, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.png",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.svg",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      {:ok, map} =
+        GitHub.fetch_all(
+          ["@openfn/language-http"],
+          %{"@openfn/language-http" => %{square: etag}}
+        )
+
+      assert get_in(map, ["@openfn/language-http", :square]) == :not_modified
+    end
+
+    test "sends no If-None-Match when no prior etag", %{bypass: bypass} do
+      Bypass.expect(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
+        fn conn ->
+          assert Plug.Conn.get_req_header(conn, "if-none-match") == []
+
+          conn
+          |> Plug.Conn.put_resp_header("etag", "test-etag-abc")
+          |> Plug.Conn.resp(200, "SQ_BYTES")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.png",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.svg",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      {:ok, map} = GitHub.fetch_all(["@openfn/language-http"], %{})
+
+      assert %{
+               data: "SQ_BYTES",
+               ext: "png",
+               etag: "test-etag-abc"
+             } = get_in(map, ["@openfn/language-http", :square])
+    end
+
+    test "304 short-circuits with the :not_modified sentinel in the slot", %{
+      bypass: bypass
+    } do
+      etag = ~s("xyz")
+
+      Bypass.expect(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
+        fn conn ->
+          assert Plug.Conn.get_req_header(conn, "if-none-match") == [etag]
+          Plug.Conn.resp(conn, 304, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.png",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.svg",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      {:ok, map} =
+        GitHub.fetch_all(
+          ["@openfn/language-http"],
+          %{"@openfn/language-http" => %{square: etag}}
+        )
+
+      # explicit sentinel — distinct from "absent" (which would mean upstream
+      # had no such shape at all).
+      assert map["@openfn/language-http"][:square] == :not_modified
+    end
+
+    test "200 with a new etag overrides the prior", %{bypass: bypass} do
+      prior = ~s("old")
+      fresh = ~s("new")
+
+      Bypass.expect(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/square.png",
+        fn conn ->
+          assert Plug.Conn.get_req_header(conn, "if-none-match") == [prior]
+
+          conn
+          |> Plug.Conn.put_resp_header("etag", fresh)
+          |> Plug.Conn.resp(200, "FRESH")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.png",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      Bypass.stub(
+        bypass,
+        "GET",
+        "/OpenFn/adaptors/main/packages/http/assets/rectangle.svg",
+        fn conn ->
+          Plug.Conn.resp(conn, 404, "")
+        end
+      )
+
+      {:ok, map} =
+        GitHub.fetch_all(
+          ["@openfn/language-http"],
+          %{"@openfn/language-http" => %{square: prior}}
+        )
+
+      assert %{data: "FRESH", ext: "png", etag: ^fresh} =
+               map["@openfn/language-http"][:square]
     end
   end
 end

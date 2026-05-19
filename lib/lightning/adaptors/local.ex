@@ -65,7 +65,7 @@ defmodule Lightning.Adaptors.Local do
   end
 
   @impl Lightning.Adaptors.Strategy
-  def fetch_icons do
+  def fetch_icons(_opts \\ []) do
     with {:ok, records} <- discover() do
       icons =
         Enum.reduce(records, %{}, fn record, acc ->
