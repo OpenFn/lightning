@@ -1650,6 +1650,59 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "PubSub subscription and adaptors broadcasting" do
+    test "forwards adaptors_updated envelope from client topic to socket", %{
+      socket: _socket
+    } do
+      payload = %{adaptors: [%{name: "a"}]}
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+        %{event: "adaptors_updated", payload: payload}
+      )
+
+      assert_push "adaptors_updated", %{adaptors: [%{name: "a"}]}
+    end
+
+    test "credentials_updated forwarder still pushes after adaptors clause added",
+         %{workflow: workflow} do
+      rendered_credentials = %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      assert_push "credentials_updated", %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+    end
+
+    test "does not push adaptors_updated for unrelated events on client topic",
+         %{socket: socket} do
+      Process.flag(:trap_exit, true)
+      Process.unlink(socket.channel_pid)
+      ref = Process.monitor(socket.channel_pid)
+
+      capture_log(fn ->
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+          %{event: "something_else", payload: %{}}
+        )
+
+        refute_push "adaptors_updated", _, 50
+        assert_receive {:DOWN, ^ref, :process, _, _}, 200
+      end)
+    end
+  end
+
   describe "request_history" do
     test "returns work orders with runs for workflow", %{
       socket: socket,

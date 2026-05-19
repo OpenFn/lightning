@@ -72,6 +72,11 @@ defmodule LightningWeb.WorkflowChannel do
         "workflow:collaborate:#{workflow_id}"
       )
 
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors)
+      )
+
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -698,6 +703,12 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
     # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(%{event: "adaptors_updated", payload: payload}, socket) do
+    push(socket, "adaptors_updated", payload)
     {:noreply, socket}
   end
 
