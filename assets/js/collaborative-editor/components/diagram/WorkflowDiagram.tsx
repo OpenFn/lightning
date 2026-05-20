@@ -11,7 +11,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tippy from 'tippy.js';
 
-import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
+import { useAdaptorsInUse } from '#/collaborative-editor/hooks/useAdaptors';
 import useConnect from '#/collaborative-editor/hooks/useConnect';
 import {
   usePositions,
@@ -201,7 +201,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   } | null>(null);
 
   // Fetch project adaptors for modal
-  const { projectAdaptors } = useProjectAdaptors();
+  const { adaptorsInUse } = useAdaptorsInUse();
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -1000,7 +1000,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         isOpen={pendingPlaceholder !== null}
         onClose={handleAdaptorModalClose}
         onSelect={handleAdaptorSelect}
-        projectAdaptors={projectAdaptors}
+        adaptorsInUse={adaptorsInUse}
       />
     </>
   );

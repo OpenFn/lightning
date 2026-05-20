@@ -16,7 +16,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -106,38 +105,6 @@ defmodule LightningWeb.WorkflowChannel do
         |> Enum.map(&with_icon_urls/1)
 
       %{adaptors: adaptors}
-    end)
-  end
-
-  @impl true
-  def handle_in("request_project_adaptors", _payload, socket) do
-    project = socket.assigns.project
-
-    async_task(socket, "request_project_adaptors", fn ->
-      project_adaptor_names =
-        from(j in Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id,
-          select: j.adaptor,
-          distinct: true
-        )
-        |> Lightning.Repo.all()
-        |> Enum.sort()
-
-      all_adaptors = list_all_packages()
-
-      project_adaptors =
-        all_adaptors
-        |> Enum.filter(fn adaptor ->
-          Enum.any?(project_adaptor_names, fn used_adaptor ->
-            String.starts_with?(used_adaptor, adaptor.name)
-          end)
-        end)
-
-      %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
     end)
   end
 
@@ -877,7 +844,6 @@ defmodule LightningWeb.WorkflowChannel do
   defp handle_async_event(event, socket_ref, reply)
        when event in [
               "request_adaptors",
-              "request_project_adaptors",
               "request_credentials",
               "request_metadata",
               "request_current_user",
