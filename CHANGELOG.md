@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.4-pre2] - 2026-05-20
+
+### Fixed
+
 - Drop webhook response body when status is 204 or 304
   [#4778](https://github.com/OpenFn/lightning/issues/4778)
 
