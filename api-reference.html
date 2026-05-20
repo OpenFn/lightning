@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.3">
+    <meta name="project" content="Lightning v2.16.4">
 
 
-    <title>API Reference — Lightning v2.16.3</title>
+    <title>API Reference — Lightning v2.16.4</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-CAF03E7A.js"></script>
+    <script defer src="dist/sidebar_items-03A943AB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.3
+          v2.16.4
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ Lightning
 
 <div id="top-content">
   <div class="heading-with-actions top-heading">
-    <h1>API Reference <small class="app-vsn">Lightning v#2.16.3</small></h1>
+    <h1>API Reference <small class="app-vsn">Lightning v#2.16.4</small></h1>
 
       <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -1454,6 +1454,21 @@ and settings specific to a project.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Represents a summarized view of a project for a user, used in the project overview table.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.ProjectTreeItem.html" translate="no">Lightning.Projects.ProjectTreeItem</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A node in a user-visible project tree. Carries only the fields needed
+to render the tree, with <code class="inline">parent_id</code> shaped for display (<code class="inline">nil</code> at the
+user's access roots, the nearest visible ancestor for descendants).
+<code class="inline">sandbox?</code> reflects the underlying DB shape (true when the project has
+a real <code class="inline">parent_id</code> in the database, regardless of where the user's
+access root sits) so the picker can pick the right icon for a sandbox
+surfaced as an access root. Not a persistable record.</p></div>
 
 </div>
 <div class="summary-row">
