@@ -95,7 +95,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb_items items={[
                 {"Workflows", "/projects/#{@project.id}/w"}
               ]} />

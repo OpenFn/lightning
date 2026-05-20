@@ -29,10 +29,10 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Authorization
 
-  * **Provisioning**: Requires `:editor`, `:admin`, or `:owner` role on the parent project, or superuser
-  * **Merge**: Requires `:editor`, `:admin`, or `:owner` role on the target project, or superuser
+  * **Provisioning**: Requires `:editor`, `:admin`, or `:owner` role on the parent project
+  * **Merge**: Requires `:editor`, `:admin`, or `:owner` role on the target project
   * **Updates/Deletion**: Requires `:owner` or `:admin` role on the sandbox itself,
-                          or `:owner` or `:admin` on the root project, or superuser
+                          or `:owner` or `:admin` on the root project
 
   ## Transaction safety
 

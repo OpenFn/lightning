@@ -1,7 +1,6 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
-  import Ecto.Query
   import Lightning.Factories
   import Mox
 
@@ -528,6 +527,51 @@ defmodule LightningWeb.WebhooksControllerTest do
              }
 
       assert WorkOrders.get(work_order_id)
+    end
+
+    for status_code <- [204, 304] do
+      test "sends empty body when broadcast status is #{status_code}", %{
+        conn: conn
+      } do
+        %{triggers: [trigger], project_id: project_id} =
+          insert(:simple_workflow)
+          |> Lightning.Repo.preload(:triggers)
+          |> with_snapshot()
+
+        trigger =
+          trigger
+          |> Ecto.Changeset.change(webhook_reply: :after_completion)
+          |> Repo.update!()
+
+        Lightning.WorkOrders.Events.subscribe(project_id)
+
+        test_pid = self()
+
+        task =
+          Task.async(fn ->
+            conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+            send(test_pid, {:response, conn})
+          end)
+
+        assert_receive %Lightning.WorkOrders.Events.WorkOrderCreated{
+          work_order: work_order
+        }
+
+        assert_receive %Lightning.WorkOrders.Events.RunCreated{run: _run}
+
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          "work_order:#{work_order.id}:webhook_response",
+          {:webhook_response, unquote(status_code), nil}
+        )
+
+        assert_receive {:response, response_conn}, 5_000
+
+        assert response_conn.status == unquote(status_code)
+        assert response_conn.resp_body == ""
+
+        Task.await(task)
+      end
     end
 
     test "returns immediately when webhook_reply is before_start (default)", %{

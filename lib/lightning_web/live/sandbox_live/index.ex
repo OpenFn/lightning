@@ -40,16 +40,10 @@ defmodule LightningWeb.SandboxLive.Index do
   def handle_params(
         %{"id" => id},
         _uri,
-        %{
-          assigns: %{
-            sandboxes: sandboxes,
-            project: project,
-            live_action: live_action
-          }
-        } = socket
+        %{assigns: %{project: project, live_action: live_action}} = socket
       )
       when live_action == :edit do
-    case Enum.find(sandboxes, &(&1.id == id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -104,7 +98,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-delete-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -114,6 +108,7 @@ defmodule LightningWeb.SandboxLive.Index do
            socket
            |> assign(:confirm_delete_open?, true)
            |> assign(:confirm_delete_sandbox, sandbox)
+           |> assign(:confirm_delete_descendants, active_descendants(sandbox.id))
            |> assign(:confirm_delete_input, "")
            |> assign(:confirm_changeset, confirm_changeset(sandbox))}
         else
@@ -185,7 +180,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"id" => sandbox_id},
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -207,7 +202,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -218,8 +213,7 @@ defmodule LightningWeb.SandboxLive.Index do
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants =
-            get_all_descendants(sandbox, socket.assigns.workspace_projects)
+          descendants = active_descendants(sandbox.id)
 
           merge_changeset =
             merge_changeset(%{
@@ -440,7 +434,10 @@ defmodule LightningWeb.SandboxLive.Index do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
               </LayoutComponents.breadcrumb>
@@ -488,6 +485,7 @@ defmodule LightningWeb.SandboxLive.Index do
           sandbox={@confirm_delete_sandbox}
           changeset={@confirm_changeset}
           root_project={@root_project}
+          descendants={@confirm_delete_descendants}
         />
 
         <Components.merge_modal
@@ -528,11 +526,19 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
-    %{root: root_project, descendants: descendants} =
-      Projects.list_workspace_projects(project.id)
-
     current_user = socket.assigns.current_user
     limit_new_sandbox = socket.assigns.limit_new_sandbox
+
+    access_root = Repo.preload(socket.assigns.access_root, :project_users)
+
+    workspace_root =
+      project |> Projects.root_of() |> Repo.preload(:project_users)
+
+    descendants =
+      access_root.id
+      |> Projects.list_descendants()
+      |> Repo.preload([:parent, :project_users])
+      |> Projects.visible_sandboxes(current_user)
 
     can_create_sandbox =
       Permissions.can?(
@@ -548,42 +554,53 @@ defmodule LightningWeb.SandboxLive.Index do
 
     manage_permissions =
       Lightning.Policies.Sandboxes.check_manage_permissions(
-        descendants,
+        [access_root | descendants],
         current_user,
-        root_project
+        workspace_root
       )
 
-    sandboxes =
-      Enum.map(descendants, fn sandbox ->
-        perms =
-          Map.get(manage_permissions, sandbox.id, %{
-            update: false,
-            delete: false,
-            merge: false
-          })
+    decorate =
+      &decorate_for_render(&1, manage_permissions, project, limit_new_sandbox)
 
-        scheduled? = not is_nil(sandbox.scheduled_deletion)
-
-        {restore_blocked_by_limit?, restore_blocked_message} =
-          restore_block_state(scheduled?, limit_new_sandbox)
-
-        sandbox
-        |> Map.put(:can_edit, perms.update and not scheduled?)
-        |> Map.put(:can_delete, perms.delete and not scheduled?)
-        |> Map.put(:can_merge, perms.merge and not scheduled?)
-        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
-        |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
-        |> Map.put(:restore_blocked_message, restore_blocked_message)
-        |> Map.put(:scheduled_for_deletion?, scheduled?)
-        |> Map.put(:is_current, project.id == sandbox.id)
-      end)
+    decorated_root = decorate.(access_root)
+    decorated_sandboxes = Enum.map(descendants, decorate)
 
     socket
-    |> assign(:workspace_projects, [root_project | descendants])
-    |> assign(:root_project, root_project)
-    |> assign(:sandboxes, sandboxes)
+    |> assign(:workspace_projects, [access_root | descendants])
+    |> assign(:workspace_tree, [decorated_root | decorated_sandboxes])
+    |> assign(:root_project, decorated_root)
+    |> assign(:sandboxes, decorated_sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
     |> assign(:nesting_at_limit, nesting_at_limit)
+  end
+
+  defp active_descendants(sandbox_id) do
+    sandbox_id
+    |> Projects.list_descendants()
+    |> Enum.filter(&is_nil(&1.scheduled_deletion))
+  end
+
+  defp decorate_for_render(
+         sandbox,
+         manage_permissions,
+         current_project,
+         limit_new_sandbox
+       ) do
+    can_manage? = Map.get(manage_permissions, sandbox.id, false)
+    scheduled? = not is_nil(sandbox.scheduled_deletion)
+
+    {restore_blocked_by_limit?, restore_blocked_message} =
+      restore_block_state(scheduled?, limit_new_sandbox)
+
+    sandbox
+    |> Map.put(:can_edit, can_manage? and not scheduled?)
+    |> Map.put(:can_delete, can_manage? and not scheduled?)
+    |> Map.put(:can_merge, can_manage? and not scheduled?)
+    |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
+    |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
+    |> Map.put(:restore_blocked_message, restore_blocked_message)
+    |> Map.put(:scheduled_for_deletion?, scheduled?)
+    |> Map.put(:is_current, current_project.id == sandbox.id)
   end
 
   defp restore_block_state(true, {:error, _reason, %{text: text}}),
@@ -595,6 +612,7 @@ defmodule LightningWeb.SandboxLive.Index do
     socket
     |> assign(:confirm_delete_open?, false)
     |> assign(:confirm_delete_sandbox, nil)
+    |> assign(:confirm_delete_descendants, [])
     |> assign(:confirm_delete_input, "")
     |> assign(:confirm_changeset, empty_confirm_changeset())
   end
@@ -723,12 +741,12 @@ defmodule LightningWeb.SandboxLive.Index do
 
     socket.assigns.workspace_projects
     |> Enum.reject(fn potential_target ->
-      potential_target.id == source_sandbox.id or
+      not is_nil(potential_target.scheduled_deletion) or
+        potential_target.id == source_sandbox.id or
         Projects.descendant_of?(potential_target, source_sandbox, root_project)
     end)
     |> Enum.filter(fn project ->
-      user_role_on_project(project, current_user) in [:owner, :admin, :editor] or
-        current_user.role == :superuser
+      user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
       %{
@@ -742,32 +760,6 @@ defmodule LightningWeb.SandboxLive.Index do
     case Enum.find(project.project_users, &(&1.user_id == user.id)) do
       nil -> nil
       pu -> pu.role
-    end
-  end
-
-  defp get_all_descendants(sandbox, workspace_projects) do
-    project_map = Map.new(workspace_projects, &{&1.id, &1})
-
-    workspace_projects
-    |> Enum.filter(fn project ->
-      descendant_of?(project.parent_id, sandbox.id, project_map)
-    end)
-    |> Enum.sort_by(& &1.name)
-  end
-
-  defp descendant_of?(nil, _ancestor_id, _project_map), do: false
-
-  defp descendant_of?(parent_id, ancestor_id, _project_map)
-       when parent_id == ancestor_id,
-       do: true
-
-  defp descendant_of?(parent_id, ancestor_id, project_map) do
-    case Map.get(project_map, parent_id) do
-      nil ->
-        false
-
-      parent ->
-        descendant_of?(parent.parent_id, ancestor_id, project_map)
     end
   end
 

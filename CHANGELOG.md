@@ -17,6 +17,39 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.4] - 2026-05-20
+
+## [2.16.4-pre2] - 2026-05-20
+
+### Fixed
+
+- Drop webhook response body when status is 204 or 304
+  [#4778](https://github.com/OpenFn/lightning/issues/4778)
+
+## [2.16.4-pre1] - 2026-05-19
+
+### Fixed
+
+- The breadcrumb project picker now shows the full ancestor path on the project
+  settings page (previously it collapsed to the sandbox's own name).
+  [#4769](https://github.com/OpenFn/lightning/issues/4769)
+- Sandboxes no longer appear in the sandboxes list, the project picker, or via
+  the sandbox URL unless the user has access
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- The Merge button on a sandbox now requires admin or owner on the source
+  sandbox (or admin/owner on the root project)
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandbox policies no longer treat `User.role: :superuser` as a project-access
+  bypass [#4762](https://github.com/OpenFn/lightning/issues/4762)
+
+## [2.16.4-pre] - 2026-05-18
+
+### Added
+
 - Apollo AI chat requests now carry optional Langfuse tracking fields
   (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
   `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)

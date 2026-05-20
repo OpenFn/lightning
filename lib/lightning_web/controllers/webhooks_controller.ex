@@ -140,6 +140,9 @@ defmodule LightningWeb.WebhooksController do
     Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
 
     receive do
+      {:webhook_response, status_code, _body} when status_code in [204, 304] ->
+        send_resp(conn, status_code, "")
+
       {:webhook_response, status_code, body} ->
         conn
         |> put_status(status_code)
