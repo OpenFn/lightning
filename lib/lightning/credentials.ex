@@ -576,8 +576,8 @@ defmodule Lightning.Credentials do
   @spec get_schema(String.t()) :: Credentials.Schema.t()
   def get_schema(schema_name) do
     case Lightning.Adaptors.schema(schema_name) do
-      {:ok, schema_map} ->
-        Credentials.Schema.new(schema_map, schema_name)
+      {:ok, schema_body} ->
+        Credentials.Schema.new(schema_body, schema_name)
 
       {:error, reason} ->
         raise "Error reading credential schema. Got: #{inspect(reason)}"

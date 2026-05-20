@@ -16,6 +16,41 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
 
   import Ecto.Changeset
 
+  defmodule JSONBinary do
+    @moduledoc """
+    Ecto type backing `schema_data` with a text column while preserving
+    JSON field order on read.
+
+    Storage is a JSON binary in a `text` column. Inputs may be either a
+    binary or a map — maps are encoded with `Jason.encode!/1` at the
+    dumper to keep `Lightning.Factories.adaptor/2` and other direct
+    struct inserts compatible without forcing every caller to encode
+    up-front. Loads always return a binary so credential-form rendering
+    can re-engage `Jason.decode!(_, objects: :ordered_objects)`.
+    """
+
+    use Ecto.Type
+
+    @impl true
+    def type, do: :string
+
+    @impl true
+    def cast(nil), do: {:ok, nil}
+    def cast(value) when is_binary(value), do: {:ok, value}
+    def cast(value) when is_map(value), do: {:ok, Jason.encode!(value)}
+    def cast(_), do: :error
+
+    @impl true
+    def load(nil), do: {:ok, nil}
+    def load(value) when is_binary(value), do: {:ok, value}
+
+    @impl true
+    def dump(nil), do: {:ok, nil}
+    def dump(value) when is_binary(value), do: {:ok, value}
+    def dump(value) when is_map(value), do: {:ok, Jason.encode!(value)}
+    def dump(_), do: :error
+  end
+
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           name: String.t() | nil,
@@ -26,7 +61,7 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
           license: String.t() | nil,
           latest_version: String.t() | nil,
           deprecated: boolean(),
-          schema_data: map() | nil,
+          schema_data: String.t() | nil,
           schema_sha256: String.t() | nil,
           icon_square_ext: String.t() | nil,
           icon_rectangle_ext: String.t() | nil,
@@ -52,7 +87,7 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
     field :license, :string
     field :latest_version, :string
     field :deprecated, :boolean, default: false
-    field :schema_data, :map
+    field :schema_data, Lightning.Adaptors.Repo.Adaptor.JSONBinary
     field :schema_sha256, :string
     field :icon_square_ext, :string
     field :icon_rectangle_ext, :string

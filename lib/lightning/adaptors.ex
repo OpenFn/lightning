@@ -37,10 +37,10 @@ defmodule Lightning.Adaptors do
           {:ok, [version_meta()]} | {:error, term()}
   def versions(sup, pkg), do: Store.versions(sup, pkg)
 
-  @spec schema(String.t()) :: {:ok, map()} | {:error, term()}
+  @spec schema(String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(pkg), do: schema(@sup, pkg)
 
-  @spec schema(atom(), String.t()) :: {:ok, map()} | {:error, term()}
+  @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup, pkg), do: Store.schema(sup, pkg)
 
   @spec icon(String.t(), :square | :rectangle) ::

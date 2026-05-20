@@ -148,10 +148,24 @@ defmodule Lightning.AdaptorsTest do
 
       {:ok, _} =
         AdaptorsRepo.upsert_adaptor(
-          adaptor_record(schema_data: %{"type" => "object"})
+          adaptor_record(schema_data: ~s({"type":"object"}))
         )
 
-      assert {:ok, %{"type" => "object"}} =
+      assert {:ok, ~s({"type":"object"})} =
+               Adaptors.schema(sup, "@openfn/language-http")
+    end
+
+    test "preserves JSON property order across the DB round-trip", %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:error, :unreachable}
+      end)
+
+      ordered_body = ~s({"a":1,"z":2,"m":3})
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(adaptor_record(schema_data: ordered_body))
+
+      assert {:ok, ^ordered_body} =
                Adaptors.schema(sup, "@openfn/language-http")
     end
   end

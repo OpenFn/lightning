@@ -70,8 +70,11 @@ defmodule Lightning.Adaptors.Store do
   Cache-then-Repo-then-Strategy. On Strategy success the full adaptor
   record is upserted into Postgres and the projected schema blob is
   committed to the cache.
+
+  Returns the schema as a JSON binary so that ordered-objects decoding
+  can re-engage at the credential-form renderer.
   """
-  @spec schema(sup(), String.t()) :: {:ok, map()} | {:error, term()}
+  @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup, name) do
     cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
@@ -261,7 +264,11 @@ defmodule Lightning.Adaptors.Store do
   defp fetch_and_persist(sup, name, source, field) do
     case AdaptorsSupervisor.strategy(sup).fetch_adaptor(name) do
       {:ok, record} ->
-        record = Map.put(record, :source, source)
+        record =
+          record
+          |> Map.put(:source, source)
+          |> normalize_schema_data()
+
         {:ok, _} = AdaptorsRepo.upsert_adaptor(record)
         {:commit, {:ok, Map.get(record, field)}}
 
@@ -269,6 +276,16 @@ defmodule Lightning.Adaptors.Store do
         {:ignore, {:error, reason}}
     end
   end
+
+  # Strategies should emit `schema_data` as a JSON binary, but legacy
+  # call paths (and tests) may still hand us a map. Normalize here so
+  # the cached value matches what subsequent DB-backed reads return.
+  defp normalize_schema_data(%{schema_data: data} = record)
+       when is_map(data) and not is_struct(data) do
+    %{record | schema_data: Jason.encode!(data)}
+  end
+
+  defp normalize_schema_data(record), do: record
 
   @spec project_icon_meta(map()) :: icon_meta()
   defp project_icon_meta(adaptor) do

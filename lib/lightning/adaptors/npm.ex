@@ -73,12 +73,22 @@ defmodule Lightning.Adaptors.NPM do
          license: Map.get(packument, "license"),
          latest_version: latest_version,
          deprecated: Registry.deprecated?(packument, latest_version),
-         schema_data: schema_data,
+         schema_data: encode_schema(schema_data),
          schema_sha256: schema_sha,
          versions: Registry.build_versions(packument)
        }}
     end
   end
+
+  # Strategy boundary: re-encode the decoded schema map to a JSON binary
+  # so the row is persisted as text and `Jason.decode!(_,
+  # objects: :ordered_objects)` re-engages downstream. NPM's upstream
+  # Schema sub-module already decoded into a regular map, so field order
+  # is whatever map iteration yields — the round-trip preserves it for
+  # the Local strategy (raw binary in) and is a no-op for NPM data.
+  defp encode_schema(nil), do: nil
+  defp encode_schema(data) when is_binary(data), do: data
+  defp encode_schema(data) when is_map(data), do: Jason.encode!(data)
 
   @impl Lightning.Adaptors.Strategy
   def fetch_icon(name, shape)

@@ -39,10 +39,10 @@ defmodule Lightning.Adaptors.StoreTest do
       Cachex.put!(
         cache,
         {:schema, "@openfn/language-http", source},
-        {:ok, %{"type" => "object"}}
+        {:ok, ~s({"type":"object"})}
       )
 
-      assert {:ok, %{"type" => "object"}} =
+      assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
 
       assert AdaptorsRepo.get_adaptor("@openfn/language-http", source) == nil
@@ -57,10 +57,10 @@ defmodule Lightning.Adaptors.StoreTest do
 
       {:ok, _} =
         AdaptorsRepo.upsert_adaptor(
-          adaptor_record(schema_data: %{"type" => "object"})
+          adaptor_record(schema_data: ~s({"type":"object"}))
         )
 
-      assert {:ok, %{"type" => "object"}} =
+      assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
     end
 
@@ -76,17 +76,17 @@ defmodule Lightning.Adaptors.StoreTest do
         :fetch_adaptor,
         1,
         fn "@openfn/language-http" ->
-          {:ok, adaptor_record(schema_data: %{"type" => "object"})}
+          {:ok, adaptor_record(schema_data: ~s({"type":"object"}))}
         end
       )
 
-      assert {:ok, %{"type" => "object"}} =
+      assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
 
-      assert %{schema_data: %{"type" => "object"}} =
+      assert %{schema_data: ~s({"type":"object"})} =
                AdaptorsRepo.get_adaptor("@openfn/language-http", source)
 
-      assert {:ok, {:ok, %{"type" => "object"}}} =
+      assert {:ok, {:ok, ~s({"type":"object"})}} =
                Cachex.get(cache, {:schema, "@openfn/language-http", source})
     end
 
@@ -97,7 +97,7 @@ defmodule Lightning.Adaptors.StoreTest do
       expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn ^name ->
         # Brief sleep so the other two tasks queue up in Cachex's courier.
         Process.sleep(30)
-        {:ok, adaptor_record(schema_data: %{"type" => "object"})}
+        {:ok, adaptor_record(schema_data: ~s({"type":"object"}))}
       end)
 
       tasks =
@@ -118,7 +118,7 @@ defmodule Lightning.Adaptors.StoreTest do
       Enum.each(tasks, &send(&1.pid, :go))
 
       results = Task.await_many(tasks, 5_000)
-      assert Enum.all?(results, &match?({:ok, %{"type" => "object"}}, &1))
+      assert Enum.all?(results, &match?({:ok, ~s({"type":"object"})}, &1))
     end
 
     test "Strategy error returns {:error, _} and is not cached — next call retries",
@@ -143,12 +143,26 @@ defmodule Lightning.Adaptors.StoreTest do
         :fetch_adaptor,
         1,
         fn "@openfn/language-http" ->
-          {:ok, adaptor_record(schema_data: %{"type" => "object"})}
+          {:ok, adaptor_record(schema_data: ~s({"type":"object"}))}
         end
       )
 
-      assert {:ok, %{"type" => "object"}} =
+      assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
+    end
+
+    test "preserves JSON property order through the persistence round-trip",
+         %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 0, fn _ ->
+        :unreachable
+      end)
+
+      ordered_body = ~s({"a":1,"z":2,"m":3})
+
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(adaptor_record(schema_data: ordered_body))
+
+      assert {:ok, ^ordered_body} = Store.schema(sup, "@openfn/language-http")
     end
   end
 

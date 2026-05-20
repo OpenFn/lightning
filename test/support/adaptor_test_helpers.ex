@@ -56,20 +56,22 @@ defmodule Lightning.AdaptorTestHelpers do
   @spec seed_credential_schema(String.t()) ::
           Lightning.Adaptors.Repo.Adaptor.t()
   def seed_credential_schema(short_name) when is_binary(short_name) do
-    schema_data =
+    # Keep the raw JSON binary so field order survives — credential-form
+    # rendering re-engages `Jason.decode!(_, objects: :ordered_objects)`
+    # downstream via `Lightning.Credentials.Schema.new/2`.
+    schema_body =
       Path.join(["test", "fixtures", "schemas", "#{short_name}.json"])
       |> File.read!()
-      |> Jason.decode!()
 
     row =
-      insert(:adaptor, name: short_name, source: :npm, schema_data: schema_data)
+      insert(:adaptor, name: short_name, source: :npm, schema_data: schema_body)
 
     # Cachex's fallback runs in the Courier process — it can't see the
     # test-owned sandbox connection. Pre-populate the cache so reads
     # never need to fall through to a DB lookup from the Courier.
     cache = AdaptorsSupervisor.cache_name(Lightning.Adaptors)
     source = AdaptorsSupervisor.source(Lightning.Adaptors)
-    Cachex.put(cache, {:schema, short_name, source}, {:ok, schema_data})
+    Cachex.put(cache, {:schema, short_name, source}, {:ok, schema_body})
 
     row
   end

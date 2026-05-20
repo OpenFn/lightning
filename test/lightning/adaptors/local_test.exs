@@ -145,7 +145,7 @@ defmodule Lightning.Adaptors.LocalTest do
       assert record.license == "LGPL-3.0"
       assert record.latest_version == "2.1.0"
       assert record.deprecated == false
-      assert record.schema_data == schema
+      assert record.schema_data == Jason.encode!(schema)
 
       assert record.schema_sha256 ==
                :crypto.hash(:sha256, Jason.encode!(schema))
@@ -202,7 +202,7 @@ defmodule Lightning.Adaptors.LocalTest do
 
       {:ok, record} = Local.fetch_adaptor("@openfn/language-http")
 
-      assert record.schema_data == %{"version" => "new"}
+      assert record.schema_data == Jason.encode!(%{"version" => "new"})
       assert record.latest_version == "2.0.0"
     end
 

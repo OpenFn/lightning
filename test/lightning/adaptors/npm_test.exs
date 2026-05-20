@@ -76,7 +76,7 @@ defmodule Lightning.Adaptors.NPMTest do
                license: "LGPL-3.0",
                latest_version: @latest_version,
                deprecated: false,
-               schema_data: ^schema,
+               schema_data: ^schema_bytes,
                schema_sha256: ^expected_schema_sha
              } = record
 

@@ -18,12 +18,14 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   defp seed_adaptor_schema(name) do
-    schema_data =
+    # Persist the raw JSON binary so the credential-form renderer can
+    # re-engage `Jason.decode!(_, objects: :ordered_objects)` and
+    # preserve the schema author's property order.
+    schema_body =
       Path.join(["test", "fixtures", "schemas", "#{name}.json"])
       |> File.read!()
-      |> Jason.decode!()
 
-    insert(:adaptor, name: name, source: :npm, schema_data: schema_data)
+    insert(:adaptor, name: name, source: :npm, schema_data: schema_body)
   end
 
   setup do
@@ -308,6 +310,40 @@ defmodule Lightning.Credentials.SchemaTest do
       assert Schema.warning(schema, "weird") == "Bogus"
       assert Schema.warning(schema, :fine) == nil
       assert Schema.warning(schema, "never_seen_field_name") == nil
+    end
+  end
+
+  describe "Credentials.get_schema/1" do
+    setup do
+      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
+      :ok
+    end
+
+    test "preserves JSON property order from the persisted schema body" do
+      ordered_body = ~s({
+        "properties": {
+          "zeta": {"type": "string"},
+          "alpha": {"type": "string"},
+          "mu": {"type": "string"}
+        },
+        "type": "object"
+      })
+
+      insert(:adaptor,
+        name: "ordered-fixture",
+        source: :npm,
+        schema_data: ordered_body
+      )
+
+      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:error, :unreachable}
+      end)
+
+      schema = Credentials.get_schema("ordered-fixture")
+
+      assert schema.fields == [:zeta, :alpha, :mu]
     end
   end
 

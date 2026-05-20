@@ -195,10 +195,12 @@ defmodule Lightning.Adaptors.Local do
   defp read_schema(dir) do
     case File.read(Path.join(dir, @schema_filename)) do
       {:ok, body} ->
+        # Validate JSON, but keep the raw binary so credential-form
+        # rendering can re-engage ordered_objects decoding downstream.
         case Jason.decode(body) do
-          {:ok, data} ->
+          {:ok, _data} ->
             sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
-            {data, sha}
+            {body, sha}
 
           {:error, _} ->
             {nil, nil}
