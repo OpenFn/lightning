@@ -1849,9 +1849,11 @@ defmodule LightningWeb.RunChannelTest do
       refute_receive {:webhook_response, _, _}
     end
 
-    test "broadcasts final state as body on success with no captured response",
+    test "broadcasts envelope with final state on success with no captured response",
          %{
-           socket: socket
+           socket: socket,
+           run: run,
+           work_order: work_order
          } do
       final_state = %{"data" => %{"result" => "ok"}}
 
@@ -1862,7 +1864,12 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 201, ^final_state}
+      assert_receive {:webhook_response, 201, body}
+
+      assert %{data: ^final_state, meta: meta} = body
+      assert meta.run_id == run.id
+      assert meta.work_order_id == work_order.id
+      assert meta.state == :success
     end
 
     test "broadcasts security message on error with no captured response", %{
@@ -1877,7 +1884,9 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 500, %{message: message}}
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
       assert message =~ "failed"
       assert message =~ "security policy"
     end
@@ -1897,7 +1906,7 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^final_state}
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
     end
 
     test "uses configured error_code on error", %{
@@ -1914,7 +1923,9 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 422, %{message: _}}
+
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: _}, meta: _meta}}
     end
 
     test "uses 201 on success when only error_code is configured", %{
@@ -1932,7 +1943,7 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 201, ^final_state}
+      assert_receive {:webhook_response, 201, %{data: ^final_state, meta: _meta}}
     end
 
     test "does not broadcast for runs with no starting trigger", %{
@@ -1978,7 +1989,9 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^override_body}
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
     end
 
     test "last step:complete with a webhook_response wins (last-write-wins)",
@@ -2004,7 +2017,7 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 202, ^last_body}
+      assert_receive {:webhook_response, 202, %{data: ^last_body, meta: _meta}}
     end
 
     test "step without webhook_response does not clear a previously captured one",
@@ -2028,7 +2041,9 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^captured_body}
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^captured_body, meta: _meta}}
     end
 
     test "float status in webhook_response is normalised to integer", %{
@@ -2049,10 +2064,12 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^override_body}
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
     end
 
-    test "webhook_response with only status uses default body", %{
+    test "webhook_response with only status uses default body envelope", %{
       socket: socket,
       run: run,
       job: job
@@ -2068,7 +2085,8 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 200, ^final_state}
+
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
     end
 
     test "webhook_response with only body uses config status code", %{
@@ -2090,7 +2108,7 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 202, ^custom_body}
+      assert_receive {:webhook_response, 202, %{data: ^custom_body, meta: _meta}}
     end
 
     test "webhook_response with only body falls back to 201 when no config", %{
@@ -2109,7 +2127,7 @@ defmodule LightningWeb.RunChannelTest do
         })
 
       assert_reply ref, :ok, nil
-      assert_receive {:webhook_response, 201, ^custom_body}
+      assert_receive {:webhook_response, 201, %{data: ^custom_body, meta: _meta}}
     end
 
     test "malformed status in webhook_response yields 201 with explanation", %{
@@ -2129,7 +2147,9 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 201, %{message: message}}
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
       assert message =~ "webhook_response was malformed"
       assert message =~ "status"
     end
@@ -2151,7 +2171,9 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 201, %{message: message}}
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
       assert message =~ "webhook_response was malformed"
       assert message =~ "body"
     end
@@ -2175,7 +2197,9 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 500, %{message: message}}
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
       assert message =~ "webhook_response was malformed"
     end
 
@@ -2201,7 +2225,9 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
-      assert_receive {:webhook_response, 422, %{message: message}}
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: message}, meta: _meta}}
+
       assert message =~ "webhook_response was malformed"
     end
   end

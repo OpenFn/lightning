@@ -363,10 +363,22 @@ defmodule LightningWeb.RunChannel do
     if already_sent?(webhook_response) do
       socket
     else
+      meta = %{
+        work_order_id: run.work_order_id,
+        run_id: run.id,
+        state: run.state,
+        error_type: run.error_type,
+        inserted_at: run.inserted_at,
+        started_at: run.started_at,
+        claimed_at: run.claimed_at,
+        finished_at: run.finished_at
+      }
+
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{run.work_order_id}:webhook_response",
-        {:webhook_response, webhook_response.status, webhook_response.body}
+        {:webhook_response, webhook_response.status,
+         %{data: webhook_response.body, meta: meta}}
       )
 
       assign(socket, :webhook_response, %{
@@ -429,7 +441,7 @@ defmodule LightningWeb.RunChannel do
        when is_integer(code),
        do: code
 
-  defp default_response_status(_run_status, _config), do: 500
+  defp default_response_status(_run_status, _config), do: 201
 
   defp default_response_body(:success, final_state, _config),
     do: final_state

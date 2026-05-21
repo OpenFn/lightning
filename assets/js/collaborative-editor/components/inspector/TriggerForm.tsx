@@ -645,7 +645,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                                   <input
                                                     id={`${field.name}-error-code`}
                                                     type="number"
-                                                    placeholder="500"
+                                                    placeholder="201"
                                                     value={
                                                       config?.error_code ?? ''
                                                     }

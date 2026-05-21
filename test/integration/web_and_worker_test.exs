@@ -471,7 +471,15 @@ defmodule Lightning.WebAndWorkerTest do
       response = Task.await(task, 10_000)
 
       assert response.status == 201
-      assert %{"data" => %{"value" => 10}, "result" => "success"} = response.body
+
+      assert %{
+               "data" => %{"data" => %{"value" => 10}, "result" => "success"},
+               "meta" => meta
+             } = response.body
+
+      assert meta["state"] == "success"
+      assert is_binary(meta["run_id"])
+      assert is_binary(meta["work_order_id"])
 
       # Verify the work order completed successfully
       work_order =
@@ -532,11 +540,12 @@ defmodule Lightning.WebAndWorkerTest do
         )
         |> Tesla.post!("/i/#{trigger.id}", webhook_body)
 
-      # Should return 500 for failed workflow
-      assert response.status == 500
+      # Default status when no error_code is configured
+      assert response.status == 201
 
-      # Response should include the final state
-      assert is_map(response.body)
+      assert %{"data" => %{"message" => msg}, "meta" => meta} = response.body
+      assert msg =~ "security policy"
+      assert meta["state"] == "failed"
 
       # Verify the work order failed
       work_order =
@@ -693,7 +702,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert response.status == 201
 
-      final_state = response.body
+      assert %{"data" => final_state, "meta" => _meta} = response.body
 
       # The final_state is keyed by job ID. When the same job is reached
       # twice (step 5), the second entry gets a "-1" suffix.
@@ -795,7 +804,7 @@ defmodule Lightning.WebAndWorkerTest do
         |> Tesla.post!("/i/#{trigger.id}", %{})
 
       assert response.status == 500
-      assert %{"message" => msg} = response.body
+      assert %{"data" => %{"message" => msg}, "meta" => _meta} = response.body
       assert msg =~ "security policy"
     end
 
@@ -837,7 +846,9 @@ defmodule Lightning.WebAndWorkerTest do
         |> Tesla.post!("/i/#{trigger.id}", %{"value" => 42})
 
       assert response.status == 200
-      assert response.body == %{"ack" => true, "received" => 42}
+
+      assert %{"data" => %{"ack" => true, "received" => 42}, "meta" => _} =
+               response.body
     end
 
     @tag :integration
@@ -921,7 +932,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       # input x=1 → step 1: x=2 → step 2: x=6 → step 4: x=7
       assert response.status == 202
-      assert response.body == %{"from" => "step-4", "x" => 7}
+
+      assert %{"data" => %{"from" => "step-4", "x" => 7}, "meta" => _} =
+               response.body
 
       %{entries: steps} = Invocation.list_steps_for_project(project)
       assert Enum.count(steps) == 6
@@ -970,7 +983,9 @@ defmodule Lightning.WebAndWorkerTest do
         |> Tesla.post!("/i/#{trigger.id}", %{"value" => 42})
 
       assert response.status == 200
-      assert response.body == %{"ack" => true, "received" => 42}
+
+      assert %{"data" => %{"ack" => true, "received" => 42}, "meta" => _} =
+               response.body
 
       # Confirm erase_all actually took effect: the step's output dataclip
       # was persisted with the body wiped. The webhook response made it
