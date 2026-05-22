@@ -283,14 +283,10 @@ defmodule Lightning.Accounts do
   A `user_registered` event is broadcast on success.
   """
   def register_user_from_sso(attrs, provider, uid) do
+    attrs = Map.put(attrs, :sso_identity, %{provider: provider, uid: uid})
+
     Repo.transact(fn ->
-      with {:ok, user} <-
-             %User{}
-             |> User.sso_registration_changeset(attrs)
-             |> Repo.insert(),
-           {:ok, _identity} <- link_user_identity(user, provider, uid) do
-        {:ok, user}
-      end
+      AccountHook.handle_register_user(attrs)
     end)
     |> tap(fn result ->
       with {:ok, user} <- result do
