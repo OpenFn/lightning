@@ -21,6 +21,14 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.5] - 2026-05-21
+
+### Fixed
+
+- Restore webhook responses to include `data` and `meta` fields, with `data`
+  containing the actual response body and `meta` containing run metadata.
+  [#4785](https://github.com/OpenFn/lightning/issues/4785)
+
 ## [2.16.4] - 2026-05-20
 
 ## [2.16.4-pre2] - 2026-05-20
