@@ -65,7 +65,7 @@ defmodule LightningWeb.OidcControllerTest do
   describe "GET /authenticate/:provider/callback" do
     setup :setup_handler
 
-    test "logs the given person in", %{
+    test "logs in users whose identity is already linked", %{
       conn: conn,
       bypass: bypass,
       handler: handler
@@ -73,6 +73,12 @@ defmodule LightningWeb.OidcControllerTest do
       expect_token(bypass, handler.wellknown)
 
       user = Lightning.AccountsFixtures.user_fixture()
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "sub-#{user.id}"
+      )
 
       expect_userinfo(bypass, handler.wellknown, %{
         "email" => user.email,
@@ -88,14 +94,14 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == "/projects"
     end
 
-    test "auto-links an identity for an existing email-only user and logs them in",
+    test "redirects to login with a notice when email matches an existing account",
          %{conn: conn, bypass: bypass, handler: handler} do
       expect_token(bypass, handler.wellknown)
       user = Lightning.AccountsFixtures.user_fixture()
 
       expect_userinfo(bypass, handler.wellknown, %{
         "email" => user.email,
-        "sub" => "github-uid-1"
+        "sub" => "unlinked-uid"
       })
 
       conn =
@@ -104,15 +110,19 @@ defmodule LightningWeb.OidcControllerTest do
           Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
         )
 
-      assert redirected_to(conn) == "/projects"
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
-      assert %Lightning.Accounts.User{id: same_id} =
-               Lightning.Accounts.get_user_by_identity(
-                 handler.name,
-                 "github-uid-1"
-               )
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "An account already exists"
 
-      assert same_id == user.id
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "link your #{String.capitalize(handler.name)} account"
+
+      # No identity was silently created
+      refute Lightning.Accounts.get_user_by_identity(
+               handler.name,
+               "unlinked-uid"
+             )
     end
 
     test "auto-registers a new user when there is no existing email or identity",
@@ -175,7 +185,16 @@ defmodule LightningWeb.OidcControllerTest do
 
       user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
-      expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "mfa-uid-#{user.id}"
+      )
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "mfa-uid-#{user.id}"
+      })
 
       conn =
         conn

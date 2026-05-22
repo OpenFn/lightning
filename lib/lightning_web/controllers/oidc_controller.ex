@@ -135,9 +135,13 @@ defmodule LightningWeb.OidcController do
 
       nil ->
         case Accounts.get_user_by_email(email) do
-          %User{} = user ->
-            Accounts.link_user_identity(user, provider, uid)
-            do_log_in(conn, user)
+          %User{} ->
+            conn
+            |> put_flash(
+              :info,
+              "An account already exists for #{email}. Sign in and link your #{display_name(provider)} account from your profile settings to use single sign-on."
+            )
+            |> redirect(to: Routes.user_session_path(conn, :new))
 
           nil ->
             name = extract_name(userinfo)
