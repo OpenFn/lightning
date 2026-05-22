@@ -125,7 +125,7 @@ defmodule LightningWeb.OidcControllerTest do
              )
     end
 
-    test "auto-registers a new user when there is no existing email or identity",
+    test "prompts the user to confirm before creating a brand-new account",
          %{conn: conn, bypass: bypass, handler: handler} do
       expect_token(bypass, handler.wellknown)
       email = "new-sso-user-#{System.unique_integer([:positive])}@example.com"
@@ -142,16 +142,19 @@ defmodule LightningWeb.OidcControllerTest do
           Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
         )
 
-      assert redirected_to(conn) == "/projects"
+      assert redirected_to(conn) == ~p"/authenticate/signup/confirm"
 
-      user = Lightning.Accounts.get_user_by_email(email)
-      assert user
-      assert user.first_name == "First"
-      assert user.last_name == "Last"
-      assert is_nil(user.hashed_password)
-      refute is_nil(user.confirmed_at)
+      assert get_session(conn, :sso_pending_signup) == %{
+               "provider" => handler.name,
+               "uid" => "fresh-uid-1",
+               "email" => email,
+               "first_name" => "First",
+               "last_name" => "Last"
+             }
 
-      assert Lightning.Accounts.get_user_by_identity(handler.name, "fresh-uid-1")
+      # No account or identity is created until the user confirms
+      refute Lightning.Accounts.get_user_by_email(email)
+      refute Lightning.Accounts.get_user_by_identity(handler.name, "fresh-uid-1")
     end
 
     test "redirects to login when userinfo has no email", %{
@@ -408,6 +411,98 @@ defmodule LightningWeb.OidcControllerTest do
                )
 
       assert same_id == other_user.id
+    end
+  end
+
+  describe "SSO signup confirmation flow" do
+    test "GET /authenticate/signup/confirm renders the confirmation page",
+         %{conn: conn} do
+      pending = %{
+        "provider" => "github",
+        "uid" => "uid-123",
+        "email" => "new@example.com",
+        "first_name" => "Pat",
+        "last_name" => "Doe"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> get(~p"/authenticate/signup/confirm")
+
+      html = html_response(conn, 200)
+      assert html =~ "Create your account"
+      assert html =~ "new@example.com"
+      assert html =~ "Github"
+      assert html =~ "Pat Doe"
+    end
+
+    test "GET /authenticate/signup/confirm redirects to login when no pending signup",
+         %{conn: conn} do
+      conn = get(conn, ~p"/authenticate/signup/confirm")
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+
+    test "POST /authenticate/signup/confirm creates the account and logs in",
+         %{conn: conn} do
+      email = "confirm-signup-#{System.unique_integer([:positive])}@example.com"
+
+      pending = %{
+        "provider" => "github",
+        "uid" => "confirm-uid",
+        "email" => email,
+        "first_name" => "Alice",
+        "last_name" => "Smith"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> post(~p"/authenticate/signup/confirm", %{})
+
+      assert redirected_to(conn) == "/projects"
+
+      user = Lightning.Accounts.get_user_by_email(email)
+      assert user
+      assert user.first_name == "Alice"
+      assert user.last_name == "Smith"
+      assert is_nil(user.hashed_password)
+      refute is_nil(user.confirmed_at)
+
+      assert %Lightning.Accounts.User{id: same_id} =
+               Lightning.Accounts.get_user_by_identity("github", "confirm-uid")
+
+      assert same_id == user.id
+      refute get_session(conn, :sso_pending_signup)
+    end
+
+    test "POST /authenticate/signup/confirm redirects when there is no pending signup",
+         %{conn: conn} do
+      conn = post(conn, ~p"/authenticate/signup/confirm", %{})
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "No pending sign-up"
+    end
+
+    test "GET /authenticate/signup/cancel clears the pending signup",
+         %{conn: conn} do
+      pending = %{
+        "provider" => "github",
+        "uid" => "cancel-uid",
+        "email" => "cancel@example.com",
+        "first_name" => "C",
+        "last_name" => "X"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> get(~p"/authenticate/signup/cancel")
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+      refute get_session(conn, :sso_pending_signup)
+      refute Lightning.Accounts.get_user_by_email("cancel@example.com")
     end
   end
 

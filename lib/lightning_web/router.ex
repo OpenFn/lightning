@@ -64,6 +64,9 @@ defmodule LightningWeb.Router do
     post "/users/confirm", UserConfirmationController, :create
 
     get "/authenticate/callback", OidcController, :new
+    get "/authenticate/signup/confirm", OidcController, :confirm_signup
+    post "/authenticate/signup/confirm", OidcController, :complete_signup
+    get "/authenticate/signup/cancel", OidcController, :cancel_signup
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/link", OidcController, :link
     get "/authenticate/:provider/callback", OidcController, :new
