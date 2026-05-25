@@ -3,7 +3,7 @@ import { FormField, INPUT_CLASSES } from './form-field';
 import { useFieldContext } from '.';
 
 interface NumberFieldProps {
-  label: string;
+  label: React.ReactNode;
   placeholder?: string | undefined;
   disabled?: boolean | undefined;
   min?: number | undefined;

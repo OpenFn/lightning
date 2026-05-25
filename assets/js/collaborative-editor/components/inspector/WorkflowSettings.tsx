@@ -16,6 +16,7 @@ import { createWorkflowSchema } from '#/collaborative-editor/types/workflow';
 import { useURLState } from '#/react/lib/use-url-state';
 
 import { AlertDialog } from '../AlertDialog';
+import { Tooltip } from '../Tooltip';
 
 export function WorkflowSettings() {
   // Get workflow from store - LoadingBoundary guarantees it's non-null
@@ -34,6 +35,11 @@ export function WorkflowSettings() {
 
   // Check if project has concurrency disabled (concurrency === 1)
   const isProjectConcurrencyDisabled = projectConcurrency === 1;
+
+  const triggers = useWorkflowState(state => state.triggers);
+  const isSyncMode =
+    triggers[0]?.type === 'webhook' &&
+    triggers[0]?.webhook_reply === 'after_completion';
 
   const handleViewAsYAML = () => {
     updateSearchParams({ panel: 'code' });
@@ -135,16 +141,21 @@ export function WorkflowSettings() {
 
       {/* Concurrency Section */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Concurrency</h3>
-        <p className="text-sm text-gray-600 mb-3">
-          Control how many of this workflow's <em>Runs</em> are executed at the
-          same time
-        </p>
         <form.AppField name="concurrency">
           {field => (
             <>
               <field.NumberField
-                label="Max Concurrency"
+                label={
+                  <>
+                    Max Concurrency
+                    <Tooltip
+                      content="Limit the number of concurrent runs for this workflow, up to the project's maximum"
+                      side="right"
+                    >
+                      <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
+                    </Tooltip>
+                  </>
+                }
                 placeholder="Unlimited (up to max available)"
                 helpText={
                   field.state.value === null
@@ -155,7 +166,20 @@ export function WorkflowSettings() {
                 max={projectConcurrency ?? undefined}
                 disabled={isReadOnly || isProjectConcurrencyDisabled}
               />
-              {isProjectConcurrencyDisabled && (
+              {isSyncMode && (
+                <div className="text-xs mt-2">
+                  <div className="italic text-gray-500">
+                    <span className="hero-exclamation-triangle-mini h-4 w-4 text-yellow-500 inline-block align-text-bottom mr-1" />
+                    This workflow uses a sync-mode trigger. Because sync-mode is
+                    time sensitive, most OpenFn instances ignore concurrency
+                    limits for these workflows and process as many as possible
+                    at once. (You may set this setting, but as your OpenFn host
+                    scales the workers and adjusts their priorities over time it
+                    may not have any impact.)
+                  </div>
+                </div>
+              )}
+              {!isSyncMode && isProjectConcurrencyDisabled && (
                 <div className="text-xs mt-2">
                   <div className="italic text-gray-500">
                     Parallel execution of runs is disabled for this project.
