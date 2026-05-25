@@ -21,6 +21,29 @@ and this project adheres to
 
 ### Fixed
 
+### Security
+
+- Bumped `plug` (1.19.2), `cowboy` (2.15.0), `cowlib` (2.16.1), `postgrex`
+  (0.22.2) and overrode `decimal` to 3.1.0 to clear seven advisories surfaced by
+  `mix deps.audit`: multipart-header DoS in plug and cowboy
+  ([GHSA-468c-vq7p-gh64][a1], [GHSA-jfc2-q6qh-g5x8][a2]), cowlib
+  resource-consumption, decompression-bomb and CRLF-injection issues
+  ([GHSA-32p9-57cr-4x65][a3], [GHSA-84f2-rp86-235p][a4],
+  [GHSA-hv23-4qp7-8c8r][a5]), Postgrex channel-name SQL injection
+  ([GHSA-r73h-97w8-m54h][a6]) and a `decimal` unbounded-exponent DoS
+  ([GHSA-rhv4-8758-jx7v][a7]). One low-severity unpatched cowlib cookie issue
+  ([GHSA-g2wm-735q-3f56][a8]) remains; we don't construct cookies server-side
+  from untrusted input, so it isn't reachable here.
+
+[a1]: https://github.com/advisories/GHSA-468c-vq7p-gh64
+[a2]: https://github.com/advisories/GHSA-jfc2-q6qh-g5x8
+[a3]: https://github.com/advisories/GHSA-32p9-57cr-4x65
+[a4]: https://github.com/advisories/GHSA-84f2-rp86-235p
+[a5]: https://github.com/advisories/GHSA-hv23-4qp7-8c8r
+[a6]: https://github.com/advisories/GHSA-r73h-97w8-m54h
+[a7]: https://github.com/advisories/GHSA-rhv4-8758-jx7v
+[a8]: https://github.com/advisories/GHSA-g2wm-735q-3f56
+
 ## [2.16.5] - 2026-05-21
 
 ### Fixed
