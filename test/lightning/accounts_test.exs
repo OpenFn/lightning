@@ -98,6 +98,57 @@ defmodule Lightning.AccountsTest do
     assert [%{id: ^user_id}] = Accounts.list_users()
   end
 
+  describe "list_users_for_admin/1" do
+    test "returns a paginated, searchable, sortable users page" do
+      insert(:user,
+        first_name: "Alice",
+        last_name: "Able",
+        email: "alice.admin@example.com"
+      )
+
+      insert(:user,
+        first_name: "Bob",
+        last_name: "Baker",
+        email: "bob.admin@example.com"
+      )
+
+      insert(:user,
+        first_name: "Zoe",
+        last_name: "Zulu",
+        email: "zoe.admin@example.com"
+      )
+
+      page =
+        Accounts.list_users_for_admin(%{
+          "filter" => "bo",
+          "sort" => "email",
+          "dir" => "asc",
+          "page" => "1",
+          "page_size" => "10"
+        })
+
+      assert page.page_number == 1
+      assert page.page_size == 10
+      assert Enum.map(page.entries, & &1.email) == ["bob.admin@example.com"]
+    end
+
+    test "falls back to safe defaults for invalid params" do
+      insert(:user, email: "fallback.admin@example.com")
+
+      page =
+        Accounts.list_users_for_admin(%{
+          "sort" => "not_a_column",
+          "dir" => "boom",
+          "page" => "-10",
+          "page_size" => "1000"
+        })
+
+      assert page.page_number == 1
+      assert page.page_size <= 100
+      assert is_list(page.entries)
+    end
+  end
+
   test "list_api_token/1 returns all user tokens" do
     user = insert(:user)
 
