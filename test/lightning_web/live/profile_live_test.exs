@@ -911,10 +911,11 @@ defmodule LightningWeb.ProfileLiveTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      html =
+      {:ok, _view, html} =
         view
         |> element("#unlink-#{handler.name}-button")
         |> render_click()
+        |> follow_redirect(conn, ~p"/profile")
 
       assert html =~ "Set a password"
       assert [_] = Lightning.Accounts.list_user_identities(user)

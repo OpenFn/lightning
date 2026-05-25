@@ -33,7 +33,8 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
          |> put_flash(
            :error,
            "Set a password (via the password reset link) before unlinking your only sign-in method."
-         )}
+         )
+         |> push_navigate(to: ~p"/profile")}
 
       {:error, :not_linked} ->
         {:noreply,
@@ -47,7 +48,8 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
          |> put_flash(
            :error,
            "Could not unlink your #{display_name(provider)} account."
-         )}
+         )
+         |> push_navigate(to: ~p"/profile")}
     end
   end
 
