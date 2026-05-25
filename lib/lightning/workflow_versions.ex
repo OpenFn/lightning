@@ -218,25 +218,34 @@ defmodule Lightning.WorkflowVersions do
 
   ## Parameters
     * `workflow` — the workflow struct to hash
+    * `opts` — options:
+      * `hash: false` — return the joined pre-hash string instead of hashing it.
+        Useful for debugging what's fed into the hash. Defaults to `true`.
 
   ## Returns
-    * A 12-character lowercase hex string
+    * When `hash: true` (default): a 12-character lowercase hex string
+    * When `hash: false`: the joined pre-hash string
 
   ## Examples
 
       iex> WorkflowVersions.generate_hash(workflow)
       "a1b2c3d4e5f6"
+
+      iex> WorkflowVersions.generate_hash(workflow, hash: false)
+      "My Workflow{...}webhook..."
   """
-  @spec generate_hash(Workflow.t() | map()) :: binary()
-  def generate_hash(%Workflow{} = workflow) do
+  @spec generate_hash(Workflow.t() | map(), keyword()) :: binary()
+  def generate_hash(workflow, opts \\ [])
+
+  def generate_hash(%Workflow{} = workflow, opts) do
     workflow = Repo.preload(workflow, [:jobs, :edges, :triggers])
 
     workflow
     |> Map.from_struct()
-    |> generate_hash()
+    |> generate_hash(opts)
   end
 
-  def generate_hash(%{} = workflow) do
+  def generate_hash(%{} = workflow, opts) do
     workflow_keys = [:name, :positions]
 
     job_keys = [
@@ -322,9 +331,13 @@ defmodule Lightning.WorkflowVersions do
         edges_hash_list
       ])
 
-    :crypto.hash(:sha256, joined_data)
-    |> Base.encode16(case: :lower)
-    |> binary_part(0, 12)
+    if Keyword.get(opts, :hash, true) do
+      :crypto.hash(:sha256, joined_data)
+      |> Base.encode16(case: :lower)
+      |> binary_part(0, 12)
+    else
+      joined_data
+    end
   end
 
   defp serialize_value(%WebhookResponseConfig{} = val) do
