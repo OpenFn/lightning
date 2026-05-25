@@ -18,6 +18,11 @@ defmodule LightningWeb.RunChannel do
   require Jason.Helpers
   require Logger
 
+  defmodule WebhookResponse do
+    @moduledoc false
+    defstruct status: nil, body: nil, step_id: nil, sent_at: nil
+  end
+
   @impl true
   def join(
         "run:" <> id,
@@ -39,7 +44,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: nil,
+         webhook_response: nil
        })}
     else
       {:error, :not_found} ->
@@ -115,15 +121,15 @@ defmodule LightningWeb.RunChannel do
         # instead of blocking the channel.
         run_with_preloads =
           run
-          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+          |> Repo.preload([:log_lines, work_order: [:workflow]])
 
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        # Broadcast webhook response if after_completion is enabled
-        maybe_broadcast_webhook_response(run_with_preloads, payload)
-
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket
+        |> assign(run: run)
+        |> maybe_send_after_completion_response(payload["final_state"])
+        |> reply_with({:ok, nil})
 
       {:error, changeset} ->
         reply_with(socket, {:error, changeset})
@@ -210,7 +216,9 @@ defmodule LightningWeb.RunChannel do
         reply_with(socket, {:error, changeset})
 
       {:ok, step} ->
-        reply_with(socket, {:ok, %{step_id: step.id}})
+        socket
+        |> put_webhook_response(payload)
+        |> reply_with({:ok, %{step_id: step.id}})
     end
   end
 
@@ -306,51 +314,148 @@ defmodule LightningWeb.RunChannel do
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(run, payload) do
-    work_order = run.work_order
-    trigger = work_order.trigger
+  defp put_webhook_response(socket, payload) do
+    if already_sent?(socket.assigns.webhook_response) do
+      socket
+    else
+      case Map.get(payload, "webhook_response") do
+        %{} = wr ->
+          assign(socket, :webhook_response, %WebhookResponse{
+            status: Map.get(wr, "status"),
+            body: Map.get(wr, "body"),
+            step_id: Map.get(payload, "step_id")
+          })
 
-    if trigger && trigger.type == :webhook &&
-         trigger.webhook_reply == :after_completion do
-      topic = "work_order:#{work_order.id}:webhook_response"
+        _ ->
+          socket
+      end
+    end
+  end
 
-      # TODO - Later allow workflow authors to customize the status code
-      # and body of the reply.
-      status_code = determine_status_code(run.state)
+  defp already_sent?(%WebhookResponse{sent_at: %DateTime{}}), do: true
+  defp already_sent?(_), do: false
 
-      body = %{
-        data: payload["final_state"],
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: run.state,
-          error_type: run.error_type,
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
+  defp maybe_send_after_completion_response(socket, final_state) do
+    run = Repo.preload(socket.assigns.run, :starting_trigger)
+    trigger = run.starting_trigger
+
+    if trigger && trigger.webhook_reply == :after_completion do
+      webhook_response =
+        build_webhook_response(
+          run,
+          final_state,
+          trigger.webhook_response_config,
+          socket.assigns.webhook_response
+        )
+
+      socket
+      |> assign(:webhook_response, webhook_response)
+      |> maybe_broadcast_webhook_response()
+    else
+      socket
+    end
+  end
+
+  defp maybe_broadcast_webhook_response(socket) do
+    %{run: run, webhook_response: %WebhookResponse{} = webhook_response} =
+      socket.assigns
+
+    if already_sent?(webhook_response) do
+      socket
+    else
+      meta = %{
+        work_order_id: run.work_order_id,
+        run_id: run.id,
+        state: run.state,
+        error_type: run.error_type,
+        inserted_at: run.inserted_at,
+        started_at: run.started_at,
+        claimed_at: run.claimed_at,
+        finished_at: run.finished_at
       }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        topic,
-        {:webhook_response, status_code, body}
+        "work_order:#{run.work_order_id}:webhook_response",
+        {:webhook_response, webhook_response.status,
+         %{data: webhook_response.body, meta: meta}}
       )
+
+      assign(socket, :webhook_response, %{
+        webhook_response
+        | sent_at: DateTime.utc_now()
+      })
     end
   end
 
-  # TODO - decide how we should respond... do we use HTTP codes for run states?
-  defp determine_status_code(state) do
-    case state do
-      :success -> 201
-      :failed -> 201
-      :crashed -> 201
-      :exception -> 201
-      :killed -> 201
-      :cancelled -> 201
-      _other -> 201
+  defp build_webhook_response(run, final_state, config, nil) do
+    {status, body} = build_default_response(run, final_state, config)
+    %WebhookResponse{status: status, body: body}
+  end
+
+  defp build_webhook_response(
+         run,
+         final_state,
+         config,
+         %WebhookResponse{} = webhook_response
+       ) do
+    with {:ok, custom_status} <- parse_webhook_status(webhook_response.status),
+         {:ok, custom_body} <- parse_webhook_body(webhook_response.body) do
+      status = custom_status || default_response_status(run.state, config)
+      body = custom_body || default_response_body(run.state, final_state, config)
+      %{webhook_response | status: status, body: body}
+    else
+      {:error, reason} ->
+        {status, body} = malformed_response(reason, run, config)
+        %{webhook_response | status: status, body: body}
     end
+  end
+
+  defp parse_webhook_status(nil), do: {:ok, nil}
+  defp parse_webhook_status(status) when is_integer(status), do: {:ok, status}
+
+  defp parse_webhook_status(status) when is_float(status),
+    do: {:ok, trunc(status)}
+
+  defp parse_webhook_status(status),
+    do: {:error, "status needs to be an integer, got: #{inspect(status)}"}
+
+  defp parse_webhook_body(nil), do: {:ok, nil}
+  defp parse_webhook_body(body) when is_map(body), do: {:ok, body}
+
+  defp parse_webhook_body(body),
+    do: {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
+
+  defp build_default_response(run, final_state, config) do
+    {default_response_status(run.state, config),
+     default_response_body(run.state, final_state, config)}
+  end
+
+  defp default_response_status(:success, %{success_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(:success, _config), do: 201
+
+  defp default_response_status(_run_status, %{error_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, _config), do: 201
+
+  defp default_response_body(:success, final_state, _config),
+    do: final_state
+
+  defp default_response_body(run_status, _final_state, _config) do
+    %{
+      message:
+        "Run completed with status: #{run_status}. As a security policy, OpenFn does not send state data when the run errors out to avoid leaking sensitive information"
+    }
+  end
+
+  defp malformed_response(reason, run, config) do
+    {default_response_status(run.state, config),
+     %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
   end
 
   defp update_scrubber(nil, samples, basic_auth) do

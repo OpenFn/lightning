@@ -226,6 +226,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def max_sandbox_nesting_depth do
+      Application.get_env(:lightning, :max_sandbox_nesting_depth, 5)
+    end
+
+    @impl true
     def kafka_alternate_storage_enabled? do
       kafka_trigger_config() |> Keyword.get(:alternate_storage_enabled)
     end
@@ -479,6 +484,7 @@ defmodule Lightning.Config do
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
   @callback max_dataclip_size_bytes() :: non_neg_integer()
+  @callback max_sandbox_nesting_depth() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
@@ -683,6 +689,16 @@ defmodule Lightning.Config do
 
   def max_dataclip_size_bytes do
     impl().max_dataclip_size_bytes()
+  end
+
+  @doc """
+  Maximum depth of nested sandboxes. A direct child sandbox is depth 1, a
+  sandbox of a sandbox is depth 2, etc. Root projects are depth 0 and not
+  subject to this limit. Defaults to 5. Set to 0 to disable sandbox
+  creation entirely.
+  """
+  def max_sandbox_nesting_depth do
+    impl().max_sandbox_nesting_depth()
   end
 
   def kafka_alternate_storage_enabled? do

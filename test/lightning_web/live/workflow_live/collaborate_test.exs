@@ -6,11 +6,15 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   import Phoenix.LiveViewTest
 
   describe "sandbox indicator banner data attributes" do
-    test "sets root project data attributes when in sandbox project", %{
-      conn: conn
-    } do
+    test "sets root project data attributes to the user's access root in a sandbox project",
+         %{conn: conn} do
       user = insert(:user)
-      parent_project = insert(:project, name: "Production Project")
+
+      parent_project =
+        insert(:project,
+          name: "Production Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
 
       sandbox =
         insert(:sandbox,
@@ -31,6 +35,33 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert html =~ "data-root-project-id=\"#{parent_project.id}\""
       assert html =~ "data-root-project-name=\"#{parent_project.name}\""
+    end
+
+    test "falls back to the sandbox itself when the user has no access to ancestors",
+         %{conn: conn} do
+      user = insert(:user)
+      parent_project = insert(:project, name: "Production Project")
+
+      sandbox =
+        insert(:sandbox,
+          parent: parent_project,
+          name: "test-sandbox",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}"
+        )
+
+      refute html =~ parent_project.name
+      assert html =~ "data-root-project-id=\"#{sandbox.id}\""
+      assert html =~ "data-root-project-name=\"#{sandbox.name}\""
     end
 
     test "sets null root project data attributes when in root project", %{
@@ -60,12 +91,18 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
     test "sets correct root project in deeply nested sandbox", %{conn: conn} do
       user = insert(:user)
-      root_project = insert(:project, name: "Root Project")
+
+      root_project =
+        insert(:project,
+          name: "Root Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
 
       sandbox_a =
         insert(:sandbox,
           parent: root_project,
-          name: "sandbox-a"
+          name: "sandbox-a",
+          project_users: [%{user_id: user.id, role: :owner}]
         )
 
       sandbox_b =
@@ -90,6 +127,43 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert html =~
                "data-project-display-name=\"#{root_project.name}/#{sandbox_a.name}/#{sandbox_b.name}\""
+    end
+
+    test "deeply nested sandbox truncates display name at the user's access root",
+         %{conn: conn} do
+      user = insert(:user)
+      root_project = insert(:project, name: "Root Project")
+
+      sandbox_a =
+        insert(:sandbox,
+          parent: root_project,
+          name: "sandbox-a",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      sandbox_b =
+        insert(:sandbox,
+          parent: sandbox_a,
+          name: "sandbox-b",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox_b.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}"
+        )
+
+      refute html =~ root_project.name
+      assert html =~ "data-root-project-id=\"#{sandbox_a.id}\""
+      assert html =~ "data-root-project-name=\"#{sandbox_a.name}\""
+
+      assert html =~
+               "data-project-display-name=\"#{sandbox_a.name}/#{sandbox_b.name}\""
     end
   end
 

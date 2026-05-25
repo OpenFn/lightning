@@ -22,6 +22,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias LightningWeb.ProjectLive.Settings
 
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
@@ -2173,6 +2174,48 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "view-extension slot wrappers" do
+    test "concurrency_input_slot/1 forwards project, field, and disabled" do
+      project = insert(:project)
+      changeset = Lightning.Projects.Project.changeset(project, %{})
+      form = Phoenix.HTML.FormData.to_form(changeset, [])
+      field = form[:concurrency]
+
+      echo =
+        render_component(
+          &Settings.concurrency_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          field: field,
+          project: project,
+          disabled: true
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-field-id") == [field.id]
+      assert Floki.attribute(echo, "data-disabled") == ["true"]
+    end
+
+    test "usage_caps_input_slot/1 forwards project and current_user" do
+      project = insert(:project)
+      user = insert(:user)
+
+      echo =
+        render_component(
+          &Settings.usage_caps_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          project: project,
+          current_user: user
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-current-user-id") == [user.id]
+    end
+  end
+
   describe "webhook-security" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
@@ -2751,7 +2794,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      assert html =~
+               "The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?"
 
       # retain_all is the default
       assert ["checked"] ==
@@ -2780,7 +2825,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "heads-up-description"
 
       # 3 radio buttons descriptions
-      assert "Retain input/output data for all workflow runs" =
+      assert "Retain all input/output data" =
                view
                |> element(~s{label#[for="retain_all"]})
                |> render()
@@ -2847,7 +2892,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored." =
                view
                |> element("#heads-up-description")
                |> render()

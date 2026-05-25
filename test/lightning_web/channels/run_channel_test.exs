@@ -1768,6 +1768,500 @@ defmodule LightningWeb.RunChannelTest do
     end
   end
 
+  describe "webhook response broadcasting" do
+    setup [:create_user, :create_project]
+
+    setup %{project: project} do
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true,
+          webhook_reply: :after_completion
+        )
+
+      job = build(:job)
+
+      %{triggers: [trigger], jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{run: run, work_order: work_order, trigger: trigger, job: job}
+    end
+
+    setup [:create_socket, :join_run_channel]
+
+    setup %{work_order: work_order} do
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "work_order:#{work_order.id}:webhook_response"
+      )
+
+      :ok
+    end
+
+    test "does not broadcast when webhook_reply is not :after_completion", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :before_start)
+      |> Repo.update!()
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => %{"data" => "ok"}}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      refute_receive {:webhook_response, _, _}
+    end
+
+    test "broadcasts envelope with final state on success with no captured response",
+         %{
+           socket: socket,
+           run: run,
+           work_order: work_order
+         } do
+      final_state = %{"data" => %{"result" => "ok"}}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, body}
+
+      assert %{data: ^final_state, meta: meta} = body
+      assert meta.run_id == run.id
+      assert meta.work_order_id == work_order.id
+      assert meta.state == :success
+    end
+
+    test "broadcasts security message on error with no captured response", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "failed"
+      assert message =~ "security policy"
+    end
+
+    test "uses configured success_code on success", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 200)
+
+      final_state = %{"data" => "ok"}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "uses configured error_code on error", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, error_code: 422)
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: _}, meta: _meta}}
+    end
+
+    test "uses 201 on success when only error_code is configured", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, error_code: 422)
+
+      final_state = %{"data" => "ok"}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "does not broadcast for runs with no starting trigger", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      run
+      |> Ecto.Changeset.change(
+        starting_trigger_id: nil,
+        starting_job_id: job.id
+      )
+      |> Repo.update!()
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      refute_receive {:webhook_response, _, _}
+    end
+
+    test "captured webhook_response from step:complete overrides config", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 999)
+
+      override_body = %{"custom" => "response"}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => override_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
+    end
+
+    test "last step:complete with a webhook_response wins (last-write-wins)",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 201, "body" => %{"first" => true}}
+      )
+
+      last_body = %{"last" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 202, "body" => last_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 202, %{data: ^last_body, meta: _meta}}
+    end
+
+    test "step without webhook_response does not clear a previously captured one",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      captured_body = %{"captured" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => captured_body}
+      )
+
+      complete_step(socket, run, job, [])
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^captured_body, meta: _meta}}
+    end
+
+    test "float status in webhook_response is normalised to integer", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      override_body = %{"ok" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200.0, "body" => override_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
+    end
+
+    test "webhook_response with only status uses default body envelope", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      final_state = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"status" => 200})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "webhook_response with only body uses config status code", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 202)
+
+      custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 202, %{data: ^custom_body, meta: _meta}}
+    end
+
+    test "webhook_response with only body falls back to 201 when no config", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, %{data: ^custom_body, meta: _meta}}
+    end
+
+    test "malformed status in webhook_response yields 201 with explanation", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "status"
+    end
+
+    test "malformed body in webhook_response yields 201 with explanation", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "body"
+    end
+
+    test "malformed webhook_response on failed run uses default error status",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+    end
+
+    test "malformed webhook_response on failed run uses configured error_code",
+         %{
+           socket: socket,
+           run: run,
+           job: job,
+           trigger: trigger
+         } do
+      put_webhook_config(trigger, error_code: 422)
+
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+    end
+  end
+
+  defp put_webhook_config(trigger, attrs) do
+    alias Lightning.Workflows.Triggers.WebhookResponseConfig
+    config = struct(WebhookResponseConfig, attrs)
+
+    trigger
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_embed(:webhook_response_config, config)
+    |> Repo.update!()
+  end
+
+  defp complete_step(socket, run, job, opts) do
+    step = insert(:step, runs: [run], job: job)
+
+    payload =
+      %{
+        "step_id" => step.id,
+        "output_dataclip_id" => Ecto.UUID.generate(),
+        "output_dataclip" => ~s({"foo": "bar"}),
+        "reason" => "normal"
+      }
+      |> maybe_put("webhook_response", Keyword.get(opts, :webhook_response))
+
+    ref = push(socket, "step:complete", payload)
+    assert_reply ref, :ok, %{step_id: _}
+    step
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
   defp create_socket_and_run(context) do
     merge_setups(context, [
       :create_project,

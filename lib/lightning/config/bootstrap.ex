@@ -322,6 +322,10 @@ defmodule Lightning.Config.Bootstrap do
            env!("MAX_DATACLIP_SIZE_MB", :integer, 10) * 1_000_000
 
     config :lightning,
+           :max_sandbox_nesting_depth,
+           env!("MAX_SANDBOX_NESTING_DEPTH", :integer, 5)
+
+    config :lightning,
            :queue_result_retention_period,
            env!("QUEUE_RESULT_RETENTION_PERIOD_MINUTES", :integer, 60)
 
@@ -389,16 +393,8 @@ defmodule Lightning.Config.Bootstrap do
               end,
               :always
             ),
-          tls_options: [
-            versions: [:"tlsv1.3"],
-            verify: :verify_peer,
-            cacerts: :public_key.cacerts_get(),
-            server_name_indication: env!("SMTP_RELAY", :string) |> to_charlist(),
-            depth: 5,
-            customize_hostname_check: [
-              match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-            ]
-          ],
+          tls_options:
+            :tls_certificate_check.options(env!("SMTP_RELAY", :string)),
           port: env!("SMTP_PORT", :integer, 587)
 
       unknown ->
@@ -660,7 +656,15 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
-      drop_metrics_groups: [],
+      # `:oban_queue_poll_metrics` is dropped because PromEx 1.11.0's helper
+      # `include_zeros_for_missing_queue_states/1` calls `Oban.config()` with
+      # no args — looking up the default `Oban` name — even though we run our
+      # supervisor as `Lightning.Oban`. The first poll raises, telemetry_poller
+      # filters the measurement out, and the queue-length gauge is dead for
+      # the rest of the process's life. Fix is upstream PR #278 (unreleased,
+      # repo dormant since 2024). Re-enable once that ships.
+      # https://github.com/akoutmos/prom_ex/pull/278
+      drop_metrics_groups: [:oban_queue_poll_metrics],
       expensive_metrics_enabled:
         env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [

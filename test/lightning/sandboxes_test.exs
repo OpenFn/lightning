@@ -310,8 +310,7 @@ defmodule Lightning.Projects.SandboxesTest do
         Sandboxes.provision(parent, actor, %{
           name: "sandbox-x",
           color: "#abcdef",
-          env: "staging",
-          collaborators: [%{user_id: actor.id, role: :owner}]
+          env: "staging"
         })
 
       sandbox = Repo.preload(sandbox, [:project_users, :project_credentials])
@@ -1178,16 +1177,58 @@ defmodule Lightning.Projects.SandboxesTest do
       assert %{name: [_error_msg]} = errors_on(changeset)
     end
 
-    test "handles foreign key constraint violations in collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      non_existent_user_id = Ecto.UUID.generate()
+    test "rejects when the parent is already at the configured nesting depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
 
-      assert_raise Ecto.ConstraintError, ~r/foreign_key_constraint/, fn ->
-        Sandboxes.provision(parent, actor, %{
-          name: "test-fk-error",
-          collaborators: [%{user_id: non_existent_user_id, role: :editor}]
-        })
-      end
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+      l2 = insert(:project, parent: l1)
+      ensure_member!(l2, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(l2, actor, %{name: "too-deep"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^l2.id),
+               :count,
+               :id
+             ) == 0
+    end
+
+    test "succeeds when the parent is one level below the nesting cap" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+
+      assert {:ok, %Project{} = sandbox} =
+               Sandboxes.provision(l1, actor, %{name: "just-below"})
+
+      assert sandbox.parent_id == l1.id
+    end
+
+    test "rejects every sandbox creation when the cap is set to 0" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(root, actor, %{name: "no-sandboxes"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^root.id),
+               :count,
+               :id
+             ) == 0
     end
 
     test "rolls back transaction on keychain validation failure" do
@@ -1327,25 +1368,145 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "collaborators" do
-    test "adds non-owner collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      other = insert(:user)
+  describe "project_users derivation from parent" do
+    test "copies every parent user with their role preserved, actor stays owner" do
+      %{actor: actor, other: other, parent: parent} =
+        build_parent_fixture!(:owner)
 
       {:ok, sandbox} =
-        Sandboxes.provision(parent, actor, %{
-          name: "sb-with-collab",
-          collaborators: [
-            %{user_id: other.id, role: :editor},
-            %{user_id: actor.id, role: :owner}
-          ]
-        })
+        Sandboxes.provision(parent, actor, %{name: "sb-derived"})
 
       sandbox = Repo.preload(sandbox, :project_users)
 
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == other.id and &1.role == :editor)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "preserves the :viewer role" do
+      actor = insert(:user)
+      viewer = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(parent, viewer, :viewer)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == viewer.id and &1.role == :viewer)
+             )
+    end
+
+    test "demotes the parent owner to :admin on the sandbox" do
+      actor = insert(:user)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :editor)
+      ensure_member!(parent, parent_owner, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-demote-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == parent_owner.id and &1.role == :admin)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "actor is sandbox owner even if they had a non-owner role on parent" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-actor-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(
+               sandbox.project_users,
+               &(&1.user_id == actor.id)
+             ) == 1
+    end
+
+    test "superuser actor who is not on the parent cannot provision a sandbox" do
+      superuser = insert(:user, role: :superuser)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, parent_owner, :owner)
+
+      assert {:error, :unauthorized} =
+               Sandboxes.provision(parent, superuser, %{name: "sb-superuser"})
+    end
+
+    test "still provisions cleanly when the parent has only the actor on it" do
+      actor = insert(:user)
+      parent = insert(:project, name: "solo-parent")
+
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "solo-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert [%{user_id: user_id, role: :owner}] = sandbox.project_users
+      assert user_id == actor.id
+    end
+
+    test "still provisions cleanly when the parent has no :owner row" do
+      # `Projects.delete_project_user!/1` and direct repo deletions bypass
+      # the Project changeset's single-owner guarantee, so the ownerless
+      # state is reachable in practice.
+      actor = insert(:user)
+      editor = insert(:user)
+      parent = insert(:project, name: "ownerless-parent")
+
+      ensure_member!(parent, actor, :admin)
+      ensure_member!(parent, editor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "ownerless-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == editor.id and &1.role == :editor)
              )
 
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
@@ -2223,6 +2384,49 @@ defmodule Lightning.Projects.SandboxesTest do
                  non_existent_id,
                  actor
                )
+    end
+
+    test "refuses to restore when the active sandbox limit is reached" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      message = %Lightning.Extensions.Message{
+        text: "Sandbox limit reached"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      assert {:error, :too_many_sandboxes, ^message} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "permission check runs before the limit check" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes,
+           %Lightning.Extensions.Message{text: "limit reached"}}
+        end
+      )
+
+      assert {:error, :unauthorized} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
     end
   end
 end

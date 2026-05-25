@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# benchmarking/channels/run_all.sh
+# tooling/benchmarking/channels/run_all.sh
 #
 # Runs all channel proxy load test scenarios in sequence, logging output
 # to a timestamped file. Assumes Lightning and mock destination are already running.
 # Bails on first failure.
 #
 # Usage:
-#   benchmarking/channels/run_all.sh [options]
+#   tooling/benchmarking/channels/run_all.sh [options]
 #
 # Options:
 #   --sname NAME       Erlang short name (default: lt)
@@ -18,9 +18,9 @@
 #   RESULTS_DIR        Output directory (default: /tmp/channel-bench-results)
 #
 # Examples:
-#   benchmarking/channels/run_all.sh
-#   benchmarking/channels/run_all.sh --duration 60 --concurrency 50
-#   benchmarking/channels/run_all.sh --sname mynode --cookie mysecret
+#   tooling/benchmarking/channels/run_all.sh
+#   tooling/benchmarking/channels/run_all.sh --duration 60 --concurrency 50
+#   tooling/benchmarking/channels/run_all.sh --sname mynode --cookie mysecret
 
 set -euo pipefail
 
@@ -74,7 +74,7 @@ if curl -sf http://localhost:4001/ > /dev/null 2>&1; then
 else
   echo "FAILED"
   echo "error: Mock destination is not reachable at http://localhost:4001" >&2
-  echo "Start it first: elixir benchmarking/channels/mock_destination.exs" >&2
+  echo "Start it first: elixir tooling/benchmarking/channels/mock_destination.exs" >&2
   exit 1
 fi
 
@@ -91,7 +91,7 @@ fi
 echo ""
 
 # ── Scenario runner ───────────────────────────────────────────────
-SCRIPT="benchmarking/channels/load_test.exs"
+SCRIPT="tooling/benchmarking/channels/load_test.exs"
 PASS=0
 FAIL=0
 

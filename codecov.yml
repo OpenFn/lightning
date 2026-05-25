@@ -1,0 +1,29 @@
+coverage:
+  precision: 1
+  round: nearest
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+
+ignore:
+  # Mirrors coveralls.json skip_files (Codecov doesn't read that file)
+  - "lib/lightning_web/router.ex"
+  - "lib/lightning/release.ex"
+  - "lib/lightning/sentry_event_filter.ex"
+  - "test/support/**"
+  - "storybook/**"
+
+  # Phoenix declarative scaffolding — boot-only or pure DSL
+  - "lib/lightning_web.ex"
+  - "lib/lightning_web/endpoint.ex"
+  - "lib/lightning_web/telemetry.ex"
+  - "lib/lightning/application.ex"
+
+  # Mix tasks — one-shot CLI utilities, not exercised by the suite
+  - "lib/mix/tasks/**"

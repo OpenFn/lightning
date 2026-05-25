@@ -305,7 +305,7 @@ defmodule LightningWeb.LayoutComponents do
   ## Example
 
       <.breadcrumbs>
-        <.breadcrumb_project_picker project={@project} />
+        <.breadcrumb_project_picker project={@project} label={@project_label} />
         <.breadcrumb_items items={[{"History", "/projects/\#{@project}/history"}]} />
         <.breadcrumb>
           <:label>{@page_title}</:label>
@@ -356,18 +356,16 @@ defmodule LightningWeb.LayoutComponents do
   LiveView pages and the collaborative editor.
   """
   attr :project, Lightning.Projects.Project, required: true
+  attr :label, :string, required: true
 
   def breadcrumb_project_picker(assigns) do
-    alias Lightning.Projects
-    alias Lightning.Projects.Project
-
-    project = Projects.preload_ancestors(assigns.project)
-
     assigns =
       assigns
-      |> assign(:label, Project.display_name(project))
-      |> assign(:is_sandbox, to_string(Project.sandbox?(project)))
-      |> assign(:color, project.color)
+      |> assign(
+        :is_sandbox,
+        to_string(Lightning.Projects.Project.sandbox?(assigns.project))
+      )
+      |> assign(:color, assigns.project.color)
 
     ~H"""
     <li class="mr-3">
@@ -490,7 +488,8 @@ defmodule LightningWeb.LayoutComponents do
         depth: depth,
         color: project.color,
         href: href,
-        sameSection: same_section
+        sameSection: same_section,
+        isSandbox: project.sandbox?
       }
 
       walk_project_tree(project.id, by_parent, depth + 1, label, path, [

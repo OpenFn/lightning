@@ -17,6 +17,63 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.5] - 2026-05-21
+
+### Fixed
+
+- Restore webhook responses to include `data` and `meta` fields, with `data`
+  containing the actual response body and `meta` containing run metadata.
+  [#4785](https://github.com/OpenFn/lightning/issues/4785)
+
+## [2.16.4] - 2026-05-20
+
+## [2.16.4-pre2] - 2026-05-20
+
+### Fixed
+
+- Drop webhook response body when status is 204 or 304
+  [#4778](https://github.com/OpenFn/lightning/issues/4778)
+
+## [2.16.4-pre1] - 2026-05-19
+
+### Fixed
+
+- The breadcrumb project picker now shows the full ancestor path on the project
+  settings page (previously it collapsed to the sandbox's own name).
+  [#4769](https://github.com/OpenFn/lightning/issues/4769)
+- Sandboxes no longer appear in the sandboxes list, the project picker, or via
+  the sandbox URL unless the user has access
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- The Merge button on a sandbox now requires admin or owner on the source
+  sandbox (or admin/owner on the root project)
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandbox policies no longer treat `User.role: :superuser` as a project-access
+  bypass [#4762](https://github.com/OpenFn/lightning/issues/4762)
+
+## [2.16.4-pre] - 2026-05-18
+
+### Added
+
+- Apollo AI chat requests now carry optional Langfuse tracking fields
+  (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
+  `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)
+- Allow users to respond back with custom webhook responses via the
+  `webhookResponse` field in the job state.
+  [#3102](https://github.com/OpenFn/lightning/issues/3102)
+- New `usage_caps_input` view-extension slot on the project settings page
+  (`/projects/:project_id/settings`). Same pattern as the existing
+  `concurrency_input` slot: downstream apps register a component via
+  `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
+  Lightning renders it in the settings view. No-op for OSS Lightning by default.
+  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+- Sandbox nesting now caps at 5 levels deep (override with the
+  `MAX_SANDBOX_NESTING_DEPTH` env var). The **Create Sandbox** button is
+  disabled at the cap, and `Sandboxes.provision/3` returns
+  `{:error, :nesting_too_deep}` if a scripted caller tries to bypass it.
 - Channel request detail page, reached by clicking a row in the channel history
   table. Shows a client / destination / timing summary, a nested timing
   visualization with per-phase breakdown and TTFB marker, foldable request and
@@ -26,9 +83,34 @@ and this project adheres to
   auth method and the destination project credential on every proxied request.
   Feature-gated behind experimental features.
   [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Support channels in the provisioner API
+  [#4522](https://github.com/OpenFn/lightning/issues/4522)
+- Do not persist channel request/response data when project has zero-persistence
+  enabled [#4622](https://github.com/OpenFn/lightning/issues/4622)
+- Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
+  plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
+  every `/channels/*` hit, tagged with
+  `:resolved | :invalid_uuid | :unknown_channel`), and
+  `lightning_channel_proxy_requests_started_total`
+  - `lightning_channel_proxy_request_duration_milliseconds` (tagged with
+    `project_id`) on resolved requests. A self-contained Prometheus + Grafana
+    stack and example dashboard for local development ships in
+    `tooling/observability/`.
+    [#4508](https://github.com/OpenFn/lightning/issues/4508)
 
 ### Changed
 
+- `Lightning.Projects.Sandboxes.provision/3` no longer accepts `:collaborators`.
+  The sandbox's `project_users` are now derived from the parent project: every
+  parent user is copied with their role preserved, the parent owner is demoted
+  to `:admin`, and the actor is set as the sandbox owner. To add a user who is
+  not already on the parent, call `Lightning.Projects.add_project_users/3` after
+  `provision/3` returns.
+  [#4744](https://github.com/OpenFn/lightning/issues/4744)
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
+  called with a project's `:owner` row. The settings UI already prevented this;
+  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
+  otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
@@ -36,9 +118,29 @@ and this project adheres to
 - Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
   so that changes to these trigger fields are properly detected by CLI deploy
   and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+- Bump `@openfn/ws-worker` from
+  [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
+- Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. OTP
+  trusted CA certificates will now be used (usualy the OS CA store), failing
+  which the library's bundled CA store will be used; use
+  `tls_certificate_check`'s `override_trusted_authorities/1` to customise
+  [#4755](https://github.com/OpenFn/lightning/issues/4755)
+- Removed `Duplicate` button from Sandbox UI
+  [#4767](https://github.com/OpenFn/lightning/pull/4767)
 
 ### Fixed
 
+- Drop the PromEx `oban_queue_poll_metrics` group, which crashes on boot against
+  our named `Lightning.Oban` supervisor (waiting on upstream
+  [PromEx #278](https://github.com/akoutmos/prom_ex/pull/278)).
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list is
+  disabled (with the limiter's tooltip) when the active sandbox count is already
+  at the limit.
+- `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
 - Copy token button on the Personal Access Tokens page now shows a 'Copied!'
   tooltip on click and no longer causes the icon to flicker
   [#2463](https://github.com/OpenFn/lightning/issues/2463)
@@ -56,6 +158,26 @@ and this project adheres to
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
 - AI Assistant: fix an issue where inline code snippets render with extra
   backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
+- The dataclip viewer now renders "Dataclip not found" when the backend returns
+  404, instead of the generic "Failed to load content" message used for all
+  error states. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `GET /projects/:project_id/jobs/:job_id/dataclips` no longer returns a 500
+  when the `limit` query param is missing, empty, non-numeric, or non-integer.
+  It now returns 400 with a clear error and defaults to 10 when the param is
+  absent. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `mix lightning.install_schemas` now tolerates transient jsdelivr CDN timeouts
+  by retrying each fetch with escalating recv_timeouts, logs and skips packages
+  that genuinely can't be fetched (with the underlying reason), and reports a
+  tally of installed vs. skipped packages instead of aborting the whole task on
+  a single failure. [#4750](https://github.com/OpenFn/lightning/issues/4750)
+
+### Security
+
+- `PATCH /projects/:project_id/dataclips/:dataclip_id` now rejects requests
+  where the URL `project_id` and the dataclip's project disagree. Previously, a
+  user with edit access on project A and view access to a dataclip in project B
+  could rename the dataclip via project A's URL scope.
+  [#4746](https://github.com/OpenFn/lightning/pull/4746)
 
 ## [2.16.3] - 2026-05-07
 
