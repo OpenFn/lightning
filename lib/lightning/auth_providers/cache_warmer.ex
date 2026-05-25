@@ -10,6 +10,14 @@ defmodule Lightning.AuthProviders.CacheWarmer do
   # https://github.com/whitfin/cachex/issues/276
   @dialyzer {:nowarn_function, init: 1}
 
+  # `GithubHandler.build/0` and `GoogleHandler.build/0` read their client
+  # credentials through `Lightning.Config.*_oauth/1`, which dispatches
+  # dynamically through an extension module. Dialyzer can't see that the
+  # binary branch is reachable, so it concludes `build/0` only ever returns
+  # `{:error, :not_configured}` and flags the `{:ok, _}` pattern here as
+  # unreachable. The runtime behaviour is fine.
+  @dialyzer {:nowarn_function, execute: 1}
+
   @doc """
   Returns the interval for this warmer.
   """

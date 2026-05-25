@@ -270,15 +270,6 @@ defmodule LightningWeb.OidcController do
     end
   end
 
-  defp extract_email(userinfo) when is_list(userinfo) do
-    userinfo
-    |> Enum.find(& &1["primary"])
-    |> case do
-      %{"email" => email} when is_binary(email) -> email
-      _ -> nil
-    end
-  end
-
   defp extract_email(%{"email" => email}) when is_binary(email), do: email
   defp extract_email(_), do: nil
 
