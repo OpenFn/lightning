@@ -34,6 +34,7 @@ and this project adheres to
   ([GHSA-rhv4-8758-jx7v][a7]). One low-severity unpatched cowlib cookie issue
   ([GHSA-g2wm-735q-3f56][a8]) remains; we don't construct cookies server-side
   from untrusted input, so it isn't reachable here.
+  [#4789](https://github.com/OpenFn/lightning/pull/4789)
 
 [a1]: https://github.com/advisories/GHSA-468c-vq7p-gh64
 [a2]: https://github.com/advisories/GHSA-jfc2-q6qh-g5x8
