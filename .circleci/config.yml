@@ -183,6 +183,18 @@ jobs:
           command: |
             sudo -u lightning mix sobelow --threshold medium || echo "sobelow" >> /tmp/lint_failed
       - run:
+          name: "Check for known-vulnerable Hex dependencies"
+          when: always
+          command: |
+            sudo -u lightning mix deps.audit \
+              --ignore-advisory-ids GHSA-g2wm-735q-3f56 \
+              || echo "deps.audit" >> /tmp/lint_failed
+      - run:
+          name: "Check for retired Hex packages"
+          when: always
+          command: |
+            sudo -u lightning mix hex.audit || echo "hex.audit" >> /tmp/lint_failed
+      - run:
           name: "Verify all checks passed"
           when: always
           command: |
