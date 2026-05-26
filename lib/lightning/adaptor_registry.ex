@@ -323,7 +323,8 @@ defmodule Lightning.AdaptorRegistry do
   # package.
   defp dedupe_first_wins(adaptors) do
     {kept_reversed, _seen, shadowed} =
-      Enum.reduce(adaptors, {[], MapSet.new(), []}, fn adaptor, {kept, seen, shadowed} ->
+      Enum.reduce(adaptors, {[], MapSet.new(), []}, fn adaptor,
+                                                       {kept, seen, shadowed} ->
         if MapSet.member?(seen, adaptor.name) do
           {kept, seen, [adaptor | shadowed]}
         else

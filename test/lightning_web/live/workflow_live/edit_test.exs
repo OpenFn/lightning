@@ -1548,11 +1548,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
-    test "renders the job form correctly when local_adaptors_repos is NOT set", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
+    test "renders the job form correctly when local_adaptors_repos is NOT set",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
       {:ok, view, _html} =
         live(
           conn,
