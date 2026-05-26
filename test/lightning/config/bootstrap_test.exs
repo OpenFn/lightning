@@ -538,10 +538,10 @@ defmodule Lightning.Config.BootstrapTest do
       assert adaptor_registry[:local_adaptors_repos] == ["/path"]
     end
 
-    test "local_adaptors_repos parses colon-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
       Dotenvy.source([
         %{
-          "OPENFN_ADAPTORS_REPO" => "/private/repo:/canonical/adaptors",
+          "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
           "LOCAL_ADAPTORS" => "true"
         }
       ])
@@ -559,7 +559,7 @@ defmodule Lightning.Config.BootstrapTest do
     test "local_adaptors_repos drops empty segments and trims whitespace" do
       Dotenvy.source([
         %{
-          "OPENFN_ADAPTORS_REPO" => "  /a  :  :/b ",
+          "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
           "LOCAL_ADAPTORS" => "true"
         }
       ])

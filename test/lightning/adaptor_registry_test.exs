@@ -139,7 +139,9 @@ defmodule Lightning.AdaptorRegistryTest do
         [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
       end)
 
-      start_supervised!({AdaptorRegistry, [name: test, local_adaptors_repos: [tmp_dir]]})
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repos: [tmp_dir]]}
+      )
 
       results = AdaptorRegistry.all(test)
 
@@ -165,7 +167,9 @@ defmodule Lightning.AdaptorRegistryTest do
       [repo_a, "packages", "alpha"] |> Path.join() |> File.mkdir_p!()
       [repo_b, "packages", "beta"] |> Path.join() |> File.mkdir_p!()
 
-      start_supervised!({AdaptorRegistry, [name: test, local_adaptors_repos: [repo_a, repo_b]]})
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repos: [repo_a, repo_b]]}
+      )
 
       names = AdaptorRegistry.all(test) |> Enum.map(& &1.name) |> Enum.sort()
 
@@ -185,7 +189,8 @@ defmodule Lightning.AdaptorRegistryTest do
       log =
         ExUnit.CaptureLog.capture_log(fn ->
           start_supervised!(
-            {AdaptorRegistry, [name: test, local_adaptors_repos: [repo_a, repo_b]]}
+            {AdaptorRegistry,
+             [name: test, local_adaptors_repos: [repo_a, repo_b]]}
           )
 
           # force the GenServer to finish handle_continue
@@ -194,7 +199,10 @@ defmodule Lightning.AdaptorRegistryTest do
 
       results = AdaptorRegistry.all(test)
       assert length(results) == 1
-      assert hd(results).repo == "file://" <> Path.join([repo_a, "packages", "http"])
+
+      assert hd(results).repo ==
+               "file://" <> Path.join([repo_a, "packages", "http"])
+
       assert log =~ "@openfn/language-http"
       assert log =~ "shadowed"
     end
@@ -211,7 +219,8 @@ defmodule Lightning.AdaptorRegistryTest do
       log =
         ExUnit.CaptureLog.capture_log(fn ->
           start_supervised!(
-            {AdaptorRegistry, [name: test, local_adaptors_repos: [missing_repo, good_repo]]}
+            {AdaptorRegistry,
+             [name: test, local_adaptors_repos: [missing_repo, good_repo]]}
           )
 
           AdaptorRegistry.all(test)

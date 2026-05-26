@@ -203,11 +203,12 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
-    # OPENFN_ADAPTORS_REPO accepts a colon-separated list of paths so that a
+    # OPENFN_ADAPTORS_REPO accepts a comma-separated list of paths so that a
     # private adaptor repo can be loaded alongside the canonical OpenFn
     # adaptors monorepo. A single path is still valid; it just becomes a
     # one-element list. Order is precedence: earlier entries shadow later ones
-    # when two repos ship a package with the same name.
+    # when two repos ship a package with the same name. Comma (rather than
+    # ':') keeps Windows drive-letter paths like `c:/repo` usable.
     local_adaptors_repos =
       env!("OPENFN_ADAPTORS_REPO", :string, nil)
       |> case do
@@ -216,7 +217,7 @@ defmodule Lightning.Config.Bootstrap do
 
         value when is_binary(value) ->
           value
-          |> String.split(":", trim: true)
+          |> String.split(",", trim: true)
           |> Enum.map(&String.trim/1)
           |> Enum.reject(&(&1 == ""))
           |> Enum.map(&Path.expand/1)
