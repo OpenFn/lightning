@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Run channel crashes when wiping `global` dataclip
+  [#4795](https://github.com/OpenFn/lightning/issues/4795)
+
 ### Security
 
 - Bumped `plug` (1.19.2), `cowboy` (2.15.0), `cowlib` (2.16.1), `postgrex`
