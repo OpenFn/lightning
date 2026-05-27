@@ -356,6 +356,22 @@ defmodule LightningWeb.RunChannelTest do
       refute body
     end
 
+    @tag project_retention_policy: :erase_all
+    test "fetch:dataclip does not wipe :global dataclip body for projects with erase_all retention policy",
+         %{socket: socket, dataclip: dataclip} do
+      dataclip
+      |> Ecto.Changeset.change(type: :global, body: %{})
+      |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, "{}"}
+
+      %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
+      assert is_nil(wiped_at)
+      assert body == %{}
+    end
+
     @tag project_retention_policy: :retain_all
     test "fetch:dataclip wipes dataclip body for projects with retain_all retention policy",
          context do
