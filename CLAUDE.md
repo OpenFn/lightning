@@ -132,6 +132,11 @@ in development.
 - Use `{}` brace syntax in HEEx templates
 - `warnings_as_errors: true` - code must compile without warnings
 
+> Before writing or reviewing any supervisor, GenServer, or named process, see
+> `.claude/guidelines/testable-supervision-trees.md`. Don't bake `name:
+> __MODULE__` into a process or resolve collaborators from global state — it
+> forces the test suite serial.
+
 ### React/TypeScript
 
 - Props from LiveView are **underscore_cased** (not camelCase)
@@ -209,5 +214,6 @@ Detailed guidelines in `.claude/guidelines/`:
 - `testing-essentials.md` - Unit testing patterns and anti-patterns
 - `e2e-testing.md` - Playwright E2E testing
 - `yex-guidelines.md` - Critical Yex (Yjs/Elixir) usage rules
+- `testable-supervision-trees.md` - OTP processes addressable in tests (async), nameless in prod
 - `toast-notifications.md` - Notification patterns
 - `ui-patterns.md` - Button variants, disabled states, Tailwind conventions
