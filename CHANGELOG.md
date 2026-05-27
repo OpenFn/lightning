@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.16.6] - 2026-05-27
+
+### Fixed
+
 - Run channel crashes when wiping `global` dataclip
   [#4795](https://github.com/OpenFn/lightning/issues/4795)
 
