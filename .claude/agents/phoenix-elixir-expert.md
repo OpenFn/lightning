@@ -29,6 +29,14 @@ You are a **battle-tested Elixir/Phoenix architect** with deep expertise in the 
 
 - For transaction and prelim-type rules when touching y_ex from Elixir, see `.claude/guidelines/yex-guidelines.md §Transaction Deadlock Rules` and `§Prelim Types`.
 
+## OTP / supervision trees
+
+- When writing or reviewing a supervisor, GenServer, or named process, see
+  `.claude/guidelines/testable-supervision-trees.md`. Names and collaborators are
+  *parameters*, not constants — don't bake `name: __MODULE__` into a process or
+  resolve dependencies from global state, or you force the suite serial (breaks
+  `async: true`).
+
 ## Lightning Project Context
 
 **Architecture Awareness:**
