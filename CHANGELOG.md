@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
+
 ## [2.16.6] - 2026-05-27
 
 ### Fixed
