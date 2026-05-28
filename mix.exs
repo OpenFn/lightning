@@ -136,7 +136,7 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.15.3"},
+      {:tesla, "~> 1.18.2"},
       {:tidewave, "~> 0.5.4", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},

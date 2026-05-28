@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+- Bump Tesla from 1.15.3 to 1.18.2 to pick up the streaming-error fix
+  ([elixir-tesla/tesla#819](https://github.com/elixir-tesla/tesla/pull/819)).
+  The older adapter raised `CaseClauseError` when Finch reported a transport
+  error mid-stream, taking down the AI assistant worker; 1.16+ handles the
+  3-tuple error shape gracefully.
+  [#4781](https://github.com/OpenFn/lightning/issues/4781)
+
 ## [2.16.6] - 2026-05-27
 
 ### Fixed
