@@ -448,6 +448,32 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
     end
 
+    test "delete_project/1 deletes project with associated oauth clients" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      oauth_client = insert(:oauth_client)
+
+      project_oauth_client =
+        insert(:project_oauth_client,
+          project: project,
+          oauth_client: oauth_client
+        )
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(
+               Lightning.Projects.ProjectOauthClient,
+               project_oauth_client.id
+             )
+
+      assert Repo.get(Lightning.Credentials.OauthClient, oauth_client.id),
+             "The OAuth client itself should survive — only the join row is project-scoped"
+    end
+
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)

@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fix `purge_deleted` Oban job crashing when a soft-deleted project has
+  associated OAuth clients. The `project_oauth_clients` join rows are now
+  cleaned up alongside the other project-scoped deletes in
+  `ProjectHook.handle_delete_project/1`.
+  [#4807](https://github.com/OpenFn/lightning/pull/4807)
 - Bump Tesla from 1.15.3 to 1.18.2 to pick up the streaming-error fix
   ([elixir-tesla/tesla#819](https://github.com/elixir-tesla/tesla/pull/819)).
   The older adapter raised `CaseClauseError` when Finch reported a transport
