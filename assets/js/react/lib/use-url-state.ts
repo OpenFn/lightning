@@ -102,6 +102,10 @@ class URLStore {
     const newURL = new URL(window.location.pathname, window.location.origin);
     newURL.search = newParams.toString();
     newURL.hash = window.location.hash;
+    // Skip no-op writes so mount-time normalization doesn't stack
+    // duplicate browser history entries (a no-op pushState never notifies
+    // subscribers anyway, due to the guard in updateParams).
+    if (newURL.href === window.location.href) return;
     history.pushState({}, '', newURL);
   };
 
