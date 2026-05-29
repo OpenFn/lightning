@@ -32,6 +32,8 @@ and this project adheres to
   error mid-stream, taking down the AI assistant worker; 1.16+ handles the
   3-tuple error shape gracefully.
   [#4781](https://github.com/OpenFn/lightning/issues/4781)
+- Slow GitHub responses cause repo list to fail to load on project settings
+  [#4810](https://github.com/OpenFn/lightning/issues/4810)
 
 ## [2.16.6] - 2026-05-27
 
