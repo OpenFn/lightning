@@ -5,6 +5,8 @@ Mox.defmock(Lightning.AuthProviders.OauthHTTPClient.Mock, for: Tesla.Adapter)
 Mox.defmock(Lightning.MockSentry, for: Lightning.SentryBehaviour)
 Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
+Mox.defmock(Lightning.Adaptors.StrategyMock, for: Lightning.Adaptors.Strategy)
+
 :ok = Application.ensure_started(:ex_machina)
 
 Mimic.copy(:hackney)
@@ -55,6 +57,32 @@ Application.put_env(:lightning, Lightning.Extensions,
   collection_hook: Lightning.Extensions.MockCollectionHook,
   project_hook: Lightning.Extensions.MockProjectHook,
   external_metrics: Lightning.Extensions.ExternalMetrics
+)
+
+# Pin the `Lightning.Adaptors.IconCache` on-disk path to a per-OS-PID
+# directory and wipe it at startup so:
+#   1. Each `mix test` invocation begins with an empty icon cache —
+#      `System.unique_integer/1` resets per-VM and recycles, so without
+#      this, leftover files from a prior run can mask a Mox expectation
+#      by short-circuiting `IconCache.cached?/4`.
+#   2. Concurrent `mix test` invocations (different tmux panes, parallel
+#      CI shards) use distinct directories and never collide — each BEAM
+#      has its own OS PID.
+icon_dir =
+  Path.join([
+    System.tmp_dir!(),
+    "lightning_test_icons",
+    System.pid()
+  ])
+
+File.rm_rf!(icon_dir)
+File.mkdir_p!(icon_dir)
+
+Application.put_env(
+  :lightning,
+  Lightning.Adaptors,
+  Application.get_env(:lightning, Lightning.Adaptors, [])
+  |> Keyword.put(:icon_path, icon_dir)
 )
 
 ExUnit.start()

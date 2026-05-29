@@ -60,6 +60,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
+      # Seed the credential schemas the job inspector's new-credential
+      # modal renders. `Credentials.get_schema/1` now reads through
+      # `Lightning.Adaptors.schema/1`, which falls back to the Strategy
+      # mock without a seeded row.
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+
       %{job: job} = workflow_job_fixture(project_id: project.id)
       workflow = Repo.get(Workflow, job.workflow_id)
 
@@ -131,6 +137,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   end
 
   describe "new" do
+    setup do
+      # The adaptor picker reads packages/0 and versions/1 through the
+      # production `Lightning.Adaptors` supervisor's Cachex. Seed the
+      # adaptors a default job needs, plus the credential schemas
+      # rendered by `JsonSchemaBodyComponent` inside the new-credential
+      # modal.
+      Lightning.AdaptorTestHelpers.seed_common_packages()
+      Lightning.AdaptorTestHelpers.seed_credential_schema("dhis2")
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "builds a new workflow", %{conn: conn, project: project} do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy", on_error: :raise)
@@ -1581,8 +1599,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow,
       tmp_dir: tmp_dir
     } do
-      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+      # The legacy `MockConfig.adaptor_registry` knob is gone — the
+      # picker now keys "local" mode off `Adaptors.Config.current_source/0`.
+      # Flip the strategy module to `Lightning.Adaptors.Local` for the
+      # duration of this test.
+      prev = Application.get_env(:lightning, Lightning.Adaptors, [])
+
+      Application.put_env(
+        :lightning,
+        Lightning.Adaptors,
+        Keyword.put(prev, :strategy, Lightning.Adaptors.Local)
+      )
+
+      on_exit(fn ->
+        Application.put_env(:lightning, Lightning.Adaptors, prev)
       end)
 
       expected_adaptors = ["foo", "bar", "baz"]
@@ -2524,6 +2554,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
+      # The picker (production `Lightning.Adaptors` supervisor) needs
+      # to see `language-dhis2@3.0.4` as a known version for the
+      # `change_adaptor_version/2` form submit to validate.
+      Lightning.AdaptorTestHelpers.seed_common_packages()
+
       project_credential =
         insert(:project_credential,
           project: project,

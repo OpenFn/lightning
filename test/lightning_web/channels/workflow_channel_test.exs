@@ -88,14 +88,35 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
+    setup do
+      # The production Adaptors.Supervisor's Cachex persists across tests;
+      # clear it so each test's seeded Adaptors.Repo rows are visible.
+      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
+      Cachex.clear(cache)
+
+      # Seed Adaptors.Repo rows so packages/0 returns a non-empty list.
+      # Individual tests insert additional rows for icon-meta assertions.
+      insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
+      insert(:adaptor, name: "@openfn/language-http", source: :npm)
+      :ok
+    end
+
     test "handles multiple concurrent requests independently", %{
       socket: socket
     } do
       ref_adaptors = push(socket, "request_adaptors", %{})
       ref_credentials = push(socket, "request_credentials", %{})
 
-      assert_reply ref_adaptors, :ok, %{adaptors: _}
+      assert_reply ref_adaptors, :ok, %{adaptors: adaptors}
       assert_reply ref_credentials, :ok, %{credentials: credentials}
+
+      assert is_list(adaptors)
+      assert adaptors != []
+      assert Enum.all?(adaptors, &Map.has_key?(&1, :icon_urls))
+
+      assert Enum.all?(adaptors, fn a ->
+               Enum.sort(Map.keys(a.icon_urls)) == [:rectangle, :square]
+             end)
 
       assert Map.has_key?(credentials, :project_credentials)
       assert Map.has_key?(credentials, :keychain_credentials)
@@ -103,74 +124,78 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.keychain_credentials)
     end
 
-    test "returns project-specific adaptors", %{socket: socket, project: project} do
-      # Create jobs with specific adaptors in this project
-      workflow = insert(:workflow, project: project)
+    test "request_adaptors enriches records with icon_urls when meta present",
+         %{socket: socket} do
+      name = "@openfn/language-common"
+      square_sha = :crypto.strong_rand_bytes(32)
+      rectangle_sha = :crypto.strong_rand_bytes(32)
 
-      insert(:job,
-        workflow: workflow,
-        adaptor: "@openfn/language-salesforce@latest"
+      insert(:adaptor,
+        name: name,
+        icon_square_ext: "png",
+        icon_square_sha256: square_sha,
+        icon_rectangle_ext: "svg",
+        icon_rectangle_sha256: rectangle_sha
       )
 
-      insert(:job, workflow: workflow, adaptor: "@openfn/language-http@2.0.0")
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
 
-      ref = push(socket, "request_project_adaptors", %{})
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected legacy registry to include #{name}"
 
-      assert_reply ref, :ok, %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
+      {:ok, meta} = Lightning.Adaptors.icon_meta(name)
 
-      assert is_list(project_adaptors)
-      assert is_list(all_adaptors)
+      assert record.icon_urls.square ==
+               LightningWeb.AdaptorIconURL.build(name, meta, :square)
 
-      # Verify project_adaptors contains only adaptors used in the project
-      project_adaptor_names = Enum.map(project_adaptors, & &1.name)
-      assert "@openfn/language-salesforce" in project_adaptor_names
-      assert "@openfn/language-http" in project_adaptor_names
+      assert record.icon_urls.rectangle ==
+               LightningWeb.AdaptorIconURL.build(name, meta, :rectangle)
 
-      # Verify all_adaptors contains the full registry
-      assert length(all_adaptors) > 0
+      assert is_binary(record.icon_urls.square)
+      assert is_binary(record.icon_urls.rectangle)
     end
 
-    test "returns empty project_adaptors for project with no jobs", %{
-      socket: socket
-    } do
-      ref = push(socket, "request_project_adaptors", %{})
+    test "request_adaptors emits nil icon_urls when row has no icon meta",
+         %{socket: socket} do
+      name = "@openfn/language-dhis2"
 
-      assert_reply ref, :ok, %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
-
-      assert project_adaptors == []
-      assert is_list(all_adaptors)
-      assert length(all_adaptors) > 0
-    end
-
-    test "handles duplicate adaptors in project", %{
-      socket: socket,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-
-      # Create multiple jobs with the same adaptor
-      insert(:job,
-        workflow: workflow,
-        adaptor: "@openfn/language-common@latest"
+      insert(:adaptor,
+        name: name,
+        source: :npm,
+        icon_square_ext: nil,
+        icon_square_sha256: nil,
+        icon_rectangle_ext: nil,
+        icon_rectangle_sha256: nil
       )
 
-      insert(:job, workflow: workflow, adaptor: "@openfn/language-common@1.0.0")
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
 
-      ref = push(socket, "request_project_adaptors", %{})
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected packages/0 to include #{name}"
+      assert record.icon_urls == %{square: nil, rectangle: nil}
+    end
 
-      assert_reply ref, :ok, %{project_adaptors: project_adaptors}
+    test "request_adaptors handles half-populated icon meta", %{socket: socket} do
+      name = "@openfn/language-commcare"
+      square_sha = :crypto.strong_rand_bytes(32)
 
-      # Should only appear once in project_adaptors
-      common_adaptors =
-        Enum.filter(project_adaptors, &(&1.name == "@openfn/language-common"))
+      insert(:adaptor,
+        name: name,
+        icon_square_ext: "png",
+        icon_square_sha256: square_sha,
+        icon_rectangle_ext: nil,
+        icon_rectangle_sha256: nil
+      )
 
-      assert length(common_adaptors) <= 1
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
+
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected legacy registry to include #{name}"
+      assert is_binary(record.icon_urls.square)
+      assert record.icon_urls.rectangle == nil
     end
 
     test "returns correctly structured project credentials", %{
@@ -1574,6 +1599,59 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert [cred | _] = credentials.project_credentials
       assert cred.owner == nil
       assert cred.oauth_client_name == nil
+    end
+  end
+
+  describe "PubSub subscription and adaptors broadcasting" do
+    test "forwards adaptors_updated envelope from client topic to socket", %{
+      socket: _socket
+    } do
+      payload = %{adaptors: [%{name: "a"}]}
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+        %{event: "adaptors_updated", payload: payload}
+      )
+
+      assert_push "adaptors_updated", %{adaptors: [%{name: "a"}]}
+    end
+
+    test "credentials_updated forwarder still pushes after adaptors clause added",
+         %{workflow: workflow} do
+      rendered_credentials = %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      assert_push "credentials_updated", %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+    end
+
+    test "does not push adaptors_updated for unrelated events on client topic",
+         %{socket: socket} do
+      Process.flag(:trap_exit, true)
+      Process.unlink(socket.channel_pid)
+      ref = Process.monitor(socket.channel_pid)
+
+      capture_log(fn ->
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+          %{event: "something_else", payload: %{}}
+        )
+
+        refute_push "adaptors_updated", _, 50
+        assert_receive {:DOWN, ^ref, :process, _, _}, 200
+      end)
     end
   end
 

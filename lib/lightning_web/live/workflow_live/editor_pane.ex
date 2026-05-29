@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
       |> assign(
         adaptor:
           form[:adaptor].value
-          |> Lightning.AdaptorRegistry.resolve_adaptor(),
+          |> Lightning.Adaptors.PackageName.to_wire(),
         source: form.source.data.body,
         job_id: form[:id].value
       )

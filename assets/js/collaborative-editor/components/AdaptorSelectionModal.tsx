@@ -14,7 +14,7 @@ interface AdaptorSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (adaptorSpec: string) => void;
-  projectAdaptors?: Adaptor[];
+  adaptorsInUse?: Adaptor[];
 }
 
 interface AdaptorWithDisplayName extends Adaptor {
@@ -25,7 +25,7 @@ export function AdaptorSelectionModal({
   isOpen,
   onClose,
   onSelect,
-  projectAdaptors = [],
+  adaptorsInUse = [],
 }: AdaptorSelectionModalProps) {
   const allAdaptors = useAdaptors();
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,17 +60,17 @@ export function AdaptorSelectionModal({
     [allAdaptors]
   );
 
-  const projectAdaptorsWithDisplayNames = useMemo<
+  const adaptorsInUseWithDisplayNames = useMemo<
     AdaptorWithDisplayName[]
   >(() => {
-    return projectAdaptors.map(adaptor => ({
+    return adaptorsInUse.map(adaptor => ({
       ...adaptor,
       displayName: getAdaptorDisplayName(adaptor.name, {
         titleCase: true,
         fallback: adaptor.name,
       }),
     }));
-  }, [projectAdaptors]);
+  }, [adaptorsInUse]);
 
   const allAdaptorsWithDisplayNames = useMemo<AdaptorWithDisplayName[]>(() => {
     return allAdaptors.map(adaptor => ({
@@ -89,10 +89,10 @@ export function AdaptorSelectionModal({
 
       // Filter project adaptors
       const filteredProject = searchQuery
-        ? projectAdaptorsWithDisplayNames.filter(adaptor =>
+        ? adaptorsInUseWithDisplayNames.filter(adaptor =>
             adaptor.displayName.toLowerCase().includes(lowerQuery)
           )
-        : projectAdaptorsWithDisplayNames;
+        : adaptorsInUseWithDisplayNames;
 
       // Filter all adaptors and exclude duplicates from project adaptors
       const projectAdaptorNames = new Set(filteredProject.map(a => a.name));
@@ -130,7 +130,7 @@ export function AdaptorSelectionModal({
       };
     }, [
       searchQuery,
-      projectAdaptorsWithDisplayNames,
+      adaptorsInUseWithDisplayNames,
       allAdaptorsWithDisplayNames,
       httpAdaptor,
     ]);

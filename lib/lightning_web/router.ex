@@ -68,6 +68,10 @@ defmodule LightningWeb.Router do
     get "/authenticate/:provider/callback", OidcController, :new
 
     get "/oauth/:provider/callback", OauthController, :new
+
+    get "/adaptors/icons/:name/:filename",
+        AdaptorIconController,
+        :show
   end
 
   ## JSON API
@@ -224,6 +228,8 @@ defmodule LightningWeb.Router do
       live "/settings/projects/:id/delete", ProjectLive.Index, :delete
 
       live "/settings/audit", AuditLive.Index, :index
+
+      live "/settings/maintenance", MaintenanceLive.Index, :index
 
       live "/settings/authentication", AuthProvidersLive.Index, :edit
       live "/settings/authentication/new", AuthProvidersLive.Index, :new

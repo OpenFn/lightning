@@ -109,7 +109,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign_new(
        :local_adaptors_enabled?,
        fn ->
-         Lightning.AdaptorRegistry.local_adaptors_enabled?()
+         Lightning.Adaptors.Config.current_source() == :local
        end
      )}
   end
@@ -133,19 +133,19 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   def get_adaptor_version_options(adaptor) do
     adaptor_names =
-      Lightning.AdaptorRegistry.all()
+      list_all_adaptors()
       |> Enum.map(&display_name_for_adaptor(&1.name))
       |> Enum.sort()
 
     {module_name, version, versions} =
       if adaptor do
         {module_name, version} =
-          Lightning.AdaptorRegistry.resolve_package_name(adaptor)
+          Lightning.Adaptors.PackageName.parse(adaptor)
 
-        latest = Lightning.AdaptorRegistry.latest_for(module_name)
+        latest = latest_for(module_name)
 
         versions =
-          Lightning.AdaptorRegistry.versions_for(module_name)
+          versions_for(module_name)
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
           |> sort_versions_desc()
@@ -177,6 +177,31 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
     [key: version, value: "#{module_name}@#{version}"]
   end
 
+  defp list_all_adaptors do
+    case Lightning.Adaptors.packages() do
+      {:ok, pkgs} -> pkgs
+      {:error, _} -> []
+    end
+  end
+
+  defp latest_for(nil), do: nil
+
+  defp latest_for(name) do
+    case Lightning.Adaptors.resolve_version(name, "latest") do
+      {:ok, version} -> version
+      {:error, _} -> nil
+    end
+  end
+
+  defp versions_for(nil), do: []
+
+  defp versions_for(name) do
+    case Lightning.Adaptors.versions(name) do
+      {:ok, versions} -> versions
+      {:error, _} -> []
+    end
+  end
+
   @doc "Sort version strings in descending semver order."
   @spec sort_versions_desc([String.t()]) :: [String.t()]
   def sort_versions_desc(versions) when is_list(versions) do
@@ -192,7 +217,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         socket
       ) do
     # Get the latest specific version instead of using @latest
-    latest_version = Lightning.AdaptorRegistry.latest_for(value)
+    latest_version = latest_for(value)
 
     adaptor_value =
       if latest_version do

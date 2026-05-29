@@ -31,6 +31,7 @@ export const mockAdaptor: Adaptor = {
   versions: mockAdaptorVersions,
   repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/http',
   latest: '2.1.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 /**
@@ -41,6 +42,7 @@ export const mockAdaptorDhis2: Adaptor = {
   versions: [{ version: '4.2.1' }, { version: '4.2.0' }, { version: '4.1.3' }],
   repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/dhis2',
   latest: '4.2.1',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorSalesforce: Adaptor = {
@@ -53,6 +55,7 @@ export const mockAdaptorSalesforce: Adaptor = {
   ],
   repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/salesforce',
   latest: '3.5.2',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorGmail: Adaptor = {
@@ -60,6 +63,7 @@ export const mockAdaptorGmail: Adaptor = {
   versions: [{ version: '1.2.0' }, { version: '1.1.0' }, { version: '1.0.0' }],
   repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/gmail',
   latest: '1.2.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorCommon: Adaptor = {
@@ -71,6 +75,7 @@ export const mockAdaptorCommon: Adaptor = {
   ],
   repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/common',
   latest: '2.0.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 /**
@@ -143,6 +148,7 @@ export function createMockAdaptorsList(count: number): AdaptorsList {
     versions: [{ version: `${i}.1.0` }, { version: `${i}.0.0` }],
     repo: `https://github.com/test/adaptor-${i}`,
     latest: `${i}.1.0`,
+    icon_urls: { square: null, rectangle: null },
   }));
 }
 /* eslint-enable @typescript-eslint/restrict-template-expressions */
