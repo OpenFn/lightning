@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Stop reporting expected credential-resolution failures (OAuth re-auth needed,
+  misconfigured project environment, transient provider errors) to Sentry. These
+  are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
+  instead of `error`; only a genuinely missing project still logs at `error`.
+  [#4814](https://github.com/OpenFn/lightning/issues/4814)
+
 ### Fixed
 
 - Channel join crashes when multiple users open the same workflow concurrently
