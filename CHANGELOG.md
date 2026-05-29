@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
   associated OAuth clients. The `project_oauth_clients` join rows are now
   cleaned up alongside the other project-scoped deletes in
