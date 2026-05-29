@@ -89,6 +89,26 @@
               <.button type="submit" theme="primary">
                 Register
               </.button>
+              <%= if @auth_providers != [] do %>
+                <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
+                  <span class="px-2 bg-white">or</span>
+                </div>
+                <%= for provider <- @auth_providers do %>
+                  <.button theme="secondary">
+                    <a href={provider.url} class="w-full">
+                      <div class="-ml-1 inline-flex items-center">
+                        <LightningWeb.Components.SsoIcons.provider_icon
+                          name={provider.name}
+                          class="h-4 w-4 inline-block"
+                        />
+                        <span class="ml-1 inline-block align-middle">
+                          Sign up with {String.capitalize(provider.name)}
+                        </span>
+                      </div>
+                    </a>
+                  </.button>
+                <% end %>
+              <% end %>
             </div>
 
             <LightningWeb.Components.Form.divider />

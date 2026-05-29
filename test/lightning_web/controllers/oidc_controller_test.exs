@@ -65,7 +65,7 @@ defmodule LightningWeb.OidcControllerTest do
   describe "GET /authenticate/:provider/callback" do
     setup :setup_handler
 
-    test "logs the given person in", %{
+    test "logs in users whose identity is already linked", %{
       conn: conn,
       bypass: bypass,
       handler: handler
@@ -73,7 +73,17 @@ defmodule LightningWeb.OidcControllerTest do
       expect_token(bypass, handler.wellknown)
 
       user = Lightning.AccountsFixtures.user_fixture()
-      expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "sub-#{user.id}"
+      )
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "sub-#{user.id}"
+      })
 
       conn =
         conn
@@ -82,6 +92,90 @@ defmodule LightningWeb.OidcControllerTest do
         )
 
       assert redirected_to(conn) == "/projects"
+    end
+
+    test "redirects to login with a notice when email matches an existing account",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      expect_token(bypass, handler.wellknown)
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "unlinked-uid"
+      })
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "An account already exists"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "link your #{String.capitalize(handler.name)} account"
+
+      # No identity was silently created
+      refute Lightning.Accounts.get_user_by_identity(
+               handler.name,
+               "unlinked-uid"
+             )
+    end
+
+    test "prompts the user to confirm before creating a brand-new account",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      expect_token(bypass, handler.wellknown)
+      email = "new-sso-user-#{System.unique_integer([:positive])}@example.com"
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => email,
+        "sub" => "fresh-uid-1",
+        "name" => "First Last"
+      })
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == ~p"/authenticate/signup/confirm"
+
+      assert get_session(conn, :sso_pending_signup) == %{
+               "provider" => handler.name,
+               "uid" => "fresh-uid-1",
+               "email" => email,
+               "first_name" => "First",
+               "last_name" => "Last"
+             }
+
+      # No account or identity is created until the user confirms
+      refute Lightning.Accounts.get_user_by_email(email)
+      refute Lightning.Accounts.get_user_by_identity(handler.name, "fresh-uid-1")
+    end
+
+    test "redirects to login when userinfo has no email", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{"sub" => "abc"})
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Could not retrieve your email"
     end
 
     test "logs the person in but marks totp as pending for users wth MFA enabled",
@@ -94,7 +188,16 @@ defmodule LightningWeb.OidcControllerTest do
 
       user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
-      expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "mfa-uid-#{user.id}"
+      )
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "mfa-uid-#{user.id}"
+      })
 
       conn =
         conn
@@ -112,14 +215,14 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
     end
 
-    test "shows an error when the person doesn't exist", %{
+    test "redirects to login when userinfo has no uid", %{
       conn: conn,
       bypass: bypass,
       handler: handler
     } do
       expect_token(bypass, handler.wellknown)
 
-      expect_userinfo(bypass, handler.wellknown, %{"email" => "invalid@user.com"})
+      expect_userinfo(bypass, handler.wellknown, %{"email" => "x@example.com"})
 
       conn =
         conn
@@ -130,16 +233,18 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
     end
 
-    test "renders a 404 when a provider is missing", %{conn: conn} do
-      response =
+    test "redirects to login when a provider is missing", %{conn: conn} do
+      conn =
         conn
         |> get(Routes.oidc_path(conn, :new, "bar", %{"code" => "callback_code"}))
 
-      assert response.resp_body =~ "Not Found"
-      assert response.status == 404
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
     end
 
-    test "renders an error when a handler returns an error", %{
+    test "redirects to login when a handler returns an error", %{
       conn: conn,
       handler: handler,
       bypass: bypass
@@ -155,15 +260,249 @@ defmodule LightningWeb.OidcControllerTest do
          |> Jason.encode!()}
       )
 
-      response =
+      conn =
         conn
         |> get(
           Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
         )
 
-      assert response.resp_body =~ "invalid_client"
-      assert response.resp_body =~ "No client credentials found"
-      assert response.status == 401
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
+    end
+  end
+
+  describe "GET /authenticate/:provider/link" do
+    setup :setup_handler
+
+    test "redirects to the provider authorize url for a logged-in user", %{
+      conn: conn,
+      handler: handler
+    } do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.oidc_path(conn, :link, handler.name))
+
+      assert redirected_to(conn) ==
+               AuthProviders.Handler.authorize_url(handler)
+
+      assert get_session(conn, :sso_link_intent_provider) == handler.name
+    end
+
+    test "redirects unauthenticated users to log in", %{
+      conn: conn,
+      handler: handler
+    } do
+      conn = get(conn, Routes.oidc_path(conn, :link, handler.name))
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+  end
+
+  describe "GET /authenticate/:provider/callback (link flow)" do
+    setup :setup_handler
+
+    test "links the identity to the current user", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = user_fixture()
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => "anything@example.com",
+        "sub" => "new-link-uid"
+      })
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> put_session(:sso_link_intent_provider, handler.name)
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == ~p"/profile"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Linked your"
+
+      assert %Lightning.Accounts.User{id: same_id} =
+               Lightning.Accounts.get_user_by_identity(
+                 handler.name,
+                 "new-link-uid"
+               )
+
+      assert same_id == user.id
+    end
+
+    test "flashes info when identity is already linked to the same account", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = user_fixture()
+
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "existing-uid"
+      )
+
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "existing-uid"
+      })
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> put_session(:sso_link_intent_provider, handler.name)
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == ~p"/profile"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "already linked"
+    end
+
+    test "rejects linking an identity already claimed by another user", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = user_fixture()
+      other_user = user_fixture()
+
+      insert(:user_identity,
+        user: other_user,
+        provider: handler.name,
+        uid: "claimed-uid"
+      )
+
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => "anything@example.com",
+        "sub" => "claimed-uid"
+      })
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> put_session(:sso_link_intent_provider, handler.name)
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == ~p"/profile"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "already linked"
+
+      # Still belongs to the other user
+      assert %Lightning.Accounts.User{id: same_id} =
+               Lightning.Accounts.get_user_by_identity(
+                 handler.name,
+                 "claimed-uid"
+               )
+
+      assert same_id == other_user.id
+    end
+  end
+
+  describe "SSO signup confirmation flow" do
+    test "GET /authenticate/signup/confirm renders the confirmation page",
+         %{conn: conn} do
+      pending = %{
+        "provider" => "github",
+        "uid" => "uid-123",
+        "email" => "new@example.com",
+        "first_name" => "Pat",
+        "last_name" => "Doe"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> get(~p"/authenticate/signup/confirm")
+
+      html = html_response(conn, 200)
+      assert html =~ "Create your account"
+      assert html =~ "new@example.com"
+      assert html =~ "Github"
+      assert html =~ "Pat Doe"
+    end
+
+    test "GET /authenticate/signup/confirm redirects to login when no pending signup",
+         %{conn: conn} do
+      conn = get(conn, ~p"/authenticate/signup/confirm")
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+
+    test "POST /authenticate/signup/confirm creates the account and logs in",
+         %{conn: conn} do
+      email = "confirm-signup-#{System.unique_integer([:positive])}@example.com"
+
+      pending = %{
+        "provider" => "github",
+        "uid" => "confirm-uid",
+        "email" => email,
+        "first_name" => "Alice",
+        "last_name" => "Smith"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> post(~p"/authenticate/signup/confirm", %{})
+
+      assert redirected_to(conn) == "/projects"
+
+      user = Lightning.Accounts.get_user_by_email(email)
+      assert user
+      assert user.first_name == "Alice"
+      assert user.last_name == "Smith"
+      assert is_nil(user.hashed_password)
+      refute is_nil(user.confirmed_at)
+
+      assert %Lightning.Accounts.User{id: same_id} =
+               Lightning.Accounts.get_user_by_identity("github", "confirm-uid")
+
+      assert same_id == user.id
+      refute get_session(conn, :sso_pending_signup)
+    end
+
+    test "POST /authenticate/signup/confirm redirects when there is no pending signup",
+         %{conn: conn} do
+      conn = post(conn, ~p"/authenticate/signup/confirm", %{})
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "No pending sign-up"
+    end
+
+    test "GET /authenticate/signup/cancel clears the pending signup",
+         %{conn: conn} do
+      pending = %{
+        "provider" => "github",
+        "uid" => "cancel-uid",
+        "email" => "cancel@example.com",
+        "first_name" => "C",
+        "last_name" => "X"
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{sso_pending_signup: pending})
+        |> get(~p"/authenticate/signup/cancel")
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+      refute get_session(conn, :sso_pending_signup)
+      refute Lightning.Accounts.get_user_by_email("cancel@example.com")
     end
   end
 

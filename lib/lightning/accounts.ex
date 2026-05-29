@@ -14,6 +14,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserIdentity
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
   alias Lightning.Accounts.UserTOTP
@@ -172,7 +173,126 @@ defmodule Lightning.Accounts do
   def get_user_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
-    if User.valid_password?(user, password), do: user
+
+    cond do
+      is_nil(user) ->
+        User.valid_password?(user, password)
+        nil
+
+      is_nil(user.hashed_password) ->
+        User.valid_password?(user, password)
+        {:error, :sso_account}
+
+      User.valid_password?(user, password) ->
+        user
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Looks up a user by their SSO provider identity.
+
+  Returns the `%User{}` if found, otherwise `nil`.
+  """
+  def get_user_by_identity(provider, uid) do
+    from(u in User,
+      join: i in UserIdentity,
+      on: i.user_id == u.id,
+      where: i.provider == ^provider and i.uid == ^uid
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Links an SSO provider identity to an existing user account.
+
+  Silently succeeds if the identity already exists (on_conflict: :nothing).
+  """
+  def link_user_identity(%User{id: user_id}, provider, uid) do
+    %UserIdentity{}
+    |> UserIdentity.changeset(%{user_id: user_id, provider: provider, uid: uid})
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:provider, :uid])
+  end
+
+  @doc """
+  Returns the SSO identities linked to a user, ordered by provider name.
+  """
+  def list_user_identities(%User{id: user_id}) do
+    from(i in UserIdentity,
+      where: i.user_id == ^user_id,
+      order_by: [asc: i.provider]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a user's identity for a given provider, or `nil` if not linked.
+  """
+  def get_user_identity(%User{id: user_id}, provider) do
+    Repo.get_by(UserIdentity, user_id: user_id, provider: provider)
+  end
+
+  @doc """
+  Removes the SSO identity for the given user and provider.
+
+  Refuses to remove the last identity for an SSO-only user (no password set),
+  since that would lock them out. Such users can set a password by going
+  through the password reset flow first.
+
+  Returns:
+    * `{:ok, identity}` when the identity is removed
+    * `{:error, :not_linked}` when the user has no identity for the provider
+    * `{:error, :would_lock_out}` when removing would leave an SSO-only user
+      with no way to log in
+  """
+  def unlink_user_identity(%User{} = user, provider) do
+    case get_user_identity(user, provider) do
+      nil ->
+        {:error, :not_linked}
+
+      %UserIdentity{} = identity ->
+        if can_remove_identity?(user, identity) do
+          Repo.delete(identity)
+        else
+          {:error, :would_lock_out}
+        end
+    end
+  end
+
+  defp can_remove_identity?(%User{hashed_password: hp}, _identity)
+       when is_binary(hp),
+       do: true
+
+  defp can_remove_identity?(%User{} = user, %UserIdentity{id: identity_id}) do
+    other_count =
+      from(i in UserIdentity,
+        where: i.user_id == ^user.id and i.id != ^identity_id,
+        select: count(i.id)
+      )
+      |> Repo.one()
+
+    other_count > 0
+  end
+
+  @doc """
+  Registers a brand-new user via SSO.
+
+  The user is created without a password and confirmed immediately.
+  A `user_registered` event is broadcast on success.
+  """
+  def register_user_from_sso(attrs, provider, uid) do
+    attrs = Map.put(attrs, :sso_identity, %{provider: provider, uid: uid})
+
+    Repo.transact(fn ->
+      AccountHook.handle_register_user(attrs)
+    end)
+    |> tap(fn result ->
+      with {:ok, user} <- result do
+        Events.user_registered(user)
+      end
+    end)
   end
 
   @doc """

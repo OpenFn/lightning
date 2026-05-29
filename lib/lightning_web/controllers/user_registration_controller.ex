@@ -7,7 +7,10 @@ defmodule LightningWeb.UserRegistrationController do
   def new(conn, _params) do
     changeset = Accounts.change_user_registration()
 
-    render(conn, "new.html", changeset: changeset)
+    render(conn, "new.html",
+      changeset: changeset,
+      auth_providers: LightningWeb.UserSessionController.auth_providers()
+    )
   end
 
   def create(conn, %{"user" => user_params}) do
@@ -21,7 +24,10 @@ defmodule LightningWeb.UserRegistrationController do
         |> redirect_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "new.html", changeset: changeset)
+        render(conn, "new.html",
+          changeset: changeset,
+          auth_providers: LightningWeb.UserSessionController.auth_providers()
+        )
     end
   end
 

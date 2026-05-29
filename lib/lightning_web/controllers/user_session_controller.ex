@@ -8,7 +8,7 @@ defmodule LightningWeb.UserSessionController do
   def new(conn, _params) do
     render(conn, "new.html",
       error_message: nil,
-      auth_handler_url: auth_handler_url()
+      auth_providers: auth_providers()
     )
   end
 
@@ -21,7 +21,7 @@ defmodule LightningWeb.UserSessionController do
         conn
         |> put_flash(:error, "This user account is disabled")
         |> render("new.html",
-          auth_handler_url: auth_handler_url()
+          auth_providers: auth_providers()
         )
 
       %User{scheduled_deletion: x} when x != nil ->
@@ -31,7 +31,7 @@ defmodule LightningWeb.UserSessionController do
           "This user account is scheduled for deletion"
         )
         |> render("new.html",
-          auth_handler_url: auth_handler_url()
+          auth_providers: auth_providers()
         )
 
       %User{mfa_enabled: true} = user ->
@@ -47,11 +47,21 @@ defmodule LightningWeb.UserSessionController do
         |> UserAuth.log_in_user(user)
         |> UserAuth.redirect_with_return_to(user_params)
 
+      {:error, :sso_account} ->
+        conn
+        |> put_flash(
+          :error,
+          "This account uses single sign-on. Please log in with your SSO provider."
+        )
+        |> render("new.html",
+          auth_providers: auth_providers()
+        )
+
       _ ->
         conn
         |> put_flash(:error, "Invalid email or password")
         |> render("new.html",
-          auth_handler_url: auth_handler_url()
+          auth_providers: auth_providers()
         )
     end
   end
@@ -76,13 +86,18 @@ defmodule LightningWeb.UserSessionController do
     |> UserAuth.log_out_user()
   end
 
-  def auth_handler_url do
+  def auth_providers do
     case Lightning.AuthProviders.get_handlers() do
       {:ok, []} ->
-        nil
+        []
 
-      {:ok, [handler | _rest]} ->
-        Lightning.AuthProviders.get_authorize_url(handler)
+      {:ok, handlers} ->
+        Enum.map(handlers, fn handler ->
+          %{
+            name: handler.name,
+            url: Lightning.AuthProviders.get_authorize_url(handler)
+          }
+        end)
     end
   end
 end

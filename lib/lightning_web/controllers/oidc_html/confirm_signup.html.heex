@@ -1,0 +1,64 @@
+<LayoutComponents.nav conn={@conn} />
+<LayoutComponents.page_content>
+  <:header>
+    <LayoutComponents.header>
+      <:title>Create your account</:title>
+    </LayoutComponents.header>
+  </:header>
+  <LayoutComponents.centered>
+    <div id="confirm-signup">
+      <.form
+        :let={_f}
+        for={%{}}
+        as={:signup}
+        action={~p"/authenticate/signup/confirm"}
+      >
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-xs bg-white p-6">
+            <%= if error = Phoenix.Flash.get(@flash, :error) do %>
+              <div class="alert alert-danger" role="alert">
+                {error}
+              </div>
+            <% end %>
+
+            <p class="text-sm text-gray-700 mb-4">
+              No account exists for <strong>{@pending["email"]}</strong>
+              yet. We'll create a new account using your
+              <strong>{String.capitalize(@pending["provider"])}</strong>
+              profile.
+            </p>
+
+            <dl class="text-sm text-gray-700 mb-6 space-y-1">
+              <div class="flex">
+                <dt class="w-28 text-gray-500">Email</dt>
+                <dd>{@pending["email"]}</dd>
+              </div>
+              <%= if @pending["first_name"] != "" or @pending["last_name"] != "" do %>
+                <div class="flex">
+                  <dt class="w-28 text-gray-500">Name</dt>
+                  <dd>{@pending["first_name"]} {@pending["last_name"]}</dd>
+                </div>
+              <% end %>
+              <div class="flex">
+                <dt class="w-28 text-gray-500">Provider</dt>
+                <dd>{String.capitalize(@pending["provider"])}</dd>
+              </div>
+            </dl>
+
+            <div class="grid grid-flow-row gap-3 auto-rows-max">
+              <.button type="submit" theme="primary">
+                Create account and continue
+              </.button>
+              <.link
+                href={~p"/authenticate/signup/cancel"}
+                class="text-xs text-secondary-700 text-center"
+              >
+                Cancel
+              </.link>
+            </div>
+          </div>
+        </div>
+      </.form>
+    </div>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

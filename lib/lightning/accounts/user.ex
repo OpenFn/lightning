@@ -50,6 +50,8 @@ defmodule Lightning.Accounts.User do
     has_many :backup_codes, Lightning.Accounts.UserBackupCode,
       on_replace: :delete
 
+    has_many :user_identities, Lightning.Accounts.UserIdentity
+
     timestamps()
   end
 
@@ -335,6 +337,22 @@ defmodule Lightning.Accounts.User do
   def confirm_changeset(user) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     change(user, confirmed_at: now)
+  end
+
+  @doc """
+  A changeset for registering a user via SSO. No password is required;
+  the account is confirmed immediately at registration time.
+  """
+  def sso_registration_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:first_name, :last_name, :email])
+    |> validate_required([:first_name, :last_name, :email])
+    |> validate_email_format()
+    |> validate_email_exists()
+    |> put_change(
+      :confirmed_at,
+      DateTime.utc_now() |> DateTime.truncate(:second)
+    )
   end
 
   @spec remove_github_token_changeset(t()) :: Ecto.Changeset.t()
