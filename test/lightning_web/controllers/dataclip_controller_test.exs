@@ -85,12 +85,8 @@ defmodule LightningWeb.DataclipControllerTest do
         starting_trigger: trigger,
         state: :success,
         dataclip: input_dataclip,
-        steps: [step1, step2]
+        steps: [step1, step2, step3]
       )
-
-    insert(:run_step, run: run, step: step1)
-    insert(:run_step, run: run, step: step2)
-    insert(:run_step, run: run, step: step3)
 
     %{
       run: run,
