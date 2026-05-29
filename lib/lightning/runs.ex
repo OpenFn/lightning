@@ -297,7 +297,7 @@ defmodule Lightning.Runs do
         end
       end
     end)
-    |> Repo.insert()
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:id, :run_id])
     |> case do
       {:ok, log_line} ->
         Events.log_appended(log_line)
@@ -375,6 +375,8 @@ defmodule Lightning.Runs do
           Repo.insert_all(
             Lightning.Invocation.LogLine,
             entries,
+            on_conflict: :nothing,
+            conflict_target: [:id, :run_id],
             returning: true
           )
 

@@ -12,6 +12,8 @@ defmodule Lightning.Invocation.LogLine do
   """
   use Lightning.Schema
 
+  import Lightning.ChangesetUtils
+
   alias Lightning.Invocation.Step
   alias Lightning.LogMessage
   alias Lightning.Run
@@ -48,10 +50,13 @@ defmodule Lightning.Invocation.LogLine do
   end
 
   def new(%Run{} = run, attrs \\ %{}, scrubber) do
-    %__MODULE__{id: Ecto.UUID.generate()}
-    |> cast(attrs, [:message, :timestamp, :step_id, :run_id, :level, :source],
+    %__MODULE__{}
+    |> cast(
+      attrs,
+      [:id, :message, :timestamp, :step_id, :run_id, :level, :source],
       empty_values: [[], nil]
     )
+    |> put_new_change(:id, Ecto.UUID.generate())
     |> put_assoc(:run, run)
     |> validate(scrubber)
   end

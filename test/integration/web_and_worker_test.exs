@@ -33,6 +33,16 @@ defmodule Lightning.WebAndWorkerTest do
     %{uri: uri}
   end
 
+  # NOTE: These are real-worker, end-to-end tests. They cannot yet demonstrate
+  # the inbound-event idempotency added in #4090 (run:start/complete, step:*,
+  # run:log, final dataclip). The worker's timeout-retry is hard-disabled
+  # (kit #1137) so it never resends an event, and it does not yet send a
+  # per-line log `id` or an always-on `final_dataclip_id` (kit Phase 2). Until
+  # those land, idempotency is proven only at the channel/handler layer (see
+  # the "idempotency (duplicate worker events)" describe in
+  # test/lightning_web/channels/run_channel_test.exs, which mocks the future
+  # worker payloads). TODO(kit #1137 / Phase 2): once worker retry + always-on
+  # ids ship, add an end-to-end duplicate-event idempotency test here.
   describe "webhook triggered runs" do
     setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
 
@@ -726,6 +736,31 @@ defmodule Lightning.WebAndWorkerTest do
       # 1 root + 2 branches from root + 2 from step 2 + 1 from step 3 = 6 steps
       assert Enum.count(steps) == 6
       assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
+
+      # job 5 converges on two branch paths (via step 2 and via step 3), so it
+      # executes as two *distinct* Step rows with two distinct (run_id, step_id)
+      # pairs and two distinct output dataclips. This is precisely the case the
+      # new `unique_index(:run_steps, [:run_id, :step_id])` must NOT collapse:
+      # each execution mints its own random step_id, so both rows survive and
+      # each output dataclip is persisted independently (x = 106 and x = 110).
+      job_5_steps =
+        steps
+        |> Enum.filter(fn step -> step.job_id == job_5.id end)
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert length(job_5_steps) == 2
+      assert job_5_steps |> Enum.map(& &1.id) |> Enum.uniq() |> length() == 2
+
+      assert job_5_steps
+             |> Enum.map(& &1.output_dataclip_id)
+             |> Enum.uniq()
+             |> length() == 2
+
+      assert job_5_steps
+             |> Enum.map(fn step ->
+               step.output_dataclip.body |> Jason.decode!() |> Map.fetch!("x")
+             end)
+             |> Enum.sort() == [106, 110]
     end
 
     @tag :integration

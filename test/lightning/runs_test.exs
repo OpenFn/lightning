@@ -658,6 +658,21 @@ defmodule Lightning.RunsTest do
         %{}
       }
     end
+
+    test "a second start_run short-circuits and leaves started_at unchanged",
+         %{run: run} do
+      Lightning.Stub.freeze_time(~U[2024-05-05 12:34:56.000000Z])
+
+      {:ok, %Run{started_at: started_at} = run} = Runs.start_run(run)
+      assert started_at
+
+      # Time moves on, but a duplicate start (with the now-:started run) must
+      # not overwrite started_at.
+      Lightning.Stub.freeze_time(~U[2024-05-05 13:00:00.000000Z])
+
+      assert {:ok, %Run{state: :started, started_at: ^started_at}} =
+               Runs.start_run(run)
+    end
   end
 
   describe "complete_run/1" do
@@ -706,6 +721,35 @@ defmodule Lightning.RunsTest do
       assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
         work_order: %{id: ^workorder_id}
       }
+    end
+
+    test "a second complete_run on a final run returns {:ok} and preserves finished_at" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :claimed))
+
+      {:ok, run} = Runs.start_run(run)
+
+      Lightning.Stub.freeze_time(~U[2024-05-05 12:34:56.000000Z])
+      {:ok, run} = Runs.complete_run(run, %{state: "success"})
+
+      assert run.state == :success
+      finished_at = run.finished_at
+      assert finished_at
+
+      # A duplicate complete must short-circuit to {:ok, run} rather than
+      # raising the "already in completed state" error or overwriting
+      # finished_at.
+      Lightning.Stub.freeze_time(~U[2024-05-05 13:00:00.000000Z])
+
+      assert {:ok, %Run{state: :success, finished_at: ^finished_at}} =
+               Runs.complete_run(run, %{state: "failed"})
     end
 
     test "blocks completion from :available if new state is :lost" do

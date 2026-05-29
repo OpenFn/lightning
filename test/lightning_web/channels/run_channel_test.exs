@@ -1461,7 +1461,7 @@ defmodule LightningWeb.RunChannelTest do
     setup [:create_socket, :join_run_channel]
 
     @tag run_state: :claimed
-    test "run:complete when claimed", %{socket: socket} do
+    test "run:complete when claimed", %{socket: socket, run: run} do
       ref =
         push(socket, "run:complete", %{
           "reason" => "success",
@@ -1471,6 +1471,11 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, nil
 
+      %{state: :success, finished_at: finished_at} = Lightning.Repo.reload!(run)
+
+      # A duplicate run:complete is now idempotent: it short-circuits to {:ok}
+      # rather than returning the "already in completed state" error, and the
+      # first finished_at / state is preserved.
       ref =
         push(socket, "run:complete", %{
           "reason" => "failed",
@@ -1478,11 +1483,10 @@ defmodule LightningWeb.RunChannelTest do
           "error_message" => nil
         })
 
-      assert_reply ref, :error, errors
+      assert_reply ref, :ok, nil
 
-      assert errors == %{
-               state: ["already in completed state"]
-             }
+      assert %{state: :success, finished_at: ^finished_at} =
+               Lightning.Repo.reload!(run)
     end
 
     @tag run_state: :started, api_version: "1.2"
@@ -1781,6 +1785,349 @@ defmodule LightningWeb.RunChannelTest do
       run = Lightning.Repo.reload!(run)
       assert run.state == :success
       assert run.final_dataclip_id == nil
+    end
+
+    @tag run_state: :started
+    test "run:complete with both final_dataclip_id and final_state inserts under the supplied id and is idempotent",
+         %{socket: socket, run: run} do
+      # Mocks the future worker: today it sends final_dataclip_id OR
+      # final_state, never both. Always-on final_dataclip_id is kit Phase 2.
+      dataclip_id = Ecto.UUID.generate()
+
+      payload = %{
+        "reason" => "success",
+        "final_dataclip_id" => dataclip_id,
+        "final_state" => %{"merged" => "output"}
+      }
+
+      ref = push(socket, "run:complete", payload)
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == dataclip_id
+
+      dataclip = get_dataclip_with_body(dataclip_id)
+      assert dataclip.type == :step_result
+      assert dataclip.body == %{"merged" => "output"}
+
+      # Duplicate send short-circuits on the run state: still {:ok}, no error,
+      # finished_at and the single dataclip are preserved.
+      finished_at = run.finished_at
+
+      ref = push(socket, "run:complete", payload)
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == dataclip_id
+      assert run.finished_at == finished_at
+
+      assert Repo.aggregate(
+               from(d in Dataclip, where: d.id == ^dataclip_id),
+               :count
+             ) == 1
+    end
+
+    @tag run_state: :started
+    test "run:complete with supplied final_dataclip_id respects save_dataclips: false" do
+      # Mocks the future worker: today it sends final_dataclip_id OR
+      # final_state, never both. Always-on final_dataclip_id is kit Phase 2.
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run_options = %Lightning.Runs.RunOptions{
+        save_dataclips: false,
+        run_timeout_ms: 2
+      }
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options: run_options |> Map.from_struct()
+        )
+
+      {:ok, bearer, claims} =
+        Lightning.Workers.WorkerToken.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      {:ok, _, socket} =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
+        |> subscribe_and_join(
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{"token" => Lightning.Workers.generate_run_token(run, run_options)}
+        )
+
+      dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => dataclip_id,
+          "final_state" => %{"should_be" => "wiped"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.final_dataclip_id == dataclip_id
+
+      dataclip = get_dataclip_with_body(dataclip_id)
+      assert is_nil(dataclip.body), "body is wiped"
+      assert is_struct(dataclip.wiped_at, DateTime)
+    end
+  end
+
+  # These tests prove the *Lightning* side no-ops on a duplicate worker event
+  # (#4090). Some push payloads that today's worker does NOT yet send, so they
+  # mock the FUTURE worker:
+  #   * run:log / run:batch_logs supply an explicit per-line "id" — the worker
+  #     only starts sending log ids in kit Phase 2.
+  #   * run:complete with BOTH "final_dataclip_id" and "final_state" (see the
+  #     "run:complete" describe) — always-on final_dataclip_id is kit Phase 2.
+  # The worker also does not retry events yet (hard-disabled, kit #1137), so a
+  # real duplicate only occurs once that retry path is re-enabled AND replays
+  # the original buffered payload (same ids). Until then these guarantees can't
+  # be shown end-to-end (see test/integration/web_and_worker_test.exs).
+  # TODO(kit #1137 / Phase 2): re-enable worker retry + always-on ids.
+  describe "idempotency (duplicate worker events)" do
+    setup [:create_user, :create_project]
+
+    setup context do
+      run_state = Map.get(context, :run_state, :claimed)
+      project = context.project
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger], jobs: [job]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          state: run_state,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{run: run, workflow: workflow, work_order: work_order, job: job}
+    end
+
+    setup [:create_socket, :join_run_channel]
+
+    test "duplicate run:start preserves started_at and is a no-op", %{
+      socket: socket,
+      run: run,
+      work_order: work_order
+    } do
+      ref = push(socket, "run:start", %{})
+      assert_reply ref, :ok, nil
+
+      %{state: :started, started_at: started_at} = Lightning.Repo.reload!(run)
+      assert %{state: :running} = Lightning.Repo.reload!(work_order)
+
+      # Duplicate send: still {:ok}, started_at unchanged.
+      ref = push(socket, "run:start", %{})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :started, started_at: ^started_at} =
+               Lightning.Repo.reload!(run)
+    end
+
+    @tag run_state: :started
+    test "duplicate run:complete returns {:ok} and preserves finished_at", %{
+      socket: socket,
+      run: run
+    } do
+      payload = %{
+        "reason" => "success",
+        "error_type" => nil,
+        "error_message" => nil
+      }
+
+      ref = push(socket, "run:complete", payload)
+      assert_reply ref, :ok, nil
+
+      %{state: :success, finished_at: finished_at} = Lightning.Repo.reload!(run)
+      assert finished_at
+
+      # Duplicate send short-circuits: {:ok}, not the
+      # "already in completed state" error; finished_at unchanged.
+      ref = push(socket, "run:complete", payload)
+      assert_reply ref, :ok, nil
+
+      assert %{state: :success, finished_at: ^finished_at} =
+               Lightning.Repo.reload!(run)
+    end
+
+    test "duplicate step:start creates exactly one step and one run_step", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      step_id = Ecto.UUID.generate()
+
+      payload = %{
+        "step_id" => step_id,
+        "job_id" => job.id,
+        "input_dataclip_id" => run.dataclip_id
+      }
+
+      ref = push(socket, "step:start", payload)
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      ref = push(socket, "step:start", payload)
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert Repo.aggregate(
+               from(s in Step, where: s.id == ^step_id),
+               :count
+             ) == 1
+
+      assert Repo.aggregate(
+               from(rs in Lightning.RunStep,
+                 where: rs.run_id == ^run.id and rs.step_id == ^step_id
+               ),
+               :count
+             ) == 1
+    end
+
+    test "duplicate step:complete saves exactly one output dataclip", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      %{id: step_id} = insert(:step, runs: [run], job: job)
+      output_dataclip_id = Ecto.UUID.generate()
+
+      payload = %{
+        "step_id" => step_id,
+        "output_dataclip_id" => output_dataclip_id,
+        "output_dataclip" => ~s({"foo": "bar"}),
+        "reason" => "normal"
+      }
+
+      ref = push(socket, "step:complete", payload)
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      ref = push(socket, "step:complete", payload)
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert %{exit_reason: "normal", output_dataclip_id: ^output_dataclip_id} =
+               Repo.get(Step, step_id)
+
+      assert Repo.aggregate(
+               from(d in Dataclip, where: d.id == ^output_dataclip_id),
+               :count
+             ) == 1
+    end
+
+    test "duplicate run:log with the same id inserts exactly one log line", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      step_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => run.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      # Mocks the future worker: the "id" is supplied by the worker only as of
+      # kit Phase 2. Without it, each send mints a fresh UUID and never dedupes.
+      log_id = Ecto.UUID.generate()
+
+      payload = %{
+        "id" => log_id,
+        "level" => "info",
+        "message" => ["A log line"],
+        "source" => "R/T",
+        "step_id" => step_id,
+        "timestamp" => "1699444653874083"
+      }
+
+      ref = push(socket, "run:log", payload)
+      assert_reply ref, :ok, %{log_line_id: ^log_id}
+
+      ref = push(socket, "run:log", payload)
+      assert_reply ref, :ok, %{log_line_id: ^log_id}
+
+      assert Repo.aggregate(
+               from(l in Lightning.Invocation.LogLine,
+                 where: l.run_id == ^run.id
+               ),
+               :count
+             ) == 1
+    end
+
+    test "duplicate run:batch_logs with the same ids inserts each line once", %{
+      socket: socket,
+      run: run
+    } do
+      # Mocks the future worker: per-line "id"s are supplied only as of kit
+      # Phase 2; without them each resend mints fresh UUIDs and never dedupes.
+      logs = [
+        %{
+          "id" => Ecto.UUID.generate(),
+          "message" => ["First"],
+          "timestamp" => "1699444653874083"
+        },
+        %{
+          "id" => Ecto.UUID.generate(),
+          "message" => ["Second"],
+          "timestamp" => "1699444653874084"
+        }
+      ]
+
+      ref = push(socket, "run:batch_logs", %{"logs" => logs})
+      assert_reply ref, :ok, _
+
+      ref = push(socket, "run:batch_logs", %{"logs" => logs})
+      assert_reply ref, :ok, _
+
+      assert Repo.aggregate(
+               from(l in Lightning.Invocation.LogLine,
+                 where: l.run_id == ^run.id
+               ),
+               :count
+             ) == 2
     end
   end
 

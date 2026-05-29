@@ -25,10 +25,14 @@ defmodule Lightning.Runs.Handlers do
 
     def call(run, params) do
       with {:ok, start_run} <- params |> new() |> apply_action(:validate) do
-        run
-        |> Run.start(to_run_params(start_run))
-        |> Runs.update_run()
-        |> tap(&track_run_queue_delay/1)
+        if run.state == :started or run.state in Run.final_states() do
+          {:ok, run}
+        else
+          run
+          |> Run.start(to_run_params(start_run))
+          |> Runs.update_run()
+          |> tap(&track_run_queue_delay/1)
+        end
       end
     end
 
@@ -90,20 +94,24 @@ defmodule Lightning.Runs.Handlers do
 
     def call(run, params) do
       with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
-        Repo.transact(fn ->
-          with {:ok, run_params} <-
-                 resolve_final_dataclip(complete_run, run.options) do
-            run
-            |> Run.complete(run_params)
-            |> case do
-              %{valid?: false} = changeset ->
-                {:error, changeset}
+        if run.state in Run.final_states() do
+          {:ok, run}
+        else
+          Repo.transact(fn ->
+            with {:ok, run_params} <-
+                   resolve_final_dataclip(complete_run, run.options) do
+              run
+              |> Run.complete(run_params)
+              |> case do
+                %{valid?: false} = changeset ->
+                  {:error, changeset}
 
-              changeset ->
-                Runs.update_run(changeset)
+                changeset ->
+                  Runs.update_run(changeset)
+              end
             end
-          end
-        end)
+          end)
+        end
       end
     end
 
@@ -145,6 +153,26 @@ defmodule Lightning.Runs.Handlers do
       complete_run
       |> Map.take([:state, :error_type])
       |> Map.put(:finished_at, complete_run.timestamp)
+    end
+
+    # When the worker sends both a dataclip ID and the final state, insert the
+    # dataclip under the supplied id idempotently (a retry no-ops on conflict).
+    defp resolve_final_dataclip(
+           %__MODULE__{
+             final_dataclip_id: id,
+             final_state: final_state,
+             project_id: project_id
+           } = complete_run,
+           options
+         )
+         when is_binary(id) and is_map(final_state) and is_binary(project_id) do
+      case save_final_dataclip(id, final_state, project_id, options) do
+        {:ok, _dataclip} ->
+          {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
+
+        error ->
+          error
+      end
     end
 
     # @Stu - is this necessary? I'm worried that it's overkill to check first,
@@ -206,6 +234,32 @@ defmodule Lightning.Runs.Handlers do
       })
       |> Repo.insert()
     end
+
+    defp save_final_dataclip(
+           id,
+           _final_state,
+           project_id,
+           %Runs.RunOptions{save_dataclips: false}
+         ) do
+      Dataclip.new(%{
+        id: id,
+        project_id: project_id,
+        body: nil,
+        wiped_at: Lightning.current_time() |> DateTime.truncate(:second),
+        type: :step_result
+      })
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:id])
+    end
+
+    defp save_final_dataclip(id, final_state, project_id, _options) do
+      Dataclip.new(%{
+        id: id,
+        project_id: project_id,
+        body: final_state,
+        type: :step_result
+      })
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:id])
+    end
   end
 
   defmodule StartStep do
@@ -263,8 +317,17 @@ defmodule Lightning.Runs.Handlers do
 
     defp insert(%__MODULE__{} = attrs) do
       Repo.transact(fn ->
-        with {:ok, step} <- attrs |> to_step() |> Repo.insert(),
-             {:ok, _} <- attrs |> to_run_step() |> Repo.insert() do
+        with {:ok, step} <-
+               attrs
+               |> to_step()
+               |> Repo.insert(on_conflict: :nothing, conflict_target: [:id]),
+             {:ok, _} <-
+               attrs
+               |> to_run_step()
+               |> Repo.insert(
+                 on_conflict: :nothing,
+                 conflict_target: [:run_id, :step_id]
+               ) do
           {:ok, step}
         end
       end)
@@ -453,7 +516,7 @@ defmodule Lightning.Runs.Handlers do
           wiped_at: Lightning.current_time() |> DateTime.truncate(:second),
           type: :step_result
         })
-        |> Repo.insert()
+        |> Repo.insert(on_conflict: :nothing, conflict_target: [:id])
       end
     end
 
@@ -478,7 +541,7 @@ defmodule Lightning.Runs.Handlers do
         body: output_dataclip |> Jason.decode!() |> ensure_map(),
         type: :step_result
       })
-      |> Repo.insert()
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:id])
     end
 
     defp ensure_map(%{} = map), do: map
