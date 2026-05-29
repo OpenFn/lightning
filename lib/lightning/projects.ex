@@ -22,6 +22,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
@@ -828,6 +829,10 @@ defmodule Lightning.Projects do
 
   def project_credentials_query(project) do
     from(pc in ProjectCredential, where: pc.project_id == ^project.id)
+  end
+
+  def project_oauth_clients_query(project) do
+    from(poc in ProjectOauthClient, where: poc.project_id == ^project.id)
   end
 
   def project_dataclips_query(project) do
