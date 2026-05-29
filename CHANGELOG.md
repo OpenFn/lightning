@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
   associated OAuth clients. The `project_oauth_clients` join rows are now
   cleaned up alongside the other project-scoped deletes in

@@ -11,7 +11,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { useURLState } from '../../../js/react/lib/use-url-state';
 
@@ -198,6 +198,41 @@ describe('useURLState', () => {
       expect(result.current.params.active).toBe('true');
       expect(result.current.params.old).toBe('value');
       expect(result.current.params.remove).toBeUndefined();
+    });
+  });
+
+  describe('updateSearchParams - no-op writes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('does not push a history entry when params are unchanged', () => {
+      history.replaceState({}, '', '/workflow?panel=run&job=abc');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        // Same values that are already in the URL -> a no-op
+        result.current.updateSearchParams({ panel: 'run', job: 'abc' });
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.search).toBe('?panel=run&job=abc');
+    });
+
+    test('still pushes a history entry when a param actually changes', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateSearchParams({ panel: 'inspector' });
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.params.panel).toBe('inspector');
     });
   });
 
