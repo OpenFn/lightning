@@ -508,6 +508,176 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "CredentialIndexComponent pagination and collapsible" do
+    test "credentials table shows pagination bar and supports page navigation when there are more than 10 credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(index_live, ~p"/credentials?credentials_page=2")
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "credentials table does not show page navigation links when there are 10 or fewer credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      refute table_html =~ "sr-only\">Previous"
+      refute table_html =~ "sr-only\">Next"
+    end
+
+    test "OAuth clients section is collapsed by default and toggle button is visible",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert has_element?(index_live, "#oauth-clients-section")
+      assert has_element?(index_live, "button[phx-click='toggle_oauth_clients']")
+      refute html =~ oauth_client.name
+    end
+
+    test "toggling OAuth clients section shows and then hides the clients table",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      assert html =~ oauth_client.name
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      refute html =~ oauth_client.name
+    end
+
+    test "OAuth clients table shows pagination bar after section is expanded and supports page navigation",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("toggle_oauth_clients", %{})
+
+      table_html = index_live |> element("#oauth-clients-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(index_live, ~p"/credentials?oauth_clients_page=2")
+
+      table_html = index_live |> element("#oauth-clients-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "credentials pagination works on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do:
+            insert(:credential,
+              user: user,
+              project_credentials: [%{project: project}]
+            )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?credentials_page=2")
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials table shows pagination on project settings when there are more than 10",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do: insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?keychain_page=2")
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials section is not shown on the user credentials page",
+         %{conn: conn} do
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(index_live, "#keychain-credentials-table")
+    end
+
+    test "keychain credentials section is shown on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert has_element?(view, "#keychain-credentials-table")
+    end
+
+    test "navigating to a page number beyond total pages falls back gracefully",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      render_patch(index_live, ~p"/credentials?credentials_page=999")
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+    end
+  end
+
   describe "Clicking new from the list view" do
     test "allows the user to define and save a new raw credential", %{
       conn: conn,

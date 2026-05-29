@@ -88,6 +88,37 @@ defmodule Lightning.OauthClients do
     |> Repo.all()
   end
 
+  def list_clients(%Project{} = project, page_params) do
+    global_clients_subquery =
+      from(c in OauthClient,
+        where: c.global == true,
+        select: c.id
+      )
+
+    clients_query =
+      from(c in OauthClient,
+        left_join: poc in ProjectOauthClient,
+        on: poc.oauth_client_id == c.id,
+        where:
+          poc.project_id == ^project.id or
+            c.id in subquery(global_clients_subquery),
+        preload: [:user, :project_oauth_clients, :projects],
+        order_by: [asc: fragment("lower(?)", c.name)],
+        group_by: c.id
+      )
+
+    Repo.paginate(clients_query, page_params)
+  end
+
+  def list_clients(%User{id: user_id}, page_params) do
+    from(c in OauthClient,
+      where: c.user_id == ^user_id or c.global,
+      preload: :projects,
+      order_by: [asc: fragment("lower(?)", c.name)]
+    )
+    |> Repo.paginate(page_params)
+  end
+
   @doc """
   Retrieves a single OAuth client by its ID, raising an error if not found.
 
