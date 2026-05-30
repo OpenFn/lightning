@@ -31,6 +31,25 @@ defmodule Lightning.Repo.Migrations.AddLogLinesPendingSearchIndex do
   end
 
   defp create_partition_index(_num_partitions, part_num) do
+    # A failed CREATE INDEX CONCURRENTLY leaves an INVALID index behind. The
+    # IF NOT EXISTS below would then skip rebuilding it, and the subsequent
+    # ATTACH would leave the parent permanently INVALID. Drop any invalid
+    # leftover first so a re-run rebuilds it cleanly. (A valid index is kept;
+    # only invalid ones are dropped.)
+    execute("""
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_index i ON i.indexrelid = c.oid
+        WHERE c.relname = 'log_lines_#{part_num}_pending_search_idx'
+          AND NOT i.indisvalid
+      ) THEN
+        EXECUTE 'DROP INDEX log_lines_#{part_num}_pending_search_idx';
+      END IF;
+    END $$;
+    """)
+
     execute("""
     CREATE INDEX CONCURRENTLY IF NOT EXISTS log_lines_#{part_num}_pending_search_idx
     ON log_lines_#{part_num} (timestamp)

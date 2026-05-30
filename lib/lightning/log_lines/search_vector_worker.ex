@@ -39,7 +39,14 @@ defmodule Lightning.LogLines.SearchVectorWorker do
     queue: :search_indexing,
     priority: 1,
     max_attempts: 10,
-    unique: [period: 55, keys: [:trigger]]
+    # `states` is restricted to the queued states on purpose. Oban's default
+    # unique states include `:executing` and `:completed`, which would make a
+    # running snowball job match *itself* when it tries to enqueue its
+    # successor, silently dedup the insert, and break the chain after a single
+    # hop. Limiting uniqueness to `:available`/`:scheduled` still guarantees at
+    # most one queued snowball (and one queued cron heartbeat, via the distinct
+    # `:trigger` key) while letting the executing job enqueue the next link.
+    unique: [period: 55, keys: [:trigger], states: [:available, :scheduled]]
 
   alias Lightning.Repo
 
