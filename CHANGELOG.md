@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
+  search indexing off the insert path. The full-text search vector is now
+  backfilled by a background worker rather than computed synchronously on every
+  insert, so log search is eventually-consistent (typically within a minute).
+  [#4425](https://github.com/OpenFn/lightning/issues/4425)
 - Channel join crashes when multiple users open the same workflow concurrently
   [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
