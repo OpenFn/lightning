@@ -18,9 +18,8 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
     %{run: run}
   end
 
-  # Inserts a log line via the public API. With the synchronous trigger removed
-  # this leaves `search_vector` NULL, which is exactly the pending state the
-  # worker drains.
+  # Inserts via the public API, which leaves `search_vector` NULL — the pending
+  # state the worker drains.
   defp append_log(run, message) do
     {:ok, log_line} =
       Runs.append_run_log(run, %{
@@ -74,14 +73,12 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
           append_log(run, "logline number #{n} doing work").id
         end
 
-      # Freshly inserted lines start out unindexed (deferred computation).
       for id <- ids do
         assert %{null?: true, matches?: false} = search_vector_state(id)
       end
 
       assert {:ok, 5} = perform_job(SearchVectorWorker, %{})
 
-      # After draining, every row has a populated, matching search_vector.
       for id <- ids do
         assert %{null?: false, matches?: true} = search_vector_state(id)
       end
@@ -145,11 +142,9 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
   end
 
   describe "snowball uniqueness" do
-    # Regression: Oban's default unique states include :executing and :completed,
-    # so a running snowball job (state :executing) matched *itself* when it tried
-    # to enqueue its successor — the insert was silently deduped and the chain
-    # died after one hop. The worker restricts uniqueness to the queued states so
-    # an executing job can always enqueue the next link.
+    # Guards the snowball chain: an executing job must be able to enqueue its
+    # successor. Oban's default unique states include :executing, so a snowball
+    # would otherwise match itself and the chain would die after one hop.
     test "an executing snowball does not block enqueuing its successor" do
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:ok, running} =

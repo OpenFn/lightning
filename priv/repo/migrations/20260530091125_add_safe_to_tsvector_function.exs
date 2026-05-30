@@ -2,10 +2,9 @@ defmodule Lightning.Repo.Migrations.AddSafeToTsvectorFunction do
   use Ecto.Migration
 
   def up do
-    # Not STRICT: a STRICT function returns NULL (without running) when `doc` is
-    # NULL, which would leave the row's search_vector NULL forever and stuck in
-    # the pending index. COALESCE the doc instead so the function always yields
-    # a non-NULL tsvector. CREATE OR REPLACE keeps the migration re-runnable.
+    # Deliberately not STRICT: a STRICT function returns NULL for a NULL doc,
+    # which would leave search_vector NULL forever and stuck in the pending
+    # index. COALESCE instead so the result is always a non-NULL tsvector.
     execute("""
     CREATE OR REPLACE FUNCTION safe_to_tsvector(config regconfig, doc text) RETURNS tsvector
     LANGUAGE plpgsql IMMUTABLE AS $$

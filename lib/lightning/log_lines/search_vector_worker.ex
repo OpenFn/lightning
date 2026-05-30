@@ -1,60 +1,43 @@
 defmodule Lightning.LogLines.SearchVectorWorker do
   @moduledoc """
-  Asynchronously backfills `log_lines.search_vector` for rows that were left
-  `NULL` at insert time.
+  Backfills the full-text `search_vector` on `log_lines` rows.
 
-  ## Why defer the tsvector?
+  Log lines are inserted with `search_vector` left `NULL`; the vector is built
+  here rather than on the insert path, keeping `to_tsvector` off the hot path of
+  high-volume log ingestion. Search is eventually consistent as a result,
+  typically catching up within a minute.
 
-  Computing the full-text `search_vector` synchronously (via an insert trigger)
-  put `to_tsvector` on the hot path of every log line write. Under heavy run
-  load that work serialises behind the worker's log firehose and slows
-  ingestion. A sibling migration removes the synchronous trigger, leaving the
-  column `NULL` on insert, and adds:
+  Two database objects support this: `safe_to_tsvector(regconfig, text)`, which
+  builds the vector while tolerating NULL and oversized input, and a partial
+  index over `search_vector IS NULL`, which keeps locating pending rows cheap as
+  the table grows. Vectors use the `english_nostop` config to match the read
+  side (`Lightning.Invocation`), which queries with
+  `to_tsquery('english_nostop', ...)`.
 
-    * a `safe_to_tsvector(regconfig, text)` SQL function (tolerant of bad input);
-    * a partial index `... WHERE search_vector IS NULL` so finding pending rows
-      stays cheap.
-
-  This worker then fills `search_vector` out-of-band. The read side
-  (`Lightning.Invocation`) queries with `to_tsquery('english_nostop', ...)`, so
-  this worker MUST build vectors with the matching `english_nostop` config,
-  otherwise searches would silently miss freshly-written log lines.
-
-  ## Draining and snowballing
-
-  Each run drains pending rows in bounded batches (`@batch_size` rows, up to
-  `@max_batches` per run). When a run consumes its full budget there is almost
-  certainly more backlog, so it enqueues an immediate follow-up job (a
-  "snowball") rather than waiting for the next 1-minute cron tick. This lets the
-  worker keep pace with bursty load while the dedicated `search_indexing` queue
-  (concurrency 1) plus job uniqueness keep the snowball self-limiting.
-
-  The cron entry enqueues with default args; the snowball uses
-  `%{"trigger" => "snowball"}`. The differing `trigger` key produces a distinct
-  uniqueness key, so a queued snowball is never swallowed by the cron job (and
-  vice versa).
+  Each run drains pending rows newest-first, in batches of `@batch_size` up to
+  `@max_batches` per run. A run that exhausts its budget leaves backlog behind
+  and enqueues an immediate follow-up ("snowball"); otherwise the minute-ly cron
+  tick keeps pace. The worker runs on the dedicated `search_indexing` queue at
+  concurrency 1, so only one job executes at a time, and the cron tick and the
+  snowball carry distinct `trigger` args, so job uniqueness allows one of each to
+  queue but never a duplicate.
   """
 
   use Oban.Worker,
     queue: :search_indexing,
     priority: 1,
     max_attempts: 10,
-    # `states` is restricted to the queued states on purpose. Oban's default
-    # unique states include `:executing` and `:completed`, which would make a
-    # running snowball job match *itself* when it tries to enqueue its
-    # successor, silently dedup the insert, and break the chain after a single
-    # hop. Limiting uniqueness to `:available`/`:scheduled` still guarantees at
-    # most one queued snowball (and one queued cron heartbeat, via the distinct
-    # `:trigger` key) while letting the executing job enqueue the next link.
+    # Restrict uniqueness to queued states. Oban's defaults also dedup against
+    # :executing/:completed, so a running snowball would match itself and fail
+    # to enqueue its successor — breaking the chain after one hop.
     unique: [period: 55, keys: [:trigger], states: [:available, :scheduled]]
 
   alias Lightning.Repo
 
   require Logger
 
-  # Rows to fill per batch.
   @batch_size 2_500
-  # Maximum batches to drain in a single run (per-run budget).
+  # Per-run budget.
   @max_batches 10
 
   @drain_sql """
@@ -80,9 +63,8 @@ defmodule Lightning.LogLines.SearchVectorWorker do
     end)
 
     if budget_exhausted? do
-      # The run hit its per-run budget, so more backlog almost certainly
-      # remains. Snowball an immediate follow-up with a distinct uniqueness key
-      # so the cron job's uniqueness does not swallow it.
+      # Budget exhausted, so backlog likely remains: enqueue an immediate
+      # follow-up rather than waiting for the next cron tick.
       Oban.insert(Lightning.Oban, __MODULE__.new(%{"trigger" => "snowball"}))
     end
 

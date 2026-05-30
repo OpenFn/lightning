@@ -7,7 +7,7 @@ defmodule Lightning.Repo.Migrations.AddLogLinesPendingSearchIndex do
   @num_partitions 100
 
   def up do
-    # Create the partial index on the parent table (ONLY), unattached so far.
+    # Partial index on the parent (ONLY); attached per-partition below.
     execute("""
     CREATE INDEX IF NOT EXISTS log_lines_pending_search_idx
     ON ONLY log_lines (timestamp)
@@ -31,11 +31,9 @@ defmodule Lightning.Repo.Migrations.AddLogLinesPendingSearchIndex do
   end
 
   defp create_partition_index(_num_partitions, part_num) do
-    # A failed CREATE INDEX CONCURRENTLY leaves an INVALID index behind. The
-    # IF NOT EXISTS below would then skip rebuilding it, and the subsequent
-    # ATTACH would leave the parent permanently INVALID. Drop any invalid
-    # leftover first so a re-run rebuilds it cleanly. (A valid index is kept;
-    # only invalid ones are dropped.)
+    # A failed CREATE INDEX CONCURRENTLY leaves an INVALID index that IF NOT
+    # EXISTS would skip, so the ATTACH below would mark the parent INVALID too.
+    # Drop any invalid leftover first so a re-run rebuilds cleanly.
     execute("""
     DO $$
     BEGIN

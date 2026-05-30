@@ -921,9 +921,8 @@ defmodule Lightning.RunsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      # The synchronous trigger is gone: search_vector is computed out-of-band
-      # by Lightning.LogLines.SearchVectorWorker, so it starts NULL and is not
-      # yet matched by a full-text query.
+      # search_vector is computed out-of-band by SearchVectorWorker, so it
+      # starts NULL and isn't matched by a full-text query yet.
       assert search_vector_null?(log_line.id)
       refute log_line_searchable?(log_line.id, "searchable")
     end
@@ -953,12 +952,10 @@ defmodule Lightning.RunsTest do
       assert length(log_lines) == 3
       assert Enum.map(log_lines, & &1.message) == Enum.map(entries, & &1.message)
 
-      # Each inserted line broadcasts a LogAppended event.
       for _ <- entries do
         assert_received %Runs.Events.LogAppended{}
       end
 
-      # All rows are persisted with a NULL search_vector (deferred indexing).
       for log_line <- log_lines do
         assert search_vector_null?(log_line.id)
         refute log_line_searchable?(log_line.id, "logline")
