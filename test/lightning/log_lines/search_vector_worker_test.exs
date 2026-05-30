@@ -143,4 +143,53 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
       end)
     end
   end
+
+  describe "snowball uniqueness" do
+    # Regression: Oban's default unique states include :executing and :completed,
+    # so a running snowball job (state :executing) matched *itself* when it tried
+    # to enqueue its successor — the insert was silently deduped and the chain
+    # died after one hop. The worker restricts uniqueness to the queued states so
+    # an executing job can always enqueue the next link.
+    test "an executing snowball does not block enqueuing its successor" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, running} =
+          Oban.insert(
+            Lightning.Oban,
+            SearchVectorWorker.new(%{"trigger" => "snowball"})
+          )
+
+        # Mimic Oban marking the job as executing while perform/1 runs.
+        from(j in Oban.Job, where: j.id == ^running.id)
+        |> Repo.update_all(set: [state: "executing"])
+
+        {:ok, successor} =
+          Oban.insert(
+            Lightning.Oban,
+            SearchVectorWorker.new(%{"trigger" => "snowball"})
+          )
+
+        refute successor.conflict?
+        refute successor.id == running.id
+      end)
+    end
+
+    test "two queued snowballs are deduped to one" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, first} =
+          Oban.insert(
+            Lightning.Oban,
+            SearchVectorWorker.new(%{"trigger" => "snowball"})
+          )
+
+        {:ok, second} =
+          Oban.insert(
+            Lightning.Oban,
+            SearchVectorWorker.new(%{"trigger" => "snowball"})
+          )
+
+        assert second.conflict?
+        assert second.id == first.id
+      end)
+    end
+  end
 end
