@@ -270,7 +270,8 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
+      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
+      {"* * * * *", Lightning.LogLines.SearchVectorWorker}
     ]
 
     cleanup_cron =
@@ -300,7 +301,8 @@ defmodule Lightning.Config.Bootstrap do
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
-        ai_assistant: 10
+        ai_assistant: 10,
+        search_indexing: 1
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to
