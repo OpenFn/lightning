@@ -36,6 +36,7 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias LightningWeb.API.Helpers
 
   action_fallback LightningWeb.FallbackController
 
@@ -94,7 +95,8 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with %Lightning.Projects.Project{} = project <-
+    with :ok <- Helpers.validate_uuid(id),
+         %Lightning.Projects.Project{} = project <-
            Projects.get_project(id),
          :ok <-
            ProjectUsers
