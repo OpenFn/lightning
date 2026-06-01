@@ -131,10 +131,8 @@ defmodule Lightning.AdaptorRegistryTest do
     end
 
     @tag :tmp_dir
-    test "lists directory names of the when local_adaptors_repo is set", %{
-      tmp_dir: tmp_dir,
-      test: test
-    } do
+    test "lists directory names from a single-element local_adaptors_repos list",
+         %{tmp_dir: tmp_dir, test: test} do
       expected_adaptors = ["foo", "bar", "baz"]
 
       Enum.each(expected_adaptors, fn adaptor ->
@@ -142,7 +140,7 @@ defmodule Lightning.AdaptorRegistryTest do
       end)
 
       start_supervised!(
-        {AdaptorRegistry, [name: test, local_adaptors_repo: tmp_dir]}
+        {AdaptorRegistry, [name: test, local_adaptors_repos: [tmp_dir]]}
       )
 
       results = AdaptorRegistry.all(test)
@@ -157,6 +155,105 @@ defmodule Lightning.AdaptorRegistryTest do
 
         assert expected_result in results
       end
+    end
+
+    @tag :tmp_dir
+    test "merges adaptors from multiple local_adaptors_repos", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      repo_a = Path.join(tmp_dir, "a")
+      repo_b = Path.join(tmp_dir, "b")
+      [repo_a, "packages", "alpha"] |> Path.join() |> File.mkdir_p!()
+      [repo_b, "packages", "beta"] |> Path.join() |> File.mkdir_p!()
+
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repos: [repo_a, repo_b]]}
+      )
+
+      names = AdaptorRegistry.all(test) |> Enum.map(& &1.name) |> Enum.sort()
+
+      assert names == ["@openfn/language-alpha", "@openfn/language-beta"]
+    end
+
+    @tag :tmp_dir
+    test "first repo wins on collision and emits a warning", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      repo_a = Path.join(tmp_dir, "a")
+      repo_b = Path.join(tmp_dir, "b")
+      [repo_a, "packages", "http"] |> Path.join() |> File.mkdir_p!()
+      [repo_b, "packages", "http"] |> Path.join() |> File.mkdir_p!()
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          start_supervised!(
+            {AdaptorRegistry,
+             [name: test, local_adaptors_repos: [repo_a, repo_b]]}
+          )
+
+          # force the GenServer to finish handle_continue
+          AdaptorRegistry.all(test)
+        end)
+
+      results = AdaptorRegistry.all(test)
+      assert length(results) == 1
+
+      assert hd(results).repo ==
+               "file://" <> Path.join([repo_a, "packages", "http"])
+
+      assert log =~ "@openfn/language-http"
+      assert log =~ "shadowed"
+    end
+
+    @tag :tmp_dir
+    test "soft-fails when a repo path is missing or unreadable", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      good_repo = Path.join(tmp_dir, "good")
+      missing_repo = Path.join(tmp_dir, "does-not-exist")
+      [good_repo, "packages", "alpha"] |> Path.join() |> File.mkdir_p!()
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          start_supervised!(
+            {AdaptorRegistry,
+             [name: test, local_adaptors_repos: [missing_repo, good_repo]]}
+          )
+
+          AdaptorRegistry.all(test)
+        end)
+
+      names = AdaptorRegistry.all(test) |> Enum.map(& &1.name)
+      assert names == ["@openfn/language-alpha"]
+      assert log =~ "Skipping local adaptors repo"
+      assert log =~ missing_repo
+    end
+  end
+
+  describe "local_adaptors_enabled?/0" do
+    test "returns true when a non-empty plural list is configured" do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repos: ["/some/path"]]
+      end)
+
+      assert AdaptorRegistry.local_adaptors_enabled?()
+    end
+
+    test "returns false when the list is empty" do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repos: []]
+      end)
+
+      refute AdaptorRegistry.local_adaptors_enabled?()
+    end
+
+    test "returns false when the key is absent" do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn -> [] end)
+
+      refute AdaptorRegistry.local_adaptors_enabled?()
     end
   end
 
@@ -178,10 +275,10 @@ defmodule Lightning.AdaptorRegistryTest do
     end
 
     @tag :tmp_dir
-    test "returns local as the version when local_adaptors_repo config is set",
+    test "returns local as the version when local_adaptors_repos config is set",
          %{tmp_dir: tmp_dir} do
       Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+        [local_adaptors_repos: [tmp_dir]]
       end)
 
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==

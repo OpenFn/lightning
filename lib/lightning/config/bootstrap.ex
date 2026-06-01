@@ -203,21 +203,30 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
-    local_adaptors_repo =
-      env!(
-        "OPENFN_ADAPTORS_REPO",
-        :string,
-        Utils.get_env([
-          :lightning,
-          Lightning.AdaptorRegistry,
-          :local_adaptors_repo
-        ])
-      )
+    # OPENFN_ADAPTORS_REPO accepts a comma-separated list of paths so that a
+    # private adaptor repo can be loaded alongside the canonical OpenFn
+    # adaptors monorepo. A single path is still valid; it just becomes a
+    # one-element list. Order is precedence: earlier entries shadow later ones
+    # when two repos ship a package with the same name. Comma (rather than
+    # ':') keeps Windows drive-letter paths like `c:/repo` usable.
+    local_adaptors_repos =
+      env!("OPENFN_ADAPTORS_REPO", :string, nil)
+      |> case do
+        nil ->
+          []
 
-    use_local_adaptors_repo? =
+        value when is_binary(value) ->
+          value
+          |> String.split(",", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.map(&Path.expand/1)
+      end
+
+    use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
       |> tap(fn v ->
-        if v && !is_binary(local_adaptors_repo) do
+        if v && local_adaptors_repos == [] do
           raise """
           LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
           """
@@ -231,8 +240,8 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
         ),
-      local_adaptors_repo:
-        use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
+      local_adaptors_repos:
+        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
     config :lightning,
       schemas_path:
