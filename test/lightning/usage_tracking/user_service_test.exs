@@ -189,4 +189,71 @@ defmodule Lightning.UsageTracking.UserServiceTest do
       assert UserService.no_of_active_users(@date, user_list) == 2
     end
   end
+
+  describe ".no_of_monthly_active_users/1" do
+    test "counts users active within the trailing 30 days" do
+      {:ok, within_threshold_time, _offset} =
+        DateTime.from_iso8601("#{Date.add(@date, -29)}T10:00:00Z")
+
+      {:ok, outside_threshold_time, _offset} =
+        DateTime.from_iso8601("#{Date.add(@date, -30)}T10:00:00Z")
+
+      user_within_window = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: within_threshold_time,
+        user: user_within_window
+      )
+
+      user_outside_window = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: outside_threshold_time,
+        user: user_outside_window
+      )
+
+      assert UserService.no_of_monthly_active_users(@date) == 1
+    end
+  end
+
+  describe ".no_of_monthly_active_users/2" do
+    test "counts the active subset of the user list within the trailing 30 days" do
+      {:ok, within_threshold_time, _offset} =
+        DateTime.from_iso8601("#{Date.add(@date, -29)}T10:00:00Z")
+
+      {:ok, outside_threshold_time, _offset} =
+        DateTime.from_iso8601("#{Date.add(@date, -30)}T10:00:00Z")
+
+      user_in_list_active = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: within_threshold_time,
+        user: user_in_list_active
+      )
+
+      user_not_in_list = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: within_threshold_time,
+        user: user_not_in_list
+      )
+
+      user_in_list_inactive =
+        insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: outside_threshold_time,
+        user: user_in_list_inactive
+      )
+
+      user_list = [user_in_list_active, user_in_list_inactive]
+
+      assert UserService.no_of_monthly_active_users(@date, user_list) == 1
+    end
+  end
 end

@@ -136,6 +136,18 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
              } = ProjectMetricsService.generate_metrics(project, enabled, date)
     end
 
+    test "includes the number of monthly active users (trailing 30 days)", %{
+      date: date,
+      enabled: enabled,
+      project: project
+    } do
+      # The project's active users last logged in at 2023-11-08, which is
+      # within the 90-day window but outside the 30-day monthly window.
+      assert %{
+               no_of_monthly_active_users: 0
+             } = ProjectMetricsService.generate_metrics(project, enabled, date)
+    end
+
     test "includes data for workflows existing on or before date", %{
       date: date,
       eligible_workflow_1: eligible_workflow_1,
