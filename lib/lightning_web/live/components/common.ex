@@ -123,9 +123,9 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 text-wrap #{@class}"}>
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <.icon name={@icon} class={"align-top h-5 w-5 text-#{@color}-400"} />
+      <div class={["flex", if(@header, do: "items-start", else: "items-center")]}>
+        <div class="shrink-0">
+          <.icon name={@icon} class={"block h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3 min-w-0 flex-1",
