@@ -271,7 +271,8 @@ defmodule Lightning.Config.Bootstrap do
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
       {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
-      {"* * * * *", Lightning.LogLines.SearchVectorWorker}
+      {"* * * * *", Lightning.LogLines.SearchVectorWorker},
+      {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
 
     cleanup_cron =
@@ -302,7 +303,11 @@ defmodule Lightning.Config.Bootstrap do
         background: 1,
         history_exports: 1,
         ai_assistant: 10,
-        search_indexing: 1
+        # Shared by Lightning.LogLines.SearchVectorWorker and
+        # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives
+        # each worker its own slot so their snowball re-enqueue chains run in
+        # parallel and never starve one another.
+        search_indexing: 2
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to

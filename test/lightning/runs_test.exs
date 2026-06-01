@@ -385,6 +385,43 @@ defmodule Lightning.RunsTest do
       assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
     end
 
+    # Regression for #4800: dataclip inserts no longer build the search_vector
+    # synchronously (the AFTER INSERT trigger was dropped). Saving an output
+    # dataclip via the handler must succeed and the row must be retrievable with
+    # search_vector NULL — proving the insert path doesn't depend on building the
+    # vector, which is deferred to DataclipSearchVectorWorker.
+    test "saves the output dataclip with a NULL search_vector (deferred indexing)" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step = insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+      output_dataclip_id = Ecto.UUID.generate()
+
+      assert {:ok, _step} =
+               Runs.complete_step(%{
+                 step_id: step.id,
+                 reason: "success",
+                 output_dataclip: ~s({"deferred": "indexword"}),
+                 output_dataclip_id: output_dataclip_id,
+                 run_id: run.id,
+                 project_id: workflow.project_id
+               })
+
+      %{rows: [[is_null]]} =
+        Repo.query!(
+          "SELECT search_vector IS NULL FROM dataclips WHERE id = $1::uuid",
+          [Ecto.UUID.dump!(output_dataclip_id)]
+        )
+
+      assert is_null,
+             "expected the saved dataclip's search_vector to be NULL " <>
+               "immediately after insert (deferred indexing)"
+    end
+
     test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
