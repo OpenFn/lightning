@@ -36,6 +36,8 @@ and this project adheres to
   [#4781](https://github.com/OpenFn/lightning/issues/4781)
 - Slow GitHub responses cause repo list to fail to load on project settings
   [#4810](https://github.com/OpenFn/lightning/issues/4810)
+- Workflow channel raises an exception when fetching trigger auth methods for an
+  unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
 
 ## [2.16.6] - 2026-05-27
 
