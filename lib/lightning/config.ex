@@ -82,12 +82,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def oauth_provider(key) do
-      Application.get_env(:lightning, :oauth_clients)
-      |> Keyword.get(key)
-    end
-
-    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -489,7 +483,6 @@ defmodule Lightning.Config do
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
   @callback metrics_unclaimed_run_threshold_seconds() :: integer()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
@@ -597,10 +590,6 @@ defmodule Lightning.Config do
 
   def repo_connection_token_signer do
     impl().repo_connection_token_signer()
-  end
-
-  def oauth_provider(key) do
-    impl().oauth_provider(key)
   end
 
   def purge_deleted_after_days do
