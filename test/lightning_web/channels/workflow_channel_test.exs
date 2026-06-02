@@ -2110,6 +2110,26 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert log =~ trigger.id
     end
 
+    test "request_trigger_auth_methods returns empty list unpersisted trigger_id",
+         %{
+           socket: socket
+         } do
+      unsaved_trigger_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "request_trigger_auth_methods", %{
+          "trigger_id" => unsaved_trigger_id
+        })
+
+      assert_reply ref, :ok, %{
+        trigger_id: returned_trigger_id,
+        webhook_auth_methods: methods
+      }
+
+      assert returned_trigger_id == unsaved_trigger_id
+      assert methods == []
+    end
+
     test "update_trigger_auth_methods associates auth methods with trigger", %{
       socket: socket,
       workflow: workflow,
