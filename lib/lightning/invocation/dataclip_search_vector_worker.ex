@@ -40,7 +40,7 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
 
   require Logger
 
-  @batch_size 2_500
+  @batch_size 250
   # Per-run budget.
   @max_batches 10
 
