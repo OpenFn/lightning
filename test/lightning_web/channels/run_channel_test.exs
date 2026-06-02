@@ -654,7 +654,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref,
                    :error,
-                   "Could not reach the oauth provider. Try again later"
+                   "Could not reach the OAuth provider. Try again later"
     end
   end
 
