@@ -21,7 +21,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix icon vertical alignment in alert banners
+- Fix icon vertical alignment in sandbox alert banners
   [#4730](https://github.com/OpenFn/lightning/issues/4730)
 - Channel join crashes when multiple users open the same workflow concurrently
   [#4802](https://github.com/OpenFn/lightning/issues/4802)
