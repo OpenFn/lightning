@@ -72,7 +72,7 @@ msgstr "Please change your email"
 
 msgid "oauth_reauth_required"
 msgstr ""
-"Oauth token has expired. Reauthorize with your external system:"
+"OAuth token has expired. Reauthorize with your external system:"
 "  1. Go to %{credentials_url}"
 "  2. Find %{credential_name}"
 "  3. Click \"Edit\" and then \"Reauthorize\""

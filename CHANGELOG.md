@@ -19,10 +19,18 @@ and this project adheres to
 
 ### Changed
 
+- Stop reporting expected credential-resolution failures (OAuth re-auth needed,
+  misconfigured project environment, transient provider errors) to Sentry. These
+  are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
+  instead of `error`; only a genuinely missing project still logs at `error`.
+  [#4814](https://github.com/OpenFn/lightning/issues/4814)
+
 ### Fixed
 
 - Fix issue where back button must be pressed 3 times to go back once from the
   Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
   associated OAuth clients. The `project_oauth_clients` join rows are now
   cleaned up alongside the other project-scoped deletes in
@@ -34,6 +42,10 @@ and this project adheres to
   error mid-stream, taking down the AI assistant worker; 1.16+ handles the
   3-tuple error shape gracefully.
   [#4781](https://github.com/OpenFn/lightning/issues/4781)
+- Slow GitHub responses cause repo list to fail to load on project settings
+  [#4810](https://github.com/OpenFn/lightning/issues/4810)
+- Workflow channel raises an exception when fetching trigger auth methods for an
+  unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
 
 ## [2.16.6] - 2026-05-27
 

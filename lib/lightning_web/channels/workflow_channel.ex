@@ -512,24 +512,23 @@ defmodule LightningWeb.WorkflowChannel do
       trigger_id: #{trigger_id}
     """)
 
-    async_task(socket, "request_trigger_auth_methods", fn ->
-      trigger = Lightning.Repo.get!(Lightning.Workflows.Trigger, trigger_id)
+    project_id = socket.assigns.project.id
 
+    async_task(socket, "request_trigger_auth_methods", fn ->
       webhook_auth_methods_query =
         from(wam in Lightning.Workflows.WebhookAuthMethod,
+          join: t in assoc(wam, :triggers),
+          where: t.id == ^trigger_id,
+          where: wam.project_id == ^project_id,
           where: is_nil(wam.scheduled_deletion),
           order_by: wam.name
         )
 
-      trigger_with_auth =
-        Lightning.Repo.preload(trigger,
-          webhook_auth_methods: webhook_auth_methods_query
-        )
+      webhook_auth_methods = Repo.all(webhook_auth_methods_query)
 
       %{
         trigger_id: trigger_id,
-        webhook_auth_methods:
-          render_webhook_auth_methods(trigger_with_auth.webhook_auth_methods)
+        webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods)
       }
     end)
   end
