@@ -15,6 +15,11 @@ interface InspectorLayoutProps {
   'data-testid'?: string;
   fixedHeight?: boolean;
   showBackButton?: boolean;
+  /**
+   * Handler for the back button. Falls back to `onClose` when not provided,
+   * so existing callers that only pass `showBackButton` are unaffected.
+   */
+  onBack?: () => void;
   fullHeight?: boolean;
 }
 
@@ -32,6 +37,7 @@ export function InspectorLayout({
   'data-testid': dataTestId,
   fixedHeight = false,
   showBackButton = false,
+  onBack,
   fullHeight = false,
 }: InspectorLayoutProps) {
   return (
@@ -56,7 +62,7 @@ export function InspectorLayout({
               {showBackButton && (
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={onBack ?? onClose}
                   className="flex items-center justify-center hover:text-gray-500 cursor-pointer text-gray-900"
                 >
                   <span className="hero-arrow-left h-4 w-4 inline-block" />

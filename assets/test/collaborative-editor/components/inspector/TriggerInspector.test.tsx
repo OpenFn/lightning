@@ -119,12 +119,15 @@ describe('TriggerInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
-    // Create Y.Doc with a webhook trigger
+    // Create Y.Doc with a cron trigger. The footer (Enabled toggle + Run) is
+    // shared by all non-webhook editor views; webhook now renders the
+    // footer-less read-only show panel by default, so we exercise the footer
+    // states against a cron trigger here.
     ydoc = createWorkflowYDoc({
       triggers: {
         'trigger-1': {
           id: 'trigger-1',
-          type: 'webhook',
+          type: 'cron',
           enabled: true,
         },
       },

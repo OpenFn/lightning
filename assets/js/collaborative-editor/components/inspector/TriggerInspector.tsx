@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { Tooltip } from '../../../components/Tooltip';
 import { usePermissions } from '../../hooks/useSessionContext';
 import {
   useWorkflowActions,
@@ -8,10 +9,11 @@ import {
 import type { Workflow } from '../../types/workflow';
 import { NewRunButton } from '../NewRunButton';
 import { Toggle } from '../Toggle';
-import { Tooltip } from '../../../components/Tooltip';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
+import { WebhookEditWizard } from './trigger/WebhookEditWizard';
+import { WebhookShowPanel } from './trigger/WebhookShowPanel';
 import { TriggerForm } from './TriggerForm';
 
 interface TriggerInspectorProps {
@@ -52,6 +54,17 @@ export function TriggerInspector({
   const permissions = usePermissions();
   const { updateTrigger } = useWorkflowActions();
   const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+
+  // View-state machine. The read-only "show" panel is the resting state for a
+  // webhook trigger; "edit" hands off to the WebhookEditWizard (Choose →
+  // Configure over a local draft). Cron/Kafka ignore this and render the legacy
+  // TriggerForm.
+  const [view, setView] = useState<'show' | 'edit'>('show');
+
+  // Reset to the resting state whenever a different trigger is selected.
+  useEffect(() => {
+    setView('show');
+  }, [trigger.id]);
 
   const handleEnabledChange = useCallback(
     (enabled: boolean) => {
@@ -94,6 +107,33 @@ export function TriggerInspector({
     />
   );
 
+  // Webhook resting state: read-only show panel, no footer (per design the
+  // Toggle and NewRunButton are dropped here — running lives on the header and
+  // enable/disable on the canvas).
+  if (trigger.type === 'webhook' && view === 'show') {
+    return (
+      <WebhookShowPanel
+        trigger={trigger}
+        onClose={onClose}
+        onEdit={() => setView('edit')}
+      />
+    );
+  }
+
+  // Webhook edit: the wizard owns the entire Choose → Configure flow over a
+  // local draft (mounted fresh per edit so the draft seeds from the current
+  // trigger). Finish/Cancel return to the show panel.
+  if (trigger.type === 'webhook' && view === 'edit') {
+    return (
+      <WebhookEditWizard
+        trigger={trigger}
+        onClose={onClose}
+        onDone={() => setView('show')}
+      />
+    );
+  }
+
+  // Cron/Kafka: unchanged legacy form with the enabled toggle + run footer.
   return (
     <InspectorLayout
       title={getTriggerTitle(trigger)}
