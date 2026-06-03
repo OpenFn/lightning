@@ -68,8 +68,11 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
   describe "perform/1" do
     test "fills search_vector for pending log lines so they become searchable",
          %{run: run} do
+      # Stay within the tiny test budget (batch_size: 2, max_batches: 2) so a
+      # single run drains everything: batch 1 fills 2, batch 2 fills 1 (< 2) and
+      # stops without tripping the budget.
       ids =
-        for n <- 1..5 do
+        for n <- 1..3 do
           append_log(run, "logline number #{n} doing work").id
         end
 
@@ -77,7 +80,7 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
         assert %{null?: true, matches?: false} = search_vector_state(id)
       end
 
-      assert {:ok, 5} = perform_job(SearchVectorWorker, %{})
+      assert {:ok, 3} = perform_job(SearchVectorWorker, %{})
 
       for id <- ids do
         assert %{null?: false, matches?: true} = search_vector_state(id)
@@ -124,6 +127,23 @@ defmodule Lightning.LogLines.SearchVectorWorkerTest do
         assert {:ok, 3} = perform_job(SearchVectorWorker, %{})
 
         refute_enqueued(worker: SearchVectorWorker)
+      end)
+    end
+
+    test "snowballs an immediate follow-up when the per-run budget is exhausted",
+         %{run: run} do
+      # config/test.exs sets batch_size: 2, max_batches: 2. With 5 pending rows
+      # the run fills two full batches (4 rows), reaches max_batches, and trips
+      # the budget guard, leaving backlog behind and enqueuing a snowball.
+      for n <- 1..5, do: append_log(run, "logline overflowing backlog #{n}")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, 4} = perform_job(SearchVectorWorker, %{})
+
+        assert_enqueued(
+          worker: SearchVectorWorker,
+          args: %{"trigger" => "snowball"}
+        )
       end)
     end
 
