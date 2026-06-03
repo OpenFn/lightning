@@ -7,11 +7,9 @@ defmodule LightningWeb.RunChannel do
 
   import LightningWeb.ChannelHelpers
 
-  alias Lightning.Credentials
   alias Lightning.Credentials.Resolver
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
 
@@ -141,19 +139,20 @@ defmodule LightningWeb.RunChannel do
 
     Logger.metadata(credential_id: id)
 
-    case Resolver.resolve_credential(run, id) do
-      {:ok, nil} ->
-        reply_with(socket, {:ok, nil})
+    credential =
+      case Resolver.resolve_credential(run, id) do
+        {:ok, %{credential: credential}} -> credential
+        {:error, {_reason, credential}} -> credential
+        _ -> nil
+      end
 
-      {:ok, resolved_credential} ->
-        handle_resolved_credential(socket, resolved_credential)
+    error =
+      LightningWeb.ErrorFormatter.format(
+        {:reauthorization_required, credential},
+        %{project: project_id}
+      )
 
-      {:error, :not_found} ->
-        reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
-
-      {:error, error_tuple} ->
-        handle_credential_error(socket, error_tuple, id, project_id, run.id)
-    end
+    reply_with(socket, {:error, error})
   end
 
   def handle_in("fetch:credential", _payload, socket) do
@@ -456,97 +455,5 @@ defmodule LightningWeb.RunChannel do
   defp malformed_response(reason, run, config) do
     {default_response_status(run.state, config),
      %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
-  end
-
-  defp update_scrubber(nil, samples, basic_auth) do
-    Scrubber.start_link(samples: samples, basic_auth: basic_auth)
-  end
-
-  defp update_scrubber(scrubber, samples, basic_auth) do
-    :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-    {:ok, scrubber}
-  end
-
-  defp handle_resolved_credential(socket, resolved_credential) do
-    samples = Credentials.sensitive_values_from_body(resolved_credential.body)
-    basic_auth = Credentials.basic_auth_from_body(resolved_credential.body)
-
-    {:ok, scrubber} =
-      update_scrubber(socket.assigns.scrubber, samples, basic_auth)
-
-    socket
-    |> assign(scrubber: scrubber)
-    |> reply_with({:ok, resolved_credential.body})
-  end
-
-  defp handle_credential_error(
-         socket,
-         {:environment_not_configured, _credential},
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    error =
-      LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
-        project: socket.assigns.project_id
-      })
-
-    {:reply, {:error, error}, socket}
-  end
-
-  defp handle_credential_error(
-         socket,
-         {:project_not_found, _credential},
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
-    {:reply, {:error, error}, socket}
-  end
-
-  defp handle_credential_error(
-         socket,
-         {:environment_mismatch, credential},
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    project_env =
-      Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
-
-    error =
-      LightningWeb.ErrorFormatter.format(
-        {:environment_mismatch, credential},
-        %{project: socket.assigns.project_id, project_env: project_env}
-      )
-
-    {:reply, {:error, error}, socket}
-  end
-
-  defp handle_credential_error(
-         socket,
-         {:reauthorization_required, _credential} = reason,
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    error =
-      LightningWeb.ErrorFormatter.format(reason, %{
-        project: socket.assigns.project_id
-      })
-
-    {:reply, {:error, error}, socket}
-  end
-
-  defp handle_credential_error(
-         socket,
-         {:temporary_failure, _credential},
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
-     socket}
   end
 end
