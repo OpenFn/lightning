@@ -1600,6 +1600,7 @@ defmodule Lightning.InvocationTest do
       )
 
       flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
@@ -1803,6 +1804,9 @@ defmodule Lightning.InvocationTest do
          %{
            project: project
          } do
+      # Positive control: the dataclip body vector is populated, so a known body
+      # token matches. Without this, a regression that leaves search_vector NULL
+      # would make the negative assertion below pass vacuously.
       assert [_found] =
                Invocation.search_workorders(
                  project,
@@ -1958,6 +1962,7 @@ defmodule Lightning.InvocationTest do
       )
 
       flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
