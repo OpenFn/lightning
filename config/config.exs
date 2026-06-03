@@ -189,6 +189,8 @@ config :lightning, :claim_work_mem, nil
 
 config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10
 
+config :lightning, :dataclip_search_indexing, batch_size: 250, max_batches: 10
+
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 config :lightning, LightningWeb.CollectionsController,

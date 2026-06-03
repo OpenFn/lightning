@@ -137,6 +137,8 @@ config :lightning, :is_resettable_demo, true
 # the per-run budget guard, exercising the snowball follow-up path.
 config :lightning, :log_lines_search_indexing, batch_size: 2, max_batches: 2
 
+config :lightning, :dataclip_search_indexing, batch_size: 2, max_batches: 2
+
 config :lightning, :github_app,
   app_id: "111111",
   app_name: "test-github",

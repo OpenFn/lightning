@@ -95,8 +95,11 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorkerTest do
     end
 
     test "drains all pending dataclips across a batch" do
+      # Stay within the tiny test budget (batch_size: 2, max_batches: 2) so a
+      # single run drains everything: batch 1 fills 2, batch 2 fills 1 (< 2) and
+      # stops without tripping the budget.
       dataclips =
-        for n <- 1..5 do
+        for n <- 1..3 do
           insert(:dataclip, body: %{"n" => "draindataclip#{n}"})
         end
 
@@ -105,7 +108,7 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorkerTest do
                  search_vector_state(dataclip.id, "draindataclip1")
       end
 
-      assert {:ok, 5} = perform_job(DataclipSearchVectorWorker, %{})
+      assert {:ok, 3} = perform_job(DataclipSearchVectorWorker, %{})
 
       for dataclip <- dataclips do
         assert %{null?: false} =
@@ -120,6 +123,22 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorkerTest do
         assert {:ok, 3} = perform_job(DataclipSearchVectorWorker, %{})
 
         refute_enqueued(worker: DataclipSearchVectorWorker)
+      end)
+    end
+
+    test "snowballs an immediate follow-up when the per-run budget is exhausted" do
+      # config/test.exs sets batch_size: 2, max_batches: 2. With 5 pending rows
+      # the run fills two full batches (4 rows), reaches max_batches, and trips
+      # the budget guard, leaving backlog behind and enqueuing a snowball.
+      for n <- 1..5, do: insert(:dataclip, body: %{"n" => "overflow#{n}"})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, 4} = perform_job(DataclipSearchVectorWorker, %{})
+
+        assert_enqueued(
+          worker: DataclipSearchVectorWorker,
+          args: %{"trigger" => "snowball"}
+        )
       end)
     end
 

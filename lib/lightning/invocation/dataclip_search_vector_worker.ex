@@ -17,8 +17,9 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
   `english_nostop` config to match the read side (`Lightning.Invocation`), which
   queries with `to_tsquery('english_nostop', ...)`.
 
-  Each run drains pending rows newest-first, in batches of `@batch_size` up to
-  `@max_batches` per run. A run that exhausts its budget leaves backlog behind
+  Each run drains pending rows newest-first, in batches up to a per-run budget
+  (batch size and max batches are configurable via `Lightning.Config`). A run
+  that exhausts its budget leaves backlog behind
   and enqueues an immediate follow-up ("snowball"); otherwise the minute-ly cron
   tick keeps pace. The worker shares the `search_indexing` queue with
   `Lightning.LogLines.SearchVectorWorker`; that queue runs at concurrency 2, so
@@ -40,10 +41,6 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
 
   require Logger
 
-  @batch_size 250
-  # Per-run budget.
-  @max_batches 10
-
   @drain_sql """
   WITH pending AS (
     SELECT id FROM dataclips
@@ -59,7 +56,10 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    {filled, budget_exhausted?} = drain(0, 0)
+    batch_size = Lightning.Config.dataclip_search_indexing_batch_size()
+    max_batches = Lightning.Config.dataclip_search_indexing_max_batches()
+
+    {filled, budget_exhausted?} = drain(0, 0, batch_size, max_batches)
 
     Logger.info(fn ->
       # coveralls-ignore-start
@@ -76,20 +76,20 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
     {:ok, filled}
   end
 
-  # Drains up to @max_batches batches, accumulating the number of rows filled.
+  # Drains up to max_batches batches, accumulating the number of rows filled.
   # Returns {filled, budget_exhausted?}. Stops early when a batch fills fewer
-  # than @batch_size rows (backlog drained).
-  defp drain(filled, batches) when batches >= @max_batches do
-    {filled, true}
-  end
-
-  defp drain(filled, batches) do
-    %{num_rows: num_rows} = Repo.query!(@drain_sql, [@batch_size])
-
-    if num_rows < @batch_size do
-      {filled + num_rows, false}
+  # than batch_size rows (backlog drained).
+  defp drain(filled, batches, batch_size, max_batches) do
+    if batches >= max_batches do
+      {filled, true}
     else
-      drain(filled + num_rows, batches + 1)
+      %{num_rows: num_rows} = Repo.query!(@drain_sql, [batch_size])
+
+      if num_rows < batch_size do
+        {filled + num_rows, false}
+      else
+        drain(filled + num_rows, batches + 1, batch_size, max_batches)
+      end
     end
   end
 end
