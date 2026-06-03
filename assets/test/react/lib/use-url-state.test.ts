@@ -236,6 +236,40 @@ describe('useURLState', () => {
     });
   });
 
+  describe('replaceSearchParams - no-op writes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('does not push a history entry when params are unchanged', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'run' });
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.search).toBe('?panel=run');
+    });
+
+    test('still pushes a history entry when a param actually changes', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'inspector' });
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.params.panel).toBe('inspector');
+    });
+  });
+
   describe('replaceSearchParams', () => {
     test('replaces all params with new ones (clears unspecified params)', () => {
       history.replaceState({}, '', '/workflow?panel=run&job=abc&step=5');

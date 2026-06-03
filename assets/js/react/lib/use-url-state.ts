@@ -117,13 +117,16 @@ class URLStore {
     newParams: Record<string, string | number | boolean | null>
   ) => {
     const newURL = new URL(window.location.pathname, window.location.origin);
-    // Only set params with non-null values (clears all existing params)
     Object.entries(newParams).forEach(([key, value]) => {
       if (value !== null) {
         newURL.searchParams.set(key, String(value));
       }
     });
     newURL.hash = window.location.hash;
+    // Skip no-op writes so mount-time normalization doesn't stack
+    // duplicate browser history entries (a no-op pushState never notifies
+    // subscribers anyway, due to the guard in updateParams).
+    if (newURL.href === window.location.href) return;
     history.pushState({}, '', newURL);
   };
 
