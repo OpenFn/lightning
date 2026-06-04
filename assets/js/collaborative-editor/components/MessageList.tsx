@@ -546,6 +546,25 @@ export function MessageList({
                     className={PROSE_CLASSES}
                   />
 
+                  {/* Status (e.g. "Generating code...") Apollo may stream
+                      after the text answer, while we wait for code. Same
+                      visual as the pre-text loading indicator. */}
+                  {isStreaming(message) && streamingStatus && (
+                    <div
+                      className="flex items-center gap-2"
+                      data-testid="streaming-status"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                      </div>
+                      <span className="text-xs text-gray-400 italic">
+                        {streamingStatus}
+                      </span>
+                    </div>
+                  )}
+
                   {!isStreaming(message) && message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div

@@ -336,6 +336,33 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Status', () => {
+    it('should clear a pre-text status on the first chunk only', () => {
+      store.setStreamingStatus('Thinking...');
+      store._appendStreamingChunk('Here');
+
+      // First chunk clears the pre-text status
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+
+      // A status streamed after the text answer survives later chunks
+      // (text drains one char at a time, so this must not be wiped).
+      store.setStreamingStatus('Writing code...');
+      store._appendStreamingChunk(' is the answer');
+
+      expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
+      expect(store.getSnapshot().streamingContent).toBe('Here is the answer');
+    });
+
+    it('should clear the status once changes arrive', () => {
+      store._appendStreamingChunk('Answer');
+      store.setStreamingStatus('Writing code...');
+
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();
