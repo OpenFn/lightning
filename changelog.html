@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-61BB9DA5.js"></script>
+    <script defer src="dist/sidebar_items-01FEABAB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -113,7 +113,19 @@ and this project adheres to
 misconfigured project environment, transient provider errors) to Sentry. These
 are now logged once, in <a href="Lightning.Credentials.Resolver.html"><code class="inline">Lightning.Credentials.Resolver</code></a>, at <code class="inline">info</code>/<code class="inline">warning</code>
 instead of <code class="inline">error</code>; only a genuinely missing project still logs at <code class="inline">error</code>.
-<a href="https://github.com/OpenFn/lightning/issues/4814">#4814</a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix icon vertical alignment in sandbox alert banners
+<a href="https://github.com/OpenFn/lightning/issues/4814">#4814</a></li><li>Extend UUID format validation to all <code class="inline">:binary_id</code> foreign keys on jobs,
+triggers, edges and workflows so a malformed id surfaces as a changeset error
+instead of an <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.ChangeError.html"><code class="inline">Ecto.ChangeError</code></a> at insert; de-duplicate the validator by
+routing <code class="inline">Channels.SearchParams</code> onto the shared
+<code class="inline">Lightning.Validators.validate_uuid</code>.
+<a href="https://github.com/OpenFn/lightning/issues/4816">#4816</a></li><li>The cron-trigger cursor (<code class="inline">cron_cursor_job_id</code>) foreign key is now compound and
+same-workflow, matching workflow edges: a trigger's cursor may only reference
+a job in its own workflow. Cross-workflow cursors — previously accepted
+silently by the single-column FK — are now rejected with a changeset error on
+save and on provisioning/import. A migration nulls any pre-existing
+cross-workflow cursors (the cron lookup falls back to final-run state when the
+cursor is nil); this nilification is not reversible.
+<a href="https://github.com/OpenFn/lightning/issues/4816">#4816</a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix icon vertical alignment in sandbox alert banners
 <a href="https://github.com/OpenFn/lightning/issues/4730">#4730</a></li><li>Fix issue where back button must be pressed 3 times to go back once from the
 Workflow canvas <a href="https://github.com/OpenFn/lightning/issues/4812">#4812</a></li><li>Reduce <code class="inline">run:log</code> channel timeouts under heavy log volume by moving <code class="inline">log_lines</code>
 search indexing off the insert path. The full-text search vector is now
@@ -138,7 +150,27 @@ error mid-stream, taking down the AI assistant worker; 1.16+ handles the
 3-tuple error shape gracefully.
 <a href="https://github.com/OpenFn/lightning/issues/4781">#4781</a></li><li>Slow GitHub responses cause repo list to fail to load on project settings
 <a href="https://github.com/OpenFn/lightning/issues/4810">#4810</a></li><li>Workflow channel raises an exception when fetching trigger auth methods for an
-unpersisted trigger <a href="https://github.com/OpenFn/lightning/issues/4819">#4819</a></li></ul><h2 id="2-16-6-2026-05-27" class="section-heading"><a href="#2-16-6-2026-05-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.16.6] - 2026-05-27</span></h2><h3 id="fixed-1" class="section-heading"><a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Run channel crashes when wiping <code class="inline">global</code> dataclip
+unpersisted trigger <a href="https://github.com/OpenFn/lightning/issues/4819">#4819</a></li><li>Collaborative session no longer crashes when saving a cron trigger whose
+<code class="inline">cron_cursor_job_id</code> references a deleted job. Two independent mechanisms now
+cooperate, with the server authoritative and the client advisory: server-side,
+the compound cron-cursor foreign key nulls the cursor when its job is deleted
+(and rejects cross-workflow cursors), and <code class="inline">save_workflow/3</code> rescues the
+resulting constraint error into a changeset error so the session stays up;
+client-side, a single advisory <code class="inline">reconcileDanglingReferences</code> pass nulls
+orphaned cursors before save as a UX fast-path. The client cleanup does not by
+itself produce the validation error and cannot close the concurrent-editor
+race — the server resolves that case authoritatively.
+<a href="https://github.com/OpenFn/lightning/issues/4816">#4816</a></li><li>Collaborative session no longer crashes when a workflow payload contains a
+malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+trigger, or edge id. These ids are now validated in the changesets, so the bad
+value returns a changeset error instead of raising an <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.ChangeError.html"><code class="inline">Ecto.ChangeError</code></a>
+during insert. <a href="https://github.com/OpenFn/lightning/issues/4816">#4816</a></li><li>Collaborative workflow saves no longer crash the session/channel when the
+payload contains a malformed reference or value: <code class="inline">validate_uuid</code> now checks
+with <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#dump/1"><code class="inline">Ecto.UUID.dump/1</code></a> (the function that runs at insert) so 16-byte non-hex
+placeholders are rejected as changeset errors, and <code class="inline">Workflows.save_workflow/3</code>
+rescues a typed allow-list of Ecto exceptions (<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.ChangeError.html"><code class="inline">Ecto.ChangeError</code></a>,
+<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Query.CastError.html"><code class="inline">Ecto.Query.CastError</code></a>, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.ConstraintError.html"><code class="inline">Ecto.ConstraintError</code></a>) and returns a changeset error
+instead of raising. <a href="https://github.com/OpenFn/lightning/issues/4816">#4816</a></li></ul><h2 id="2-16-6-2026-05-27" class="section-heading"><a href="#2-16-6-2026-05-27" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.16.6] - 2026-05-27</span></h2><h3 id="fixed-1" class="section-heading"><a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Run channel crashes when wiping <code class="inline">global</code> dataclip
 <a href="https://github.com/OpenFn/lightning/issues/4795">#4795</a></li></ul><h3 id="security" class="section-heading"><a href="#security" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Security</span></h3><ul><li>Bumped <code class="inline">plug</code> (1.19.2), <code class="inline">cowboy</code> (2.15.0), <code class="inline">cowlib</code> (2.16.1), <code class="inline">postgrex</code>
 (0.22.2) and overrode <code class="inline">decimal</code> to 3.1.0 to clear seven advisories surfaced by
 <a href="https://hexdocs.pm/mix_audit/2.1.5/Mix.Tasks.Deps.Audit.html"><code class="inline">mix deps.audit</code></a>: multipart-header DoS in plug and cowboy
@@ -1179,20 +1211,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="4712853109-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="4712853109-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="1238964530-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="1238964530-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="4712853109-2">(</span><span class="k" data-group-id="4712853109-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="1238964530-2">(</span><span class="k" data-group-id="1238964530-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="4712853109-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="4712853109-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4712853109-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="4712853109-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4712853109-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="4712853109-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4712853109-7">(</span><span class="k" data-group-id="4712853109-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="4712853109-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="4712853109-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="4712853109-10">(</span><span class="n">workflow</span><span class="p" data-group-id="4712853109-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="1238964530-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="1238964530-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="1238964530-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="1238964530-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="1238964530-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="1238964530-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="1238964530-7">(</span><span class="k" data-group-id="1238964530-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="1238964530-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="1238964530-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="1238964530-10">(</span><span class="n">workflow</span><span class="p" data-group-id="1238964530-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="4712853109-8">end</span><span class="p" data-group-id="4712853109-7">)</span><span class="w">
+    </span><span class="k" data-group-id="1238964530-8">end</span><span class="p" data-group-id="1238964530-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="4712853109-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="4712853109-11">}</span><span class="w">
-</span><span class="k" data-group-id="4712853109-3">end</span><span class="p" data-group-id="4712853109-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-76" class="section-heading"><a href="#added-76" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="1238964530-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="1238964530-11">}</span><span class="w">
+</span><span class="k" data-group-id="1238964530-3">end</span><span class="p" data-group-id="1238964530-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-76" class="section-heading"><a href="#added-76" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-86" class="section-heading"><a href="#changed-86" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-116" class="section-heading"><a href="#fixed-116" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -1641,7 +1673,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="2138231118-1">(</span><span class="p" data-group-id="2138231118-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="3999637706-1">(</span><span class="p" data-group-id="3999637706-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-114" class="section-heading"><a href="#added-114" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error
