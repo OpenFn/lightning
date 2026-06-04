@@ -103,6 +103,7 @@ Lightning.Graph.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
 Lightning.Invocation.DataclipAudit.html
+Lightning.Invocation.DataclipSearchVectorWorker.html
 Lightning.Invocation.LogLine.html
 Lightning.Invocation.Query.html
 Lightning.Invocation.Step.html
@@ -453,8 +454,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-6E8434BB.js
-dist/sidebar_items-41F676D0.js
+dist/search_data-B261952C.js
+dist/sidebar_items-61BB9DA5.js
 index.html
 provisioning.html
 readme.html
