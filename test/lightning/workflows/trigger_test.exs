@@ -31,6 +31,17 @@ defmodule Lightning.Workflows.TriggerTest do
       assert errors[:type] == nil
     end
 
+    test "a malformed workflow_id is a changeset error, not an Ecto.ChangeError on save" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          workflow_id: "__ID_JOB_Fetch__"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+    end
+
     test "must raise an error when cron expression is invalid" do
       errors =
         Trigger.changeset(%Trigger{}, %{
@@ -349,8 +360,68 @@ defmodule Lightning.Workflows.TriggerTest do
 
       assert {:error, changeset} = Lightning.Repo.update(changeset)
 
-      assert {"the referenced cursor job does not exist", _} =
+      assert {"cursor job doesn't exist, or is not in the same workflow", _} =
                changeset.errors[:cron_cursor_job_id]
+    end
+
+    test "cron_cursor_job_id pointing at a job in another workflow is rejected" do
+      workflow_a = insert(:workflow)
+      workflow_b = insert(:workflow)
+      foreign_job = insert(:job, workflow: workflow_b)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow_a,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+
+      assert {:error, changeset} =
+               trigger
+               |> Trigger.changeset(%{cron_cursor_job_id: foreign_job.id})
+               |> Lightning.Repo.update()
+
+      assert {"cursor job doesn't exist, or is not in the same workflow", _} =
+               changeset.errors[:cron_cursor_job_id]
+    end
+
+    test "cron_cursor_job_id pointing at a job in the SAME workflow is accepted" do
+      workflow = insert(:workflow)
+      job = insert(:job, workflow: workflow)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+
+      assert {:ok, updated} =
+               trigger
+               |> Trigger.changeset(%{cron_cursor_job_id: job.id})
+               |> Lightning.Repo.update()
+
+      assert updated.cron_cursor_job_id == job.id
+    end
+
+    test "deleting the cursor job nulls only the cursor, not the workflow link" do
+      workflow = insert(:workflow)
+      job = insert(:job, workflow: workflow)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+        |> Trigger.changeset(%{cron_cursor_job_id: job.id})
+        |> Lightning.Repo.update!()
+
+      Lightning.Repo.delete!(job)
+
+      reloaded = Lightning.Repo.reload!(trigger)
+      assert reloaded.cron_cursor_job_id == nil
+      assert reloaded.workflow_id == workflow.id
     end
 
     test "allows webhook_reply to be set for webhook triggers" do

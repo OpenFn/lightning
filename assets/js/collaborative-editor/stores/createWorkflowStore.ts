@@ -137,6 +137,7 @@ import { z } from 'zod';
 import _logger from '#/utils/logger';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { reconcileDanglingReferences } from '../adapters/reconcileDanglingReferences';
 import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
 import { channelRequest } from '../hooks/useChannel';
 import { notifications } from '../lib/notifications';
@@ -273,7 +274,7 @@ export const createWorkflowStore = () => {
    * @throws {Error} If Y.Doc is not initialized
    * @returns Y.Doc instance
    */
-  const ensureYDoc = (): Y.Doc => {
+  const ensureYDoc = (): Session.WorkflowDoc => {
     if (!ydoc) {
       throw new Error(
         'Cannot modify workflow: Y.Doc not initialized. ' +
@@ -941,26 +942,20 @@ export const createWorkflowStore = () => {
       // Find all incoming edges (where this job is the target)
       const incomingEdgeIndices = getIncomingEdgeIndices(edges, id);
 
-      // Find triggers whose cron cursor points at the job being removed.
-      const triggersArray = ydoc.getArray('triggers');
-      const triggers = triggersArray.toArray() as Y.Map<unknown>[];
-      const cursorTriggers = triggers.filter(
-        trigger => trigger.get('cron_cursor_job_id') === id
-      );
-
       ydoc.transact(() => {
         // Delete incoming edges first (highest index to lowest)
         incomingEdgeIndices.forEach(edgeIndex => {
           edgesArray.delete(edgeIndex, 1);
         });
 
-        // Clear any cron cursor reference to the job being removed
-        cursorTriggers.forEach(trigger => {
-          trigger.set('cron_cursor_job_id', null);
-        });
-
         // Then delete the job
         jobsArray.delete(jobIndex, 1);
+
+        // Reconcile any cron cursor that pointed at the now-deleted job. The
+        // reconciler reads the jobs array inside this open transaction, so the
+        // deleted job is already absent. This is the single advisory owner for
+        // dangling-reference cleanup — see adapters/reconcileDanglingReferences.
+        reconcileDanglingReferences(ydoc, { inTransaction: true });
       });
     }
     // Observer handles: Y.Doc → Immer → notify
@@ -1023,6 +1018,12 @@ export const createWorkflowStore = () => {
     // Observer handles: Y.Doc → Immer → notify
   };
 
+  // NOTE: there is intentionally no removeTrigger / bulk job-removal command
+  // today. If one is ever added, it MUST call
+  // reconcileDanglingReferences(ydoc, { inTransaction: true }) inside its
+  // transaction (after the structural delete) so it cannot leave a dangling cron
+  // cursor. Do not re-implement per-path cursor cleanup — see
+  // adapters/reconcileDanglingReferences and store-structure.md.
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
     const ydoc = ensureYDoc();
 

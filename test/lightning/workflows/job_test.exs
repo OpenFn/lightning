@@ -32,6 +32,55 @@ defmodule Lightning.Workflows.JobTest do
       assert changeset.errors[:id] == {"is not a valid UUID", []}
     end
 
+    test "malformed FK ids are changeset errors, not Ecto.ChangeError on save" do
+      # workflow_id + keychain_credential_id together (no project_credential_id
+      # so validate_exclusive doesn't fire and override the UUID error).
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: "__ID_JOB_Fetch__",
+          keychain_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:keychain_credential_id] ==
+               {"is not a valid UUID", []}
+
+      # project_credential_id in isolation (no keychain set).
+      project_changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          project_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute project_changeset.valid?
+
+      assert project_changeset.errors[:project_credential_id] ==
+               {"is not a valid UUID", []}
+    end
+
+    test "FKs left unset stay valid" do
+      workflow = insert(:workflow)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        })
+
+      assert changeset.valid?
+      refute changeset.errors[:project_credential_id]
+      refute changeset.errors[:keychain_credential_id]
+    end
+
     test "accepts keychain_credential_id in changeset" do
       workflow = insert(:workflow)
 

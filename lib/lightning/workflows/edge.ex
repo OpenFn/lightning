@@ -93,6 +93,7 @@ defmodule Lightning.Workflows.Edge do
     changeset
     |> validate_uuid([
       :id,
+      :workflow_id,
       :source_job_id,
       :source_trigger_id,
       :target_job_id

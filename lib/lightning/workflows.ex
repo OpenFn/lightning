@@ -146,14 +146,71 @@ defmodule Lightning.Workflows do
       ) do
     skip_reconcile = Keyword.get(opts, :skip_reconcile, false)
 
+    # Only the transaction is guarded. Post-commit side effects run OUTSIDE the
+    # rescue: once Repo.transaction has returned {:ok, _}, the write is durable
+    # and must never be rewritten into {:error, _}.
+    transaction_result =
+      try do
+        changeset
+        |> build_save_multi(actor)
+        |> Repo.transaction()
+
+        # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
+        # lock conflicts have their own reload UX and workflows_test.exs asserts
+        # it raises. Anything off this allow-list re-raises automatically with
+        # the original stacktrace.
+      rescue
+        e in Ecto.ChangeError ->
+          # Malformed values that pass cast but fail at dump (e.g. a 16-byte
+          # non-hex :binary_id). Convert to a field-targeted changeset so the
+          # collaborative session and LiveView editor surface a toast instead of
+          # crashing the GenServer.
+          {:error, :rescued,
+           rescued_changeset(
+             changeset,
+             {:warning,
+              "save_workflow rescued Ecto.ChangeError: #{Exception.message(e)}"},
+             "contains an invalid reference or value"
+           )}
+
+        e in Ecto.Query.CastError ->
+          # Query-time cast failures (e.g. a malformed :binary_id reaching a
+          # Repo query). Convert to a field-targeted changeset so the
+          # collaborative session and LiveView editor surface a toast instead of
+          # crashing the GenServer.
+          {:error, :rescued,
+           rescued_changeset(
+             changeset,
+             {:warning,
+              "save_workflow rescued Ecto.Query.CastError: #{Exception.message(e)}"},
+             "contains an invalid value"
+           )}
+
+        e in Ecto.ConstraintError ->
+          # An UNDECLARED DB constraint that Ecto did not map to a changeset
+          # error because the changeset declares no matching unique/foreign_key
+          # constraint — e.g. the workflows_pkey duplicate INSERT (#4830;
+          # Workflow declares no unique_constraint(:id)). Convert to a changeset
+          # error instead of crashing the session.
+          {:error, :rescued, constraint_error_changeset(changeset, e)}
+      end
+
+    handle_save_result(transaction_result, changeset, skip_reconcile)
+  end
+
+  def save_workflow(%{} = attrs, actor, opts) do
+    Workflow.changeset(%Workflow{}, attrs)
+    |> save_workflow(actor, opts)
+  end
+
+  # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
+  # Repo.transaction — that stays in the try/rescue block of the caller so
+  # rescue wraps only the transaction, not this builder.
+  defp build_save_multi(changeset, actor) do
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
-      if is_nil(changeset.data.deleted_at) do
-        {:ok, true}
-      else
-        {:error, :workflow_deleted}
-      end
+      validate_not_deleted(changeset)
     end)
     |> Multi.run(:orphan_deleted_jobs, fn repo, _changes ->
       orphan_jobs_being_deleted(repo, changeset)
@@ -167,67 +224,156 @@ defmodule Lightning.Workflows do
                                              } ->
       cleanup_orphaned_edges(repo, workflow.id, orphaned_edge_ids)
     end)
-    |> then(fn multi ->
-      if changeset.changes == %{} do
-        multi
-      else
-        multi |> capture_snapshot()
-      end
-    end)
+    |> maybe_capture_snapshot(changeset)
     |> maybe_audit_workflow_state_changes(changeset)
     |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
       hash = WorkflowVersions.generate_hash(workflow)
       WorkflowVersions.record_version(workflow, hash)
     end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{workflow: workflow}} ->
-        publish_kafka_trigger_events(changeset)
+  end
 
-        Events.workflow_updated(workflow)
+  defp validate_not_deleted(%{data: %{deleted_at: nil}}), do: {:ok, true}
+  defp validate_not_deleted(_changeset), do: {:error, :workflow_deleted}
 
-        # Emit telemetry for workflow save metrics
-        is_sandbox =
-          Lightning.Repo.get(Lightning.Projects.Project, workflow.project_id)
-          |> Lightning.Projects.Project.sandbox?()
+  defp maybe_capture_snapshot(multi, %{changes: changes}) when changes == %{},
+    do: multi
 
-        Lightning.Projects.SandboxPromExPlugin.fire_workflow_saved_event(
-          is_sandbox
-        )
+  defp maybe_capture_snapshot(multi, _changeset), do: capture_snapshot(multi)
 
-        # Reconcile changes with active collaborative editing sessions
-        # Skip reconciliation when changes originate from collaborative session
-        # to prevent circular updates (Session → DB → Session)
-        unless skip_reconcile do
-          Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
-            changeset,
-            workflow
-          )
-        end
+  # Dispatches the Repo.transaction result to the appropriate outcome. The
+  # {:ok, ...} head runs OUTSIDE the rescue block — after_commit's return is
+  # intentionally discarded so that a side-effect failure never downgrades a
+  # durable {:ok} save into {:error, _}.
+  defp handle_save_result(
+         {:ok, %{workflow: workflow}},
+         changeset,
+         skip_reconcile
+       ) do
+    after_commit(workflow, changeset, skip_reconcile)
+    {:ok, workflow}
+  end
 
-        {:ok, workflow}
+  defp handle_save_result({:error, :rescued, changeset}, _changeset, _skip),
+    do: {:error, changeset}
 
-      {:error, :workflow, changeset, _changes} ->
-        {:error, changeset}
+  defp handle_save_result(
+         {:error, :workflow, changeset, _changes},
+         _changeset,
+         _skip
+       ),
+       do: {:error, changeset}
 
-      {:error, :snapshot, snapshot_changeset, %{workflow: workflow}} ->
-        Logger.warning(fn ->
-          """
-          Failed to save snapshot for workflow: #{workflow.id}
-          #{inspect(snapshot_changeset.errors)}
-          """
-        end)
+  defp handle_save_result(
+         {:error, :snapshot, snapshot_changeset, %{workflow: workflow}},
+         _changeset,
+         _skip
+       ) do
+    Logger.warning(fn ->
+      """
+      Failed to save snapshot for workflow: #{workflow.id}
+      #{inspect(snapshot_changeset.errors)}
+      """
+    end)
 
-        {:error, false}
+    {:error, false}
+  end
 
-      {:error, _action, reason, _changes} ->
-        {:error, reason}
+  defp handle_save_result(
+         {:error, _action, reason, _changes},
+         _changeset,
+         _skip
+       ),
+       do: {:error, reason}
+
+  # Post-commit side effects: Kafka events, workflow_updated broadcast,
+  # telemetry, and optional reconciliation. Runs OUTSIDE the rescue block: the
+  # write is already durable, so these MUST NOT raise the rescued Ecto types
+  # (they operate on already-validated/committed data) — a raise here is an honest
+  # crash, never a downgrade of a committed save. If you add a post-commit step
+  # that can fail, handle it here; don't widen the rescue to cover it.
+  defp after_commit(workflow, changeset, skip_reconcile) do
+    publish_kafka_trigger_events(changeset)
+
+    Events.workflow_updated(workflow)
+
+    fire_workflow_saved_telemetry(workflow)
+
+    # Reconcile changes with active collaborative editing sessions.
+    # Skip reconciliation when changes originate from a collaborative session
+    # to prevent circular updates (Session → DB → Session).
+    unless skip_reconcile do
+      Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
+        changeset,
+        workflow
+      )
     end
   end
 
-  def save_workflow(%{} = attrs, actor, opts) do
-    Workflow.changeset(%Workflow{}, attrs)
-    |> save_workflow(actor, opts)
+  defp fire_workflow_saved_telemetry(workflow) do
+    # Emit telemetry for workflow save metrics
+    is_sandbox =
+      Lightning.Repo.get(Lightning.Projects.Project, workflow.project_id)
+      |> Lightning.Projects.Project.sandbox?()
+
+    Lightning.Projects.SandboxPromExPlugin.fire_workflow_saved_event(is_sandbox)
+  end
+
+  # Single home for "convert a rescued exception into a :base changeset error so
+  # the collaborative session (session.ex) and workflow channel render a toast
+  # instead of crashing". Callers supply the log level + message and the
+  # user-facing :base message. We cannot reliably map a nested job/edge/trigger id
+  # back to its association path, so the error is attached to :base. (Field
+  # coverage that pre-empts this is a follow-up.)
+  defp rescued_changeset(changeset, {level, log_message}, base_message)
+       when level in [:warning, :error] do
+    Logger.log(level, log_message)
+
+    changeset
+    |> Ecto.Changeset.add_error(:base, base_message)
+    |> Map.put(:action, derive_action(changeset))
+  end
+
+  # Derive the changeset action from the data's persistence state so the rescued
+  # changeset reports :insert on the attrs/new-workflow path (e.g. the #4830
+  # duplicate-pkey INSERT) and :update on the existing-workflow path.
+  defp derive_action(%Ecto.Changeset{data: %{__meta__: %{state: :built}}}),
+    do: :insert
+
+  defp derive_action(_changeset), do: :update
+
+  # Undeclared constraint (e.g. workflows_pkey duplicate, #4830). We cannot
+  # reliably map the PG constraint name back to a nested association path, so
+  # attach a generic message to :base and log the detail. Declared constraints
+  # never reach here — Ecto converts those to changeset errors that return via
+  # the normal Multi path. The raw constraint name is logged but never leaked
+  # into the user-facing message.
+  #
+  # A constraint physically defined on the `workflows` table is workflow-owned
+  # (e.g. the duplicate-pkey case #4830, or any future workflows_* unique/FK) and
+  # logs at :warning. Anything else is a non-workflow side-table failure
+  # (workflow_snapshots_*, workflow_versions_*, audit_*) mislabelled to the user as
+  # a workflow error, so it logs at :error for triage while still converting to a
+  # changeset (never crashes the session — see #4816). A nil constraint is not a
+  # binary, so it takes the safe :error branch.
+  defp constraint_error_changeset(changeset, %Ecto.ConstraintError{} = e) do
+    {level, log_message} =
+      if is_binary(e.constraint) and
+           String.starts_with?(e.constraint, "workflows_") do
+        {:warning,
+         "save_workflow rescued workflow Ecto.ConstraintError " <>
+           "(type=#{inspect(e.type)}, constraint=#{inspect(e.constraint)})"}
+      else
+        {:error,
+         "save_workflow rescued a NON-workflow Ecto.ConstraintError — likely a " <>
+           "snapshot/audit/version side-effect, mislabelled to the user as a " <>
+           "workflow error (type=#{inspect(e.type)}, constraint=#{inspect(e.constraint)})"}
+      end
+
+    rescued_changeset(
+      changeset,
+      {level, log_message},
+      "could not be saved due to a conflicting or missing reference"
+    )
   end
 
   # Nullifies edge FK references to jobs that are about to be deleted.

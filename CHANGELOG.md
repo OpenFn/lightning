@@ -24,6 +24,20 @@ and this project adheres to
   are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
   instead of `error`; only a genuinely missing project still logs at `error`.
   [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ### Fixed
 
@@ -62,16 +76,28 @@ and this project adheres to
 - Workflow channel raises an exception when fetching trigger auth methods for an
   unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
 - Collaborative session no longer crashes when saving a cron trigger whose
-  `cron_cursor_job_id` references a job that no longer exists. The `Trigger`
-  changeset now declares the foreign key constraint, and `removeJob` clears any
-  cron cursor pointing at a deleted job, so the violation surfaces as a
-  validation error instead of an `Ecto.ConstraintError`.
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
   [#4816](https://github.com/OpenFn/lightning/issues/4816)
 - Collaborative session no longer crashes when a workflow payload contains a
   malformed UUID (e.g. an unsubstituted template placeholder) for a job,
   trigger, or edge id. These ids are now validated in the changesets, so the bad
   value returns a changeset error instead of raising an `Ecto.ChangeError`
   during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ## [2.16.6] - 2026-05-27
 

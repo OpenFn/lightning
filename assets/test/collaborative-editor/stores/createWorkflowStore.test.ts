@@ -1187,6 +1187,28 @@ describe('WorkflowStore - removeJob with edge cleanup', () => {
     const snapshot = store.getSnapshot();
     expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBe('job-a');
   });
+
+  test('clears dangling cursors on multiple cron triggers when their job is removed', () => {
+    const triggersArray = ydoc.getArray('triggers');
+    ['t1', 't2'].forEach(id => {
+      const t = new Y.Map();
+      t.set('id', id);
+      t.set('type', 'cron');
+      t.set('enabled', true);
+      t.set('cron_cursor_job_id', 'job-b');
+      triggersArray.push([t]);
+    });
+
+    store.addJob({ id: 'job-a', name: 'A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'B', body: 'fn(state => state)' });
+
+    store.removeJob('job-b');
+
+    const snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.every(t => t.cron_cursor_job_id === null)).toBe(
+      true
+    );
+  });
 });
 
 describe('WorkflowStore - AI Workflow Apply Coordination', () => {

@@ -122,10 +122,11 @@ defmodule Lightning.Workflows.Trigger do
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
     |> validate_by_type()
-    |> validate_uuid([:id, :cron_cursor_job_id])
+    |> validate_uuid([:id, :workflow_id, :cron_cursor_job_id])
     |> unique_constraint(:id, name: "triggers_pkey")
     |> foreign_key_constraint(:cron_cursor_job_id,
-      message: "the referenced cursor job does not exist"
+      name: "triggers_cron_cursor_job_id_fkey",
+      message: "cursor job doesn't exist, or is not in the same workflow"
     )
   end
 
