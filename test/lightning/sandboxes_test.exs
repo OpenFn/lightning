@@ -946,7 +946,7 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "merge/4 workflows and credentials" do
-    test "merges a brand-new sandbox workflow into the parent" do
+    test "merges a new workflow from a sandbox into the parent" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
 
       {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
@@ -972,7 +972,7 @@ defmodule Lightning.Projects.SandboxesTest do
       assert length(new_workflow.edges) == 1
     end
 
-    test "merges a credential newly added to an existing step" do
+    test "merges a credential added to an existing step in the sandbox" do
       %{actor: actor, parent: parent, pc: pc, nodes: %{j2: parent_a2}} =
         build_parent_fixture!(:owner)
 
@@ -1007,7 +1007,7 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Repo.reload!(parent_a2).project_credential_id == pc.id
     end
 
-    test "merges a new workflow whose step references a credential" do
+    test "merges a new workflow in the sandbox with a step that references a credential" do
       %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
 
       {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
