@@ -13,6 +13,34 @@ defmodule Lightning.RunsTest do
   alias Lightning.WorkOrders
   alias Lightning.Workflows
 
+  # LogLine's Ecto schema has no search_vector field, so assert against the
+  # column via raw SQL.
+  defp search_vector_null?(id) do
+    %{rows: [[is_null]]} =
+      Lightning.Repo.query!(
+        "SELECT search_vector IS NULL FROM log_lines WHERE id = $1::uuid",
+        [Ecto.UUID.dump!(id)]
+      )
+
+    is_null
+  end
+
+  defp log_line_searchable?(id, term) do
+    %{rows: [[matches]]} =
+      Lightning.Repo.query!(
+        """
+        SELECT COALESCE(
+                 search_vector @@ to_tsquery('english_nostop', $2),
+                 false
+               )
+        FROM log_lines WHERE id = $1::uuid
+        """,
+        [Ecto.UUID.dump!(id), term]
+      )
+
+    matches
+  end
+
   describe "enqueue/1" do
     test "enqueues a run" do
       dataclip = insert(:dataclip)
@@ -877,6 +905,61 @@ defmodule Lightning.RunsTest do
         })
 
       assert log_line.message == ~s<{"foo":"bar"}>
+    end
+
+    test "leaves search_vector NULL at insert (deferred indexing)" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [_job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, log_line} =
+        Runs.append_run_log(run, %{
+          message: "a searchable logline message",
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      # search_vector is computed out-of-band by SearchVectorWorker, so it
+      # starts NULL and isn't matched by a full-text query yet.
+      assert search_vector_null?(log_line.id)
+      refute log_line_searchable?(log_line.id, "searchable")
+    end
+  end
+
+  describe "append_run_logs_batch/3" do
+    test "inserts all lines, broadcasts log_appended, and defers search_vector" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      Runs.subscribe(run)
+
+      now = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+
+      entries = [
+        %{message: "batch logline alpha", timestamp: now},
+        %{message: "batch logline beta", timestamp: now + 1},
+        %{message: "batch logline gamma", timestamp: now + 2}
+      ]
+
+      {:ok, log_lines} = Runs.append_run_logs_batch(run, entries)
+
+      assert length(log_lines) == 3
+      assert Enum.map(log_lines, & &1.message) == Enum.map(entries, & &1.message)
+
+      for _ <- entries do
+        assert_received %Runs.Events.LogAppended{}
+      end
+
+      for log_line <- log_lines do
+        assert search_vector_null?(log_line.id)
+        refute log_line_searchable?(log_line.id, "logline")
+      end
     end
   end
 

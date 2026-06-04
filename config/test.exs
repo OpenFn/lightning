@@ -133,6 +133,10 @@ config :lightning, CLI, child_process_mod: FakeRambo
 
 config :lightning, :is_resettable_demo, true
 
+# Tiny budget so a handful of pending rows fills multiple full batches and trips
+# the per-run budget guard, exercising the snowball follow-up path.
+config :lightning, :log_lines_search_indexing, batch_size: 2, max_batches: 2
+
 config :lightning, :github_app,
   app_id: "111111",
   app_name: "test-github",

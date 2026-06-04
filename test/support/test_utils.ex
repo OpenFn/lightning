@@ -1,6 +1,8 @@
 defmodule Lightning.TestUtils do
   @moduledoc false
 
+  alias Lightning.LogLines.SearchVectorWorker
+
   @doc """
   Assert that the given context has the given keys, otherwise raise an error.
 
@@ -17,6 +19,26 @@ defmodule Lightning.TestUtils do
     end
 
     :ok
+  end
+
+  @doc """
+  Drain the deferred `log_lines.search_vector` backlog synchronously.
+
+  Log lines are inserted with `search_vector` left NULL and indexed asynchronously
+  by `Lightning.LogLines.SearchVectorWorker`. In tests that insert log lines and then
+  query log search, call this after inserting (and before searching) so the vector is
+  populated within the SQL sandbox.
+
+  Runs the worker in-process via `Oban.Testing.perform_job/3`, so it sees the
+  uncommitted sandbox rows. Returns the number of rows indexed; a no-op (`0`) when
+  nothing is pending, so it is safe to call unconditionally.
+  """
+  @spec flush_log_search_index() :: non_neg_integer()
+  def flush_log_search_index do
+    {:ok, indexed} =
+      Oban.Testing.perform_job(SearchVectorWorker, %{}, repo: Lightning.Repo)
+
+    indexed
   end
 
   @doc """
