@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
 ### Changed
 
 - Stop reporting expected credential-resolution failures (OAuth re-auth needed,
@@ -38,7 +44,8 @@ and this project adheres to
   the whole run. The search vector is now built off the insert path by a
   background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
   `search_indexing` queue with the log-lines worker), making dataclip search
-  eventually consistent. [#4800](https://github.com/OpenFn/lightning/issues/4800)
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
 - Channel join crashes when multiple users open the same workflow concurrently
   [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
