@@ -998,12 +998,8 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
 
-      # The credential added in the sandbox should propagate to the parent,
-      # mapped to the parent's project_credential for the same credential.
-      #
-      # NOTE: this currently fails. The merge drops credential changes made to
-      # existing steps (matched jobs reuse the target's credential ids), so A2
-      # ends up with no credential in the parent.
+      # The credential added in the sandbox propagates to the parent, mapped to
+      # the parent's project_credential for the same underlying credential.
       assert Repo.reload!(parent_a2).project_credential_id == pc.id
     end
 
@@ -1027,12 +1023,10 @@ defmodule Lightning.Projects.SandboxesTest do
       |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
       |> Repo.update!()
 
-      # The new workflow should merge into the parent, mapping the credential to
-      # the parent's project_credential for the same credential.
-      #
-      # NOTE: this currently fails with a validation error. The new (unmatched)
-      # job keeps the sandbox-scoped project_credential_id, which the parent
-      # does not own, so import rejects it ("credential doesnt exist or isn't
+      # The new workflow merges into the parent, mapping the (sandbox-scoped)
+      # credential to the parent's project_credential for the same underlying
+      # credential. Without remapping, import would reject the new job's
+      # sandbox-scoped project_credential_id ("credential doesnt exist or isn't
       # available in this project").
       assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
 
