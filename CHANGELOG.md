@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
 - Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
   search indexing off the insert path. The full-text search vector is now
   backfilled by a background worker rather than computed synchronously on every
@@ -38,7 +40,8 @@ and this project adheres to
   the whole run. The search vector is now built off the insert path by a
   background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
   `search_indexing` queue with the log-lines worker), making dataclip search
-  eventually consistent. [#4800](https://github.com/OpenFn/lightning/issues/4800)
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
 - Channel join crashes when multiple users open the same workflow concurrently
   [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
