@@ -148,6 +148,38 @@ defmodule Lightning.UsageTracking.ProjectMetricsServiceTest do
              } = ProjectMetricsService.generate_metrics(project, enabled, date)
     end
 
+    test "counts project users active within the trailing 30 days", %{
+      date: date,
+      enabled: enabled
+    } do
+      {:ok, within_30_days, _offset} =
+        DateTime.from_iso8601("#{Date.add(date, -10)}T10:00:00Z")
+
+      project =
+        insert(:project,
+          project_users: [
+            build(:project_user,
+              user: fn ->
+                user = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+                insert(:user_token,
+                  context: "session",
+                  user: user,
+                  inserted_at: within_30_days
+                )
+
+                user
+              end
+            )
+          ]
+        )
+        |> Repo.preload([:users, workflows: [:jobs, :runs]])
+
+      assert %{
+               no_of_monthly_active_users: 1
+             } = ProjectMetricsService.generate_metrics(project, enabled, date)
+    end
+
     test "includes data for workflows existing on or before date", %{
       date: date,
       eligible_workflow_1: eligible_workflow_1,
