@@ -1006,6 +1006,44 @@ defmodule Lightning.Projects.SandboxesTest do
       # ends up with no credential in the parent.
       assert Repo.reload!(parent_a2).project_credential_id == pc.id
     end
+
+    test "merges a new workflow whose step references a credential" do
+      %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # Add a brand-new workflow to the sandbox whose step references the
+      # (sandbox-scoped) credential.
+      new_wf = insert(:simple_workflow, project: sandbox, name: "NewFlow")
+      [new_job] = Repo.preload(new_wf, :jobs).jobs
+
+      new_job
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      # The new workflow should merge into the parent, mapping the credential to
+      # the parent's project_credential for the same credential.
+      #
+      # NOTE: this currently fails with a validation error. The new (unmatched)
+      # job keeps the sandbox-scoped project_credential_id, which the parent
+      # does not own, so import rejects it ("credential doesnt exist or isn't
+      # available in this project").
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_new_wf =
+        Repo.get_by!(Workflow, project_id: parent.id, name: "NewFlow")
+
+      merged_job =
+        Repo.get_by!(Job, workflow_id: parent_new_wf.id, name: new_job.name)
+
+      assert merged_job.project_credential_id == pc.id
+    end
   end
 
   describe "keychains" do
