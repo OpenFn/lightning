@@ -112,6 +112,20 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def dataclip_search_indexing_batch_size do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:batch_size)
+    end
+
+    @impl true
+    def dataclip_search_indexing_max_batches do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:max_batches)
+    end
+
+    defp dataclip_search_indexing_config do
+      Application.get_env(:lightning, :dataclip_search_indexing, [])
+    end
+
+    @impl true
     def default_ecto_database_timeout do
       Application.get_env(:lightning, Lightning.Repo) |> Keyword.get(:timeout)
     end
@@ -499,6 +513,8 @@ defmodule Lightning.Config do
   @callback activity_cleanup_chunk_size() :: integer()
   @callback log_lines_search_indexing_batch_size() :: pos_integer()
   @callback log_lines_search_indexing_max_batches() :: pos_integer()
+  @callback dataclip_search_indexing_batch_size() :: pos_integer()
+  @callback dataclip_search_indexing_max_batches() :: pos_integer()
   @callback default_ecto_database_timeout() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
@@ -619,6 +635,14 @@ defmodule Lightning.Config do
 
   def log_lines_search_indexing_max_batches do
     impl().log_lines_search_indexing_max_batches()
+  end
+
+  def dataclip_search_indexing_batch_size do
+    impl().dataclip_search_indexing_batch_size()
+  end
+
+  def dataclip_search_indexing_max_batches do
+    impl().dataclip_search_indexing_max_batches()
   end
 
   def default_ecto_database_timeout do

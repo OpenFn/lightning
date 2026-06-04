@@ -1,6 +1,7 @@
 defmodule Lightning.TestUtils do
   @moduledoc false
 
+  alias Lightning.Invocation.DataclipSearchVectorWorker
   alias Lightning.LogLines.SearchVectorWorker
 
   @doc """
@@ -37,6 +38,28 @@ defmodule Lightning.TestUtils do
   def flush_log_search_index do
     {:ok, indexed} =
       Oban.Testing.perform_job(SearchVectorWorker, %{}, repo: Lightning.Repo)
+
+    indexed
+  end
+
+  @doc """
+  Drain the deferred `dataclips.search_vector` backlog synchronously.
+
+  Dataclips are inserted with `search_vector` left NULL and indexed asynchronously
+  by `Lightning.Invocation.DataclipSearchVectorWorker`. In tests that insert
+  dataclips and then query dataclip body search, call this after inserting (and
+  before searching) so the vector is populated within the SQL sandbox.
+
+  Runs the worker in-process via `Oban.Testing.perform_job/3`, so it sees the
+  uncommitted sandbox rows. Returns the number of rows indexed; a no-op (`0`) when
+  nothing is pending, so it is safe to call unconditionally.
+  """
+  @spec flush_dataclip_search_index() :: non_neg_integer()
+  def flush_dataclip_search_index do
+    {:ok, indexed} =
+      Oban.Testing.perform_job(DataclipSearchVectorWorker, %{},
+        repo: Lightning.Repo
+      )
 
     indexed
   end
