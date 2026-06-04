@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.16.7] - 2026-06-04
+
+### Changed
+
 - Stop reporting expected credential-resolution failures (OAuth re-auth needed,
   misconfigured project environment, transient provider errors) to Sentry. These
   are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
