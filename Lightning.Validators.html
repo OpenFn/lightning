@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.6">
+    <meta name="project" content="Lightning v2.16.7">
 
 
-    <title>Lightning.Validators — Lightning v2.16.6</title>
+    <title>Lightning.Validators — Lightning v2.16.7</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-01FEABAB.js"></script>
+    <script defer src="dist/sidebar_items-D38E4FFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.6
+          v2.16.7
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Validators</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.6)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.16.7)</small>
 
     </h1>
 
@@ -263,10 +263,10 @@ they cannot drift apart.</p>
       </div>
 
 <p>Validate that only one of the fields is set at a time.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="2473251676-1">(</span><span class="w">
-  </span><span class="p" data-group-id="2473251676-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="2473251676-2">]</span><span class="p">,</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="0627198786-1">(</span><span class="w">
+  </span><span class="p" data-group-id="0627198786-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="0627198786-2">]</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;source_job_id and source_trigger_id are mutually exclusive&quot;</span><span class="w">
-</span><span class="p" data-group-id="2473251676-1">)</span></code></pre>
+</span><span class="p" data-group-id="0627198786-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate_one_required/3">
@@ -394,7 +394,7 @@ foreign keys left unset are unaffected.</p><blockquote><p><strong>Narrowing:</st
 rejects raw 16-byte binaries and unsubstituted placeholders that <code class="inline">cast</code>
 accepted. Confirmed no live caller relied on the laxer behaviour (uppercase
 canonical UUIDs still pass).</p></blockquote><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="0231692001-1">(</span><span class="p" data-group-id="0231692001-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="0231692001-2">]</span><span class="p" data-group-id="0231692001-1">)</span></code></pre>
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="6399680193-1">(</span><span class="p" data-group-id="6399680193-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="6399680193-2">]</span><span class="p" data-group-id="6399680193-1">)</span></code></pre>
   </section>
 </section>
 
