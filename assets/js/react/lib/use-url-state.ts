@@ -82,6 +82,29 @@ class URLStore {
    */
   getSnapshot = () => this.state;
 
+  // A fresh, mutable copy of the current URL. Writers seed from this and
+  // override only the dimension they own (search or hash); everything else
+  // carries over untouched.
+  private currentURL = () => new URL(window.location.href);
+
+  private urlsAreEquivalent = (a: URL, b: URL) => {
+    if (a.pathname !== b.pathname || a.hash !== b.hash) return false;
+    const ap = new URLSearchParams(a.search);
+    ap.sort();
+    const bp = new URLSearchParams(b.search);
+    bp.sort();
+    return ap.toString() === bp.toString();
+  };
+
+  // Skip no-op writes so mount-time normalization doesn't stack duplicate
+  // browser history entries (a no-op pushState never notifies subscribers
+  // anyway, due to the guard in updateParams). Param order is ignored so a
+  // reorder-only write is also treated as a no-op.
+  private pushIfChanged = (newURL: URL) => {
+    if (this.urlsAreEquivalent(newURL, this.currentURL())) return;
+    history.pushState({}, '', newURL);
+  };
+
   /**
    * Update URL search params (merges with existing params).
    * Accepts strings, numbers, booleans; null removes param.
@@ -89,24 +112,17 @@ class URLStore {
   updateSearchParams = (
     updates: Record<string, string | number | boolean | null>
   ) => {
-    const newParams = new URLSearchParams(window.location.search);
+    const newURL = this.currentURL();
 
     Object.entries(updates).forEach(([key, value]) => {
       if (value === null) {
-        newParams.delete(key);
+        newURL.searchParams.delete(key);
       } else {
-        newParams.set(key, String(value));
+        newURL.searchParams.set(key, String(value));
       }
     });
 
-    const newURL = new URL(window.location.pathname, window.location.origin);
-    newURL.search = newParams.toString();
-    newURL.hash = window.location.hash;
-    // Skip no-op writes so mount-time normalization doesn't stack
-    // duplicate browser history entries (a no-op pushState never notifies
-    // subscribers anyway, due to the guard in updateParams).
-    if (newURL.href === window.location.href) return;
-    history.pushState({}, '', newURL);
+    this.pushIfChanged(newURL);
   };
 
   /**
@@ -116,18 +132,14 @@ class URLStore {
   replaceSearchParams = (
     newParams: Record<string, string | number | boolean | null>
   ) => {
-    const newURL = new URL(window.location.pathname, window.location.origin);
+    const newURL = this.currentURL();
+    newURL.search = '';
     Object.entries(newParams).forEach(([key, value]) => {
       if (value !== null) {
         newURL.searchParams.set(key, String(value));
       }
     });
-    newURL.hash = window.location.hash;
-    // Skip no-op writes so mount-time normalization doesn't stack
-    // duplicate browser history entries (a no-op pushState never notifies
-    // subscribers anyway, due to the guard in updateParams).
-    if (newURL.href === window.location.href) return;
-    history.pushState({}, '', newURL);
+    this.pushIfChanged(newURL);
   };
 
   /**
@@ -135,11 +147,9 @@ class URLStore {
    * Pass null to remove hash.
    */
   updateHash = (hash: string | null) => {
-    const newURL =
-      window.location.pathname +
-      window.location.search +
-      (hash ? `#${hash}` : '');
-    history.pushState({}, '', newURL);
+    const newURL = this.currentURL();
+    newURL.hash = hash ? `#${hash}` : '';
+    this.pushIfChanged(newURL);
   };
 }
 
