@@ -941,10 +941,22 @@ export const createWorkflowStore = () => {
       // Find all incoming edges (where this job is the target)
       const incomingEdgeIndices = getIncomingEdgeIndices(edges, id);
 
+      // Find triggers whose cron cursor points at the job being removed.
+      const triggersArray = ydoc.getArray('triggers');
+      const triggers = triggersArray.toArray() as Y.Map<unknown>[];
+      const cursorTriggers = triggers.filter(
+        trigger => trigger.get('cron_cursor_job_id') === id
+      );
+
       ydoc.transact(() => {
         // Delete incoming edges first (highest index to lowest)
         incomingEdgeIndices.forEach(edgeIndex => {
           edgesArray.delete(edgeIndex, 1);
+        });
+
+        // Clear any cron cursor reference to the job being removed
+        cursorTriggers.forEach(trigger => {
+          trigger.set('cron_cursor_job_id', null);
         });
 
         // Then delete the job

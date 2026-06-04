@@ -16,6 +16,22 @@ defmodule Lightning.Workflows.JobTest do
   end
 
   describe "changeset/2" do
+    test "a malformed id is a changeset error, not an Ecto.ChangeError on save" do
+      # An unsubstituted import placeholder reaching :id (a :binary_id field)
+      # passes cast/3 and would only raise when dumped on insert. validate_uuid
+      # surfaces it as a changeset error instead.
+      changeset =
+        Job.changeset(%Job{}, %{
+          id: "__ID_JOB_Envoyer-dans-DHIS2__",
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:id] == {"is not a valid UUID", []}
+    end
+
     test "accepts keychain_credential_id in changeset" do
       workflow = insert(:workflow)
 

@@ -97,6 +97,7 @@ defmodule Lightning.Workflows.Job do
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
+    |> Validators.validate_uuid([:id])
     |> Validators.validate_exclusive(
       [:project_credential_id, :keychain_credential_id],
       "cannot be set when the other credential type is also set"

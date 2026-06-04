@@ -320,6 +320,39 @@ defmodule Lightning.Workflows.TriggerTest do
       assert get_field(changeset, :cron_cursor_job_id) == nil
     end
 
+    test "a malformed cron_cursor_job_id is a changeset error, not an Ecto.ChangeError on save" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          cron_cursor_job_id: "__ID_JOB_Envoyer-dans-DHIS2__"
+        })
+
+      refute changeset.valid?
+
+      assert changeset.errors[:cron_cursor_job_id] ==
+               {"is not a valid UUID", []}
+    end
+
+    test "cron_cursor_job_id pointing at a non-existent job is a changeset error, not a raise" do
+      workflow = insert(:workflow)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+
+      changeset =
+        Trigger.changeset(trigger, %{cron_cursor_job_id: Ecto.UUID.generate()})
+
+      assert {:error, changeset} = Lightning.Repo.update(changeset)
+
+      assert {"the referenced cursor job does not exist", _} =
+               changeset.errors[:cron_cursor_job_id]
+    end
+
     test "allows webhook_reply to be set for webhook triggers" do
       changeset =
         Trigger.changeset(%Trigger{}, %{

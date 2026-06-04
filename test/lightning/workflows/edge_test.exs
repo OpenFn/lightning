@@ -14,6 +14,19 @@ defmodule Lightning.Workflows.EdgeTest do
       assert changeset.valid?
     end
 
+    test "a malformed uuid field is a changeset error, not an Ecto.ChangeError on save" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_job_id: "__ID_JOB_Envoyer-dans-DHIS2__",
+          target_job_id: Ecto.UUID.generate(),
+          condition_type: :on_job_success
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:source_job_id] == {"is not a valid UUID", []}
+    end
+
     test "edges must have a condition" do
       changeset =
         Edge.changeset(%Edge{}, %{

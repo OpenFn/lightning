@@ -61,6 +61,17 @@ and this project adheres to
   [#4810](https://github.com/OpenFn/lightning/issues/4810)
 - Workflow channel raises an exception when fetching trigger auth methods for an
   unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a job that no longer exists. The `Trigger`
+  changeset now declares the foreign key constraint, and `removeJob` clears any
+  cron cursor pointing at a deleted job, so the violation surfaces as a
+  validation error instead of an `Ecto.ConstraintError`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ## [2.16.6] - 2026-05-27
 

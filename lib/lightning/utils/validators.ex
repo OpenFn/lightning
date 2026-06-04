@@ -81,6 +81,37 @@ defmodule Lightning.Validators do
   end
 
   @doc """
+  Validates that the given field(s) contain a well-formed UUID.
+
+  `:binary_id` fields are not format-checked by `cast/3` — a malformed value
+  (e.g. an unsubstituted import placeholder) passes casting and only raises
+  `Ecto.ChangeError` when dumped on insert/update. This converts that into a
+  changeset error instead.
+
+  Only runs when a non-nil change is present for the field, so optional
+  foreign keys left unset are unaffected.
+
+  ```
+  changeset
+  |> validate_uuid([:id, :workflow_id])
+  ```
+  """
+  @spec validate_uuid(Ecto.Changeset.t(), atom() | [atom()]) ::
+          Ecto.Changeset.t()
+  def validate_uuid(changeset, fields) when is_list(fields) do
+    Enum.reduce(fields, changeset, &validate_uuid(&2, &1))
+  end
+
+  def validate_uuid(changeset, field) when is_atom(field) do
+    validate_change(changeset, field, fn _, value ->
+      case Ecto.UUID.cast(value) do
+        {:ok, _} -> []
+        :error -> [{field, "is not a valid UUID"}]
+      end
+    end)
+  end
+
+  @doc """
   Validates a URL in a changeset field.
 
   Ensures that the URL:
