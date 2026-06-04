@@ -945,6 +945,69 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "merge/4 workflows and credentials" do
+    test "merges a brand-new sandbox workflow into the parent" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # Add a brand-new workflow to the sandbox only.
+      insert(:simple_workflow, project: sandbox, name: "NewFlow")
+
+      refute Repo.exists?(
+               from(w in Workflow,
+                 where: w.project_id == ^parent.id and w.name == "NewFlow"
+               )
+             )
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      new_workflow =
+        Workflow
+        |> Repo.get_by!(project_id: parent.id, name: "NewFlow")
+        |> Repo.preload([:jobs, :triggers, :edges])
+
+      assert length(new_workflow.jobs) == 1
+      assert length(new_workflow.triggers) == 1
+      assert length(new_workflow.edges) == 1
+    end
+
+    test "merges a credential newly added to an existing step" do
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j2: parent_a2}} =
+        build_parent_fixture!(:owner)
+
+      # Start with A2 (an existing parent step) having no credential.
+      Repo.update!(Ecto.Changeset.change(parent_a2, project_credential_id: nil))
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # The sandbox clones the parent's credential as its own project_credential
+      # referencing the same underlying credential.
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # In the sandbox, add that credential to the previously-uncredentialed
+      # step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A2")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The credential added in the sandbox should propagate to the parent,
+      # mapped to the parent's project_credential for the same credential.
+      #
+      # NOTE: this currently fails. The merge drops credential changes made to
+      # existing steps (matched jobs reuse the target's credential ids), so A2
+      # ends up with no credential in the parent.
+      assert Repo.reload!(parent_a2).project_credential_id == pc.id
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
