@@ -337,20 +337,21 @@ describe('createAIAssistantStore', () => {
   });
 
   describe('Streaming Status', () => {
-    it('should clear a pre-text status on the first chunk only', () => {
-      store.setStreamingStatus('Thinking...');
-      store._appendStreamingChunk('Here');
-
-      // First chunk clears the pre-text status
-      expect(store.getSnapshot().streamingStatus).toBeNull();
-
-      // A status streamed after the text answer survives later chunks
-      // (text drains one char at a time, so this must not be wiped).
+    it('should not clear the status when content is appended', () => {
+      // Clearing on new text is the channel buffer's job (at network
+      // arrival), not the drain — so the store must leave status alone.
       store.setStreamingStatus('Writing code...');
-      store._appendStreamingChunk(' is the answer');
+      store._appendStreamingChunk('Here is the answer');
 
       expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
       expect(store.getSnapshot().streamingContent).toBe('Here is the answer');
+    });
+
+    it('should clear the status when set to null', () => {
+      store.setStreamingStatus('Thinking...');
+      store.setStreamingStatus(null);
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
     });
 
     it('should clear the status once changes arrive', () => {

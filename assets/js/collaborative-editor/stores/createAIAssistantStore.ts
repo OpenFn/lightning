@@ -576,20 +576,12 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
   const _appendStreamingChunk = (content: string) => {
     state = produce(state, draft => {
-      const hadContent = !!draft.streamingContent;
       draft.streamingContent = (draft.streamingContent || '') + content;
-      // Clear the pre-text status (e.g. "Thinking...") only on the first
-      // chunk. Text drains one char at a time, so nulling on every chunk
-      // would wipe any status Apollo streams *after* the text answer
-      // (e.g. "Writing code...") before it's ever visible.
-      if (!hadContent) {
-        draft.streamingStatus = null;
-      }
     });
     notify('_appendStreamingChunk');
   };
 
-  const setStreamingStatus = (text: string) => {
+  const setStreamingStatus = (text: string | null) => {
     state = produce(state, draft => {
       draft.streamingStatus = text;
     });
