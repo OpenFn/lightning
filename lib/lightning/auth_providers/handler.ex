@@ -122,11 +122,16 @@ defmodule Lightning.AuthProviders.Handler do
        )
        when is_binary(endpoint) do
     if is_binary(userinfo["email"]) do
-      userinfo
+      Map.put(userinfo, "email_verified", true)
     else
       case fetch_primary_verified_email(client, endpoint) do
-        nil -> userinfo
-        email -> Map.put(userinfo, "email", email)
+        nil ->
+          userinfo
+
+        email ->
+          userinfo
+          |> Map.put("email", email)
+          |> Map.put("email_verified", true)
       end
     end
   end

@@ -130,6 +130,7 @@ defmodule LightningWeb.OidcControllerTest do
 
       expect_userinfo(bypass, handler.wellknown, %{
         "email" => user.email,
+        "email_verified" => true,
         "sub" => "unlinked-uid"
       })
 
@@ -161,6 +162,7 @@ defmodule LightningWeb.OidcControllerTest do
 
       expect_userinfo(bypass, handler.wellknown, %{
         "email" => email,
+        "email_verified" => true,
         "sub" => "fresh-uid-1",
         "name" => "First Last"
       })
@@ -205,6 +207,96 @@ defmodule LightningWeb.OidcControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "Could not retrieve your email"
+    end
+
+    test "refuses to provision a new account when the email is not verified", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      email = "unverified-#{System.unique_integer([:positive])}@example.com"
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => email,
+        "email_verified" => false,
+        "sub" => "unverified-uid"
+      })
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "has not been verified"
+
+      # No account or identity is provisioned for an unverified email
+      refute Lightning.Accounts.get_user_by_email(email)
+
+      refute Lightning.Accounts.get_user_by_identity(
+               handler.name,
+               "unverified-uid"
+             )
+
+      refute get_session(conn, :sso_pending_signup)
+    end
+
+    test "rejects an unverified email without revealing an existing account", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "email_verified" => false,
+        "sub" => "unverified-existing-uid"
+      })
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      # The unverified probe gets the generic "not verified" message, not the
+      # "an account already exists" notice — so account existence isn't leaked.
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "has not been verified"
+
+      refute Phoenix.Flash.get(conn.assigns.flash, :info)
+    end
+
+    test "refuses to provision a new account when no email_verified claim is present",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      expect_token(bypass, handler.wellknown)
+      email = "no-claim-#{System.unique_integer([:positive])}@example.com"
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => email,
+        "sub" => "no-claim-uid"
+      })
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "has not been verified"
+
+      refute Lightning.Accounts.get_user_by_email(email)
     end
 
     test "logs the person in but marks totp as pending for users wth MFA enabled",

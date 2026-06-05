@@ -210,18 +210,31 @@ defmodule LightningWeb.OidcController do
         do_log_in(conn, user)
 
       nil ->
-        case Accounts.get_user_by_email(email) do
-          %User{} ->
-            conn
-            |> put_flash(
-              :info,
-              "An account already exists for #{email}. Sign in and link your #{display_name(provider)} account from your profile settings to use single sign-on."
-            )
-            |> redirect(to: Routes.user_session_path(conn, :new))
-
-          nil ->
-            request_signup_confirmation(conn, provider, uid, email, userinfo)
+        if email_verified?(userinfo) do
+          handle_unlinked_identity(conn, provider, uid, email, userinfo)
+        else
+          conn
+          |> put_flash(
+            :error,
+            "Your #{display_name(provider)} email address has not been verified. Please verify it with #{display_name(provider)} and try signing in again."
+          )
+          |> redirect(to: Routes.user_session_path(conn, :new))
         end
+    end
+  end
+
+  defp handle_unlinked_identity(conn, provider, uid, email, userinfo) do
+    case Accounts.get_user_by_email(email) do
+      %User{} ->
+        conn
+        |> put_flash(
+          :info,
+          "An account already exists for #{email}. Sign in and link your #{display_name(provider)} account from your profile settings to use single sign-on."
+        )
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      nil ->
+        request_signup_confirmation(conn, provider, uid, email, userinfo)
     end
   end
 
@@ -272,6 +285,11 @@ defmodule LightningWeb.OidcController do
 
   defp extract_email(%{"email" => email}) when is_binary(email), do: email
   defp extract_email(_), do: nil
+
+  defp email_verified?(%{"email_verified" => verified}),
+    do: verified in [true, "true"]
+
+  defp email_verified?(_), do: false
 
   defp extract_uid(%{"sub" => sub}) when is_binary(sub), do: sub
   defp extract_uid(%{"id" => id}) when is_integer(id), do: to_string(id)
