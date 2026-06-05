@@ -1038,6 +1038,28 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert merged_job.project_credential_id == pc.id
     end
+
+    test "merges a credential removed from an existing step in the sandbox" do
+      # A1 references the credential in the parent (per build_parent_fixture!).
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j1: parent_a1}} =
+        build_parent_fixture!(:owner)
+
+      assert parent_a1.project_credential_id == pc.id
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # In the sandbox, remove the credential from the step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: nil)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The removal propagates to the parent: the step no longer references a
+      # credential.
+      assert Repo.reload!(parent_a1).project_credential_id == nil
+    end
   end
 
   describe "keychains" do
