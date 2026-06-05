@@ -360,7 +360,50 @@ been marked as recovered.
 Once all files have either been recovered or discarded, the triggers can be
 enabled once more.
 
+### Single Sign-On (SSO)
+
+Lightning supports SSO **sign-in** with GitHub and Google, letting users
+authenticate with an external identity provider instead of an email/password.
+
+> SSO sign-in is distinct from two other, similarly-named features. Don't mix up
+> their environment variables:
+>
+> - **GitHub App** (`GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`,
+>   `GITHUB_APP_CLIENT_SECRET`, `GITHUB_CERT`) — used for project **version
+>   control / repo sync**, with callback `/oauth/github/callback`. See
+>   [GitHub](#github) above. This is **not** sign-in.
+> - **Credential OAuth** — clients that **jobs** use to connect to external
+>   systems (e.g. Google Sheets, Salesforce). These are configured per-project
+>   in the UI, not via these environment variables.
+
+Enable a provider by setting its client ID and secret. Each provider has its own
+callback (redirect) URL that you must register in the provider's OAuth app
+settings. The redirect URL is derived automatically from your configured
+host/scheme/port — you only need to register the matching URL below.
+
+| Provider | Variables                                  | Redirect / Callback URL                                  |
+| -------- | ------------------------------------------ | -------------------------------------------------------- |
+| GitHub   | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/github/callback` |
+| Google   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/google/callback` |
+
+For **GitHub**, create an **OAuth App** (Settings → Developer settings → OAuth
+Apps — _not_ a GitHub App) and request the `read:user` and `user:email` scopes.
+GitHub's userinfo endpoint omits the email for users without a public profile
+email, so Lightning resolves the primary, verified address via the granted
+`user:email` scope.
+
+> ⚠️ **Upgrading from the older Google login?** The new Google SSO provider
+> reuses the same `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` as the
+> [Google Oauth2](#google-oauth2) setup below, but expects the callback
+> `/authenticate/google/callback` (not `/authenticate/callback`). Add the new
+> callback URL to your Google OAuth client's authorized redirect URIs.
+
 ### Google Oauth2
+
+> These `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` variables are also used by
+> [Single Sign-On (SSO)](#single-sign-on-sso) above, which expects a different
+> callback URL (`/authenticate/google/callback`). If you use Google for SSO
+> sign-in, register both callback URLs on the same OAuth client.
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.
