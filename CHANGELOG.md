@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Single Sign-On (SSO) sign-in with GitHub and Google, including account
+  [#4621](https://github.com/OpenFn/lightning/issues/4621)
+
 ### Changed
 
 ### Fixed
