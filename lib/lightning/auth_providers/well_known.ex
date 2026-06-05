@@ -11,7 +11,8 @@ defmodule Lightning.AuthProviders.WellKnown do
     :introspection_endpoint
   ]
 
-  # `:user_emails_endpoint` resolves a verified email for providers (e.g. GitHub) whose userinfo endpoint doesn't return one.
+  # `:user_emails_endpoint` resolves a verified email for providers (e.g.
+  # GitHub) whose userinfo endpoint doesn't return one.
   defstruct @discovery_fields ++ [:user_emails_endpoint]
 
   @type t :: %__MODULE__{

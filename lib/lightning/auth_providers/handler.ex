@@ -114,7 +114,8 @@ defmodule Lightning.AuthProviders.Handler do
     maybe_resolve_email(client, handler.wellknown, userinfo)
   end
 
-  # Some providers (e.g. GitHub) omit `email` from userinfo; fall back to the emails endpoint and pick the primary, verified address.
+  # Some providers (e.g. GitHub) omit `email` from userinfo; fall back to the
+  # emails endpoint and pick the primary, verified address.
   defp maybe_resolve_email(
          client,
          %{user_emails_endpoint: endpoint},
