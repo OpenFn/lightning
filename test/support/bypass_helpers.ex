@@ -89,6 +89,19 @@ defmodule Lightning.BypassHelpers do
   end
 
   @doc """
+  Add a user emails endpoint expectation (e.g. GitHub's `/user/emails`). Used to
+  test providers that resolve a verified email from a dedicated endpoint.
+  """
+  def expect_user_emails(bypass, wellknown, emails) do
+    path = URI.new!(wellknown.user_emails_endpoint).path
+
+    Bypass.expect(bypass, "GET", path, fn conn ->
+      Plug.Conn.put_resp_header(conn, "content-type", "application/json")
+      |> Plug.Conn.resp(200, Jason.encode!(emails))
+    end)
+  end
+
+  @doc """
   Generate an http url for use with a Bypass test process
   """
   def endpoint_url(bypass) do

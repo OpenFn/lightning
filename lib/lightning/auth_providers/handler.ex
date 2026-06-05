@@ -106,10 +106,55 @@ defmodule Lightning.AuthProviders.Handler do
   @spec get_userinfo(handler :: __MODULE__.t(), token :: OAuth2.AccessToken.t()) ::
           map()
   def get_userinfo(handler, token) do
-    OAuth2.Client.get!(
-      %{handler.client | token: token},
-      handler.wellknown.userinfo_endpoint
-    ).body
+    client = %{handler.client | token: token}
+
+    userinfo =
+      OAuth2.Client.get!(client, handler.wellknown.userinfo_endpoint).body
+
+    maybe_resolve_email(client, handler.wellknown, userinfo)
+  end
+
+  # Some providers (e.g. GitHub) omit `email` from userinfo; fall back to the emails endpoint and pick the primary, verified address.
+  defp maybe_resolve_email(
+         client,
+         %{user_emails_endpoint: endpoint},
+         %{} = userinfo
+       )
+       when is_binary(endpoint) do
+    if is_binary(userinfo["email"]) do
+      userinfo
+    else
+      case fetch_primary_verified_email(client, endpoint) do
+        nil -> userinfo
+        email -> Map.put(userinfo, "email", email)
+      end
+    end
+  end
+
+  defp maybe_resolve_email(_client, _wellknown, userinfo), do: userinfo
+
+  defp fetch_primary_verified_email(client, endpoint) do
+    case OAuth2.Client.get(client, endpoint) do
+      {:ok, %OAuth2.Response{body: emails}} when is_list(emails) ->
+        select_primary_verified_email(emails)
+
+      _ ->
+        nil
+    end
+  end
+
+  defp select_primary_verified_email(emails) do
+    primary =
+      Enum.find_value(emails, fn
+        %{"primary" => true, "verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
+
+    primary ||
+      Enum.find_value(emails, fn
+        %{"verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
   end
 
   defp validate_opts(opts) do

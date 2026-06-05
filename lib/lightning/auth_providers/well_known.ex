@@ -4,20 +4,22 @@ defmodule Lightning.AuthProviders.WellKnown do
   """
   use HTTPoison.Base
 
-  @fields [
+  @discovery_fields [
     :authorization_endpoint,
     :token_endpoint,
     :userinfo_endpoint,
     :introspection_endpoint
   ]
 
-  defstruct @fields
+  # `:user_emails_endpoint` resolves a verified email for providers (e.g. GitHub) whose userinfo endpoint doesn't return one.
+  defstruct @discovery_fields ++ [:user_emails_endpoint]
 
   @type t :: %__MODULE__{
           authorization_endpoint: String.t(),
           token_endpoint: String.t(),
           userinfo_endpoint: String.t(),
-          introspection_endpoint: String.t()
+          introspection_endpoint: String.t(),
+          user_emails_endpoint: String.t() | nil
         }
 
   @spec fetch(discovery_url :: String.t()) ::
@@ -42,7 +44,7 @@ defmodule Lightning.AuthProviders.WellKnown do
   def new(%{} = json_body) do
     struct!(
       __MODULE__,
-      @fields
+      @discovery_fields
       |> Enum.map(fn key ->
         {key, json_body[key |> to_string()]}
       end)

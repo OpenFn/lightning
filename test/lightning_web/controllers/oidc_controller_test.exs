@@ -33,6 +33,35 @@ defmodule LightningWeb.OidcControllerTest do
     {:ok, handler: handler, bypass: bypass}
   end
 
+  # A handler that resolves email from a dedicated emails endpoint, mirroring
+  # GitHub's `/user/emails`.
+  def setup_handler_with_user_emails(_) do
+    bypass = Bypass.open()
+
+    wellknown = %AuthProviders.WellKnown{
+      authorization_endpoint: "#{endpoint_url(bypass)}/authorization_endpoint",
+      token_endpoint: "#{endpoint_url(bypass)}/token_endpoint",
+      userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint",
+      user_emails_endpoint: "#{endpoint_url(bypass)}/user_emails_endpoint"
+    }
+
+    handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+
+    {:ok, handler} =
+      AuthProviders.Handler.new(handler_name,
+        wellknown: wellknown,
+        client_id: "id",
+        client_secret: "secret",
+        redirect_uri: "http://localhost/callback_url"
+      )
+
+    AuthProviders.create_handler(handler)
+
+    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+
+    {:ok, handler: handler, bypass: bypass}
+  end
+
   describe "GET /authenticate/:provider" do
     setup :setup_handler
 
@@ -270,6 +299,135 @@ defmodule LightningWeb.OidcControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Authentication failed"
+    end
+  end
+
+  # GitHub's /user endpoint returns a null email for users without a public
+  # profile email, even when the user:email scope is granted. Providers that set
+  # a `user_emails_endpoint` must resolve the primary, verified email from it.
+  describe "GET /authenticate/:provider/callback (email resolution fallback)" do
+    setup :setup_handler_with_user_emails
+
+    test "resolves the primary verified email when userinfo has none", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+
+      # userinfo carries no email (the GitHub "no public email" case)
+      expect_userinfo(bypass, handler.wellknown, %{"sub" => "gh-uid-1"})
+
+      expect_user_emails(bypass, handler.wellknown, [
+        %{
+          "email" => "secondary@example.com",
+          "primary" => false,
+          "verified" => true
+        },
+        %{
+          "email" => "primary@example.com",
+          "primary" => true,
+          "verified" => true
+        },
+        %{
+          "email" => "unverified@example.com",
+          "primary" => false,
+          "verified" => false
+        }
+      ])
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      # The signup confirmation flow is reached, meaning an email was resolved.
+      assert redirected_to(conn) == ~p"/authenticate/signup/confirm"
+
+      assert get_session(conn, :sso_pending_signup)["email"] ==
+               "primary@example.com"
+    end
+
+    test "falls back to any verified email when none is marked primary", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      expect_userinfo(bypass, handler.wellknown, %{"sub" => "gh-uid-2"})
+
+      expect_user_emails(bypass, handler.wellknown, [
+        %{
+          "email" => "unverified@example.com",
+          "primary" => true,
+          "verified" => false
+        },
+        %{
+          "email" => "verified@example.com",
+          "primary" => false,
+          "verified" => true
+        }
+      ])
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert get_session(conn, :sso_pending_signup)["email"] ==
+               "verified@example.com"
+    end
+
+    test "errors when the emails endpoint has no verified address", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      expect_userinfo(bypass, handler.wellknown, %{"sub" => "gh-uid-3"})
+
+      expect_user_emails(bypass, handler.wellknown, [
+        %{
+          "email" => "unverified@example.com",
+          "primary" => true,
+          "verified" => false
+        }
+      ])
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Could not retrieve your email"
+    end
+
+    test "prefers the userinfo email and skips the emails endpoint when present",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "sub" => "gh-uid-4",
+        "email" => "public@example.com"
+      })
+
+      # No expect_user_emails/3 stub: if the endpoint were called, Bypass would
+      # fail the test, proving the extra request is skipped.
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert get_session(conn, :sso_pending_signup)["email"] ==
+               "public@example.com"
     end
   end
 
