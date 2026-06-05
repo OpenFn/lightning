@@ -592,12 +592,7 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   # Builds a map of `source_project_credential_id => target_project_credential_id`
-  # by matching on the shared underlying `credential_id`. A sandbox and its
-  # parent reference the same credentials, but via project-scoped
-  # `project_credentials` rows with different ids; this map translates a
-  # sandbox-scoped reference into the parent's equivalent. Source credentials
-  # the target project does not have map to `nil` (the reference is dropped, as
-  # it cannot be imported into the target project).
+  # by matching on the shared underlying `credential_id`
   defp build_credential_remap(
          source_project_credentials,
          target_project_credentials
@@ -610,9 +605,6 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  # Rewrites every job's `project_credential_id` in the merged document using
-  # the source -> target credential map. Ids that are not source-scoped (target
-  # ids on passthrough jobs, or `nil`) are left untouched.
   defp remap_document_credentials(document, credential_map)
        when map_size(credential_map) == 0,
        do: document
