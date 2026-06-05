@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-D38E4FFB.js"></script>
+    <script defer src="dist/sidebar_items-8AF552CD.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,11 +112,11 @@ Lightning
 
     <section id="moduledoc">
 <p>Index LiveView for project settings.</p><h2 id="module-view-extension-slots" class="section-heading"><a href="#module-view-extension-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">View-extension slots</span></h2><p>Two slots let downstream apps inject LiveComponents into the settings page
-by registering them in route metadata:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2844088736-1">{</span><span class="s">&quot;/projects/:project_id/settings&quot;</span><span class="p">,</span><span class="w"> </span><span class="nc">LightningWeb.ProjectLive.Settings</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p">,</span><span class="w">
- </span><span class="ss">metadata</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2844088736-2">%{</span><span class="w">
+by registering them in route metadata:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="8206611527-1">{</span><span class="s">&quot;/projects/:project_id/settings&quot;</span><span class="p">,</span><span class="w"> </span><span class="nc">LightningWeb.ProjectLive.Settings</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p">,</span><span class="w">
+ </span><span class="ss">metadata</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8206611527-2">%{</span><span class="w">
    </span><span class="ss">concurrency_input</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.ConcurrencyInputComponent</span><span class="p">,</span><span class="w">
    </span><span class="ss">usage_caps_input</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.UsageCapsInputComponent</span><span class="w">
- </span><span class="p" data-group-id="2844088736-2">}</span><span class="p" data-group-id="2844088736-1">}</span></code></pre><p>Each slot has its own assigns contract, which the component must accept:</p><ul><li><p><code class="inline">:concurrency_input</code> receives <code class="inline">field</code> (the <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> field for
+ </span><span class="p" data-group-id="8206611527-2">}</span><span class="p" data-group-id="8206611527-1">}</span></code></pre><p>Each slot has its own assigns contract, which the component must accept:</p><ul><li><p><code class="inline">:concurrency_input</code> receives <code class="inline">field</code> (the <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> field for
 <code class="inline">project.concurrency</code>), <code class="inline">project</code>, and <code class="inline">disabled</code> (a pre-computed
 boolean — Lightning resolves whether the current user is allowed to
 edit the value and passes the result through).</p></li><li><p><code class="inline">:usage_caps_input</code> receives <code class="inline">project</code> and <code class="inline">current_user</code>. The
