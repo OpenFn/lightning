@@ -150,6 +150,19 @@ defmodule Lightning.Collaboration.Registry do
     ])
   end
 
+  @doc """
+  List the `document_name`s of every registered DocumentSupervisor.
+
+  The match spec lives here, beside the other key-shape knowledge this module
+  owns, rather than being hand-rolled by callers.
+  """
+  @spec doc_supervisor_names() :: [binary()]
+  def doc_supervisor_names do
+    Registry.select(__MODULE__, [
+      {{{:doc_supervisor, :"$1"}, :_, :_}, [], [:"$1"]}
+    ])
+  end
+
   def get_group(key) do
     select(key)
     |> Enum.reduce(%{}, fn [type, pid], acc ->

@@ -23,6 +23,7 @@ defmodule Lightning.SessionTest do
   require Logger
 
   setup do
+    on_exit(&stop_all_collaboration_documents/0)
     user = insert(:user)
     {:ok, user: user}
   end

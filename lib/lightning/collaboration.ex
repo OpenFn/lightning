@@ -52,26 +52,62 @@ defmodule Lightning.Collaborate do
       "Starting collaboration for document: #{document_name} (workflow: #{workflow.id})"
     )
 
-    # Ensure document supervisor exists for this document
-    case lookup_shared_doc(document_name) do
-      nil ->
-        Logger.info("Starting document for #{document_name}")
-        {:ok, _doc_supervisor_pid} = start_document(workflow, document_name)
+    # Ensure document supervisor exists for this document. Track whether THIS
+    # call started the document, so we only tear down a doc we orphaned.
+    started_here? =
+      case lookup_shared_doc(document_name) do
+        nil ->
+          Logger.info("Starting document for #{document_name}")
+          {:ok, _doc_supervisor_pid} = start_document(workflow, document_name)
+          true
 
-      _shared_doc_pid ->
-        Logger.info("Found existing document for #{document_name}")
-        :ok
-    end
+        _shared_doc_pid ->
+          Logger.info("Found existing document for #{document_name}")
+          false
+      end
 
     # Start session for this user
-    SessionSupervisor.start_child({
-      Session,
-      workflow: workflow,
-      user: user,
-      parent_pid: parent_pid,
-      document_name: document_name,
-      name: Registry.via({:session, "#{document_name}:#{session_id}", user.id})
-    })
+    result =
+      SessionSupervisor.start_child({
+        Session,
+        workflow: workflow,
+        user: user,
+        parent_pid: parent_pid,
+        document_name: document_name,
+        name: Registry.via({:session, "#{document_name}:#{session_id}", user.id})
+      })
+
+    case result do
+      {:ok, _session_pid} ->
+        result
+
+      _error ->
+        if started_here?, do: stop_document(document_name)
+        result
+    end
+  end
+
+  @doc """
+  Deterministically stops the collaborative document for `document_name`.
+
+  Tears down its DocumentSupervisor, SharedDoc and PersistenceWriter (with a
+  final flush). Synchronous and idempotent: returns `:ok` whether or not a
+  document is running. The symmetric partner to `start_document/2`.
+  """
+  @spec stop_document(document_name :: String.t()) :: :ok
+  def stop_document(document_name) do
+    case Registry.whereis({:doc_supervisor, document_name}) do
+      nil ->
+        :ok
+
+      pid ->
+        try do
+          DocumentSupervisor.stop(pid)
+          :ok
+        catch
+          :exit, _ -> :ok
+        end
+    end
   end
 
   def start_document(

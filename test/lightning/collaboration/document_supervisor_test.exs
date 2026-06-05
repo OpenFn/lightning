@@ -480,18 +480,21 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                         :killed},
                        5000
 
-        # Wait for the supervisor to restart the child
+        # Transient strategy restarts the child after an abnormal exit. The
+        # killed process is already confirmed dead (:killed :DOWN above); the
+        # BEAM may reuse its PID and its registry entry clears asynchronously,
+        # so poll for a registered AND live replacement rather than comparing
+        # PID identity.
         assert_eventually(
-          Registry.whereis({:doc_supervisor, context.document_name}) != nil,
+          case Registry.whereis({:doc_supervisor, context.document_name}) do
+            pid when is_pid(pid) -> Process.alive?(pid)
+            _ -> false
+          end,
           2000
         )
 
-        # Verify the restarted process is different
-        restarted_supervisor =
-          Registry.whereis({:doc_supervisor, context.document_name})
-
-        assert restarted_supervisor != doc_supervisor2
-        assert Process.alive?(restarted_supervisor)
+        assert %{active: 1} =
+                 DynamicSupervisor.count_children(setup_data.test_supervisor)
       end)
 
       # Verify the test supervisor itself is still alive (didn't crash due to child failure)

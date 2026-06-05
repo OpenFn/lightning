@@ -27,6 +27,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     GenServer.start_link(__MODULE__, args, opts)
   end
 
+  @doc """
+  Gracefully stops the DocumentSupervisor and its children.
+
+  Synchronous: returns only once `terminate/2` has run, which flushes the
+  PersistenceWriter (via the SharedDoc) and stops both children. Because the
+  child spec uses `restart: :transient`, a `:normal` stop is not restarted by
+  the DynamicSupervisor.
+  """
+  def stop(pid, timeout \\ 5_000) when is_pid(pid) do
+    GenServer.stop(pid, :normal, timeout)
+  end
+
   @impl true
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
