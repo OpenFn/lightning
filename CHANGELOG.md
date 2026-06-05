@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix email format validation not displaying in the Add Collaborators modal.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+
 - Fix issue where back button must be pressed 3 times to go back once from the
   Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
 - Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
