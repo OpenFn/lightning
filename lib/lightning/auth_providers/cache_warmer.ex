@@ -5,6 +5,8 @@ defmodule Lightning.AuthProviders.CacheWarmer do
   use Cachex.Warmer
   alias Lightning.AuthProviders
 
+  require Logger
+
   # Suppress dialyzer warning for Cachex.Warmer.init/1
   # This has been fixed upstream but not released on hex.
   # https://github.com/whitfin/cachex/issues/276
@@ -38,7 +40,13 @@ defmodule Lightning.AuthProviders.CacheWarmer do
           _ -> []
         end
       rescue
-        _ -> []
+        error ->
+          Logger.warning(
+            "AuthProviders.CacheWarmer failed to warm the DB-backed provider: " <>
+              Exception.message(error)
+          )
+
+          []
       end
 
     github_entries =

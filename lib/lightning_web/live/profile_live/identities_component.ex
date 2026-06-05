@@ -23,7 +23,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
          socket
          |> put_flash(
            :info,
-           "Unlinked your #{display_name(provider)} account."
+           "Unlinked your #{AuthProviders.display_name(provider)} account."
          )
          |> push_navigate(to: ~p"/profile")}
 
@@ -47,7 +47,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
          socket
          |> put_flash(
            :error,
-           "Could not unlink your #{display_name(provider)} account."
+           "Could not unlink your #{AuthProviders.display_name(provider)} account."
          )
          |> push_navigate(to: ~p"/profile")}
     end
@@ -123,7 +123,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
         />
         <div class="min-w-0">
           <p class="text-sm font-medium text-gray-900 capitalize">
-            {display_name(@provider.name)}
+            {AuthProviders.display_name(@provider.name)}
           </p>
           <%= if @provider.identity do %>
             <p class="text-xs text-gray-500 truncate">
@@ -143,7 +143,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
             phx-click="unlink-identity"
             phx-value-provider={@provider.name}
             phx-target={@myself}
-            data-confirm={"Unlink #{display_name(@provider.name)} from your account?"}
+            data-confirm={"Unlink #{AuthProviders.display_name(@provider.name)} from your account?"}
           >
             Unlink
           </.button>
@@ -160,6 +160,4 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
     </li>
     """
   end
-
-  defp display_name(provider), do: String.capitalize(provider)
 end

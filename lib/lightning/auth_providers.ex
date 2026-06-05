@@ -10,6 +10,12 @@ defmodule Lightning.AuthProviders do
   alias Lightning.AuthProviders.WellKnown
   alias Lightning.Repo
 
+  @doc """
+  Returns a human-friendly name for a provider, e.g. `"github"` -> `"Github"`.
+  """
+  @spec display_name(provider :: String.t()) :: String.t()
+  def display_name(provider), do: String.capitalize(provider)
+
   @spec get_existing() :: AuthConfig.t() | nil
   def get_existing do
     from(ap in AuthConfig) |> Repo.one()

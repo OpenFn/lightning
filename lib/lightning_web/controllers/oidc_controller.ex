@@ -171,7 +171,7 @@ defmodule LightningWeb.OidcController do
         conn
         |> put_flash(
           :info,
-          "Your #{display_name(provider)} account is already linked."
+          "Your #{AuthProviders.display_name(provider)} account is already linked."
         )
         |> redirect(to: ~p"/profile")
 
@@ -179,7 +179,7 @@ defmodule LightningWeb.OidcController do
         conn
         |> put_flash(
           :error,
-          "This #{display_name(provider)} identity is already linked to a different account."
+          "This #{AuthProviders.display_name(provider)} identity is already linked to a different account."
         )
         |> redirect(to: ~p"/profile")
 
@@ -189,7 +189,7 @@ defmodule LightningWeb.OidcController do
             conn
             |> put_flash(
               :info,
-              "Linked your #{display_name(provider)} account."
+              "Linked your #{AuthProviders.display_name(provider)} account."
             )
             |> redirect(to: ~p"/profile")
 
@@ -197,7 +197,7 @@ defmodule LightningWeb.OidcController do
             conn
             |> put_flash(
               :error,
-              "This #{display_name(provider)} identity is already linked to a different account."
+              "This #{AuthProviders.display_name(provider)} identity is already linked to a different account."
             )
             |> redirect(to: ~p"/profile")
 
@@ -205,7 +205,7 @@ defmodule LightningWeb.OidcController do
             conn
             |> put_flash(
               :error,
-              "Could not link your #{display_name(provider)} account. Please try again."
+              "Could not link your #{AuthProviders.display_name(provider)} account. Please try again."
             )
             |> redirect(to: ~p"/profile")
         end
@@ -224,7 +224,7 @@ defmodule LightningWeb.OidcController do
           conn
           |> put_flash(
             :error,
-            "Your #{display_name(provider)} email address has not been verified. Please verify it with #{display_name(provider)} and try signing in again."
+            "Your #{AuthProviders.display_name(provider)} email address has not been verified. Please verify it with #{AuthProviders.display_name(provider)} and try signing in again."
           )
           |> redirect(to: Routes.user_session_path(conn, :new))
         end
@@ -237,7 +237,7 @@ defmodule LightningWeb.OidcController do
         conn
         |> put_flash(
           :info,
-          "An account already exists for #{email}. Sign in and link your #{display_name(provider)} account from your profile settings to use single sign-on."
+          "An account already exists for #{email}. Sign in and link your #{AuthProviders.display_name(provider)} account from your profile settings to use single sign-on."
         )
         |> redirect(to: Routes.user_session_path(conn, :new))
 
@@ -332,8 +332,6 @@ defmodule LightningWeb.OidcController do
       Routes.user_session_path(conn, :new)
     end
   end
-
-  defp display_name(provider), do: String.capitalize(provider)
 
   defp broadcast_message(state, data) do
     [subscription_id, mod, component_id, current_tab] =
