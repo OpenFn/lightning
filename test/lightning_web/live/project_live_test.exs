@@ -1021,6 +1021,50 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    test "new credential in a sandbox pre-selects the sandbox and its root parent",
+         %{conn: conn, user: user} do
+      root =
+        insert(:project,
+          name: "root-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      intermediate = insert(:project, name: "intermediate", parent_id: root.id)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox-project",
+          parent_id: intermediate.id,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      # Both the active sandbox and the root parent are pre-selected; the
+      # intermediate project in the chain is not.
+      assert has_element?(
+               view,
+               "#remove-project-credential-button-new-#{sandbox.id}"
+             )
+
+      assert has_element?(
+               view,
+               "#remove-project-credential-button-new-#{root.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{intermediate.id}"
+             )
+    end
+
     test "support users can create new credentials in the project credentials page",
          %{
            conn: conn,
