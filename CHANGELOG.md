@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+
 ## [2.16.7] - 2026-06-04
 
 ### Changed
