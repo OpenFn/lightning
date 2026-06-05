@@ -454,11 +454,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             credential={
               %Lightning.Credentials.Credential{
                 user_id: @current_user.id,
-                project_credentials: [
-                  %Lightning.Projects.ProjectCredential{
-                    project_id: @project.id
-                  }
-                ]
+                project_credentials: @new_credential_project_credentials
               }
             }
             current_user={@current_user}
@@ -1462,6 +1458,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_canvas_placeholder: assigns.live_action == :new,
        show_workflow_ai_chat: false,
        show_job_credential_modal: false,
+       new_credential_project_credentials:
+         LightningWeb.CredentialLive.Helpers.default_project_credentials(
+           assigns.project
+         ),
        active_modal: nil,
        active_modal_assigns: nil,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
