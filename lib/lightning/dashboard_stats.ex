@@ -60,10 +60,7 @@ defmodule Lightning.DashboardStats do
     last_workorders = batch_get_last_workorders(workflow_ids)
 
     last_failed_workorders =
-      batch_get_last_workorders(
-        workflow_ids,
-        WorkOrder.active_states() ++ [:success]
-      )
+      batch_get_last_workorders(workflow_ids, @wo_active ++ [:success])
 
     Enum.map(workflows, fn workflow ->
       wf_id = workflow.id

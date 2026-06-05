@@ -53,7 +53,7 @@ defmodule Lightning.Run do
     :lost
   ]
 
-  @states [:available, :claimed, :started] ++ @final_states
+  @states @active_states ++ @final_states
 
   @doc """
   Returns all possible states for a run.
