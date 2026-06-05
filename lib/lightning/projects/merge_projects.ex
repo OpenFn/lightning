@@ -561,13 +561,8 @@ defmodule Lightning.Projects.MergeProjects do
             ])
             |> then(fn job_attrs ->
               if target_job do
-                # Keep the source's project_credential_id (remapped to the
-                # target project's credential later via
-                # remap_document_credentials/2) so credential changes made in
-                # the sandbox propagate. Keychains are project-scoped and are
-                # not remapped here, so the target's value is preserved.
-                Map.put(
-                  job_attrs,
+                job_attrs
+                |> Map.put(
                   :keychain_credential_id,
                   target_job.keychain_credential_id
                 )
