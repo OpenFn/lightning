@@ -325,6 +325,22 @@ export const createMyStore = () => {
 5. **useSyncExternalStore** — All stores implement React 18's external store contract
 6. **Immutability** — All state updates via Immer's `produce()`
 
+### Dangling-reference reconciliation: server authoritative, client advisory
+
+Referential invariants (e.g. a cron trigger's `cron_cursor_job_id` must point at a
+live job in the same workflow) are enforced **authoritatively on the server** — the
+compound foreign key (`ON DELETE SET NULL (cron_cursor_job_id)`) plus the
+`Workflows.save_workflow/3` rescue. The client has exactly ONE advisory cleanup
+function, `adapters/reconcileDanglingReferences.ts`, invoked from every structural
+mutation that can orphan a reference (`removeJob`, `YAMLStateToYDoc.applyToYDoc`,
+and defensively before save in `saveWorkflow`/`saveAndSyncWorkflow`). It is a UX
+fast-path only: it cannot close the concurrent-editor race (a collaborator's delete
+that has not yet merged into this client's doc), and it is NOT the correctness
+guarantee. **Do not add per-path client cursor cleanup** — if a new structural
+mutation can orphan a reference, call `reconcileDanglingReferences` from it (pass
+`{ inTransaction: true }` when already inside a `ydoc.transact`); do not reimplement
+the check.
+
 ---
 
 ## Common Anti-Patterns

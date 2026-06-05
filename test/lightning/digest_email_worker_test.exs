@@ -153,7 +153,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       workflow = insert(:simple_workflow, project: project)
 
       # Create workorders in non-final states (these should not be counted as failed)
-      create_runs(workflow, [:pending, :running])
+      create_runs(workflow, Lightning.WorkOrder.active_states())
 
       # Create one actual failed run for comparison
       create_runs(workflow, [:failed])

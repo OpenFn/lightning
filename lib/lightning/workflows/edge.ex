@@ -91,6 +91,13 @@ defmodule Lightning.Workflows.Edge do
 
   def validate(changeset) do
     changeset
+    |> validate_uuid([
+      :id,
+      :workflow_id,
+      :source_job_id,
+      :source_trigger_id,
+      :target_job_id
+    ])
     |> assoc_constraint(:workflow)
     |> assoc_constraint(:source_trigger)
     |> assoc_constraint(:source_job)

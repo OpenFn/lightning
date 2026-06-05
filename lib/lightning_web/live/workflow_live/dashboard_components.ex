@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.Components.Common
   alias LightningWeb.WorkflowLive.Helpers
@@ -455,7 +456,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div>
       <div class="flex items-center gap-x-2">
         <span class="relative inline-flex h-2 w-2">
-          <%= if @state in [:pending, :running] do %>
+          <%= if @state in WorkOrder.active_states() do %>
             <span class={[
               "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
               @dot_color
