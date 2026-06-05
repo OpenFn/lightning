@@ -206,14 +206,29 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Links an SSO provider identity to an existing user account.
-
-  Silently succeeds if the identity already exists (on_conflict: :nothing).
+  Links an SSO provider identity to a user; idempotent if already linked to the same user, `{:error, :identity_already_linked}` if claimed by another.
   """
   def link_user_identity(%User{id: user_id}, provider, uid) do
-    %UserIdentity{}
-    |> UserIdentity.changeset(%{user_id: user_id, provider: provider, uid: uid})
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:provider, :uid])
+    case get_identity(provider, uid) do
+      %UserIdentity{user_id: ^user_id} = identity ->
+        {:ok, identity}
+
+      %UserIdentity{} ->
+        {:error, :identity_already_linked}
+
+      nil ->
+        %UserIdentity{}
+        |> UserIdentity.changeset(%{
+          user_id: user_id,
+          provider: provider,
+          uid: uid
+        })
+        |> Repo.insert()
+    end
+  end
+
+  defp get_identity(provider, uid) do
+    Repo.get_by(UserIdentity, provider: provider, uid: uid)
   end
 
   @doc """

@@ -3,8 +3,8 @@ defmodule Lightning.Extensions.AccountHook do
   @behaviour Lightning.Extensions.AccountHooking
 
   alias Ecto.Changeset
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Accounts.UserIdentity
   alias Lightning.Repo
 
   @spec handle_register_user(map()) :: {:ok, User.t()} | {:error, Changeset.t()}
@@ -47,9 +47,7 @@ defmodule Lightning.Extensions.AccountHook do
     |> Repo.insert()
   end
 
-  defp link_identity(%User{id: user_id}, provider, uid) do
-    %UserIdentity{}
-    |> UserIdentity.changeset(%{user_id: user_id, provider: provider, uid: uid})
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:provider, :uid])
+  defp link_identity(%User{} = user, provider, uid) do
+    Accounts.link_user_identity(user, provider, uid)
   end
 end

@@ -193,6 +193,14 @@ defmodule LightningWeb.OidcController do
             )
             |> redirect(to: ~p"/profile")
 
+          {:error, :identity_already_linked} ->
+            conn
+            |> put_flash(
+              :error,
+              "This #{display_name(provider)} identity is already linked to a different account."
+            )
+            |> redirect(to: ~p"/profile")
+
           {:error, _reason} ->
             conn
             |> put_flash(

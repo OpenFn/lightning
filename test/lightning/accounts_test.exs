@@ -182,11 +182,29 @@ defmodule Lightning.AccountsTest do
       assert identity.uid == "abc"
     end
 
-    test "is idempotent on (provider, uid) conflicts" do
+    test "is idempotent when already linked to the same user" do
       user = insert(:user)
-      insert(:user_identity, user: user, provider: "github", uid: "abc")
 
-      assert {:ok, _} = Accounts.link_user_identity(user, "github", "abc")
+      existing =
+        insert(:user_identity, user: user, provider: "github", uid: "abc")
+
+      assert {:ok, identity} = Accounts.link_user_identity(user, "github", "abc")
+      # Returns the existing persisted row, not a fake unpersisted struct
+      assert identity.id == existing.id
+    end
+
+    test "errors when the (provider, uid) is claimed by a different user" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "abc")
+
+      user = insert(:user)
+
+      assert {:error, :identity_already_linked} =
+               Accounts.link_user_identity(user, "github", "abc")
+
+      # The identity still belongs to the original owner
+      assert %User{id: owner_id} = Accounts.get_user_by_identity("github", "abc")
+      assert owner_id == other_user.id
     end
   end
 
@@ -232,6 +250,23 @@ defmodule Lightning.AccountsTest do
                )
 
       assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "rolls back without orphaning a user when the identity is already claimed" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "taken")
+
+      email = unique_user_email()
+
+      assert {:error, :identity_already_linked} =
+               Accounts.register_user_from_sso(
+                 %{email: email, first_name: "Sso", last_name: "User"},
+                 "github",
+                 "taken"
+               )
+
+      # The user insert is rolled back with the failed identity link
+      refute Accounts.get_user_by_email(email)
     end
   end
 
