@@ -29,7 +29,9 @@ defmodule LightningWeb.ProjectLive.Collaborators do
     schema
     |> cast(attrs, [:email, :role])
     |> validate_required([:email, :role])
-    |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/)
+    |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/,
+      message: "must be a valid email address"
+    )
   end
 
   @spec prepare_for_insertion(%__MODULE__{}, map(), [map(), ...]) ::
