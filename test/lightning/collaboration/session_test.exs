@@ -23,6 +23,9 @@ defmodule Lightning.SessionTest do
   require Logger
 
   setup do
+    # Belt-and-braces: every category-2 doc is bound to its own test via
+    # `start_collaboration_document/2`. This blanket net only catches a future
+    # un-bound call site leaking a global doc into the next serial test.
     on_exit(&stop_all_collaboration_documents/0)
     user = insert(:user)
     {:ok, user: user}
@@ -56,7 +59,7 @@ defmodule Lightning.SessionTest do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
-      Lightning.Collaborate.start_document(
+      start_collaboration_document(
         workflow,
         "workflow:#{workflow.id}"
       )
@@ -1731,7 +1734,7 @@ defmodule Lightning.SessionTest do
 
       # Start initial session and make some changes
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           workflow,
           "workflow:#{workflow.id}"
         )
@@ -1771,7 +1774,7 @@ defmodule Lightning.SessionTest do
       # Start a new session - this will load persisted Y.Doc state
       # The persisted state has old lock_version, but fresh workflow has new one
       {:ok, _doc_supervisor2} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           updated_workflow,
           "workflow:#{workflow.id}"
         )
@@ -1807,7 +1810,7 @@ defmodule Lightning.SessionTest do
 
       # Start initial session with lock_version 0
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           workflow,
           "workflow:#{workflow.id}"
         )
@@ -1843,7 +1846,7 @@ defmodule Lightning.SessionTest do
       # Start new session with updated workflow
       # Persistence should detect stale lock_version and reload from DB
       {:ok, _doc_supervisor2} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           updated_workflow,
           "workflow:#{workflow.id}"
         )
@@ -1911,7 +1914,7 @@ defmodule Lightning.SessionTest do
       # Now start a session - this should NOT crash
       # The persistence layer should handle the nil lock_version and reset from DB
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           workflow,
           doc_name
         )
@@ -2002,7 +2005,7 @@ defmodule Lightning.SessionTest do
 
       # Now start a session - this will load and reconstruct the full state
       {:ok, _doc_supervisor} =
-        Lightning.Collaborate.start_document(
+        start_collaboration_document(
           workflow,
           doc_name
         )
