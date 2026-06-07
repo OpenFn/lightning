@@ -477,26 +477,40 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
+  # :built state with default lock_version (0) is the genuine first-save case
+  # (route to INSERT) UNLESS a row already exists for this id. A stale "new"
+  # rejoin after an in-place socket reconnect can hand us a freshly-built struct
+  # for an id that was already persisted by the first save; reloading it here
+  # routes the save to UPDATE and avoids a workflows_pkey duplicate INSERT
+  # (#4830). Reload-by-id mirrors the sibling clauses above and below.
   defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    workflow =
-      workflow
-      |> Map.put(:edges, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :edges,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :jobs,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :triggers,
-        __owner__: Lightning.Workflows.Workflow
-      })
+    case Lightning.Workflows.get_workflow(workflow.id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil ->
+        workflow =
+          workflow
+          |> Map.put(:edges, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :edges,
+            __owner__: Lightning.Workflows.Workflow
+          })
+          |> Map.put(:jobs, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :jobs,
+            __owner__: Lightning.Workflows.Workflow
+          })
+          |> Map.put(:triggers, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :triggers,
+            __owner__: Lightning.Workflows.Workflow
+          })
 
-    {:ok, workflow}
+        {:ok, workflow}
+
+      persisted_workflow ->
+        {:ok, persisted_workflow}
+    end
   end
 
   defp fetch_workflow(workflow) do
