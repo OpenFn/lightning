@@ -51,13 +51,11 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     registry = Keyword.get(opts, :registry, Registry)
     pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
+    owner = Keyword.get(opts, :owner)
+
     # Optionally monitor an owner pid; when it goes :DOWN we stop :normal so the
     # document tree dies with its owner. nil (production default) → no monitor.
-    owner_ref =
-      case Keyword.get(opts, :owner) do
-        owner when is_pid(owner) -> Process.monitor(owner)
-        _ -> nil
-      end
+    owner_ref = if is_pid(owner), do: Process.monitor(owner), else: nil
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
@@ -88,6 +86,19 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     :ok = register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
+
+    # When started on behalf of an owner pid, give that owner a chance to grant
+    # the freshly spawned children whatever process-scoped access they'll need
+    # to do their work (the two children below both write through their own
+    # processes). The default is a no-op, so production wiring is untouched; a
+    # real callback is only configured under the test environment. We run this
+    # synchronously here, before the SharedDoc begins flushing, so the children
+    # are set up before they touch any shared resource.
+    if is_pid(owner) do
+      allow = grant_process_access_fun()
+      allow.(owner, persistence_writer_pid)
+      allow.(owner, shared_doc_pid)
+    end
 
     {:ok,
      %{
@@ -185,5 +196,13 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   defp register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid) do
     :pg.join(pg_scope, document_name, shared_doc_pid)
+  end
+
+  defp grant_process_access_fun do
+    Application.get_env(
+      :lightning,
+      :collaboration_process_allow,
+      fn _owner, _pid -> :ok end
+    )
   end
 end
