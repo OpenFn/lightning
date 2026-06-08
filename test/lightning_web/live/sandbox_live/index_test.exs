@@ -2057,8 +2057,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         "merged_yaml"
       end)
 
-      # A workflow-name collision surfaces as an error nested under the
-      # :workflows association, with no top-level error.
+      # An error nested under :workflows, with nothing at the top level.
       nested_changeset =
         %Lightning.Workflows.Workflow{}
         |> Ecto.Changeset.change(%{})

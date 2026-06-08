@@ -1000,10 +1000,7 @@ defmodule LightningWeb.SandboxLive.Index do
   defp format_merge_error(reason) when is_binary(reason), do: reason
   defp format_merge_error(reason), do: "Failed to merge: #{inspect(reason)}"
 
-  # Finds the first error anywhere in the changeset, including errors nested in
-  # associations (e.g. a workflow's name or a job's credential). Without this,
-  # a nested error has no top-level entry and the merge screen would only show a
-  # generic "validation error" with no indication of the real cause.
+  # Errors nested in an association have no top-level entry, so walk them too.
   defp first_changeset_error(%Ecto.Changeset{} = changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(&interpolate_error_message/1)

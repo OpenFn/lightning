@@ -146,16 +146,9 @@ defmodule LightningWeb.CredentialLive.Helpers do
   end
 
   @doc """
-  Builds the `project_credentials` to pre-select when creating a credential in
-  a project context: the active project plus every ancestor project (when the
-  active project is a sandbox), deduplicated and order-preserving.
-
-  A sandbox can be merged into any of its ancestors, not just the root, and the
-  merge maps credentials by matching them on the target project. Pre-selecting
-  the whole ancestor chain ensures the credential exists on whichever ancestor
-  the merge targets, so it survives the merge instead of being dropped.
-
-  Returns an empty list when there is no project context.
+  The `project_credentials` to pre-select when creating a credential: the active
+  project plus every ancestor, so the credential survives a merge into any of
+  them. Empty when there is no project context.
   """
   @spec default_project_credentials(Lightning.Projects.Project.t() | nil) ::
           [Lightning.Projects.ProjectCredential.t()]

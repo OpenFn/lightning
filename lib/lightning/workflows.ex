@@ -739,14 +739,11 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Applies the soft-delete transition to a workflow changeset: marks it deleted
-  and frees its name for reuse, in a single step.
+  Marks a workflow deleted and frees its name for reuse, in one step.
 
-  This is the one definition of what soft deleting a workflow means at the data
-  level. Every path that removes a workflow routes through it, the workflows
-  list (`mark_for_deletion/3`) and the provisioner-driven imports (YAML, CLI,
-  GitHub sync, sandbox merge), so the name can never stay reserved on a hidden
-  row. Setting `deleted_at` without freeing the name is not expressible here.
+  The single soft-delete transition both `mark_for_deletion/3` and the
+  provisioner route through, so a deleted workflow can never keep its name
+  reserved on a hidden row.
   """
   @spec soft_delete_changeset(Ecto.Changeset.t(Workflow.t())) ::
           Ecto.Changeset.t(Workflow.t())

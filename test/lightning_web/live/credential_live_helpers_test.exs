@@ -272,8 +272,7 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
         |> Helpers.default_project_credentials()
         |> Enum.map(& &1.project_id)
 
-      # The active (sandbox) project and every ancestor, including the
-      # intermediate parent, so the credential survives a merge into any of them.
+      # Includes the intermediate parent, not just the root.
       assert project_ids == [grandchild.id, child.id, root.id]
     end
   end

@@ -24,16 +24,12 @@ and this project adheres to
 - Ensure that credentials are properly transferred when merging a sandbox. This
   fixes a validation error which can occur on merge
   [#4831](https://github.com/OpenFn/lightning/issues/4831)
-- Free up a workflow's name when it is deleted as part of a merge, the same way
-  UI deletes already do. Previously the hidden workflow kept its name and a
-  later merge that recreated that name was rejected, surfacing as a merge
-  validation error [#4831](https://github.com/OpenFn/lightning/issues/4831)
-- Surface the underlying reason when a sandbox merge fails on a nested
-  validation error, instead of a generic "validation error" message
-  [#4831](https://github.com/OpenFn/lightning/issues/4831)
-- Add a credential created within a sandbox to its full ancestor chain rather
-  than only the root project, so the credential survives a merge into any
-  ancestor, including a nested parent
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Show the underlying reason when a sandbox merge fails, instead of a generic
+  "validation error" [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
 
 ## [2.16.7] - 2026-06-04
 

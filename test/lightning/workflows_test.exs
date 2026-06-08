@@ -1585,8 +1585,6 @@ defmodule Lightning.WorkflowsTest do
         |> Ecto.Changeset.change()
         |> Workflows.soft_delete_changeset()
 
-      # The single definition both the workflows list and the provisioner route
-      # through: setting deleted_at and freeing the name are inseparable here.
       assert %DateTime{} = Ecto.Changeset.get_change(changeset, :deleted_at)
 
       assert Ecto.Changeset.get_change(changeset, :name) ==

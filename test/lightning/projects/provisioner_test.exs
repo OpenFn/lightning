@@ -950,8 +950,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert deleted.name == "#{original_name}_del",
              "The soft-deleted workflow should release its original name"
 
-      # Importing a fresh workflow that reuses the original name now succeeds,
-      # rather than colliding with the hidden, soft-deleted one.
+      # A fresh workflow can now reuse the freed name on a later import.
       %{body: reuse_body} = valid_document(project.id)
 
       reuse_body =
