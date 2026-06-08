@@ -1028,7 +1028,9 @@ defmodule Lightning.SessionTest do
         )
       )
 
-      # Try to save again - should get workflow_deleted error (covering line 475)
+      # Try to save again - should get workflow_deleted error: the resolver
+      # reconciles to the soft-deleted :loaded row and save_workflow's
+      # validate_not_deleted step then rejects it.
       assert {:error, :workflow_deleted} =
                Session.save_workflow(session_pid, user)
     end
@@ -1091,6 +1093,58 @@ defmodule Lightning.SessionTest do
       assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
 
       assert Process.alive?(session)
+    end
+  end
+
+  describe "reset_workflow/2" do
+    setup do
+      # Set global mode for the mock to allow cross-process calls
+      Mox.set_mox_global(LightningMock)
+      # Stub the broadcast calls that reset_workflow makes
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, name: "Original Name", project: project)
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
+
+      %{session: session_pid, user: user, workflow: workflow, project: project}
+    end
+
+    test "returns workflow_deleted error for a soft-deleted workflow", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      # Soft-delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      # Reset should fail
+      assert {:error, :workflow_deleted} = Session.reset_workflow(session, user)
+    end
+
+    test "resets successfully for a live workflow", %{
+      session: session,
+      user: user
+    } do
+      assert {:ok, %Lightning.Workflows.Workflow{}} =
+               Session.reset_workflow(session, user)
     end
   end
 
@@ -1230,10 +1284,10 @@ defmodule Lightning.SessionTest do
       assert saved_trigger.enabled == true
     end
 
-    # #4830: a stale "new" rejoin after an in-place socket reconnect hands the
-    # session a freshly-built struct (default lock_version 0) for an id that the
-    # first save already persisted. Without reconcile-by-id in fetch_workflow/1
-    # the second save routes to INSERT and collides on workflows_pkey.
+    # A stale "new" rejoin after an in-place socket reconnect hands the session a
+    # freshly-built struct (default lock_version 0) for an id the first save
+    # already persisted. The resolver reconciles by id so the second save routes
+    # to UPDATE, not a duplicate INSERT on workflows_pkey (#4830).
     test "reconnect with stale built struct UPDATEs instead of duplicate INSERT",
          %{session: session, user: user, workflow: workflow, project: project} do
       stub(
@@ -1243,8 +1297,8 @@ defmodule Lightning.SessionTest do
       )
 
       # A freshly built workflow is in :built state with the default
-      # lock_version (0, not > 0), so fetch_workflow/1 routes it through the
-      # built clause rather than the lock_version > 0 reload clause.
+      # lock_version of 0. The resolver routes the save by whether a row already
+      # exists, not by lock_version.
       assert workflow.__meta__.state == :built
       refute workflow.lock_version > 0
 

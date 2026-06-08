@@ -12,13 +12,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
+  alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
@@ -44,7 +43,7 @@ defmodule LightningWeb.WorkflowChannel do
            {:user, socket.assigns[:current_user]},
          {:project, %_{} = project} <-
            {:project, Lightning.Projects.get_project(project_id)},
-         {:workflow, {:ok, workflow}} <-
+         {:workflow, {:ok, workflow, workflow_kind}} <-
            {:workflow,
             load_workflow(action, workflow_id, project, user, version)} do
       Logger.info("""
@@ -80,7 +79,7 @@ defmodule LightningWeb.WorkflowChannel do
          project: project,
          session_pid: session_pid,
          project_user: project_user,
-         snapshot_version: version
+         workflow_kind: workflow_kind
        )}
     else
       {:user, nil} -> {:error, %{reason: "unauthorized"}}
@@ -205,19 +204,22 @@ defmodule LightningWeb.WorkflowChannel do
     workflow = socket.assigns.workflow
     project = socket.assigns.project
     project_user = socket.assigns.project_user
+    workflow_kind = socket.assigns.workflow_kind
 
     async_task(socket, "get_context", fn ->
-      # For unsaved workflows (action="new"), lock_version is nil and the workflow
-      # doesn't exist in the database yet. Use the in-memory workflow in that case.
-      # For saved workflows, always fetch fresh from DB to get the actual latest
-      # lock_version (socket.assigns.workflow could be stale).
-      fresh_workflow =
-        if is_nil(workflow.lock_version) do
-          workflow
+      # A genuinely-new workflow has no DB row, so use the in-memory struct and
+      # report a nil latest version. Otherwise reload to get the current
+      # lock_version, since socket.assigns.workflow may be stale.
+      {fresh_workflow, latest_lock_version} =
+        if workflow_kind == :new do
+          {workflow, nil}
         else
-          Lightning.Workflows.get_workflow(workflow.id,
-            include: [:edges, :jobs, :triggers]
-          )
+          fresh =
+            Lightning.Workflows.get_workflow(workflow.id,
+              include: [:edges, :jobs, :triggers]
+            )
+
+          {fresh, (fresh && fresh.lock_version) || workflow.lock_version}
         end
 
       project_repo_connection =
@@ -234,9 +236,7 @@ defmodule LightningWeb.WorkflowChannel do
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version:
-          (fresh_workflow && fresh_workflow.lock_version) ||
-            workflow.lock_version,
+        latest_snapshot_lock_version: latest_lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
         workflow_template: render_workflow_template(workflow_template),
@@ -460,14 +460,15 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("request_versions", _payload, socket) do
     Logger.info("====== RECEIVED request_versions ======")
     workflow = socket.assigns.workflow
+    workflow_kind = socket.assigns.workflow_kind
     Logger.info("Workflow ID: #{workflow.id}")
 
     async_task(socket, "request_versions", fn ->
       Logger.info("Inside async_task for request_versions")
 
-      # For unsaved workflows (action="new"), there are no versions to show.
-      # Return empty list instead of crashing.
-      if is_nil(workflow.lock_version) do
+      # A genuinely-new workflow has no DB row and thus no versions, so
+      # short-circuit to an empty list rather than reloading a nil row.
+      if workflow_kind == :new do
         Logger.info("Workflow is unsaved, returning empty versions list")
         %{versions: []}
       else
@@ -1187,66 +1188,27 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp fetch_auth_methods(_ids, _project), do: []
 
+  # Snapshot-version view. The channel owns version parsing (and the
+  # "invalid version format" error); the resolver hydrates from the snapshot.
+  # Resolve before auth, so a snapshot-not-found beats the auth error.
   defp load_workflow("edit", workflow_id, project, user, version)
        when is_binary(version) do
     Logger.info("Loading workflow snapshot version: #{version}")
 
     case Integer.parse(version) do
       {lock_version, ""} ->
-        case Snapshot.get_by_version(workflow_id, lock_version) do
-          nil ->
-            {:error, "snapshot version #{version} not found"}
-
-          snapshot ->
-            trigger_ids =
-              snapshot.triggers
-              |> Enum.map(& &1.id)
-              |> Enum.map(&Ecto.UUID.dump!/1)
-
-            trigger_auth_methods =
-              from(twam in "trigger_webhook_auth_methods",
-                where: twam.trigger_id in ^trigger_ids,
-                join: wam in Lightning.Workflows.WebhookAuthMethod,
-                on: twam.webhook_auth_method_id == wam.id,
-                where: is_nil(wam.scheduled_deletion),
-                select: %{trigger_id: twam.trigger_id, auth_method: wam}
-              )
-              |> Lightning.Repo.all()
-              |> Enum.group_by(
-                &Ecto.UUID.cast!(&1.trigger_id),
-                & &1.auth_method
-              )
-
-            workflow = %Workflow{
-              id: workflow_id,
-              project_id: project.id,
-              name: snapshot.name,
-              lock_version: snapshot.lock_version,
-              deleted_at: nil,
-              jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
-              edges: Enum.map(snapshot.edges, &Map.from_struct/1),
-              triggers:
-                Enum.map(snapshot.triggers, fn trigger ->
-                  auth_methods = Map.get(trigger_auth_methods, trigger.id, [])
-
-                  trigger
-                  |> Map.from_struct()
-                  |> Map.put(:has_auth_method, length(auth_methods) > 0)
-                end)
-            }
-
-            case Permissions.can(
-                   :workflows,
-                   :access_read,
-                   user,
-                   project
-                 ) do
-              :ok ->
-                {:ok, workflow}
-
-              {:error, :unauthorized} ->
-                {:error, "unauthorized"}
+        case WorkflowResolver.resolve(workflow_id, :edit,
+               version: lock_version,
+               project: project
+             ) do
+          {:ok, workflow, kind} ->
+            case Permissions.can(:workflows, :access_read, user, project) do
+              :ok -> {:ok, workflow, kind}
+              {:error, :unauthorized} -> {:error, "unauthorized"}
             end
+
+          {:error, :snapshot_not_found} ->
+            {:error, "snapshot version #{version} not found"}
         end
 
       _ ->
@@ -1254,80 +1216,39 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
+  # Edit latest. Resolve before auth, so workflow-not-found and wrong-project
+  # both beat the auth error.
   defp load_workflow("edit", workflow_id, project, user, _version) do
-    # IMPORTANT: Preload associations needed for Y.Doc initialization
-    # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
-    # and needs jobs, edges, and triggers loaded to avoid empty workflow state
-    case Lightning.Workflows.get_workflow(workflow_id,
-           include: [
-             :jobs,
-             :edges,
-             triggers:
-               from(t in Lightning.Workflows.Trigger,
-                 preload: [
-                   webhook_auth_methods:
-                     ^from(wam in Lightning.Workflows.WebhookAuthMethod,
-                       where: is_nil(wam.scheduled_deletion),
-                       order_by: wam.name
-                     )
-                 ]
-               )
-           ]
-         ) do
-      nil ->
+    case WorkflowResolver.resolve(workflow_id, :edit, project: project) do
+      {:ok, workflow, kind} ->
+        case Permissions.can(:workflows, :access_read, user, project) do
+          :ok -> {:ok, workflow, kind}
+          {:error, :unauthorized} -> {:error, "unauthorized"}
+        end
+
+      {:error, :workflow_not_found} ->
         {:error, "workflow not found"}
 
-      workflow ->
-        if workflow.project_id != project.id do
-          {:error, "workflow does not belong to specified project"}
-        else
-          case Permissions.can(
-                 :workflows,
-                 :access_read,
-                 user,
-                 project
-               ) do
-            :ok ->
-              workflow_with_auth_flags = %{
-                workflow
-                | triggers:
-                    Enum.map(workflow.triggers, fn trigger ->
-                      %{
-                        trigger
-                        | has_auth_method:
-                            length(trigger.webhook_auth_methods || []) > 0
-                      }
-                    end)
-              }
-
-              {:ok, workflow_with_auth_flags}
-
-            {:error, :unauthorized} ->
-              {:error, "unauthorized"}
-          end
-        end
+      {:error, :wrong_project} ->
+        {:error, "workflow does not belong to specified project"}
     end
   end
 
+  # New workflow. Auth before resolve, so an unauthorised create never resolves.
+  #
+  # The resolver reconciles by id, so a "new" join for an id owned by another
+  # project returns {:error, :wrong_project}, mapped to the same client-facing
+  # string as the "edit" path.
   defp load_workflow("new", workflow_id, project, user, _version) do
-    case Permissions.can(
-           :project_users,
-           :create_workflow,
-           user,
-           project
-         ) do
+    case Permissions.can(:project_users, :create_workflow, user, project) do
       :ok ->
-        workflow = %Lightning.Workflows.Workflow{
-          id: workflow_id,
-          project_id: project.id,
-          name: "Untitled workflow",
-          lock_version: nil,
-          jobs: [],
-          edges: [],
-          triggers: []
-        }
+        case WorkflowResolver.resolve(workflow_id, :new, project: project) do
+          {:ok, workflow, kind} ->
+            {:ok, workflow, kind}
 
-        {:ok, workflow}
+          {:error, :wrong_project} ->
+            {:error, "workflow does not belong to specified project"}
+        end
 
       {:error, :unauthorized} ->
         {:error, "unauthorized"}
