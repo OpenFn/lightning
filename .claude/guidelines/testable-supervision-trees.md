@@ -44,6 +44,31 @@ below is damage control for the thin shell that remains.
 > signature and how information reaches child processes** — not relitigating
 > whether something should be a GenServer.
 
+### One ownership seam, three payoffs
+
+Name-isolation (§1), deterministic teardown (§3), and async-safety (§2) are not
+three problems — they are three payoffs of **one** seam. The root control is an
+**injectable owning identity**: the process / atom / pid / name that owns the
+thing. Make that a parameter and all three follow:
+
+- **Name-isolation** — an anonymous or per-test name means no
+  `{:already_started, _}` clash, so the suite runs `async: true`.
+- **Deterministic teardown** — bind the owner to the test (it holds the pid, or
+  the process monitors a chosen owner) and the thing dies with its owner — no
+  manual cleanup.
+- **Async-safety** — that same injected owner is the pid you scope `Mox.allow`
+  to (§2, Axis 2). Where the hop graph is deep you add the `Mox.allow`
+  strategies, but the seam is the same one.
+
+Lose the seam and you fight all three separately: a hardcoded name forces the
+suite serial; a process with no symmetric `stop` and no owner to monitor leaks
+past its test; a dependency fished from a global has no owner to lend a mock to.
+The collaboration fix below (§3) is the cautionary example — it solved
+*lifetime* in test support (an `on_exit` wrapper) instead of at the seam,
+because the production API has no owner option yet. That works, but the seam
+ended up in the test helper, not the API; the API-level owner option (§3,
+option 1) is the fuller fix.
+
 ---
 
 ## 1. The 101 case: fixed children, no Registry
@@ -131,6 +156,64 @@ The one principled exception: **pipeline-first APIs put the instance last** —
 transformed is the subject and the instance is configuration, so it reads in a
 pipe. Rule of thumb: *callers piping data through it → instance last; callers
 addressing a process → instance first (the common case).*
+
+### Constructor sub-rule: `start_link`-style functions put the name in trailing opts
+
+"Subject leads" governs functions that **address an already-running process**.
+It does *not* govern **constructors** — `start_link` / `start_child` and
+friends — and the constructor convention pulls the other way, just as
+near-universally: the name goes in a **trailing `opts` keyword list**, never as
+a leading positional.
+
+```elixir
+GenServer.start_link(module, init_arg, opts)    # name: in opts
+Supervisor.start_link(children, opts)            # name: in opts
+Agent.start_link(fun, opts)                      # name: in opts
+Registry.start_link(opts)                        # name: in opts
+Oban.start_link(opts) / Finch.start_link(opts)   # name: in opts
+```
+
+Every `start_link` in the standard library, and across Oban, Phoenix.PubSub and
+Finch, puts `name:` in opts. So the two rules never actually collide — they
+govern **mutually exclusive function shapes**:
+
+- a function that **creates** a process → name in trailing `opts`
+  (`def start_link(arg, opts \\ [])`);
+- a function that **operates on** an existing one → instance leads positionally
+  (`def fetch(server \\ __MODULE__, key)`).
+
+You never call `start_link` on a running process, and you never need a
+name-in-opts on `call` / `lookup`. The *identity-vs-configuration* question does
+not change this: whether the name is **intrinsic identity** (the key a
+`Registry` registers under) or an **instance selector** (which `Oban` to talk
+to), the constructor still takes it in opts. What flips is only the call side —
+`Oban` leads with the instance for `insert(name \\ Oban, changeset)`.
+
+One nuance worth stating, because it is the thing that confuses people: the
+**process-registration name** (the `:via` tuple, the registered atom, the
+`name:` opt) is what goes in trailing opts. **Domain data that happens to
+identify the thing** (a workflow id, a `document_name`) is just an `init_arg`
+payload and stays positional. `Lightning.Collaborate.start_document/2` already
+gets this right — `document_name` is a positional payload, while the registered
+name lives in opts inside the child spec:
+
+```elixir
+def start_document(%Workflow{} = workflow, document_name) do
+  SessionSupervisor.start_child(
+    {DocumentSupervisor,
+     workflow: workflow,
+     document_name: document_name,
+     name: Registry.via({:doc_supervisor, document_name})}  # name → opts
+  )
+end
+```
+
+So a new document entrypoint that also takes an **owner** (for owner-monitored
+cleanup, §3) resolves cleanly: the owner is process configuration, so it joins
+the registration name in opts — `start_document(workflow, document_name, opts \\ [])`
+with `owner:` in `opts` — *not* threaded as a leading positional. Its
+call/lookup partners (`stop_document/1`, `whereis/1`) keep the subject first,
+per the main rule.
 
 ---
 
@@ -277,6 +360,89 @@ owner-monitored ETS table needs no manual cleanup function (cf. the adaptors
 `forget/1` wart and its "we don't call this automatically because GC is
 expensive" comment).
 
+### Lifetime/ownership: how a dynamic process gets torn down in a test
+
+§1's teardown story — `start_supervised!` hands the test the pid, ExUnit stops
+it on exit — works *because that process is a fixed singleton owned by its
+starter*. A §3 process is the opposite by design: started under a global
+`DynamicSupervisor`, keyed by runtime data, **meant to outlive the caller** that
+started it. ExUnit does not own it, so nothing tears it down when the test ends.
+And if it touches a test-scoped resource — a DB write, say — it does so *after*
+the test's Ecto-sandbox owner has exited, crashing with `owner ... exited` and
+poisoning the next test. This is a real flake the Lightning collaboration suite
+hit: a document started via `Collaborate.start/1` is owned by the global
+`SessionSupervisor` DynamicSupervisor, outlived its test, and wrote to the DB
+after teardown.
+
+Two recipes, in order of preference.
+
+**Option 1 (preferred) — owner-monitored self-cleanup on the production API.**
+Generalise the `commanded/eventstore` owner-monitor pattern from "config row
+self-deletes" to "process tree self-terminates": let the dynamic `start` take an
+optional `owner` pid, `Process.monitor/1` it, and stop the process when that
+owner goes `:DOWN`. Then *any* caller — a test, a LiveView, a short-lived
+request — gets deterministic cleanup for free by passing `owner: self()`, and
+tests need no special wrapper. This is the §0 seam landed in the API: one owner
+parameter buys lifetime *and* (with a per-test name) async-isolation, the same
+control plane.
+
+**Option 2 (what the collaboration fix did) — public symmetric `stop` + a test
+helper that binds it.** When the API has no owner option yet, add a
+deterministic, idempotent public `stop` (the partner to the dynamic `start`),
+then bind it to the test in test support with `on_exit`:
+
+```elixir
+# lib/lightning/collaboration.ex — the symmetric public stop, idempotent
+@spec stop_document(document_name :: String.t()) :: :ok
+def stop_document(document_name) do
+  case Registry.whereis({:doc_supervisor, document_name}) do
+    nil ->
+      :ok
+
+    pid ->
+      try do
+        DocumentSupervisor.stop(pid)
+        :ok
+      catch
+        :exit, _ -> :ok
+      end
+  end
+end
+```
+
+```elixir
+# lib/lightning/collaboration/document_supervisor.ex — synchronous graceful stop.
+# GenServer.stop(:normal) guarantees terminate/2 runs the flush, unlike the
+# DynamicSupervisor's :shutdown; :transient restart means a :normal exit is not
+# restarted.
+def stop(pid, timeout \\ 5_000) when is_pid(pid) do
+  GenServer.stop(pid, :normal, timeout)
+end
+```
+
+```elixir
+# test/support/collaboration_helpers.ex — reconstruct start_supervised's
+# lifetime-binding at the test boundary
+def start_collaboration_document(
+      %Lightning.Workflows.Workflow{} = workflow,
+      document_name
+    )
+    when is_binary(document_name) do
+  on_exit(fn -> Lightning.Collaborate.stop_document(document_name) end)
+  Lightning.Collaborate.start_document(workflow, document_name)
+end
+```
+
+The helper *is* the §0 seam, but living in test support rather than the API. It
+works, and the symmetric `stop` is worth having regardless — production needs
+deterministic teardown too (`Collaborate.start/1` calls `stop_document/1` to
+clean up a document it orphaned when a session fails to attach). But every new
+call site must *remember* to use the helper; the owner-monitored option (1)
+needs no wrapper and protects every caller, which is why it is the fuller fix.
+Either way, keep a blanket `stop_all_collaboration_documents/0` `on_exit` net as
+belt-and-braces for serial (`async: false`) suites — it catches a single
+un-bound leak before it corrupts the next test.
+
 ---
 
 ## 4. Anti-patterns checklist (point the harness here)
@@ -285,6 +451,16 @@ expensive" comment).
   `:name` an option defaulting to `__MODULE__`.
 - ❌ Public API calling `GenServer.call(__MODULE__, …)` with no server arg. →
   `def fn(server \\ __MODULE__, …)`, server first.
+- ❌ Putting the registered name as a leading positional on a constructor
+  "because the subject leads." → Constructors take `name:` (and `owner:`) in
+  trailing opts; "subject leads" is the rule for `call` / `lookup` only. Domain
+  data (a workflow id) can still be a positional payload.
+- ❌ A dynamically-supervised process that must outlive its caller, with no
+  deterministic teardown — it outlives the test and crashes on a post-teardown
+  resource (e.g. a DB write after the Ecto-sandbox owner has exited). → Give it
+  an owner-monitored self-cleanup option (preferred), or a public symmetric
+  `stop` bound to the test via `on_exit`; keep a blanket sweep as
+  belt-and-braces for serial suites.
 - ❌ Dependencies / per-instance config read from `:persistent_term` /
   runtime `Application.put_env` / global ETS at call time. → Inject via
   `start_link` opts → `init/1` → process state, or thread through the child
@@ -315,9 +491,22 @@ expensive" comment).
 - [Mox docs](https://hexdocs.pm/mox/Mox.html) — `allow/3`, deferred resolver,
   `set_mox_from_context`.
 - [`commanded/eventstore`](https://github.com/commanded/eventstore) —
-  `lib/event_store/config/store.ex` (ETS-per-instance, owner-monitored).
+  `lib/event_store/config/store.ex` (ETS-per-instance, owner-monitored). The
+  owner-monitor idea generalises beyond a config row: monitor a chosen owner and
+  have the whole *process tree* self-terminate on its `:DOWN` (§3, option 1).
 - [`Registry`](https://hexdocs.pm/elixir/Registry.html) ·
   [Thoughtbot — dynamic process names](https://thoughtbot.com/blog/how-to-start-processes-with-dynamic-names-in-elixir)
+- Constructor vs call/lookup argument order — `start_link` puts `name:` in
+  trailing opts across the stdlib and ecosystem, while `call`/`lookup`/`insert`
+  lead with the instance:
+  [`GenServer`](https://hexdocs.pm/elixir/GenServer.html) ·
+  [`Supervisor`](https://hexdocs.pm/elixir/Supervisor.html) ·
+  [`Agent`](https://hexdocs.pm/elixir/Agent.html) ·
+  [`Oban`](https://hexdocs.pm/oban/Oban.html) ·
+  [`Phoenix.PubSub`](https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html) ·
+  [`Finch`](https://hexdocs.pm/finch/Finch.html).
 - In-repo: `lib/lightning/adaptors/supervisor.ex`,
   `lib/lightning/collaboration.ex`,
-  `lib/lightning/collaboration/registry.ex`.
+  `lib/lightning/collaboration/registry.ex`,
+  `lib/lightning/collaboration/document_supervisor.ex`,
+  `test/support/collaboration_helpers.ex`.
