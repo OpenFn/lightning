@@ -41,6 +41,8 @@ defmodule Lightning.Projects.Sandboxes do
   """
   import Ecto.Query
 
+  require Logger
+
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Collections.Collection
@@ -167,10 +169,19 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
-  * `{:error, reason}` - Workflow merge or collection sync failed
+  * `{:error, merge_error}` - Merge failed, classified into a domain reason
+
+  Failures are returned as typed reasons (see `t:merge_error/0`) so callers can
+  render user-facing copy without inspecting changeset internals. The full
+  validation detail is logged for diagnosis.
   """
+  @type merge_error ::
+          {:workflow_name_conflict, String.t()}
+          | :merge_validation_failed
+          | Lightning.Extensions.UsageLimiting.message()
+
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
-          {:ok, Project.t()} | {:error, term()}
+          {:ok, Project.t()} | {:error, merge_error()}
   def merge(
         %Project{} = source,
         %Project{} = target,
@@ -187,6 +198,41 @@ defmodule Lightning.Projects.Sandboxes do
            {:ok, _} <- sync_collections(source, target) do
         {:ok, updated_target}
       end
+    end)
+    |> case do
+      {:ok, _} = ok -> ok
+      {:error, reason} -> {:error, classify_merge_error(reason)}
+    end
+  end
+
+  defp classify_merge_error(%Ecto.Changeset{} = changeset) do
+    Logger.warning(
+      "Sandbox merge failed validation: #{inspect(merge_error_details(changeset))}"
+    )
+
+    case conflicting_workflow_name(changeset) do
+      {:ok, name} -> {:workflow_name_conflict, name}
+      :error -> :merge_validation_failed
+    end
+  end
+
+  defp classify_merge_error(reason), do: reason
+
+  defp conflicting_workflow_name(changeset) do
+    changeset
+    |> Ecto.Changeset.get_change(:workflows, [])
+    |> Enum.find_value(:error, fn workflow_changeset ->
+      if Keyword.has_key?(workflow_changeset.errors, :name) do
+        {:ok, Ecto.Changeset.get_field(workflow_changeset, :name)}
+      end
+    end)
+  end
+
+  defp merge_error_details(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Regex.replace(~r/%\{(\w+)\}/, message, fn _whole, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
     end)
   end
 

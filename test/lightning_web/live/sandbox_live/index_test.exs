@@ -2001,7 +2001,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                "Successfully merged child1 into root, but could not schedule the sandbox for deletion."
     end
 
-    test "formats changeset error correctly", %{
+    test "shows a generic message when a merge fails validation", %{
       conn: conn,
       root: root,
       child1: child1
@@ -2014,7 +2014,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         "merged_yaml"
       end)
 
-      # Return changeset error
+      # A validation failure with no recognised cause.
       changeset = %Ecto.Changeset{
         errors: [name: {"is invalid", []}],
         valid?: false
@@ -2039,16 +2039,17 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "name: is invalid"
+      assert html =~ "pass validation"
+      # No schema field paths or raw changeset internals leak to the user.
+      refute html =~ "name: is invalid"
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "surfaces errors nested in associations instead of a generic message",
-         %{
-           conn: conn,
-           root: root,
-           child1: child1
-         } do
+    test "names the conflicting workflow on a name collision", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
@@ -2057,10 +2058,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         "merged_yaml"
       end)
 
-      # An error nested under :workflows, with nothing at the top level.
+      # A name collision surfaces as an error on a nested workflow's :name.
       nested_changeset =
-        %Lightning.Workflows.Workflow{}
-        |> Ecto.Changeset.change(%{})
+        %Lightning.Workflows.Workflow{name: "Patient Sync"}
+        |> Ecto.Changeset.change()
         |> Ecto.Changeset.add_error(
           :name,
           "A workflow with this name already exists (possibly pending deletion) in this project."
@@ -2068,7 +2069,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       changeset =
         %Lightning.Projects.Project{workflows: []}
-        |> Ecto.Changeset.change(%{})
+        |> Ecto.Changeset.change()
         |> Ecto.Changeset.put_assoc(:workflows, [nested_changeset])
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
@@ -2090,10 +2091,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       html = render(view)
-
-      refute html =~ "Failed to merge: validation error"
-      assert html =~ "workflows.name"
-      assert html =~ "A workflow with this name already exists"
+      assert html =~ "Patient Sync"
+      assert html =~ "already exists in the target project"
+      refute html =~ "validation error"
+      refute has_element?(view, "#merge-sandbox-modal")
     end
 
     test "formats text error correctly", %{
