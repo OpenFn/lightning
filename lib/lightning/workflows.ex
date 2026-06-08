@@ -744,10 +744,18 @@ defmodule Lightning.Workflows do
     end)
   end
 
-  defp resolve_name_for_pending_deletion(%Workflow{
-         name: name,
-         project_id: project_id
-       }) do
+  @doc """
+  Computes the `name_del`-style name a workflow should take when it is soft
+  deleted, so it frees up its original name for reuse within the project.
+
+  Used both by UI-initiated deletion and by merge/provisioning soft deletes,
+  keeping the name-freeing behaviour consistent across every delete path.
+  """
+  @spec resolve_name_for_pending_deletion(Workflow.t()) :: String.t()
+  def resolve_name_for_pending_deletion(%Workflow{
+        name: name,
+        project_id: project_id
+      }) do
     base_name = "#{name}_del"
 
     existing_names =
