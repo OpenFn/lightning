@@ -61,7 +61,13 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    case PersistenceWriter.add_update(doc_name, update) do
+    # Resolve the writer through the instance's registry. Defaults to the global
+    # collaboration Registry when none was threaded in (production), so this is
+    # byte-for-byte the same lookup as before; an isolated instance finds its
+    # own writer rather than missing in the global registry.
+    registry = Map.get(state, :registry, Lightning.Collaboration.Registry)
+
+    case PersistenceWriter.add_update(registry, doc_name, update) do
       :ok ->
         state
 

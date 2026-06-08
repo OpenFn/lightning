@@ -51,6 +51,13 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     registry = Keyword.get(opts, :registry, Registry)
     pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
+    # Whether the SharedDoc exits on its own once its last observer leaves.
+    # Defaults to `true` (production behaviour). Callers that drive the document
+    # lifecycle explicitly — e.g. tests that want teardown sequenced solely
+    # through `terminate/2` rather than racing an asynchronous self-exit — can
+    # pass `auto_exit: false`.
+    auto_exit = Keyword.get(opts, :auto_exit, true)
+
     owner = Keyword.get(opts, :owner)
 
     # Optionally monitor an owner pid; when it goes :DOWN we stop :normal so the
@@ -71,12 +78,13 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       Yex.Sync.SharedDoc.start_link(
         [
           doc_name: document_name,
-          auto_exit: true,
+          auto_exit: auto_exit,
           persistence:
             {Persistence,
              %{
                workflow: workflow,
                persistence_writer: persistence_writer_pid,
+               registry: registry,
                owner: owner
              }}
         ],

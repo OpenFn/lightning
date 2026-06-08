@@ -177,19 +177,27 @@ defmodule Lightning.Collaborate do
         opts
       )
       when is_list(opts) do
+    doc_opts =
+      [
+        workflow: workflow,
+        document_name: document_name,
+        owner: Keyword.get(opts, :owner),
+        registry: instance.registry,
+        pg_scope: instance.pg_scope,
+        name: Registry.via(instance.registry, {:doc_supervisor, document_name})
+      ]
+      |> then(fn base ->
+        # Only forward auto_exit when a caller supplied it, so the production
+        # default (DocumentSupervisor's own `auto_exit: true`) is preserved.
+        case Keyword.fetch(opts, :auto_exit) do
+          {:ok, auto_exit} -> Keyword.put(base, :auto_exit, auto_exit)
+          :error -> base
+        end
+      end)
+
     case SessionSupervisor.start_child(
            instance.dynamic_supervisor,
-           {DocumentSupervisor,
-            workflow: workflow,
-            document_name: document_name,
-            owner: Keyword.get(opts, :owner),
-            registry: instance.registry,
-            pg_scope: instance.pg_scope,
-            name:
-              Registry.via(
-                instance.registry,
-                {:doc_supervisor, document_name}
-              )}
+           {DocumentSupervisor, doc_opts}
          ) do
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, pid}} -> {:ok, pid}
