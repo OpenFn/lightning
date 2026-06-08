@@ -717,16 +717,10 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
-    new_name = resolve_name_for_pending_deletion(workflow)
-
     Multi.new()
     |> Multi.update(
       :workflow,
-      workflow
-      |> Workflow.request_deletion_changeset(%{
-        "deleted_at" => DateTime.utc_now()
-      })
-      |> Ecto.Changeset.put_change(:name, new_name)
+      soft_delete_changeset(Ecto.Changeset.change(workflow))
     )
     |> Multi.insert(:audit, Audit.marked_for_deletion(workflow.id, actor))
     |> Multi.update_all(
@@ -745,11 +739,35 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
+  Applies the soft-delete transition to a workflow changeset: marks it deleted
+  and frees its name for reuse, in a single step.
+
+  This is the one definition of what soft deleting a workflow means at the data
+  level. Every path that removes a workflow routes through it, the workflows
+  list (`mark_for_deletion/3`) and the provisioner-driven imports (YAML, CLI,
+  GitHub sync, sandbox merge), so the name can never stay reserved on a hidden
+  row. Setting `deleted_at` without freeing the name is not expressible here.
+  """
+  @spec soft_delete_changeset(Ecto.Changeset.t(Workflow.t())) ::
+          Ecto.Changeset.t(Workflow.t())
+  def soft_delete_changeset(
+        %Ecto.Changeset{data: %Workflow{} = workflow} = changeset
+      ) do
+    changeset
+    |> Workflow.request_deletion_changeset(%{
+      deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+    |> Ecto.Changeset.put_change(
+      :name,
+      resolve_name_for_pending_deletion(workflow)
+    )
+  end
+
+  @doc """
   Computes the `name_del`-style name a workflow should take when it is soft
   deleted, so it frees up its original name for reuse within the project.
 
-  Used both by UI-initiated deletion and by merge/provisioning soft deletes,
-  keeping the name-freeing behaviour consistent across every delete path.
+  Used by `soft_delete_changeset/1`, which every delete path routes through.
   """
   @spec resolve_name_for_pending_deletion(Workflow.t()) :: String.t()
   def resolve_name_for_pending_deletion(%Workflow{

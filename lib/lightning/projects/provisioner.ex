@@ -687,11 +687,7 @@ defmodule Lightning.Projects.Provisioner do
       {true, others} when map_size(others) == 0 ->
         changeset
         |> Map.put(:changes, others)
-        |> put_change(
-          :deleted_at,
-          DateTime.utc_now() |> DateTime.truncate(:second)
-        )
-        |> free_up_workflow_name()
+        |> Workflows.soft_delete_changeset()
 
       {true, others} when map_size(others) > 0 ->
         changeset
@@ -701,23 +697,6 @@ defmodule Lightning.Projects.Provisioner do
         changeset
     end
   end
-
-  # Renames a workflow on soft delete so it releases its name for reuse, mirroring
-  # the UI delete path. Without this, a workflow deleted as a side effect of a
-  # merge keeps its name while hidden, and the `(name, project_id)` unique index
-  # rejects any later merge that recreates a workflow with that name.
-  defp free_up_workflow_name(
-         %{data: %Workflow{name: name} = workflow} = changeset
-       )
-       when is_binary(name) do
-    put_change(
-      changeset,
-      :name,
-      Lightning.Workflows.resolve_name_for_pending_deletion(workflow)
-    )
-  end
-
-  defp free_up_workflow_name(changeset), do: changeset
 
   defp maybe_mark_for_deletion(changeset) do
     changeset.changes
