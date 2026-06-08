@@ -76,7 +76,8 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
             {Persistence,
              %{
                workflow: workflow,
-               persistence_writer: persistence_writer_pid
+               persistence_writer: persistence_writer_pid,
+               owner: owner
              }}
         ],
         name: Registry.via(registry, {:shared_doc, document_name})
@@ -87,13 +88,14 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
 
-    # When started on behalf of an owner pid, give that owner a chance to grant
-    # the freshly spawned children whatever process-scoped access they'll need
-    # to do their work (the two children below both write through their own
-    # processes). The default is a no-op, so production wiring is untouched; a
-    # real callback is only configured under the test environment. We run this
-    # synchronously here, before the SharedDoc begins flushing, so the children
-    # are set up before they touch any shared resource.
+    # When started on behalf of an owner pid, grant that owner's process-scoped
+    # access (DB sandbox connection, mocks) to the two children, so they can
+    # reach the database and resolve mocks for the rest of their lives. The
+    # SharedDoc's *init-time* read is handled separately (the owner is threaded
+    # into its persistence state above, since `$callers` isn't propagated across
+    # `GenServer.start_link`); this grant covers everything after init. The
+    # callback defaults to a no-op, so production wiring is untouched; a real
+    # callback is only configured under the test environment.
     if is_pid(owner) do
       allow = grant_process_access_fun()
       allow.(owner, persistence_writer_pid)

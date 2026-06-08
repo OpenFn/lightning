@@ -17,6 +17,21 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def bind(state, doc_name, doc) do
+    # `bind/3` runs inside the SharedDoc process and reads the database to load
+    # persisted state. When an owner is threaded through (tests running with an
+    # owner-scoped DB sandbox connection), register it as a caller of this
+    # process so the load can reach that connection. `$callers` is not
+    # propagated across `GenServer.start_link`, so it has to be set here, in the
+    # process that performs the read. In production no owner is present and this
+    # is a no-op.
+    case Map.get(state, :owner) do
+      owner when is_pid(owner) ->
+        Process.put(:"$callers", [owner | Process.get(:"$callers", [])])
+
+      _ ->
+        :ok
+    end
+
     workflow = Map.fetch!(state, :workflow)
 
     if !workflow do

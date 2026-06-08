@@ -50,7 +50,10 @@ defmodule Lightning.Collaboration.Instance do
     %__MODULE__{
       registry: Module.concat(base, Registry),
       dynamic_supervisor: Module.concat(base, DocSupervisor),
-      pg_scope: base
+      # The `:pg` scope must be a distinct atom from `base`: the supervisor
+      # registers itself under `base`, and `:pg.start_link/1` registers the
+      # scope process under the scope atom, so reusing `base` would clash.
+      pg_scope: Module.concat(base, PG)
     }
   end
 end

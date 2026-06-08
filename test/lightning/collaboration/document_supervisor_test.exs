@@ -1,5 +1,5 @@
 defmodule Lightning.Collaboration.DocumentSupervisorTest do
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -8,31 +8,59 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
   import Eventually
   import Lightning.Factories
+  import Lightning.CollaborationHelpers
   import ExUnit.CaptureLog
 
-  # Common setup for most tests
+  # Common setup for most tests.
+  #
+  # Each test drives its own isolated collaboration tree (Registry,
+  # DynamicSupervisor, and `:pg` scope) so concurrent tests can't see or collide
+  # with each other's registrations or process-group members. The instance's
+  # registry and pg scope are threaded into every Registry/`:pg` call and into
+  # every DocumentSupervisor started below.
   setup do
     Process.flag(:trap_exit, true)
+    instance = start_collaboration_instance()
     workflow = insert(:workflow)
     workflow_id = workflow.id
     document_name = "workflow:#{workflow_id}"
 
     {:ok,
-     workflow: workflow, workflow_id: workflow_id, document_name: document_name}
+     instance: instance,
+     workflow: workflow,
+     workflow_id: workflow_id,
+     document_name: document_name}
   end
 
   # Setup for tests that need a running DocumentSupervisor
   defp setup_document_supervisor(context) do
     {:ok, doc_supervisor} =
       DocumentSupervisor.start_link(
-        [workflow: context.workflow, document_name: context.document_name],
-        name: Registry.via({:doc_supervisor, context.document_name})
+        [
+          workflow: context.workflow,
+          document_name: context.document_name,
+          registry: context.instance.registry,
+          pg_scope: context.instance.pg_scope,
+          owner: self()
+        ],
+        name:
+          Registry.via(
+            context.instance.registry,
+            {:doc_supervisor, context.document_name}
+          )
       )
 
     persistence_writer =
-      Registry.whereis({:persistence_writer, context.document_name})
+      Registry.whereis(
+        context.instance.registry,
+        {:persistence_writer, context.document_name}
+      )
 
-    shared_doc = Registry.whereis({:shared_doc, context.document_name})
+    shared_doc =
+      Registry.whereis(
+        context.instance.registry,
+        {:shared_doc, context.document_name}
+      )
 
     assert Process.alive?(doc_supervisor)
     assert Process.alive?(persistence_writer)
@@ -53,7 +81,14 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       DocumentSupervisor.child_spec(
         workflow: context.workflow,
         document_name: context.document_name,
-        name: Registry.via({:doc_supervisor, context.document_name})
+        registry: context.instance.registry,
+        pg_scope: context.instance.pg_scope,
+        owner: self(),
+        name:
+          Registry.via(
+            context.instance.registry,
+            {:doc_supervisor, context.document_name}
+          )
       )
 
     Map.merge(context, %{
@@ -63,15 +98,23 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
   end
 
   # Helper function to verify cleanup after process termination
-  defp verify_cleanup(document_name, _workflow_id) do
+  defp verify_cleanup(instance, document_name, _workflow_id) do
     # Verify Registry is cleaned up eventually
-    refute_eventually(Registry.whereis({:doc_supervisor, document_name}))
-    refute_eventually(Registry.whereis({:persistence_writer, document_name}))
-    refute_eventually(Registry.whereis({:shared_doc, document_name}))
+    refute_eventually(
+      Registry.whereis(instance.registry, {:doc_supervisor, document_name})
+    )
+
+    refute_eventually(
+      Registry.whereis(instance.registry, {:persistence_writer, document_name})
+    )
+
+    refute_eventually(
+      Registry.whereis(instance.registry, {:shared_doc, document_name})
+    )
 
     # Verify process group is cleaned up eventually
     refute_eventually(
-      :pg.get_members(:workflow_collaboration, document_name)
+      :pg.get_members(instance.pg_scope, document_name)
       |> Enum.any?()
     )
   end
@@ -155,11 +198,16 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     refute Process.alive?(setup_data.persistence_writer)
     refute Process.alive?(setup_data.shared_doc)
 
-    verify_cleanup(setup_data.document_name, setup_data.workflow_id)
+    verify_cleanup(
+      setup_data.instance,
+      setup_data.document_name,
+      setup_data.workflow_id
+    )
   end
 
   # Helper function to verify successful DocumentSupervisor initialization
   defp verify_initialization(%{
+         instance: instance,
          workflow_id: workflow_id,
          document_name: document_name,
          doc_supervisor: doc_supervisor,
@@ -167,11 +215,13 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
          shared_doc: shared_doc
        }) do
     # Verify DocumentSupervisor is registered correctly
-    registered_supervisor = Registry.whereis({:doc_supervisor, document_name})
+    registered_supervisor =
+      Registry.whereis(instance.registry, {:doc_supervisor, document_name})
+
     assert registered_supervisor == doc_supervisor
 
     # Verify SharedDoc is in process group (now keyed by document_name, not workflow_id)
-    members = :pg.get_members(:workflow_collaboration, document_name)
+    members = :pg.get_members(instance.pg_scope, document_name)
     assert shared_doc in members
 
     # Verify both processes are monitored by checking state
@@ -183,13 +233,13 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     assert state.workflow.id == workflow_id
 
     # Verify all processes are grouped correctly in Registry
-    group = Registry.get_group(document_name)
+    group = Registry.get_group(instance.registry, document_name)
     assert Map.has_key?(group, :persistence_writer)
     assert Map.has_key?(group, :shared_doc)
     assert Map.has_key?(group, :doc_supervisor)
 
     # Count all registered processes for this workflow
-    assert Registry.count(document_name) == 3
+    assert Registry.count(instance.registry, document_name) == 3
   end
 
   # Helper function to test DocumentSupervisor startup failure
@@ -292,7 +342,11 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       assert_all_processes_terminated(processes, monitor_refs)
 
-      verify_cleanup(context.document_name, context.workflow_id)
+      verify_cleanup(
+        context.instance,
+        context.document_name,
+        context.workflow_id
+      )
     end
 
     test "3.2 - Termination with Already Dead Children", context do
@@ -320,7 +374,11 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         refute Process.alive?(context.shared_doc)
       end)
 
-      verify_cleanup(context.document_name, context.workflow_id)
+      verify_cleanup(
+        context.instance,
+        context.document_name,
+        context.workflow_id
+      )
     end
 
     test "3.3 - Termination Order Verification", context do
@@ -354,7 +412,12 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                "PersistenceWriter: #{persistence_writer_time}ms"
 
       refute Process.alive?(context.doc_supervisor)
-      verify_cleanup(context.document_name, context.workflow_id)
+
+      verify_cleanup(
+        context.instance,
+        context.document_name,
+        context.workflow_id
+      )
     end
   end
 
@@ -440,7 +503,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       # Verify it's alive and registered
       assert Process.alive?(doc_supervisor)
 
-      assert Registry.whereis({:doc_supervisor, context.document_name}) ==
+      assert Registry.whereis(
+               context.instance.registry,
+               {:doc_supervisor, context.document_name}
+             ) ==
                doc_supervisor
 
       # Test transient behavior - normal exit should NOT restart
@@ -455,7 +521,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       # Verify no restart occurred for normal termination
       # Wait a reasonable time to ensure supervisor doesn't restart
       refute_eventually(
-        Registry.whereis({:doc_supervisor, context.document_name}) != nil,
+        Registry.whereis(
+          context.instance.registry,
+          {:doc_supervisor, context.document_name}
+        ) != nil,
         1000
       )
 
@@ -485,7 +554,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         # and the registry entry clears asynchronously, so poll for a registered,
         # live replacement instead of comparing PIDs.
         assert_eventually(
-          case Registry.whereis({:doc_supervisor, context.document_name}) do
+          case Registry.whereis(
+                 context.instance.registry,
+                 {:doc_supervisor, context.document_name}
+               ) do
             pid when is_pid(pid) -> Process.alive?(pid)
             _ -> false
           end,
@@ -509,6 +581,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     setup :setup_document_supervisor
 
     test "5.1 - Registry Registration", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       doc_supervisor: doc_supervisor,
@@ -520,17 +593,18 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                doc_supervisor: ^doc_supervisor,
                persistence_writer: ^persistence_writer,
                shared_doc: ^shared_doc
-             } = Registry.get_group(document_name)
+             } = Registry.get_group(instance.registry, document_name)
 
       # Test count function
-      assert Registry.count(document_name) == 3
+      assert Registry.count(instance.registry, document_name) == 3
 
       # Clean up
       GenServer.stop(doc_supervisor, :normal)
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
 
     test "5.2 - Process Group Registration", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       doc_supervisor: doc_supervisor,
@@ -538,14 +612,14 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     } do
       # Test SharedDoc is the only member in workflow_collaboration process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, document_name)
+               :pg.get_members(instance.pg_scope, document_name)
 
       assert [^shared_doc] =
-               :pg.get_local_members(:workflow_collaboration, document_name)
+               :pg.get_local_members(instance.pg_scope, document_name)
 
       # Clean up and verify process group is cleaned up
       GenServer.stop(doc_supervisor, :normal)
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
   end
 
@@ -553,6 +627,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     setup :setup_document_supervisor
 
     test "6.1 - Rapid Child Restarts", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       doc_supervisor: doc_supervisor
@@ -564,9 +639,13 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         # Rapidly kill the same child multiple times to simulate rapid failures
         # DocumentSupervisor should handle this gracefully and terminate cleanly
         persistence_writer =
-          Registry.whereis({:persistence_writer, document_name})
+          Registry.whereis(
+            instance.registry,
+            {:persistence_writer, document_name}
+          )
 
-        shared_doc = Registry.whereis({:shared_doc, document_name})
+        shared_doc =
+          Registry.whereis(instance.registry, {:shared_doc, document_name})
 
         # Kill persistence_writer first
         GenServer.stop(persistence_writer, :kill)
@@ -582,10 +661,11 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         refute Process.alive?(shared_doc)
       end)
 
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
 
     test "6.2 - Concurrent Stop Requests", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       doc_supervisor: doc_supervisor
@@ -635,7 +715,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
           # Verify cleanup happened only once - no orphaned processes
           refute Process.alive?(doc_supervisor)
-          verify_cleanup(document_name, workflow_id)
+          verify_cleanup(instance, document_name, workflow_id)
         end)
 
       # Verify we captured the expected concurrent termination error
@@ -643,6 +723,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     end
 
     test "6.3 - Process Already Stopping", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       doc_supervisor: doc_supervisor,
@@ -674,22 +755,27 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                        5000
       end)
 
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
   end
 
   describe "7. Integration Points" do
-    test "7.1 - With Lightning.Collaborate", %{workflow: workflow} do
+    test "7.1 - With Lightning.Collaborate", %{
+      instance: instance,
+      workflow: workflow
+    } do
       workflow_id = workflow.id
       document_name = "workflow:#{workflow_id}"
       user = insert(:user)
 
-      # Test that Lightning.Collaborate.start/1 creates DocumentSupervisor through session
+      # Test that Lightning.Collaborate.start/2 creates DocumentSupervisor through session
       {:ok, session} =
-        Lightning.Collaborate.start(workflow: workflow, user: user)
+        Lightning.Collaborate.start(instance, workflow: workflow, user: user)
 
       # Verify DocumentSupervisor is created and registered
-      doc_supervisor = Registry.whereis({:doc_supervisor, document_name})
+      doc_supervisor =
+        Registry.whereis(instance.registry, {:doc_supervisor, document_name})
+
       assert doc_supervisor != nil
 
       # Verify all expected processes are registered
@@ -697,37 +783,50 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                doc_supervisor: ^doc_supervisor,
                persistence_writer: _persistence_writer,
                shared_doc: shared_doc
-             } = Registry.get_group(document_name)
+             } = Registry.get_group(instance.registry, document_name)
 
       # Verify SharedDoc is in process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, document_name)
+               :pg.get_members(instance.pg_scope, document_name)
 
       # Clean up session which should clean up DocumentSupervisor
       # Capture potential race condition logs during process shutdown
       capture_log(fn ->
         GenServer.stop(session, :normal)
-        verify_cleanup(document_name, workflow_id)
+        verify_cleanup(instance, document_name, workflow_id)
       end)
     end
 
     setup :setup_document_supervisor
 
     test "7.2 - With Session Processes", %{
-      workflow_id: _workflow_id,
+      instance: instance,
+      workflow_id: workflow_id,
       document_name: document_name,
+      doc_supervisor: doc_supervisor,
       shared_doc: shared_doc
     } do
       # Both discovery methods should find the same process
-      found_via_registry = Registry.whereis({:shared_doc, document_name})
-      [found_via_pg] = :pg.get_members(:workflow_collaboration, document_name)
+      found_via_registry =
+        Registry.whereis(instance.registry, {:shared_doc, document_name})
+
+      [found_via_pg] = :pg.get_members(instance.pg_scope, document_name)
 
       assert found_via_registry == shared_doc
       assert found_via_pg == shared_doc
       assert found_via_registry == found_via_pg
+
+      # Stop the tree synchronously while this test process is still alive. The
+      # children flush to the database under terminate/2; doing it here (rather
+      # than leaving it to the owner-DOWN path after the test process exits)
+      # guarantees no child is mid-query when the sandbox connection is checked
+      # back in.
+      GenServer.stop(doc_supervisor, :normal)
+      verify_cleanup(instance, document_name, workflow_id)
     end
 
     test "7.3 - Persistence Flow", %{
+      instance: instance,
       workflow_id: workflow_id,
       document_name: document_name,
       shared_doc: shared_doc,
@@ -749,12 +848,12 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                      5000
 
       # Cleanup is handled by DocumentSupervisor monitoring
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
   end
 
   describe "8. Resource Management" do
-    test "8.1 - Memory Leaks", %{workflow: workflow} do
+    test "8.1 - Memory Leaks", %{instance: instance, workflow: workflow} do
       workflow_id = workflow.id
       document_name = "workflow:#{workflow_id}"
 
@@ -763,8 +862,15 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         # Start DocumentSupervisor
         {:ok, doc_supervisor} =
           DocumentSupervisor.start_link(
-            [workflow: workflow, document_name: document_name],
-            name: Registry.via({:doc_supervisor, document_name})
+            [
+              workflow: workflow,
+              document_name: document_name,
+              registry: instance.registry,
+              pg_scope: instance.pg_scope,
+              owner: self()
+            ],
+            name:
+              Registry.via(instance.registry, {:doc_supervisor, document_name})
           )
 
         # Verify all processes are created and registered
@@ -772,32 +878,39 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                  doc_supervisor: ^doc_supervisor,
                  persistence_writer: _persistence_writer,
                  shared_doc: shared_doc
-               } = Registry.get_group(document_name)
+               } = Registry.get_group(instance.registry, document_name)
 
         # Verify process group membership
         assert [^shared_doc] =
-                 :pg.get_members(:workflow_collaboration, document_name)
+                 :pg.get_members(instance.pg_scope, document_name)
 
         # Stop DocumentSupervisor normally
         GenServer.stop(doc_supervisor, :normal)
 
         # Verify complete cleanup after each cycle
-        verify_cleanup(document_name, workflow_id)
+        verify_cleanup(instance, document_name, workflow_id)
       end
     end
 
-    test "8.2 - Timeout Handling", %{workflow: workflow} do
+    test "8.2 - Timeout Handling", %{instance: instance, workflow: workflow} do
       workflow_id = workflow.id
       document_name = "workflow:#{workflow_id}"
 
       # Start DocumentSupervisor
       {:ok, doc_supervisor} =
         DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
+          [
+            workflow: workflow,
+            document_name: document_name,
+            registry: instance.registry,
+            pg_scope: instance.pg_scope,
+            owner: self()
+          ],
+          name: Registry.via(instance.registry, {:doc_supervisor, document_name})
         )
 
-      shared_doc = Registry.whereis({:shared_doc, document_name})
+      shared_doc =
+        Registry.whereis(instance.registry, {:shared_doc, document_name})
 
       # Make SharedDoc unresponsive by suspending it
       :sys.suspend(shared_doc)
@@ -813,12 +926,15 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                       :shutdown},
                      15_000
 
-      verify_cleanup(document_name, workflow_id)
+      verify_cleanup(instance, document_name, workflow_id)
     end
   end
 
   describe "9. Checkpoint Creation" do
-    test "creates checkpoint from persisted updates", %{workflow: workflow} do
+    test "creates checkpoint from persisted updates", %{
+      instance: instance,
+      workflow: workflow
+    } do
       document_name = "workflow:#{workflow.id}"
 
       # Create some initial document state with Y.Doc data
@@ -855,18 +971,30 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
           version: :update
         })
 
-      # Start PersistenceWriter
-      {:ok, persistence_writer} =
-        PersistenceWriter.start_link(
-          document_name: document_name,
-          name: Registry.via({:persistence_writer, document_name})
+      # Start PersistenceWriter under ExUnit so it is torn down before the
+      # sandbox owner is stopped, even if an assertion below fails.
+      persistence_writer =
+        start_supervised!(
+          {PersistenceWriter,
+           document_name: document_name,
+           registry: instance.registry,
+           name:
+             Registry.via(
+               instance.registry,
+               {:persistence_writer, document_name}
+             )}
         )
 
-      # Trigger checkpoint creation by sending the message directly
-      send(persistence_writer, :create_checkpoint)
+      # Started directly (no DocumentSupervisor owner hook), so grant the writer
+      # this test's sandbox access before it writes the checkpoint.
+      allow_collaboration_process(persistence_writer)
 
-      # Wait for the checkpoint to be created
-      Process.sleep(100)
+      # Trigger checkpoint creation by sending the message directly, then drain
+      # the mailbox with a synchronous call. Messages are handled in order, so
+      # once :sys.get_state/1 returns, the :create_checkpoint DB insert has
+      # completed and no query is left in flight.
+      send(persistence_writer, :create_checkpoint)
+      :sys.get_state(persistence_writer)
 
       # Verify checkpoint was created
       checkpoint =
@@ -892,11 +1020,13 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       assert Yex.Map.fetch!(checkpoint_workflow_map, "lock_version") == 1
       assert Yex.Map.fetch!(checkpoint_workflow_map, "concurrency") == 10
 
-      # Clean up
+      # Stop synchronously so the writer is gone before this test process exits;
+      # start_supervised! is the safety net if an assertion above raises first.
       GenServer.stop(persistence_writer, :normal)
     end
 
     test "creates checkpoint merging existing checkpoint with updates", %{
+      instance: instance,
       workflow: workflow
     } do
       document_name = "workflow:#{workflow.id}"
@@ -939,15 +1069,28 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
           version: :update
         })
 
-      # Start PersistenceWriter and trigger checkpoint
-      {:ok, persistence_writer} =
-        PersistenceWriter.start_link(
-          document_name: document_name,
-          name: Registry.via({:persistence_writer, document_name})
+      # Start PersistenceWriter under ExUnit so it is torn down before the
+      # sandbox owner is stopped, even if an assertion below fails.
+      persistence_writer =
+        start_supervised!(
+          {PersistenceWriter,
+           document_name: document_name,
+           registry: instance.registry,
+           name:
+             Registry.via(
+               instance.registry,
+               {:persistence_writer, document_name}
+             )}
         )
 
+      # Started directly (no DocumentSupervisor owner hook), so grant the writer
+      # this test's sandbox access before it writes the checkpoint.
+      allow_collaboration_process(persistence_writer)
+
+      # Trigger the checkpoint, then drain the mailbox synchronously so the DB
+      # insert has finished (messages are handled in order) before we read back.
       send(persistence_writer, :create_checkpoint)
-      Process.sleep(100)
+      :sys.get_state(persistence_writer)
 
       # Get the new checkpoint (should be the most recent one)
       checkpoints =
@@ -973,7 +1116,8 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       assert Yex.Map.fetch!(new_workflow_map, "name") == "Modified Name"
       assert Yex.Map.fetch!(new_workflow_map, "lock_version") == 2
 
-      # Clean up
+      # Stop synchronously so the writer is gone before this test process exits;
+      # start_supervised! is the safety net if an assertion above raises first.
       GenServer.stop(persistence_writer, :normal)
     end
   end
