@@ -147,8 +147,13 @@ defmodule LightningWeb.CredentialLive.Helpers do
 
   @doc """
   Builds the `project_credentials` to pre-select when creating a credential in
-  a project context: the active project plus its root parent project (when the
+  a project context: the active project plus every ancestor project (when the
   active project is a sandbox), deduplicated and order-preserving.
+
+  A sandbox can be merged into any of its ancestors, not just the root, and the
+  merge maps credentials by matching them on the target project. Pre-selecting
+  the whole ancestor chain ensures the credential exists on whichever ancestor
+  the merge targets, so it survives the merge instead of being dropped.
 
   Returns an empty list when there is no project context.
   """
@@ -157,11 +162,21 @@ defmodule LightningWeb.CredentialLive.Helpers do
   def default_project_credentials(nil), do: []
 
   def default_project_credentials(%Lightning.Projects.Project{} = project) do
-    [project, Lightning.Projects.root_of(project)]
-    |> Enum.map(& &1.id)
+    project
+    |> Lightning.Projects.preload_ancestors()
+    |> project_and_ancestor_ids()
     |> Enum.uniq()
     |> Enum.map(&%Lightning.Projects.ProjectCredential{project_id: &1})
   end
+
+  defp project_and_ancestor_ids(%Lightning.Projects.Project{
+         id: id,
+         parent: %Lightning.Projects.Project{} = parent
+       }) do
+    [id | project_and_ancestor_ids(parent)]
+  end
+
+  defp project_and_ancestor_ids(%Lightning.Projects.Project{id: id}), do: [id]
 
   def handle_save_response(socket, credential) do
     if socket.assigns[:on_save] do

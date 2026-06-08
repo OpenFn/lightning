@@ -262,7 +262,7 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
       assert project_id == project.id
     end
 
-    test "returns the sandbox and its root parent for a sandbox" do
+    test "returns the sandbox and its full ancestor chain for a sandbox" do
       root = insert(:project)
       child = insert(:project, parent_id: root.id)
       grandchild = insert(:project, parent_id: child.id)
@@ -272,8 +272,9 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
         |> Helpers.default_project_credentials()
         |> Enum.map(& &1.project_id)
 
-      # The active (sandbox) project and the root parent, not the intermediate.
-      assert project_ids == [grandchild.id, root.id]
+      # The active (sandbox) project and every ancestor, including the
+      # intermediate parent, so the credential survives a merge into any of them.
+      assert project_ids == [grandchild.id, child.id, root.id]
     end
   end
 end
