@@ -11,6 +11,14 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   Uses a transient restart strategy, only restarting if the supervisor
   itself crashes, not when child processes exit normally. Monitors both
   child processes and stops itself if either child crashes.
+
+  Optionally monitors an `:owner` pid (passed through the child spec). When that
+  owner goes `:DOWN`, the supervisor stops `:normal` — running `terminate/2`'s
+  flush, and not restarting (transient). This is the owner-monitored
+  self-cleanup seam from
+  `.claude/guidelines/testable-supervision-trees.md` §3: any caller gets
+  deterministic teardown by passing `owner: self()`. With no owner (the
+  production default) the document outlives its starter as before.
   """
   use GenServer
 
@@ -44,6 +52,14 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     workflow = Keyword.fetch!(opts, :workflow)
     document_name = Keyword.fetch!(opts, :document_name)
 
+    # Optionally monitor an owner pid; when it goes :DOWN we stop :normal so the
+    # document tree dies with its owner. nil (production default) → no monitor.
+    owner_ref =
+      case Keyword.get(opts, :owner) do
+        owner when is_pid(owner) -> Process.monitor(owner)
+        _ -> nil
+      end
+
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
         document_name: document_name,
@@ -76,6 +92,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     {:ok,
      %{
        workflow: workflow,
+       owner_ref: owner_ref,
        persistence_writer_pid: persistence_writer_pid,
        persistence_writer_ref: persistence_writer_ref,
        shared_doc_pid: shared_doc_pid,
@@ -103,6 +120,10 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   @impl true
   def terminate(_reason, state) do
+    # Drop the owner monitor if it's still live (e.g. stopped via stop/2 while
+    # the owner is alive) so no stray :DOWN is delivered after we're gone.
+    if state[:owner_ref], do: Process.demonitor(state.owner_ref, [:flush])
+
     # Specifically stop the SharedDoc first, which sends a flush_and_stop
     # message to the PersistenceWriter. So we usually don't need to stop the
     # PersistenceWriter if the SharedDoc is exiting normally, but just in case
@@ -136,6 +157,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   end
 
   @impl true
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{owner_ref: ref} = state
+      ) do
+    Logger.debug("Owner DOWN, stopping document. reason: #{inspect(reason)}")
+
+    Process.demonitor(ref, [:flush])
+
+    # Stop :normal so terminate/2 runs the flush; :transient => no restart.
+    {:stop, :normal, %{state | owner_ref: nil}}
+  end
+
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     key =
       [:persistence_writer_ref, :shared_doc_ref]

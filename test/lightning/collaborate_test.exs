@@ -104,5 +104,47 @@ defmodule Lightning.CollaborateTest do
       assert {:ok, ^doc_supervisor_pid} =
                Collaborate.start_document(workflow, document_name)
     end
+
+    test "start_document/3 with an owner self-terminates when the owner exits",
+         %{workflow: workflow} do
+      document_name = "workflow:#{workflow.id}"
+
+      # A controllable owner distinct from the test pid, so the document tree's
+      # teardown is driven by THIS process exiting, not the test's lifecycle.
+      owner = spawn(fn -> Process.sleep(:infinity) end)
+
+      assert {:ok, doc_supervisor_pid} =
+               Collaborate.start_document(workflow, document_name, owner: owner)
+
+      doc_supervisor_ref = Process.monitor(doc_supervisor_pid)
+      assert Process.alive?(doc_supervisor_pid)
+
+      assert Registry.whereis({:doc_supervisor, document_name}) ==
+               doc_supervisor_pid
+
+      # Killing the owner should stop the document tree :normal (terminate/2
+      # runs the flush; :transient means it is not restarted).
+      Process.exit(owner, :kill)
+
+      assert_receive {:DOWN, ^doc_supervisor_ref, :process, ^doc_supervisor_pid,
+                      :normal},
+                     5000
+
+      refute_eventually(Registry.whereis({:doc_supervisor, document_name}))
+      refute_eventually(Registry.whereis({:shared_doc, document_name}))
+      refute_eventually(Registry.whereis({:persistence_writer, document_name}))
+    end
+
+    test "start_document/3 without an owner does not monitor (production default)",
+         %{workflow: workflow} do
+      document_name = "workflow:#{workflow.id}"
+
+      assert {:ok, doc_supervisor_pid} =
+               Collaborate.start_document(workflow, document_name)
+
+      assert :sys.get_state(doc_supervisor_pid).owner_ref == nil
+
+      Collaborate.stop_document(document_name)
+    end
   end
 end

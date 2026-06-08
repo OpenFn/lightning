@@ -110,14 +110,36 @@ defmodule Lightning.Collaborate do
     end
   end
 
+  @doc """
+  Starts the collaborative document tree for `document_name`.
+
+  `document_name` is a positional payload (domain identity); the registered name
+  and the optional `owner` are process configuration and live in trailing `opts`,
+  per `.claude/guidelines/testable-supervision-trees.md` §1.
+
+  ## Options
+
+  - `:owner` — a pid the document tree monitors. When that pid goes `:DOWN`, the
+    tree stops `:normal` (running its flush via `terminate/2`; `:transient` means
+    no restart). Lets any caller — a test, a request — get deterministic cleanup
+    by passing `owner: self()`, with no wrapper. Defaults to `nil` (no monitor),
+    so production documents outlive the LiveView that starts them.
+  """
+  @spec start_document(
+          workflow :: Lightning.Workflows.Workflow.t(),
+          document_name :: String.t(),
+          opts :: Keyword.t()
+        ) :: {:ok, pid()}
   def start_document(
         %Lightning.Workflows.Workflow{} = workflow,
-        document_name
+        document_name,
+        opts \\ []
       ) do
     case SessionSupervisor.start_child(
            {DocumentSupervisor,
             workflow: workflow,
             document_name: document_name,
+            owner: Keyword.get(opts, :owner),
             name: Registry.via({:doc_supervisor, document_name})}
          ) do
       {:ok, pid} -> {:ok, pid}

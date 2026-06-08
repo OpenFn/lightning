@@ -1,6 +1,4 @@
 defmodule Lightning.CollaborationHelpers do
-  import ExUnit.Callbacks, only: [on_exit: 1]
-
   alias Lightning.Collaboration.Session
 
   @doc """
@@ -20,23 +18,24 @@ defmodule Lightning.CollaborationHelpers do
   Start a collaboration document via the production entrypoint and bind its
   lifetime to the calling test.
 
-  Wraps `Lightning.Collaborate.start_document/2` and registers an `on_exit`
-  that stops THAT specific document, so the doc is torn down with the test
-  that started it — mirroring `start_supervised`'s "the test holds what it
-  started" guarantee. Returns `Collaborate.start_document/2`'s result.
+  Passes `owner: self()` to `Lightning.Collaborate.start_document/3`, so the
+  document tree monitors the test process and self-terminates when it exits —
+  the owner-monitored seam from
+  `.claude/guidelines/testable-supervision-trees.md` §3, so no `on_exit` wrapper
+  is needed. Returns `Collaborate.start_document/3`'s result.
 
-  Prefer this over a bare `Collaborate.start_document/2` in tests: documents
+  Prefer this over a bare `Collaborate.start_document/3` in tests: documents
   started this way live under the global `DocSupervisor`, which ExUnit does
-  not own, so an un-bound doc would otherwise outlive the test. See
-  `ensure_doc_supervisor_stopped/1`.
+  not own, so an un-owned doc would otherwise outlive the test. The blanket
+  `stop_all_collaboration_documents/0` `on_exit` net remains as belt-and-braces
+  for serial suites.
   """
   def start_collaboration_document(
         %Lightning.Workflows.Workflow{} = workflow,
         document_name
       )
       when is_binary(document_name) do
-    on_exit(fn -> Lightning.Collaborate.stop_document(document_name) end)
-    Lightning.Collaborate.start_document(workflow, document_name)
+    Lightning.Collaborate.start_document(workflow, document_name, owner: self())
   end
 
   @doc """
