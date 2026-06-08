@@ -16,15 +16,15 @@ defmodule Lightning.Validators do
   This is a pure format check — no database lookup. Use `User.validate_email/1`
   when you also need to verify the email is unique in the users table.
   """
-  @spec validate_email_format(Ecto.Changeset.t()) :: Ecto.Changeset.t()
-  def validate_email_format(changeset) do
+  @spec validate_email_format(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
+  def validate_email_format(changeset, field \\ :email) do
     changeset
-    |> validate_required(:email, message: "can't be blank")
-    |> validate_format(:email, @email_format_regex,
+    |> validate_required(field, message: "can't be blank")
+    |> validate_format(field, @email_format_regex,
       message: "must be a valid email address"
     )
-    |> validate_length(:email, max: 160)
-    |> update_change(:email, &String.downcase/1)
+    |> validate_length(field, max: 160)
+    |> update_change(field, &String.downcase/1)
   end
 
   @doc """
