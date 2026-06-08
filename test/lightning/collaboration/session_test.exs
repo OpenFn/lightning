@@ -23,9 +23,9 @@ defmodule Lightning.SessionTest do
   require Logger
 
   setup do
-    # Belt-and-braces: every category-2 doc is bound to its own test via
-    # `start_collaboration_document/2`. This blanket net only catches a future
-    # un-bound call site leaking a global doc into the next serial test.
+    # Safety net: documents here are tied to their own test via
+    # `start_collaboration_document/2`. This sweep just catches a stray one a
+    # call site left running, so it can't leak into the next test.
     on_exit(&stop_all_collaboration_documents/0)
     user = insert(:user)
     {:ok, user: user}

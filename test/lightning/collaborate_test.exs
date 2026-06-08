@@ -109,8 +109,8 @@ defmodule Lightning.CollaborateTest do
          %{workflow: workflow} do
       document_name = "workflow:#{workflow.id}"
 
-      # A controllable owner distinct from the test pid, so the document tree's
-      # teardown is driven by THIS process exiting, not the test's lifecycle.
+      # A separate owner process we control, so the document tree's shutdown is
+      # driven by this process exiting rather than by the test finishing.
       owner = spawn(fn -> Process.sleep(:infinity) end)
 
       assert {:ok, doc_supervisor_pid} =
@@ -122,8 +122,8 @@ defmodule Lightning.CollaborateTest do
       assert Registry.whereis({:doc_supervisor, document_name}) ==
                doc_supervisor_pid
 
-      # Killing the owner should stop the document tree :normal (terminate/2
-      # runs the flush; :transient means it is not restarted).
+      # Killing the owner stops the document tree with reason :normal, so
+      # terminate/2 runs the flush and the :transient child isn't restarted.
       Process.exit(owner, :kill)
 
       assert_receive {:DOWN, ^doc_supervisor_ref, :process, ^doc_supervisor_pid,

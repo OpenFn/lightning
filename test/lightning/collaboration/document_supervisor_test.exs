@@ -480,11 +480,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
                         :killed},
                        5000
 
-        # Transient strategy restarts the child after an abnormal exit. The
-        # killed process is already confirmed dead (:killed :DOWN above); the
-        # BEAM may reuse its PID and its registry entry clears asynchronously,
-        # so poll for a registered AND live replacement rather than comparing
-        # PID identity.
+        # The transient strategy restarts the child after an abnormal exit. We
+        # already saw the killed process go down, but the BEAM can reuse its PID
+        # and the registry entry clears asynchronously, so poll for a registered,
+        # live replacement instead of comparing PIDs.
         assert_eventually(
           case Registry.whereis({:doc_supervisor, context.document_name}) do
             pid when is_pid(pid) -> Process.alive?(pid)

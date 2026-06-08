@@ -24,6 +24,13 @@ and this project adheres to
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
   codebase
   [#4589](https://github.com/OpenFn/lightning/issues/4589)
+- Collaborative editing documents now shut down deterministically. A document
+  tree can be handed an `owner` process to monitor, and when that owner exits it
+  stops cleanly with a final persistence flush; `Lightning.Collaborate` gains a
+  synchronous, idempotent `stop_document/1`. Production behaviour is unchanged
+  (documents started by a LiveView still outlive it), but tests can now bind a
+  document's lifetime to the test that starts it, fixing intermittent failures
+  caused by document processes leaking between runs.
 
 ### Fixed
 
