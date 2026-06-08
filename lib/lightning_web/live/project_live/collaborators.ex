@@ -28,8 +28,8 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   defp collaborators_changeset(schema, attrs) do
     schema
     |> cast(attrs, [:email, :role])
-    |> validate_required([:email, :role])
-    |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/)
+    |> validate_required([:role])
+    |> Lightning.Validators.validate_email_format()
   end
 
   @spec prepare_for_insertion(%__MODULE__{}, map(), [map(), ...]) ::
@@ -47,7 +47,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
           Lightning.Accounts.list_users_by_emails(emails)
 
         existing_emails =
-          Enum.map(existing_users, fn user -> String.downcase(user.email) end)
+          Enum.map(existing_users, fn user -> user.email end)
 
         {existing_collaborators, new_collaborators} =
           Enum.split_with(collaborators, fn collaborator ->

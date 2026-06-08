@@ -394,7 +394,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -471,7 +471,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -846,7 +846,7 @@ defmodule Lightning.AccountsTest do
           email: "not valid"
         })
 
-      assert %{email: ["must have the @ sign and no spaces"]} =
+      assert %{email: ["must be a valid email address"]} =
                errors_on(changeset)
     end
 
