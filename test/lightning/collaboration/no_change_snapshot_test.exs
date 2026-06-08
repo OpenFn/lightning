@@ -6,15 +6,17 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
   use Lightning.DataCase, async: false
 
   import Lightning.Factories
+  import Lightning.CollaborationHelpers
 
   alias Lightning.Collaboration.{DocumentSupervisor, Session}
   alias Lightning.Workflows
 
   describe "saving without changes" do
     setup do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
+      # Stub the broadcast calls that save_workflow makes. save_workflow runs in
+      # the Session process; tests that exercise it allow that process into this
+      # test's mocks/sandbox, and the DocumentSupervisor's spawned children are
+      # granted access by the owner-anchored startup hook via `owner: self()`.
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
       user = insert(:user)
@@ -32,7 +34,9 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
       # Start document and session
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow,
+         document_name: "workflow:#{workflow.id}",
+         owner: self()}
       )
 
       session_pid =
@@ -42,6 +46,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
            user: user,
            document_name: "workflow:#{workflow.id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       # Get initial lock_version
       workflow = Workflows.get_workflow!(workflow.id)
@@ -80,7 +86,9 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
       # Start document and session
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow,
+         document_name: "workflow:#{workflow.id}",
+         owner: self()}
       )
 
       session_pid =
@@ -90,6 +98,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
            user: user,
            document_name: "workflow:#{workflow.id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       # Get initial lock_version
       workflow = Workflows.get_workflow!(workflow.id)

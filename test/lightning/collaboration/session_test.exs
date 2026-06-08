@@ -730,9 +730,10 @@ defmodule Lightning.SessionTest do
 
   describe "save_workflow/2" do
     setup do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
+      # Stub the broadcast calls that save_workflow makes. save_workflow runs in
+      # the Session process, which we allow into this test's mocks/sandbox below;
+      # the DocumentSupervisor's spawned children are granted access by the
+      # owner-anchored startup hook via `owner: self()`.
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
       user = insert(:user)
@@ -744,7 +745,9 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow,
+         document_name: "workflow:#{workflow.id}",
+         owner: self()}
       )
 
       session_pid =
@@ -754,6 +757,8 @@ defmodule Lightning.SessionTest do
            user: user,
            document_name: "workflow:#{workflow.id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       %{
         session: session_pid,
@@ -955,7 +960,9 @@ defmodule Lightning.SessionTest do
       # Start document and session with the new workflow
       start_supervised!(
         {DocumentSupervisor,
-         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+         workflow: new_workflow,
+         document_name: "workflow:#{workflow_id}",
+         owner: self()}
       )
 
       session_pid =
@@ -965,6 +972,8 @@ defmodule Lightning.SessionTest do
            user: user,
            document_name: "workflow:#{workflow_id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       # First save - this creates the workflow in DB (lock_version becomes 1)
       assert {:ok, saved_workflow} = Session.save_workflow(session_pid, user)
@@ -1009,7 +1018,9 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+         workflow: new_workflow,
+         document_name: "workflow:#{workflow_id}",
+         owner: self()}
       )
 
       session_pid =
@@ -1019,6 +1030,8 @@ defmodule Lightning.SessionTest do
            user: user,
            document_name: "workflow:#{workflow_id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       # First save to create in DB
       assert {:ok, _saved_workflow} = Session.save_workflow(session_pid, user)
@@ -1104,7 +1117,6 @@ defmodule Lightning.SessionTest do
   # The main save_workflow/2 tests use insert() which creates :loaded workflows.
   describe "save_workflow/2 with NEW workflows" do
     setup do
-      Mox.set_mox_global(LightningMock)
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
       user = insert(:user)
@@ -1124,13 +1136,16 @@ defmodule Lightning.SessionTest do
       document_name = "workflow:new:#{workflow_id}"
 
       start_supervised!(
-        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+        {DocumentSupervisor,
+         workflow: workflow, document_name: document_name, owner: self()}
       )
 
       session_pid =
         start_supervised!(
           {Session, workflow: workflow, user: user, document_name: document_name}
         )
+
+      allow_collaboration_process(session_pid)
 
       %{
         session: session_pid,
@@ -1237,9 +1252,9 @@ defmodule Lightning.SessionTest do
 
   describe "save_workflow/2 validation errors" do
     setup do
-      # Set global mode for the mock to allow cross-process calls
-      Mox.set_mox_global(LightningMock)
-      # Stub the broadcast calls that save_workflow makes
+      # Stub the broadcast calls that save_workflow makes. save_workflow runs in
+      # the Session process (allowed below); the DocumentSupervisor's spawned
+      # children are granted access by the owner-anchored startup hook.
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
       user = insert(:user)
@@ -1248,7 +1263,9 @@ defmodule Lightning.SessionTest do
 
       start_supervised!(
         {DocumentSupervisor,
-         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+         workflow: workflow,
+         document_name: "workflow:#{workflow.id}",
+         owner: self()}
       )
 
       session_pid =
@@ -1258,6 +1275,8 @@ defmodule Lightning.SessionTest do
            user: user,
            document_name: "workflow:#{workflow.id}"}
         )
+
+      allow_collaboration_process(session_pid)
 
       %{
         session: session_pid,
