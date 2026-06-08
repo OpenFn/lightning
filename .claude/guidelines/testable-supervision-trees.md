@@ -33,10 +33,9 @@ process, or resolving a collaborator from global state at call time, instead of
 threading it through structure (supervision wiring, `start_link` opts, process
 state, the caller signature).
 
-Useful framing from Gray & Tate, *Designing Elixir Systems with OTP* ("Do Fun
-Things with Big, Loud Worker-Bees"): push logic into a pure functional core
-that needs no processes to test, so the GenServer is a thin shell. Everything
-below is damage control for the thin shell that remains.
+Per Gray & Tate's *Designing Elixir Systems with OTP*: push logic into a pure
+functional core that needs no processes to test, so the GenServer is a thin
+shell. Everything below is damage control for the thin shell that remains.
 
 > **Scope guard.** Often the cleanest fix is that a thing never needed to be a
 > process or a stored value at all. That's worth one sentence at the design
@@ -63,11 +62,9 @@ thing. Make that a parameter and all three follow:
 Lose the seam and you fight all three separately: a hardcoded name forces the
 suite serial; a process with no symmetric `stop` and no owner to monitor leaks
 past its test; a dependency fished from a global has no owner to lend a mock to.
-The collaboration fix below (§3) is the cautionary example — it solved
-*lifetime* in test support (an `on_exit` wrapper) instead of at the seam,
-because the production API has no owner option yet. That works, but the seam
-ended up in the test helper, not the API; the API-level owner option (§3,
-option 1) is the fuller fix.
+The collaboration fix (§3) is the cautionary case — it solved *lifetime* in
+test support rather than at the seam, because the production API has no owner
+option yet.
 
 ---
 
@@ -183,11 +180,10 @@ govern **mutually exclusive function shapes**:
   (`def fetch(server \\ __MODULE__, key)`).
 
 You never call `start_link` on a running process, and you never need a
-name-in-opts on `call` / `lookup`. The *identity-vs-configuration* question does
-not change this: whether the name is **intrinsic identity** (the key a
-`Registry` registers under) or an **instance selector** (which `Oban` to talk
-to), the constructor still takes it in opts. What flips is only the call side —
-`Oban` leads with the instance for `insert(name \\ Oban, changeset)`.
+name-in-opts on `call` / `lookup`. Identity-vs-configuration doesn't change
+this: whether the name is intrinsic identity (a `Registry` key) or an instance
+selector (which `Oban`), the constructor still takes it in opts; only the call
+side flips — `Oban.insert(name \\ Oban, changeset)` leads with the instance.
 
 One nuance worth stating, because it is the thing that confuses people: the
 **process-registration name** (the `:via` tuple, the registered atom, the
@@ -377,14 +373,13 @@ after teardown.
 Two recipes, in order of preference.
 
 **Option 1 (preferred) — owner-monitored self-cleanup on the production API.**
-Generalise the `commanded/eventstore` owner-monitor pattern from "config row
-self-deletes" to "process tree self-terminates": let the dynamic `start` take an
-optional `owner` pid, `Process.monitor/1` it, and stop the process when that
-owner goes `:DOWN`. Then *any* caller — a test, a LiveView, a short-lived
-request — gets deterministic cleanup for free by passing `owner: self()`, and
-tests need no special wrapper. This is the §0 seam landed in the API: one owner
-parameter buys lifetime *and* (with a per-test name) async-isolation, the same
-control plane.
+Generalise the eventstore owner-monitor above from a self-deleting config row to
+a self-terminating process tree: let the dynamic `start` take an optional
+`owner` pid, `Process.monitor/1` it, and stop the process when that owner goes
+`:DOWN`. Then *any* caller — a test, a LiveView, a short-lived request — gets
+deterministic cleanup for free by passing `owner: self()`, with no special
+wrapper. This is the §0 seam landed in the API: one owner parameter buys
+lifetime *and* (with a per-test name) async-isolation.
 
 **Option 2 (what the collaboration fix did) — public symmetric `stop` + a test
 helper that binds it.** When the API has no owner option yet, add a
@@ -496,9 +491,7 @@ un-bound leak before it corrupts the next test.
   have the whole *process tree* self-terminate on its `:DOWN` (§3, option 1).
 - [`Registry`](https://hexdocs.pm/elixir/Registry.html) ·
   [Thoughtbot — dynamic process names](https://thoughtbot.com/blog/how-to-start-processes-with-dynamic-names-in-elixir)
-- Constructor vs call/lookup argument order — `start_link` puts `name:` in
-  trailing opts across the stdlib and ecosystem, while `call`/`lookup`/`insert`
-  lead with the instance:
+- Constructor vs call/lookup argument order (§1):
   [`GenServer`](https://hexdocs.pm/elixir/GenServer.html) ·
   [`Supervisor`](https://hexdocs.pm/elixir/Supervisor.html) ·
   [`Agent`](https://hexdocs.pm/elixir/Agent.html) ·
