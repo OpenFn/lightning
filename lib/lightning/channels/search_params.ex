@@ -5,6 +5,8 @@ defmodule Lightning.Channels.SearchParams do
 
   use Lightning.Schema
 
+  import Lightning.Validators, only: [validate_uuid: 2]
+
   @primary_key false
   embedded_schema do
     field :channel_id, :binary_id
@@ -34,14 +36,5 @@ defmodule Lightning.Channels.SearchParams do
       {:ok, struct} -> struct
       {:error, _changeset} -> %__MODULE__{}
     end
-  end
-
-  defp validate_uuid(changeset, field) do
-    validate_change(changeset, field, fn _, value ->
-      case Ecto.UUID.cast(value) do
-        {:ok, _} -> []
-        :error -> [{field, "is not a valid UUID"}]
-      end
-    end)
   end
 end

@@ -25,14 +25,56 @@ and this project adheres to
   plus-addressed emails and other valid addresses were accepted at creation but
   rejected by the collaborator forms.
   [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
+### Fixed
+
+## [2.16.7] - 2026-06-04
+
+### Changed
+
 - Stop reporting expected credential-resolution failures (OAuth re-auth needed,
   misconfigured project environment, transient provider errors) to Sentry. These
   are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
   instead of `error`; only a genuinely missing project still logs at `error`.
   [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ### Fixed
 
+- Fix icon vertical alignment in sandbox alert banners
+  [#4730](https://github.com/OpenFn/lightning/issues/4730)
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
+- Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
+  search indexing off the insert path. The full-text search vector is now
+  backfilled by a background worker rather than computed synchronously on every
+  insert, so log search is eventually-consistent (typically within a minute).
+  [#4425](https://github.com/OpenFn/lightning/issues/4425)
+- Dataclip inserts no longer roll back when building the full-text search vector
+  is slow. The `jsonb_to_tsvector` work that ran in an `AFTER INSERT` trigger
+  could hold the connection past the timeout and roll back the insert, losing
+  the whole run. The search vector is now built off the insert path by a
+  background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
+  `search_indexing` queue with the log-lines worker), making dataclip search
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
 - Channel join crashes when multiple users open the same workflow concurrently
   [#4802](https://github.com/OpenFn/lightning/issues/4802)
 - Fix `purge_deleted` Oban job crashing when a soft-deleted project has
@@ -50,6 +92,29 @@ and this project adheres to
   [#4810](https://github.com/OpenFn/lightning/issues/4810)
 - Workflow channel raises an exception when fetching trigger auth methods for an
   unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ## [2.16.6] - 2026-05-27
 

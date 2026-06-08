@@ -1032,6 +1032,66 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} =
                Session.save_workflow(session_pid, user)
     end
+
+    @tag :capture_log
+    test "malformed job id returns a changeset error without crashing the session",
+         %{
+           session: session,
+           user: user
+         } do
+      # 16-byte unsubstituted placeholder: cast/1 accepts it, dump/1 rejects it.
+      malformed_job =
+        :job
+        |> string_params_for()
+        |> Map.put("id", "__ID_JOB_Fetch__")
+
+      :ok =
+        Lightning.CollaborationHelpers.push_to_array(
+          session,
+          "jobs",
+          malformed_job
+        )
+
+      # Full path: get_doc → transaction → save_workflow must NOT crash the
+      # GenServer.
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # The contract from #4816: the GenServer (and thus the channel) stays up.
+      assert Process.alive?(session)
+    end
+
+    @tag :capture_log
+    test "cron cursor pointing at a job in another workflow returns a changeset error without crashing the session",
+         %{
+           session: session,
+           user: user
+         } do
+      # A job in a DIFFERENT workflow — the compound same-workflow FK rejects a
+      # cursor that points at it (finding #4: silent cross-workflow corruption).
+      foreign_workflow = insert(:workflow)
+      foreign_job = insert(:job, workflow: foreign_workflow)
+
+      cron_trigger = %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "cron",
+        "enabled" => true,
+        "cron_expression" => "* * * * *",
+        "cron_cursor_job_id" => foreign_job.id
+      }
+
+      :ok =
+        Lightning.CollaborationHelpers.push_to_array(
+          session,
+          "triggers",
+          cron_trigger
+        )
+
+      # Full path: get_doc → transaction → save_workflow must NOT crash the
+      # GenServer, returning the FK changeset error instead.
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      assert Process.alive?(session)
+    end
   end
 
   # Separate describe block for NEW workflow tests.

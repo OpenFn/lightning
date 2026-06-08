@@ -1139,6 +1139,76 @@ describe('WorkflowStore - removeJob with edge cleanup', () => {
     expect(snapshotAfter.jobs).toHaveLength(1);
     expect(snapshotAfter.jobs?.[0]?.id).toBe('job-a');
   });
+
+  test('clears cron_cursor_job_id on a cron trigger pointing at the removed job', () => {
+    // Setup: cron trigger whose cursor points at Job B (no edge between them,
+    // mirroring the unfiltered "Cron Input Source" dropdown).
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'cron');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_cursor_job_id', 'job-b');
+    triggersArray.push([triggerMap]);
+
+    store.addJob({ id: 'job-a', name: 'Job A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'Job B', body: 'fn(state => state)' });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBe('job-b');
+
+    // Action: Delete the cursor job
+    store.removeJob('job-b');
+
+    // Assert: Job B gone and the trigger's cursor reference cleared
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.jobs?.[0]?.id).toBe('job-a');
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBeNull();
+  });
+
+  test('leaves cron_cursor_job_id untouched when a different job is removed', () => {
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'cron');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_cursor_job_id', 'job-a');
+    triggersArray.push([triggerMap]);
+
+    store.addJob({ id: 'job-a', name: 'Job A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'Job B', body: 'fn(state => state)' });
+
+    // Action: Delete a job that is NOT the cursor target
+    store.removeJob('job-b');
+
+    // Assert: cursor still points at the surviving job
+    const snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBe('job-a');
+  });
+
+  test('clears dangling cursors on multiple cron triggers when their job is removed', () => {
+    const triggersArray = ydoc.getArray('triggers');
+    ['t1', 't2'].forEach(id => {
+      const t = new Y.Map();
+      t.set('id', id);
+      t.set('type', 'cron');
+      t.set('enabled', true);
+      t.set('cron_cursor_job_id', 'job-b');
+      triggersArray.push([t]);
+    });
+
+    store.addJob({ id: 'job-a', name: 'A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'B', body: 'fn(state => state)' });
+
+    store.removeJob('job-b');
+
+    const snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.every(t => t.cron_cursor_job_id === null)).toBe(
+      true
+    );
+  });
 });
 
 describe('WorkflowStore - AI Workflow Apply Coordination', () => {

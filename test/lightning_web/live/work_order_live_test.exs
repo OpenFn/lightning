@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.Factories
   import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 1]
+  import Lightning.TestUtils, only: [flush_dataclip_search_index: 0]
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
@@ -1104,6 +1105,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           ],
           "step_id" => Ecto.UUID.generate()
         })
+
+      flush_dataclip_search_index()
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
