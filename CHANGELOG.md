@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
 - Stop reporting expected credential-resolution failures (OAuth re-auth needed,
   misconfigured project environment, transient provider errors) to Sentry. These
   are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
