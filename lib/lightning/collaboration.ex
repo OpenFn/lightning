@@ -26,16 +26,16 @@ defmodule Lightning.Collaborate do
       Collaborate.start(user: user, workflow: workflow)
   """
   alias Lightning.Collaboration.DocumentSupervisor
+  alias Lightning.Collaboration.Instance
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Supervisor, as: SessionSupervisor
 
   require Logger
 
-  @pg_scope :workflow_collaboration
-
-  @spec start(opts :: Keyword.t()) :: GenServer.on_start()
-  def start(opts) do
+  @spec start(instance :: Instance.t(), opts :: Keyword.t()) ::
+          GenServer.on_start()
+  def start(instance \\ Instance.default(), opts) do
     session_id = Ecto.UUID.generate()
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
@@ -55,10 +55,13 @@ defmodule Lightning.Collaborate do
     # Ensure document supervisor exists for this document. Track whether THIS
     # call started the document, so we only tear down a doc we orphaned.
     started_here? =
-      case lookup_shared_doc(document_name) do
+      case lookup_shared_doc(instance, document_name) do
         nil ->
           Logger.info("Starting document for #{document_name}")
-          {:ok, _doc_supervisor_pid} = start_document(workflow, document_name)
+
+          {:ok, _doc_supervisor_pid} =
+            start_document(instance, workflow, document_name)
+
           true
 
         _shared_doc_pid ->
@@ -68,21 +71,30 @@ defmodule Lightning.Collaborate do
 
     # Start session for this user
     result =
-      SessionSupervisor.start_child({
-        Session,
-        workflow: workflow,
-        user: user,
-        parent_pid: parent_pid,
-        document_name: document_name,
-        name: Registry.via({:session, "#{document_name}:#{session_id}", user.id})
-      })
+      SessionSupervisor.start_child(
+        instance.dynamic_supervisor,
+        {
+          Session,
+          workflow: workflow,
+          user: user,
+          parent_pid: parent_pid,
+          document_name: document_name,
+          registry: instance.registry,
+          pg_scope: instance.pg_scope,
+          name:
+            Registry.via(
+              instance.registry,
+              {:session, "#{document_name}:#{session_id}", user.id}
+            )
+        }
+      )
 
     case result do
       {:ok, _session_pid} ->
         result
 
       _error ->
-        if started_here?, do: stop_document(document_name)
+        if started_here?, do: stop_document(instance, document_name)
         result
     end
   end
@@ -94,9 +106,10 @@ defmodule Lightning.Collaborate do
   final flush). Synchronous and idempotent: returns `:ok` whether or not a
   document is running. The symmetric partner to `start_document/2`.
   """
-  @spec stop_document(document_name :: String.t()) :: :ok
-  def stop_document(document_name) do
-    case Registry.whereis({:doc_supervisor, document_name}) do
+  @spec stop_document(instance :: Instance.t(), document_name :: String.t()) ::
+          :ok
+  def stop_document(instance \\ Instance.default(), document_name) do
+    case Registry.whereis(instance.registry, {:doc_supervisor, document_name}) do
       nil ->
         :ok
 
@@ -127,28 +140,64 @@ defmodule Lightning.Collaborate do
   """
   @spec start_document(
           workflow :: Lightning.Workflows.Workflow.t(),
+          document_name :: String.t()
+        ) :: {:ok, pid()}
+  @spec start_document(
+          workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t(),
           opts :: Keyword.t()
         ) :: {:ok, pid()}
+  @spec start_document(
+          instance :: Instance.t(),
+          workflow :: Lightning.Workflows.Workflow.t(),
+          document_name :: String.t(),
+          opts :: Keyword.t()
+        ) :: {:ok, pid()}
+  def start_document(%Lightning.Workflows.Workflow{} = workflow, document_name) do
+    start_document(Instance.default(), workflow, document_name, [])
+  end
+
+  def start_document(%Instance{} = instance, workflow, document_name) do
+    start_document(instance, workflow, document_name, [])
+  end
+
   def start_document(
         %Lightning.Workflows.Workflow{} = workflow,
         document_name,
-        opts \\ []
-      ) do
+        opts
+      )
+      when is_list(opts) do
+    start_document(Instance.default(), workflow, document_name, opts)
+  end
+
+  def start_document(
+        %Instance{} = instance,
+        %Lightning.Workflows.Workflow{} = workflow,
+        document_name,
+        opts
+      )
+      when is_list(opts) do
     case SessionSupervisor.start_child(
+           instance.dynamic_supervisor,
            {DocumentSupervisor,
             workflow: workflow,
             document_name: document_name,
             owner: Keyword.get(opts, :owner),
-            name: Registry.via({:doc_supervisor, document_name})}
+            registry: instance.registry,
+            pg_scope: instance.pg_scope,
+            name:
+              Registry.via(
+                instance.registry,
+                {:doc_supervisor, document_name}
+              )}
          ) do
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, pid}} -> {:ok, pid}
     end
   end
 
-  defp lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+  defp lookup_shared_doc(%Instance{} = instance, document_name) do
+    case :pg.get_members(instance.pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

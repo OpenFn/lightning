@@ -39,11 +39,16 @@ defmodule Lightning.Collaboration.Registry do
 
   @doc """
   Child specification for starting the Registry.
+
+  The registered name is injectable via the `:name` option (defaulting to
+  `__MODULE__`) so a supervisor instance can run its own Registry.
   """
-  def child_spec(_opts) do
+  def child_spec(opts) do
+    {name, _opts} = Keyword.pop(opts, :name, __MODULE__)
+
     %{
-      id: __MODULE__,
-      start: {Registry, :start_link, [[keys: :unique, name: __MODULE__]]},
+      id: name,
+      start: {Registry, :start_link, [[keys: :unique, name: name]]},
       type: :supervisor
     }
   end
@@ -65,16 +70,17 @@ defmodule Lightning.Collaboration.Registry do
       # => {:error, {:already_registered, #PID<0.456.0>}}
 
   """
-  @spec register(term()) :: {:ok, pid()} | {:error, {:already_registered, pid()}}
-  def register(key) do
-    case Registry.register(__MODULE__, key, nil) do
+  @spec register(registry :: atom(), term()) ::
+          {:ok, pid()} | {:error, {:already_registered, pid()}}
+  def register(registry \\ __MODULE__, key) do
+    case Registry.register(registry, key, nil) do
       {:ok, _pid} -> {:ok, self()}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  def via(key) do
-    {:via, Registry, {__MODULE__, key}}
+  def via(registry \\ __MODULE__, key) do
+    {:via, Registry, {registry, key}}
   end
 
   @doc """
@@ -92,9 +98,9 @@ defmodule Lightning.Collaboration.Registry do
       # => []
 
   """
-  @spec lookup(term()) :: [{pid(), term()}]
-  def lookup(key) do
-    Registry.lookup(__MODULE__, key)
+  @spec lookup(registry :: atom(), term()) :: [{pid(), term()}]
+  def lookup(registry \\ __MODULE__, key) do
+    Registry.lookup(registry, key)
   end
 
   @doc """
@@ -112,22 +118,28 @@ defmodule Lightning.Collaboration.Registry do
       # => nil
 
   """
-  @spec whereis(term()) :: pid() | nil
-  def whereis(key) do
-    case lookup(key) do
+  @spec whereis(registry :: atom(), term()) :: pid() | nil
+  def whereis(registry \\ __MODULE__, key) do
+    case lookup(registry, key) do
       [{pid, _value}] -> pid
       [] -> nil
     end
   end
 
-  def count(key \\ nil)
+  @doc """
+  Count registered processes, optionally restricted to a key prefix.
 
-  def count(nil) do
-    Registry.count(__MODULE__)
+  With no key (`count/0`, or `count/1` with a registry), counts every entry in
+  the registry. With a key, counts entries whose key starts with it.
+  """
+  def count(registry \\ __MODULE__, key)
+
+  def count(registry, nil) do
+    Registry.count(registry)
   end
 
-  def count(key) do
-    select(key) |> length()
+  def count(registry, key) do
+    select(registry, key) |> length()
   end
 
   @doc """
@@ -139,10 +151,10 @@ defmodule Lightning.Collaboration.Registry do
 
   We do a select with any key that _starts with_ the given key.
   """
-  @spec select(binary()) :: [{term(), pid()}]
-  def select(key) when is_binary(key) do
+  @spec select(registry :: atom(), binary()) :: [{term(), pid()}]
+  def select(registry \\ __MODULE__, key) when is_binary(key) do
     # We have two select specs, for keys with and without values.
-    Registry.select(__MODULE__, [
+    Registry.select(registry, [
       {{{:"$1", :"$2"}, :"$3", :"$4"},
        [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]},
       {{{:"$1", :"$2", :"$5"}, :"$3", :"$4"},
@@ -156,15 +168,15 @@ defmodule Lightning.Collaboration.Registry do
   The match spec lives here, beside the other key-shape knowledge this module
   owns, rather than being hand-rolled by callers.
   """
-  @spec doc_supervisor_names() :: [binary()]
-  def doc_supervisor_names do
-    Registry.select(__MODULE__, [
+  @spec doc_supervisor_names(registry :: atom()) :: [binary()]
+  def doc_supervisor_names(registry \\ __MODULE__) do
+    Registry.select(registry, [
       {{{:doc_supervisor, :"$1"}, :_, :_}, [], [:"$1"]}
     ])
   end
 
-  def get_group(key) do
-    select(key)
+  def get_group(registry \\ __MODULE__, key) do
+    select(registry, key)
     |> Enum.reduce(%{}, fn [type, pid], acc ->
       case type do
         :session ->

@@ -22,14 +22,11 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   """
   use GenServer
 
-  import Lightning.Collaboration.Registry, only: [via: 1]
-
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
+  alias Lightning.Collaboration.Registry
 
   require Logger
-
-  @pg_scope :workflow_collaboration
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
@@ -51,6 +48,8 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
     document_name = Keyword.fetch!(opts, :document_name)
+    registry = Keyword.get(opts, :registry, Registry)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
     # Optionally monitor an owner pid; when it goes :DOWN we stop :normal so the
     # document tree dies with its owner. nil (production default) → no monitor.
@@ -64,7 +63,8 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       PersistenceWriter.start_link(
         document_name: document_name,
         workflow_id: workflow.id,
-        name: via({:persistence_writer, document_name})
+        registry: registry,
+        name: Registry.via(registry, {:persistence_writer, document_name})
       )
 
     persistence_writer_ref = Process.monitor(persistence_writer_pid)
@@ -81,11 +81,11 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
                persistence_writer: persistence_writer_pid
              }}
         ],
-        name: via({:shared_doc, document_name})
+        name: Registry.via(registry, {:shared_doc, document_name})
       )
 
     # Register with :pg using document_name so versioned rooms are isolated
-    :ok = register_shared_doc_with_pg(document_name, shared_doc_pid)
+    :ok = register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
 
@@ -183,8 +183,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     {:stop, :normal, state |> Map.put(key, nil)}
   end
 
-  # Supervisor.start_link(children, strategy: :one_for_all)
-  defp register_shared_doc_with_pg(document_name, shared_doc_pid) do
-    :pg.join(@pg_scope, document_name, shared_doc_pid)
+  defp register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid) do
+    :pg.join(pg_scope, document_name, shared_doc_pid)
   end
 end
