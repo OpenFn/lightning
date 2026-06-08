@@ -990,15 +990,47 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp format_merge_error(%Ecto.Changeset{} = changeset) do
-    changeset.errors
-    |> List.first()
-    |> case do
-      {field, {message, _}} -> "#{field}: #{message}"
-      _ -> "Failed to merge: validation error"
+    case first_changeset_error(changeset) do
+      {path, message} -> "Failed to merge: #{path}: #{message}"
+      nil -> "Failed to merge: validation error"
     end
   end
 
   defp format_merge_error(%{text: text}), do: text
   defp format_merge_error(reason) when is_binary(reason), do: reason
   defp format_merge_error(reason), do: "Failed to merge: #{inspect(reason)}"
+
+  # Finds the first error anywhere in the changeset, including errors nested in
+  # associations (e.g. a workflow's name or a job's credential). Without this,
+  # a nested error has no top-level entry and the merge screen would only show a
+  # generic "validation error" with no indication of the real cause.
+  defp first_changeset_error(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(&interpolate_error_message/1)
+    |> first_nested_error([])
+  end
+
+  defp first_nested_error(errors, path) when is_map(errors) do
+    Enum.find_value(errors, fn {field, value} ->
+      first_nested_error(value, [to_string(field) | path])
+    end)
+  end
+
+  defp first_nested_error(values, path) when is_list(values) do
+    Enum.find_value(values, &first_nested_error(&1, path))
+  end
+
+  defp first_nested_error(message, path) when is_binary(message) do
+    {path |> Enum.reverse() |> Enum.join("."), message}
+  end
+
+  defp first_nested_error(_other, _path), do: nil
+
+  defp interpolate_error_message({message, opts}) do
+    Regex.replace(~r/%\{(\w+)\}/, message, fn _whole, key ->
+      opts
+      |> Keyword.get(String.to_existing_atom(key), key)
+      |> to_string()
+    end)
+  end
 end
