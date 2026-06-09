@@ -676,9 +676,7 @@ export function MessageList({
                   {!isStreaming(message) && message.status === 'processing' && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <div className="flex items-center gap-1">
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                        <BouncingDots />
                       </div>
                     </div>
                   )}
