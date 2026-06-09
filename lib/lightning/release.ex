@@ -13,10 +13,10 @@ defmodule Lightning.Release do
 
   import Ecto.Query
 
-  require Logger
-
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
+
+  require Logger
 
   @app :lightning
   @repo Lightning.Repo
