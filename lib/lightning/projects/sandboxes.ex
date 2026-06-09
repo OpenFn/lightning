@@ -206,13 +206,24 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp classify_merge_error(%Ecto.Changeset{} = changeset) do
-    Logger.warning(
-      "Sandbox merge failed validation: #{inspect(merge_error_details(changeset))}"
-    )
+    details = inspect(merge_error_details(changeset))
 
     case conflicting_workflow_name(changeset) do
-      {:ok, name} -> {:workflow_name_conflict, name}
-      :error -> :merge_validation_failed
+      {:ok, name} ->
+        Logger.warning(
+          "Sandbox merge failed: workflow name conflict. #{details}"
+        )
+
+        {:workflow_name_conflict, name}
+
+      :error ->
+        # Unrecognised failure mode: log at :error so it reaches Sentry and we
+        # can give it a typed reason.
+        Logger.error(
+          "Sandbox merge failed validation (unclassified). #{details}"
+        )
+
+        :merge_validation_failed
     end
   end
 
