@@ -247,11 +247,7 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp merge_error_details(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r/%\{(\w+)\}/, message, fn _whole, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
+    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   @doc """
