@@ -1,0 +1,1 @@
+call "%~dp0\lightning" eval Lightning.Release.backfill_deleted_workflow_names
