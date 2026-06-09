@@ -26,8 +26,8 @@ and this project adheres to
 
 ### Fixed
 
-- Fix email format validation not displaying in the Add Collaborators modal.
-  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
 
 ## [2.16.7] - 2026-06-04
 
