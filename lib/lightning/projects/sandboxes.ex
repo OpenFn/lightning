@@ -41,8 +41,6 @@ defmodule Lightning.Projects.Sandboxes do
   """
   import Ecto.Query
 
-  require Logger
-
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Collections.Collection
@@ -63,6 +61,8 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkflowVersions
+
+  require Logger
 
   @typedoc """
   Attributes for creating a new sandbox via `provision/3`.
@@ -179,6 +179,7 @@ defmodule Lightning.Projects.Sandboxes do
           {:workflow_name_conflict, String.t()}
           | :merge_validation_failed
           | :merge_failed
+          | String.t()
           | Lightning.Extensions.UsageLimiting.message()
 
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
