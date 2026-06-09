@@ -1021,7 +1021,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
-    test "new credential in a sandbox pre-selects the sandbox and its root parent",
+    test "new credential in a sandbox pre-selects the sandbox and its full ancestor chain",
          %{conn: conn, user: user} do
       root =
         insert(:project,
@@ -1047,8 +1047,8 @@ defmodule LightningWeb.ProjectLiveTest do
       view |> select_credential_type("http")
       view |> click_continue()
 
-      # Both the active sandbox and the root parent are pre-selected; the
-      # intermediate project in the chain is not.
+      # The active sandbox and every ancestor are pre-selected, including the
+      # intermediate, so the credential survives a merge into any of them.
       assert has_element?(
                view,
                "#remove-project-credential-button-new-#{sandbox.id}"
@@ -1056,12 +1056,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#remove-project-credential-button-new-#{root.id}"
+               "#remove-project-credential-button-new-#{intermediate.id}"
              )
 
-      refute has_element?(
+      assert has_element?(
                view,
-               "#remove-project-credential-button-new-#{intermediate.id}"
+               "#remove-project-credential-button-new-#{root.id}"
              )
     end
 
