@@ -1825,7 +1825,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       html = render(view)
 
-      assert html =~ "Failed to merge"
+      assert html =~ "merge this sandbox"
 
       refute has_element?(view, "#merge-sandbox-modal")
     end
@@ -2133,11 +2133,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "formats generic error with inspect", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
+    test "shows a generic message for an unexpected failure, without leaking internals",
+         %{
+           conn: conn,
+           root: root,
+           child1: child1
+         } do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
@@ -2165,8 +2166,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "Failed to merge:"
-      assert html =~ "unexpected"
+      assert html =~ "merge this sandbox"
+      # The raw reason must not leak to the user.
+      refute html =~ "unexpected"
+      refute html =~ "something went wrong"
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
