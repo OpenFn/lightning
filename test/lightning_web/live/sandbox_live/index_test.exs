@@ -2347,7 +2347,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert hd(parent_collections).name == "shared"
     end
 
-    test "merge fails with flash error when collection sync fails", %{
+    test "merge failure shows a flash error and closes the modal", %{
       conn: conn,
       root: root,
       sandbox: sandbox
@@ -2358,7 +2358,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                                                             _tgt,
                                                             _actor,
                                                             _opts ->
-        {:error, "Failed to sync collections: :boom"}
+        {:error, :merge_failed}
       end)
 
       Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
@@ -2370,7 +2370,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       view |> form("#merge-sandbox-modal form") |> render_submit()
 
       html = render(view)
-      assert html =~ "Failed to sync collections"
+      assert html =~ "merge this sandbox"
       refute has_element?(view, "#merge-sandbox-modal")
     end
   end

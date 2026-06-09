@@ -179,7 +179,6 @@ defmodule Lightning.Projects.Sandboxes do
           {:workflow_name_conflict, String.t()}
           | :merge_validation_failed
           | :merge_failed
-          | String.t()
           | Lightning.Extensions.UsageLimiting.message()
 
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
@@ -231,8 +230,6 @@ defmodule Lightning.Projects.Sandboxes do
 
   defp classify_merge_error(%{text: _} = usage_limit_message),
     do: usage_limit_message
-
-  defp classify_merge_error(reason) when is_binary(reason), do: reason
 
   defp classify_merge_error(reason) do
     Logger.error("Sandbox merge failed unexpectedly. #{inspect(reason)}")
