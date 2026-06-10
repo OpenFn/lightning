@@ -21,7 +21,8 @@ defmodule Lightning.WorkOrders.SearchParams do
              :sort_direction
            ]}
 
-  @statuses ~w(pending running success failed crashed killed cancelled lost exception rejected)
+  @statuses Lightning.WorkOrder.states()
+            |> Enum.map(&Atom.to_string/1)
   @statuses_set MapSet.new(@statuses)
   @search_fields ~w(id body log dataclip_name)
 
