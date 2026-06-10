@@ -9,6 +9,7 @@ interface NumberFieldProps {
   min?: number | undefined;
   max?: number | undefined;
   helpText?: string | undefined;
+  labelTooltip?: React.ReactNode | undefined;
 }
 
 /**
@@ -38,6 +39,7 @@ export function NumberField({
   min,
   max,
   helpText,
+  labelTooltip,
 }: NumberFieldProps) {
   const field = useFieldContext<number | null>();
 
@@ -57,6 +59,7 @@ export function NumberField({
       label={label}
       meta={field.state.meta}
       helpText={helpText}
+      labelTooltip={labelTooltip}
     >
       <input
         type="number"
