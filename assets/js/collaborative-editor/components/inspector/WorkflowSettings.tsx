@@ -15,8 +15,8 @@ import { notifications } from '#/collaborative-editor/lib/notifications';
 import { createWorkflowSchema } from '#/collaborative-editor/types/workflow';
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { Tooltip } from '../../../components/Tooltip';
 import { AlertDialog } from '../AlertDialog';
-import { Tooltip } from '../Tooltip';
 
 export function WorkflowSettings() {
   // Get workflow from store - LoadingBoundary guarantees it's non-null
@@ -145,7 +145,7 @@ export function WorkflowSettings() {
           <h3 className="text-sm font-medium text-gray-900">Concurrency</h3>
           {isSyncMode && (
             <Tooltip
-              content="Concurrency cannot be set for workflows triggered in sync (response) mode. The trigger holds the HTTP connection open until the run completes, so only one run can be active per request."
+              content="This workflow uses a sync-mode trigger. Because sync-mode is time sensitive, most OpenFn instances ignore concurrency limits for these workflows. You may still set this value, but it may not have any effect."
               side="right"
             >
               <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
@@ -169,14 +169,18 @@ export function WorkflowSettings() {
                 }
                 min={1}
                 max={projectConcurrency ?? undefined}
-                disabled={isReadOnly || isProjectConcurrencyDisabled || isSyncMode}
+                disabled={isReadOnly || isProjectConcurrencyDisabled}
               />
               {isSyncMode && (
                 <div className="text-xs mt-2">
                   <div className="italic text-gray-500">
-                    This workflow's trigger uses sync (response) mode, which
-                    holds the HTTP connection open until the run completes.
-                    Concurrency is not respected in this mode.
+                    <span className="hero-exclamation-triangle-solid h-4 w-4 mr-1 inline-block align-text-bottom text-amber-400" />
+                    This workflow uses a sync-mode trigger. Because sync-mode is
+                    time sensitive, most OpenFn instances ignore concurrency
+                    limits for these workflows and process as many as possible
+                    at once. (You may set this setting, but as your OpenFn host
+                    scales the workers and adjusts their priorities over time it
+                    may not have any impact.)
                   </div>
                 </div>
               )}
