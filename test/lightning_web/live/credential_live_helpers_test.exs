@@ -262,7 +262,7 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
       assert project_id == project.id
     end
 
-    test "returns the sandbox and its full ancestor chain for a sandbox" do
+    test "returns only the sandbox itself, not its ancestors" do
       root = insert(:project)
       child = insert(:project, parent_id: root.id)
       grandchild = insert(:project, parent_id: child.id)
@@ -272,8 +272,7 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
         |> Helpers.default_project_credentials()
         |> Enum.map(& &1.project_id)
 
-      # Includes the intermediate parent, not just the root.
-      assert project_ids == [grandchild.id, child.id, root.id]
+      assert project_ids == [grandchild.id]
     end
   end
 end

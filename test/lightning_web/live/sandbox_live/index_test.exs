@@ -3857,6 +3857,162 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
+  describe "credential selection in merge modal" do
+    setup :register_and_log_in_user
+
+    # Provisions a real sandbox from the parent, then adds a credential that
+    # lives only in the sandbox and wires the sandbox's job to it. The merge of
+    # this sandbox into the parent would drop that credential unless the user
+    # keeps it selected in the modal.
+    setup %{user: user} do
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      wf = insert(:workflow, project: parent, name: "Alpha")
+      trigger = insert(:trigger, workflow: wf, type: :webhook)
+
+      job =
+        insert(:job,
+          workflow: wf,
+          name: "A1",
+          adaptor: "@openfn/language-common@latest",
+          body: "console.log('A1');"
+        )
+
+      insert(:edge,
+        workflow: wf,
+        source_trigger_id: trigger.id,
+        target_job_id: job.id,
+        condition_type: :always,
+        enabled: true
+      )
+
+      {:ok, sandbox} =
+        Lightning.Projects.Sandboxes.provision(parent, user, %{name: "sb"})
+
+      credential =
+        insert(:credential,
+          name: "sandbox-only-cred",
+          body: %{"token" => "x"},
+          user: user
+        )
+
+      sandbox_pc =
+        insert(:project_credential, project: sandbox, credential: credential)
+
+      sandbox_job =
+        from(j in Lightning.Workflows.Job,
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^sandbox.id and j.name == "A1"
+        )
+        |> Repo.one!()
+
+      sandbox_job
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      {:ok,
+       parent: parent,
+       sandbox: sandbox,
+       credential: credential,
+       sandbox_pc: sandbox_pc}
+    end
+
+    test "modal lists sandbox-only credentials checked by default", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_pc: sandbox_pc
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert [%{id: listed_id, name: "sandbox-only-cred"}] =
+               assigns.merge_credentials
+
+      assert listed_id == sandbox_pc.id
+
+      assert MapSet.equal?(
+               assigns.merge_selected_credential_ids,
+               MapSet.new([sandbox_pc.id])
+             )
+
+      html = render(view)
+      assert html =~ "Credentials to add to the target project"
+      assert html =~ "sandbox-only-cred"
+    end
+
+    test "deselecting a credential and merging does not attach it", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_pc: sandbox_pc,
+      credential: credential
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("li[phx-value-id='#{sandbox_pc.id}']")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.size(assigns.merge_selected_credential_ids) == 0
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+
+      refute Repo.exists?(
+               from(pc in Lightning.Projects.ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^credential.id
+               )
+             )
+    end
+
+    test "keeping a credential selected and merging attaches it", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      credential: credential
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+
+      assert Repo.exists?(
+               from(pc in Lightning.Projects.ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^credential.id
+               )
+             )
+    end
+  end
+
   describe "GitHub sync integration during merge" do
     setup do
       Mox.verify_on_exit!()

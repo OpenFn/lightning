@@ -249,6 +249,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :diverged_workflows, :list, default: []
   attr :source_workflows, :list, required: true
   attr :selected_workflow_ids, :any, required: true
+  attr :credentials, :list, default: []
+  attr :selected_credential_ids, :any, default: %MapSet{}
 
   def merge_modal(assigns) do
     assigns =
@@ -387,6 +389,35 @@ defmodule LightningWeb.SandboxLive.Components do
                   title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
                 >
                   Deleted in sandbox
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            :if={@credentials != []}
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Credentials to add to the target project
+              </span>
+            </div>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={credential <- @credentials}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-credential"
+                phx-value-id={credential.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_credential_ids, credential.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {credential.name}
                 </span>
               </li>
             </ul>

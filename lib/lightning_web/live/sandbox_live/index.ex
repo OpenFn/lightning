@@ -249,6 +249,8 @@ defmodule LightningWeb.SandboxLive.Index do
             |> Enum.filter(fn wf -> wf.is_changed end)
             |> MapSet.new(fn wf -> wf.id end)
 
+          merge_credentials = sandbox_only_credentials(sandbox, target_project)
+
           {:noreply,
            socket
            |> assign(:merge_modal_open?, true)
@@ -258,7 +260,12 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(:merge_descendants, descendants)
            |> assign(:merge_diverged_workflows, diverged_workflows)
            |> assign(:merge_source_workflows, source_workflows)
-           |> assign(:merge_selected_workflow_ids, selected_ids)}
+           |> assign(:merge_selected_workflow_ids, selected_ids)
+           |> assign(:merge_credentials, merge_credentials)
+           |> assign(
+             :merge_selected_credential_ids,
+             all_credential_ids(merge_credentials)
+           )}
         else
           {:noreply,
            socket
@@ -299,6 +306,20 @@ defmodule LightningWeb.SandboxLive.Index do
       end
 
     {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+  end
+
+  @impl true
+  def handle_event("toggle-credential", %{"id" => credential_id}, socket) do
+    selected = socket.assigns.merge_selected_credential_ids
+
+    new_selected =
+      if MapSet.member?(selected, credential_id) do
+        MapSet.delete(selected, credential_id)
+      else
+        MapSet.put(selected, credential_id)
+      end
+
+    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
   end
 
   @impl true
@@ -350,12 +371,19 @@ defmodule LightningWeb.SandboxLive.Index do
       |> MapSet.intersection(all_ids)
       |> MapSet.union(added_changed_ids)
 
+    merge_credentials = sandbox_only_credentials(sandbox, target_project)
+
     {:noreply,
      socket
      |> assign(:merge_changeset, merge_changeset)
      |> assign(:merge_diverged_workflows, diverged_workflows)
      |> assign(:merge_source_workflows, source_workflows)
-     |> assign(:merge_selected_workflow_ids, selected_ids)}
+     |> assign(:merge_selected_workflow_ids, selected_ids)
+     |> assign(:merge_credentials, merge_credentials)
+     |> assign(
+       :merge_selected_credential_ids,
+       all_credential_ids(merge_credentials)
+     )}
   end
 
   @impl true
@@ -403,8 +431,16 @@ defmodule LightningWeb.SandboxLive.Index do
               selected_ids =
                 resolve_selected_workflow_ids(socket.assigns)
 
+              selected_credential_ids =
+                MapSet.to_list(socket.assigns.merge_selected_credential_ids)
+
               source
-              |> perform_merge(target, actor, selected_ids)
+              |> perform_merge(
+                target,
+                actor,
+                selected_ids,
+                selected_credential_ids
+              )
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
               socket
@@ -498,6 +534,8 @@ defmodule LightningWeb.SandboxLive.Index do
           diverged_workflows={@merge_diverged_workflows}
           source_workflows={@merge_source_workflows}
           selected_workflow_ids={@merge_selected_workflow_ids}
+          credentials={@merge_credentials}
+          selected_credential_ids={@merge_selected_credential_ids}
         />
 
         <.live_component
@@ -627,6 +665,8 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_diverged_workflows, [])
     |> assign(:merge_source_workflows, [])
     |> assign(:merge_selected_workflow_ids, MapSet.new())
+    |> assign(:merge_credentials, [])
+    |> assign(:merge_selected_credential_ids, MapSet.new())
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -877,6 +917,35 @@ defmodule LightningWeb.SandboxLive.Index do
   defp preload_merge_projects(source, target),
     do: {Repo.preload(source, :workflows), Repo.preload(target, :workflows)}
 
+  # The sandbox's project_credentials whose underlying credential the target
+  # does not already have. These would be dropped on merge unless the user
+  # chooses to carry them over.
+  defp sandbox_only_credentials(_source, nil), do: []
+
+  defp sandbox_only_credentials(source, target) do
+    source =
+      Repo.preload(source, project_credentials: [:credential])
+
+    target = Repo.preload(target, :project_credentials)
+
+    target_credential_ids =
+      MapSet.new(target.project_credentials, & &1.credential_id)
+
+    source.project_credentials
+    |> Enum.reject(&MapSet.member?(target_credential_ids, &1.credential_id))
+    |> Enum.map(fn pc ->
+      %{id: pc.id, name: credential_display_name(pc.credential)}
+    end)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp credential_display_name(%{name: name}) when is_binary(name), do: name
+  defp credential_display_name(_), do: "Untitled credential"
+
+  defp all_credential_ids(merge_credentials) do
+    MapSet.new(merge_credentials, & &1.id)
+  end
+
   defp get_diverged_workflows(_source, nil), do: []
 
   defp get_diverged_workflows(source, target_project) do
@@ -893,7 +962,8 @@ defmodule LightningWeb.SandboxLive.Index do
          source,
          target,
          actor,
-         {selected_workflow_ids, deleted_target_workflow_ids}
+         {selected_workflow_ids, deleted_target_workflow_ids},
+         selected_credential_ids
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
@@ -906,6 +976,8 @@ defmodule LightningWeb.SandboxLive.Index do
       else
         %{}
       end
+
+    opts = Map.put(opts, :selected_credential_ids, selected_credential_ids)
 
     case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->

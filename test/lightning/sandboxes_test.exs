@@ -1062,6 +1062,98 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "merge/4 sandbox-only credentials" do
+    # Adds a credential that exists only in the sandbox (the target has no
+    # project_credential for its underlying credential) and wires the sandbox's
+    # A1 step to reference it. Returns the sandbox project_credential so the
+    # test can choose whether to select it for attachment.
+    defp add_sandbox_only_credential!(sandbox, actor) do
+      cred =
+        insert(:credential,
+          name: "sandbox-only",
+          body: %{"token" => "only-here"},
+          user: actor
+        )
+
+      sandbox_pc =
+        insert(:project_credential, project: sandbox, credential: cred)
+
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      {cred, sandbox_pc}
+    end
+
+    test "attaches a selected sandbox-only credential to the target and the merged job references it" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: [sandbox_pc.id]
+               })
+
+      parent_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: parent.id,
+          credential_id: cred.id
+        )
+
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == parent_pc.id
+    end
+
+    test "does not attach a deselected sandbox-only credential" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, _sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: []
+               })
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      # The merged step drops the credential it could not map.
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == nil
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
