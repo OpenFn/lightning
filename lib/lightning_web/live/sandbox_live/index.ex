@@ -989,17 +989,6 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp format_merge_error({:workflow_name_conflict, name}) do
-    ~s(Couldn't merge: a workflow named "#{name}" already exists in the target project. Rename it and merge again.)
-  end
-
-  defp format_merge_error(:merge_validation_failed) do
-    "Couldn't merge this sandbox. Some changes didn't pass validation."
-  end
-
   defp format_merge_error(%{text: text}), do: text
-
-  defp format_merge_error(_reason) do
-    "Couldn't merge this sandbox. Please try again."
-  end
+  defp format_merge_error(_reason), do: "Couldn't merge this sandbox."
 end

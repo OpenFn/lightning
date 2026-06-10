@@ -2039,17 +2039,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "pass validation"
+      assert html =~ "merge this sandbox"
       # No schema field paths or raw changeset internals leak to the user.
       refute html =~ "name: is invalid"
       refute has_element?(view, "#merge-sandbox-modal")
     end
 
-    test "names the conflicting workflow on a name collision", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
+    test "shows a generic message for a nested workflow error, without leaking it",
+         %{
+           conn: conn,
+           root: root,
+           child1: child1
+         } do
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
@@ -2091,9 +2092,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "Patient Sync"
-      assert html =~ "already exists in the target project"
-      refute html =~ "validation error"
+      assert html =~ "merge this sandbox"
+      # The workflow name and the raw error must not leak to the user.
+      refute html =~ "Patient Sync"
+      refute html =~ "already exists"
       refute has_element?(view, "#merge-sandbox-modal")
     end
 

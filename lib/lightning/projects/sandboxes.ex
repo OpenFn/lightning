@@ -176,10 +176,7 @@ defmodule Lightning.Projects.Sandboxes do
   validation detail is logged for diagnosis.
   """
   @type merge_error ::
-          {:workflow_name_conflict, String.t()}
-          | :merge_validation_failed
-          | :merge_failed
-          | Lightning.Extensions.UsageLimiting.message()
+          :merge_failed | Lightning.Extensions.UsageLimiting.message()
 
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
           {:ok, Project.t()} | {:error, merge_error()}
@@ -206,44 +203,23 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
+  # A failed merge is sensitive (it can block or lose a user's work), so every
+  # failure is logged at :error to surface in Sentry. A usage-limit message is
+  # an expected, user-actionable block, so it passes through unlogged.
   defp classify_merge_error(%Ecto.Changeset{} = changeset) do
-    details = inspect(merge_error_details(changeset))
+    Logger.error(
+      "Sandbox merge failed. #{inspect(merge_error_details(changeset))}"
+    )
 
-    case conflicting_workflow_name(changeset) do
-      {:ok, name} ->
-        Logger.warning(
-          "Sandbox merge failed: workflow name conflict. #{details}"
-        )
-
-        {:workflow_name_conflict, name}
-
-      :error ->
-        # Unrecognised failure mode: log at :error so it reaches Sentry and we
-        # can give it a typed reason.
-        Logger.error(
-          "Sandbox merge failed validation (unclassified). #{details}"
-        )
-
-        :merge_validation_failed
-    end
+    :merge_failed
   end
 
   defp classify_merge_error(%{text: _} = usage_limit_message),
     do: usage_limit_message
 
   defp classify_merge_error(reason) do
-    Logger.error("Sandbox merge failed unexpectedly. #{inspect(reason)}")
+    Logger.error("Sandbox merge failed. #{inspect(reason)}")
     :merge_failed
-  end
-
-  defp conflicting_workflow_name(changeset) do
-    changeset
-    |> Ecto.Changeset.get_change(:workflows, [])
-    |> Enum.find_value(:error, fn workflow_changeset ->
-      if Keyword.has_key?(workflow_changeset.errors, :name) do
-        {:ok, Ecto.Changeset.get_field(workflow_changeset, :name)}
-      end
-    end)
   end
 
   defp merge_error_details(changeset) do
