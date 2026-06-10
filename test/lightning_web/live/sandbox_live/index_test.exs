@@ -3972,6 +3972,32 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert MapSet.member?(assigns.merge_selected_credential_ids, sandbox_pc.id)
     end
 
+    test "a deselected credential survives a form change", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_pc: sandbox_pc
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("li[phx-value-id='#{sandbox_pc.id}']")
+      |> render_click()
+
+      # The checkboxes share the merge form, so any form change re-runs
+      # select-merge-target; it must not wipe the user's deselection.
+      view
+      |> form("#merge-sandbox-modal form", merge: %{target_id: parent.id})
+      |> render_change()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute MapSet.member?(assigns.merge_selected_credential_ids, sandbox_pc.id)
+    end
+
     test "deselecting a credential and merging does not attach it", %{
       conn: conn,
       parent: parent,

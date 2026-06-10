@@ -387,6 +387,19 @@ defmodule LightningWeb.SandboxLive.Index do
 
     merge_credentials = sandbox_only_credentials(sandbox, target_project)
 
+    # Preserve the user's credential choices across form changes (the checkboxes
+    # live in the same form, so toggling one fires this event). Keep selections
+    # still in the diff, and default any newly-appeared credential to selected.
+    new_credential_ids = all_credential_ids(merge_credentials)
+    previously_shown_ids = MapSet.new(socket.assigns.merge_credentials, & &1.id)
+
+    selected_credential_ids =
+      socket.assigns.merge_selected_credential_ids
+      |> MapSet.intersection(new_credential_ids)
+      |> MapSet.union(
+        MapSet.difference(new_credential_ids, previously_shown_ids)
+      )
+
     {:noreply,
      socket
      |> assign(:merge_changeset, merge_changeset)
@@ -394,10 +407,7 @@ defmodule LightningWeb.SandboxLive.Index do
      |> assign(:merge_source_workflows, source_workflows)
      |> assign(:merge_selected_workflow_ids, selected_ids)
      |> assign(:merge_credentials, merge_credentials)
-     |> assign(
-       :merge_selected_credential_ids,
-       all_credential_ids(merge_credentials)
-     )}
+     |> assign(:merge_selected_credential_ids, selected_credential_ids)}
   end
 
   @impl true
