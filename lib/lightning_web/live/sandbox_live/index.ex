@@ -990,5 +990,8 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp format_merge_error(%{text: text}), do: text
-  defp format_merge_error(_reason), do: "Couldn't merge this sandbox."
+
+  defp format_merge_error(_reason) do
+    "Couldn't merge this sandbox. Please try again."
+  end
 end
