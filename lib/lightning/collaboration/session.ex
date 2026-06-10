@@ -137,11 +137,11 @@ defmodule Lightning.Collaboration.Session do
       Process.demonitor(state.parent_ref)
     end
 
-    # Don't check Process.alive? - it only works for local PIDs
-    # and shared_doc_pid can be on another node in a distributed cluster.
-    # Sending to a dead process is safe (message is discarded).
+    # Don't check Process.alive? - it only works for local PIDs and
+    # shared_doc_pid can be on another node in a distributed cluster.
+    # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
     if shared_doc_pid do
-      SharedDoc.unobserve(shared_doc_pid)
+      safe_unobserve(shared_doc_pid)
     end
 
     Presence.untrack_user_presence(
@@ -151,6 +151,17 @@ defmodule Lightning.Collaboration.Session do
     )
 
     :ok
+  end
+
+  defp safe_unobserve(shared_doc_pid) do
+    SharedDoc.unobserve(shared_doc_pid)
+  catch
+    :exit, reason ->
+      Logger.warning(
+        "SharedDoc.unobserve skipped during session cleanup: #{inspect(reason)}"
+      )
+
+      :ok
   end
 
   def lookup_shared_doc(document_name) do
@@ -423,10 +434,11 @@ defmodule Lightning.Collaboration.Session do
     if ref == parent_ref do
       Process.demonitor(parent_ref)
 
-      # Don't check Process.alive? - it only works for local PIDs
-      # and shared_doc_pid can be on another node in a distributed cluster.
+      # Don't check Process.alive? - it only works for local PIDs and
+      # shared_doc_pid can be on another node in a distributed cluster.
+      # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
       if shared_doc_pid do
-        SharedDoc.unobserve(shared_doc_pid)
+        safe_unobserve(shared_doc_pid)
       end
 
       {:stop, :normal, %{state | parent_ref: nil, shared_doc_pid: nil}}

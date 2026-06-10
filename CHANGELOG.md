@@ -22,10 +22,16 @@ and this project adheres to
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
-  codebase
-  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
 
 ### Fixed
+
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
 
 ## [2.16.7] - 2026-06-04
 

@@ -655,6 +655,27 @@ defmodule Lightning.SessionTest do
       #     %{}
       # )
     end
+
+    @tag :capture_log
+    test "terminate tolerates an unreachable SharedDoc", %{user: user} do
+      # The cross-node `unobserve` issued during cleanup can exit when the
+      # SharedDoc's node is gone (:noconnection) or slow (:timeout). terminate/2
+      # must swallow that and still finish cleanup rather than crash (#4817).
+      # A dead pid stands in for the unreachable remote: the GenServer.call to
+      # it exits :noproc, the same :exit class caught by safe_unobserve/1.
+      dead_pid = spawn(fn -> :ok end)
+      refute_eventually(Process.alive?(dead_pid))
+
+      state = %Session{
+        parent_ref: nil,
+        shared_doc_pid: dead_pid,
+        user: user,
+        workflow: %Workflow{id: Ecto.UUID.generate()},
+        document_name: "workflow:#{Ecto.UUID.generate()}"
+      }
+
+      assert :ok = Session.terminate(:shutdown, state)
+    end
   end
 
   defp get_expected_value(model, key) do
