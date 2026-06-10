@@ -1,5 +1,3 @@
-import { Tooltip } from '../../../components/Tooltip';
-
 import { ErrorMessage } from './error-message';
 
 export const INPUT_CLASSES =
@@ -10,7 +8,6 @@ interface FormFieldProps {
   label: string;
   meta: any; // TanStack Form meta type
   helpText?: string | undefined;
-  labelTooltip?: React.ReactNode | undefined;
   children: React.ReactNode;
 }
 
@@ -19,7 +16,6 @@ export function FormField({
   label,
   meta,
   helpText,
-  labelTooltip,
   children,
 }: FormFieldProps) {
   return (
@@ -29,11 +25,6 @@ export function FormField({
         className="text-sm/6 font-medium text-slate-800 mb-2 flex items-center gap-2"
       >
         {label}
-        {labelTooltip && (
-          <Tooltip content={labelTooltip} side="right">
-            <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
-          </Tooltip>
-        )}
       </label>
       {children}
       {helpText && (

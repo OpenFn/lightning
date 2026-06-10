@@ -140,12 +140,16 @@ export function WorkflowSettings() {
 
       {/* Concurrency Section */}
       <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-2">Concurrency</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          Control how many of this workflow's <em>Runs</em> are executed at the
+          same time
+        </p>
         <form.AppField name="concurrency">
           {field => (
             <>
               <field.NumberField
                 label="Max Concurrency"
-                labelTooltip={`Limit how many of this workflow's Runs are executed at the same time${isSyncMode && '; depending on how your administrator configured this instance of OpenFn, limits may not apply to "sync mode" workflows like this one.'}`}
                 placeholder="Unlimited (up to max available)"
                 helpText={
                   field.state.value === null
