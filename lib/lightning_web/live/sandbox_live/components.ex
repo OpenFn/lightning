@@ -264,6 +264,13 @@ defmodule LightningWeb.SandboxLive.Components do
           assigns.source_workflows
         )
       )
+      |> assign(
+        :credentials_select_all_state,
+        merge_select_all_state(
+          assigns.selected_credential_ids,
+          assigns.credentials
+        )
+      )
 
     ~H"""
     <.modal
@@ -398,11 +405,30 @@ defmodule LightningWeb.SandboxLive.Components do
             :if={@credentials != []}
             class="border border-gray-200 rounded-lg overflow-hidden bg-white"
           >
-            <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @credentials_select_all_state == :empty && "cursor-default",
+              @credentials_select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-credentials"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-credentials"
+                disabled={@credentials_select_all_state == :empty}
+                checked={@credentials_select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @credentials_select_all_state == :partial && "indeterminate"
+                ]}
+              />
               <span class="flex-1 text-sm font-medium text-gray-900">
-                Credentials to add to the target project
+                Credentials to add
               </span>
-            </div>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_credential_ids)} of {length(@credentials)} selected
+              </span>
+            </label>
             <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
               <li
                 :for={credential <- @credentials}

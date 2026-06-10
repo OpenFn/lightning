@@ -323,6 +323,20 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
+  def handle_event("toggle-all-credentials", _params, socket) do
+    all_ids = MapSet.new(socket.assigns.merge_credentials, fn c -> c.id end)
+
+    new_selected =
+      if MapSet.equal?(socket.assigns.merge_selected_credential_ids, all_ids) do
+        MapSet.new()
+      else
+        all_ids
+      end
+
+    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
+  end
+
+  @impl true
   def handle_event(
         "select-merge-target",
         %{"merge" => %{"target_id" => target_id}},

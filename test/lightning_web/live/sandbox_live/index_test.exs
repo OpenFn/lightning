@@ -3946,8 +3946,30 @@ defmodule LightningWeb.SandboxLive.IndexTest do
              )
 
       html = render(view)
-      assert html =~ "Credentials to add to the target project"
+      assert html =~ "Credentials to add"
       assert html =~ "sandbox-only-cred"
+    end
+
+    test "select-all toggles every credential", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_pc: sandbox_pc
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Default is all selected; the select-all clears them, then re-selects.
+      view |> element("#merge-select-all-credentials") |> render_click()
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.size(assigns.merge_selected_credential_ids) == 0
+
+      view |> element("#merge-select-all-credentials") |> render_click()
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert MapSet.member?(assigns.merge_selected_credential_ids, sandbox_pc.id)
     end
 
     test "deselecting a credential and merging does not attach it", %{
