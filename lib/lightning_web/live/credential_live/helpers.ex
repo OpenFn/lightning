@@ -146,21 +146,15 @@ defmodule LightningWeb.CredentialLive.Helpers do
   end
 
   @doc """
-  Builds the `project_credentials` to pre-select when creating a credential in
-  a project context: the active project plus its root parent project (when the
-  active project is a sandbox), deduplicated and order-preserving.
-
-  Returns an empty list when there is no project context.
+  The `project_credentials` to pre-select when creating a credential: only the
+  active project. Empty when there is no project context.
   """
   @spec default_project_credentials(Lightning.Projects.Project.t() | nil) ::
           [Lightning.Projects.ProjectCredential.t()]
   def default_project_credentials(nil), do: []
 
-  def default_project_credentials(%Lightning.Projects.Project{} = project) do
-    [project, Lightning.Projects.root_of(project)]
-    |> Enum.map(& &1.id)
-    |> Enum.uniq()
-    |> Enum.map(&%Lightning.Projects.ProjectCredential{project_id: &1})
+  def default_project_credentials(%Lightning.Projects.Project{id: id}) do
+    [%Lightning.Projects.ProjectCredential{project_id: id}]
   end
 
   def handle_save_response(socket, credential) do

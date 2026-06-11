@@ -924,6 +924,46 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The soft-deleted workflow should be excluded from the project"
     end
 
+    test "soft-deleting a workflow frees its name for reuse", %{
+      project: project,
+      user: user
+    } do
+      %{
+        body: body,
+        workflows: [%{id: workflow_id}]
+      } = valid_document(project.id)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      original_name =
+        Repo.get!(Lightning.Workflows.Workflow, workflow_id).name
+
+      {:ok, _} =
+        body
+        |> remove_workflow_from_document(workflow_id)
+        |> then(&Provisioner.import_document(project, user, &1))
+
+      deleted = Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert deleted.deleted_at
+
+      assert deleted.name == "#{original_name}_del",
+             "The soft-deleted workflow should release its original name"
+
+      # A fresh workflow can now reuse the freed name on a later import.
+      %{body: reuse_body} = valid_document(project.id)
+
+      reuse_body =
+        Map.update!(reuse_body, "workflows", fn [workflow] ->
+          [Map.put(workflow, "name", original_name)]
+        end)
+
+      assert {:ok, reimported} =
+               Provisioner.import_document(project, user, reuse_body)
+
+      assert Enum.any?(reimported.workflows, &(&1.name == original_name))
+    end
+
     test "disables all triggers on a workflow that is soft-deleted via provisioner",
          %{
            project: project,
