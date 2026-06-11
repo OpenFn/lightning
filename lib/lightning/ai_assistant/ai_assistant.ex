@@ -614,7 +614,7 @@ defmodule Lightning.AiAssistant do
     %{
       session
       | expression: expression,
-        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+        adaptor: Lightning.Adaptors.PackageName.to_wire(adaptor)
     }
   end
 

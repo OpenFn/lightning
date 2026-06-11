@@ -1,9 +1,46 @@
 defmodule LightningWeb.JobLive.AdaptorPickerTest do
-  use LightningWeb.ConnCase, async: true
+  # async: false because we touch the production-named
+  # `Lightning.Adaptors` supervisor's shared Cachex.
+  use LightningWeb.ConnCase, async: false
+
+  import Lightning.AdaptorTestHelpers
 
   alias LightningWeb.JobLive.AdaptorPicker
 
   describe "get_adaptor_version_options/1" do
+    setup do
+      {:ok, _} =
+        Lightning.Adaptors.Repo.upsert_adaptor(%{
+          name: "@openfn/language-common",
+          source: :npm,
+          latest_version: "1.6.2",
+          description: nil,
+          homepage: nil,
+          repository: nil,
+          license: nil,
+          deprecated: false,
+          schema_data: nil,
+          schema_sha256: nil,
+          versions:
+            Enum.map(["1.0.0", "1.6.2", "2.0.0"], fn v ->
+              %{
+                version: v,
+                integrity: "sha512-#{v}",
+                tarball_url: "https://example.com/x-#{v}.tgz",
+                size_bytes: 1024,
+                dependencies: %{},
+                peer_dependencies: %{},
+                published_at: nil,
+                deprecated: false
+              }
+            end)
+        })
+
+      clear_global_adaptors_cache()
+
+      :ok
+    end
+
     test "returns sorted versions with latest option when adaptor exists" do
       adaptor_name = "@openfn/language-common"
 

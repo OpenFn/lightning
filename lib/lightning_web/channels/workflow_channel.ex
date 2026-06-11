@@ -16,7 +16,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -72,6 +71,11 @@ defmodule LightningWeb.WorkflowChannel do
         "workflow:collaborate:#{workflow_id}"
       )
 
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors)
+      )
+
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -96,40 +100,11 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("request_adaptors", _payload, socket) do
     async_task(socket, "request_adaptors", fn ->
-      adaptors = Lightning.AdaptorRegistry.all()
+      adaptors =
+        list_all_packages()
+        |> Enum.map(&with_icon_urls/1)
+
       %{adaptors: adaptors}
-    end)
-  end
-
-  @impl true
-  def handle_in("request_project_adaptors", _payload, socket) do
-    project = socket.assigns.project
-
-    async_task(socket, "request_project_adaptors", fn ->
-      project_adaptor_names =
-        from(j in Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id,
-          select: j.adaptor,
-          distinct: true
-        )
-        |> Lightning.Repo.all()
-        |> Enum.sort()
-
-      all_adaptors = Lightning.AdaptorRegistry.all()
-
-      project_adaptors =
-        all_adaptors
-        |> Enum.filter(fn adaptor ->
-          Enum.any?(project_adaptor_names, fn used_adaptor ->
-            String.starts_with?(used_adaptor, adaptor.name)
-          end)
-        end)
-
-      %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
     end)
   end
 
@@ -698,6 +673,12 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info(%{event: "adaptors_updated", payload: payload}, socket) do
+    push(socket, "adaptors_updated", payload)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(
         %{event: "webhook_auth_methods_updated", payload: webhook_auth_methods},
         socket
@@ -830,6 +811,30 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  defp list_all_packages do
+    case Lightning.Adaptors.packages() do
+      {:ok, pkgs} -> pkgs
+      {:error, _} -> []
+    end
+  end
+
+  defp with_icon_urls(adaptor) do
+    Map.put(adaptor, :icon_urls, icon_urls_for(adaptor.name))
+  end
+
+  defp icon_urls_for(name) do
+    case Lightning.Adaptors.icon_meta(name) do
+      {:ok, meta} ->
+        %{
+          square: LightningWeb.AdaptorIconURL.build(name, meta, :square),
+          rectangle: LightningWeb.AdaptorIconURL.build(name, meta, :rectangle)
+        }
+
+      {:error, :not_found} ->
+        %{square: nil, rectangle: nil}
+    end
+  end
+
   defp handle_async_event("request_run_steps", socket_ref, reply) do
     unwrapped_reply = unwrap_run_steps_reply(reply)
     reply(socket_ref, unwrapped_reply)
@@ -838,7 +843,6 @@ defmodule LightningWeb.WorkflowChannel do
   defp handle_async_event(event, socket_ref, reply)
        when event in [
               "request_adaptors",
-              "request_project_adaptors",
               "request_credentials",
               "request_metadata",
               "request_current_user",

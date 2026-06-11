@@ -288,7 +288,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp adaptor_block(assigns) do
     {package_name, version} =
-      Lightning.AdaptorRegistry.resolve_package_name(assigns.adaptor)
+      Lightning.Adaptors.PackageName.parse(assigns.adaptor)
 
     assigns =
       assigns

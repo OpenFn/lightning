@@ -97,6 +97,7 @@ defmodule Lightning.MixProject do
       {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
+      {:highlander_pg, "~> 1.0"},
       {:httpoison, "~> 2.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},

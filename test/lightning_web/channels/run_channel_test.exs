@@ -117,6 +117,22 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
+    # `RunWithOptions.render/1` now uses
+    # `Lightning.Adaptors.PackageName.to_wire/1`, which resolves
+    # `@latest` against `Lightning.Adaptors.resolve_version/2` (a direct
+    # `Repo.get_adaptor/2` read — async-safe under the Ecto sandbox).
+    # Seed `language-common` with the version the legacy registry
+    # fixture used to publish.
+    setup do
+      insert(:adaptor,
+        name: "@openfn/language-common",
+        source: :npm,
+        latest_version: "1.6.2"
+      )
+
+      :ok
+    end
+
     test "fetch:plan success", %{
       socket: socket,
       run: run,

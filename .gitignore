@@ -75,6 +75,7 @@ priv/openfn
 
 .elixir_ls
 .elixir-tools
+.expert
 
 .env
 .env.dev

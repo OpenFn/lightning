@@ -117,6 +117,17 @@ defmodule Lightning.WebAndWorkerTest do
     @tag :integration
     @tag timeout: 20_000
     test "the whole thing", %{conn: conn, user: user} do
+      # `RunWithOptions.render/1` resolves `@latest` via
+      # `Lightning.Adaptors.PackageName.to_wire/1` (was
+      # `AdaptorRegistry.resolve_adaptor/1` — sourced from the legacy
+      # `test/fixtures/adaptor_registry_cache.json`). Seed the version
+      # the legacy fixture used so the worker gets a concrete pin
+      # instead of resolving `@latest` against live NPM.
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-http",
+        "3.1.12"
+      )
+
       project = insert(:project)
 
       # Create credential with body for main environment

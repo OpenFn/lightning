@@ -125,7 +125,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -156,7 +156,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -172,7 +172,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -187,7 +187,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={[]}
+          adaptorsInUse={[]}
         />
       );
 
@@ -203,7 +203,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -220,7 +220,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -243,7 +243,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -263,7 +263,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -287,7 +287,7 @@ describe('AdaptorSelectionModal', () => {
               isOpen={isOpen}
               onClose={onClose}
               onSelect={onSelect}
-              projectAdaptors={mockProjectAdaptors}
+              adaptorsInUse={mockProjectAdaptors}
             />
           </StoreContext.Provider>
         </KeyboardProvider>
@@ -329,7 +329,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -349,7 +349,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
