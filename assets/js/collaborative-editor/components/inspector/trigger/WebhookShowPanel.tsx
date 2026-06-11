@@ -3,11 +3,18 @@ import { usePermissions } from '../../../hooks/useSessionContext';
 import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
 import { Button } from '../../Button';
+import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { TriggerTypeBadge } from './TriggerTypeBadge';
 import { useWebhookTrigger } from './useWebhookTrigger';
 import { WebhookUrlField } from './WebhookUrlField';
+
+/** Backend default webhook response status (success and error) when unset. */
+const DEFAULT_STATUS_CODE = 201;
+
+const RESPONSE_DOCS_URL =
+  'https://docs.openfn.org/documentation/build/triggers#webhook-trigger-responses';
 
 interface WebhookShowPanelProps {
   trigger: Workflow.Trigger;
@@ -45,9 +52,30 @@ export function WebhookShowPanel({
 
   const responseConfig = trigger.webhook_response_config;
   const isAfterCompletion = trigger.webhook_reply === 'after_completion';
+  const successCode = responseConfig?.success_code ?? DEFAULT_STATUS_CODE;
+  const errorCode = responseConfig?.error_code ?? DEFAULT_STATUS_CODE;
+
+  const footer = (
+    <InspectorFooter
+      rightButtons={
+        <Tooltip content={canEdit ? 'Edit trigger' : tooltipMessage}>
+          <span className="inline-block">
+            <Button
+              variant="secondary"
+              onClick={onEdit}
+              disabled={!canEdit}
+              aria-label="Edit trigger"
+            >
+              Edit
+            </Button>
+          </span>
+        </Tooltip>
+      }
+    />
+  );
 
   return (
-    <InspectorLayout title="On webhook call" onClose={onClose}>
+    <InspectorLayout title="On webhook call" onClose={onClose} footer={footer}>
       <div className="p-6 space-y-6">
         {/* Trigger type badge */}
         <div>
@@ -62,7 +90,7 @@ export function WebhookShowPanel({
         />
 
         {/* Authentication */}
-        <div className="space-y-2 pt-4 border-t border-slate-200">
+        <div className="space-y-2">
           <h4 className="text-sm font-medium text-slate-800">Authentication</h4>
 
           {loadingAuthMethods ? (
@@ -88,51 +116,46 @@ export function WebhookShowPanel({
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-slate-500 italic">
-                No auth configured
-              </p>
+            <p className="text-xs text-slate-500">
+              No authentication configured.
               {canEdit && (
-                <Button variant="secondary" onClick={onEdit}>
-                  Add Authentication
-                </Button>
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className="link text-xs font-medium no-underline"
+                  >
+                    Add authentication
+                  </button>
+                </>
               )}
-            </div>
+            </p>
           )}
         </div>
 
-        {/* Response summary */}
-        <div className="space-y-1 pt-4 border-t border-slate-200">
-          <p className="text-sm text-slate-700">
-            <span className="font-medium text-slate-800">Response:</span>{' '}
-            {isAfterCompletion ? 'On complete' : 'Immediately'}
+        {/* Response */}
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium text-slate-800">Response</h4>
+          <p className="text-xs text-slate-600">
+            {isAfterCompletion
+              ? successCode === errorCode
+                ? `Responds after completion with a status of ${successCode} ` +
+                  `(on both success and error).`
+                : `Responds after completion with ${successCode} on success ` +
+                  `and ${errorCode} on error.`
+              : `Responds immediately with a status of ${DEFAULT_STATUS_CODE} ` +
+                `(cannot be changed).`}{' '}
+            <a
+              href={RESPONSE_DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="link text-xs"
+            >
+              Learn how to respond with a custom status and body
+            </a>
+            .
           </p>
-          {isAfterCompletion && responseConfig?.success_code != null && (
-            <p className="text-xs text-slate-500">
-              Success code: {responseConfig.success_code}
-            </p>
-          )}
-          {isAfterCompletion && responseConfig?.error_code != null && (
-            <p className="text-xs text-slate-500">
-              Error code: {responseConfig.error_code}
-            </p>
-          )}
-        </div>
-
-        {/* Edit action */}
-        <div className="pt-2">
-          <Tooltip content={canEdit ? 'Edit trigger' : tooltipMessage}>
-            <span className="inline-block">
-              <Button
-                variant="primary"
-                onClick={onEdit}
-                disabled={!canEdit}
-                aria-label="Edit trigger"
-              >
-                Edit
-              </Button>
-            </span>
-          </Tooltip>
         </div>
       </div>
     </InspectorLayout>

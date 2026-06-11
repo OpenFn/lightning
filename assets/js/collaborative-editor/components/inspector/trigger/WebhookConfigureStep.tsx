@@ -13,7 +13,14 @@ import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 import { WebhookAuthMethodModal } from '../WebhookAuthMethodModal';
 
+import { ResponseTypeSelect } from './ResponseTypeSelect';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
+
+const codeInputClass = cn(
+  'block w-full rounded-lg border border-gray-200 bg-white px-3 py-2',
+  'text-sm text-slate-700',
+  'focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+);
 
 type ResponseConfig = {
   success_code: number | null;
@@ -68,21 +75,12 @@ export function WebhookConfigureStep({
   const canWriteAuth = Boolean(permissions?.can_write_webhook_auth_method);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authExpanded, setAuthExpanded] = useState(true);
-  const [responseExpanded, setResponseExpanded] = useState(true);
+  // Both progressive-disclosure sections start collapsed, matching Figma 1.2.0.
+  const [authExpanded, setAuthExpanded] = useState(false);
+  const [responseExpanded, setResponseExpanded] = useState(false);
 
-  // Local "reveal this row but not yet typed" intents, mirroring TriggerForm.
   const config = draft.webhook_response_config ?? null;
-  const [forceShowSuccess, setForceShowSuccess] = useState(
-    () => config?.success_code != null
-  );
-  const [forceShowError, setForceShowError] = useState(
-    () => config?.error_code != null
-  );
-
   const isAfterCompletion = draft.webhook_reply === 'after_completion';
-  const shownSuccessCode = config?.success_code != null || forceShowSuccess;
-  const shownErrorCode = config?.error_code != null || forceShowError;
 
   const projectAuthMethods = useMemo<WebhookAuthMethod[]>(
     () => webhookAuthMethods ?? [],
@@ -97,12 +95,6 @@ export function WebhookConfigureStep({
 
   const baseConfig = config ?? { success_code: null, error_code: null };
 
-  const inputClass = cn(
-    'block w-full px-3 py-2 border rounded-md text-sm border-slate-300',
-    'focus:border-indigo-500 focus:ring-indigo-500',
-    'focus:outline-none focus:ring-1'
-  );
-
   const footer = (
     <div className="space-y-2">
       {validationError && (
@@ -110,13 +102,16 @@ export function WebhookConfigureStep({
       )}
       <InspectorFooter
         leftButtons={
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
         }
         rightButtons={
           <Button variant="primary" onClick={onFinish}>
-            Finish
+            <span className="inline-flex items-center gap-1.5">
+              Finish
+              <span className="hero-arrow-right-micro h-4 w-4" />
+            </span>
           </Button>
         }
       />
@@ -124,32 +119,20 @@ export function WebhookConfigureStep({
   );
 
   return (
-    <InspectorLayout
-      title="Setup Trigger"
-      onClose={onClose}
-      footer={footer}
-      showBackButton
-      onBack={onBack}
-    >
+    <InspectorLayout title="On webhook call" onClose={onClose} footer={footer}>
       <div className="space-y-6 p-6">
-        <WizardBreadcrumb step="configure" />
+        <WizardBreadcrumb
+          step="configure"
+          onNavigate={target => {
+            if (target === 'choose') onBack();
+          }}
+        />
 
         {/* Response Type */}
         <div className="space-y-1">
-          <label
-            htmlFor="webhook-response-type"
-            className="block text-sm font-medium text-slate-800"
-          >
-            Response Type
-          </label>
-          <select
-            id="webhook-response-type"
-            aria-describedby="webhook-response-type-description"
+          <ResponseTypeSelect
             value={draft.webhook_reply ?? 'before_start'}
-            onChange={e => {
-              const value = e.target.value as
-                | 'before_start'
-                | 'after_completion';
+            onChange={value => {
               mergeDraft({
                 webhook_reply: value,
                 ...(value === 'before_start'
@@ -157,23 +140,7 @@ export function WebhookConfigureStep({
                   : {}),
               });
             }}
-            className={cn(
-              'block w-full px-3 py-2 border rounded-md text-sm border-slate-300',
-              'focus:border-indigo-500 focus:ring-indigo-500',
-              'focus:outline-none focus:ring-1'
-            )}
-          >
-            <option value="before_start">Immediately</option>
-            <option value="after_completion">On Complete</option>
-          </select>
-          <p
-            id="webhook-response-type-description"
-            className="text-xs text-slate-500"
-          >
-            {isAfterCompletion
-              ? 'Holds the HTTP connection open and responds when the run completes.'
-              : 'Responds immediately with the enqueued work order ID.'}
-          </p>
+          />
           {isAfterCompletion && hasResponseConfig(config) && (
             <p className="text-xs text-amber-600">
               Switching to async will clear your response configuration.
@@ -182,7 +149,7 @@ export function WebhookConfigureStep({
         </div>
 
         {/* Authentication */}
-        <div className="border-t border-slate-200 pt-4">
+        <div>
           <button
             type="button"
             onClick={() => setAuthExpanded(v => !v)}
@@ -243,154 +210,80 @@ export function WebhookConfigureStep({
           )}
         </div>
 
-        {/* Response Options (only meaningful for after_completion) */}
-        {isAfterCompletion && (
-          <div className="border-t border-slate-200 pt-4">
-            <button
-              type="button"
-              onClick={() => setResponseExpanded(v => !v)}
-              className="flex w-full items-center gap-1.5 text-sm font-medium
-                text-slate-800 focus:outline-none"
-            >
-              <span
-                className={cn(
-                  'h-3.5 w-3.5 transition-transform',
-                  responseExpanded
-                    ? 'hero-chevron-down-mini'
-                    : 'hero-chevron-right-mini'
-                )}
-              />
-              Response Options
-            </button>
+        {/* Response Options */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setResponseExpanded(v => !v)}
+            className="flex w-full items-center gap-1.5 text-sm font-medium
+              text-slate-800 focus:outline-none"
+          >
+            <span
+              className={cn(
+                'h-3.5 w-3.5 transition-transform',
+                responseExpanded
+                  ? 'hero-chevron-down-mini'
+                  : 'hero-chevron-right-mini'
+              )}
+            />
+            Response Options
+          </button>
 
-            {responseExpanded && (
-              <div className="mt-3 space-y-3">
-                {/* Success Status Code */}
-                {shownSuccessCode && (
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label
-                        htmlFor="webhook-success-code"
-                        className="block text-xs font-medium text-slate-600 mb-1"
-                      >
-                        Success Status Code
-                      </label>
-                      <input
-                        id="webhook-success-code"
-                        type="number"
-                        placeholder="201"
-                        value={config?.success_code ?? ''}
-                        onChange={e => {
-                          const raw = e.target.value;
-                          mergeDraft({
-                            webhook_response_config: {
-                              ...baseConfig,
-                              success_code:
-                                raw === '' ? null : parseInt(raw, 10),
-                            },
-                          });
-                        }}
-                        className={inputClass}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      title="Remove"
-                      onClick={() => {
-                        setForceShowSuccess(false);
-                        mergeDraft({
-                          webhook_response_config: {
-                            ...baseConfig,
-                            success_code: null,
-                          },
-                        });
-                      }}
-                      className="mb-0.5 p-1.5 text-slate-400 hover:text-red-500
-                        rounded transition-colors"
-                    >
-                      <span className="hero-trash-mini h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Error Status Code */}
-                {shownErrorCode && (
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label
-                        htmlFor="webhook-error-code"
-                        className="block text-xs font-medium text-slate-600 mb-1"
-                      >
-                        Error Status Code
-                      </label>
-                      <input
-                        id="webhook-error-code"
-                        type="number"
-                        placeholder="500"
-                        value={config?.error_code ?? ''}
-                        onChange={e => {
-                          const raw = e.target.value;
-                          mergeDraft({
-                            webhook_response_config: {
-                              ...baseConfig,
-                              error_code: raw === '' ? null : parseInt(raw, 10),
-                            },
-                          });
-                        }}
-                        className={inputClass}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      title="Remove"
-                      onClick={() => {
-                        setForceShowError(false);
-                        mergeDraft({
-                          webhook_response_config: {
-                            ...baseConfig,
-                            error_code: null,
-                          },
-                        });
-                      }}
-                      className="mb-0.5 p-1.5 text-slate-400 hover:text-red-500
-                        rounded transition-colors"
-                    >
-                      <span className="hero-trash-mini h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Add individual status code buttons */}
-                {(!shownSuccessCode || !shownErrorCode) && (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1">
-                    {!shownSuccessCode && (
-                      <button
-                        type="button"
-                        onClick={() => setForceShowSuccess(true)}
-                        className="flex items-center gap-1 text-xs text-indigo-600
-                          hover:text-indigo-700 font-medium"
-                      >
-                        <span className="hero-plus-mini h-3.5 w-3.5" />
-                        Success Status Code
-                      </button>
-                    )}
-                    {!shownErrorCode && (
-                      <button
-                        type="button"
-                        onClick={() => setForceShowError(true)}
-                        className="flex items-center gap-1 text-xs text-indigo-600
-                          hover:text-indigo-700 font-medium"
-                      >
-                        <span className="hero-plus-mini h-3.5 w-3.5" />
-                        Error Status Code
-                      </button>
-                    )}
-                  </div>
-                )}
+          {responseExpanded && (
+            <div className="mt-3 flex items-start gap-3">
+              <div className="flex-1 space-y-1">
+                <label
+                  htmlFor="webhook-success-code"
+                  className="block text-xs font-medium text-slate-600"
+                >
+                  Success Code
+                </label>
+                <input
+                  id="webhook-success-code"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="201"
+                  value={config?.success_code ?? ''}
+                  onChange={e => {
+                    const raw = e.target.value;
+                    mergeDraft({
+                      webhook_response_config: {
+                        ...baseConfig,
+                        success_code: raw === '' ? null : parseInt(raw, 10),
+                      },
+                    });
+                  }}
+                  className={codeInputClass}
+                />
               </div>
-            )}
-          </div>
-        )}
+              <div className="flex-1 space-y-1">
+                <label
+                  htmlFor="webhook-error-code"
+                  className="block text-xs font-medium text-slate-600"
+                >
+                  Error Code
+                </label>
+                <input
+                  id="webhook-error-code"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="201"
+                  value={config?.error_code ?? ''}
+                  onChange={e => {
+                    const raw = e.target.value;
+                    mergeDraft({
+                      webhook_response_config: {
+                        ...baseConfig,
+                        error_code: raw === '' ? null : parseInt(raw, 10),
+                      },
+                    });
+                  }}
+                  className={codeInputClass}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Webhook Auth Method Modal — buffers selection into the draft; the

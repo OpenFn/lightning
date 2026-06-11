@@ -206,7 +206,7 @@ describe('WebhookEditWizard', () => {
       const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
       const { onDone } = await setup(trigger, workflowStore);
 
-      // Choose -> Configure
+      // Choose -> Configure -> commit
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
       await userEvent.click(screen.getByRole('button', { name: 'Finish' }));
 
@@ -231,9 +231,9 @@ describe('WebhookEditWizard', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 
       // Switch back to Immediately (before_start) -> config must clear.
-      await userEvent.selectOptions(
-        screen.getByLabelText('Response Type'),
-        'before_start'
+      await userEvent.click(screen.getByLabelText(/Response Type/i));
+      await userEvent.click(
+        screen.getByRole('option', { name: /Immediately/i })
       );
       await userEvent.click(screen.getByRole('button', { name: 'Finish' }));
 
@@ -294,7 +294,11 @@ describe('WebhookEditWizard', () => {
 
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 
-      // Open the (mocked) auth modal and save a new selection.
+      // Authentication is collapsed by default; expand it, then open the
+      // (mocked) auth modal and save a new selection.
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Authentication' })
+      );
       await userEvent.click(
         screen.getByRole('button', { name: /manage authentication/i })
       );
@@ -331,17 +335,19 @@ describe('WebhookEditWizard', () => {
       await setup(trigger, workflowStore);
 
       expect(
-        screen.getByRole('heading', { name: 'Select trigger' })
+        screen.getByRole('heading', { name: 'On webhook call' })
       ).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-      expect(
-        screen.getByRole('heading', { name: 'Setup Trigger' })
-      ).toBeInTheDocument();
+      // Configure shares the "On webhook call" heading; the breadcrumb marks the
+      // active step, so assert via a Configure-only control.
+      expect(screen.getByLabelText(/Response Type/i)).toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      // Back on Choose: Configure-only control gone, Choose-only "Change" present.
+      expect(screen.queryByLabelText(/Response Type/i)).not.toBeInTheDocument();
       expect(
-        screen.getByRole('heading', { name: 'Select trigger' })
+        screen.getByRole('button', { name: 'Change' })
       ).toBeInTheDocument();
     });
 
@@ -358,7 +364,7 @@ describe('WebhookEditWizard', () => {
         screen.getByRole('button', { name: /on webhook call/i })
       );
       expect(
-        screen.getByRole('heading', { name: 'Select trigger' })
+        screen.getByRole('heading', { name: 'On webhook call' })
       ).toBeInTheDocument();
     });
   });

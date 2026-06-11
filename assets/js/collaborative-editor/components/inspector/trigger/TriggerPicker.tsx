@@ -27,45 +27,34 @@ interface PickerRowProps {
   icon: string;
   title: string;
   description: string;
-  badge?: string;
   onClick: () => void;
 }
 
-function PickerRow({
-  icon,
-  title,
-  description,
-  badge,
-  onClick,
-}: PickerRowProps) {
+function PickerRow({ icon, title, description, onClick }: PickerRowProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-lg border border-slate-200
-        p-3 text-left transition-colors hover:border-slate-300 hover:bg-slate-50
-        focus:outline-none focus:ring-1 focus:ring-indigo-500"
+      className="flex w-full items-center gap-3 rounded-lg p-3 text-left
+        transition-colors hover:bg-slate-50 focus:outline-none
+        focus:ring-1 focus:ring-indigo-500"
     >
       <span
         className={`${icon} h-5 w-5 shrink-0 text-slate-500`}
         aria-hidden="true"
       />
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-800">{title}</span>
-          {badge && (
-            <span
-              className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs
-                font-medium text-indigo-600"
-            >
-              {badge}
-            </span>
-          )}
+        <span className="block text-sm font-medium text-slate-800">
+          {title}
         </span>
         <span className="mt-0.5 block text-xs text-slate-500">
           {description}
         </span>
       </span>
+      <span
+        className="hero-chevron-right-mini h-4 w-4 shrink-0 text-slate-400"
+        aria-hidden="true"
+      />
     </button>
   );
 }
@@ -111,7 +100,6 @@ export function TriggerPicker({
             icon="hero-globe-alt"
             title="On webhook call"
             description="Run the workflow, on receiving an HTTP request."
-            badge="Popular"
             onClick={() => onPickDraftType('webhook')}
           />
           <PickerRow

@@ -203,30 +203,36 @@ describe('WebhookShowPanel', () => {
         expect(screen.getByText('Primary API Key')).toBeInTheDocument();
       });
       expect(screen.getByText('(API Key)')).toBeInTheDocument();
-      expect(screen.queryByText('No auth configured')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/no authentication configured/i)
+      ).not.toBeInTheDocument();
     });
 
-    test('shows the placeholder and an Add Authentication action when none and editable', async () => {
+    test('shows the placeholder and an Add authentication link when none and editable', async () => {
       const workflowStore = createConnectedWorkflowStore(ydoc, []);
       const { onEdit } = await setup(trigger, workflowStore, { canEdit: true });
 
       await waitFor(() => {
-        expect(screen.getByText('No auth configured')).toBeInTheDocument();
+        expect(
+          screen.getByText(/no authentication configured/i)
+        ).toBeInTheDocument();
       });
 
-      const addButton = screen.getByRole('button', {
+      const addLink = screen.getByRole('button', {
         name: /add authentication/i,
       });
-      await userEvent.click(addButton);
+      await userEvent.click(addLink);
       expect(onEdit).toHaveBeenCalledTimes(1);
     });
 
-    test('hides Add Authentication for viewers even when no auth configured', async () => {
+    test('hides the Add authentication link for viewers even when no auth configured', async () => {
       const workflowStore = createConnectedWorkflowStore(ydoc, []);
       await setup(trigger, workflowStore, { canEdit: false });
 
       await waitFor(() => {
-        expect(screen.getByText('No auth configured')).toBeInTheDocument();
+        expect(
+          screen.getByText(/no authentication configured/i)
+        ).toBeInTheDocument();
       });
       expect(
         screen.queryByRole('button', { name: /add authentication/i })

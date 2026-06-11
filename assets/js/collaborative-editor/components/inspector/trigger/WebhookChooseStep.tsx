@@ -40,25 +40,32 @@ export function WebhookChooseStep({
   const footer = (
     <InspectorFooter
       leftButtons={
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
       }
       rightButtons={
         <Button variant="primary" onClick={onNext}>
-          Next
+          <span className="inline-flex items-center gap-1.5">
+            Next
+            <span className="hero-arrow-right-micro h-4 w-4" />
+          </span>
         </Button>
       }
     />
   );
 
   return (
-    <InspectorLayout title="Select trigger" onClose={onClose} footer={footer}>
+    <InspectorLayout title="On webhook call" onClose={onClose} footer={footer}>
       <div className="space-y-6 p-6">
         <WizardBreadcrumb step="choose" />
 
-        {/* Trigger type badge + Change */}
-        <div className="flex items-center justify-between">
+        {/* Trigger type — chip on the left, "Change" button on the right
+            (opens the picker to switch the trigger type). */}
+        <div
+          className="flex w-full items-center justify-between rounded-lg border
+            border-gray-200 bg-white px-3 py-2"
+        >
           <TriggerTypeBadge />
           <button
             type="button"
