@@ -208,6 +208,89 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "message serialization" do
+    test "derives job_id from legacy from_global_job_code meta", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Legacy global job code response",
+              status: :success,
+              meta: %{"from_global_job_code" => "some-job-key"},
+              code: "fn(state => state);"
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: [message]}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert %{
+               job_id: "some-job-key",
+               from_global: false,
+               code: "fn(state => state);"
+             } = message
+    end
+
+    test "serializes from_global marker with nil job_id", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Global workflow response",
+              status: :success,
+              meta: %{"from_global" => true},
+              code: "workflow:\n  name: updated"
+            },
+            %{
+              role: :assistant,
+              content: "Job chat response",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [
+               %{
+                 from_global: true,
+                 job_id: nil,
+                 code: "workflow:\n  name: updated"
+               },
+               %{from_global: false}
+             ] = messages
+    end
+  end
+
   describe "workflow_template sessions" do
     test "successfully creates workflow template session", %{
       socket: socket,

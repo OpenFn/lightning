@@ -780,13 +780,25 @@ defmodule Lightning.AiAssistant do
   end
 
   defp prepare_message_attrs(message_attrs, session, code) do
-    message_attrs
-    |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("chat_session_id", session.id)
-    |> Map.put("code", code)
-    |> maybe_put_job_id_from_session(session)
-    |> maybe_put_unsaved_job_meta(session)
+    attrs =
+      message_attrs
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("code", code)
+
+    # Global messages carry a full workflow YAML, never a job —
+    # even when the session was started from a job step.
+    if global_message?(attrs) do
+      attrs
+    else
+      attrs
+      |> maybe_put_job_id_from_session(session)
+      |> maybe_put_unsaved_job_meta(session)
+    end
   end
+
+  defp global_message?(%{"meta" => %{"from_global" => true}}), do: true
+  defp global_message?(_), do: false
 
   defp maybe_put_unsaved_job_meta(attrs, session) do
     is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
@@ -1479,93 +1491,29 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  defp build_global_message(body, session) do
-    {code, job, job_key} =
-      extract_global_code_and_job(body["attachments"], session)
+  defp build_global_message(body, _session) do
+    code = extract_global_workflow_yaml(body["attachments"])
 
     message_attrs = %{
       role: :assistant,
-      content: body["response"]
+      content: body["response"],
+      meta: %{"from_global" => true}
     }
 
-    # Set job on message for "Generated Job Code" rendering.
-    # For saved jobs, set the job association directly.
-    # For unsaved jobs, set from_unsaved_job in meta so
-    # format_message can use it as a fallback job_id.
-    message_attrs =
-      cond do
-        job ->
-          Map.put(message_attrs, :job, job)
-
-        job_key ->
-          Map.put(message_attrs, :meta, %{"from_global_job_code" => job_key})
-
-        true ->
-          message_attrs
-      end
-
-    opts = [
-      usage: body["usage"] || %{},
-      meta: body["meta"],
-      code: code
-    ]
-
+    opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
   end
 
-  # Extracts the appropriate code artifact and optional job from global chat
-  # attachments. On a job step, prefers job_code (renders as code diff).
-  # On the workflow overview, prefers workflow_yaml (renders as YAML card).
-  defp extract_global_code_and_job(attachments, session)
-       when is_list(attachments) do
-    page = get_in(session.meta || %{}, ["message_options", "page"])
-    on_job_step = page && length(String.split(page, "/")) >= 3
-
-    job_code_attachment =
-      Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
-
-    if on_job_step && job_code_attachment do
-      job_key = job_code_attachment["job_key"]
-
-      job =
-        resolve_job_from_key(session.workflow_id, job_key)
-
-      {job_code_attachment["content"], job, job_key}
-    else
-      workflow_yaml =
-        Enum.find_value(attachments, fn
-          %{"type" => "workflow_yaml", "content" => content} -> content
-          _ -> nil
-        end)
-
-      {workflow_yaml, nil, nil}
-    end
-  end
-
-  defp extract_global_code_and_job(_, _), do: {nil, nil, nil}
-
-  defp resolve_job_from_key(nil, _), do: nil
-  defp resolve_job_from_key(_, nil), do: nil
-
-  defp resolve_job_from_key(workflow_id, job_key) do
-    import Ecto.Query
-
-    Lightning.Workflows.Job
-    |> where([j], j.workflow_id == ^workflow_id)
-    |> Repo.all()
-    |> Enum.find(fn job ->
-      normalize_job_name(job.name) == normalize_job_name(job_key)
+  # Global chat always returns a full workflow YAML (job bodies embedded).
+  # The frontend handles per-step diffing and full-workflow apply.
+  defp extract_global_workflow_yaml(attachments) when is_list(attachments) do
+    Enum.find_value(attachments, fn
+      %{"type" => "workflow_yaml", "content" => content} -> content
+      _ -> nil
     end)
   end
 
-  defp normalize_job_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
-  end
-
-  defp normalize_job_name(_), do: ""
+  defp extract_global_workflow_yaml(_), do: nil
 
   defp build_history(session) do
     messages = session.messages || []

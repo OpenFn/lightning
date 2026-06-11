@@ -733,6 +733,8 @@ defmodule LightningWeb.AiAssistantChannel do
           message.job_id
       end
 
+    from_global = match?(%{"from_global" => true}, message.meta)
+
     %{
       id: message.id,
       content: message.content,
@@ -742,7 +744,8 @@ defmodule LightningWeb.AiAssistantChannel do
       inserted_at: message.inserted_at,
       user_id: message.user_id,
       user: format_user(message.user),
-      job_id: job_id
+      job_id: job_id,
+      from_global: from_global
     }
   end
 

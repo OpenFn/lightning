@@ -170,7 +170,14 @@ export function useAIWorkflowApplications({
    */
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
-      if (!aiMode || aiMode.page !== 'workflow_template') {
+      if (!aiMode) return;
+      // Global messages carry a full workflow YAML and may be applied even
+      // while a job is open (job_code mode). Non-global workflow chat keeps
+      // the workflow_template-only guard so its Apply stays a no-op when a
+      // job is open.
+      const isGlobal = !!currentSession?.messages.find(m => m.id === messageId)
+        ?.from_global;
+      if (aiMode.page !== 'workflow_template' && !isGlobal) {
         console.error(
           '[AI Assistant] Cannot apply workflow - not in workflow mode',
           {
@@ -218,7 +225,8 @@ export function useAIWorkflowApplications({
       }
     },
     [
-      aiMode?.page,
+      aiMode,
+      currentSession,
       importWorkflow,
       startApplyingWorkflow,
       doneApplyingWorkflow,
@@ -290,6 +298,55 @@ export function useAIWorkflowApplications({
           title: 'Preview unavailable',
           description: 'Editor not ready. Please try again in a moment.',
         });
+      }
+    },
+    [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
+  );
+
+  /**
+   * Preview the open job's diff from a global full-workflow YAML message
+   *
+   * Mirrors handlePreviewJobCode, but extracts the open job's body from the
+   * workflow YAML (global messages carry the whole workflow in `code`).
+   * Shows a diff only when the open step's body actually changed; clears any
+   * stale diff otherwise.
+   */
+  const handlePreviewGlobalStep = useCallback(
+    (yaml: string, messageId: string) => {
+      if (!aiMode || aiMode.page !== 'job_code') return; // only when a step is open
+      const jobId = (aiMode.context as JobCodeContext).job_id;
+      if (!jobId) return;
+
+      // Same dedup guards as handlePreviewJobCode
+      if (previewingMessageId === messageId) return;
+      if (previewingMessageId === '__streaming__') {
+        setPreviewingMessageId(messageId);
+        return;
+      }
+
+      const currentBody = jobs.find(j => j.id === jobId)?.body ?? '';
+
+      let newBody: string | undefined;
+      try {
+        const spec = parseWorkflowYAML(yaml);
+        // state.jobs is an array; ids from the YAML are preserved
+        const state = convertWorkflowSpecToState(spec);
+        newBody = state.jobs.find(j => j.id === jobId)?.body;
+      } catch {
+        return; // invalid YAML -> no diff
+      }
+
+      if (newBody === undefined || newBody === currentBody) {
+        // open step unchanged -> ensure no stale diff is shown
+        if (previewingMessageId) monacoRef?.current?.clearDiff();
+        return;
+      }
+
+      const monaco = monacoRef?.current;
+      if (previewingMessageId && monaco) monaco.clearDiff();
+      if (monaco) {
+        monaco.showDiff(currentBody, newBody);
+        setPreviewingMessageId(messageId);
       }
     },
     [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
@@ -453,6 +510,7 @@ export function useAIWorkflowApplications({
   return {
     handleApplyWorkflow,
     handlePreviewJobCode,
+    handlePreviewGlobalStep,
     handleApplyJobCode,
   };
 }

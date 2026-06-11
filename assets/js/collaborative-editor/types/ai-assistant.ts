@@ -54,6 +54,11 @@ export interface Message {
   user_id?: string;
   user?: MessageUser | null;
   job_id?: string;
+  /**
+   * True when this message came from the global AI assistant. Global
+   * messages carry a full workflow YAML in `code` and never a `job_id`.
+   */
+  from_global?: boolean;
 }
 
 /**
