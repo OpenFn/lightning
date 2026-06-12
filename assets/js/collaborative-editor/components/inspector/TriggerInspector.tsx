@@ -13,7 +13,7 @@ import { Toggle } from '../Toggle';
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
 import { WebhookEditWizard } from './trigger/WebhookEditWizard';
-import { WebhookShowPanel } from './trigger/WebhookShowPanel';
+import { WebhookShowPanel, type EditFocus } from './trigger/WebhookShowPanel';
 import { TriggerForm } from './TriggerForm';
 
 interface TriggerInspectorProps {
@@ -60,10 +60,15 @@ export function TriggerInspector({
   // Configure over a local draft). Cron/Kafka ignore this and render the legacy
   // TriggerForm.
   const [view, setView] = useState<'show' | 'edit'>('show');
+  // When the user enters edit via an inline deep link ("Add authentication" /
+  // "Configure default response status"), jump straight to Configure with that
+  // section expanded. `undefined` = the plain Edit button → Choose step.
+  const [editFocus, setEditFocus] = useState<EditFocus | undefined>(undefined);
 
   // Reset to the resting state whenever a different trigger is selected.
   useEffect(() => {
     setView('show');
+    setEditFocus(undefined);
   }, [trigger.id]);
 
   const handleEnabledChange = useCallback(
@@ -115,7 +120,10 @@ export function TriggerInspector({
       <WebhookShowPanel
         trigger={trigger}
         onClose={onClose}
-        onEdit={() => setView('edit')}
+        onEdit={focus => {
+          setEditFocus(focus);
+          setView('edit');
+        }}
       />
     );
   }
@@ -127,8 +135,12 @@ export function TriggerInspector({
     return (
       <WebhookEditWizard
         trigger={trigger}
+        initialFocus={editFocus}
         onClose={onClose}
-        onDone={() => setView('show')}
+        onDone={() => {
+          setView('show');
+          setEditFocus(undefined);
+        }}
       />
     );
   }

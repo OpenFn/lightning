@@ -195,23 +195,35 @@ describe('WebhookShowPanel', () => {
   });
 
   describe('authentication section', () => {
-    test('shows configured auth methods when present', async () => {
+    // The section is collapsible and collapsed by default; the disclosure
+    // button's accessible name is "Authentication (<count>)".
+    const expandAuth = () =>
+      userEvent.click(screen.getByRole('button', { name: /^authentication/i }));
+
+    test('shows a count in the header and the configured methods when expanded', async () => {
       const workflowStore = createConnectedWorkflowStore(ydoc, AUTH_METHODS);
       await setup(trigger, workflowStore);
 
+      await expandAuth();
       await waitFor(() => {
         expect(screen.getByText('Primary API Key')).toBeInTheDocument();
       });
       expect(screen.getByText('(API Key)')).toBeInTheDocument();
+      expect(screen.getByText(/1 configured/i)).toBeInTheDocument();
       expect(
         screen.queryByText(/no authentication configured/i)
       ).not.toBeInTheDocument();
     });
 
-    test('shows the placeholder and an Add authentication link when none and editable', async () => {
+    test('shows "none configured" and an Add authentication link when none and editable', async () => {
       const workflowStore = createConnectedWorkflowStore(ydoc, []);
       const { onEdit } = await setup(trigger, workflowStore, { canEdit: true });
 
+      await waitFor(() => {
+        expect(screen.getByText(/none configured/i)).toBeInTheDocument();
+      });
+
+      await expandAuth();
       await waitFor(() => {
         expect(
           screen.getByText(/no authentication configured/i)
@@ -229,6 +241,7 @@ describe('WebhookShowPanel', () => {
       const workflowStore = createConnectedWorkflowStore(ydoc, []);
       await setup(trigger, workflowStore, { canEdit: false });
 
+      await expandAuth();
       await waitFor(() => {
         expect(
           screen.getByText(/no authentication configured/i)

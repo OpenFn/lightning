@@ -13,6 +13,11 @@ import { WebhookConfigureStep } from './WebhookConfigureStep';
 
 interface WebhookEditWizardProps {
   trigger: Workflow.Trigger;
+  /**
+   * Deep-link target: when set, open directly on Configure with this section
+   * expanded (from the show panel's inline links). Undefined → start at Choose.
+   */
+  initialFocus?: 'authentication' | 'response' | undefined;
   /** Close the inspector entirely. */
   onClose: () => void;
   /** Leave the wizard and return to the show panel (Cancel or Finish). */
@@ -34,6 +39,7 @@ type Step = 'choose' | 'picker' | 'configure';
  */
 export function WebhookEditWizard({
   trigger,
+  initialFocus,
   onClose,
   onDone,
 }: WebhookEditWizardProps) {
@@ -58,7 +64,7 @@ export function WebhookEditWizard({
     commitAuthMethods,
   });
 
-  const [step, setStep] = useState<Step>('choose');
+  const [step, setStep] = useState<Step>(initialFocus ? 'configure' : 'choose');
 
   // Cancel: the draft is purely local, so discarding it just means leaving the
   // wizard. No persistence happens.
@@ -106,6 +112,7 @@ export function WebhookEditWizard({
         draftAuthMethodIds={draftAuthMethodIds}
         setDraftAuthMethodIds={setDraftAuthMethodIds}
         validationError={validationError}
+        initialExpand={initialFocus}
         onClose={onClose}
         onCancel={cancel}
         onBack={() => setStep('choose')}

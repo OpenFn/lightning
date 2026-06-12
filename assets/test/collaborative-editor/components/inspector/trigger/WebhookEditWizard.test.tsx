@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as Y from 'yjs';
 
 import { WebhookEditWizard } from '../../../../../js/collaborative-editor/components/inspector/trigger/WebhookEditWizard';
+import { LiveViewActionsProvider } from '../../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
@@ -34,22 +35,12 @@ import {
 import { createMockSocket } from '../../../__helpers__/sessionStoreHelpers';
 import { createWorkflowYDoc } from '../../../__helpers__/workflowFactory';
 
-// Mock the auth modal so we can exercise its onSave boundary without rendering
-// the full Headless UI dialog. The mock surfaces a button that buffers an id.
-vi.mock(
-  '../../../../../js/collaborative-editor/components/inspector/WebhookAuthMethodModal',
-  () => ({
-    WebhookAuthMethodModal: ({
-      onSave,
-    }: {
-      onSave: (ids: string[]) => Promise<void>;
-    }) => (
-      <button type="button" onClick={() => void onSave(['auth-2'])}>
-        mock-save-auth
-      </button>
-    ),
-  })
-);
+const mockLiveViewActions = {
+  pushEvent: vi.fn(),
+  pushEventTo: vi.fn(),
+  handleEvent: vi.fn(() => () => {}),
+  navigate: vi.fn(),
+};
 
 const TRIGGER_ID = '11111111-1111-4111-8111-111111111111';
 const AUTH_METHOD_1 = '22222222-2222-4222-8222-222222222222';
@@ -161,7 +152,9 @@ async function setup(
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
       <StoreContext.Provider value={storeValue}>
-        {children}
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          {children}
+        </LiveViewActionsProvider>
       </StoreContext.Provider>
     </SessionContext.Provider>
   );
@@ -179,6 +172,7 @@ describe('WebhookEditWizard', () => {
   let trigger: Workflow.Trigger;
 
   beforeEach(() => {
+    mockLiveViewActions.pushEvent.mockClear();
     ydoc = createWorkflowYDoc({
       triggers: { [TRIGGER_ID]: { id: TRIGGER_ID, type: 'webhook' } },
     });
@@ -284,26 +278,24 @@ describe('WebhookEditWizard', () => {
   });
 
   describe('auth buffering', () => {
-    test('auth modal onSave buffers ids; the channel commit fires only on Finish', async () => {
-      // Trigger starts associated with method 1; saving in the modal selects
-      // method 2 instead, so the set changed and a commit must fire on Finish.
-      const workflowStore = createConnectedWorkflowStore(ydoc, [
-        PROJECT_AUTH_METHODS[0],
-      ]);
+    test('selecting a credential buffers it; the channel commit fires only on Finish', async () => {
+      // Trigger starts with no auth methods; picking one in the dropdown changes
+      // the set, so a commit must fire on Finish (and not before).
+      const workflowStore = createConnectedWorkflowStore(ydoc, []);
       const { sessionChannel } = await setup(trigger, workflowStore);
 
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 
-      // Authentication is collapsed by default; expand it, then open the
-      // (mocked) auth modal and save a new selection.
+      // Authentication is collapsed by default; expand it, open the first
+      // credential row's dropdown, and pick a method.
       await userEvent.click(
         screen.getByRole('button', { name: 'Authentication' })
       );
       await userEvent.click(
-        screen.getByRole('button', { name: /manage authentication/i })
+        screen.getByRole('button', { name: 'Authentication credential 1' })
       );
       await userEvent.click(
-        screen.getByRole('button', { name: 'mock-save-auth' })
+        screen.getByRole('option', { name: /Basic Login/i })
       );
 
       // No channel push for auth before Finish.
@@ -323,9 +315,52 @@ describe('WebhookEditWizard', () => {
         expect(authPushAfter).toHaveLength(1);
         expect(authPushAfter[0][1]).toEqual({
           trigger_id: TRIGGER_ID,
-          auth_method_ids: ['auth-2'],
+          auth_method_ids: [AUTH_METHOD_2],
         });
       });
+    });
+
+    test('the Add button appends another credential row', async () => {
+      const workflowStore = createConnectedWorkflowStore(ydoc, []);
+      await setup(trigger, workflowStore);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Authentication' })
+      );
+
+      // One row by default. Fill it (Add stays disabled while a row is empty),
+      // then Add appends a second row.
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Authentication credential 1' })
+      );
+      await userEvent.click(
+        screen.getByRole('option', { name: /Basic Login/i })
+      );
+      await userEvent.click(screen.getByRole('button', { name: /add/i }));
+      expect(
+        screen.getByRole('button', { name: 'Authentication credential 2' })
+      ).toBeInTheDocument();
+    });
+
+    test('the "Create a new authentication method" link opens the create flow', async () => {
+      const workflowStore = createConnectedWorkflowStore(ydoc, []);
+      await setup(trigger, workflowStore);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Authentication' })
+      );
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /create a new authentication method/i,
+        })
+      );
+
+      expect(mockLiveViewActions.pushEvent).toHaveBeenCalledWith(
+        'open_webhook_auth_modal',
+        {}
+      );
     });
   });
 

@@ -19,24 +19,31 @@ interface ResponseTypeSelectProps {
   onChange: (value: WebhookReply) => void;
 }
 
-interface ResponseTypeOption {
+export interface ResponseTypeOption {
   value: WebhookReply;
   label: string;
+  /** Full description shown in the Configure dropdown option. */
   description: string;
+  /** Trimmed variant shown on the resting panel (no parenthetical hint). */
+  shortDescription: string;
 }
 
-const IMMEDIATELY: ResponseTypeOption = {
+export const IMMEDIATELY: ResponseTypeOption = {
   value: 'before_start',
   label: 'Immediately',
   description:
     'Responds immediately with a confirmation and work order ID. ' +
     '(Best for long running or queued workflows)',
+  shortDescription:
+    'Responds immediately with a confirmation and work order ID.',
 };
 
-const ON_COMPLETE: ResponseTypeOption = {
+export const ON_COMPLETE: ResponseTypeOption = {
   value: 'after_completion',
   label: 'On Complete',
   description: 'Responds when the workflow completes, then returns the result.',
+  shortDescription:
+    'Responds when the workflow completes, then returns the result.',
 };
 
 const OPTIONS: ResponseTypeOption[] = [IMMEDIATELY, ON_COMPLETE];
