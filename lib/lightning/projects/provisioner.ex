@@ -687,10 +687,7 @@ defmodule Lightning.Projects.Provisioner do
       {true, others} when map_size(others) == 0 ->
         changeset
         |> Map.put(:changes, others)
-        |> put_change(
-          :deleted_at,
-          DateTime.utc_now() |> DateTime.truncate(:second)
-        )
+        |> Workflows.soft_delete_changeset()
 
       {true, others} when map_size(others) > 0 ->
         changeset

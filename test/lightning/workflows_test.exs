@@ -1576,6 +1576,21 @@ defmodule Lightning.WorkflowsTest do
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
 
+    test "soft_delete_changeset/1 marks deleted and frees the name in one step" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, name: "Shared Transition")
+
+      changeset =
+        workflow
+        |> Ecto.Changeset.change()
+        |> Workflows.soft_delete_changeset()
+
+      assert %DateTime{} = Ecto.Changeset.get_change(changeset, :deleted_at)
+
+      assert Ecto.Changeset.get_change(changeset, :name) ==
+               "Shared Transition_del"
+    end
+
     test "mark_for_deletion/3 renames workflow with _del suffix" do
       # Use a separate project to avoid pollution from setup
       project = insert(:project)

@@ -71,6 +71,28 @@ defmodule LightningWeb.WorkflowChannelTest do
                )
     end
 
+    test "rejects \"new\" join for an id owned by another project", %{
+      project: project,
+      user: user
+    } do
+      # A workflow id that already exists, but belongs to a DIFFERENT project.
+      # The user passes the :create_workflow check on their own project, but the
+      # resolver reconciles by id and finds the foreign-owned row, returning
+      # :wrong_project. The "new" path must map that to the same client-facing
+      # string as the "edit" path.
+      other_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: other_project)
+
+      assert {:error, %{reason: "workflow does not belong to specified project"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{foreign_workflow.id}",
+                 %{"project_id" => project.id, "action" => "new"}
+               )
+    end
+
     test "accepts authorized users with proper assigns", %{
       socket: socket,
       workflow: workflow,
@@ -3051,14 +3073,52 @@ defmodule LightningWeb.WorkflowChannelTest do
         ensure_doc_supervisor_stopped(workflow_id)
       end)
 
-      # Verify the workflow in socket has nil lock_version
-      assert is_nil(socket.assigns.workflow.lock_version)
+      # A genuinely-new struct is seeded with lock_version 0. The empty-versions
+      # short-circuit keys on workflow_kind, not on lock_version.
+      assert socket.assigns.workflow.lock_version == 0
 
       ref = push(socket, "request_versions", %{})
 
       assert_reply ref, :ok, %{versions: versions}
 
       assert versions == []
+    end
+
+    test "does not short-circuit for a version-view socket", %{
+      workflow: workflow,
+      user: user,
+      project: project
+    } do
+      # Snapshot v0, then bump to v1 so there is genuine version history.
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, _updated} =
+        Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      # Join viewing the old snapshot (v0). The resolver hydrates a :built struct
+      # with lock_version == 0, BUT this is a version-view, not a genuinely-new
+      # workflow, so request_versions must NOT short-circuit to [].
+      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+
+      {:ok, _, snapshot_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          topic_with_version,
+          %{project_id: project.id, action: "edit"}
+        )
+
+      ref = push(snapshot_socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      assert length(versions) >= 1
     end
 
     test "marks latest version correctly", %{

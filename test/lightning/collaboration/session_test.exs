@@ -1028,7 +1028,9 @@ defmodule Lightning.SessionTest do
         )
       )
 
-      # Try to save again - should get workflow_deleted error (covering line 475)
+      # Try to save again - should get workflow_deleted error: the resolver
+      # reconciles to the soft-deleted :loaded row and save_workflow's
+      # validate_not_deleted step then rejects it.
       assert {:error, :workflow_deleted} =
                Session.save_workflow(session_pid, user)
     end
@@ -1091,6 +1093,58 @@ defmodule Lightning.SessionTest do
       assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
 
       assert Process.alive?(session)
+    end
+  end
+
+  describe "reset_workflow/2" do
+    setup do
+      # Set global mode for the mock to allow cross-process calls
+      Mox.set_mox_global(LightningMock)
+      # Stub the broadcast calls that reset_workflow makes
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, name: "Original Name", project: project)
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
+
+      %{session: session_pid, user: user, workflow: workflow, project: project}
+    end
+
+    test "returns workflow_deleted error for a soft-deleted workflow", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      # Soft-delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      # Reset should fail
+      assert {:error, :workflow_deleted} = Session.reset_workflow(session, user)
+    end
+
+    test "resets successfully for a live workflow", %{
+      session: session,
+      user: user
+    } do
+      assert {:ok, %Lightning.Workflows.Workflow{}} =
+               Session.reset_workflow(session, user)
     end
   end
 
@@ -1228,6 +1282,110 @@ defmodule Lightning.SessionTest do
       # Verify trigger remains enabled
       saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
       assert saved_trigger.enabled == true
+    end
+
+    # A stale "new" rejoin after an in-place socket reconnect hands the session a
+    # freshly-built struct (default lock_version 0) for an id the first save
+    # already persisted. The resolver reconciles by id so the second save routes
+    # to UPDATE, not a duplicate INSERT on workflows_pkey (#4830).
+    test "reconnect with stale built struct UPDATEs instead of duplicate INSERT",
+         %{session: session, user: user, workflow: workflow, project: project} do
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      # A freshly built workflow is in :built state with the default
+      # lock_version of 0. The resolver routes the save by whether a row already
+      # exists, not by lock_version.
+      assert workflow.__meta__.state == :built
+      refute workflow.lock_version > 0
+
+      # First Create: the genuine first save inserts the row.
+      assert {:ok, created} = Session.save_workflow(session, user)
+      assert created.id == workflow.id
+
+      assert [%{lock_version: first_lock_version}] =
+               Repo.all(from w in Workflow, where: w.id == ^workflow.id)
+
+      # Simulate the reconnect: a fresh "new" rejoin reconstructs a built
+      # struct (default lock_version 0) for the SAME id with empty associations,
+      # while the persisted row is already present.
+      stale_workflow =
+        build(:workflow,
+          id: workflow.id,
+          name: "New Workflow",
+          project: project,
+          project_id: project.id
+        )
+
+      assert stale_workflow.__meta__.state == :built
+      refute stale_workflow.lock_version > 0
+
+      reconnect_document_name = "workflow:new:reconnect:#{workflow.id}"
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: stale_workflow, document_name: reconnect_document_name},
+        id: :reconnect_doc_sup
+      )
+
+      reconnect_session =
+        start_supervised!(
+          {Session,
+           workflow: stale_workflow,
+           user: user,
+           document_name: reconnect_document_name},
+          id: :reconnect_session
+        )
+
+      # Make a real edit in the reconnect doc so the UPDATE has a change to
+      # commit (and thus advances the optimistic lock).
+      doc = Session.get_doc(reconnect_session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "rename", fn ->
+        Yex.Map.set(workflow_map, "name", "Renamed After Reconnect")
+      end)
+
+      # The reconcile branch must fire (UPDATE), not raise workflows_pkey and
+      # not be caught by the #4829 ConstraintError rescue (which returns an
+      # error changeset rather than {:ok, _}).
+      assert {:ok, updated} = Session.save_workflow(reconnect_session, user)
+      assert updated.id == workflow.id
+      assert updated.name == "Renamed After Reconnect"
+
+      # lock_version advanced and the row was not duplicated.
+      rows = Repo.all(from w in Workflow, where: w.id == ^workflow.id)
+      assert length(rows) == 1
+      assert [%{lock_version: second_lock_version}] = rows
+      assert second_lock_version > first_lock_version
+    end
+
+    # Lower-level assertion of the routing decision: when a built struct's id
+    # already has a row, the session resolves it to the :loaded DB workflow
+    # (→ UPDATE) rather than keeping it :built (→ INSERT). Observed via the
+    # session state, which save_workflow/2 replaces with the resolved workflow.
+    test "built struct for a persisted id resolves to the :loaded workflow",
+         %{session: session, user: user} do
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert %Session{workflow: %{__meta__: %{state: :built}} = seeded} =
+               :sys.get_state(session)
+
+      refute seeded.lock_version > 0
+
+      assert {:ok, _created} = Session.save_workflow(session, user)
+
+      # After the save the session holds the resolved, persisted workflow.
+      assert %Session{workflow: resolved} = :sys.get_state(session)
+      assert resolved.__meta__.state == :loaded
+      assert is_integer(resolved.lock_version)
     end
   end
 
