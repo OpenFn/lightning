@@ -1,8 +1,5 @@
 defmodule Lightning.Collaboration.WorkflowReconcilerTest do
-  # Tests must be async: false because we put a SharedDoc in a dynamic supervisor
-  # that isn't owned by the test process. So we need our Ecto sandbox to be
-  # in shared mode.
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   import Lightning.Factories
   import Lightning.CollaborationHelpers
@@ -11,14 +8,20 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   alias Lightning.Collaboration.{Session, WorkflowReconciler}
   alias Lightning.Workflows
 
-  # we assume that the WorkflowCollaboration supervisor is up
-  # that starts :pg with the :workflow_collaboration scope
-  # and a dynamic supervisor called Lightning.WorkflowCollaboration
+  # WorkflowReconciler resolves its target SharedDoc through the default `:pg`
+  # scope (`Session.lookup_shared_doc/1`), exactly as the production save path
+  # does (`Workflows.after_commit/3`). So these tests run against the
+  # application-wide default instance rather than a per-test one. That is safe
+  # under async because every test inserts a fresh workflow with a unique id, so
+  # its document name (`workflow:<uuid>`) never collides with another test's —
+  # the same isolation production already relies on between concurrent
+  # workflows. Determinism comes from ownership, not from a private registry:
+  # each document is started with `owner: self()` and torn down (flush included)
+  # before this test process — the sandbox owner — exits.
 
   setup do
-    # Set global mode for the mock to allow cross-process calls
-    Mox.set_mox_global(LightningMock)
-    # Stub the broadcast calls that WorkflowReconciler makes
+    # Stub the broadcast calls that the reconcile path makes from the test
+    # process (private-mode Mox: the stub applies to this process).
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
     user = insert(:user)
@@ -28,21 +31,67 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   describe "reconcile_workflow_changes/2" do
     setup do
       workflow = insert(:complex_workflow)
+      %{workflow: workflow}
+    end
 
+    # Start the collaboration document for this workflow, then open a session
+    # against it. `Collaborate.start/1` reuses the document we pre-start here
+    # rather than starting an unowned one.
+    #
+    # It targets the application-wide default registry/`:pg` scope because
+    # WorkflowReconciler resolves the SharedDoc through the default scope, exactly
+    # as production does; document-name uniqueness (a fresh workflow per test)
+    # keeps concurrent tests isolated.
+    #
+    # Teardown must run the document's flush `:normal` (so DocumentSupervisor's
+    # terminate/2 runs) rather than via ExUnit's supervised `:shutdown` (which a
+    # non-trapping DocumentSupervisor turns into an abrupt kill, skipping the
+    # flush and leaving its DB-writing children to be killed mid-query — a sandbox
+    # disconnect). So the document is started owner-monitored (not
+    # `start_supervised!`) and the `on_exit` below stops it `:normal` via
+    # `Collaborate.stop_document/1` (flush-inclusive). The default registry is the
+    # app global, alive throughout `on_exit`; the callback is registered after
+    # DataCase's `stop_owner` and runs LIFO before it, so the flush completes
+    # while this test — the sandbox owner — is still alive.
+    defp start_session(workflow, user) do
+      document_name = "workflow:#{workflow.id}"
+
+      {:ok, _doc_supervisor} =
+        start_collaboration_document(workflow, document_name)
+
+      {:ok, session_pid} = Collaborate.start(workflow: workflow, user: user)
+
+      allow_collaboration_process(session_pid)
+
+      # Sessions live under the default (non-ExUnit) dynamic supervisor. Stop the
+      # session first (so its terminate-time unobserve hits a live SharedDoc),
+      # then drain the document `:normal` (flush-inclusive).
       on_exit(fn ->
+        stop_session(session_pid)
         ensure_doc_supervisor_stopped(workflow.id)
       end)
 
-      %{workflow: workflow}
+      session_pid
+    end
+
+    # Synchronously stop a session, tolerating the races inherent in teardown: it
+    # may already be gone, or exit :normal as we stop it. Returns only once the
+    # process is dead.
+    defp stop_session(session_pid) do
+      if Process.alive?(session_pid) do
+        try do
+          Session.stop(session_pid)
+        catch
+          :exit, _ -> :ok
+        end
+      end
     end
 
     test "job insert operations are applied to YDoc", %{
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Create a new job changeset
       new_job =
@@ -90,17 +139,15 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
                "adaptor" => "@openfn/language-http@latest"
              } = new_job_data
 
-      Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      # Teardown (session stop + synchronous document flush/stop) is handled by
+      # the `on_exit` registered in start_session/2.
     end
 
     test "job update operations are applied to YDoc", %{
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the SharedDoc and verify initial state
       shared_doc = Session.get_doc(session_pid)
@@ -157,17 +204,15 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
              } =
                updated_job_data
 
-      Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      # Teardown (session stop + synchronous document flush/stop) is handled by
+      # the `on_exit` registered in start_session/2.
     end
 
     test "job delete operations are applied to YDoc", %{
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the first job to delete
       job_to_delete = Enum.at(workflow.jobs, 0)
@@ -202,17 +247,15 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       # Verify the deleted job is no longer in the YDoc
       refute find_in_ydoc_array(jobs_array, job_to_delete.id)
 
-      Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      # Teardown (session stop + synchronous document flush/stop) is handled by
+      # the `on_exit` registered in start_session/2.
     end
 
     test "edge insert operations are applied to YDoc", %{
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Create a new edge between existing jobs
       %{id: source_job_id} = source_job = Enum.at(workflow.jobs, 1)
@@ -268,9 +311,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the first edge to update
       edge_to_update = Enum.at(workflow.edges, 0)
@@ -310,9 +351,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the first edge to delete
       edge_to_delete = Enum.at(workflow.edges, 0)
@@ -355,9 +394,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the first trigger to update
       trigger_to_update = Enum.at(workflow.triggers, 0)
@@ -403,9 +440,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get the trigger to delete
       trigger_to_delete = Enum.at(workflow.triggers, 0)
@@ -442,9 +477,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Create changeset for updating workflow properties
       workflow_changeset =
@@ -470,9 +503,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get initial lock_version from YDoc
       shared_doc = Session.get_doc(session_pid)
@@ -505,17 +536,15 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       assert Yex.Map.fetch!(updated_workflow_map, "lock_version") ==
                new_lock_version
 
-      Session.stop(session_pid)
-      ensure_doc_supervisor_stopped(workflow.id)
+      # Teardown (session stop + synchronous document flush/stop) is handled by
+      # the `on_exit` registered in start_session/2.
     end
 
     test "positions updates are applied to YDoc", %{
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get some job IDs to create positions for
       job1_id = Enum.at(workflow.jobs, 0).id
@@ -555,9 +584,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Get existing entities to modify
       job_to_update = Enum.at(workflow.jobs, 0)
@@ -668,9 +695,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start a session to create the SharedDoc
-      {:ok, session_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      session_pid = start_session(workflow, user)
 
       # Create many new jobs at once (stress test)
       new_jobs =
@@ -722,15 +747,20 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       user: user,
       workflow: workflow
     } do
-      # Start multiple sessions to create multiple references to SharedDoc
-      {:ok, session1_pid} =
-        Collaborate.start(workflow: workflow, user: user)
+      # First session pre-starts the owned document (and registers teardown);
+      # the next two reuse that same document.
+      session1_pid = start_session(workflow, user)
 
       {:ok, session2_pid} =
         Collaborate.start(workflow: workflow, user: user)
 
       {:ok, session3_pid} =
         Collaborate.start(workflow: workflow, user: user)
+
+      for pid <- [session2_pid, session3_pid] do
+        allow_collaboration_process(pid)
+        on_exit(fn -> stop_session(pid) end)
+      end
 
       # Verify all sessions share the same SharedDoc
       shared_doc1 = Session.get_doc(session1_pid)
