@@ -28,8 +28,10 @@ and this project adheres to
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
-  codebase
-  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+- Added explanation of why setting "workflow concurrency" may have no impact on
+  sync-mode webhook triggered workflows
+  [#4569](https://github.com/OpenFn/lightning/issues/4569)
 
 ### Fixed
 

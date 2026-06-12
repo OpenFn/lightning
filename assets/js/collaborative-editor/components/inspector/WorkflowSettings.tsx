@@ -35,6 +35,11 @@ export function WorkflowSettings() {
   // Check if project has concurrency disabled (concurrency === 1)
   const isProjectConcurrencyDisabled = projectConcurrency === 1;
 
+  const triggers = useWorkflowState(state => state.triggers);
+  const isSyncMode =
+    triggers[0]?.type === 'webhook' &&
+    triggers[0]?.webhook_reply === 'after_completion';
+
   const handleViewAsYAML = () => {
     updateSearchParams({ panel: 'code' });
   };
@@ -134,47 +139,52 @@ export function WorkflowSettings() {
       </form.AppField>
 
       {/* Concurrency Section */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Concurrency</h3>
-        <p className="text-sm text-gray-600 mb-3">
-          Control how many of this workflow's <em>Runs</em> are executed at the
-          same time
-        </p>
-        <form.AppField name="concurrency">
-          {field => (
-            <>
-              <field.NumberField
-                label="Max Concurrency"
-                placeholder="Unlimited (up to max available)"
-                helpText={
-                  field.state.value === null
-                    ? 'Unlimited (up to max available)'
-                    : undefined
-                }
-                min={1}
-                max={projectConcurrency ?? undefined}
-                disabled={isReadOnly || isProjectConcurrencyDisabled}
-              />
-              {isProjectConcurrencyDisabled && (
-                <div className="text-xs mt-2">
-                  <div className="italic text-gray-500">
-                    Parallel execution of runs is disabled for this project.
-                    This setting will have no effect. You can modify your
-                    Project Concurrency setting on the{' '}
-                    <a
-                      href={`/projects/${project?.id}/settings`}
-                      className="text-indigo-600 hover:text-indigo-500 underline"
-                    >
-                      project setup
-                    </a>{' '}
-                    page.
-                  </div>
+      <form.AppField name="concurrency">
+        {field => (
+          <>
+            <field.NumberField
+              label="Max Concurrency"
+              placeholder="Unlimited (up to max available)"
+              min={1}
+              max={projectConcurrency ?? undefined}
+              disabled={isReadOnly || isProjectConcurrencyDisabled}
+            />
+            <div className="text-xs">
+              {isSyncMode && field.state.value !== null ? (
+                <div className="italic text-gray-500">
+                  <span className="hero-exclamation-triangle-solid h-4 w-4 mr-1 inline-block align-text-bottom text-amber-400" />
+                  Because sync-mode is time sensitive, most OpenFn instances
+                  ignore concurrency limits for these workflows and process as
+                  many as possible at once. As your OpenFn host scales the
+                  workers and adjusts their priorities over time, this setting
+                  may not have any impact.
+                </div>
+              ) : (
+                <div className="italic text-gray-500">
+                  Setting "Max Concurrency" limits how many of this workflow's
+                  runs will be executed at the same time.
                 </div>
               )}
-            </>
-          )}
-        </form.AppField>
-      </div>
+            </div>
+            {!isSyncMode && isProjectConcurrencyDisabled && (
+              <div className="text-xs mt-2">
+                <div className="italic text-gray-500">
+                  Parallel execution of runs is disabled for this project. This
+                  setting will have no effect. You can modify your Project
+                  Concurrency setting on the{' '}
+                  <a
+                    href={`/projects/${project?.id}/settings`}
+                    className="text-indigo-600 hover:text-indigo-500 underline"
+                  >
+                    project setup
+                  </a>{' '}
+                  page.
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </form.AppField>
 
       {/* Reset Section - Only show if user has edit permission */}
       {permissions?.can_edit_workflow && !isReadOnly && (
