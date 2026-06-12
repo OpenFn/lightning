@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-FB8D852C.js"></script>
+    <script defer src="dist/sidebar_items-2D960D68.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -141,6 +141,16 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#validate_email_format/2" data-no-tooltip="" translate="no">validate_email_format(changeset, field \\ :email)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validates that an email field contains a properly formatted email address.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#validate_exclusive/3" data-no-tooltip="" translate="no">validate_exclusive(changeset, fields, message)</a>
 
       </div>
@@ -213,7 +223,7 @@ Lightning
       <h1 class="signature" translate="no">valid_uuid?(value)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L118" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -236,6 +246,38 @@ database actually enforces. <code class="inline">nil</code> is not a valid UUID.
 they cannot drift apart.</p>
   </section>
 </section>
+<section class="detail" id="validate_email_format/2">
+
+    <span id="validate_email_format/1"></span>
+
+  <div class="detail-header">
+    <a href="#validate_email_format/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate_email_format(changeset, field \\ :email)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> validate_email_format(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+
+      </div>
+
+<p>Validates that an email field contains a properly formatted email address.</p><p>Applies: required check, format regex, max 160 chars, lowercases the value.
+This is a pure format check — no database lookup. Use <code class="inline">User.validate_email/1</code>
+when you also need to verify the email is unique in the users table.</p>
+  </section>
+</section>
 <section class="detail" id="validate_exclusive/3">
 
   <div class="detail-header">
@@ -246,7 +288,7 @@ they cannot drift apart.</p>
       <h1 class="signature" translate="no">validate_exclusive(changeset, fields, message)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L45" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -263,10 +305,10 @@ they cannot drift apart.</p>
       </div>
 
 <p>Validate that only one of the fields is set at a time.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="8587789951-1">(</span><span class="w">
-  </span><span class="p" data-group-id="8587789951-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="8587789951-2">]</span><span class="p">,</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="3646619925-1">(</span><span class="w">
+  </span><span class="p" data-group-id="3646619925-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="3646619925-2">]</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;source_job_id and source_trigger_id are mutually exclusive&quot;</span><span class="w">
-</span><span class="p" data-group-id="8587789951-1">)</span></code></pre>
+</span><span class="p" data-group-id="3646619925-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate_one_required/3">
@@ -279,7 +321,7 @@ they cannot drift apart.</p>
       <h1 class="signature" translate="no">validate_one_required(changeset, fields, message)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L69" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -310,7 +352,7 @@ they cannot drift apart.</p>
       <h1 class="signature" translate="no">validate_required_assoc(changeset, assoc, message \\ &quot;is required&quot;)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L93" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -343,7 +385,7 @@ list in the schema.</p></blockquote>
       <h1 class="signature" translate="no">validate_url(changeset, field)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L164" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -371,7 +413,7 @@ list in the schema.</p></blockquote>
       <h1 class="signature" translate="no">validate_uuid(changeset, fields)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/utils/validators.ex#L143" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -394,7 +436,7 @@ foreign keys left unset are unaffected.</p><blockquote><p><strong>Narrowing:</st
 rejects raw 16-byte binaries and unsubstituted placeholders that <code class="inline">cast</code>
 accepted. Confirmed no live caller relied on the laxer behaviour (uppercase
 canonical UUIDs still pass).</p></blockquote><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="1243060628-1">(</span><span class="p" data-group-id="1243060628-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="1243060628-2">]</span><span class="p" data-group-id="1243060628-1">)</span></code></pre>
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="2151643025-1">(</span><span class="p" data-group-id="2151643025-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="2151643025-2">]</span><span class="p" data-group-id="2151643025-1">)</span></code></pre>
   </section>
 </section>
 
