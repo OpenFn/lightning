@@ -28,8 +28,7 @@ and this project adheres to
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
-  codebase
-  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
 
 ### Fixed
 
@@ -38,6 +37,16 @@ and this project adheres to
   single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
   session save path can no longer disagree on whether an id should INSERT or
   UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
 
 ## [2.16.7] - 2026-06-04
 

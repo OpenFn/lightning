@@ -717,16 +717,10 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
-    new_name = resolve_name_for_pending_deletion(workflow)
-
     Multi.new()
     |> Multi.update(
       :workflow,
-      workflow
-      |> Workflow.request_deletion_changeset(%{
-        "deleted_at" => DateTime.utc_now()
-      })
-      |> Ecto.Changeset.put_change(:name, new_name)
+      soft_delete_changeset(Ecto.Changeset.change(workflow))
     )
     |> Multi.insert(:audit, Audit.marked_for_deletion(workflow.id, actor))
     |> Multi.update_all(
@@ -744,10 +738,39 @@ defmodule Lightning.Workflows do
     end)
   end
 
-  defp resolve_name_for_pending_deletion(%Workflow{
-         name: name,
-         project_id: project_id
-       }) do
+  @doc """
+  Marks a workflow deleted and frees its name for reuse, in one step.
+
+  The single soft-delete transition both `mark_for_deletion/3` and the
+  provisioner route through, so a deleted workflow can never keep its name
+  reserved on a hidden row.
+  """
+  @spec soft_delete_changeset(Ecto.Changeset.t(Workflow.t())) ::
+          Ecto.Changeset.t(Workflow.t())
+  def soft_delete_changeset(
+        %Ecto.Changeset{data: %Workflow{} = workflow} = changeset
+      ) do
+    changeset
+    |> Workflow.request_deletion_changeset(%{
+      deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+    |> Ecto.Changeset.put_change(
+      :name,
+      resolve_name_for_pending_deletion(workflow)
+    )
+  end
+
+  @doc """
+  Computes the `name_del`-style name a workflow should take when it is soft
+  deleted, so it frees up its original name for reuse within the project.
+
+  Used by `soft_delete_changeset/1`, which every delete path routes through.
+  """
+  @spec resolve_name_for_pending_deletion(Workflow.t()) :: String.t()
+  def resolve_name_for_pending_deletion(%Workflow{
+        name: name,
+        project_id: project_id
+      }) do
     base_name = "#{name}_del"
 
     existing_names =
