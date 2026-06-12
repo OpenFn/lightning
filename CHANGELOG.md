@@ -33,6 +33,12 @@ and this project adheres to
 
 ### Fixed
 
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+
 ## [2.16.7] - 2026-06-04
 
 ### Changed
