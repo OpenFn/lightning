@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.16.7">
+
+
+    <title>Lightning.Collaboration.WorkflowResolver — Lightning v2.16.7</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-3A33C8A1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.16.7
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Collaboration.WorkflowResolver</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.16.7)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Single authority for resolving &quot;given a <code class="inline">workflow_id</code> and an <code class="inline">action</code>, what
+<code class="inline">%Workflow{}</code> should a collaboration session edit, and in which Ecto state?&quot;.</p><p>Both the channel join and the session save delegate here so they cannot
+disagree on whether an id maps to a <code class="inline">:built</code> or <code class="inline">:loaded</code> struct — the
+structural root cause behind the <code class="inline">workflows_pkey</code> duplicate INSERT on collab
+reconnect (#4830).</p><p>The resolver performs <strong>no</strong> authorization (<code class="inline">Permissions.can</code> stays at the
+channel). It does enforce project-ownership, but only when a <code class="inline">:project</code> opt is
+supplied, because ownership is a property of the resolved row, not of the
+user.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:action/0" data-no-tooltip="" translate="no">action()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:kind/0" data-no-tooltip="" translate="no">kind()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The discriminant the resolver returns alongside the workflow, so callers
+read newness from the tag rather than re-deriving it from struct shape</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:resolve_opts/0" data-no-tooltip="" translate="no">resolve_opts()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#resolve/3" data-no-tooltip="" translate="no">resolve(workflow_id, action, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Resolves the <code class="inline">%Workflow{}</code> a collaboration session should edit.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#resolve_version/3" data-no-tooltip="" translate="no">resolve_version(workflow_id, version, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Hydrates a read-only <code class="inline">%Workflow{}</code> from a specific snapshot version.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:action/0">
+
+  <div class="detail-header">
+    <a href="#t:action/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">action()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> action() :: :new | :edit</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:kind/0">
+
+  <div class="detail-header">
+    <a href="#t:kind/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">kind()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> kind() :: :new | :existing | :version</pre>
+
+      </div>
+
+<p>The discriminant the resolver returns alongside the workflow, so callers
+read newness from the tag rather than re-deriving it from struct shape:</p><ul><li><code class="inline">:new</code>      — <code class="inline">:new</code> action with no existing DB row (a freshly built
+<code class="inline">:built</code> struct).</li><li><code class="inline">:existing</code> — a <code class="inline">:new</code> action for an id that already has a row, or an
+<code class="inline">:edit</code> action (loaded row).</li><li><code class="inline">:version</code>  — a snapshot version-view (<a href="#resolve_version/3"><code class="inline">resolve_version/3</code></a>).</li></ul>
+  </section>
+</section>
+<section class="detail" id="t:resolve_opts/0">
+
+  <div class="detail-header">
+    <a href="#t:resolve_opts/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve_opts()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> resolve_opts() :: [
+  version: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>() | nil,
+  project: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | nil
+]</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="resolve/3">
+
+    <span id="resolve/2"></span>
+
+  <div class="detail-header">
+    <a href="#resolve/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve(workflow_id, action, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> resolve(
+  workflow_id :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  action :: <a href="#t:action/0">action</a>(),
+  opts :: <a href="#t:resolve_opts/0">resolve_opts</a>()
+) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="#t:kind/0">kind</a>()}
+  | {:error,
+     :workflow_not_found
+     | :wrong_project
+     | :snapshot_not_found
+     | :invalid_action}</pre>
+
+      </div>
+
+<p>Resolves the <code class="inline">%Workflow{}</code> a collaboration session should edit.</p><p>Returns <code class="inline">{:ok, workflow, kind}</code> where <code class="inline">workflow</code> is already in the correct
+Ecto state (with <code class="inline">jobs</code>, <code class="inline">edges</code>, and <code class="inline">triggers</code> populated and the
+<code class="inline">has_auth_method</code> flag set on each trigger) and <code class="inline">kind</code> is the newness
+discriminant (see <a href="#t:kind/0"><code class="inline">kind/0</code></a>).</p><p>Cases:</p><ul><li><code class="inline">action: :new</code>, no existing row — a freshly built <code class="inline">%Workflow{}</code> keyed on
+<code class="inline">workflow_id</code>, with <code class="inline">project_id</code> from the supplied project, empty
+jobs/edges/triggers, and <code class="inline">lock_version: 0</code>. Ecto state <code class="inline">:built</code>, kind
+<code class="inline">:new</code>. The first-INSERT case.</li><li><code class="inline">action: :new</code>, row already exists — the persisted workflow loaded with
+jobs/edges/triggers. Ecto state <code class="inline">:loaded</code>, kind <code class="inline">:existing</code>. Resolving an
+existing id to its loaded row routes the save to UPDATE rather than a
+duplicate INSERT (#4830).</li><li><code class="inline">action: :edit</code>, no version, row exists — the persisted workflow loaded
+with jobs/edges/triggers and <code class="inline">has_auth_method</code> set. Ecto state <code class="inline">:loaded</code>,
+kind <code class="inline">:existing</code>.</li><li><code class="inline">action: :edit</code>, no version, no row — <code class="inline">{:error, :workflow_not_found}</code>.</li><li>unknown action — <code class="inline">{:error, :invalid_action}</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="resolve_version/3">
+
+    <span id="resolve_version/2"></span>
+
+  <div class="detail-header">
+    <a href="#resolve_version/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve_version(workflow_id, version, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> resolve_version(
+  workflow_id :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  version :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+  opts :: <a href="#t:resolve_opts/0">resolve_opts</a>()
+) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="#t:kind/0">kind</a>()}
+  | {:error, :snapshot_not_found}</pre>
+
+      </div>
+
+<p>Hydrates a read-only <code class="inline">%Workflow{}</code> from a specific snapshot version.</p><p>Dispatched from <a href="#resolve/3"><code class="inline">resolve/3</code></a> when a non-nil <code class="inline">:version</code> opt is present, and may
+also be called directly. The <code class="inline">version</code> is a <code class="inline">non_neg_integer()</code> already parsed
+by the caller — the resolver never parses version strings.</p><p>Returns a <code class="inline">%Workflow{}</code> in Ecto state <code class="inline">:built</code> carrying the snapshot's
+<code class="inline">lock_version</code> and tagged with kind <code class="inline">:version</code>. A version-view is a read-only
+point-in-time view that is never saved through this path; the <code class="inline">:version</code> kind
+lets callers distinguish it from a genuinely-new workflow.</p><p>Sets <code class="inline">project_id</code> from the supplied project and performs <strong>no</strong> ownership
+check, unlike the <code class="inline">:edit</code> latest path. Performs <strong>no</strong> authorization (auth
+stays at the channel).</p><p>Returns <code class="inline">{:error, :snapshot_not_found}</code> when no snapshot exists for the
+version.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
