@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 
 import { cn } from '../../../utils/cn';
 
+import { humanizeCron } from './trigger/cronSchedule';
+
 interface CronFieldBuilderProps {
   value: string;
   onChange: (cronExpression: string) => void;
@@ -198,6 +200,15 @@ export function CronFieldBuilder({
     setCronData(parseCronExpression(value));
   }, [value]);
 
+  // When the schedule can't be expressed via the frequency presets ("custom"),
+  // reveal the raw cron-expression input so it can be edited directly — both on
+  // selecting "Custom" and when loading an existing non-preset expression.
+  useEffect(() => {
+    if (cronData.frequency === 'custom') {
+      setShowAdvanced(true);
+    }
+  }, [cronData.frequency]);
+
   // Build cron expression from current state
   const buildCronExpression = (data: CronData): string => {
     switch (data.frequency) {
@@ -269,6 +280,10 @@ export function CronFieldBuilder({
   // Base select styling with disabled states
   const selectClassName =
     'block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50';
+
+  // Plain-English description of the current expression, shown under the raw
+  // cron input. Null when the expression can't be humanized (invalid).
+  const humanizedExpression = humanizeCron(value);
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -752,7 +767,7 @@ export function CronFieldBuilder({
         </button>
 
         {showAdvanced && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-1.5">
             <input
               id="cron-expression"
               type="text"
@@ -767,6 +782,14 @@ export function CronFieldBuilder({
               placeholder="0 0 * * *"
               className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none focus:ring-1 font-mono text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
+            {value.trim() !== '' &&
+              (humanizedExpression ? (
+                <p className="text-xs text-slate-500">{humanizedExpression}</p>
+              ) : (
+                <p className="text-xs text-amber-600">
+                  Invalid cron expression
+                </p>
+              ))}
           </div>
         )}
       </div>

@@ -12,6 +12,8 @@ import { Toggle } from '../Toggle';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
+import { CronEditWizard } from './trigger/CronEditWizard';
+import { CronShowPanel } from './trigger/CronShowPanel';
 import { WebhookEditWizard } from './trigger/WebhookEditWizard';
 import { WebhookShowPanel, type EditFocus } from './trigger/WebhookShowPanel';
 import { TriggerForm } from './TriggerForm';
@@ -145,7 +147,33 @@ export function TriggerInspector({
     );
   }
 
-  // Cron/Kafka: unchanged legacy form with the enabled toggle + run footer.
+  // Cron resting state: read-only show panel mirroring the webhook flow. Cron
+  // has no EditFocus deep links, so the plain Edit button just enters the
+  // wizard at its first step.
+  if (trigger.type === 'cron' && view === 'show') {
+    return (
+      <CronShowPanel
+        trigger={trigger}
+        onClose={onClose}
+        onEdit={() => setView('edit')}
+      />
+    );
+  }
+
+  // Cron edit: the wizard owns the Choose → Configure flow over a local draft
+  // (mounted fresh per edit). Finish/Cancel return to the show panel.
+  if (trigger.type === 'cron' && view === 'edit') {
+    return (
+      <CronEditWizard
+        trigger={trigger}
+        onClose={onClose}
+        onDone={() => setView('show')}
+      />
+    );
+  }
+
+  // Kafka (and any untyped trigger): unchanged legacy form with the enabled
+  // toggle + run footer.
   return (
     <InspectorLayout
       title={getTriggerTitle(trigger)}

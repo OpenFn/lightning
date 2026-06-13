@@ -536,6 +536,52 @@ describe('CronFieldBuilder - Advanced Section', () => {
 
     expect(mockOnBlur).toHaveBeenCalled();
   });
+
+  test('selecting Custom frequency auto-opens the cron expression input', async () => {
+    const user = userEvent.setup();
+    const mockOnChange = vi.fn();
+
+    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
+
+    // Initially collapsed for a recognised (daily) expression.
+    expect(screen.queryByPlaceholderText('0 0 * * *')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Frequency'), 'custom');
+
+    expect(screen.getByPlaceholderText('0 0 * * *')).toBeInTheDocument();
+  });
+
+  test('loading an unrecognized (custom) expression auto-opens the input', () => {
+    const mockOnChange = vi.fn();
+    render(<CronFieldBuilder value="0 0 L * *" onChange={mockOnChange} />);
+
+    expect(screen.getByDisplayValue('Custom')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('0 0 * * *')).toBeInTheDocument();
+  });
+
+  test('shows the humanized description below the cron expression input', async () => {
+    const user = userEvent.setup();
+    const mockOnChange = vi.fn();
+
+    render(<CronFieldBuilder value="0 9 * * 1-5" onChange={mockOnChange} />);
+
+    await user.click(screen.getByRole('button', { name: /cron expression/i }));
+
+    // cronstrue humanizes "0 9 * * 1-5".
+    expect(
+      screen.getByText('At 09:00 AM, Monday through Friday')
+    ).toBeInTheDocument();
+  });
+
+  test('shows an invalid notice for an unparseable expression', () => {
+    const mockOnChange = vi.fn();
+
+    // An unparseable expression is "custom", so the input auto-opens; cronstrue
+    // can't humanize it, so the invalid notice shows instead of a description.
+    render(<CronFieldBuilder value="0 0 * * XYZ" onChange={mockOnChange} />);
+
+    expect(screen.getByText('Invalid cron expression')).toBeInTheDocument();
+  });
 });
 
 describe('CronFieldBuilder - Disabled State', () => {

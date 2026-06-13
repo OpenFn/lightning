@@ -106,7 +106,7 @@ export function TriggerPicker({
             icon="hero-clock"
             title="On a Schedule"
             description="Schedule workflows to run at specific intervals."
-            onClick={() => onCommitType('cron')}
+            onClick={() => onPickDraftType('cron')}
           />
           {kafkaEnabled && (
             <PickerRow

@@ -119,15 +119,15 @@ describe('TriggerInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
-    // Create Y.Doc with a cron trigger. The footer (Enabled toggle + Run) is
-    // shared by all non-webhook editor views; webhook now renders the
-    // footer-less read-only show panel by default, so we exercise the footer
-    // states against a cron trigger here.
+    // Create Y.Doc with a kafka trigger. The legacy InspectorLayout footer
+    // (Enabled toggle + Run button) only renders for the kafka/untyped path —
+    // webhook and cron both route to their own footer-less show panels now.
+    // Kafka stays on the legacy TriggerForm, so it's the right fixture here.
     ydoc = createWorkflowYDoc({
       triggers: {
         'trigger-1': {
           id: 'trigger-1',
-          type: 'cron',
+          type: 'kafka',
           enabled: true,
         },
       },

@@ -1,11 +1,8 @@
 import { useCallback, useState } from 'react';
 
-import { createDefaultTrigger } from '#/collaborative-editor/types/trigger';
-
-import { useWorkflowActions } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
 
-import { TriggerPicker } from './TriggerPicker';
+import { TriggerTypeStep } from './TriggerTypeStep';
 import { useTriggerDraft } from './useTriggerDraft';
 import { useWebhookTrigger } from './useWebhookTrigger';
 import { WebhookChooseStep } from './WebhookChooseStep';
@@ -43,7 +40,6 @@ export function WebhookEditWizard({
   onClose,
   onDone,
 }: WebhookEditWizardProps) {
-  const { updateTrigger } = useWorkflowActions();
   const {
     webhookUrl,
     copyText,
@@ -82,24 +78,13 @@ export function WebhookEditWizard({
 
   if (step === 'picker') {
     return (
-      <TriggerPicker
+      <TriggerTypeStep
+        trigger={trigger}
+        draft={draft}
+        mergeDraft={mergeDraft}
         onClose={onClose}
-        onBack={() => setStep('choose')}
-        onPickDraftType={type => {
-          // Re-confirming the type the draft already has must NOT reset its
-          // config to defaults — only an actual type change applies defaults.
-          if (draft.type !== type) {
-            mergeDraft(createDefaultTrigger(type) as Partial<Workflow.Trigger>);
-          }
-          setStep('choose');
-        }}
-        onCommitType={type => {
-          // Cron/Kafka have no wizard yet in this webhook-first phase, so we
-          // commit the type switch immediately and hand back to the show panel,
-          // which renders the legacy TriggerForm for that type.
-          updateTrigger(trigger.id, createDefaultTrigger(type));
-          onDone();
-        }}
+        onReturnToChoose={() => setStep('choose')}
+        onLeaveWizard={onDone}
       />
     );
   }
