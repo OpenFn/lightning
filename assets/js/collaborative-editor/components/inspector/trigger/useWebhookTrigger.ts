@@ -62,12 +62,16 @@ export function useWebhookTrigger(
     state => state.activeTriggerAuthMethods
   );
 
-  // Request auth methods when the trigger changes
+  // Request auth methods when the trigger changes. Only webhook triggers have
+  // associated auth methods; firing this for cron/kafka triggers would hit the
+  // server's `request_trigger_auth_methods` path for a non-webhook trigger and
+  // produce NoResults noise. This hook is called unconditionally by the unified
+  // wizard (React hook rules), so we guard the effect body by type instead.
   useEffect(() => {
-    if (trigger.id) {
+    if (trigger.type === 'webhook' && trigger.id) {
       void requestTriggerAuthMethods(trigger.id);
     }
-  }, [trigger.id, requestTriggerAuthMethods]);
+  }, [trigger.type, trigger.id, requestTriggerAuthMethods]);
 
   // Derive auth methods / loading state for this trigger
   const triggerAuthMethods =

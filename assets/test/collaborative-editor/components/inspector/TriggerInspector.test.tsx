@@ -1,21 +1,23 @@
 /**
- * TriggerInspector Component Tests - Footer Button States
+ * TriggerInspector Component Tests
  *
- * Tests for TriggerInspector footer visibility and button states in read-only mode.
+ * Tests for TriggerInspector's show-dispatch-by-type behaviour: each trigger
+ * type should render its own resting ("show") panel, identifiable by its
+ * distinctive heading. The legacy TriggerForm footer (Enabled toggle + Run
+ * button) was removed in #4787 — those tests are no longer applicable.
  */
 
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as Y from 'yjs';
 
 import { TriggerInspector } from '../../../../js/collaborative-editor/components/inspector/TriggerInspector';
-import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -24,14 +26,15 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
-import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
 // Mock useCanRun hook
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
@@ -47,21 +50,19 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
   };
 });
 
-/**
- * Helper to create and connect a workflow store with Y.Doc
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function createConnectedWorkflowStore(ydoc: Y.Doc): WorkflowStoreInstance {
   const store = createWorkflowStore();
   const mockProvider = createMockPhoenixChannelProvider(
     createMockPhoenixChannel()
   );
-  store.connect(ydoc, mockProvider as any);
+  store.connect(ydoc, mockProvider as never);
   return store;
 }
 
-/**
- * Creates a React wrapper with store providers for component testing
- */
 function createWrapper(
   workflowStore: WorkflowStoreInstance,
   credentialStore: CredentialStoreInstance,
@@ -109,158 +110,34 @@ function createWrapper(
   );
 }
 
-describe('TriggerInspector - Footer Button States', () => {
-  let ydoc: Y.Doc;
-  let workflowStore: WorkflowStoreInstance;
+// ---------------------------------------------------------------------------
+// Show-dispatch-by-type
+// ---------------------------------------------------------------------------
+
+describe('TriggerInspector — show dispatch by type', () => {
   let credentialStore: CredentialStoreInstance;
-  let sessionContextStore: SessionContextStoreInstance;
   let adaptorStore: AdaptorStoreInstance;
   let awarenessStore: AwarenessStoreInstance;
-  let mockChannel: any;
 
-  beforeEach(() => {
-    // Create Y.Doc with a kafka trigger. The legacy InspectorLayout footer
-    // (Enabled toggle + Run button) only renders for the kafka/untyped path —
-    // webhook and cron both route to their own footer-less show panels now.
-    // Kafka stays on the legacy TriggerForm, so it's the right fixture here.
-    ydoc = createWorkflowYDoc({
-      triggers: {
-        'trigger-1': {
-          id: 'trigger-1',
-          type: 'kafka',
-          enabled: true,
-        },
-      },
-    });
-
-    // Set workflow lock_version to match session context
-    const workflowMap = ydoc.getMap('workflow');
-    workflowMap.set('lock_version', 1);
-
-    workflowStore = createConnectedWorkflowStore(ydoc);
-    credentialStore = createCredentialStore();
-    sessionContextStore = createSessionContextStore();
-    adaptorStore = createAdaptorStore();
-    awarenessStore = createAwarenessStore();
-
-    mockChannel = createMockPhoenixChannel();
+  function makeSessionContextStore(triggerType: string): {
+    sessionContextStore: SessionContextStoreInstance;
+  } {
+    const sessionContextStore = createSessionContextStore();
+    const mockChannel = createMockPhoenixChannel();
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-    sessionContextStore._connectChannel(mockProvider as any);
+    sessionContextStore._connectChannel(mockProvider as never);
 
-    // Set default read-only permissions in beforeEach
-    // Individual tests can override by emitting a new session_context event
     act(() => {
-      (mockChannel as any)._test.emit('session_context', {
+      (
+        mockChannel as never as {
+          _test: { emit: (e: string, m: unknown) => void };
+        }
+      )._test.emit('session_context', {
         user: null,
         project: null,
         config: {
           require_email_verification: false,
-          kafka_triggers_enabled: false,
-        },
-        permissions: {
-          can_edit_workflow: false,
-          can_run_workflow: false,
-          can_write_webhook_auth_method: false,
-        },
-        latest_snapshot_lock_version: 1,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
-        workflow_template: null,
-        has_read_ai_disclaimer: false,
-      });
-    });
-  });
-
-  test('footer is rendered in read-only mode', () => {
-    // beforeEach already sets read-only permissions
-    const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    // Footer should be rendered with toggle and run button
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
-  });
-
-  test('toggle is disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions
-    const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    const toggle = screen.getByLabelText(/enabled/i);
-    expect(toggle).toBeDisabled();
-  });
-
-  test('toggle is disabled when user lacks edit permission', () => {
-    // beforeEach sets can_edit_workflow: false, which is what this test needs
-    const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    const toggle = screen.getByLabelText(/enabled/i);
-    expect(toggle).toBeDisabled();
-  });
-
-  test('footer is rendered with all buttons visible', () => {
-    act(() => {
-      (mockChannel as any)._test.emit('session_context', {
-        user: null,
-        project: null,
-        config: {
-          require_email_verification: false,
-          kafka_triggers_enabled: false,
+          kafka_triggers_enabled: triggerType === 'kafka',
         },
         permissions: {
           can_edit_workflow: true,
@@ -275,15 +152,33 @@ describe('TriggerInspector - Footer Button States', () => {
       });
     });
 
+    return { sessionContextStore };
+  }
+
+  beforeEach(() => {
+    credentialStore = createCredentialStore();
+    adaptorStore = createAdaptorStore();
+    awarenessStore = createAwarenessStore();
+  });
+
+  test('a webhook trigger renders WebhookShowPanel ("On webhook call" heading)', () => {
+    const triggerId = 'trigger-webhook';
+    const ydoc = createWorkflowYDoc({
+      triggers: {
+        [triggerId]: { id: triggerId, type: 'webhook', enabled: true },
+      },
+    });
+    ydoc.getMap('workflow').set('lock_version', 1);
+
+    const workflowStore = createConnectedWorkflowStore(ydoc);
+    const { sessionContextStore } = makeSessionContextStore('webhook');
     const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
 
     render(
       <TriggerInspector
         trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
+        onClose={vi.fn()}
+        onOpenRunPanel={vi.fn()}
       />,
       {
         wrapper: createWrapper(
@@ -296,8 +191,81 @@ describe('TriggerInspector - Footer Button States', () => {
       }
     );
 
-    // Both toggle and run button should be present
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'On webhook call' })
+    ).toBeInTheDocument();
+  });
+
+  test('a cron trigger renders CronShowPanel ("On a Schedule" heading)', () => {
+    const triggerId = 'trigger-cron';
+    const ydoc = createWorkflowYDoc({
+      triggers: {
+        [triggerId]: {
+          id: triggerId,
+          type: 'cron',
+          enabled: true,
+          cron_expression: '0 9 * * *',
+        },
+      },
+    });
+    ydoc.getMap('workflow').set('lock_version', 1);
+
+    const workflowStore = createConnectedWorkflowStore(ydoc);
+    const { sessionContextStore } = makeSessionContextStore('cron');
+    const trigger = workflowStore.getSnapshot().triggers[0];
+
+    render(
+      <TriggerInspector
+        trigger={trigger}
+        onClose={vi.fn()}
+        onOpenRunPanel={vi.fn()}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'On a Schedule' })
+    ).toBeInTheDocument();
+  });
+
+  test('a kafka trigger renders KafkaShowPanel ("Kafka" heading)', () => {
+    const triggerId = 'trigger-kafka';
+    const ydoc = createWorkflowYDoc({
+      triggers: {
+        [triggerId]: { id: triggerId, type: 'kafka', enabled: true },
+      },
+    });
+    ydoc.getMap('workflow').set('lock_version', 1);
+
+    const workflowStore = createConnectedWorkflowStore(ydoc);
+    const { sessionContextStore } = makeSessionContextStore('kafka');
+    const trigger = workflowStore.getSnapshot().triggers[0];
+
+    render(
+      <TriggerInspector
+        trigger={trigger}
+        onClose={vi.fn()}
+        onOpenRunPanel={vi.fn()}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    expect(screen.getByRole('heading', { name: 'Kafka' })).toBeInTheDocument();
   });
 });

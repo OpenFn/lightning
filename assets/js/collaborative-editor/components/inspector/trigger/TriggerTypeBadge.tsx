@@ -4,16 +4,19 @@
  *
  * - webhook → globe icon + "Webhook" (default, for back-compat)
  * - cron    → clock icon + "Schedule / Cron"
+ * - kafka   → queue-list icon + "Kafka"
  */
 export function TriggerTypeBadge({
   type = 'webhook',
 }: {
-  type?: 'webhook' | 'cron';
+  type?: 'webhook' | 'cron' | 'kafka';
 }) {
   const { icon, label } =
     type === 'cron'
       ? { icon: 'hero-clock-mini', label: 'Schedule / Cron' }
-      : { icon: 'hero-globe-alt-mini', label: 'Webhook' };
+      : type === 'kafka'
+        ? { icon: 'hero-queue-list-mini', label: 'Kafka' }
+        : { icon: 'hero-globe-alt-mini', label: 'Webhook' };
 
   return (
     <span
