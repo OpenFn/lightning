@@ -40,6 +40,12 @@ and this project adheres to
 
 ### Changed
 
+- On Linux, database connections now fail fast when their network path dies
+  (e.g. a TCP reset during a node-pool upgrade) instead of blocking on a dead
+  socket for up to ~15 minutes. `DATABASE_TCP_USER_TIMEOUT` (ms) defaults to
+  `DATABASE_TIMEOUT + 5s`; set it to `0` to restore the previous behaviour. No
+  effect on non-Linux platforms.
+  [#4855](https://github.com/OpenFn/lightning/pull/4855)
 - Failure alerts and project digests now link to the workflow health page, where
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that

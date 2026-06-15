@@ -128,6 +128,75 @@ defmodule Lightning.Config.BootstrapTest do
       assert endpoint_idle_timeout() == 75_000
     end
 
+    test "Repo socket options" do
+      db = %{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      }
+
+      reconfigure(db)
+      assert repo_opt(:socket_options) == dead_socket_options(20_000)
+
+      reconfigure(Map.put(db, "DATABASE_TIMEOUT", "30000"))
+      assert repo_opt(:socket_options) == dead_socket_options(35_000)
+
+      reconfigure(Map.put(db, "DATABASE_TCP_USER_TIMEOUT", "25000"))
+      assert repo_opt(:socket_options) == dead_socket_options(25_000)
+
+      reconfigure(Map.put(db, "ECTO_IPV6", "true"))
+
+      assert repo_opt(:socket_options) ==
+               [:inet6 | dead_socket_options(20_000)]
+
+      reconfigure(Map.put(db, "DATABASE_TCP_USER_TIMEOUT", "0"))
+      assert repo_opt(:socket_options) == []
+    end
+
+    test "rejects a DATABASE_TCP_USER_TIMEOUT the kernel would refuse" do
+      for bad <- ["-1", "2147483648"] do
+        assert_raise RuntimeError, ~r/DATABASE_TCP_USER_TIMEOUT/, fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => bad
+          })
+        end
+      end
+    end
+
+    test "warns on Linux when DATABASE_TCP_USER_TIMEOUT is below DATABASE_TIMEOUT" do
+      configure_with = fn tcp_user_timeout ->
+        capture_log(fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => tcp_user_timeout
+          })
+        end)
+      end
+
+      assert configure_with.("5000") =~ "DATABASE_TCP_USER_TIMEOUT" == linux?()
+      refute configure_with.("20000") =~ "DATABASE_TCP_USER_TIMEOUT"
+    end
+
+    test "Repo SSL is on by default and disabled by DISABLE_DB_SSL" do
+      # SSL defaults on for managed Postgres; DISABLE_DB_SSL opts out
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      assert repo_opt(:ssl) == :tls_certificate_check.options("HOST")
+
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      assert repo_opt(:ssl) == false
+    end
+
     test "prod endpoint URL defaults" do
       reconfigure(%{
         "SECRET_KEY_BASE" => "Foo",
@@ -1407,6 +1476,27 @@ defmodule Lightning.Config.BootstrapTest do
       {_, value} -> value
       nil -> nil
     end
+  end
+
+  defp linux?, do: match?({:unix, :linux}, :os.type())
+
+  defp dead_socket_options(tcp_user_timeout) do
+    if linux?() do
+      [
+        {:keepalive, true},
+        {:raw, 6, 4, <<5::32-native>>},
+        {:raw, 6, 5, <<5::32-native>>},
+        {:raw, 6, 18, <<tcp_user_timeout::32-native>>}
+      ]
+    else
+      []
+    end
+  end
+
+  defp repo_opt(key) do
+    :lightning
+    |> get_env(Lightning.Repo)
+    |> Keyword.get(key)
   end
 
   defp reconfigure(envs) do
