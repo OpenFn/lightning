@@ -62,6 +62,8 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkflowVersions
 
+  require Logger
+
   @typedoc """
   Attributes for creating a new sandbox via `provision/3`.
 
@@ -163,24 +165,50 @@ defmodule Lightning.Projects.Sandboxes do
   * `source` - The sandbox project being merged
   * `target` - The project receiving the merge
   * `actor` - The user performing the merge
-  * `opts` - Merge options (`:selected_workflow_ids`, `:deleted_target_workflow_ids`)
+  * `opts` - Merge options (`:selected_workflow_ids`,
+    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+
+  ## Credential attachment
+
+  A credential that lives only in the sandbox (the target has no
+  `project_credential` for its underlying `credential_id`) would otherwise be
+  dropped on merge, since the remap only matches on shared credentials. Pass
+  `:selected_credential_ids` (a list of the sandbox `project_credential` ids the
+  caller chose to carry over) and each one is attached to the target before the
+  document is imported, so the remap finds a match instead of dropping it.
+  Sandbox `project_credentials` left out of the list stay dropped. Only regular
+  `project_credentials` are handled here; keychain credentials are out of scope.
 
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
-  * `{:error, reason}` - Workflow merge or collection sync failed
+  * `{:error, merge_error}` - Merge failed, classified into a domain reason
+
+  Failures are returned as typed reasons (see `t:merge_error/0`) so callers can
+  render user-facing copy without inspecting changeset internals. The full
+  validation detail is logged for diagnosis.
   """
+  @type merge_error ::
+          :merge_failed | Lightning.Extensions.UsageLimiting.message()
+
   @spec merge(Project.t(), Project.t(), User.t(), map()) ::
-          {:ok, Project.t()} | {:error, term()}
+          {:ok, Project.t()} | {:error, merge_error()}
   def merge(
         %Project{} = source,
         %Project{} = target,
         %User{} = actor,
         opts \\ %{}
       ) do
-    merge_doc = MergeProjects.merge_project(source, target, opts)
+    selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
     Repo.transact(fn ->
-      with {:ok, updated_target} <-
+      with :ok <-
+             attach_selected_credentials(source, target, selected_credential_ids),
+           # Re-preload so the credential remap sees the just-attached
+           # associations; merge_project skips the preload if they're already loaded.
+           target =
+             Repo.preload(target, [project_credentials: []], force: true),
+           merge_doc = MergeProjects.merge_project(source, target, opts),
+           {:ok, updated_target} <-
              Provisioner.import_document(target, actor, merge_doc,
                allow_stale: true
              ),
@@ -188,6 +216,85 @@ defmodule Lightning.Projects.Sandboxes do
         {:ok, updated_target}
       end
     end)
+    |> case do
+      {:ok, _} = ok -> ok
+      {:error, reason} -> {:error, classify_merge_error(reason)}
+    end
+  end
+
+  # Attaches the chosen sandbox-only credentials to the target so the merge
+  # remap can match them. The credential diff is recomputed from the database
+  # rather than trusting the caller's list verbatim: only sandbox
+  # project_credentials whose underlying credential the target still lacks are
+  # attached, and ON CONFLICT DO NOTHING guards against a concurrent attach.
+  defp attach_selected_credentials(_source, _target, []), do: :ok
+
+  defp attach_selected_credentials(source, target, selected_credential_ids) do
+    selected_set = MapSet.new(selected_credential_ids)
+
+    target_credential_ids =
+      from(pc in ProjectCredential,
+        where: pc.project_id == ^target.id,
+        select: pc.credential_id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    rows =
+      from(pc in ProjectCredential,
+        where: pc.project_id == ^source.id,
+        select: %{id: pc.id, credential_id: pc.credential_id}
+      )
+      |> Repo.all()
+      |> Enum.filter(fn pc ->
+        MapSet.member?(selected_set, pc.id) and
+          not MapSet.member?(target_credential_ids, pc.credential_id)
+      end)
+      |> build_target_credential_rows(target.id)
+
+    Repo.insert_all(ProjectCredential, rows,
+      on_conflict: :nothing,
+      conflict_target: [:project_id, :credential_id]
+    )
+
+    :ok
+  end
+
+  defp build_target_credential_rows(source_credentials, target_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Enum.map(source_credentials, fn pc ->
+      %{
+        id: Ecto.UUID.generate(),
+        project_id: target_id,
+        credential_id: pc.credential_id,
+        inserted_at: now,
+        updated_at: now
+      }
+    end)
+  end
+
+  # A failed merge is sensitive (it can block or lose a user's work), so every
+  # failure is logged at :error to surface in Sentry. A usage-limit message is
+  # an expected, user-actionable block, so it passes through unlogged.
+  defp classify_merge_error(%Ecto.Changeset{} = changeset) do
+    Logger.error(
+      "Sandbox merge failed. #{inspect(merge_error_details(changeset))}"
+    )
+
+    :merge_failed
+  end
+
+  defp classify_merge_error(%{text: _} = usage_limit_message),
+    do: usage_limit_message
+
+  defp classify_merge_error(reason) do
+    Logger.error("Sandbox merge failed. #{inspect(reason)}")
+    :merge_failed
+  end
+
+  defp merge_error_details(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   @doc """

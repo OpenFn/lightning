@@ -5,6 +5,28 @@ defmodule Lightning.Validators do
 
   import Ecto.Changeset
 
+  # Matches z.regexes.email from Zod v4 (v4.0.17) — keeps validation consistent
+  # with the marketing site. Update if the Zod dependency is upgraded.
+  @email_format_regex ~r/^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/
+
+  @doc """
+  Validates that an email field contains a properly formatted email address.
+
+  Applies: required check, format regex, max 160 chars, lowercases the value.
+  This is a pure format check — no database lookup. Use `User.validate_email/1`
+  when you also need to verify the email is unique in the users table.
+  """
+  @spec validate_email_format(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
+  def validate_email_format(changeset, field \\ :email) do
+    changeset
+    |> validate_required(field, message: "can't be blank")
+    |> validate_format(field, @email_format_regex,
+      message: "must be a valid email address"
+    )
+    |> validate_length(field, max: 160)
+    |> update_change(field, &String.downcase/1)
+  end
+
   @doc """
   Validate that only one of the fields is set at a time.
 
