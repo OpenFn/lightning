@@ -25,11 +25,14 @@ and this project adheres to
 
 ### Changed
 
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
-  codebase
-  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
 
 ### Fixed
 
