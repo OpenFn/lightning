@@ -15,268 +15,186 @@ import { describe, expect, test, vi } from 'vitest';
 
 import { CronFieldBuilder } from '../../../../js/collaborative-editor/components/inspector/CronFieldBuilder';
 
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
+
 describe('CronFieldBuilder - Parsing Cron Expressions', () => {
-  test('parses empty value to default daily frequency', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="" onChange={mockOnChange} />);
+  // Rows: [expression, expectedDisplayValues, checkedCheckboxNames?]
+  // checkedCheckboxNames is a regex array for role="checkbox" elements that
+  // must be checked when rendered. Missing means no checkbox assertions.
+  test.each<[string, string, string[], RegExp[]?]>([
+    ['empty defaults to daily', '', ['Every day']],
+    [
+      '*/15 * * * * → every N minutes',
+      '*/15 * * * *',
+      ['Every N minutes', '15 minutes'],
+    ],
+    [
+      '*/8 * * * * → every N minutes (custom interval)',
+      '*/8 * * * *',
+      ['Every N minutes', '8 minutes'],
+    ],
+    [
+      '0 */6 * * * → every N hours',
+      '0 */6 * * *',
+      ['Every N hours', '6 hours'],
+    ],
+    [
+      '0 */20 * * * → every N hours (custom interval)',
+      '0 */20 * * *',
+      ['Every N hours', '20 hours'],
+    ],
+    ['30 * * * * → hourly', '30 * * * *', ['Every hour', '30']],
+    ['30 9 * * * → daily', '30 9 * * *', ['Every day', '09', '30']],
+    [
+      '30 9 * * 1-5 → weekdays',
+      '30 9 * * 1-5',
+      ['Every weekday (Mon-Fri)', '09', '30'],
+    ],
+    ['30 9 * * 1 → weekly', '30 9 * * 1', ['Every week', 'Monday', '09', '30']],
+    [
+      '30 9 * * 1,3,5 → weekly (multi-day shows first)',
+      '30 9 * * 1,3,5',
+      ['Every week', '09', '30'],
+    ],
+    ['30 9 15 * * → monthly', '30 9 15 * *', ['Every month', '15', '09', '30']],
+    [
+      '30 9 15 1,6 * → specific months',
+      '30 9 15 1,6 *',
+      ['Specific months', '15', '09', '30'],
+      [/jan/i, /jun/i],
+    ],
+    [
+      '30 9 15 1-3 * → specific months (range)',
+      '30 9 15 1-3 *',
+      ['Specific months'],
+      [/jan/i, /feb/i, /mar/i],
+    ],
+    ['0 0 L * * → unrecognized → custom', '0 0 L * *', ['Custom']],
+    [
+      '5 8 * * * → single-digit padding',
+      '5 8 * * *',
+      ['Every day', '08', '05'],
+    ],
+  ])('%s', (_label, expression, displayValues, checkedCheckboxes) => {
+    render(<CronFieldBuilder value={expression} onChange={vi.fn()} />);
 
-    expect(screen.getByDisplayValue('Every day')).toBeInTheDocument();
-  });
+    for (const value of displayValues) {
+      expect(screen.getByDisplayValue(value)).toBeInTheDocument();
+    }
 
-  test('parses every N minutes expression: */15 * * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="*/15 * * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every N minutes')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('15 minutes')).toBeInTheDocument();
-  });
-
-  test('parses every N minutes expression (value not in options): */8 * * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="*/8 * * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every N minutes')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('8 minutes')).toBeInTheDocument();
-  });
-
-  test('parses every N hours expression: 0 */6 * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="0 */6 * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every N hours')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('6 hours')).toBeInTheDocument();
-  });
-
-  test('parses every N hours expression (value not in options): 0 */20 * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="0 */20 * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every N hours')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('20 hours')).toBeInTheDocument();
-  });
-
-  test('parses hourly expression: 30 * * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 * * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every hour')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses daily expression: 30 9 * * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every day')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses weekdays expression: 30 9 * * 1-5', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 * * 1-5" onChange={mockOnChange} />);
-
-    expect(
-      screen.getByDisplayValue('Every weekday (Mon-Fri)')
-    ).toBeInTheDocument();
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses weekly expression: 30 9 * * 1', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 * * 1" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every week')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Monday')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses weekly expression with multiple days: 30 9 * * 1,3,5', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 * * 1,3,5" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every week')).toBeInTheDocument();
-    // Note: When multiple days are selected, the select shows the first value
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses monthly expression: 30 9 15 * *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 15 * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every month')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('15')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-  });
-
-  test('parses specific months expression: 30 9 15 1,6 *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 15 1,6 *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Specific months')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('15')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('09')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
-
-    // Check that Jan and Jun checkboxes are checked
-    const janCheckbox = screen.getByRole('checkbox', { name: /jan/i });
-    const junCheckbox = screen.getByRole('checkbox', { name: /jun/i });
-    expect(janCheckbox).toBeChecked();
-    expect(junCheckbox).toBeChecked();
-  });
-
-  test('parses specific months with range: 30 9 15 1-3 *', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="30 9 15 1-3 *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Specific months')).toBeInTheDocument();
-
-    // Check that Jan, Feb, Mar checkboxes are checked
-    const janCheckbox = screen.getByRole('checkbox', { name: /jan/i });
-    const febCheckbox = screen.getByRole('checkbox', { name: /feb/i });
-    const marCheckbox = screen.getByRole('checkbox', { name: /mar/i });
-    expect(janCheckbox).toBeChecked();
-    expect(febCheckbox).toBeChecked();
-    expect(marCheckbox).toBeChecked();
-  });
-
-  test('parses unrecognized expression as custom', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="0 0 L * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Custom')).toBeInTheDocument();
-  });
-
-  test('parses single digit values with padding', () => {
-    const mockOnChange = vi.fn();
-    render(<CronFieldBuilder value="5 8 * * *" onChange={mockOnChange} />);
-
-    expect(screen.getByDisplayValue('Every day')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('08')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('05')).toBeInTheDocument();
+    if (checkedCheckboxes) {
+      for (const pattern of checkedCheckboxes) {
+        expect(screen.getByRole('checkbox', { name: pattern })).toBeChecked();
+      }
+    }
   });
 });
 
+// ---------------------------------------------------------------------------
+// Frequency Selection
+// ---------------------------------------------------------------------------
+
 describe('CronFieldBuilder - Frequency Selection', () => {
-  test('switching to every_n_minutes shows interval dropdown', async () => {
+  // Rows: [description, startValue, targetFreq, expectedOnChangeArg, expectedLabeledFields, absentLabeledFields?]
+  test.each<[string, string, string, string, string[], string[]?]>([
+    [
+      'every_n_minutes → shows interval dropdown',
+      '30 9 * * *',
+      'every_n_minutes',
+      '*/15 * * * *',
+      ['Every'],
+    ],
+    [
+      'every_n_hours → shows interval dropdown',
+      '30 9 * * *',
+      'every_n_hours',
+      '0 */6 * * *',
+      ['Every'],
+    ],
+    [
+      'hourly → shows minute only (no hour)',
+      '30 9 * * *',
+      'hourly',
+      '30 * * * *',
+      ['Minute'],
+      ['Hour'],
+    ],
+    [
+      'daily → shows hour and minute',
+      '30 * * * *',
+      'daily',
+      '30 00 * * *',
+      ['Hour', 'Minute'],
+    ],
+    [
+      'weekdays → shows hour and minute',
+      '30 9 * * *',
+      'weekdays',
+      '30 09 * * 1-5',
+      ['Hour', 'Minute'],
+    ],
+    [
+      'weekly → shows day, hour, and minute',
+      '30 9 * * *',
+      'weekly',
+      '30 09 * * 01',
+      ['Day', 'Hour', 'Minute'],
+    ],
+    [
+      'monthly → shows day, hour, and minute',
+      '30 9 * * *',
+      'monthly',
+      '30 09 01 * *',
+      ['Hour', 'Minute'],
+    ],
+  ])(
+    '%s',
+    async (
+      _label,
+      startValue,
+      targetFreq,
+      expectedExpression,
+      expectedFields,
+      absentFields
+    ) => {
+      const user = userEvent.setup();
+      const mockOnChange = vi.fn();
+
+      render(<CronFieldBuilder value={startValue} onChange={mockOnChange} />);
+
+      await user.selectOptions(screen.getByLabelText('Frequency'), targetFreq);
+
+      expect(mockOnChange).toHaveBeenCalledWith(expectedExpression);
+
+      for (const label of expectedFields) {
+        // getAllByLabelText handles cases where the same label appears multiple times
+        expect(screen.getAllByLabelText(label)[0]).toBeInTheDocument();
+      }
+
+      if (absentFields) {
+        for (const label of absentFields) {
+          expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+        }
+      }
+    }
+  );
+
+  test('switching to specific_months shows month checkboxes (Jan and Dec)', async () => {
     const user = userEvent.setup();
     const mockOnChange = vi.fn();
 
     render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'every_n_minutes');
-
-    expect(screen.getByLabelText('Every')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('15 minutes')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('*/15 * * * *');
-  });
-
-  test('switching to every_n_hours shows interval dropdown', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'every_n_hours');
-
-    expect(screen.getByLabelText('Every')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('6 hours')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('0 */6 * * *');
-  });
-
-  test('switching to hourly shows only minute field', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'hourly');
-
-    expect(screen.getByLabelText('Minute')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Hour')).not.toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('30 * * * *');
-  });
-
-  test('switching to daily shows hour and minute fields', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 * * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'daily');
-
-    expect(screen.getByLabelText('Hour')).toBeInTheDocument();
-    expect(screen.getByLabelText('Minute')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('30 00 * * *');
-  });
-
-  test('switching to weekdays shows hour and minute fields', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'weekdays');
-
-    expect(screen.getByLabelText('Hour')).toBeInTheDocument();
-    expect(screen.getByLabelText('Minute')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('30 09 * * 1-5');
-  });
-
-  test('switching to weekly shows day, hour, and minute fields', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'weekly');
-
-    expect(screen.getByLabelText('Day')).toBeInTheDocument();
-    expect(screen.getByLabelText('Hour')).toBeInTheDocument();
-    expect(screen.getByLabelText('Minute')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('30 09 * * 01');
-  });
-
-  test('switching to monthly shows day, hour, and minute fields', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'monthly');
-
-    expect(screen.getAllByLabelText('Day')[0]).toBeInTheDocument();
-    expect(screen.getByLabelText('Hour')).toBeInTheDocument();
-    expect(screen.getByLabelText('Minute')).toBeInTheDocument();
-    expect(mockOnChange).toHaveBeenCalledWith('30 09 01 * *');
-  });
-
-  test('switching to specific_months shows day, hour, minute, and month checkboxes', async () => {
-    const user = userEvent.setup();
-    const mockOnChange = vi.fn();
-
-    render(<CronFieldBuilder value="30 9 * * *" onChange={mockOnChange} />);
-
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'specific_months');
+    await user.selectOptions(
+      screen.getByLabelText('Frequency'),
+      'specific_months'
+    );
 
     expect(screen.getAllByLabelText('Day')[0]).toBeInTheDocument();
     expect(screen.getByLabelText('Hour')).toBeInTheDocument();
     expect(screen.getByLabelText('Minute')).toBeInTheDocument();
     expect(screen.getByText('Months')).toBeInTheDocument();
-
-    // All 12 month checkboxes should be present
     expect(screen.getByRole('checkbox', { name: /jan/i })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /dec/i })).toBeInTheDocument();
   });
@@ -284,19 +202,17 @@ describe('CronFieldBuilder - Frequency Selection', () => {
   test('switching to custom mode preserves current expression', async () => {
     const user = userEvent.setup();
     const mockOnChange = vi.fn();
-    const customExpression = '30 9 15 * *';
 
-    render(
-      <CronFieldBuilder value={customExpression} onChange={mockOnChange} />
-    );
+    render(<CronFieldBuilder value="30 9 15 * *" onChange={mockOnChange} />);
+    await user.selectOptions(screen.getByLabelText('Frequency'), 'custom');
 
-    const frequencySelect = screen.getByLabelText('Frequency');
-    await user.selectOptions(frequencySelect, 'custom');
-
-    // Should not call onChange when switching to custom
     expect(mockOnChange).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// User Interactions
+// ---------------------------------------------------------------------------
 
 describe('CronFieldBuilder - User Interactions', () => {
   test('changing minute in hourly mode updates expression', async () => {
@@ -382,7 +298,6 @@ describe('CronFieldBuilder - User Interactions', () => {
 
     render(<CronFieldBuilder value="30 9 15 1 *" onChange={mockOnChange} />);
 
-    // Check February
     const febCheckbox = screen.getByRole('checkbox', { name: /feb/i });
     await user.click(febCheckbox);
 
@@ -397,15 +312,13 @@ describe('CronFieldBuilder - User Interactions', () => {
       <CronFieldBuilder value="30 9 15 1,2,3 *" onChange={mockOnChange} />
     );
 
-    // Uncheck February
     const febCheckbox = screen.getByRole('checkbox', { name: /feb/i });
     await user.click(febCheckbox);
 
     expect(mockOnChange).toHaveBeenCalledWith('30 09 15 1,3 *');
   });
 
-  test('preserves custom interval when switching to every_n_minutes', async () => {
-    const user = userEvent.setup();
+  test('preserves custom interval when switching to every_n_minutes', () => {
     const mockOnChange = vi.fn();
 
     render(<CronFieldBuilder value="*/7 * * * *" onChange={mockOnChange} />);
@@ -417,8 +330,7 @@ describe('CronFieldBuilder - User Interactions', () => {
     expect(intervalSelect).toHaveValue('7');
   });
 
-  test('preserves custom interval when switching to every_n_hours', async () => {
-    const user = userEvent.setup();
+  test('preserves custom interval when switching to every_n_hours', () => {
     const mockOnChange = vi.fn();
 
     render(<CronFieldBuilder value="0 */5 * * *" onChange={mockOnChange} />);
@@ -430,6 +342,10 @@ describe('CronFieldBuilder - User Interactions', () => {
     expect(intervalSelect).toHaveValue('5');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Advanced Section
+// ---------------------------------------------------------------------------
 
 describe('CronFieldBuilder - Advanced Section', () => {
   test('advanced section is initially collapsed', () => {
@@ -474,7 +390,7 @@ describe('CronFieldBuilder - Advanced Section', () => {
     await user.click(toggleButton);
 
     // Type into the expression input
-    const input = screen.getByPlaceholderText('0 0 * * *') as HTMLInputElement;
+    const input = screen.getByPlaceholderText('0 0 * * *');
     await user.click(input);
     await user.keyboard('X');
 
@@ -584,6 +500,10 @@ describe('CronFieldBuilder - Advanced Section', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Disabled State
+// ---------------------------------------------------------------------------
+
 describe('CronFieldBuilder - Disabled State', () => {
   test('all inputs are disabled when disabled prop is true', () => {
     const mockOnChange = vi.fn();
@@ -634,7 +554,7 @@ describe('CronFieldBuilder - Disabled State', () => {
     expect(janCheckbox).toBeDisabled();
   });
 
-  test('advanced input is disabled when disabled prop is true', async () => {
+  test('advanced input is disabled when disabled prop is true', () => {
     const mockOnChange = vi.fn();
 
     render(
@@ -654,6 +574,10 @@ describe('CronFieldBuilder - Disabled State', () => {
     expect(toggleButton).toBeDisabled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// External Value Changes
+// ---------------------------------------------------------------------------
 
 describe('CronFieldBuilder - External Value Changes', () => {
   test('syncs with external value changes', () => {

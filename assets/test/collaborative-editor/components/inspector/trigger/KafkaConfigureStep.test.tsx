@@ -8,19 +8,10 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type React from 'react';
-import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as Y from 'yjs';
 
 import { KafkaConfigureStep } from '../../../../../js/collaborative-editor/components/inspector/trigger/KafkaConfigureStep';
-import { SessionContext } from '../../../../../js/collaborative-editor/contexts/SessionProvider';
-import type { StoreContextValue } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
-import { StoreContext } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionContextStore } from '../../../../../js/collaborative-editor/stores/createSessionContextStore';
-import type { SessionContextStoreInstance } from '../../../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../../../js/collaborative-editor/stores/createSessionStore';
-import { createUIStore } from '../../../../../js/collaborative-editor/stores/createUIStore';
 import type { WorkflowStoreInstance } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Workflow } from '../../../../../js/collaborative-editor/types/workflow';
@@ -28,7 +19,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../../__helpers__/channelMocks';
-import { createMockSocket } from '../../../__helpers__/sessionStoreHelpers';
+import { createTriggerTestHarness } from '../../../__helpers__/triggerInspectorHelpers';
 import { createWorkflowYDoc } from '../../../__helpers__/workflowFactory';
 
 const TRIGGER_ID = '33333333-3333-4333-8333-333333333333';
@@ -53,71 +44,14 @@ async function setup(
 ) {
   const resolvedDraft: Workflow.Trigger = draft ?? makeKafkaDraft();
 
-  const sessionStore = createSessionStore();
-  const mockSocket = createMockSocket();
-  sessionStore.initializeSession(
-    mockSocket,
-    'test:room',
-    { id: 'user-1', name: 'Test', email: 'test@example.com', color: '#000' },
-    { connect: true }
-  );
-
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  const provider = sessionStore.getSnapshot().provider;
-  if (provider) {
-    provider.emit('sync', [true]);
-    provider.emit('status', [{ status: 'connected' }]);
-  }
-
-  const sessionContextStore: SessionContextStoreInstance =
-    createSessionContextStore();
-  const ctxChannel = createMockPhoenixChannel();
-  const ctxProvider = createMockPhoenixChannelProvider(ctxChannel);
-  sessionContextStore._connectChannel(ctxProvider as never);
-
-  act(() => {
-    (
-      ctxChannel as never as {
-        _test: { emit: (e: string, m: unknown) => void };
-      }
-    )._test.emit('session_context', {
-      user: null,
-      project: null,
-      config: {
-        require_email_verification: false,
-        kafka_triggers_enabled: true,
-      },
-      permissions: {
-        can_edit_workflow: true,
-        can_run_workflow: true,
-        can_write_webhook_auth_method: true,
-      },
-      latest_snapshot_lock_version: 1,
-      project_repo_connection: null,
-      webhook_auth_methods: [],
-      workflow_template: null,
-      has_read_ai_disclaimer: false,
-    });
-  });
-
-  const storeValue = {
+  const { wrapper } = await createTriggerTestHarness({
+    kafkaEnabled: true,
     workflowStore,
-    sessionContextStore,
-    uiStore: createUIStore(),
-  } as unknown as StoreContextValue;
+  });
 
   const onClose = vi.fn();
   const onBack = vi.fn();
   const onFinish = vi.fn();
-
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-      <StoreContext.Provider value={storeValue}>
-        {children}
-      </StoreContext.Provider>
-    </SessionContext.Provider>
-  );
 
   render(
     <KafkaConfigureStep

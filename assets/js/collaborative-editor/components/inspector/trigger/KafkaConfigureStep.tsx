@@ -5,10 +5,10 @@ import { cn } from '#/utils/cn';
 import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import { createDefaultTrigger } from '../../../types/trigger';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { WizardBreadcrumb } from './WizardBreadcrumb';
+import { WizardFinishFooter } from './WizardFinishFooter';
 
 interface KafkaConfigureStepProps {
   /** The local trigger draft. */
@@ -80,17 +80,7 @@ export function KafkaConfigureStep({
   const requiresAuth = config.sasl !== null;
 
   const footer = (
-    <div className="space-y-2">
-      {validationError && (
-        <p className="text-xs text-red-600">{validationError}</p>
-      )}
-      <Button variant="primary" onClick={onFinish} className="w-full">
-        <span className="inline-flex items-center gap-1.5">
-          Finish
-          <span className="hero-arrow-right-micro h-4 w-4" />
-        </span>
-      </Button>
-    </div>
+    <WizardFinishFooter validationError={validationError} onFinish={onFinish} />
   );
 
   return (

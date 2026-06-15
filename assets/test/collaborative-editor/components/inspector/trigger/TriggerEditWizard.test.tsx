@@ -10,20 +10,10 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type React from 'react';
-import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as Y from 'yjs';
 
 import { TriggerEditWizard } from '../../../../../js/collaborative-editor/components/inspector/trigger/TriggerEditWizard';
-import { LiveViewActionsProvider } from '../../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
-import { SessionContext } from '../../../../../js/collaborative-editor/contexts/SessionProvider';
-import type { StoreContextValue } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
-import { StoreContext } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionContextStore } from '../../../../../js/collaborative-editor/stores/createSessionContextStore';
-import type { SessionContextStoreInstance } from '../../../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../../../js/collaborative-editor/stores/createSessionStore';
-import { createUIStore } from '../../../../../js/collaborative-editor/stores/createUIStore';
 import type { WorkflowStoreInstance } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { WebhookAuthMethod } from '../../../../../js/collaborative-editor/types/sessionContext';
@@ -33,7 +23,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../../__helpers__/channelMocks';
-import { createMockSocket } from '../../../__helpers__/sessionStoreHelpers';
+import { createTriggerTestHarness } from '../../../__helpers__/triggerInspectorHelpers';
 import { createWorkflowYDoc } from '../../../__helpers__/workflowFactory';
 
 // ---------------------------------------------------------------------------
@@ -145,7 +135,7 @@ function createConnectedWorkflowStore(
 }
 
 // ---------------------------------------------------------------------------
-// Render harness
+// Render helper
 // ---------------------------------------------------------------------------
 
 interface SetupOptions {
@@ -157,76 +147,16 @@ async function setup(
   workflowStore: WorkflowStoreInstance,
   { initialFocus }: SetupOptions = {}
 ) {
-  const sessionStore = createSessionStore();
-  sessionStore.initializeSession(
-    createMockSocket(),
-    'test:room',
-    { id: 'user-1', name: 'Test', email: 'test@example.com', color: '#000' },
-    { connect: true }
-  );
-
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  const provider = sessionStore.getSnapshot().provider;
-  if (provider) {
-    provider.emit('sync', [true]);
-    provider.emit('status', [{ status: 'connected' }]);
-  }
-  // The session provider channel is where commitAuthMethods pushes.
-  const sessionChannel = provider?.channel as unknown as {
-    push: ReturnType<typeof createMockChannelPushOk>;
-  };
-  sessionChannel.push = createMockChannelPushOk({ ok: true });
-
-  const sessionContextStore: SessionContextStoreInstance =
-    createSessionContextStore();
-  const ctxChannel = createMockPhoenixChannel();
-  const ctxProvider = createMockPhoenixChannelProvider(ctxChannel);
-  sessionContextStore._connectChannel(ctxProvider as never);
-
-  act(() => {
-    (
-      ctxChannel as never as {
-        _test: { emit: (e: string, m: unknown) => void };
-      }
-    )._test.emit('session_context', {
-      user: null,
-      project: null,
-      config: {
-        require_email_verification: false,
-        kafka_triggers_enabled: true,
-      },
-      permissions: {
-        can_edit_workflow: true,
-        can_run_workflow: true,
-        can_write_webhook_auth_method: true,
-      },
-      latest_snapshot_lock_version: 1,
-      project_repo_connection: null,
-      webhook_auth_methods: PROJECT_AUTH_METHODS,
-      workflow_template: null,
-      has_read_ai_disclaimer: false,
-    });
-  });
-
-  const storeValue = {
+  const { wrapper, sessionChannel } = await createTriggerTestHarness({
+    canEdit: true,
+    kafkaEnabled: true,
+    webhookAuthMethods: PROJECT_AUTH_METHODS,
     workflowStore,
-    sessionContextStore,
-    uiStore: createUIStore(),
-  } as unknown as StoreContextValue;
+    liveViewActions: mockLiveViewActions,
+  });
 
   const onClose = vi.fn();
   const onDone = vi.fn();
-
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-      <StoreContext.Provider value={storeValue}>
-        <LiveViewActionsProvider actions={mockLiveViewActions}>
-          {children}
-        </LiveViewActionsProvider>
-      </StoreContext.Provider>
-    </SessionContext.Provider>
-  );
 
   render(
     <TriggerEditWizard
@@ -320,7 +250,7 @@ describe('TriggerEditWizard — webhook', () => {
       expect(updateSpy).not.toHaveBeenCalled();
     });
 
-    test('Finish on a valid draft calls updateTrigger once then onDone', async () => {
+    test('Finish with no changes skips updateTrigger but still calls onDone', async () => {
       const workflowStore = createConnectedWorkflowStore(ydoc);
       const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
       const { onDone } = await setup(makeWebhookTrigger(), workflowStore);
@@ -328,11 +258,12 @@ describe('TriggerEditWizard — webhook', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
       await userEvent.click(screen.getByRole('button', { name: 'Finish' }));
 
+      // The draft equals the source trigger, so commit() writes nothing — this
+      // is what stops an unchanged Finish from clobbering concurrent edits.
       await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledTimes(1);
+        expect(onDone).toHaveBeenCalledTimes(1);
       });
-      expect(updateSpy).toHaveBeenCalledWith(TRIGGER_ID, expect.any(Object));
-      expect(onDone).toHaveBeenCalledTimes(1);
+      expect(updateSpy).not.toHaveBeenCalled();
     });
 
     test('switching Response Type to Immediately clears response config in the committed payload', async () => {
@@ -380,19 +311,22 @@ describe('TriggerEditWizard — webhook', () => {
         screen.getByRole('button', { name: /on webhook call/i })
       );
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      // The draft still reflects after_completion — its Response Options section
+      // (only rendered in that mode) is present, proving config was preserved
+      // rather than reset to the before_start default.
+      expect(
+        screen.getByRole('button', { name: 'Response Options' })
+      ).toBeInTheDocument();
+
       await userEvent.click(screen.getByRole('button', { name: 'Finish' }));
 
+      // Nothing changed, so commit() writes nothing; a reset would instead have
+      // committed the type defaults.
       await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledTimes(1);
+        expect(onDone).toHaveBeenCalledTimes(1);
       });
-      expect(updateSpy).toHaveBeenCalledWith(
-        TRIGGER_ID,
-        expect.objectContaining({
-          webhook_reply: 'after_completion',
-          webhook_response_config: { success_code: 201, error_code: 500 },
-        })
-      );
-      expect(onDone).toHaveBeenCalledTimes(1);
+      expect(updateSpy).not.toHaveBeenCalled();
     });
   });
 

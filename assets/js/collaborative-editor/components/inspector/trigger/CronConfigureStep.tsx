@@ -5,11 +5,11 @@ import {
   useWorkflowState,
 } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
 import { CronFieldBuilder } from '../CronFieldBuilder';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { WizardBreadcrumb } from './WizardBreadcrumb';
+import { WizardFinishFooter } from './WizardFinishFooter';
 
 interface CronConfigureStepProps {
   /** The local trigger draft. */
@@ -47,17 +47,7 @@ export function CronConfigureStep({
   const { isReadOnly } = useWorkflowReadOnly();
 
   const footer = (
-    <div className="space-y-2">
-      {validationError && (
-        <p className="text-xs text-red-600">{validationError}</p>
-      )}
-      <Button variant="primary" onClick={onFinish} className="w-full">
-        <span className="inline-flex items-center gap-1.5">
-          Finish
-          <span className="hero-arrow-right-micro h-4 w-4" />
-        </span>
-      </Button>
-    </div>
+    <WizardFinishFooter validationError={validationError} onFinish={onFinish} />
   );
 
   return (

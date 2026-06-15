@@ -1,12 +1,10 @@
-import { Tooltip } from '../../../../components/Tooltip';
-import { usePermissions } from '../../../hooks/useSessionContext';
-import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
-import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 
+import { EditFooter } from './EditFooter';
+import { ReadOnlyField } from './ReadOnlyField';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
+import { useCanEditWorkflow } from './useCanEditWorkflow';
 
 interface KafkaShowPanelProps {
   trigger: Workflow.Trigger;
@@ -36,10 +34,7 @@ export function KafkaShowPanel({
   onClose,
   onEdit,
 }: KafkaShowPanelProps) {
-  const permissions = usePermissions();
-  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
-
-  const canEdit = Boolean(permissions?.can_edit_workflow) && !isReadOnly;
+  const { canEdit, tooltipMessage } = useCanEditWorkflow();
 
   const config = trigger.kafka_configuration;
 
@@ -51,21 +46,10 @@ export function KafkaShowPanel({
     : 'None';
 
   const footer = (
-    <InspectorFooter
-      leftButtons={
-        <Tooltip content={canEdit ? 'Edit trigger' : tooltipMessage}>
-          <span className="inline-block">
-            <Button
-              variant="secondary"
-              onClick={() => onEdit()}
-              disabled={!canEdit}
-              aria-label="Edit trigger"
-            >
-              Edit
-            </Button>
-          </span>
-        </Tooltip>
-      }
+    <EditFooter
+      canEdit={canEdit}
+      tooltipMessage={tooltipMessage}
+      onEdit={onEdit}
     />
   );
 
@@ -77,55 +61,10 @@ export function KafkaShowPanel({
           <TriggerTypeBadge type="kafka" />
         </div>
 
-        {/* Hosts */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">
-            Hosts
-          </span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {hosts}
-          </div>
-        </div>
-
-        {/* Topics */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">
-            Topics
-          </span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {topics}
-          </div>
-        </div>
-
-        {/* SSL */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">SSL</span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {ssl}
-          </div>
-        </div>
-
-        {/* Authentication */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">
-            Authentication
-          </span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {authentication}
-          </div>
-        </div>
+        <ReadOnlyField label="Hosts">{hosts}</ReadOnlyField>
+        <ReadOnlyField label="Topics">{topics}</ReadOnlyField>
+        <ReadOnlyField label="SSL">{ssl}</ReadOnlyField>
+        <ReadOnlyField label="Authentication">{authentication}</ReadOnlyField>
       </div>
     </InspectorLayout>
   );

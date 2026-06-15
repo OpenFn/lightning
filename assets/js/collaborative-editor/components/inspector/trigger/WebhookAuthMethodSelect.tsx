@@ -4,7 +4,7 @@ import {
   ListboxOption,
   ListboxOptions,
 } from '@headlessui/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -30,6 +30,13 @@ function authTypeLabel(method: WebhookAuthMethod): string {
   return method.auth_type === 'api' ? 'API Key' : 'Basic Auth';
 }
 
+/** Order-independent comparison of two id sets. */
+function sameIdSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const setB = new Set(b);
+  return a.every(id => setB.has(id));
+}
+
 /**
  * Credential picker for the webhook Configure step's Authentication section
  * (Figma 1.2.2). Renders one row per attached auth method; each row is a
@@ -52,7 +59,23 @@ export function WebhookAuthMethodSelect({
     selectedIds.length > 0 ? [...selectedIds] : [null]
   );
 
+  // `selectedIds` is seeded from the draft, which itself often resolves only
+  // after the project's auth methods load asynchronously. Until the user edits
+  // the rows we keep mirroring that incoming set; once they touch the selection
+  // their edit owns the rows and later async updates no longer clobber it.
+  const touchedRef = useRef(false);
+
+  useEffect(() => {
+    if (touchedRef.current) return;
+    setRows(current => {
+      const currentIds = current.filter((id): id is string => id !== null);
+      if (sameIdSet(currentIds, selectedIds)) return current;
+      return selectedIds.length > 0 ? [...selectedIds] : [null];
+    });
+  }, [selectedIds]);
+
   const commit = (next: Row[]) => {
+    touchedRef.current = true;
     setRows(next);
     onChange(next.filter((id): id is string => id !== null));
   };
@@ -70,6 +93,7 @@ export function WebhookAuthMethodSelect({
   };
 
   const addRow = () => {
+    touchedRef.current = true;
     setRows(prev => [...prev, null]);
   };
 

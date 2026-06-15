@@ -11,14 +11,19 @@ import { describe, expect, test } from 'vitest';
 import { humanizeCron } from '../../../../../js/collaborative-editor/components/inspector/trigger/cronSchedule';
 
 describe('humanizeCron', () => {
-  test('returns a friendly string for a valid expression', () => {
-    const result = humanizeCron('0 9 * * *');
-    expect(result).not.toBeNull();
-    expect(typeof result).toBe('string');
-    expect((result as string).length).toBeGreaterThan(0);
-  });
-
-  test('returns null for an invalid expression', () => {
-    expect(humanizeCron('not a cron')).toBeNull();
+  test.each<[string, string, string | null]>([
+    ['daily at 9 AM', '0 9 * * *', 'At 09:00 AM'],
+    ['every 15 minutes', '*/15 * * * *', 'Every 15 minutes'],
+    ['weekdays at 9 AM', '0 9 * * 1-5', 'At 09:00 AM, Monday through Friday'],
+    [
+      'monthly on the 15th',
+      '30 9 15 * *',
+      'At 09:30 AM, on day 15 of the month',
+    ],
+    ['weekly on Sunday midnight', '0 0 * * 0', 'At 12:00 AM, only on Sunday'],
+    ['empty string → null', '', null],
+    ['invalid expression → null', 'not a cron', null],
+  ])('%s', (_label, expression, expected) => {
+    expect(humanizeCron(expression)).toBe(expected);
   });
 });

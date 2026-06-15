@@ -2,16 +2,13 @@ import { useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
-import { Tooltip } from '../../../../components/Tooltip';
-import { usePermissions } from '../../../hooks/useSessionContext';
-import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
-import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 
+import { EditFooter } from './EditFooter';
 import { IMMEDIATELY, ON_COMPLETE } from './ResponseTypeSelect';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
+import { useCanEditWorkflow } from './useCanEditWorkflow';
 import { useWebhookTrigger } from './useWebhookTrigger';
 import { WebhookUrlField } from './WebhookUrlField';
 
@@ -55,8 +52,7 @@ export function WebhookShowPanel({
   onClose,
   onEdit,
 }: WebhookShowPanelProps) {
-  const permissions = usePermissions();
-  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const { canEdit, tooltipMessage } = useCanEditWorkflow();
   const {
     webhookUrl,
     copyText,
@@ -64,8 +60,6 @@ export function WebhookShowPanel({
     triggerAuthMethods,
     loadingAuthMethods,
   } = useWebhookTrigger(trigger);
-
-  const canEdit = Boolean(permissions?.can_edit_workflow) && !isReadOnly;
 
   // Both sections are collapsible (mirroring the Configure step); collapsed by
   // default, so the resting panel stays compact.
@@ -89,21 +83,10 @@ export function WebhookShowPanel({
     (responseConfig.success_code != null || responseConfig.error_code != null);
 
   const footer = (
-    <InspectorFooter
-      rightButtons={
-        <Tooltip content={canEdit ? 'Edit trigger' : tooltipMessage}>
-          <span className="inline-block">
-            <Button
-              variant="secondary"
-              onClick={() => onEdit()}
-              disabled={!canEdit}
-              aria-label="Edit trigger"
-            >
-              Edit
-            </Button>
-          </span>
-        </Tooltip>
-      }
+    <EditFooter
+      canEdit={canEdit}
+      tooltipMessage={tooltipMessage}
+      onEdit={() => onEdit()}
     />
   );
 

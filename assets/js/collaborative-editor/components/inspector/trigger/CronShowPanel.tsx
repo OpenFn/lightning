@@ -1,16 +1,12 @@
-import { Tooltip } from '../../../../components/Tooltip';
-import { usePermissions } from '../../../hooks/useSessionContext';
-import {
-  useWorkflowReadOnly,
-  useWorkflowState,
-} from '../../../hooks/useWorkflow';
+import { useWorkflowState } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
-import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { humanizeCron } from './cronSchedule';
+import { EditFooter } from './EditFooter';
+import { ReadOnlyField } from './ReadOnlyField';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
+import { useCanEditWorkflow } from './useCanEditWorkflow';
 
 interface CronShowPanelProps {
   trigger: Workflow.Trigger;
@@ -35,11 +31,8 @@ export function CronShowPanel({
   onClose,
   onEdit,
 }: CronShowPanelProps) {
-  const permissions = usePermissions();
-  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const { canEdit, tooltipMessage } = useCanEditWorkflow();
   const jobs = useWorkflowState(state => state.jobs);
-
-  const canEdit = Boolean(permissions?.can_edit_workflow) && !isReadOnly;
 
   const cronExpression = trigger.cron_expression ?? '';
   const humanized = humanizeCron(cronExpression);
@@ -54,21 +47,10 @@ export function CronShowPanel({
   const inputSource = cursorJobName ?? 'Final run state (default)';
 
   const footer = (
-    <InspectorFooter
-      leftButtons={
-        <Tooltip content={canEdit ? 'Edit trigger' : tooltipMessage}>
-          <span className="inline-block">
-            <Button
-              variant="secondary"
-              onClick={() => onEdit()}
-              disabled={!canEdit}
-              aria-label="Edit trigger"
-            >
-              Edit
-            </Button>
-          </span>
-        </Tooltip>
-      }
+    <EditFooter
+      canEdit={canEdit}
+      tooltipMessage={tooltipMessage}
+      onEdit={onEdit}
     />
   );
 
@@ -80,31 +62,8 @@ export function CronShowPanel({
           <TriggerTypeBadge type="cron" />
         </div>
 
-        {/* Frequency */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">
-            Frequency
-          </span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {frequency}
-          </div>
-        </div>
-
-        {/* Cron Input Source */}
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-slate-900">
-            Cron Input Source
-          </span>
-          <div
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2
-              text-sm text-slate-500"
-          >
-            {inputSource}
-          </div>
-        </div>
+        <ReadOnlyField label="Frequency">{frequency}</ReadOnlyField>
+        <ReadOnlyField label="Cron Input Source">{inputSource}</ReadOnlyField>
       </div>
     </InspectorLayout>
   );

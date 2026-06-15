@@ -161,17 +161,37 @@ describe('TriggerInspector — show dispatch by type', () => {
     awarenessStore = createAwarenessStore();
   });
 
-  test('a webhook trigger renders WebhookShowPanel ("On webhook call" heading)', () => {
-    const triggerId = 'trigger-webhook';
+  // Each row: [description, triggerType, extra trigger fields, expected heading]
+  test.each<[string, string, Record<string, unknown>, string]>([
+    [
+      'webhook trigger renders WebhookShowPanel',
+      'webhook',
+      { enabled: true },
+      'On webhook call',
+    ],
+    [
+      'cron trigger renders CronShowPanel',
+      'cron',
+      { enabled: true, cron_expression: '0 9 * * *' },
+      'On a Schedule',
+    ],
+    [
+      'kafka trigger renders KafkaShowPanel',
+      'kafka',
+      { enabled: true },
+      'Kafka',
+    ],
+  ])('%s', (_, triggerType, extraFields, expectedHeading) => {
+    const triggerId = `trigger-${triggerType}`;
     const ydoc = createWorkflowYDoc({
       triggers: {
-        [triggerId]: { id: triggerId, type: 'webhook', enabled: true },
+        [triggerId]: { id: triggerId, type: triggerType, ...extraFields },
       },
     });
     ydoc.getMap('workflow').set('lock_version', 1);
 
     const workflowStore = createConnectedWorkflowStore(ydoc);
-    const { sessionContextStore } = makeSessionContextStore('webhook');
+    const { sessionContextStore } = makeSessionContextStore(triggerType);
     const trigger = workflowStore.getSnapshot().triggers[0];
 
     render(
@@ -192,80 +212,7 @@ describe('TriggerInspector — show dispatch by type', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: 'On webhook call' })
+      screen.getByRole('heading', { name: expectedHeading })
     ).toBeInTheDocument();
-  });
-
-  test('a cron trigger renders CronShowPanel ("On a Schedule" heading)', () => {
-    const triggerId = 'trigger-cron';
-    const ydoc = createWorkflowYDoc({
-      triggers: {
-        [triggerId]: {
-          id: triggerId,
-          type: 'cron',
-          enabled: true,
-          cron_expression: '0 9 * * *',
-        },
-      },
-    });
-    ydoc.getMap('workflow').set('lock_version', 1);
-
-    const workflowStore = createConnectedWorkflowStore(ydoc);
-    const { sessionContextStore } = makeSessionContextStore('cron');
-    const trigger = workflowStore.getSnapshot().triggers[0];
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={vi.fn()}
-        onOpenRunPanel={vi.fn()}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    expect(
-      screen.getByRole('heading', { name: 'On a Schedule' })
-    ).toBeInTheDocument();
-  });
-
-  test('a kafka trigger renders KafkaShowPanel ("Kafka" heading)', () => {
-    const triggerId = 'trigger-kafka';
-    const ydoc = createWorkflowYDoc({
-      triggers: {
-        [triggerId]: { id: triggerId, type: 'kafka', enabled: true },
-      },
-    });
-    ydoc.getMap('workflow').set('lock_version', 1);
-
-    const workflowStore = createConnectedWorkflowStore(ydoc);
-    const { sessionContextStore } = makeSessionContextStore('kafka');
-    const trigger = workflowStore.getSnapshot().triggers[0];
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={vi.fn()}
-        onOpenRunPanel={vi.fn()}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    expect(screen.getByRole('heading', { name: 'Kafka' })).toBeInTheDocument();
   });
 });

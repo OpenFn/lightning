@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 
 import type { Workflow } from '../../types/workflow';
 
-import { CronShowPanel } from './trigger/CronShowPanel';
-import { KafkaShowPanel } from './trigger/KafkaShowPanel';
-import { TriggerEditWizard } from './trigger/TriggerEditWizard';
-import { WebhookShowPanel, type EditFocus } from './trigger/WebhookShowPanel';
+import {
+  CronShowPanel,
+  type EditFocus,
+  KafkaShowPanel,
+  TriggerEditWizard,
+  WebhookShowPanel,
+} from './trigger';
 
 interface TriggerInspectorProps {
   trigger: Workflow.Trigger;

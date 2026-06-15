@@ -5,7 +5,7 @@ import type { Workflow } from '../../../types/workflow';
 import { CronConfigureStep } from './CronConfigureStep';
 import { KafkaConfigureStep } from './KafkaConfigureStep';
 import { TriggerChooseStep } from './TriggerChooseStep';
-import { TriggerTypeStep } from './TriggerTypeStep';
+import { TriggerPicker } from './TriggerPicker';
 import { useTriggerDraft } from './useTriggerDraft';
 import { useWebhookTrigger } from './useWebhookTrigger';
 import { WebhookChooseStep } from './WebhookChooseStep';
@@ -101,13 +101,11 @@ export function TriggerEditWizard({
 
   if (step === 'picker') {
     return (
-      <TriggerTypeStep
-        trigger={trigger}
+      <TriggerPicker
         draft={draft}
         mergeDraft={mergeDraft}
         onClose={onClose}
         onReturnToChoose={() => setStep('choose')}
-        onLeaveWizard={onDone}
       />
     );
   }

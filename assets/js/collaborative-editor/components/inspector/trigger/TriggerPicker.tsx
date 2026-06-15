@@ -1,26 +1,21 @@
 import type { ReactNode } from 'react';
 
 import { useSessionContext } from '../../../hooks/useSessionContext';
+import { createDefaultTrigger } from '../../../types/trigger';
+import type { Workflow } from '../../../types/workflow';
 import { InspectorLayout } from '../InspectorLayout';
 
 type PickableType = 'webhook' | 'cron' | 'kafka';
 
 interface TriggerPickerProps {
+  /** The local draft (read to avoid resetting config on a no-op re-pick). */
+  draft: Workflow.Trigger;
+  /** Shallow-merge updates into the draft. */
+  mergeDraft: (updates: Partial<Workflow.Trigger>) => void;
   /** Close the inspector entirely. */
   onClose: () => void;
-  /** Return to the Choose step (back arrow). */
-  onBack: () => void;
-  /**
-   * Apply the picked type to the local DRAFT and return to Choose. Used for
-   * webhook (the type the wizard fully supports).
-   */
-  onPickDraftType: (type: PickableType) => void;
-  /**
-   * Commit a type switch immediately (no draft). Used for cron/kafka, which
-   * have no wizard yet in this webhook-first phase — selecting them switches
-   * the trigger type and hands off to the legacy editor on the show panel.
-   */
-  onCommitType: (type: PickableType) => void;
+  /** Return to the Choose step (back arrow + after applying a draft type). */
+  onReturnToChoose: () => void;
 }
 
 interface PickerRowProps {
@@ -60,29 +55,42 @@ function PickerRow({ icon, title, description, onClick }: PickerRowProps) {
 }
 
 /**
- * The "What triggers this workflow?" picker, reached only via the Choose step's
- * **Change** action. Lists only the implemented trigger types.
+ * The "What triggers this workflow?" picker step, reached via the Choose step's
+ * **Change** action. Lists only the implemented trigger types and owns the
+ * wiring that applies a pick — so the wizard just renders `<TriggerPicker>` with
+ * the draft handles rather than threading per-type callbacks through a wrapper.
  *
- * Webhook selection writes the new type's defaults into the local draft and
- * returns to Choose. Cron/Kafka have no dedicated wizard yet, so selecting them
- * commits the type switch immediately (documented webhook-first limitation) and
- * the show panel then renders the legacy `TriggerForm` for that type.
+ * Every type applies to the LOCAL draft (only on an actual type change —
+ * re-confirming the current type must not reset config) and returns to Choose;
+ * nothing is persisted until Finish, so picking a type then Cancelling discards
+ * it. The current `enabled` flag is preserved so switching type never silently
+ * re-enables a disabled trigger.
  */
 export function TriggerPicker({
+  draft,
+  mergeDraft,
   onClose,
-  onBack,
-  onPickDraftType,
-  onCommitType,
+  onReturnToChoose,
 }: TriggerPickerProps): ReactNode {
   const { config } = useSessionContext();
   const kafkaEnabled = Boolean(config?.kafka_triggers_enabled);
+
+  const pickDraftType = (type: PickableType) => {
+    if (draft.type !== type) {
+      // Drop `enabled` from the defaults so the draft keeps the trigger's
+      // current enabled state — a type change must not re-enable a disabled one.
+      const { enabled: _enabled, ...defaults } = createDefaultTrigger(type);
+      mergeDraft(defaults as Partial<Workflow.Trigger>);
+    }
+    onReturnToChoose();
+  };
 
   return (
     <InspectorLayout
       title="Select trigger"
       onClose={onClose}
       showBackButton
-      onBack={onBack}
+      onBack={onReturnToChoose}
     >
       <div className="space-y-4 p-6">
         <div>
@@ -100,20 +108,20 @@ export function TriggerPicker({
             icon="hero-globe-alt"
             title="On webhook call"
             description="Run the workflow, on receiving an HTTP request."
-            onClick={() => onPickDraftType('webhook')}
+            onClick={() => pickDraftType('webhook')}
           />
           <PickerRow
             icon="hero-clock"
             title="On a Schedule"
             description="Schedule workflows to run at specific intervals."
-            onClick={() => onPickDraftType('cron')}
+            onClick={() => pickDraftType('cron')}
           />
           {kafkaEnabled && (
             <PickerRow
               icon="hero-queue-list"
               title="Kafka"
               description="Consume messages from a Kafka topic."
-              onClick={() => onCommitType('kafka')}
+              onClick={() => pickDraftType('kafka')}
             />
           )}
         </div>

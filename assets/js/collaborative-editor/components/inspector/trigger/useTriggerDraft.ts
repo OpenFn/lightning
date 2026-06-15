@@ -40,8 +40,8 @@ export interface UseTriggerDraftResult {
   /** Validation error from the draft (null when valid). */
   validationError: string | null;
   /**
-   * Validates the draft and, if valid, commits it in one shot:
-   * `updateTrigger(trigger.id, draft)` plus `commitAuthMethods` (only when the
+   * Validates the draft and, if valid, commits it in one shot: `updateTrigger`
+   * with only the changed fields, plus `commitAuthMethods` (only when the
    * auth-method id set changed). Returns `{ ok: false }` without persisting when
    * the draft is invalid.
    */
@@ -53,6 +53,25 @@ function sameIdSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   const setB = new Set(b);
   return a.every(id => setB.has(id));
+}
+
+/**
+ * Returns only the draft keys whose value differs from the source trigger.
+ * Committing this subset (rather than the whole draft) avoids overwriting fields
+ * a collaborator changed underneath us while the wizard was open — e.g. toggling
+ * `enabled` on the canvas — since untouched fields are never written back.
+ */
+function changedFields(
+  draft: Workflow.Trigger,
+  trigger: Workflow.Trigger
+): Partial<Workflow.Trigger> {
+  const updates: Record<string, unknown> = {};
+  for (const key of Object.keys(draft) as (keyof Workflow.Trigger)[]) {
+    if (JSON.stringify(draft[key]) !== JSON.stringify(trigger[key])) {
+      updates[key] = draft[key];
+    }
+  }
+  return updates as Partial<Workflow.Trigger>;
 }
 
 /**
@@ -138,7 +157,12 @@ export function useTriggerDraft(
       return { ok: false };
     }
 
-    updateTrigger(trigger.id, draft);
+    // Write only the fields the user actually changed, so a concurrent edit to
+    // an untouched field (e.g. `enabled` toggled on the canvas) is not reverted.
+    const updates = changedFields(draft, trigger);
+    if (Object.keys(updates).length > 0) {
+      updateTrigger(trigger.id, updates);
+    }
 
     if (authIdsChanged) {
       await commitAuthMethods(draftAuthMethodIds);
@@ -147,7 +171,7 @@ export function useTriggerDraft(
     return { ok: true };
   }, [
     draft,
-    trigger.id,
+    trigger,
     updateTrigger,
     authIdsChanged,
     draftAuthMethodIds,
