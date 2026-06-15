@@ -3477,6 +3477,105 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "validate event with invalid email shows error in modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      modal = element(view, "#add_collaborators_modal")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "not-an-email", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(modal) =~ "Email address not valid."
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "valid@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(modal) =~ "Email address not valid."
+    end
+
+    test "validate event with invalid email shows error in invite modal", %{
+      conn: conn
+    } do
+      project = insert(:project, name: "my-project")
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      # Submit with a non-existent email to open the invite form
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "newuser@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert has_element?(view, "#invite_collaborators_modal_form")
+
+      invite_modal = element(view, "#invite_collaborators_modal")
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "not-an-email",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(invite_modal) =~ "Email address not valid."
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "valid@example.com",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(invite_modal) =~ "Email address not valid."
+    end
+
     test "adding a non existent user triggers the invite users process", %{
       conn: conn
     } do
