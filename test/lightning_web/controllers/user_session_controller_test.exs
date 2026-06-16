@@ -75,11 +75,16 @@ defmodule LightningWeb.UserSessionControllerTest do
     end
 
     test "shows a 'Sign in with' button for external providers", %{conn: conn} do
-      create_handler("foo")
+      handler = create_handler("foo")
 
       conn = get(conn, Routes.user_session_path(conn, :new))
       response = html_response(conn, 200)
       assert response =~ "Sign in with"
+
+      # The button must route through our `:show` action (which mints the
+      # session-bound state) rather than linking straight to the provider.
+      assert response =~ ~s(href="/authenticate/#{handler.name}")
+      refute response =~ handler.wellknown.authorization_endpoint
     end
   end
 

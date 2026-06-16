@@ -86,9 +86,20 @@ defmodule Lightning.AuthProviders.Handler do
     new(model.name, opts)
   end
 
-  @spec authorize_url(handler :: __MODULE__.t()) :: String.t()
-  def authorize_url(handler) do
-    OAuth2.Client.authorize_url!(handler.client, scope: handler.scope)
+  @doc """
+  Builds the provider authorize URL.
+
+  Extra `params` (e.g. `state:`) are forwarded to the OAuth2 client; the
+  configured `scope` is always included. Callers should pass an unguessable
+  `state` to protect the callback against CSRF.
+  """
+  @spec authorize_url(handler :: __MODULE__.t(), params :: keyword()) ::
+          String.t()
+  def authorize_url(handler, params \\ []) do
+    OAuth2.Client.authorize_url!(
+      handler.client,
+      Keyword.put(params, :scope, handler.scope)
+    )
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::

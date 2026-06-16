@@ -62,14 +62,52 @@ defmodule LightningWeb.OidcControllerTest do
     {:ok, handler: handler, bypass: bypass}
   end
 
+  # Drives the real authorize redirect so the session-bound `state` (and its
+  # session nonce) are minted, then returns the conn (carrying the session) and
+  # the state to replay on the callback.
+  defp follow_authorize(conn, path) do
+    conn = get(conn, path)
+    %{query: query} = conn |> redirected_to() |> URI.parse()
+    {conn, URI.decode_query(query) |> Map.fetch!("state")}
+  end
+
+  defp login_callback(conn, handler, params) do
+    {conn, state} =
+      follow_authorize(conn, Routes.oidc_path(conn, :show, handler.name))
+
+    get(
+      conn,
+      Routes.oidc_path(conn, :new, handler.name, Map.put(params, "state", state))
+    )
+  end
+
+  defp link_callback(conn, handler, user, params) do
+    {conn, state} =
+      follow_authorize(
+        log_in_user(conn, user),
+        Routes.oidc_path(conn, :link, handler.name)
+      )
+
+    get(
+      conn,
+      Routes.oidc_path(conn, :new, handler.name, Map.put(params, "state", state))
+    )
+  end
+
   describe "GET /authenticate/:provider" do
     setup :setup_handler
 
-    test "redirects to provider authorize_url", %{conn: conn, handler: handler} do
+    test "redirects to the provider authorize_url with a session-bound state",
+         %{conn: conn, handler: handler} do
       conn = conn |> get(Routes.oidc_path(conn, :show, handler.name))
 
-      assert redirected_to(conn) ==
-               AuthProviders.Handler.authorize_url(handler)
+      url = redirected_to(conn)
+      %{query: query} = URI.parse(url)
+      params = URI.decode_query(query)
+
+      assert String.starts_with?(url, handler.wellknown.authorization_endpoint)
+      assert Map.has_key?(params, "state")
+      assert get_session(conn, :sso_oauth_state)
     end
 
     test "redirects to / when already logged in", %{conn: conn, handler: handler} do
@@ -114,11 +152,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "sub-#{user.id}"
       })
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == "/projects"
     end
@@ -134,11 +168,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "unlinked-uid"
       })
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -167,11 +197,7 @@ defmodule LightningWeb.OidcControllerTest do
         "name" => "First Last"
       })
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == ~p"/authenticate/signup/confirm"
 
@@ -197,11 +223,7 @@ defmodule LightningWeb.OidcControllerTest do
 
       expect_userinfo(bypass, handler.wellknown, %{"sub" => "abc"})
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -223,11 +245,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "unverified-uid"
       })
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -259,11 +277,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "unverified-existing-uid"
       })
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -285,11 +299,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "no-claim-uid"
       })
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -320,11 +330,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "mfa-uid-#{user.id}"
       })
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert get_session(conn, :user_totp_pending)
 
@@ -345,11 +351,7 @@ defmodule LightningWeb.OidcControllerTest do
 
       expect_userinfo(bypass, handler.wellknown, %{"email" => "x@example.com"})
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
     end
@@ -381,11 +383,7 @@ defmodule LightningWeb.OidcControllerTest do
          |> Jason.encode!()}
       )
 
-      conn =
-        conn
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -428,11 +426,7 @@ defmodule LightningWeb.OidcControllerTest do
         }
       ])
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       # The signup confirmation flow is reached, meaning an email was resolved.
       assert redirected_to(conn) == ~p"/authenticate/signup/confirm"
@@ -462,11 +456,7 @@ defmodule LightningWeb.OidcControllerTest do
         }
       ])
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert get_session(conn, :sso_pending_signup)["email"] ==
                "verified@example.com"
@@ -488,11 +478,7 @@ defmodule LightningWeb.OidcControllerTest do
         }
       ])
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -512,11 +498,7 @@ defmodule LightningWeb.OidcControllerTest do
       # No expect_user_emails/3 stub: if the endpoint were called, Bypass would
       # fail the test, proving the extra request is skipped.
 
-      conn =
-        get(
-          conn,
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert get_session(conn, :sso_pending_signup)["email"] ==
                "public@example.com"
@@ -537,10 +519,13 @@ defmodule LightningWeb.OidcControllerTest do
         |> log_in_user(user)
         |> get(Routes.oidc_path(conn, :link, handler.name))
 
-      assert redirected_to(conn) ==
-               AuthProviders.Handler.authorize_url(handler)
+      url = redirected_to(conn)
+      %{query: query} = URI.parse(url)
+      params = URI.decode_query(query)
 
-      assert get_session(conn, :sso_link_intent_provider) == handler.name
+      assert String.starts_with?(url, handler.wellknown.authorization_endpoint)
+      assert Map.has_key?(params, "state")
+      assert get_session(conn, :sso_oauth_state)
     end
 
     test "redirects unauthenticated users to log in", %{
@@ -568,13 +553,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "new-link-uid"
       })
 
-      conn =
-        conn
-        |> log_in_user(user)
-        |> put_session(:sso_link_intent_provider, handler.name)
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = link_callback(conn, handler, user, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == ~p"/profile"
 
@@ -609,13 +588,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "existing-uid"
       })
 
-      conn =
-        conn
-        |> log_in_user(user)
-        |> put_session(:sso_link_intent_provider, handler.name)
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = link_callback(conn, handler, user, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == ~p"/profile"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "already linked"
@@ -642,13 +615,7 @@ defmodule LightningWeb.OidcControllerTest do
         "sub" => "claimed-uid"
       })
 
-      conn =
-        conn
-        |> log_in_user(user)
-        |> put_session(:sso_link_intent_provider, handler.name)
-        |> get(
-          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
-        )
+      conn = link_callback(conn, handler, user, %{"code" => "callback_code"})
 
       assert redirected_to(conn) == ~p"/profile"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "already linked"
@@ -661,6 +628,117 @@ defmodule LightningWeb.OidcControllerTest do
                )
 
       assert same_id == other_user.id
+    end
+  end
+
+  describe "GET /authenticate/:provider/callback (state verification)" do
+    setup :setup_handler
+
+    test "rejects a callback with no state parameter", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      # No token exchange should happen: a stray Bypass call would fail the test.
+      Bypass.down(bypass)
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
+    end
+
+    test "rejects a callback whose state was not minted for this session", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      Bypass.down(bypass)
+
+      # State minted in a *different* browser session (its nonce lives in that
+      # session, not ours) — the login-CSRF replay we're defending against.
+      {_other_conn, state} =
+        follow_authorize(
+          build_conn(),
+          Routes.oidc_path(conn, :show, handler.name)
+        )
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{
+            "code" => "callback_code",
+            "state" => state
+          })
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
+    end
+
+    test "rejects a tampered/garbage state", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      Bypass.down(bypass)
+
+      {conn, _state} =
+        follow_authorize(conn, Routes.oidc_path(conn, :show, handler.name))
+
+      conn =
+        get(
+          conn,
+          Routes.oidc_path(conn, :new, handler.name, %{
+            "code" => "callback_code",
+            "state" => "not-a-valid-state"
+          })
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication failed"
+    end
+
+    test "rejects a link state bound to a different user even if the nonce matches",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      Bypass.down(bypass)
+
+      victim = user_fixture()
+      other_user_id = Ecto.UUID.generate()
+
+      # A link state whose nonce matches the session but which is bound to a
+      # different user than the one now authenticated.
+      state =
+        Lightning.SafetyString.encode([
+          "shared-nonce",
+          "link",
+          handler.name,
+          other_user_id
+        ])
+
+      conn =
+        conn
+        |> log_in_user(victim)
+        |> put_session(:sso_oauth_state, "shared-nonce")
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{
+            "code" => "callback_code",
+            "state" => state
+          })
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+      assert Enum.empty?(Lightning.Accounts.list_user_identities(victim))
     end
   end
 

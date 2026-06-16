@@ -94,21 +94,6 @@ defmodule Lightning.AuthProviders do
     Handler.new(name, opts)
   end
 
-  @doc """
-  Retrieve the authorization url for a given handler or handler name.
-  """
-  @spec get_authorize_url(String.t() | Handler.t()) :: String.t() | nil
-  def get_authorize_url(name) when is_binary(name) do
-    case get_handler(name) do
-      {:ok, handler} -> get_authorize_url(handler)
-      {:error, :not_found} -> nil
-    end
-  end
-
-  def get_authorize_url(%Handler{} = handler) do
-    Handler.authorize_url(handler)
-  end
-
   defp find_and_build(name) do
     get_existing(name)
     |> Handler.from_model()

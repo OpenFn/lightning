@@ -95,7 +95,7 @@ defmodule LightningWeb.UserSessionController do
         Enum.map(handlers, fn handler ->
           %{
             name: handler.name,
-            url: Lightning.AuthProviders.get_authorize_url(handler)
+            url: ~p"/authenticate/#{handler.name}"
           }
         end)
     end

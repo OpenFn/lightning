@@ -5,12 +5,13 @@ defmodule LightningWeb.OidcController do
   alias Lightning.Accounts.User
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.Handler
+  alias Lightning.SafetyString
   alias LightningWeb.OauthCredentialHelper
   alias LightningWeb.UserAuth
 
   action_fallback LightningWeb.FallbackController
 
-  @link_intent_session_key :sso_link_intent_provider
+  @oauth_state_session_key :sso_oauth_state
   @pending_signup_session_key :sso_pending_signup
 
   plug :fetch_current_user
@@ -23,24 +24,28 @@ defmodule LightningWeb.OidcController do
       if conn.assigns.current_user do
         UserAuth.redirect_if_user_is_authenticated(conn, nil)
       else
-        authorize_url = Handler.authorize_url(handler)
+        {conn, authorize_url} =
+          authorize_redirect(conn, handler, provider, :login)
+
         redirect(conn, external: authorize_url)
       end
     end
   end
 
   @doc """
-  Initiates an SSO link flow for an already-authenticated user. The
-  provider is recorded in the session and the user is redirected to the
-  provider's authorize URL. On callback the controller links the resulting
-  identity to the current account rather than logging in.
+  Initiates an SSO link flow for an already-authenticated user. The intent,
+  provider and current user are carried in a session-bound `state` and the
+  user is redirected to the provider's authorize URL. On callback the
+  controller links the resulting identity to the current account rather than
+  logging in.
   """
   def link(conn, %{"provider" => provider}) do
     with {:ok, handler} <- AuthProviders.get_handler(provider) do
       if conn.assigns.current_user do
-        conn
-        |> put_session(@link_intent_session_key, provider)
-        |> redirect(external: Handler.authorize_url(handler))
+        {conn, authorize_url} =
+          authorize_redirect(conn, handler, provider, :link)
+
+        redirect(conn, external: authorize_url)
       else
         redirect(conn, to: Routes.user_session_path(conn, :new))
       end
@@ -51,33 +56,27 @@ defmodule LightningWeb.OidcController do
   Once the user has completed the authorization flow from above, they are
   returned here, and the authorization code is used to log them in.
   """
-  def new(conn, %{"provider" => provider, "code" => code}) do
-    {link_intent, conn} = pop_link_intent(conn)
+  def new(conn, %{"provider" => provider, "code" => code, "state" => state}) do
+    case verify_oauth_state(conn, provider, state) do
+      {:ok, intent, conn} ->
+        complete_sso_callback(conn, provider, code, intent)
 
-    with {:ok, handler} <- AuthProviders.get_handler(provider),
-         {:ok, token} <- Handler.get_token(handler, code),
-         userinfo <- Handler.get_userinfo(handler, token),
-         {:ok, email} <- fetch_email(userinfo),
-         {:ok, uid} <- fetch_uid(userinfo) do
-      if link_intent == provider && conn.assigns.current_user do
-        handle_sso_link(conn, conn.assigns.current_user, provider, uid)
-      else
-        handle_sso_login(conn, provider, uid, email, userinfo)
-      end
-    else
-      {:error, :no_email} ->
-        conn
-        |> put_flash(
-          :error,
-          "Could not retrieve your email from the provider. Please ensure your email address is accessible."
-        )
-        |> redirect(to: failure_redirect(conn, link_intent))
-
-      {:error, _reason} ->
+      {:error, conn} ->
         conn
         |> put_flash(:error, "Authentication failed")
-        |> redirect(to: failure_redirect(conn, link_intent))
+        |> redirect(to: Routes.user_session_path(conn, :new))
     end
+  end
+
+  # An SSO callback that arrives without our `state` (or with the provider's
+  # error) can't be tied back to the browser that started the flow, so we
+  # reject it.
+  def new(conn, %{"provider" => _provider} = params)
+      when is_map_key(params, "code") or is_map_key(params, "error") do
+    conn
+    |> delete_session(@oauth_state_session_key)
+    |> put_flash(:error, "Authentication failed")
+    |> redirect(to: Routes.user_session_path(conn, :new))
   end
 
   def new(conn, %{"state" => state, "code" => code}) do
@@ -163,6 +162,35 @@ defmodule LightningWeb.OidcController do
 
   defp clear_pending_signup(conn) do
     delete_session(conn, @pending_signup_session_key)
+  end
+
+  defp complete_sso_callback(conn, provider, code, intent) do
+    with {:ok, handler} <- AuthProviders.get_handler(provider),
+         {:ok, token} <- Handler.get_token(handler, code),
+         userinfo <- Handler.get_userinfo(handler, token),
+         {:ok, email} <- fetch_email(userinfo),
+         {:ok, uid} <- fetch_uid(userinfo) do
+      case intent do
+        :link ->
+          handle_sso_link(conn, conn.assigns.current_user, provider, uid)
+
+        :login ->
+          handle_sso_login(conn, provider, uid, email, userinfo)
+      end
+    else
+      {:error, :no_email} ->
+        conn
+        |> put_flash(
+          :error,
+          "Could not retrieve your email from the provider. Please ensure your email address is accessible."
+        )
+        |> redirect(to: failure_redirect(conn, intent))
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: failure_redirect(conn, intent))
+    end
   end
 
   defp handle_sso_link(conn, %User{} = current_user, provider, uid) do
@@ -318,15 +346,74 @@ defmodule LightningWeb.OidcController do
 
   defp extract_name(_), do: %{first_name: "", last_name: ""}
 
-  defp pop_link_intent(conn) do
-    case get_session(conn, @link_intent_session_key) do
-      nil -> {nil, conn}
-      provider -> {provider, delete_session(conn, @link_intent_session_key)}
+  # Mints a single-use, session-bound state and returns the provider authorize
+  # URL carrying it. The nonce lives in the session (the secret the attacker
+  # can't read); the encrypted state carries the same nonce plus the intent,
+  # provider and — for the link flow — the user it must remain bound to.
+  defp authorize_redirect(conn, handler, provider, intent) do
+    nonce = Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
+
+    user_id =
+      case conn.assigns.current_user do
+        %User{id: id} -> id
+        _ -> ""
+      end
+
+    state =
+      SafetyString.encode([
+        nonce,
+        to_string(intent),
+        provider,
+        to_string(user_id)
+      ])
+
+    conn = put_session(conn, @oauth_state_session_key, nonce)
+
+    {conn, Handler.authorize_url(handler, state: state)}
+  end
+
+  # Verifies the callback `state` against the nonce stashed in the session. The
+  # nonce is consumed (single-use) regardless of outcome. On the link flow the
+  # state must also still belong to the currently authenticated user.
+  defp verify_oauth_state(conn, provider, state) do
+    session_nonce = get_session(conn, @oauth_state_session_key)
+    conn = delete_session(conn, @oauth_state_session_key)
+
+    with [nonce, intent, state_provider, user_id] <- decode_oauth_state(state),
+         true <- is_binary(session_nonce),
+         true <- Plug.Crypto.secure_compare(nonce, session_nonce),
+         true <- state_provider == provider,
+         {:ok, intent} <- authorize_intent(conn, intent, user_id) do
+      {:ok, intent, conn}
+    else
+      _ -> {:error, conn}
     end
   end
 
-  defp failure_redirect(conn, link_intent) do
-    if link_intent && conn.assigns.current_user do
+  defp decode_oauth_state(state) when is_binary(state) do
+    SafetyString.decode(state)
+  rescue
+    _ -> :error
+  end
+
+  defp decode_oauth_state(_state), do: :error
+
+  defp authorize_intent(_conn, "login", _user_id), do: {:ok, :login}
+
+  defp authorize_intent(conn, "link", user_id) do
+    case conn.assigns.current_user do
+      %User{id: id} ->
+        if to_string(id) == user_id, do: {:ok, :link}, else: :error
+
+      _ ->
+        :error
+    end
+  end
+
+  defp authorize_intent(_conn, _intent, _user_id), do: :error
+
+  defp failure_redirect(conn, intent) do
+    if intent == :link && conn.assigns.current_user do
       ~p"/profile"
     else
       Routes.user_session_path(conn, :new)
