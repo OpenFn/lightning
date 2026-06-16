@@ -1024,6 +1024,34 @@ defmodule Lightning.Workflows do
     |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
   end
 
+  @doc """
+  Publishes a draft workflow: sets its state to `:live`, enables its triggers,
+  and saves in one transaction (capturing a snapshot and recording a version).
+  """
+  @spec go_live(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def go_live(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(true)
+    |> Ecto.Changeset.put_change(:state, :live)
+    |> save_workflow(actor)
+  end
+
+  @doc """
+  Takes a live workflow offline for editing: sets its state to `:draft` and
+  disables its triggers, saved in one transaction.
+  """
+  @spec switch_to_draft(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def switch_to_draft(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(false)
+    |> Ecto.Changeset.put_change(:state, :draft)
+    |> save_workflow(actor)
+  end
+
   defp update_triggers(triggers, enabled?) do
     Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
   end
