@@ -16,8 +16,12 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
   end
 
   @impl true
-  def handle_event("unlink-identity", %{"provider" => provider}, socket) do
-    case Accounts.unlink_user_identity(socket.assigns.user, provider) do
+  def handle_event(
+        "unlink-identity",
+        %{"id" => identity_id, "provider" => provider},
+        socket
+      ) do
+    case Accounts.unlink_user_identity(socket.assigns.user, identity_id) do
       {:ok, _identity} ->
         {:noreply,
          socket
@@ -141,6 +145,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
             type="button"
             theme="danger"
             phx-click="unlink-identity"
+            phx-value-id={@provider.identity.id}
             phx-value-provider={@provider.name}
             phx-target={@myself}
             data-confirm={"Unlink #{AuthProviders.display_name(@provider.name)} from your account?"}

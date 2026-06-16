@@ -629,6 +629,40 @@ defmodule LightningWeb.OidcControllerTest do
 
       assert same_id == other_user.id
     end
+
+    test "rejects linking a second identity for an already-linked provider", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = user_fixture()
+
+      # The user has already linked one account for this provider.
+      insert(:user_identity,
+        user: user,
+        provider: handler.name,
+        uid: "first-uid"
+      )
+
+      expect_token(bypass, handler.wellknown)
+
+      # The provider returns a *different* account for the same provider.
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => "second@example.com",
+        "sub" => "second-uid"
+      })
+
+      conn = link_callback(conn, handler, user, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) == ~p"/profile"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "already have a"
+
+      # No second identity was created
+      assert [%{uid: "first-uid"}] =
+               Lightning.Accounts.list_user_identities(user)
+    end
   end
 
   describe "GET /authenticate/:provider/callback (state verification)" do

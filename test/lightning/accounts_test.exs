@@ -206,6 +206,48 @@ defmodule Lightning.AccountsTest do
       assert %User{id: owner_id} = Accounts.get_user_by_identity("github", "abc")
       assert owner_id == other_user.id
     end
+
+    test "rejects a second identity for a provider the user already linked" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:error, :provider_already_linked} =
+               Accounts.link_user_identity(user, "github", "uid-b")
+
+      # Only the original identity remains
+      assert [%{uid: "uid-a"}] = Accounts.list_user_identities(user)
+    end
+
+    test "allows linking a different provider" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:ok, _identity} =
+               Accounts.link_user_identity(user, "google", "uid-b")
+
+      assert [%{provider: "github"}, %{provider: "google"}] =
+               Accounts.list_user_identities(user)
+    end
+
+    test "the database rejects a duplicate (user_id, provider) as a backstop" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      # Bypass the application guard to prove the DB constraint also holds (the
+      # backstop for a race between two concurrent links).
+      assert {:error, changeset} =
+               %Lightning.Accounts.UserIdentity{}
+               |> Lightning.Accounts.UserIdentity.changeset(%{
+                 user_id: user.id,
+                 provider: "github",
+                 uid: "uid-b"
+               })
+               |> Lightning.Repo.insert()
+
+      assert "is already linked to a different account for this provider" in errors_on(
+               changeset
+             ).user_id
+    end
   end
 
   describe "register_user_from_sso/3" do
@@ -287,35 +329,62 @@ defmodule Lightning.AccountsTest do
   describe "unlink_user_identity/2" do
     test "removes the identity for a user with a password" do
       user = insert(:user)
-      insert(:user_identity, user: user, provider: "github", uid: "h1")
 
-      assert {:ok, _} = Accounts.unlink_user_identity(user, "github")
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
       assert [] = Accounts.list_user_identities(user)
     end
 
-    test "returns :not_linked when the provider is not linked" do
+    test "returns :not_linked when the identity does not exist" do
       user = insert(:user)
 
       assert {:error, :not_linked} =
-               Accounts.unlink_user_identity(user, "github")
+               Accounts.unlink_user_identity(user, Ecto.UUID.generate())
+    end
+
+    test "returns :not_linked for a malformed identity id" do
+      user = insert(:user)
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, "not-a-uuid")
+    end
+
+    test "returns :not_linked when the identity belongs to another user" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      identity =
+        insert(:user_identity, user: other_user, provider: "github", uid: "h1")
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, identity.id)
+
+      assert [_] = Accounts.list_user_identities(other_user)
     end
 
     test "refuses to unlink the only identity of an SSO-only user" do
       user = insert(:user, hashed_password: nil)
-      insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
 
       assert {:error, :would_lock_out} =
-               Accounts.unlink_user_identity(user, "github")
+               Accounts.unlink_user_identity(user, identity.id)
 
       assert [_] = Accounts.list_user_identities(user)
     end
 
     test "allows unlinking when an SSO-only user has another identity" do
       user = insert(:user, hashed_password: nil)
-      insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
       insert(:user_identity, user: user, provider: "google", uid: "g1")
 
-      assert {:ok, _} = Accounts.unlink_user_identity(user, "github")
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
       assert [%{provider: "google"}] = Accounts.list_user_identities(user)
     end
   end

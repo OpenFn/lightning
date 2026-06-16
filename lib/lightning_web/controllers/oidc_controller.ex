@@ -229,6 +229,14 @@ defmodule LightningWeb.OidcController do
             )
             |> redirect(to: ~p"/profile")
 
+          {:error, :provider_already_linked} ->
+            conn
+            |> put_flash(
+              :error,
+              "You already have a #{AuthProviders.display_name(provider)} account linked. Unlink it first to link a different one."
+            )
+            |> redirect(to: ~p"/profile")
+
           {:error, _reason} ->
             conn
             |> put_flash(

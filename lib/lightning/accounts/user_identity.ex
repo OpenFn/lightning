@@ -2,8 +2,8 @@ defmodule Lightning.Accounts.UserIdentity do
   @moduledoc """
   Schema for tracking SSO provider identities linked to user accounts.
 
-  A user may have multiple identities (one per SSO provider). The combination
-  of provider and uid is globally unique.
+  A user has at most one identity per provider, and the combination of provider
+  and uid is globally unique (an identity can't be claimed by two users).
   """
   use Lightning.Schema
 
@@ -21,5 +21,8 @@ defmodule Lightning.Accounts.UserIdentity do
     |> cast(attrs, [:provider, :uid, :user_id])
     |> validate_required([:provider, :uid, :user_id])
     |> unique_constraint([:provider, :uid])
+    |> unique_constraint([:user_id, :provider],
+      message: "is already linked to a different account for this provider"
+    )
   end
 end

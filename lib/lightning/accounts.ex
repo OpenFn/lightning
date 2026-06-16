@@ -206,9 +206,14 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Links an SSO provider identity to a user; idempotent if already linked to the same user, `{:error, :identity_already_linked}` if claimed by another.
+  Links an SSO provider identity to a user.
+
+  Idempotent if already linked to the same user. Returns
+  `{:error, :identity_already_linked}` if the identity is claimed by another
+  user, and `{:error, :provider_already_linked}` if the user already has a
+  different identity for this provider (at most one identity per provider).
   """
-  def link_user_identity(%User{id: user_id}, provider, uid) do
+  def link_user_identity(%User{id: user_id} = user, provider, uid) do
     case get_identity(provider, uid) do
       %UserIdentity{user_id: ^user_id} = identity ->
         {:ok, identity}
@@ -217,18 +222,30 @@ defmodule Lightning.Accounts do
         {:error, :identity_already_linked}
 
       nil ->
-        %UserIdentity{}
-        |> UserIdentity.changeset(%{
-          user_id: user_id,
-          provider: provider,
-          uid: uid
-        })
-        |> Repo.insert()
+        if provider_linked?(user, provider) do
+          {:error, :provider_already_linked}
+        else
+          %UserIdentity{}
+          |> UserIdentity.changeset(%{
+            user_id: user_id,
+            provider: provider,
+            uid: uid
+          })
+          |> Repo.insert()
+        end
     end
   end
 
   defp get_identity(provider, uid) do
     Repo.get_by(UserIdentity, provider: provider, uid: uid)
+  end
+
+  defp provider_linked?(%User{id: user_id}, provider) do
+    Repo.exists?(
+      from(i in UserIdentity,
+        where: i.user_id == ^user_id and i.provider == ^provider
+      )
+    )
   end
 
   @doc """
@@ -243,14 +260,7 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Gets a user's identity for a given provider, or `nil` if not linked.
-  """
-  def get_user_identity(%User{id: user_id}, provider) do
-    Repo.get_by(UserIdentity, user_id: user_id, provider: provider)
-  end
-
-  @doc """
-  Removes the SSO identity for the given user and provider.
+  Removes a linked SSO identity, addressed by its id and scoped to `user`.
 
   Refuses to remove the last identity for an SSO-only user (no password set),
   since that would lock them out. Such users can set a password by going
@@ -258,21 +268,21 @@ defmodule Lightning.Accounts do
 
   Returns:
     * `{:ok, identity}` when the identity is removed
-    * `{:error, :not_linked}` when the user has no identity for the provider
+    * `{:error, :not_linked}` when no such identity belongs to the user
     * `{:error, :would_lock_out}` when removing would leave an SSO-only user
       with no way to log in
   """
-  def unlink_user_identity(%User{} = user, provider) do
-    case get_user_identity(user, provider) do
-      nil ->
-        {:error, :not_linked}
-
-      %UserIdentity{} = identity ->
-        if can_remove_identity?(user, identity) do
-          Repo.delete(identity)
-        else
-          {:error, :would_lock_out}
-        end
+  def unlink_user_identity(%User{} = user, identity_id) do
+    with {:ok, identity_id} <- Ecto.UUID.cast(identity_id),
+         %UserIdentity{} = identity <-
+           Repo.get_by(UserIdentity, id: identity_id, user_id: user.id) do
+      if can_remove_identity?(user, identity) do
+        Repo.delete(identity)
+      else
+        {:error, :would_lock_out}
+      end
+    else
+      _ -> {:error, :not_linked}
     end
   end
 
