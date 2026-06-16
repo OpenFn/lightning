@@ -1832,6 +1832,17 @@ defmodule Lightning.WorkflowsTest do
            } = audit
   end
 
+  describe "editable_state?/2" do
+    test "live workflows are read-only on main but editable in a sandbox" do
+      main = build(:project)
+      sandbox = build(:project, parent_id: Ecto.UUID.generate())
+
+      refute Workflows.editable_state?(build(:workflow, state: :live), main)
+      assert Workflows.editable_state?(build(:workflow, state: :live), sandbox)
+      assert Workflows.editable_state?(build(:workflow, state: :draft), main)
+    end
+  end
+
   defp create_workflow(opts \\ []) do
     enabled = Keyword.get(opts, :enabled, false)
     trigger = build(:trigger, type: :cron, enabled: enabled)

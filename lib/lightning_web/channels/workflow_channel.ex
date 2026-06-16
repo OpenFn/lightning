@@ -235,7 +235,8 @@ defmodule LightningWeb.WorkflowChannel do
         user: render_user_context(user),
         project: render_project_context(project),
         config: render_config_context(),
-        permissions: render_permissions(user, project_user),
+        permissions:
+          render_permissions(user, project_user, fresh_workflow, project),
         latest_snapshot_lock_version: latest_lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
@@ -902,14 +903,14 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  defp render_permissions(user, project_user) do
+  defp render_permissions(user, project_user, workflow, project) do
     can_edit =
       Permissions.can?(
         :project_users,
         :edit_workflow,
         user,
         project_user
-      )
+      ) and Lightning.Workflows.editable_state?(workflow, project)
 
     can_run =
       Permissions.can?(
