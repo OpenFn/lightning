@@ -129,6 +129,19 @@ defmodule Lightning.Workflows do
     |> preload(^include)
   end
 
+  @doc """
+  Returns true when a workflow's lifecycle state permits editing in the given
+  project. A `:live` workflow is read-only on its own project; inside a sandbox
+  the clone stays editable, and drafts are always editable. Anything that is not
+  a live workflow (a draft, or a snapshot view) is editable as far as this rule
+  is concerned.
+  """
+  @spec editable_state?(struct() | nil, Project.t()) :: boolean()
+  def editable_state?(%Workflow{state: :live}, %Project{} = project),
+    do: Project.sandbox?(project)
+
+  def editable_state?(_workflow, _project), do: true
+
   @spec save_workflow(
           Ecto.Changeset.t(Workflow.t()) | map(),
           struct(),
