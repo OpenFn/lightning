@@ -15,10 +15,39 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import type * as Y from 'yjs';
 
 import { WebhookConfigureStep } from '../../../../../js/collaborative-editor/components/inspector/trigger/WebhookConfigureStep';
+import type { WorkflowStoreInstance } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Workflow } from '../../../../../js/collaborative-editor/types/workflow';
+import {
+  createMockPhoenixChannel,
+  createMockPhoenixChannelProvider,
+} from '../../../__helpers__/channelMocks';
 import { createTriggerTestHarness } from '../../../__helpers__/triggerInspectorHelpers';
+import { createWorkflowYDoc } from '../../../__helpers__/workflowFactory';
+
+function createConnectedWorkflowStore(ydoc: Y.Doc): WorkflowStoreInstance {
+  const store = createWorkflowStore();
+  const channel = createMockPhoenixChannel();
+  const provider = createMockPhoenixChannelProvider(channel);
+  store.connect(ydoc, provider as never);
+  return store;
+}
+
+// A connected workflow store for a saved, non-deleted workflow — so
+// `useWorkflowReadOnly` (now read by WebhookConfigureStep) resolves to editable.
+function makeReadyWorkflowStore(): WorkflowStoreInstance {
+  const ydoc = createWorkflowYDoc({
+    triggers: { [TRIGGER_ID]: { id: TRIGGER_ID, type: 'webhook' } },
+  });
+  const workflowMap = ydoc.getMap('workflow');
+  workflowMap.set('id', 'workflow-1');
+  workflowMap.set('lock_version', 1);
+  workflowMap.set('deleted_at', null);
+  return createConnectedWorkflowStore(ydoc);
+}
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -73,6 +102,7 @@ async function setup({
 }: SetupOptions = {}) {
   const { wrapper } = await createTriggerTestHarness({
     canEdit: true,
+    workflowStore: makeReadyWorkflowStore(),
     liveViewActions: mockLiveViewActions,
   });
 
@@ -227,6 +257,7 @@ describe('WebhookConfigureStep', () => {
         {
           wrapper: (
             await createTriggerTestHarness({
+              workflowStore: makeReadyWorkflowStore(),
               liveViewActions: mockLiveViewActions,
             })
           ).wrapper,

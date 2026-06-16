@@ -55,7 +55,7 @@ export function CronShowPanel({
   );
 
   return (
-    <InspectorLayout title="On a Schedule" onClose={onClose} footer={footer}>
+    <InspectorLayout title="On a schedule" onClose={onClose} footer={footer}>
       <div className="p-6 space-y-6">
         {/* Trigger type badge */}
         <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">

@@ -7,6 +7,7 @@ import {
   usePermissions,
   useSessionContext,
 } from '../../../hooks/useSessionContext';
+import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import type { WebhookAuthMethod } from '../../../types/sessionContext';
 import type { Workflow } from '../../../types/workflow';
 import { Button } from '../../Button';
@@ -20,7 +21,8 @@ import { WizardBreadcrumb } from './WizardBreadcrumb';
 const codeInputClass = cn(
   'block w-full rounded-lg border border-gray-200 bg-white px-3 py-2',
   'text-sm text-slate-700',
-  'focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+  'focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
+  'disabled:cursor-not-allowed disabled:opacity-50'
 );
 
 type ResponseConfig = {
@@ -77,6 +79,7 @@ export function WebhookConfigureStep({
   const permissions = usePermissions();
   const { webhookAuthMethods } = useSessionContext();
   const { pushEvent } = useLiveViewActions();
+  const { isReadOnly } = useWorkflowReadOnly();
   const canWriteAuth = Boolean(permissions?.can_write_webhook_auth_method);
 
   // Both progressive-disclosure sections start collapsed (matching Figma 1.2.0)
@@ -155,6 +158,7 @@ export function WebhookConfigureStep({
         <div className="space-y-1">
           <ResponseTypeSelect
             value={draft.webhook_reply ?? 'before_start'}
+            disabled={isReadOnly}
             onChange={value => {
               mergeDraft({
                 webhook_reply: value,
@@ -202,6 +206,7 @@ export function WebhookConfigureStep({
                 onChange={setDraftAuthMethodIds}
                 onCreateNew={() => pushEvent('open_webhook_auth_modal', {})}
                 canCreate={canWriteAuth}
+                disabled={isReadOnly}
               />
             </div>
           )}
@@ -242,6 +247,7 @@ export function WebhookConfigureStep({
                     type="number"
                     inputMode="numeric"
                     placeholder="201"
+                    disabled={isReadOnly}
                     value={config?.success_code ?? ''}
                     onChange={e => {
                       const raw = e.target.value;
@@ -267,6 +273,7 @@ export function WebhookConfigureStep({
                     type="number"
                     inputMode="numeric"
                     placeholder="201"
+                    disabled={isReadOnly}
                     value={config?.error_code ?? ''}
                     onChange={e => {
                       const raw = e.target.value;

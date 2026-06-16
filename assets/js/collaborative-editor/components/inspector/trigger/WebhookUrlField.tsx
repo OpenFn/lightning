@@ -31,8 +31,8 @@ export function WebhookUrlField({
           border-gray-200 p-2"
       >
         <span
-          className="shrink-0 rounded bg-[#eafaf3] px-2 py-1 font-mono
-            text-[10px] font-medium leading-none text-[#006840]"
+          className="shrink-0 rounded bg-emerald-50 px-2 py-1 font-mono
+            text-[10px] font-medium leading-none text-emerald-700"
         >
           POST
         </span>

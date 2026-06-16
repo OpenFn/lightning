@@ -35,7 +35,7 @@ export function TriggerChooseStep({
   onChangeType,
   onNext,
 }: TriggerChooseStepProps) {
-  const title = type === 'cron' ? 'On a Schedule' : 'Kafka';
+  const title = type === 'cron' ? 'On a schedule' : 'Kafka';
 
   const footer = (
     <Button variant="primary" onClick={onNext} className="w-full">

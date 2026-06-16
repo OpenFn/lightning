@@ -20,8 +20,7 @@ interface TriggerInspectorProps {
  * TriggerInspector - Composition layer for trigger configuration.
  *
  * Dispatches by trigger type to a read-only "show / resting" panel, and hands
- * off to the unified {@link TriggerEditWizard} for editing (and for the future
- * typeless case, which has no show panel — the wizard starts at its picker).
+ * off to the unified {@link TriggerEditWizard} for editing.
  */
 export function TriggerInspector({
   trigger,
@@ -44,9 +43,10 @@ export function TriggerInspector({
     setEditFocus(undefined);
   }, [trigger.id]);
 
-  // A typeless trigger has no show panel; route it straight to the wizard,
-  // which starts at its picker so the user can choose a type.
-  if (view === 'edit' || !trigger.type) {
+  // The "edit" view is reachable only via a show panel's Edit button, which is
+  // already disabled when the user can't edit the workflow, so no extra
+  // permission gate is needed here.
+  if (view === 'edit') {
     return (
       <TriggerEditWizard
         trigger={trigger}

@@ -13,7 +13,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
-import { CronFieldBuilder } from '../../../../js/collaborative-editor/components/inspector/CronFieldBuilder';
+import { CronFieldBuilder } from '../../../../../js/collaborative-editor/components/inspector/trigger/CronFieldBuilder';
 
 // ---------------------------------------------------------------------------
 // Parsing

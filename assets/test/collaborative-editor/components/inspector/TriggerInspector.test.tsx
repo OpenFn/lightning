@@ -173,7 +173,7 @@ describe('TriggerInspector — show dispatch by type', () => {
       'cron trigger renders CronShowPanel',
       'cron',
       { enabled: true, cron_expression: '0 9 * * *' },
-      'On a Schedule',
+      'On a schedule',
     ],
     [
       'kafka trigger renders KafkaShowPanel',

@@ -5,6 +5,8 @@ import { TriggerSchema } from '#/collaborative-editor/types/trigger';
 import { useWorkflowActions } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
 
+import { sameIdSet } from './idSet';
+
 /**
  * Options for {@link useTriggerDraft}.
  */
@@ -46,13 +48,6 @@ export interface UseTriggerDraftResult {
    * the draft is invalid.
    */
   commit: () => Promise<{ ok: boolean }>;
-}
-
-/** Order-independent comparison of two id sets. */
-function sameIdSet(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false;
-  const setB = new Set(b);
-  return a.every(id => setB.has(id));
 }
 
 /**

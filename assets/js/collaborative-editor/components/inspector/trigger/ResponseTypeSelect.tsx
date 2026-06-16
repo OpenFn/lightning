@@ -17,6 +17,8 @@ interface ResponseTypeSelectProps {
   value: WebhookReply;
   /** Called with the newly selected value. */
   onChange: (value: WebhookReply) => void;
+  /** When true, the picker is read-only (matches read-only workflow gating). */
+  disabled?: boolean;
 }
 
 export interface ResponseTypeOption {
@@ -61,6 +63,7 @@ const OPTIONS: ResponseTypeOption[] = [IMMEDIATELY, ON_COMPLETE];
 export function ResponseTypeSelect({
   value,
   onChange,
+  disabled = false,
 }: ResponseTypeSelectProps) {
   const selected = OPTIONS.find(o => o.value === value) ?? IMMEDIATELY;
 
@@ -73,14 +76,15 @@ export function ResponseTypeSelect({
         Set when the webhook responds on receipt, or once the workflow finishes.
       </Description>
 
-      <Listbox value={value} onChange={onChange}>
+      <Listbox value={value} onChange={onChange} disabled={disabled}>
         <div className="relative pt-1">
           <ListboxButton
             className={cn(
               'flex h-9 w-full items-center justify-between gap-2 rounded-lg',
               'border border-gray-200 bg-white px-3 text-sm text-slate-700',
               'focus:outline-none focus-visible:border-indigo-500',
-              'focus-visible:ring-1 focus-visible:ring-indigo-500'
+              'focus-visible:ring-1 focus-visible:ring-indigo-500',
+              'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
             <span className="truncate">{selected.label}</span>

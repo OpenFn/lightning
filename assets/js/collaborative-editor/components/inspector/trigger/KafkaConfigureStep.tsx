@@ -38,7 +38,7 @@ const DEFAULT_KAFKA_CONFIG = (
 ).kafka_configuration;
 
 const inputClass = cn(
-  'block w-full rounded-md border border-slate-300 px-3 py-2 text-sm',
+  'block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm',
   'focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
   'disabled:cursor-not-allowed disabled:opacity-50'
 );
@@ -163,7 +163,7 @@ export function KafkaConfigureStep({
               checked={config.ssl || false}
               onChange={e => patchConfig({ ssl: e.target.checked })}
               disabled={isReadOnly}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-4 w-4 rounded border-gray-200 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <label
               htmlFor="kafka-ssl"

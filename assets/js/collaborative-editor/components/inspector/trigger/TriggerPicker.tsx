@@ -112,7 +112,7 @@ export function TriggerPicker({
           />
           <PickerRow
             icon="hero-clock"
-            title="On a Schedule"
+            title="On a schedule"
             description="Schedule workflows to run at specific intervals."
             onClick={() => pickDraftType('cron')}
           />

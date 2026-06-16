@@ -5,9 +5,9 @@ import {
   useWorkflowState,
 } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
-import { CronFieldBuilder } from '../CronFieldBuilder';
 import { InspectorLayout } from '../InspectorLayout';
 
+import { CronFieldBuilder } from './CronFieldBuilder';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
 import { WizardFinishFooter } from './WizardFinishFooter';
 
@@ -52,7 +52,7 @@ export function CronConfigureStep({
 
   return (
     <InspectorLayout
-      title="On a Schedule"
+      title="On a schedule"
       onClose={onClose}
       showBackButton
       onBack={onBack}

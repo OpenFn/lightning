@@ -10,6 +10,8 @@ import { cn } from '#/utils/cn';
 
 import type { WebhookAuthMethod } from '../../../types/sessionContext';
 
+import { sameIdSet } from './idSet';
+
 interface WebhookAuthMethodSelectProps {
   /** All webhook auth methods available in the project. */
   methods: WebhookAuthMethod[];
@@ -21,6 +23,8 @@ interface WebhookAuthMethodSelectProps {
   onCreateNew: () => void;
   /** Whether the user may create new auth methods. */
   canCreate: boolean;
+  /** When true, the picker is read-only (matches read-only workflow gating). */
+  disabled?: boolean;
 }
 
 /** A row may be unfilled (null) while the user is still picking a method. */
@@ -28,13 +32,6 @@ type Row = string | null;
 
 function authTypeLabel(method: WebhookAuthMethod): string {
   return method.auth_type === 'api' ? 'API Key' : 'Basic Auth';
-}
-
-/** Order-independent comparison of two id sets. */
-function sameIdSet(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false;
-  const setB = new Set(b);
-  return a.every(id => setB.has(id));
 }
 
 /**
@@ -53,6 +50,7 @@ export function WebhookAuthMethodSelect({
   onChange,
   onCreateNew,
   canCreate,
+  disabled = false,
 }: WebhookAuthMethodSelectProps) {
   // Seed one row per existing association, or a single empty row to pick into.
   const [rows, setRows] = useState<Row[]>(() =>
@@ -99,7 +97,8 @@ export function WebhookAuthMethodSelect({
 
   const hasEmptyRow = rows.includes(null);
   const allAttached = rows.filter(Boolean).length >= methods.length;
-  const canAddRow = methods.length > 0 && !hasEmptyRow && !allAttached;
+  const canAddRow =
+    !disabled && methods.length > 0 && !hasEmptyRow && !allAttached;
 
   // No methods exist in the project at all.
   if (methods.length === 0) {
@@ -112,7 +111,8 @@ export function WebhookAuthMethodSelect({
           <button
             type="button"
             onClick={onCreateNew}
-            className="link mt-1 text-sm font-medium"
+            disabled={disabled}
+            className="link mt-1 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             Create a new authentication method
           </button>
@@ -136,7 +136,11 @@ export function WebhookAuthMethodSelect({
             key={`${rowId ?? 'empty'}-${index}`}
             className="flex items-center gap-2"
           >
-            <Listbox value={rowId} onChange={id => setRow(index, id as string)}>
+            <Listbox
+              value={rowId}
+              onChange={id => setRow(index, id as string)}
+              disabled={disabled}
+            >
               <div className="relative flex-1">
                 <ListboxButton
                   aria-label={`Authentication credential ${index + 1}`}
@@ -145,6 +149,7 @@ export function WebhookAuthMethodSelect({
                     'border border-gray-200 bg-white px-3 text-sm',
                     'focus:outline-none focus-visible:border-indigo-500',
                     'focus-visible:ring-1 focus-visible:ring-indigo-500',
+                    'disabled:cursor-not-allowed disabled:opacity-50',
                     selected ? 'text-slate-700' : 'text-slate-400'
                   )}
                 >
@@ -192,11 +197,13 @@ export function WebhookAuthMethodSelect({
             <button
               type="button"
               onClick={() => removeRow(index)}
+              disabled={disabled}
               aria-label={`Remove credential ${index + 1}`}
               className={cn(
                 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
                 'text-slate-400 hover:bg-gray-100 hover:text-slate-600',
-                'focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500'
+                'focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500',
+                'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
               <span className="hero-trash-mini h-4 w-4" />
@@ -224,7 +231,8 @@ export function WebhookAuthMethodSelect({
           <button
             type="button"
             onClick={onCreateNew}
-            className="link text-sm font-medium"
+            disabled={disabled}
+            className="link text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             Create a new authentication method
           </button>

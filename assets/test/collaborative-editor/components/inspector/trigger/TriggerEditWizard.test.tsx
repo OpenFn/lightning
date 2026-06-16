@@ -441,7 +441,7 @@ describe('TriggerEditWizard — cron', () => {
 
       // Choose step is the landing screen.
       expect(
-        screen.getByRole('heading', { name: 'On a Schedule' })
+        screen.getByRole('heading', { name: 'On a schedule' })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'Change' })
@@ -656,7 +656,7 @@ describe('TriggerEditWizard — type switching via picker', () => {
 
     // Should be on Choose step for cron now.
     expect(
-      screen.getByRole('heading', { name: 'On a Schedule' })
+      screen.getByRole('heading', { name: 'On a schedule' })
     ).toBeInTheDocument();
   });
 });

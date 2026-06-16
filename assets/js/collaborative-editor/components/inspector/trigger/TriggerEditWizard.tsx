@@ -84,12 +84,9 @@ export function TriggerEditWizard({
         }
   );
 
-  // Initial step: a typed trigger rests on Choose (or jumps straight to
-  // Configure on a deep-link); a future typeless trigger has no type yet, so it
-  // must pick one first via the picker.
-  const [step, setStep] = useState<Step>(
-    trigger.type ? (initialFocus ? 'configure' : 'choose') : 'picker'
-  );
+  // Initial step: rest on Choose, or jump straight to Configure on a deep-link.
+  // (The picker is still reachable mid-flow via the "Change" button.)
+  const [step, setStep] = useState<Step>(initialFocus ? 'configure' : 'choose');
 
   const finish = useCallback(async () => {
     const result = await commit();
