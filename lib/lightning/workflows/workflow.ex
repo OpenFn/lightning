@@ -44,6 +44,7 @@ defmodule Lightning.Workflows.Workflow do
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
+    field :state, Ecto.Enum, values: [:draft, :live], default: :draft
 
     # the ordering of edges, triggers and jobs are intentional
     # ecto reverses the relations when inserting. so jobs->triggers->edges
