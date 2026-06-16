@@ -25,6 +25,12 @@ and this project adheres to
 
 ### Changed
 
+- On Linux, database connections now fail fast when their network path dies
+  (e.g. a TCP reset during a node-pool upgrade) instead of blocking on a dead
+  socket for up to ~15 minutes. `DATABASE_TCP_USER_TIMEOUT` (ms) defaults to
+  `DATABASE_TIMEOUT + 5s`; set it to `0` to restore the previous behaviour. No
+  effect on non-Linux platforms.
+  [#4855](https://github.com/OpenFn/lightning/pull/4855)
 - Consolidate email format validation onto a single canonical validator (Zod v4
   regex) applied uniformly across user creation, credential transfer, and both
   collaborator add/invite flows. Fixes a silent inconsistency where

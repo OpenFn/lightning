@@ -127,6 +127,124 @@ defmodule Lightning.Config.BootstrapTest do
       assert endpoint_idle_timeout() == 75_000
     end
 
+    test "Repo socket options (tcp_user_timeout, IPv6)" do
+      # tcp_user_timeout is a Linux-only raw socket option; assert its presence
+      # only where it is actually applied.
+      linux? = match?({:unix, :linux}, :os.type())
+
+      # default: tcp_user_timeout defaults to DATABASE_TIMEOUT + 5s on Linux
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      default_opts = repo_opt(:socket_options)
+
+      if linux? do
+        assert {:raw, 6, 18, <<20_000::32-native>>} in default_opts
+      else
+        assert default_opts == []
+      end
+
+      # the default tracks an overridden DATABASE_TIMEOUT
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DATABASE_TIMEOUT" => "30000"
+      })
+
+      if linux? do
+        assert {:raw, 6, 18, <<35_000::32-native>>} in repo_opt(:socket_options)
+      end
+
+      # explicit override
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DATABASE_TCP_USER_TIMEOUT" => "25000"
+      })
+
+      override_opts = repo_opt(:socket_options)
+
+      if linux? do
+        assert {:raw, 6, 18, <<25_000::32-native>>} in override_opts
+      end
+
+      # the prod block also sets socket_options for the IPv6 toggle; it appends
+      # the resilience options rather than clobbering them, so ECTO_IPV6 and the
+      # tcp_user_timeout option must coexist
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "ECTO_IPV6" => "true"
+      })
+
+      ipv6_opts = repo_opt(:socket_options)
+      assert :inet6 in ipv6_opts
+
+      if linux? do
+        assert {:raw, 6, 18, <<20_000::32-native>>} in ipv6_opts
+      end
+
+      # 0, or any non-positive value, disables the socket timeout entirely
+      # rather than wrapping into a nonsensical unsigned value
+      for disabled <- ["0", "-1"] do
+        reconfigure(%{
+          "SECRET_KEY_BASE" => "Foo",
+          "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+          "DATABASE_TCP_USER_TIMEOUT" => disabled
+        })
+
+        refute Enum.any?(
+                 repo_opt(:socket_options),
+                 &match?({:raw, 6, 18, _}, &1)
+               )
+      end
+    end
+
+    test "warns when DATABASE_TCP_USER_TIMEOUT is below DATABASE_TIMEOUT" do
+      low =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => "5000"
+          })
+        end)
+
+      assert low =~ "DATABASE_TCP_USER_TIMEOUT"
+
+      ok =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => "20000"
+          })
+        end)
+
+      refute ok =~ "DATABASE_TCP_USER_TIMEOUT"
+    end
+
+    test "Repo SSL is on by default and disabled by DISABLE_DB_SSL" do
+      # SSL defaults on for managed Postgres; DISABLE_DB_SSL opts out
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      assert repo_opt(:ssl) == true
+      assert repo_opt(:ssl_opts) == [verify: :verify_none]
+
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      assert repo_opt(:ssl) == false
+    end
+
     test "prod endpoint URL defaults" do
       reconfigure(%{
         "SECRET_KEY_BASE" => "Foo",
@@ -949,6 +1067,12 @@ defmodule Lightning.Config.BootstrapTest do
       {_, value} -> value
       nil -> nil
     end
+  end
+
+  defp repo_opt(key) do
+    :lightning
+    |> get_env(Lightning.Repo)
+    |> Keyword.get(key)
   end
 
   defp reconfigure(envs) do
