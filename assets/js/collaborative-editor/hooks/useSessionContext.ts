@@ -45,6 +45,7 @@ import type {
   UserContext,
   WorkflowTemplate,
 } from '../types/sessionContext';
+import type { BaseWorkflow } from '../types/workflow';
 
 /**
  * Main hook for accessing the SessionContextStore instance
@@ -153,6 +154,20 @@ export const usePermissions = (): Permissions | null => {
   );
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
+};
+
+/**
+ * Hook to get the session-context workflow, which carries the lifecycle
+ * `state` (`draft` | `live`). Returns null if not loaded yet.
+ */
+export const useSessionWorkflow = (): BaseWorkflow | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectWorkflow = sessionContextStore.withSelector(
+    state => state.workflow
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectWorkflow);
 };
 
 /**

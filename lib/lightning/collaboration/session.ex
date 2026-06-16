@@ -226,6 +226,23 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @doc """
+  Transitions the workflow's lifecycle state and persists it with the current
+  document in a single save: going live enables triggers and sets `:live`,
+  switching to draft disables triggers and sets `:draft`. Atomic and
+  self-consistent with the collaborative document.
+  """
+  @spec set_workflow_state(pid(), Lightning.Accounts.User.t(), :draft | :live) ::
+          {:ok, Lightning.Workflows.Workflow.t()} | {:error, term()}
+  def set_workflow_state(session_pid, user, target_state)
+      when target_state in [:draft, :live] do
+    GenServer.call(
+      session_pid,
+      {:set_workflow_state, target_state, user},
+      10_000
+    )
+  end
+
+  @doc """
   Resets the workflow document to the latest snapshot from the database.
 
   This operation:
@@ -309,85 +326,13 @@ defmodule Lightning.Collaboration.Session do
 
   @impl true
   def handle_call({:save_workflow, user}, _from, state) do
-    Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
+    do_save_workflow(state, user, :save)
+  end
 
-    with {:ok, doc} <- get_document(state),
-         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
-         {:ok, workflow, _kind} <-
-           WorkflowResolver.resolve(state.workflow.id, :new,
-             project: %Project{id: state.workflow.project_id}
-           ),
-         changeset <-
-           Lightning.Workflows.change_workflow(workflow, workflow_data),
-         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
-         {:ok, saved_workflow} <-
-           Lightning.Workflows.save_workflow(changeset, user,
-             skip_reconcile: true
-           ),
-         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
-         {:ok, _job_cleanup_count} <-
-           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow),
-         {:ok, _workflow_cleanup_count} <-
-           Lightning.AiAssistant.cleanup_unsaved_workflow_sessions(
-             saved_workflow
-           ) do
-      Logger.info("Successfully saved workflow #{state.workflow.id}")
-      {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
-    else
-      {:error, :no_shared_doc} ->
-        Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
-        {:reply, {:error, :internal_error}, state}
-
-      # Unreachable in practice (the persisted row always shares the seed's
-      # project_id), but the resolver can return :wrong_project given a :project
-      # opt, so guard against a WithClauseError.
-      {:error, :wrong_project} ->
-        Logger.error(
-          "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
-        )
-
-        {:reply, {:error, :internal_error}, state}
-
-      {:error, :deserialization_failed, reason} ->
-        Logger.error(
-          "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
-        )
-
-        {:reply, {:error, :deserialization_failed}, state}
-
-      {:error, _, %Lightning.Extensions.Message{} = message} ->
-        {:reply, {:error, message}, state}
-
-      {:error, :workflow_deleted} ->
-        Logger.warning(
-          "Cannot save workflow #{state.workflow.id}: workflow deleted"
-        )
-
-        {:reply, {:error, :workflow_deleted}, state}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        all_errors =
-          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-              opts
-              |> Keyword.get(String.to_existing_atom(key), key)
-              |> to_string()
-            end)
-          end)
-
-        Logger.warning(fn ->
-          """
-          Failed to save workflow #{state.workflow.id}
-          Top-level errors: #{inspect(changeset.errors)}
-          All validation errors: #{inspect(all_errors)}
-          """
-        end)
-
-        # Write validation errors to Y.Doc
-        write_validation_errors_to_ydoc(state, changeset)
-
-        {:reply, {:error, changeset}, state}
-    end
+  @impl true
+  def handle_call({:set_workflow_state, target_state, user}, _from, state)
+      when target_state in [:draft, :live] do
+    do_save_workflow(state, user, {:set_state, target_state})
   end
 
   @impl true
@@ -482,6 +427,109 @@ defmodule Lightning.Collaboration.Session do
 
   defp get_document(%{shared_doc_pid: pid}) do
     {:ok, SharedDoc.get_doc(pid)}
+  end
+
+  # Shared persistence pipeline for plain saves and lifecycle transitions.
+  # `mode` is `:save` (persist the Y.Doc as-is) or `{:set_state, state}` (also
+  # flip the lifecycle state and trigger enablement in the same transaction).
+  # Going live and switching to draft reuse this path so they stay atomic and
+  # self-consistent with the collaborative document (one save, one Y.Doc merge).
+  defp do_save_workflow(state, user, mode) do
+    Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
+
+    with {:ok, doc} <- get_document(state),
+         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
+         {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
+         changeset <-
+           workflow
+           |> Lightning.Workflows.change_workflow(workflow_data)
+           |> apply_state_transition(mode),
+         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
+         {:ok, saved_workflow} <-
+           Lightning.Workflows.save_workflow(changeset, user,
+             skip_reconcile: true
+           ),
+         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
+         {:ok, _job_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow),
+         {:ok, _workflow_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_workflow_sessions(
+             saved_workflow
+           ) do
+      Logger.info("Successfully saved workflow #{state.workflow.id}")
+      {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
+    else
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+
+      # Unreachable in practice (the persisted row always shares the seed's
+      # project_id), but the resolver can return :wrong_project given a :project
+      # opt, so guard against a WithClauseError.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
+      {:error, :deserialization_failed, reason} ->
+        Logger.error(
+          "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
+        )
+
+        {:reply, {:error, :deserialization_failed}, state}
+
+      {:error, _, %Lightning.Extensions.Message{} = message} ->
+        {:reply, {:error, message}, state}
+
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot save workflow #{state.workflow.id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        all_errors =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+              opts
+              |> Keyword.get(String.to_existing_atom(key), key)
+              |> to_string()
+            end)
+          end)
+
+        Logger.warning(fn ->
+          """
+          Failed to save workflow #{state.workflow.id}
+          Top-level errors: #{inspect(changeset.errors)}
+          All validation errors: #{inspect(all_errors)}
+          """
+        end)
+
+        # Write validation errors to Y.Doc
+        write_validation_errors_to_ydoc(state, changeset)
+
+        {:reply, {:error, changeset}, state}
+    end
+  end
+
+  defp apply_state_transition(changeset, :save), do: changeset
+
+  defp apply_state_transition(changeset, {:set_state, :live}) do
+    changeset
+    |> Lightning.Workflows.update_triggers_enabled_state(true)
+    |> Ecto.Changeset.put_change(:state, :live)
+  end
+
+  defp apply_state_transition(changeset, {:set_state, :draft}) do
+    changeset
+    |> Lightning.Workflows.update_triggers_enabled_state(false)
+    |> Ecto.Changeset.put_change(:state, :draft)
   end
 
   defp deserialize_workflow(doc, workflow_id) do

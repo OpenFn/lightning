@@ -1,5 +1,6 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useContext, useState } from 'react';
+import { toast } from 'sonner';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -14,6 +15,7 @@ import {
   useIsNewWorkflow,
   useLimits,
   useProjectRepoConnection,
+  useSessionWorkflow,
 } from '../hooks/useSessionContext';
 import {
   useImportPanelState,
@@ -38,6 +40,7 @@ import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
+import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
@@ -216,7 +219,7 @@ export function Header({
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
-  const { saveWorkflow } = useWorkflowActions();
+  const { saveWorkflow, goLive, switchToDraft } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const jobs = useWorkflowState(state => state.jobs);
@@ -235,6 +238,10 @@ export function Header({
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const sessionWorkflow = useSessionWorkflow();
+  const lifecycleState = sessionWorkflow?.state;
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -538,6 +545,52 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
+              {lifecycleState && !isNewWorkflow && (
+                <span
+                  data-testid="workflow-lifecycle-badge"
+                  className={
+                    'self-center rounded-md px-2 py-1 text-xs font-medium ' +
+                    (lifecycleState === 'live'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700')
+                  }
+                >
+                  {lifecycleState === 'live' ? 'Live' : 'Draft'}
+                </span>
+              )}
+              {!isNewWorkflow && lifecycleState === 'draft' && (
+                <button
+                  type="button"
+                  data-testid="go-live-button"
+                  disabled={isReadOnly || isTransitioning}
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    void goLive()
+                      .catch(() =>
+                        toast.error('Could not go live. Please try again.')
+                      )
+                      .finally(() => {
+                        setIsTransitioning(false);
+                      });
+                  }}
+                  className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Go live
+                </button>
+              )}
+              {!isNewWorkflow && lifecycleState === 'live' && (
+                <button
+                  type="button"
+                  data-testid="switch-to-draft-button"
+                  disabled={isTransitioning}
+                  onClick={() => {
+                    setShowSwitchToDraftDialog(true);
+                  }}
+                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Switch to draft
+                </button>
+              )}
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
                 <NewRunButton
                   onClick={() => {
@@ -605,6 +658,28 @@ export function Header({
           />
 
           <GitHubSyncModal />
+
+          <AlertDialog
+            isOpen={showSwitchToDraftDialog}
+            onClose={() => {
+              setShowSwitchToDraftDialog(false);
+            }}
+            onConfirm={() => {
+              setShowSwitchToDraftDialog(false);
+              setIsTransitioning(true);
+              void switchToDraft()
+                .catch(() =>
+                  toast.error('Could not switch to draft. Please try again.')
+                )
+                .finally(() => {
+                  setIsTransitioning(false);
+                });
+            }}
+            title="Switch to draft?"
+            description="This will stop the workflow from processing data."
+            confirmLabel="Switch to draft"
+            variant="danger"
+          />
         </div>
       </div>
     </>

@@ -786,6 +786,20 @@ defmodule Lightning.SessionTest do
       assert saved_from_db.lock_version == workflow.lock_version + 1
     end
 
+    test "set_workflow_state/3 transitions :live then back to :draft", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      assert {:ok, live} = Session.set_workflow_state(session, user, :live)
+      assert live.state == :live
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+
+      assert {:ok, draft} = Session.set_workflow_state(session, user, :draft)
+      assert draft.state == :draft
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
     test "handles validation errors", %{session: session, user: user} do
       # Set invalid data in Y.Doc (blank name)
       doc = Session.get_doc(session)
