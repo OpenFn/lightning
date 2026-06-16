@@ -591,17 +591,23 @@ export function Header({
                   Switch to draft
                 </button>
               )}
-              {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
-                <NewRunButton
-                  onClick={() => {
-                    void (isRetryable ? handleRetryClick() : handleRunClick());
-                  }}
-                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                  isRunning={isSubmitting || runIsProcessing}
-                  text={isRetryable ? 'Run (Retry)' : 'Run'}
-                />
-              )}
+              {projectId &&
+                workflowId &&
+                firstTriggerId &&
+                !isNewWorkflow &&
+                !isReadOnly && (
+                  <NewRunButton
+                    onClick={() => {
+                      void (isRetryable
+                        ? handleRetryClick()
+                        : handleRunClick());
+                    }}
+                    onRunWithCustomInputClick={handleRunWithCustomInputClick}
+                    disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                    isRunning={isSubmitting || runIsProcessing}
+                    text={isRetryable ? 'Run (Retry)' : 'Run'}
+                  />
+                )}
               <SaveButton
                 canSave={
                   canSave &&
