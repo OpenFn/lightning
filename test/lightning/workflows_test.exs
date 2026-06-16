@@ -12,6 +12,43 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.Triggers.Events
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
+  describe "go_live/2 and switch_to_draft/2" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "go_live sets state to :live and enables triggers", %{user: user} do
+      {:ok, workflow} =
+        insert(:simple_workflow)
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Ecto.Changeset.put_change(:state, :draft)
+        |> Workflows.save_workflow(user)
+
+      assert workflow.state == :draft
+
+      {:ok, live} = Workflows.go_live(workflow, user)
+
+      assert live.state == :live
+
+      assert Repo.preload(live, :triggers, force: true).triggers
+             |> Enum.all?(& &1.enabled)
+    end
+
+    test "switch_to_draft sets state to :draft and disables triggers", %{
+      user: user
+    } do
+      {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+      assert live.state == :live
+
+      {:ok, draft} = Workflows.switch_to_draft(live, user)
+
+      assert draft.state == :draft
+
+      refute Repo.preload(draft, :triggers, force: true).triggers
+             |> Enum.any?(& &1.enabled)
+    end
+  end
+
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
       workflow = insert(:workflow)
