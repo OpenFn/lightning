@@ -14,8 +14,9 @@ defmodule Lightning.AuthProviders do
   Returns a human-friendly name for a provider, e.g. `"github"` -> `"GitHub"`.
   """
   @spec display_name(provider :: String.t()) :: String.t()
+  # Explicit clauses needed for providers whose correct name has mid-word
+  # capitalisation that String.capitalize/1 can't produce.
   def display_name("github"), do: "GitHub"
-  def display_name("google"), do: "Google"
   def display_name(provider), do: String.capitalize(provider)
 
   @spec get_existing() :: AuthConfig.t() | nil
