@@ -795,7 +795,7 @@ defmodule LightningWeb.OidcControllerTest do
       html = html_response(conn, 200)
       assert html =~ "Create your account"
       assert html =~ "new@example.com"
-      assert html =~ "Github"
+      assert html =~ "GitHub"
       assert html =~ "Pat Doe"
     end
 
