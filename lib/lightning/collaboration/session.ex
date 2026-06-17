@@ -466,9 +466,11 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
 
-      # Unreachable in practice (the persisted row always shares the seed's
-      # project_id), but the resolver can return :wrong_project given a :project
-      # opt, so guard against a WithClauseError.
+      # coveralls-ignore-start
+      # Defensive branches: :wrong_project is unreachable in practice (the
+      # persisted row always shares the seed's project_id) and only guards a
+      # WithClauseError; :deserialization_failed is a catch-all rescue. Neither
+      # is meaningfully triggerable from a unit test.
       {:error, :wrong_project} ->
         Logger.error(
           "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
@@ -482,6 +484,8 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :deserialization_failed}, state}
+
+      # coveralls-ignore-stop
 
       {:error, _, %Lightning.Extensions.Message{} = message} ->
         {:reply, {:error, message}, state}

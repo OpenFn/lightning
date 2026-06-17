@@ -810,6 +810,23 @@ defmodule Lightning.SessionTest do
                Session.set_workflow_state(session, user, :live)
     end
 
+    test "surfaces interpolated changeset errors", %{
+      session: session,
+      user: user
+    } do
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      # concurrency < 1 fails validate_number, whose message interpolates
+      # "%{number}", exercising the error-formatting path.
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "concurrency", 0)
+      end)
+
+      assert {:error, changeset} = Session.save_workflow(session, user)
+      assert changeset.errors[:concurrency]
+    end
+
     test "handles validation errors", %{session: session, user: user} do
       # Set invalid data in Y.Doc (blank name)
       doc = Session.get_doc(session)
