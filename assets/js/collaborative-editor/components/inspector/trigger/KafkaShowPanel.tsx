@@ -19,7 +19,7 @@ const SASL_LABELS: Record<string, string> = {
 };
 
 /**
- * Read-only "show / resting" panel for a configured kafka trigger (#4787).
+ * Read-only "show / resting" panel for a configured kafka trigger.
  *
  * Renders inside {@link InspectorLayout}: the green "Kafka" badge, then a flat
  * set of read-only summary fields (Hosts, Topics, SSL on/off, Authentication =

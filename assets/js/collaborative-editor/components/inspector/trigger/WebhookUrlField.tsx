@@ -11,8 +11,8 @@ interface WebhookUrlFieldProps {
  * Read-only "Webhook URL" field shared by the show panel and the Choose step.
  *
  * Renders the full ingest URL (wrapping, not truncated) with a POST method pill
- * and a copy-icon button, matching the trigger-flow design. Webhook endpoints
- * receive POST requests, so the method tag is POST.
+ * and a copy-icon button. Webhook endpoints receive POST requests, so the
+ * method tag is POST.
  */
 export function WebhookUrlField({
   url,

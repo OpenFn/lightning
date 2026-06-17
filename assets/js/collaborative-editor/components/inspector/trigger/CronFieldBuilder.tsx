@@ -42,7 +42,6 @@ export function CronFieldBuilder({
   disabled = false,
   className = '',
 }: CronFieldBuilderProps) {
-  // Parse initial cron expression to determine frequency and field values
   const parseCronExpression = (expr: string): CronData => {
     if (!expr) {
       return {
@@ -209,7 +208,6 @@ export function CronFieldBuilder({
     }
   }, [cronData.frequency]);
 
-  // Build cron expression from current state
   const buildCronExpression = (data: CronData): string => {
     switch (data.frequency) {
       case 'every_n_minutes':
@@ -242,7 +240,6 @@ export function CronFieldBuilder({
     }
   };
 
-  // Update a field and rebuild expression
   const updateField = (
     field: keyof CronData,
     fieldValue: string | string[] | CronData['frequency']
@@ -260,7 +257,6 @@ export function CronFieldBuilder({
     onChange(newExpression);
   };
 
-  // Generate options
   const minuteOptions = useMemo(
     () => Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')),
     []
@@ -277,7 +273,6 @@ export function CronFieldBuilder({
     []
   );
 
-  // Base select styling with disabled states
   const selectClassName =
     'block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50';
 

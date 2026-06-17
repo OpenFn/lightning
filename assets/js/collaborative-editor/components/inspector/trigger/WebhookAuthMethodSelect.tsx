@@ -35,8 +35,8 @@ function authTypeLabel(method: WebhookAuthMethod): string {
 }
 
 /**
- * Credential picker for the webhook Configure step's Authentication section
- * (Figma 1.2.2). Renders one row per attached auth method; each row is a
+ * Credential picker for the webhook Configure step's Authentication section.
+ * Renders one row per attached auth method; each row is a
  * single-select dropdown of the project's methods. "Add" appends an empty row
  * so more than one method can be attached, and a "Create a new authentication
  * method" link at the bottom opens the create flow.
@@ -100,7 +100,6 @@ export function WebhookAuthMethodSelect({
   const canAddRow =
     !disabled && methods.length > 0 && !hasEmptyRow && !allAttached;
 
-  // No methods exist in the project at all.
   if (methods.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-gray-200 p-4 text-center">

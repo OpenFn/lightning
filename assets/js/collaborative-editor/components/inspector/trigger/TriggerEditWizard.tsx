@@ -30,9 +30,8 @@ interface TriggerEditWizardProps {
 type Step = 'choose' | 'picker' | 'configure';
 
 /**
- * Type-agnostic trigger edit wizard (#4787). Merges the former per-type
- * `WebhookEditWizard` and `CronEditWizard` into a single shell that dispatches
- * its Choose and Configure steps by `draft.type`, and adds the kafka path.
+ * Type-agnostic trigger edit wizard: a single shell that dispatches its Choose
+ * and Configure steps by `draft.type`, covering webhook, cron, and kafka.
  *
  * Owns the edit session: a local draft seeded from the current trigger
  * (`useTriggerDraft`), the step state machine, and the Cancel/Back/Finish

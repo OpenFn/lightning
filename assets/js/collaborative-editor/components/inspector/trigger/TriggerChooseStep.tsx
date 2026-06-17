@@ -23,7 +23,7 @@ interface TriggerChooseStepProps {
   /** Advance to the Configure step (Next). */
   onNext: () => void;
   /**
-   * Exit the wizard via the header back arrow. Used by cron/kafka, whose Figma
+   * Exit the wizard via the header back arrow. Used by cron/kafka, whose
    * design has a header arrow rather than a footer Cancel. Mutually exclusive
    * with `onCancel` (webhook).
    */
@@ -42,7 +42,7 @@ interface TriggerChooseStepProps {
 }
 
 /**
- * The wizard's "Choose" step for every trigger type (#4787). Shows the current
+ * The wizard's "Choose" step for every trigger type. Shows the current
  * type badge with a **Change** action into the picker, then (webhook only) the
  * read-only ingest URL. Two exit shapes, by type: webhook uses a footer
  * **Cancel** (`onCancel`), cron/kafka use a header back arrow (`onBack`) — the

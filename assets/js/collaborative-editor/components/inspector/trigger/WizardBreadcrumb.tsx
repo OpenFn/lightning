@@ -17,8 +17,7 @@ interface WizardBreadcrumbProps {
  * Renders the `Choose › Configure` breadcrumb for the webhook edit wizard. The
  * active step is emphasised (bold) while the inactive step is muted. When
  * `onNavigate` is provided, the already-visited "Choose" crumb becomes a button
- * that returns to that step (the Figma design has no header back arrow). The
- * Figma "Test" step is out of scope and intentionally omitted.
+ * that returns to that step.
  */
 export function WizardBreadcrumb({ step, onNavigate }: WizardBreadcrumbProps) {
   // "Choose" is navigable only when we're past it (on Configure).

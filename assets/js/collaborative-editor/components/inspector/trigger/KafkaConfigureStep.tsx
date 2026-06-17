@@ -44,8 +44,7 @@ const inputClass = cn(
 );
 
 /**
- * The kafka wizard's "Configure" step (#4787). A full-fidelity port of the
- * legacy `TriggerForm` kafka branch, but bound entirely to the local DRAFT via
+ * The kafka wizard's "Configure" step, bound entirely to the local DRAFT via
  * `mergeDraft` (no TanStack form, no live `updateTrigger`); nothing is persisted
  * until Finish.
  *

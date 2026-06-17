@@ -35,9 +35,9 @@ export interface UseWebhookTriggerResult {
 }
 
 /**
- * Shared webhook-trigger logic, extracted from `TriggerForm` so the read-only
- * show panel and the edit wizard's Configure step can rely on a single source
- * of truth rather than duplicating the webhook field logic.
+ * Shared webhook-trigger logic so the read-only show panel and the edit
+ * wizard's Configure step rely on a single source of truth rather than
+ * duplicating the webhook field logic.
  *
  * Responsibilities:
  * - Derive the webhook ingest URL and expose copy-to-clipboard helpers.
@@ -57,7 +57,6 @@ export function useWebhookTrigger(
   const { provider } = useSession();
   const channel = provider?.channel;
 
-  // Get active trigger auth methods from workflow store
   const activeTriggerAuthMethods = useWorkflowState(
     state => state.activeTriggerAuthMethods
   );
@@ -73,7 +72,6 @@ export function useWebhookTrigger(
     }
   }, [trigger.type, trigger.id, requestTriggerAuthMethods]);
 
-  // Derive auth methods / loading state for this trigger
   const triggerAuthMethods =
     activeTriggerAuthMethods?.trigger_id === trigger.id
       ? (activeTriggerAuthMethods.webhook_auth_methods as WebhookAuthMethod[])
@@ -82,13 +80,11 @@ export function useWebhookTrigger(
     activeTriggerAuthMethods === null ||
     activeTriggerAuthMethods.trigger_id !== trigger.id;
 
-  // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(
     `/i/${trigger.id}`,
     window.location.origin
   ).toString();
 
-  // Persist the given auth-method id set via the channel.
   const commitAuthMethods = useCallback(
     async (ids: string[]) => {
       if (!channel || !trigger.id) {

@@ -2,7 +2,7 @@
  * Green trigger-type pill shown on the show panel and the wizard's Choose step.
  * Kept tiny and presentational so every call site renders an identical badge.
  *
- * - webhook → globe icon + "Webhook" (default, for back-compat)
+ * - webhook → globe icon + "Webhook"
  * - cron    → clock icon + "Schedule / Cron"
  * - kafka   → queue-list icon + "Kafka"
  */

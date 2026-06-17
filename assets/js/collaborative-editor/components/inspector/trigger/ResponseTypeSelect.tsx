@@ -55,10 +55,8 @@ const OPTIONS: ResponseTypeOption[] = [IMMEDIATELY, ON_COMPLETE];
  *
  * A native `<select>` cannot render a description beneath each choice, so this
  * uses a Headless UI {@link Listbox} (mirroring {@link JobSelector}) to show the
- * rich "title + description" options from the trigger-flow Figma. Colors bridge
- * the future theme onto existing app tokens (gray borders, slate text). The
- * label is rendered here and wired to the button via `aria-labelledby` so it
- * stays a single "input with label" unit.
+ * rich "title + description" options. The label is rendered here and wired to
+ * the button via `aria-labelledby` so it stays a single "input with label" unit.
  */
 export function ResponseTypeSelect({
   value,

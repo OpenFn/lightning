@@ -27,12 +27,12 @@ interface CronConfigureStepProps {
 }
 
 /**
- * The cron wizard's "Configure" step (#4787). Binds entirely to the local
+ * The cron wizard's "Configure" step. Binds entirely to the local
  * DRAFT: the {@link CronFieldBuilder} frequency dropdown writes the compiled
  * 5-field cron string into `draft.cron_expression` via `mergeDraft`; nothing is
  * persisted until Finish.
  *
- * Below the schedule (per user; not in the Figma) is the legacy "Cron Input
+ * Below the schedule is the legacy "Cron Input
  * Source" select bound to `draft.cron_cursor_job_id`.
  */
 export function CronConfigureStep({
@@ -81,8 +81,6 @@ export function CronConfigureStep({
           />
         </div>
 
-        {/* Cron Input Source (per user; not in Figma). Mirrors the legacy
-            TriggerForm control, lighter styling. */}
         <div className="space-y-1">
           <label
             htmlFor="cron-cursor-job"

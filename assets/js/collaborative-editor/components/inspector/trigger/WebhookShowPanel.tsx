@@ -37,7 +37,7 @@ const readOnlyCodeInputClass =
   'text-sm text-slate-500';
 
 /**
- * Read-only "show / resting" panel for a configured webhook trigger (#4797).
+ * Read-only "show / resting" panel for a configured webhook trigger.
  *
  * Renders inside {@link InspectorLayout} with no footer. Surfaces the webhook
  * URL (with copy), the configured authentication methods (or a placeholder +
@@ -61,8 +61,6 @@ export function WebhookShowPanel({
     loadingAuthMethods,
   } = useWebhookTrigger(trigger);
 
-  // Both sections are collapsible (mirroring the Configure step); collapsed by
-  // default, so the resting panel stays compact.
   const [authExpanded, setAuthExpanded] = useState(false);
   const [responseExpanded, setResponseExpanded] = useState(false);
 

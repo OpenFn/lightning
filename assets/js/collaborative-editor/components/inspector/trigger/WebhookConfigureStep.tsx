@@ -60,8 +60,7 @@ function hasResponseConfig(config: ResponseConfig): boolean {
 /**
  * The wizard's "Configure" step. Binds entirely to the local DRAFT — every
  * change calls `mergeDraft` / `setDraftAuthMethodIds`; nothing is persisted
- * until Finish. Mirrors the Response Type, Authentication, and Response Options
- * behaviour of the legacy `TriggerForm` webhook branch.
+ * until Finish.
  */
 export function WebhookConfigureStep({
   draft,
@@ -81,8 +80,6 @@ export function WebhookConfigureStep({
   const { isReadOnly } = useWorkflowReadOnly();
   const canWriteAuth = Boolean(permissions?.can_write_webhook_auth_method);
 
-  // Both progressive-disclosure sections start collapsed (matching Figma 1.2.0)
-  // unless the user deep-linked into one via a show-panel link.
   const [authExpanded, setAuthExpanded] = useState(
     initialExpand === 'authentication'
   );

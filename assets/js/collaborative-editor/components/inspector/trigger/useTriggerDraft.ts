@@ -151,7 +151,6 @@ export function useTriggerDraft(
     return triggerChanged || authIdsChanged;
   }, [draft, authIdsChanged]);
 
-  // Live validation of the draft against the trigger schema.
   const validationError = useMemo(() => {
     const result = TriggerSchema.safeParse(draft);
     if (result.success) return null;

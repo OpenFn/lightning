@@ -15,7 +15,7 @@ interface CronShowPanelProps {
 }
 
 /**
- * Read-only "show / resting" panel for a configured cron trigger (#4787).
+ * Read-only "show / resting" panel for a configured cron trigger.
  *
  * Renders inside {@link InspectorLayout}: the green "Schedule / Cron" badge, a
  * **Frequency** label + a read-only box with the humanized schedule, and a
