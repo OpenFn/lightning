@@ -800,6 +800,16 @@ defmodule Lightning.SessionTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "set_workflow_state returns an internal error with no shared doc", %{
+      session: session,
+      user: user
+    } do
+      GenServer.call(session, :stop_shared_doc)
+
+      assert {:error, :internal_error} =
+               Session.set_workflow_state(session, user, :live)
+    end
+
     test "handles validation errors", %{session: session, user: user} do
       # Set invalid data in Y.Doc (blank name)
       doc = Session.get_doc(session)
