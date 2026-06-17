@@ -50,6 +50,7 @@ export const BaseWorkflowSchema = z.object({
   name: z.string().min(1).max(255),
   concurrency: z.number().nullable().optional(),
   enable_job_logs: z.boolean().default(false),
+  state: z.enum(['draft', 'live']).optional(),
 });
 
 export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;

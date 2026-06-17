@@ -528,6 +528,25 @@ export const useWorkflowActions = () => {
       return wrappedSaveWorkflow;
     })(),
 
+    // Lifecycle transitions. After the server flips the state and reconciles
+    // the document, re-fetch the session context so the new state and edit
+    // permissions (a live workflow is read-only on main) are reflected.
+    goLive: async () => {
+      const response = await store.goLive();
+      if (response) {
+        await sessionContextStore.requestSessionContext();
+      }
+      return response;
+    },
+
+    switchToDraft: async () => {
+      const response = await store.switchToDraft();
+      if (response) {
+        await sessionContextStore.requestSessionContext();
+      }
+      return response;
+    },
+
     // GitHub save and sync action - wrapped to handle lock version updates and errors
     saveAndSyncWorkflow: (commitMessage: string) => {
       // Helper: Handle successful save and sync operations

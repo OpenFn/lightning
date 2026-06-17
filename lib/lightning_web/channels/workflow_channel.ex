@@ -374,6 +374,16 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("go_live", _params, socket) do
+    transition_lifecycle_state(socket, :live)
+  end
+
+  @impl true
+  def handle_in("switch_to_draft", _params, socket) do
+    transition_lifecycle_state(socket, :draft)
+  end
+
+  @impl true
   def handle_in("save_and_sync", params, socket)
       when not is_map_key(params, "commit_message") do
     {:reply,
@@ -1096,6 +1106,25 @@ defmodule LightningWeb.WorkflowChannel do
   # that permission changes made during an active session are enforced.
   #
   # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
+  defp transition_lifecycle_state(socket, target_state) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <-
+           Session.set_workflow_state(session_pid, user, target_state) do
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
+      })
+
+      {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
+       socket}
+    else
+      error -> workflow_error_reply(socket, error)
+    end
+  end
+
   defp authorize_edit_workflow(socket) do
     user = socket.assigns.current_user
     project = socket.assigns.project

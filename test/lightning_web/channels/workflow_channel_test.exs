@@ -39,6 +39,45 @@ defmodule LightningWeb.WorkflowChannelTest do
     %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
+  describe "go_live and switch_to_draft" do
+    test "go_live sets the workflow live; switch_to_draft returns it to draft",
+         %{socket: socket, workflow: workflow} do
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: live_workflow}
+      assert live_workflow.state == :live
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: draft_workflow}
+      assert draft_workflow.state == :draft
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "go_live is rejected for a user without edit access" do
+      viewer = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: viewer, role: :viewer}])
+
+      workflow = insert(:workflow, project: project)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+  end
+
   describe "join authorization" do
     test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)

@@ -1448,6 +1448,28 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // Lifecycle transitions. The server reads the live document, sets the
+  // lifecycle state, and flips trigger enablement in a single save, then
+  // reconciles the result back into this Y.Doc.
+  const setLifecycleState = async (
+    event: 'go_live' | 'switch_to_draft'
+  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow } | null> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        lock_version: number;
+        workflow: BaseWorkflow;
+      }>(provider.channel, event, {});
+    } catch (error) {
+      logger.error(`Failed to ${event}`, error);
+      throw error;
+    }
+  };
+
+  const goLive = async () => setLifecycleState('go_live');
+  const switchToDraft = async () => setLifecycleState('switch_to_draft');
+
   const saveAndSyncWorkflow = async (
     commitMessage: string
   ): Promise<{
@@ -1943,6 +1965,8 @@ export const createWorkflowStore = () => {
     selectEdge,
     clearSelection,
     saveWorkflow,
+    goLive,
+    switchToDraft,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
