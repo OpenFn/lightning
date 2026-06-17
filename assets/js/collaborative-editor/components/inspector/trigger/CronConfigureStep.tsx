@@ -9,7 +9,7 @@ import { InspectorLayout } from '../InspectorLayout';
 
 import { CronFieldBuilder } from './CronFieldBuilder';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
-import { WizardFinishFooter } from './WizardFinishFooter';
+import { WizardFooter } from './WizardFooter';
 
 interface CronConfigureStepProps {
   /** The local trigger draft. */
@@ -47,7 +47,11 @@ export function CronConfigureStep({
   const { isReadOnly } = useWorkflowReadOnly();
 
   const footer = (
-    <WizardFinishFooter validationError={validationError} onFinish={onFinish} />
+    <WizardFooter
+      primaryLabel="Finish"
+      onPrimary={onFinish}
+      validationError={validationError}
+    />
   );
 
   return (

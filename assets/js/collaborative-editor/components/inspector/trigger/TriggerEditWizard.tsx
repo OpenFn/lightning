@@ -8,7 +8,6 @@ import { TriggerChooseStep } from './TriggerChooseStep';
 import { TriggerPicker } from './TriggerPicker';
 import { useTriggerDraft } from './useTriggerDraft';
 import { useWebhookTrigger } from './useWebhookTrigger';
-import { WebhookChooseStep } from './WebhookChooseStep';
 import { WebhookConfigureStep } from './WebhookConfigureStep';
 
 interface TriggerEditWizardProps {
@@ -155,7 +154,8 @@ export function TriggerEditWizard({
   switch (draft.type) {
     case 'webhook':
       return (
-        <WebhookChooseStep
+        <TriggerChooseStep
+          type="webhook"
           webhookUrl={webhookUrl}
           copyText={copyText}
           copyToClipboard={copyToClipboard}

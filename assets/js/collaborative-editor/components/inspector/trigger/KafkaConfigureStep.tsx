@@ -8,7 +8,7 @@ import type { Workflow } from '../../../types/workflow';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { WizardBreadcrumb } from './WizardBreadcrumb';
-import { WizardFinishFooter } from './WizardFinishFooter';
+import { WizardFooter } from './WizardFooter';
 
 interface KafkaConfigureStepProps {
   /** The local trigger draft. */
@@ -80,7 +80,11 @@ export function KafkaConfigureStep({
   const requiresAuth = config.sasl !== null;
 
   const footer = (
-    <WizardFinishFooter validationError={validationError} onFinish={onFinish} />
+    <WizardFooter
+      primaryLabel="Finish"
+      onPrimary={onFinish}
+      validationError={validationError}
+    />
   );
 
   return (

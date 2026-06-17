@@ -1,56 +1,74 @@
-import { Button } from '../../Button';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { TriggerTypeBadge } from './TriggerTypeBadge';
+import { WebhookUrlField } from './WebhookUrlField';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
+import { WizardFooter } from './WizardFooter';
+
+type ChooseType = 'webhook' | 'cron' | 'kafka';
+
+const TITLES: Record<ChooseType, string> = {
+  webhook: 'On webhook call',
+  cron: 'On a schedule',
+  kafka: 'Kafka',
+};
 
 interface TriggerChooseStepProps {
-  /** The trigger type whose badge is shown (cron or kafka). */
-  type: 'cron' | 'kafka';
+  /** The trigger type whose badge (and, for webhook, URL field) is shown. */
+  type: ChooseType;
   /** Close the inspector entirely. */
   onClose: () => void;
-  /** Leave the wizard via the header back arrow (→ exit to show panel). */
-  onBack: () => void;
   /** Open the trigger-type picker (Change). */
   onChangeType: () => void;
   /** Advance to the Configure step (Next). */
   onNext: () => void;
+  /**
+   * Exit the wizard via the header back arrow. Used by cron/kafka, whose Figma
+   * design has a header arrow rather than a footer Cancel. Mutually exclusive
+   * with `onCancel` (webhook).
+   */
+  onBack?: () => void;
+  /**
+   * Exit the wizard via a footer **Cancel** button. Used by webhook, which has
+   * no header back arrow. Mutually exclusive with `onBack` (cron/kafka).
+   */
+  onCancel?: () => void;
+  /** Webhook only: the read-only ingest URL to display below the type chip. */
+  webhookUrl?: string;
+  /** Webhook only: copy-button label ('' | 'Copied!' | 'Failed'). */
+  copyText?: string;
+  /** Webhook only: copies the given text to the clipboard. */
+  copyToClipboard?: (text: string) => Promise<void>;
 }
 
 /**
- * The cron/kafka wizard's "Choose" step (#4787). Mirrors
- * {@link WebhookChooseStep}: shows the current trigger type badge with a
- * **Change** action into the picker. Unlike the webhook Choose step, the Figma
- * design has a header back arrow (exits the wizard) rather than a footer Cancel,
- * and the footer holds a single full-width primary **Next** button.
- *
- * Generalized over `type` (cron | kafka) since both Choose steps are identical
- * apart from the badge. Webhook keeps its own `WebhookChooseStep` (it has the
- * URL field).
+ * The wizard's "Choose" step for every trigger type (#4787). Shows the current
+ * type badge with a **Change** action into the picker, then (webhook only) the
+ * read-only ingest URL. Two exit shapes, by type: webhook uses a footer
+ * **Cancel** (`onCancel`), cron/kafka use a header back arrow (`onBack`) — the
+ * difference is carried by which handler the wizard passes, not by separate
+ * components.
  */
 export function TriggerChooseStep({
   type,
   onClose,
-  onBack,
   onChangeType,
   onNext,
+  onBack,
+  onCancel,
+  webhookUrl,
+  copyText,
+  copyToClipboard,
 }: TriggerChooseStepProps) {
-  const title = type === 'cron' ? 'On a schedule' : 'Kafka';
-
   const footer = (
-    <Button variant="primary" onClick={onNext} className="w-full">
-      <span className="inline-flex items-center gap-1.5">
-        Next
-        <span className="hero-arrow-right-micro h-4 w-4" />
-      </span>
-    </Button>
+    <WizardFooter primaryLabel="Next" onPrimary={onNext} onCancel={onCancel} />
   );
 
   return (
     <InspectorLayout
-      title={title}
+      title={TITLES[type]}
       onClose={onClose}
-      showBackButton
+      showBackButton={Boolean(onBack)}
       onBack={onBack}
       footer={footer}
     >
@@ -72,6 +90,15 @@ export function TriggerChooseStep({
             Change
           </button>
         </div>
+
+        {/* Webhook URL (read-only) — only the webhook Choose step has it. */}
+        {type === 'webhook' && webhookUrl !== undefined && (
+          <WebhookUrlField
+            url={webhookUrl}
+            copyText={copyText ?? ''}
+            onCopy={url => void copyToClipboard?.(url)}
+          />
+        )}
       </div>
     </InspectorLayout>
   );

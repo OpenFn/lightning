@@ -10,13 +10,12 @@ import {
 import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
 import type { WebhookAuthMethod } from '../../../types/sessionContext';
 import type { Workflow } from '../../../types/workflow';
-import { Button } from '../../Button';
-import { InspectorFooter } from '../InspectorFooter';
 import { InspectorLayout } from '../InspectorLayout';
 
 import { ResponseTypeSelect } from './ResponseTypeSelect';
 import { WebhookAuthMethodSelect } from './WebhookAuthMethodSelect';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
+import { WizardFooter } from './WizardFooter';
 
 const codeInputClass = cn(
   'block w-full rounded-lg border border-gray-200 bg-white px-3 py-2',
@@ -122,26 +121,12 @@ export function WebhookConfigureStep({
   const baseConfig = config ?? { success_code: null, error_code: null };
 
   const footer = (
-    <div className="space-y-2">
-      {validationError && (
-        <p className="text-xs text-red-600">{validationError}</p>
-      )}
-      <InspectorFooter
-        leftButtons={
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-        }
-        rightButtons={
-          <Button variant="primary" onClick={onFinish}>
-            <span className="inline-flex items-center gap-1.5">
-              Finish
-              <span className="hero-arrow-right-micro h-4 w-4" />
-            </span>
-          </Button>
-        }
-      />
-    </div>
+    <WizardFooter
+      primaryLabel="Finish"
+      onPrimary={onFinish}
+      onCancel={onCancel}
+      validationError={validationError}
+    />
   );
 
   return (

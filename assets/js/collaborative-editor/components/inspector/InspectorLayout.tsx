@@ -19,7 +19,7 @@ interface InspectorLayoutProps {
    * Handler for the back button. Falls back to `onClose` when not provided,
    * so existing callers that only pass `showBackButton` are unaffected.
    */
-  onBack?: () => void;
+  onBack?: (() => void) | undefined;
   fullHeight?: boolean;
 }
 
