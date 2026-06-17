@@ -11,9 +11,11 @@ defmodule Lightning.AuthProviders do
   alias Lightning.Repo
 
   @doc """
-  Returns a human-friendly name for a provider, e.g. `"github"` -> `"Github"`.
+  Returns a human-friendly name for a provider, e.g. `"github"` -> `"GitHub"`.
   """
   @spec display_name(provider :: String.t()) :: String.t()
+  def display_name("github"), do: "GitHub"
+  def display_name("google"), do: "Google"
   def display_name(provider), do: String.capitalize(provider)
 
   @spec get_existing() :: AuthConfig.t() | nil

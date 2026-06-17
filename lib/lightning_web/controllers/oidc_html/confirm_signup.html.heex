@@ -24,7 +24,9 @@
             <p class="text-sm text-gray-700 mb-4">
               No account exists for <strong>{@pending["email"]}</strong>
               yet. We'll create a new account using your
-              <strong>{String.capitalize(@pending["provider"])}</strong>
+              <strong>
+                {Lightning.AuthProviders.display_name(@pending["provider"])}
+              </strong>
               profile.
             </p>
 
@@ -41,7 +43,9 @@
               <% end %>
               <div class="flex">
                 <dt class="w-28 text-gray-500">Provider</dt>
-                <dd>{String.capitalize(@pending["provider"])}</dd>
+                <dd>
+                  {Lightning.AuthProviders.display_name(@pending["provider"])}
+                </dd>
               </div>
             </dl>
 
