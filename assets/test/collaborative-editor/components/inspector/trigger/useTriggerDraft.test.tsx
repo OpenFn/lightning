@@ -103,6 +103,22 @@ describe('useTriggerDraft', () => {
     );
   }
 
+  // Variant whose `trigger` prop can change between renders, used to simulate a
+  // collaborator editing the trigger on the canvas while the wizard is open.
+  function renderDraftWithTrigger(initialTrigger: Workflow.Trigger) {
+    return renderHook(
+      ({ t }: { t: Workflow.Trigger }) =>
+        useTriggerDraft(t, {
+          initialAuthMethodIds: [],
+          commitAuthMethods,
+        }),
+      {
+        wrapper: createWrapper(workflowStore),
+        initialProps: { t: initialTrigger },
+      }
+    );
+  }
+
   describe('draft mutation', () => {
     test('mergeDraft updates the draft and never calls updateTrigger', () => {
       const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
@@ -194,6 +210,33 @@ describe('useTriggerDraft', () => {
       expect(commitAuthMethods).not.toHaveBeenCalled();
     });
 
+    test('returns ok:false and writes no trigger fields when commitAuthMethods fails', async () => {
+      const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
+      // The auth commit is the only fallible step (a channel request); make it
+      // reject to exercise the partial-commit guard.
+      commitAuthMethods = vi.fn(() =>
+        Promise.reject(new Error('channel down'))
+      );
+      const { result } = renderDraft([]);
+
+      // Change BOTH a trigger field and the auth set, so a partial commit would
+      // be observable if the trigger write ran despite the auth failure.
+      act(() => {
+        result.current.mergeDraft({ webhook_reply: 'after_completion' });
+        result.current.setDraftAuthMethodIds(['auth-1']);
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      // Auth runs first and fails -> the local trigger write never happens.
+      expect(outcome).toEqual({ ok: false });
+      expect(commitAuthMethods).toHaveBeenCalledTimes(1);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
     test('does not persist an invalid draft and surfaces validationError', async () => {
       const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
       const { result } = renderDraft();
@@ -251,6 +294,50 @@ describe('useTriggerDraft', () => {
         rerender({ ids: ['a'] });
       });
       expect(result.current.draftAuthMethodIds).toEqual(['x']);
+    });
+  });
+
+  describe('concurrent edit (diffs against the open-time baseline)', () => {
+    test('commit does not revert a field changed on the live trigger after open', async () => {
+      const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
+      const { result, rerender } = renderDraftWithTrigger(trigger);
+
+      // User edits one field in the draft.
+      act(() => {
+        result.current.mergeDraft({ webhook_reply: 'after_completion' });
+      });
+
+      // A collaborator toggles `enabled` off on the canvas -> the live trigger
+      // prop updates underneath the still-open wizard.
+      act(() => {
+        rerender({ t: { ...trigger, enabled: false } });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      // Only the user's field is written; `enabled` (untouched in the draft) is
+      // not, so the collaborator's change survives the Finish.
+      expect(outcome).toEqual({ ok: true });
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      expect(updateSpy).toHaveBeenCalledWith(TRIGGER_ID, {
+        webhook_reply: 'after_completion',
+      });
+    });
+
+    test('an external change alone does not mark the draft dirty', () => {
+      const { result, rerender } = renderDraftWithTrigger(trigger);
+      expect(result.current.isDirty).toBe(false);
+
+      // Collaborator changes an untouched field on the live trigger; the user
+      // has not edited the draft.
+      act(() => {
+        rerender({ t: { ...trigger, enabled: false } });
+      });
+
+      expect(result.current.isDirty).toBe(false);
     });
   });
 

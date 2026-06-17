@@ -33,11 +33,14 @@ export interface UseTriggerDraftResult {
   /** Replaces the draft auth-method id set. Never touches the channel. */
   setDraftAuthMethodIds: (ids: string[]) => void;
   /**
-   * True when the draft differs from the source trigger OR the draft auth-method
-   * id set differs from `initialAuthMethodIds`.
+   * True when the draft differs from the open-time baseline OR the draft
+   * auth-method id set differs from `initialAuthMethodIds`.
    */
   isDirty: boolean;
-  /** Re-seeds the draft and auth-method ids from the current source (Cancel). */
+  /**
+   * Re-seeds the draft, baseline, and auth-method ids from the current source
+   * (Cancel).
+   */
   reset: () => void;
   /** Validation error from the draft (null when valid). */
   validationError: string | null;
@@ -51,18 +54,21 @@ export interface UseTriggerDraftResult {
 }
 
 /**
- * Returns only the draft keys whose value differs from the source trigger.
+ * Returns only the draft keys whose value differs from the baseline — the
+ * trigger snapshot the draft was seeded from at open, NOT the live trigger.
  * Committing this subset (rather than the whole draft) avoids overwriting fields
  * a collaborator changed underneath us while the wizard was open — e.g. toggling
- * `enabled` on the canvas — since untouched fields are never written back.
+ * `enabled` on the canvas — since untouched fields (draft == baseline) are never
+ * written back. Diffing against the live trigger instead would treat such an
+ * external change as a local edit and revert it on Finish.
  */
 function changedFields(
   draft: Workflow.Trigger,
-  trigger: Workflow.Trigger
+  baseline: Workflow.Trigger
 ): Partial<Workflow.Trigger> {
   const updates: Record<string, unknown> = {};
   for (const key of Object.keys(draft) as (keyof Workflow.Trigger)[]) {
-    if (JSON.stringify(draft[key]) !== JSON.stringify(trigger[key])) {
+    if (JSON.stringify(draft[key]) !== JSON.stringify(baseline[key])) {
       updates[key] = draft[key];
     }
   }
@@ -93,6 +99,13 @@ export function useTriggerDraft(
     () => initialAuthMethodIds
   );
 
+  // The trigger snapshot the draft was seeded from. `useRef(trigger)` captures
+  // the open-time value once (later renders ignore the argument), so the draft
+  // is always diffed against where editing started rather than the live trigger
+  // — which keeps a collaborator's concurrent edit to an untouched field from
+  // being reverted on Finish. Re-seeded only on `reset()`.
+  const baselineRef = useRef<Workflow.Trigger>(trigger);
+
   // Auth methods load asynchronously, so `initialAuthMethodIds` is often `[]`
   // at mount and only later resolves to the real server set. Until the user
   // edits the selection we must keep tracking that loaded value; otherwise a
@@ -122,6 +135,7 @@ export function useTriggerDraft(
 
   const reset = useCallback(() => {
     authTouchedRef.current = false;
+    baselineRef.current = trigger;
     setDraft(trigger);
     setDraftAuthMethodIdsState(initialAuthMethodIds);
   }, [trigger, initialAuthMethodIds]);
@@ -132,9 +146,10 @@ export function useTriggerDraft(
   );
 
   const isDirty = useMemo(() => {
-    const triggerChanged = JSON.stringify(draft) !== JSON.stringify(trigger);
+    const triggerChanged =
+      JSON.stringify(draft) !== JSON.stringify(baselineRef.current);
     return triggerChanged || authIdsChanged;
-  }, [draft, trigger, authIdsChanged]);
+  }, [draft, authIdsChanged]);
 
   // Live validation of the draft against the trigger schema.
   const validationError = useMemo(() => {
@@ -152,21 +167,31 @@ export function useTriggerDraft(
       return { ok: false };
     }
 
-    // Write only the fields the user actually changed, so a concurrent edit to
-    // an untouched field (e.g. `enabled` toggled on the canvas) is not reverted.
-    const updates = changedFields(draft, trigger);
-    if (Object.keys(updates).length > 0) {
-      updateTrigger(trigger.id, updates);
+    // Commit the auth-method change FIRST: it's the only step that can fail (a
+    // channel request). Running it before the local trigger write means a
+    // failure leaves nothing partially committed — the user can fix the
+    // connection and retry. `commitAuthMethods` already surfaces an alert on
+    // failure, so here we just report `ok: false` to keep the wizard open.
+    if (authIdsChanged) {
+      try {
+        await commitAuthMethods(draftAuthMethodIds);
+      } catch {
+        return { ok: false };
+      }
     }
 
-    if (authIdsChanged) {
-      await commitAuthMethods(draftAuthMethodIds);
+    // Write only the fields the user actually changed (draft vs. the open-time
+    // baseline), so a concurrent edit to an untouched field (e.g. `enabled`
+    // toggled on the canvas) is not reverted.
+    const updates = changedFields(draft, baselineRef.current);
+    if (Object.keys(updates).length > 0) {
+      updateTrigger(trigger.id, updates);
     }
 
     return { ok: true };
   }, [
     draft,
-    trigger,
+    trigger.id,
     updateTrigger,
     authIdsChanged,
     draftAuthMethodIds,
