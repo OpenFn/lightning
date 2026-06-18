@@ -17,8 +17,20 @@ and this project adheres to
 
 ### Added
 
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
 ### Changed
 
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
@@ -32,6 +44,23 @@ and this project adheres to
   (`:timeout`); the failed unobserve is now tolerated as a no-op since the
   SharedDoc cleans up observers via its own monitor.
   [#4817](https://github.com/OpenFn/lightning/issues/4817)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
 
 ## [2.16.7] - 2026-06-04
 

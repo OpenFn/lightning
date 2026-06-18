@@ -1419,7 +1419,7 @@ defmodule Lightning.Credentials do
         ) :: Ecto.Changeset.t()
   def validate_credential_transfer(changeset, sender, credential) do
     changeset
-    |> Lightning.Accounts.User.validate_email_format()
+    |> Lightning.Validators.validate_email_format()
     |> then(fn changeset ->
       if changeset.valid? do
         changeset

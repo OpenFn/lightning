@@ -144,6 +144,26 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     };
   });
 
+  // Bridge the SessionContextStore's `isNewWorkflow` flag up to SessionProvider
+  // so the channel-join `action` stays honest across in-place reconnects.
+  //
+  // SessionProvider owns the join params but sits ABOVE this provider, so it
+  // cannot read the SessionContextStore directly. The store is the source of
+  // truth: it is seeded from the same `isNewWorkflow` prop and is cleared by
+  // `clearIsNewWorkflow()` after the first successful save. We forward every
+  // change up via the SessionContext setter (a ref write, no re-render).
+  const setIsNewWorkflow = sessionContext?.setIsNewWorkflow;
+  useEffect(() => {
+    if (!setIsNewWorkflow) return undefined;
+
+    const store = stores.sessionContextStore;
+    // Sync the current value immediately, then on every change.
+    setIsNewWorkflow(store.getSnapshot().isNewWorkflow);
+    return store.subscribe(() => {
+      setIsNewWorkflow(store.getSnapshot().isNewWorkflow);
+    });
+  }, [setIsNewWorkflow, stores.sessionContextStore]);
+
   // Subscribe to sessionContextStore user changes
   // Note: We use useSyncExternalStore directly here (not useUser hook) because
   // this is StoreProvider itself - the hooks require StoreContext to be available,

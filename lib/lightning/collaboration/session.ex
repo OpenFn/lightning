@@ -21,7 +21,9 @@ defmodule Lightning.Collaboration.Session do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Collaboration.WorkflowSerializer
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Yex.Sync.SharedDoc
@@ -322,7 +324,10 @@ defmodule Lightning.Collaboration.Session do
 
     with {:ok, doc} <- get_document(state),
          {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
-         {:ok, workflow} <- fetch_workflow(state.workflow),
+         {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
          {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
@@ -342,6 +347,16 @@ defmodule Lightning.Collaboration.Session do
     else
       {:error, :no_shared_doc} ->
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+
+      # Unreachable in practice (the persisted row always shares the seed's
+      # project_id), but the resolver can return :wrong_project given a :project
+      # opt, so guard against a WithClauseError.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
         {:reply, {:error, :internal_error}, state}
 
       {:error, :deserialization_failed, reason} ->
@@ -390,11 +405,24 @@ defmodule Lightning.Collaboration.Session do
   def handle_call({:reset_workflow, user}, _from, state) do
     Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
-    with {:ok, workflow} <- fetch_workflow(state.workflow),
+    with {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
+         :ok <- ensure_not_deleted(workflow),
          :ok <- clear_and_reset_doc(state, workflow) do
       Logger.info("Successfully reset workflow #{state.workflow.id}")
       {:reply, {:ok, workflow}, state}
     else
+      # Unreachable in practice (see save_workflow), guarded against a
+      # WithClauseError since the resolver is supplied a :project opt.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot reset workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
       {:error, :workflow_deleted} ->
         Logger.warning(
           "Cannot reset workflow #{state.workflow.id}: workflow deleted"
@@ -476,50 +504,6 @@ defmodule Lightning.Collaboration.Session do
       {:error, :deserialization_failed, Exception.message(e)}
   end
 
-  # :built state with positive lock_version means it was saved before - reload from DB
-  defp fetch_workflow(
-         %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
-       )
-       when is_integer(lock_version) and lock_version > 0 do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
-  end
-
-  defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    workflow =
-      workflow
-      |> Map.put(:edges, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :edges,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :jobs,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :triggers,
-        __owner__: Lightning.Workflows.Workflow
-      })
-
-    {:ok, workflow}
-  end
-
-  defp fetch_workflow(workflow) do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
-  end
-
   defp merge_saved_workflow_into_ydoc(
          %{shared_doc_pid: shared_doc_pid},
          workflow
@@ -564,6 +548,9 @@ defmodule Lightning.Collaboration.Session do
       end
     end)
   end
+
+  defp ensure_not_deleted(%{deleted_at: nil}), do: :ok
+  defp ensure_not_deleted(_workflow), do: {:error, :workflow_deleted}
 
   defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),
     do: {:error, :no_shared_doc}
