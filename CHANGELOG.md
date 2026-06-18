@@ -42,6 +42,9 @@ and this project adheres to
 
 ### Fixed
 
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
 - Stop the collaborative editor's Session (and the Phoenix channel calling it)
   from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
   a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
