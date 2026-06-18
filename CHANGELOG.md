@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
