@@ -47,6 +47,8 @@ and this project adheres to
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
   codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+- Add nicer error messages in the AI chat for when tokens don't work
+  [PR#4879](https://github.com/OpenFn/lightning/pull/4879)
 
 ### Fixed
 

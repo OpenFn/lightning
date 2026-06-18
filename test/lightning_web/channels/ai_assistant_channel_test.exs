@@ -2688,6 +2688,63 @@ defmodule LightningWeb.AiAssistantChannelTest do
       }
     end
 
+    test "broadcasts message_error including the persisted error message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "Test message", user: user},
+          []
+        )
+
+      message = List.last(updated_session.messages)
+      message_id = message.id
+
+      # Persist an error message onto the user message meta, mirroring what
+      # MessageProcessor does when Apollo returns an error.
+      message
+      |> Ecto.Changeset.change(
+        meta: %{
+          "error_message" =>
+            "Token invalid or limit reached. Contact your administrator."
+        }
+      )
+      |> Lightning.Repo.update!()
+
+      session_with_error = AiAssistant.get_session!(session.id)
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:error, session_with_error},
+           session_id: session.id
+         }}
+      )
+
+      # The persisted meta["error_message"] is surfaced to the frontend instead
+      # of a generic "Failed to send".
+      assert_broadcast "message_error", %{
+        message_id: ^message_id,
+        status: "error",
+        error: "Token invalid or limit reached. Contact your administrator."
+      }
+    end
+
     test "broadcasts message_error on failed status", %{
       socket: socket,
       job: job,
