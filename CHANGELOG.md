@@ -25,6 +25,10 @@ and this project adheres to
 
 ### Changed
 
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
 - Consolidate email format validation onto a single canonical validator (Zod v4
   regex) applied uniformly across user creation, credential transfer, and both
   collaborator add/invite flows. Fixes a silent inconsistency where
