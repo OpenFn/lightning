@@ -1424,6 +1424,11 @@ defmodule Lightning.AiAssistant do
 
   defp handle_error_response(error_response, session) do
     case error_response do
+      {:ok, %Tesla.Env{status: 401}} ->
+        Logger.error("AI query unauthorized (401) for session #{session.id}")
+
+        {:error, "Token invalid or limit reached. Contact your administrator."}
+
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
         error_message = body["message"]

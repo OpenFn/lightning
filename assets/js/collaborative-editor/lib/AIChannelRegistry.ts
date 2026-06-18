@@ -678,8 +678,13 @@ export class AIChannelRegistry {
       const typedPayload = payload as {
         message_id: string;
         status: MessageStatus;
+        error?: string;
       };
-      this.store._updateMessageStatus(typedPayload.message_id, 'error');
+      this.store._updateMessageStatus(
+        typedPayload.message_id,
+        'error',
+        typedPayload.error
+      );
       this.store._setProcessingState(false);
     };
 
