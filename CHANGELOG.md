@@ -42,6 +42,12 @@ and this project adheres to
 
 ### Fixed
 
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
 - Fix email format validation not displaying in the Add Collaborators and Invite
   Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
 - Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
