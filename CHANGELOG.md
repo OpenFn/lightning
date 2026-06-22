@@ -17,8 +17,9 @@ and this project adheres to
 
 ### Added
 
-- Single Sign-On (SSO) sign-in with GitHub and Google, including account
-  [#4621](https://github.com/OpenFn/lightning/issues/4621)
+- Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
+  external identity provider and link or unlink providers from their profile
+  settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
 
 ### Changed
 

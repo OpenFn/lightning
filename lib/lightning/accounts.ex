@@ -273,17 +273,34 @@ defmodule Lightning.Accounts do
       with no way to log in
   """
   def unlink_user_identity(%User{} = user, identity_id) do
-    with {:ok, identity_id} <- Ecto.UUID.cast(identity_id),
-         %UserIdentity{} = identity <-
-           Repo.get_by(UserIdentity, id: identity_id, user_id: user.id) do
-      if can_remove_identity?(user, identity) do
-        Repo.delete(identity)
-      else
-        {:error, :would_lock_out}
-      end
-    else
-      _ -> {:error, :not_linked}
+    case Ecto.UUID.cast(identity_id) do
+      {:ok, identity_id} -> do_unlink_user_identity(user, identity_id)
+      :error -> {:error, :not_linked}
     end
+  end
+
+  defp do_unlink_user_identity(%User{} = user, identity_id) do
+    Repo.transaction(fn ->
+      locked_user =
+        from(u in User, where: u.id == ^user.id, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      identity = Repo.get_by(UserIdentity, id: identity_id, user_id: user.id)
+
+      cond do
+        is_nil(locked_user) or is_nil(identity) ->
+          Repo.rollback(:not_linked)
+
+        not can_remove_identity?(locked_user, identity) ->
+          Repo.rollback(:would_lock_out)
+
+        true ->
+          case Repo.delete(identity) do
+            {:ok, deleted} -> deleted
+            {:error, _changeset} -> Repo.rollback(:not_linked)
+          end
+      end
+    end)
   end
 
   defp can_remove_identity?(%User{hashed_password: hp}, _identity)
