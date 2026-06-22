@@ -381,10 +381,10 @@ callback (redirect) URL that you must register in the provider's OAuth app
 settings. The redirect URL is derived automatically from your configured
 host/scheme/port — you only need to register the matching URL below.
 
-| Provider | Variables                                  | Redirect / Callback URL                                  |
-| -------- | ------------------------------------------ | -------------------------------------------------------- |
-| GitHub   | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/github/callback` |
-| Google   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/google/callback` |
+| Provider | Variables                                          | Redirect / Callback URL                                  |
+| -------- | -------------------------------------------------- | -------------------------------------------------------- |
+| GitHub   | `SSO_GITHUB_CLIENT_ID`, `SSO_GITHUB_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/github/callback` |
+| Google   | `SSO_GOOGLE_CLIENT_ID`, `SSO_GOOGLE_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/google/callback` |
 
 For **GitHub**, create an **OAuth App** (Settings → Developer settings → OAuth
 Apps — _not_ a GitHub App) and request the `read:user` and `user:email` scopes.
@@ -392,49 +392,29 @@ GitHub's userinfo endpoint omits the email for users without a public profile
 email, so Lightning resolves the primary, verified address via the granted
 `user:email` scope.
 
-> ⚠️ **Upgrading from the older Google login?** The new Google SSO provider
-> reuses the same `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` as the
-> [Google Oauth2](#google-oauth2) setup below, but expects the callback
-> `/authenticate/google/callback` (not `/authenticate/callback`). Add the new
-> callback URL to your Google OAuth client's authorized redirect URIs.
+For **Google**, provision an OAuth 2.0 Client (type "Web application") and add
+the SSO callback above to its authorized redirect URIs.
 
-### Google Oauth2
+> ℹ️ The `SSO_`-prefixed variables are **used only for SSO sign-in** and are
+> deliberately distinct from any other feature's settings — create a dedicated
+> OAuth client for SSO and register only the SSO callback above. In particular,
+> the OAuth clients your **jobs** use to connect to Google Sheets, Salesforce,
+> etc. are configured per-project in the UI and are unaffected.
 
-> These `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` variables are also used by
-> [Single Sign-On (SSO)](#single-sign-on-sso) above, which expects a different
-> callback URL (`/authenticate/google/callback`). If you use Google for SSO
-> sign-in, register both callback URLs on the same OAuth client.
+### OAuth credential connections (Google, Salesforce, etc.)
 
-Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
-application' type.
+OAuth clients that **jobs** use to connect to external systems (Google Sheets,
+Salesforce, and similar) are no longer configured via environment variables.
+They are registered in the UI under **Credentials → OAuth clients** and scoped
+to the projects that use them; the client id, secret, and redirect/callback URL
+are entered in that form.
 
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
-
-Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:
-
-| **Variable**           | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | Which is `client_id` from the client details. |
-| `GOOGLE_CLIENT_SECRET` | `client_secret` from the client details.      |
-
-### Salesforce Oauth2
-
-Using your Salesforce developer account, create a new Oauth 2.0 connected
-application.
-
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
-
-Grant permissions as desired.
-
-Once the client has been created set the following environment variables:
-
-| **Variable**               | Description                                                           |
-| -------------------------- | --------------------------------------------------------------------- |
-| `SALESFORCE_CLIENT_ID`     | Which is `Consumer Key` from the "Manage Consumer Details" screen.    |
-| `SALESFORCE_CLIENT_SECRET` | Which is `Consumer Secret` from the "Manage Consumer Details" screen. |
+> The older `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and
+> `SALESFORCE_CLIENT_ID` / `SALESFORCE_CLIENT_SECRET` environment variables are
+> no longer read by Lightning and can be removed from your deployment. They are
+> unrelated to the [Single Sign-On (SSO)](#single-sign-on-sso) `SSO_`-prefixed
+> variables above, which configure user **sign-in** rather than credential
+> connections.
 
 ### Webhook Retry Configuration
 

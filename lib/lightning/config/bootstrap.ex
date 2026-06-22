@@ -503,8 +503,8 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
-    github_client_id = env!("GITHUB_CLIENT_ID", :string, nil)
-    github_client_secret = env!("GITHUB_CLIENT_SECRET", :string, nil)
+    github_client_id = env!("SSO_GITHUB_CLIENT_ID", :string, nil)
+    github_client_secret = env!("SSO_GITHUB_CLIENT_SECRET", :string, nil)
 
     if github_client_id && github_client_secret do
       github_redirect_uri =
@@ -516,8 +516,8 @@ defmodule Lightning.Config.Bootstrap do
         redirect_uri: github_redirect_uri
     end
 
-    google_client_id = env!("GOOGLE_CLIENT_ID", :string, nil)
-    google_client_secret = env!("GOOGLE_CLIENT_SECRET", :string, nil)
+    google_client_id = env!("SSO_GOOGLE_CLIENT_ID", :string, nil)
+    google_client_secret = env!("SSO_GOOGLE_CLIENT_SECRET", :string, nil)
 
     if google_client_id && google_client_secret do
       google_redirect_uri =

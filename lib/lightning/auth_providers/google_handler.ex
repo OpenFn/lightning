@@ -2,7 +2,7 @@ defmodule Lightning.AuthProviders.GoogleHandler do
   @moduledoc """
   Builds a Handler for Google OAuth2 SSO login from environment configuration.
 
-  Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google login.
+  Set SSO_GOOGLE_CLIENT_ID and SSO_GOOGLE_CLIENT_SECRET to enable Google login.
   """
 
   alias Lightning.AuthProviders.Handler

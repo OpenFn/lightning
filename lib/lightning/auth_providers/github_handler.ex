@@ -2,7 +2,7 @@ defmodule Lightning.AuthProviders.GithubHandler do
   @moduledoc """
   Builds a Handler for GitHub OAuth2 SSO login from environment configuration.
 
-  Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable GitHub login.
+  Set SSO_GITHUB_CLIENT_ID and SSO_GITHUB_CLIENT_SECRET to enable GitHub login.
   """
 
   alias Lightning.AuthProviders.Handler
