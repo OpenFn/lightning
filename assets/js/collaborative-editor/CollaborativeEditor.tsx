@@ -2,14 +2,15 @@ import { useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
-import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
+import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -24,7 +25,7 @@ import {
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen } from './hooks/useUI';
+import { useIsRunPanelOpen, useShowLandingScreen } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
@@ -152,10 +153,10 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
-    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
+    isNewWorkflow,
   ]);
 
   return (
@@ -169,6 +170,26 @@ function BreadcrumbContent({
     >
       {breadcrumbElements}
     </Header>
+  );
+}
+
+function LandingScreenWrapper({
+  aiAssistantEnabled,
+}: {
+  aiAssistantEnabled: boolean;
+}) {
+  const showLandingScreen = useShowLandingScreen();
+  if (!showLandingScreen) return null;
+  return (
+    <>
+      {/* TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates), #4859 (Import YAML) */}
+      <LandingScreen
+        aiAssistantEnabled={aiAssistantEnabled}
+        onBuildWithAI={() => {}}
+        onBrowseTemplates={() => {}}
+        onImportYAML={() => {}}
+      />
+    </>
   );
 }
 
@@ -219,28 +240,30 @@ export const CollaborativeEditor: WithActionProps<
                     <VersionDebugLogger />
                     <Toaster />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                      <BreadcrumbContent
-                        workflowId={workflowId}
-                        workflowName={workflowName}
-                        isNewWorkflow={isNewWorkflow}
-                        aiAssistantEnabled={aiAssistantEnabled}
-                        {...(projectId !== undefined && {
-                          projectIdFallback: projectId,
-                        })}
-                        {...(projectName !== undefined && {
-                          projectNameFallback: projectName,
-                        })}
-                        {...(projectDisplayName !== null && {
-                          projectDisplayNameFallback: projectDisplayName,
-                        })}
-                        projectIsSandboxFallback={projectIsSandbox}
-                        {...(projectColor !== null && {
-                          projectColorFallback: projectColor,
-                        })}
-                        {...(projectEnv !== undefined && {
-                          projectEnvFallback: projectEnv,
-                        })}
-                      />
+                      {!isNewWorkflow && (
+                        <BreadcrumbContent
+                          workflowId={workflowId}
+                          workflowName={workflowName}
+                          isNewWorkflow={isNewWorkflow}
+                          aiAssistantEnabled={aiAssistantEnabled}
+                          {...(projectId !== undefined && {
+                            projectIdFallback: projectId,
+                          })}
+                          {...(projectName !== undefined && {
+                            projectNameFallback: projectName,
+                          })}
+                          {...(projectDisplayName !== null && {
+                            projectDisplayNameFallback: projectDisplayName,
+                          })}
+                          projectIsSandboxFallback={projectIsSandbox}
+                          {...(projectColor !== null && {
+                            projectColorFallback: projectColor,
+                          })}
+                          {...(projectEnv !== undefined && {
+                            projectEnvFallback: projectEnv,
+                          })}
+                        />
+                      )}
                       <div className="flex-1 min-h-0 overflow-hidden relative">
                         <LoadingBoundary>
                           <div className="h-full w-full">
@@ -251,6 +274,9 @@ export const CollaborativeEditor: WithActionProps<
                           </div>
                         </LoadingBoundary>
                       </div>
+                      <LandingScreenWrapper
+                        aiAssistantEnabled={aiAssistantEnabled}
+                      />
                     </div>
                     <AIAssistantPanelWrapper
                       aiAssistantEnabled={aiAssistantEnabled}

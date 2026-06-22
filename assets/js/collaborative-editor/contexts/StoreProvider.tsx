@@ -138,7 +138,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       historyStore: createHistoryStore({
         initialRunData: parsedInitialRunData,
       }),
-      uiStore: createUIStore(),
+      uiStore: createUIStore(isNewWorkflow),
       editorPreferencesStore: createEditorPreferencesStore(),
       aiAssistantStore: createAIAssistantStore(),
     };

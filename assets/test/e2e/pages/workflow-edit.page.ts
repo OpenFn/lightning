@@ -21,6 +21,13 @@ export class WorkflowEditPage extends LiveViewPage {
     workflowNameInput: 'input[name="workflow[name]"]',
   };
 
+  // Landing screen selectors
+  readonly landingScreen = this.page.getByTestId('landing-screen');
+  readonly buildWithAIInput = this.page.getByTestId('build-with-ai-input');
+  readonly buildWithAIButton = this.page.getByTestId('build-with-ai-button');
+  readonly browseTemplatesCard = this.page.getByTestId('browse-templates-card');
+  readonly importYAMLCard = this.page.getByTestId('import-yaml-card');
+
   constructor(page: Page) {
     super(page);
     this.diagram = new WorkflowDiagramPage(page);

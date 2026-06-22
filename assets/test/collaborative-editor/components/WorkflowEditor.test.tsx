@@ -210,6 +210,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   }),
   useIsCreateWorkflowPanelCollapsed: () => true,
   useIsAIAssistantPanelOpen: () => false,
+  useShowLandingScreen: () => false,
 }));
 
 // Mock workflow hooks with controllable node selection

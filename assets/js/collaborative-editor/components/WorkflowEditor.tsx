@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from '../../components/Tooltip';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
@@ -15,8 +16,9 @@ import {
   useRunPanelContext,
   useTemplatePanel,
   useUICommands,
-  useIsCreateWorkflowPanelCollapsed,
+  //useIsCreateWorkflowPanelCollapsed, // TODO-AI-FIRST clean up
   useIsAIAssistantPanelOpen,
+  useShowLandingScreen,
 } from '../hooks/useUI';
 import {
   useNodeSelection,
@@ -35,7 +37,6 @@ import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 import { TemplateDetailsCard } from './TemplateDetailsCard';
-import { Tooltip } from '../../components/Tooltip';
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -50,6 +51,7 @@ export function WorkflowEditor({
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
+  const showLandingScreen = useShowLandingScreen();
   const { saveWorkflow } = useWorkflowActions();
 
   const isRunPanelOpen = useIsRunPanelOpen();
@@ -64,7 +66,8 @@ export function WorkflowEditor({
     expandCreateWorkflowPanel,
     setTemplateSearchQuery,
   } = useUICommands();
-  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
+  // TODO-AI-FIRST: remove in #4856
+  const isCreateWorkflowPanelCollapsed = true;
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
   // Get selected template from UI store (for template details card)
@@ -567,8 +570,10 @@ export function WorkflowEditor({
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
-        {/* Show placeholder when workflow is empty */}
+        {/* TODO-AI-FIRST: remove this placeholder once the landing screen (#4856) always covers the new-workflow state */}
+        {/* Show placeholder when workflow is empty and landing screen is not covering it */}
         {isNewWorkflow &&
+          !showLandingScreen &&
           workflow.jobs.length === 0 &&
           workflow.triggers.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

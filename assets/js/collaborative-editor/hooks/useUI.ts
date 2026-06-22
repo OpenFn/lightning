@@ -60,6 +60,7 @@ export const useUICommands = () => {
     // Template panel commands
     selectTemplate: uiStore.selectTemplate,
     setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
+    dismissLandingScreen: uiStore.dismissLandingScreen,
   };
 };
 
@@ -127,6 +128,17 @@ export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
   );
 
   return useSyncExternalStore(uiStore.subscribe, selectIsCollapsed);
+};
+
+/**
+ * Hook to check if the landing screen overlay is visible
+ */
+export const useShowLandingScreen = (): boolean => {
+  const uiStore = useUIStore();
+  const selectShowLandingScreen = uiStore.withSelector(
+    state => state.showLandingScreen
+  );
+  return useSyncExternalStore(uiStore.subscribe, selectShowLandingScreen);
 };
 
 /**

@@ -44,6 +44,9 @@ export interface UIState {
   /** Create workflow panel collapsed state */
   createWorkflowPanelCollapsed: boolean;
 
+  /** Whether the landing screen overlay is visible (only true at /new before a path is committed) */
+  showLandingScreen: boolean;
+
   /** Template panel state */
   templatePanel: {
     templates: WorkflowTemplate[];
@@ -99,6 +102,9 @@ export interface UICommands {
 
   /** Toggle create workflow panel collapsed state */
   toggleCreateWorkflowPanel: () => void;
+
+  /** Dismiss the landing screen — called by downstream issues when a path is committed */
+  dismissLandingScreen: () => void;
 
   /** Set templates list */
   setTemplates: (templates: WorkflowTemplate[]) => void;
