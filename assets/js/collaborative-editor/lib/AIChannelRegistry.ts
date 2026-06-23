@@ -907,12 +907,21 @@ export class AIChannelRegistry {
       if (context.workflow_id) {
         params['workflow_id'] = context.workflow_id;
       }
-      if (context.code) {
-        params['code'] = context.code;
-      }
       if (context.content) {
         params['content'] = context.content;
       }
+    }
+
+    // Workflow YAML (applicable to both session types). For global chat the
+    // `code` slot carries the FULL serialized workflow YAML (every step body
+    // embedded), not a single job's code. When a step is open the context is
+    // JobCodeContext-shaped and took the branch above, which does not forward
+    // `code`. Forwarding it here (outside the branch) ensures the YAML reaches
+    // Apollo on the *first* turn — the only message sent via the channel join.
+    // Later turns go through `new_message` and were never affected. Plain job
+    // chat never sets `context.code`, so this is a no-op there.
+    if ('code' in context && context.code) {
+      params['code'] = context.code;
     }
 
     // Global assistant flags (applicable to both session types)

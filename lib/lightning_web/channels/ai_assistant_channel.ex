@@ -395,6 +395,20 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
+  # Global chat is always a workflow_template session, even when launched with a
+  # step open (which puts a job_id in params). Route it to the workflow_template
+  # path so the full workflow YAML (`code`) and global meta are persisted and no
+  # job is attached to the message — matching the global-chat receive design and
+  # the turn-2 (new_message) path. Without this, the job_id clause below would
+  # drop `code` and Apollo would receive no workflow context on the first turn.
+  defp load_or_create_session(
+         session_id,
+         %{"use_global_assistant" => true} = params,
+         user
+       ) do
+    load_or_create_workflow_template_session(session_id, params, user)
+  end
+
   defp load_or_create_session(session_id, %{"job_id" => job_id} = params, user)
        when not is_nil(job_id) do
     case session_id do
@@ -404,6 +418,10 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp load_or_create_session(session_id, params, user) do
+    load_or_create_workflow_template_session(session_id, params, user)
+  end
+
+  defp load_or_create_workflow_template_session(session_id, params, user) do
     case session_id do
       "new" ->
         with {:project_id, project_id} when not is_nil(project_id) <-

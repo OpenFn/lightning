@@ -77,6 +77,10 @@ export interface JobCodeContext {
   job_body?: string;
   job_adaptor?: string;
   workflow_id?: string;
+
+  // Full serialized workflow YAML attached by global chat (sent as the message
+  // `code`). Present even with a step open, so it lives on the job context too.
+  code?: string;
 }
 
 /**
@@ -106,6 +110,10 @@ export type WorkflowTemplateContext =
 
       workflow_id?: string;
       project_id: string;
+
+      // Full serialized workflow YAML attached by global chat (sent as the
+      // message `code`), present even when a step is open.
+      code?: string;
     };
 
 /**
