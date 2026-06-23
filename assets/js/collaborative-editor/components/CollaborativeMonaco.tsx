@@ -41,6 +41,11 @@ interface CollaborativeMonacoProps {
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
+  /**
+   * Invoked once the editor instance and imperative ref are ready. Lets a
+   * parent re-show a diff on (re)mount; a no-op for callers that don't.
+   */
+  onReady?: () => void;
 }
 
 export const CollaborativeMonaco = forwardRef<
@@ -55,6 +60,7 @@ export const CollaborativeMonaco = forwardRef<
     disabled = false,
     className,
     options = {},
+    onReady,
   }: CollaborativeMonacoProps,
   ref
 ) {
@@ -111,6 +117,11 @@ export const CollaborativeMonaco = forwardRef<
       []
     );
 
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
       editorRef.current = editor;
@@ -132,6 +143,10 @@ export const CollaborativeMonaco = forwardRef<
 
       // Don't create binding here - let the useEffect handle it
       // This ensures binding is created/updated whenever ytext changes
+
+      // Editor instance and imperative ref are set; let the parent re-show a
+      // pending diff on this fresh mount.
+      onReadyRef.current?.();
     },
     [adaptor]
   );

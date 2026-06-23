@@ -53,7 +53,11 @@ import {
   CollaborativeMonaco,
   type MonacoHandle,
 } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
-import { MonacoRefProvider } from '../../../js/collaborative-editor/contexts/MonacoRefContext';
+import {
+  MonacoRefProvider,
+  useHandleEditorReady,
+  useRegisterEditorReadyCallback,
+} from '../../../js/collaborative-editor/contexts/MonacoRefContext';
 
 // Extend window type for test refs
 declare global {
@@ -307,6 +311,91 @@ describe('CollaborativeMonaco - Diff Display', () => {
 
       // Should not throw
       expect(() => handle.clearDiff()).not.toThrow();
+    });
+  });
+
+  describe('onReady', () => {
+    it('invokes onReady after the editor and imperative ref are set', async () => {
+      const handleAtReady = {
+        current: undefined as MonacoHandle | null | undefined,
+      };
+
+      function ReadyWrapper() {
+        const ref = useRef<MonacoHandle>(null);
+        const ydoc = new Y.Doc();
+        const ytext = ydoc.getText('code');
+        const awareness = new Awareness(ydoc);
+
+        return (
+          <CollaborativeMonaco
+            ref={ref}
+            ytext={ytext}
+            awareness={awareness}
+            onReady={() => {
+              // The imperative ref must already be populated when onReady fires
+              handleAtReady.current = ref.current;
+            }}
+          />
+        );
+      }
+
+      render(<ReadyWrapper />);
+
+      await waitFor(() => {
+        expect(handleAtReady.current).toBeTruthy();
+      });
+      expect(typeof handleAtReady.current?.showDiff).toBe('function');
+    });
+
+    it('does not throw when onReady is omitted', async () => {
+      const { findByTestId } = render(<TestWrapper />);
+
+      // Mounts cleanly with no onReady prop (job/workflow chat usage)
+      await expect(findByTestId('monaco-editor')).resolves.toBeInTheDocument();
+    });
+
+    it('fires editor-ready callbacks through the context on mount (re-show wiring)', async () => {
+      // End-to-end of the wiring: FullScreenIDE passes useHandleEditorReady as
+      // onReady; the AI panel registers a re-show callback via the context.
+      const reShow = vi.fn();
+
+      function ReShowConsumer() {
+        useRegisterEditorReadyCallback(reShow);
+        return null;
+      }
+
+      function Editor() {
+        const ref = useRef<MonacoHandle>(null);
+        const ydoc = new Y.Doc();
+        const ytext = ydoc.getText('code');
+        const awareness = new Awareness(ydoc);
+        const handleEditorReady = useHandleEditorReady();
+
+        return (
+          <CollaborativeMonaco
+            ref={ref}
+            ytext={ytext}
+            awareness={awareness}
+            onReady={handleEditorReady}
+          />
+        );
+      }
+
+      function Tree() {
+        const monacoRef = useRef<MonacoHandle>(null);
+        return (
+          <MonacoRefProvider monacoRef={monacoRef}>
+            <ReShowConsumer />
+            <Editor />
+          </MonacoRefProvider>
+        );
+      }
+
+      render(<Tree />);
+
+      await waitFor(() => {
+        expect(reShow).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

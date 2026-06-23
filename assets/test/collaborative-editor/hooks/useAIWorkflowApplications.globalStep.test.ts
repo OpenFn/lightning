@@ -213,22 +213,159 @@ describe('useAIWorkflowApplications - global messages', () => {
       expect(mockShowDiff).not.toHaveBeenCalled();
     });
 
-    it('deduplicates previews like handlePreviewJobCode', () => {
-      // Already previewing this message -> no-op
+    it('does not re-show for the same open step but re-fires for a different one', () => {
+      // job_b has a changed body too, so a diff would show if not deduped
+      vi.mocked(convertWorkflowSpecToState).mockReturnValue({
+        id: 'wf-1',
+        name: 'Test Workflow',
+        jobs: [
+          {
+            id: 'job-1',
+            name: 'Test Job',
+            adaptor: '@openfn/language-http@latest',
+            body: 'new body',
+            keychain_credential_id: null,
+            project_credential_id: null,
+          },
+          {
+            id: 'job-2',
+            name: 'Other Job',
+            adaptor: '@openfn/language-http@latest',
+            body: 'new body 2',
+            keychain_credential_id: null,
+            project_credential_id: null,
+          },
+        ],
+        triggers: [],
+        edges: [],
+        positions: null,
+      });
+
+      // First call on job-1 shows the diff
       const { result } = renderApplications({
-        previewingMessageId: 'msg-1',
+        jobs: [
+          createMockJob({ id: 'job-1', body: 'old body' }),
+          createMockJob({ id: 'job-2', body: 'old body 2' }),
+        ],
+        aiMode: createMockAIMode('job_code', { job_id: 'job-1' }),
+      });
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(1);
+
+      // Same message + same open step -> no re-show
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(1);
+
+      // Same message but a different open step -> re-fires
+      const { result: onJob2 } = renderApplications({
+        jobs: [
+          createMockJob({ id: 'job-1', body: 'old body' }),
+          createMockJob({ id: 'job-2', body: 'old body 2' }),
+        ],
+        aiMode: createMockAIMode('job_code', { job_id: 'job-2' }),
+      });
+      onJob2.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(2);
+      expect(mockShowDiff).toHaveBeenLastCalledWith('old body 2', 'new body 2');
+    });
+
+    it('re-shows the same step after resetGlobalStepPreviewDedup (re-entry)', () => {
+      const { result } = renderApplications();
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(1);
+
+      // Without a reset the same step would be deduped
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(1);
+
+      // A fresh editor mount resets the dedup, so re-entry re-shows
+      result.current.resetGlobalStepPreviewDedup();
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).toHaveBeenCalledTimes(2);
+    });
+
+    it('streaming preview swaps to the plain message id and dedups the step', () => {
+      const { result } = renderApplications({
+        previewingMessageId: '__streaming__',
       });
       result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
       expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
-
-      // Streaming preview already shown -> only swap the message id
-      const { result: streaming } = renderApplications({
-        previewingMessageId: '__streaming__',
-      });
-      streaming.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-      expect(mockShowDiff).not.toHaveBeenCalled();
       expect(mockSetPreviewingMessageId).toHaveBeenCalledWith('msg-1');
+
+      // The step is now deduped (same message + same open step) -> no re-show
+      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
+      expect(mockShowDiff).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pendingGlobalMessage selector', () => {
+    const userMessage: Message = {
+      id: 'user-1',
+      role: 'user',
+      content: 'Update my workflow',
+      status: 'success',
+      inserted_at: new Date().toISOString(),
+      user_id: 'user-123',
+    };
+
+    it('picks the latest unapplied successful global message', () => {
+      const older = createGlobalMessage({ id: 'global-old' });
+      const newer = createGlobalMessage({ id: 'global-new' });
+
+      const { result } = renderApplications({
+        currentSession: { messages: [userMessage, older, newer] },
+      });
+
+      expect(result.current.pendingGlobalMessage?.id).toBe('global-new');
+    });
+
+    it('stops being pending once explicitly applied', async () => {
+      const message = createGlobalMessage({ id: 'global-applied' });
+
+      const { result } = renderApplications({
+        currentSession: { messages: [userMessage, message] },
+      });
+
+      expect(result.current.pendingGlobalMessage?.id).toBe('global-applied');
+
+      await result.current.handleApplyWorkflow(message.code!, message.id);
+
+      await waitFor(() => {
+        expect(result.current.pendingGlobalMessage).toBeNull();
+      });
+    });
+
+    it('is unaffected by appliedMessageIdsRef (auto-apply dedup only)', () => {
+      const message = createGlobalMessage({ id: 'global-1' });
+
+      const { result } = renderApplications({
+        currentSession: { messages: [userMessage, message] },
+        appliedMessageIdsRef: { current: new Set(['global-1']) },
+      });
+
+      // Seeding the auto-apply dedup ref must NOT clear pending — only an
+      // explicit apply does (global messages never auto-apply).
+      expect(result.current.pendingGlobalMessage?.id).toBe('global-1');
+    });
+
+    it('ignores non-global, non-success, code-less, and user messages', () => {
+      const nonGlobal = createGlobalMessage({
+        id: 'workflow-msg',
+        from_global: false,
+      });
+      const errored = createGlobalMessage({
+        id: 'errored',
+        status: 'error',
+      });
+      const noCode = createGlobalMessage({ id: 'no-code', code: undefined });
+
+      const { result } = renderApplications({
+        currentSession: {
+          messages: [userMessage, nonGlobal, errored, noCode],
+        },
+      });
+
+      expect(result.current.pendingGlobalMessage).toBeNull();
     });
   });
 
@@ -295,6 +432,72 @@ describe('useAIWorkflowApplications - global messages', () => {
       await waitFor(() => {
         expect(mockImportWorkflow).toHaveBeenCalled();
         expect(mockDoneApplyingWorkflow).toHaveBeenCalledWith('msg-workflow');
+      });
+    });
+  });
+
+  describe('auto-apply suppression for global messages', () => {
+    const userMessage: Message = {
+      id: 'user-1',
+      role: 'user',
+      content: 'Update my workflow',
+      status: 'success',
+      inserted_at: new Date().toISOString(),
+      user_id: 'user-123',
+    };
+
+    const baseProps = () => ({
+      sessionId: 'session-1',
+      page: 'workflow_template' as const,
+      currentSession: { messages: [userMessage] },
+      currentUserId: 'user-123',
+      aiMode: createMockAIMode('workflow_template'),
+      workflowActions: mockWorkflowActions,
+      monacoRef: createMockMonacoRef(),
+      jobs: [createMockJob()],
+      canApplyChanges: true,
+      connectionState: 'connected' as const,
+      setPreviewingMessageId: mockSetPreviewingMessageId,
+      previewingMessageId: null,
+      setApplyingMessageId: mockSetApplyingMessageId,
+      appliedMessageIdsRef: { current: new Set<string>() },
+    });
+
+    it('does not auto-apply a global message that arrives on the canvas', () => {
+      const initialProps = baseProps();
+      const { rerender } = renderHook(p => useAIWorkflowApplications(p), {
+        initialProps,
+      });
+
+      // A global reply arrives after the session has loaded.
+      rerender({
+        ...initialProps,
+        currentSession: {
+          messages: [userMessage, createGlobalMessage({ id: 'g1' })],
+        },
+      });
+
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
+    });
+
+    it('still auto-applies a non-global workflow message', async () => {
+      const initialProps = baseProps();
+      const { rerender } = renderHook(p => useAIWorkflowApplications(p), {
+        initialProps,
+      });
+
+      rerender({
+        ...initialProps,
+        currentSession: {
+          messages: [
+            userMessage,
+            createGlobalMessage({ id: 'w1', from_global: false }),
+          ],
+        },
+      });
+
+      await waitFor(() => {
+        expect(mockImportWorkflow).toHaveBeenCalled();
       });
     });
   });

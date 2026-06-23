@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import {
@@ -156,9 +156,36 @@ export function useAIWorkflowApplications({
    */
   const hasLoadedSessionRef = useRef(false);
 
-  // Reset hasLoadedSessionRef when session changes
+  /**
+   * Tracks the last `${messageId}:${jobId}` previewed via handlePreviewGlobalStep
+   * so re-entering a step re-shows its diff while re-rendering on the same step
+   * does not. Kept separate from previewingMessageId, which the rest of the UI
+   * reads as a plain message id.
+   */
+  const lastPreviewedGlobalStepRef = useRef<string | null>(null);
+
+  /**
+   * Global messages never auto-apply; they require an explicit Apply click.
+   * This tracks which global messages the user has applied, so a message stays
+   * "pending" (and keeps showing per-step diffs as you browse) until applied.
+   * State (not a ref) so pendingGlobalMessage recomputes when it changes. Kept
+   * separate from appliedMessageIdsRef, which dedups workflow-chat auto-apply.
+   */
+  const [appliedGlobalMessageIds, setAppliedGlobalMessageIds] = useState<
+    Set<string>
+  >(() => new Set());
+
+  // Reset session-scoped tracking when the session changes. Only clear the
+  // applied-set on an actual session change (not initial mount) so we don't
+  // trigger a spurious re-render that would re-run the auto-apply effect.
+  const prevSessionIdRef = useRef(sessionId);
   useEffect(() => {
     hasLoadedSessionRef.current = false;
+    lastPreviewedGlobalStepRef.current = null;
+    if (prevSessionIdRef.current !== sessionId) {
+      prevSessionIdRef.current = sessionId;
+      setAppliedGlobalMessageIds(new Set());
+    }
   }, [sessionId]);
 
   /**
@@ -206,6 +233,12 @@ export function useAIWorkflowApplications({
         );
 
         await importWorkflow(workflowStateWithCreds);
+
+        // Mark a global message applied so it stops being "pending" and no
+        // longer re-shows per-step diffs as the user navigates.
+        if (isGlobal && messageId !== '__streaming__') {
+          setAppliedGlobalMessageIds(prev => new Set(prev).add(messageId));
+        }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
@@ -317,10 +350,14 @@ export function useAIWorkflowApplications({
       const jobId = (aiMode.context as JobCodeContext).job_id;
       if (!jobId) return;
 
-      // Same dedup guards as handlePreviewJobCode
-      if (previewingMessageId === messageId) return;
+      // Dedup is keyed on message + open step so navigating to a different
+      // step re-fires the diff while re-rendering on the same step does not.
+      // (previewingMessageId stays the plain message id for the rest of the UI.)
+      const stepKey = `${messageId}:${jobId}`;
+      if (lastPreviewedGlobalStepRef.current === stepKey) return;
       if (previewingMessageId === '__streaming__') {
         setPreviewingMessageId(messageId);
+        lastPreviewedGlobalStepRef.current = stepKey;
         return;
       }
 
@@ -339,6 +376,7 @@ export function useAIWorkflowApplications({
       if (newBody === undefined || newBody === currentBody) {
         // open step unchanged -> ensure no stale diff is shown
         if (previewingMessageId) monacoRef?.current?.clearDiff();
+        lastPreviewedGlobalStepRef.current = stepKey;
         return;
       }
 
@@ -347,6 +385,7 @@ export function useAIWorkflowApplications({
       if (monaco) {
         monaco.showDiff(currentBody, newBody);
         setPreviewingMessageId(messageId);
+        lastPreviewedGlobalStepRef.current = stepKey;
       }
     },
     [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
@@ -468,6 +507,10 @@ export function useAIWorkflowApplications({
 
     const latestMessage = messagesWithCode.pop();
 
+    // Global messages never auto-apply — they require an explicit Apply click
+    // so the user can review each step's diff first.
+    if (latestMessage?.from_global) return;
+
     if (
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
@@ -507,10 +550,46 @@ export function useAIWorkflowApplications({
     appliedMessageIdsRef,
   ]);
 
+  /**
+   * Clears the per-step preview dedup so the next handlePreviewGlobalStep call
+   * re-shows even for the same step. The editor remount on step (re)entry
+   * disposes the prior diff, so re-entry must be allowed to re-show it.
+   */
+  const resetGlobalStepPreviewDedup = useCallback(() => {
+    lastPreviewedGlobalStepRef.current = null;
+  }, []);
+
+  /**
+   * The latest "pending" global message: a successful assistant message from
+   * the global assistant that carries a full workflow YAML and has not been
+   * explicitly applied yet. While one exists, opening a step re-shows that
+   * step's diff. Returns null otherwise.
+   */
+  const pendingGlobalMessage = useMemo(() => {
+    const messages = currentSession?.messages;
+    if (!messages) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (
+        m &&
+        m.role === 'assistant' &&
+        m.from_global &&
+        m.code &&
+        m.status === 'success' &&
+        !appliedGlobalMessageIds.has(m.id)
+      ) {
+        return m;
+      }
+    }
+    return null;
+  }, [currentSession, appliedGlobalMessageIds]);
+
   return {
     handleApplyWorkflow,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
+    pendingGlobalMessage,
+    resetGlobalStepPreviewDedup,
   };
 }

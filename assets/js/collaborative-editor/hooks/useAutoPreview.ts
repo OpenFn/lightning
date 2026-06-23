@@ -99,8 +99,18 @@ export function useAutoPreview({
     // onPreview callback handles extracting the open step's body from it.
     if (!latestCodeMessage.job_id && !latestCodeMessage.from_global) return;
 
-    // Skip if we've already auto-previewed this message
-    if (stateRef.current.lastAutoPreviewedMessageId === latestCodeMessage.id) {
+    // Global messages re-key the once-guard on the open step so navigating to
+    // a different step re-previews; non-global job-code keying is unchanged
+    // (plain message id).
+    const openJobId = latestCodeMessage.from_global
+      ? (aiMode.context as { job_id?: string }).job_id
+      : undefined;
+    const previewKey = openJobId
+      ? `${latestCodeMessage.id}:${openJobId}`
+      : latestCodeMessage.id;
+
+    // Skip if we've already auto-previewed this message (for this step)
+    if (stateRef.current.lastAutoPreviewedMessageId === previewKey) {
       return;
     }
 
@@ -109,7 +119,7 @@ export function useAutoPreview({
     if (!stateRef.current.hasLoadedSession) {
       stateRef.current.hasLoadedSession = true;
       // Mark existing message as "seen" so it won't be previewed on subsequent renders
-      stateRef.current.lastAutoPreviewedMessageId = latestCodeMessage.id;
+      stateRef.current.lastAutoPreviewedMessageId = previewKey;
       return;
     }
 
@@ -133,6 +143,6 @@ export function useAutoPreview({
 
     // Auto-preview - Only for the message author
     onPreview(latestCodeMessage.code!, latestCodeMessage.id);
-    stateRef.current.lastAutoPreviewedMessageId = latestCodeMessage.id;
+    stateRef.current.lastAutoPreviewedMessageId = previewKey;
   }, [aiMode, session, currentUserId, onPreview]);
 }

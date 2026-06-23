@@ -33,6 +33,17 @@ describe('useAutoPreview', () => {
     storageKey: 'ai-job-job-1',
   });
 
+  // Derives a job_code mode for a specific open step from the base helper so the
+  // context cast stays in one place.
+  const createJobCodeModeFor = (jobId: string): AIModeResult => {
+    const base = createMockJobCodeMode();
+    return {
+      ...base,
+      context: { ...base.context, job_id: jobId },
+      storageKey: `ai-job-${jobId}`,
+    };
+  };
+
   const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
     id: 'msg-1',
     role: 'assistant',
@@ -271,6 +282,62 @@ describe('useAutoPreview', () => {
       });
 
       expect(mockOnPreview).toHaveBeenCalledWith(globalYaml, 'global-msg');
+    });
+
+    it('re-previews the same global message when the open step changes', () => {
+      const firstAssistant = createMockMessage({
+        id: 'first-msg',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+      });
+      const initialSession = createMockSession([
+        olderUserMessage,
+        firstAssistant,
+      ]);
+
+      const { rerender } = renderHook(
+        ({ aiMode, session }) =>
+          useAutoPreview({
+            aiMode,
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        {
+          initialProps: {
+            aiMode: createJobCodeModeFor('job-1'),
+            session: initialSession,
+          },
+        }
+      );
+
+      const globalSession = createMockSession([
+        olderUserMessage,
+        firstAssistant,
+        triggeringUserMessage,
+        createGlobalMessage(),
+      ]);
+
+      // New global message while job-1 is open -> previews once
+      rerender({
+        aiMode: createJobCodeModeFor('job-1'),
+        session: globalSession,
+      });
+      expect(mockOnPreview).toHaveBeenCalledTimes(1);
+
+      // Re-render on the same step -> no duplicate preview
+      rerender({
+        aiMode: createJobCodeModeFor('job-1'),
+        session: globalSession,
+      });
+      expect(mockOnPreview).toHaveBeenCalledTimes(1);
+
+      // Switch to a different open step -> the same global message re-previews
+      rerender({
+        aiMode: createJobCodeModeFor('job-2'),
+        session: globalSession,
+      });
+      expect(mockOnPreview).toHaveBeenCalledTimes(2);
+      expect(mockOnPreview).toHaveBeenLastCalledWith(globalYaml, 'global-msg');
     });
 
     it('does not auto-preview a global message when no job is open', () => {
@@ -624,6 +691,73 @@ describe('useAutoPreview', () => {
       // Re-render with same messages (e.g., store update)
       rerender({ session: sessionWithNewMessage });
       expect(mockOnPreview).toHaveBeenCalledTimes(1); // Still 1, not 2
+    });
+
+    it('does not re-preview a non-global job-code message when the open step changes', () => {
+      // Job-code keying stays on the plain message id, so changing the open
+      // job must NOT re-fire the once-guard (unlike global messages).
+      const userMessage: Message = {
+        id: 'user-msg',
+        role: 'user',
+        content: 'Question',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const firstAssistant = createMockMessage({
+        id: 'first-msg',
+        inserted_at: new Date(Date.now() - 1500).toISOString(),
+      });
+      const userMessage2: Message = {
+        id: 'user-msg-2',
+        role: 'user',
+        content: 'Another',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const jobCodeMessage = createMockMessage({
+        id: 'job-msg',
+        job_id: 'job-1',
+        inserted_at: new Date().toISOString(),
+      });
+
+      const initialSession = createMockSession([userMessage, firstAssistant]);
+      const { rerender } = renderHook(
+        ({ aiMode, session }) =>
+          useAutoPreview({
+            aiMode,
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        {
+          initialProps: {
+            aiMode: createJobCodeModeFor('job-1'),
+            session: initialSession,
+          },
+        }
+      );
+
+      const updatedSession = createMockSession([
+        userMessage,
+        firstAssistant,
+        userMessage2,
+        jobCodeMessage,
+      ]);
+
+      rerender({
+        aiMode: createJobCodeModeFor('job-1'),
+        session: updatedSession,
+      });
+      expect(mockOnPreview).toHaveBeenCalledTimes(1);
+
+      // Changing the open step must not re-fire for a job-code message
+      rerender({
+        aiMode: createJobCodeModeFor('job-2'),
+        session: updatedSession,
+      });
+      expect(mockOnPreview).toHaveBeenCalledTimes(1);
     });
 
     it('should preview different messages separately', () => {

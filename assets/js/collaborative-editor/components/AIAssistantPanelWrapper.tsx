@@ -18,6 +18,7 @@ import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
   useRegisterDiffDismissalCallback,
+  useRegisterEditorReadyCallback,
 } from '../contexts/MonacoRefContext';
 import {
   useAIConnectionState,
@@ -565,6 +566,8 @@ export function AIAssistantPanelWrapper({
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
+    pendingGlobalMessage,
+    resetGlobalStepPreviewDedup,
   } = useAIWorkflowApplications({
     sessionId,
     page: aiMode?.page || 'workflow_template',
@@ -621,6 +624,16 @@ export function AIAssistantPanelWrapper({
     onPreview: handleAutoPreview,
   });
 
+  // When the editor (re)mounts with a step open, re-show that step's diff from
+  // the pending global message. No-op for job/workflow chat (no pending global
+  // message) so their behaviour is unchanged.
+  useRegisterEditorReadyCallback(() => {
+    if (aiMode?.page !== 'job_code' || !pendingGlobalMessage?.code) return;
+    // Fresh mount disposed any prior diff, so allow re-show for this step too.
+    resetGlobalStepPreviewDedup();
+    handlePreviewGlobalStep(pendingGlobalMessage.code, pendingGlobalMessage.id);
+  });
+
   // Auto-apply streaming changes as soon as they arrive (before text finishes)
   // This triggers the same apply/preview logic that normally runs on new_message,
   // but earlier — as soon as Apollo sends the structured changes event.
@@ -636,7 +649,13 @@ export function AIAssistantPanelWrapper({
     if (appliedStreamingChangesRef.current === streamingChanges) return;
     appliedStreamingChangesRef.current = streamingChanges;
 
-    if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
+    // Global messages never auto-apply (including mid-stream); they require an
+    // explicit Apply click so the user can review each step's diff first.
+    if (
+      aiMode?.page === 'workflow_template' &&
+      !isGlobalAssistantActive &&
+      'yaml' in streamingChanges
+    ) {
       const yaml = streamingChanges['yaml'] as string;
       if (yaml) {
         appliedViaStreamingRef.current = true;
@@ -655,6 +674,7 @@ export function AIAssistantPanelWrapper({
     canApplyChanges,
     handleApplyWorkflow,
     handlePreviewJobCode,
+    isGlobalAssistantActive,
   ]);
 
   // When a new assistant message with code arrives after we already applied

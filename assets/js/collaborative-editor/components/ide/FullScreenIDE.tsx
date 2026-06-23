@@ -25,7 +25,10 @@ import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
-import { useMonacoRef } from '../../contexts/MonacoRefContext';
+import {
+  useHandleEditorReady,
+  useMonacoRef,
+} from '../../contexts/MonacoRefContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -155,6 +158,9 @@ export function FullScreenIDE({
   // Fallback to local ref if context not available (shouldn't happen)
   const localMonacoRef = useRef<MonacoHandle>(null);
   const monacoRef = useMonacoRef() ?? localMonacoRef;
+  // Signals (via context) that the editor is ready, so the AI panel can
+  // re-show a pending global-step diff on this fresh mount.
+  const handleEditorReady = useHandleEditorReady();
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -1000,6 +1006,7 @@ export function FullScreenIDE({
                             adaptor={currentJob.adaptor || 'common'}
                             metadata={metadata}
                             disabled={!canSave}
+                            onReady={handleEditorReady}
                             className="h-full w-full"
                             options={{
                               automaticLayout: true,

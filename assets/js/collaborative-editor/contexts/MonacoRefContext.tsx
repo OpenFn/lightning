@@ -28,6 +28,8 @@ export interface MonacoRefContextValue {
   monacoRef: RefObject<MonacoHandle> | null;
   registerDiffDismissalCallback: (callback: () => void) => () => void;
   handleDiffDismissed: () => void;
+  registerEditorReadyCallback: (callback: () => void) => () => void;
+  handleEditorReady: () => void;
 }
 
 export const MonacoRefContext = createContext<MonacoRefContextValue | null>(
@@ -49,6 +51,7 @@ export function MonacoRefProvider({
 }: MonacoRefProviderProps) {
   // Store callbacks in a ref to avoid re-renders when callbacks change
   const callbacksRef = useRef<Set<() => void>>(new Set());
+  const readyCallbacksRef = useRef<Set<() => void>>(new Set());
 
   /**
    * Registers a callback to be invoked when the diff is dismissed.
@@ -67,9 +70,32 @@ export function MonacoRefProvider({
     callbacksRef.current.forEach(callback => callback());
   }, []);
 
+  /**
+   * Registers a callback invoked when the editor (re)mounts and is ready.
+   * Returns a cleanup function to unregister the callback.
+   */
+  const registerEditorReadyCallback = useCallback((callback: () => void) => {
+    readyCallbacksRef.current.add(callback);
+    return () => readyCallbacksRef.current.delete(callback);
+  }, []);
+
+  /**
+   * Invokes all registered editor-ready callbacks.
+   * Called by FullScreenIDE when CollaborativeMonaco signals it is ready.
+   */
+  const handleEditorReady = useCallback(() => {
+    readyCallbacksRef.current.forEach(callback => callback());
+  }, []);
+
   return (
     <MonacoRefContext.Provider
-      value={{ monacoRef, registerDiffDismissalCallback, handleDiffDismissed }}
+      value={{
+        monacoRef,
+        registerDiffDismissalCallback,
+        handleDiffDismissed,
+        registerEditorReadyCallback,
+        handleEditorReady,
+      }}
     >
       {children}
     </MonacoRefContext.Provider>
@@ -125,6 +151,43 @@ export function useRegisterDiffDismissalCallback(callback: () => void): void {
 
     const stableCallback = () => callbackRef.current();
     const cleanup = context.registerDiffDismissalCallback(stableCallback);
+
+    return cleanup;
+  }, [context]);
+}
+
+/**
+ * Hook to access handleEditorReady callback from context.
+ * Use this in FullScreenIDE to signal when CollaborativeMonaco is ready.
+ *
+ * @returns handleEditorReady callback or undefined if outside provider
+ */
+export function useHandleEditorReady(): (() => void) | undefined {
+  const context = useContext(MonacoRefContext);
+  return context?.handleEditorReady;
+}
+
+/**
+ * Hook to register a callback invoked when the editor (re)mounts and is ready.
+ * Automatically handles cleanup when the component unmounts.
+ *
+ * @param callback - Function to call when the editor is ready
+ */
+export function useRegisterEditorReadyCallback(callback: () => void): void {
+  const context = useContext(MonacoRefContext);
+  const callbackRef = useRef(callback);
+
+  // Keep callback ref up to date
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  // Register/unregister callback on mount/unmount
+  useEffect(() => {
+    if (!context?.registerEditorReadyCallback) return;
+
+    const stableCallback = () => callbackRef.current();
+    const cleanup = context.registerEditorReadyCallback(stableCallback);
 
     return cleanup;
   }, [context]);
