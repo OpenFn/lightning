@@ -549,4 +549,15 @@ defmodule LightningWeb.RunChannel do
     {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
      socket}
   end
+
+  # Fallback for unexpected error terms
+  defp handle_credential_error(socket, error, id, _project_id, run_id) do
+    Logger.warning(
+      "Unhandled credential resolution error for credential #{id} " <>
+        "(run #{run_id}): #{inspect(error)}"
+    )
+
+    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
+     socket}
+  end
 end

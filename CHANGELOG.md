@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
@@ -25,6 +33,10 @@ and this project adheres to
 
 ### Changed
 
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
 - Consolidate email format validation onto a single canonical validator (Zod v4
   regex) applied uniformly across user creation, credential transfer, and both
   collaborator add/invite flows. Fixes a silent inconsistency where
@@ -38,6 +50,15 @@ and this project adheres to
 
 ### Fixed
 
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
 - Fix email format validation not displaying in the Add Collaborators and Invite
   Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
 - Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
