@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Changed
 
+- Bump worker to 1.27.0
+
 ### Fixed
 
 ## [2.16.8-pre] - 2026-06-18
