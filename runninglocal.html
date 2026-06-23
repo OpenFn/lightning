@@ -167,11 +167,20 @@ the adaptor picklist in the Workflow Editor will only suggest adaptors present
 in the monorepo.</p><p>Remember to re-build your adaptors after making changes (use
 <code class="inline">pnpm build --watch</code> in the monorepo).</p><p>To start, set up the following environment variables:</p><ul><li><code class="inline">LOCAL_ADAPTORS</code>: Used to enable or disable the local adaptors mode. Set it to
 <code class="inline">true</code> to enable.</li><li><code class="inline">OPENFN_ADAPTORS_REPO</code>: This should point to the adaptors monorepo. This is
-the same variable used when you pass <code class="inline">-m</code> to the CLI.</li></ul><p>Example configuration:</p><pre><code class="makeup sh" translate="no"><span class="">export LOCAL_ADAPTORS=true
+the same variable used when you pass <code class="inline">-m</code> to the CLI. It also accepts a
+comma-separated list of paths to merge multiple repos into the registry; the
+first path wins on dirname collisions, with a warning logged for shadowed
+entries. Both the registry view and the bundled <code class="inline">ws-worker</code> resolve <code class="inline">@local</code>
+adaptors against the same list, so a workflow run picks up the same package
+the picker shows.</li></ul><p>Example configuration:</p><pre><code class="makeup sh" translate="no"><span class="">export LOCAL_ADAPTORS=true
 </span><span class="">export OPENFN_ADAPTORS_REPO=/path/to/repo/
+</span><span class="">
+</span><span class=""># Or, merge a private adaptor repo with the canonical one (first wins):
+</span><span class="">export OPENFN_ADAPTORS_REPO=/path/to/private,/path/to/canonical
 </span></code></pre><p>You can also run the server directly in local mode with:</p><pre><code class="makeup sh" translate="no"><span class="">LOCAL_ADAPTORS=true mix phx.server
-</span></code></pre><p>Ensure that the <code class="inline">OPENFN_ADAPTORS_REPO</code> directory is correctly set up with the
-necessary <code class="inline">packages</code> subdirectory, otherwise the app wont start</p><h3 id="problems-with-apple-silicon" class="section-heading"><a href="#problems-with-apple-silicon" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Apple Silicon</span></h3><p>You might run into some errors when running the docker containers on Apple
+</span></code></pre><p>Each path in <code class="inline">OPENFN_ADAPTORS_REPO</code> must contain a <code class="inline">packages</code> subdirectory.
+Paths that are missing or unreadable are logged and skipped, so the rest of
+the list still loads.</p><h3 id="problems-with-apple-silicon" class="section-heading"><a href="#problems-with-apple-silicon" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Apple Silicon</span></h3><p>You might run into some errors when running the docker containers on Apple
 Silicon.
 <a href="benchmarking.md.html#problems-with-docker">We have documented the known ones here</a></p>
 
