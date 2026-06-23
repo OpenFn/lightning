@@ -322,31 +322,35 @@ defmodule Lightning.AdaptorRegistry do
   # case (the intended use of ordering) does not flood logs with one line per
   # package.
   defp dedupe_first_wins(adaptors) do
-    {kept_reversed, _seen, shadowed} =
-      Enum.reduce(adaptors, {[], MapSet.new(), []}, fn adaptor,
-                                                       {kept, seen, shadowed} ->
-        if MapSet.member?(seen, adaptor.name) do
-          {kept, seen, [adaptor | shadowed]}
+    {kept_reversed, winners, shadowed} =
+      Enum.reduce(adaptors, {[], %{}, []}, fn adaptor,
+                                              {kept, winners, shadowed} ->
+        if Map.has_key?(winners, adaptor.name) do
+          {kept, winners, [adaptor | shadowed]}
         else
-          {[adaptor | kept], MapSet.put(seen, adaptor.name), shadowed}
+          {[adaptor | kept], Map.put(winners, adaptor.name, adaptor), shadowed}
         end
       end)
 
-    log_shadowed(shadowed)
+    log_shadowed(Enum.reverse(shadowed), winners)
     Enum.reverse(kept_reversed)
   end
 
-  defp log_shadowed([]), do: :ok
+  defp log_shadowed([], _winners), do: :ok
 
-  defp log_shadowed(shadowed) do
-    names =
+  defp log_shadowed(shadowed, winners) do
+    details =
       shadowed
-      |> Enum.reverse()
-      |> Enum.map_join(", ", & &1.name)
+      |> Enum.group_by(& &1.name)
+      |> Enum.map_join("; ", fn {name, losers} ->
+        winner = Map.fetch!(winners, name)
+        loser_repos = Enum.map_join(losers, ", ", & &1.repo)
+        "#{name} (using #{winner.repo}, shadowed #{loser_repos})"
+      end)
 
     Logger.warning(
       "AdaptorRegistry: #{length(shadowed)} adaptor(s) shadowed by earlier " <>
-        "local-adaptors repo entries: #{names}"
+        "local-adaptors repo entries: #{details}"
     )
   end
 

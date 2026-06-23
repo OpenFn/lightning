@@ -205,6 +205,10 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert log =~ "@openfn/language-http"
       assert log =~ "shadowed"
+
+      assert log =~ "using"
+      assert log =~ "file://" <> Path.join([repo_a, "packages", "http"])
+      assert log =~ "file://" <> Path.join([repo_b, "packages", "http"])
     end
 
     @tag :tmp_dir
