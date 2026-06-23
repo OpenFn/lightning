@@ -19,11 +19,17 @@ and this project adheres to
 
 ### Changed
 
+- Global chat now receives a full workflow YAML from the Apollo AI server, with
+  every step's job code embedded, so a single response can change multiple steps
+  at once. Lightning matches steps by id (not name, which the assistant may
+  change) and surfaces preview errors as toasts. The per-step diff only shows
+  for the step currently open in the editor; viewing several step diffs at once
+  is a follow-up. Job chat and workflow chat are unchanged.
+  [#TODO](https://github.com/OpenFn/lightning/issues/TODO)
 - Consolidated run and work order state definitions into single source of truth
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
-  codebase
-  [#4589](https://github.com/OpenFn/lightning/issues/4589)
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
 
 ### Fixed
 
