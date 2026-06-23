@@ -311,6 +311,88 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     end
   end
 
+  describe "revealing a webhook auth secret as an SSO user without a password" do
+    setup %{project: project, trigger: trigger} do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          triggers: [trigger]
+        )
+
+      [auth_method: auth_method]
+    end
+
+    test "with mfa enabled, only the 2FA code is requested", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      trigger: trigger,
+      auth_method: auth_method
+    } do
+      user =
+        insert(:user,
+          hashed_password: nil,
+          mfa_enabled: true,
+          user_totp: build(:user_totp)
+        )
+
+      insert(:project_user, role: :owner, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
+        )
+
+      view |> element("#manageAuthenticationLink") |> render_click()
+
+      view
+      |> element("#view_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      component_id = "view_webhook_auth_method_#{auth_method.id}"
+      html = view |> element("##{component_id} button", "Show") |> render_click()
+
+      assert html =~ "2FA Code"
+      refute has_element?(view, "#reauthentication-form input[type='password']")
+    end
+
+    test "without mfa, the user is told to set a password or enable 2fa", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      trigger: trigger,
+      auth_method: auth_method
+    } do
+      user = insert(:user, hashed_password: nil, mfa_enabled: false)
+
+      insert(:project_user, role: :owner, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
+        )
+
+      view |> element("#manageAuthenticationLink") |> render_click()
+
+      view
+      |> element("#view_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      component_id = "view_webhook_auth_method_#{auth_method.id}"
+      html = view |> element("##{component_id} button", "Show") |> render_click()
+
+      assert html =~ "set a password or enable two-factor authentication"
+      refute has_element?(view, "#reauthentication-form")
+    end
+  end
+
   test "owner/admin can remove an auth method from a trigger, editor/viewer can't",
        %{
          project: project,
