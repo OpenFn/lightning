@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -130,6 +131,20 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns a paginated list of users for the superuser admin table with
+  server-side filtering and sorting.
+  """
+  @spec list_users_for_admin(map()) :: Scrivener.Page.t()
+  def list_users_for_admin(params \\ %{}) do
+    params = AdminSearchParams.new(params)
+
+    User
+    |> filter_admin_users(params.filter)
+    |> order_admin_users(params.sort, params.dir)
+    |> Repo.paginate(AdminSearchParams.pagination_opts(params))
+  end
+
+  @doc """
   Returns the list of users with the given emails
   """
   def list_users_by_emails(emails) do
@@ -174,6 +189,48 @@ defmodule Lightning.Accounts do
     user = Repo.get_by(User, email: email)
     if User.valid_password?(user, password), do: user
   end
+
+  defp filter_admin_users(query, ""), do: query
+
+  defp filter_admin_users(query, filter) do
+    search = "%#{filter}%"
+
+    where(
+      query,
+      [u],
+      ilike(u.first_name, ^search) or
+        ilike(u.last_name, ^search) or
+        ilike(u.email, ^search) or
+        ilike(fragment("?::text", u.role), ^search)
+    )
+  end
+
+  defp order_admin_users(query, "enabled", "asc"),
+    do: order_by(query, [u], desc: u.disabled)
+
+  defp order_admin_users(query, "enabled", "desc"),
+    do: order_by(query, [u], asc: u.disabled)
+
+  defp order_admin_users(query, "scheduled_deletion", "asc"),
+    do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion)
+
+  defp order_admin_users(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [u], desc_nulls_first: u.scheduled_deletion)
+
+  defp order_admin_users(query, "role", dir) do
+    direction = dir_to_atom(dir)
+    order_by(query, [u], [{^direction, fragment("?::text", u.role)}])
+  end
+
+  defp order_admin_users(query, sort, dir) do
+    direction = dir_to_atom(dir)
+    sort_field = String.to_existing_atom(sort)
+
+    order_by(query, [u], [{^direction, field(u, ^sort_field)}])
+  end
+
+  defp dir_to_atom("asc"), do: :asc
+  defp dir_to_atom("desc"), do: :desc
 
   @doc """
   Gets a single user.
