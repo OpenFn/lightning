@@ -27,6 +27,11 @@ and this project adheres to
 
 ### Fixed
 
+- Exclude wiped dataclips from work order body search, so dataclip content that
+  was erased by per-run wipe or the data-retention job is no longer discoverable
+  via full-text search.
+  [#4824](https://github.com/OpenFn/lightning/issues/4824)
+
 ## [2.16.8-pre] - 2026-06-18
 
 ### Added

@@ -728,11 +728,11 @@ defmodule Lightning.Invocation do
         dynamic(
           [input_dataclip: dataclip],
           ^dynamic or
-            fragment(
-              "? @@ to_tsquery('english_nostop', ?)",
-              dataclip.search_vector,
-              ^ts_query
-            )
+            (fragment(
+               "? @@ to_tsquery('english_nostop', ?)",
+               dataclip.search_vector,
+               ^ts_query
+             ) and is_nil(dataclip.wiped_at))
         )
 
       :id, dynamic ->
