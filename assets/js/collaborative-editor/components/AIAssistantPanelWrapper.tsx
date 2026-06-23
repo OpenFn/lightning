@@ -394,22 +394,7 @@ export function AIAssistantPanelWrapper({
             const workflowYAML = serializeWorkflowToYAML(workflowData);
             if (workflowYAML) {
               finalContext = { ...finalContext, code: workflowYAML };
-            } else {
-              console.warn(
-                '[AI Assistant] workflow YAML serialization failed',
-                {
-                  page,
-                  use_global_assistant: messageOptions?.use_global_assistant,
-                }
-              );
             }
-          } else {
-            console.warn('[AI Assistant] no workflow data to serialize', {
-              page,
-              use_global_assistant: messageOptions?.use_global_assistant,
-              hasWorkflow: !!workflow,
-              jobCount: jobs.length,
-            });
           }
 
           // Derive page for global assistant routing
