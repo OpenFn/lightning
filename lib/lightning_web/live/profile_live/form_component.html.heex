@@ -65,6 +65,20 @@
     class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
     <div class="text-xl mb-8">Change email</div>
+    <div :if={!@has_password} class="rounded-md bg-blue-50 p-4 mb-6">
+      <div class="flex">
+        <.icon
+          name="hero-information-circle"
+          class="h-5 w-5 text-blue-400 shrink-0"
+        />
+        <div class="ml-3 text-sm text-blue-700">
+          Changing your email requires confirming it with your password. Because
+          you sign in via single sign-on, you'll need to
+          <strong>set a password</strong>
+          below before you can update your email address.
+        </div>
+      </div>
+    </div>
     <div class="space-y-6">
       <div class="space-y-4">
         <.input
@@ -73,6 +87,7 @@
           label="New email address"
           required="true"
           phx-debounce="blur"
+          disabled={!@has_password}
         />
       </div>
       <div class="space-y-4">
@@ -83,6 +98,7 @@
           required="true"
           phx-debounce="blur"
           autocomplete="current-password"
+          disabled={!@has_password}
         />
       </div>
     </div>
@@ -92,7 +108,7 @@
     <.button
       type="submit"
       theme="primary"
-      disabled={!@email_changeset.valid?}
+      disabled={!@has_password || !@email_changeset.valid?}
       phx-disable-with="Sending confirmation email..."
     >
       Update email

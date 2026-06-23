@@ -178,6 +178,34 @@ defmodule LightningWeb.ProfileLiveTest do
       assert Lightning.Accounts.User.has_password?(Lightning.Repo.reload!(user))
     end
 
+    test "SSO user with no password cannot change email", %{conn: conn} do
+      user = insert(:user, hashed_password: nil)
+      conn = log_in_user(conn, user)
+
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
+
+      assert html =~ "set a password"
+
+      assert profile_live
+             |> element("#email-form button[type=submit]")
+             |> render() =~ "disabled"
+
+      assert profile_live
+             |> element("#email-form input[name=\"user[email]\"]")
+             |> render() =~ "disabled"
+
+      # Even if a submit is forced through (bypassing the disabled inputs), the
+      # server refuses and the email is not changed.
+      profile_live
+      |> element("#email-form")
+      |> render_submit(%{
+        user: %{email: "new@example.com", current_password: "anything"}
+      })
+
+      assert Lightning.Repo.reload!(user).email == user.email
+    end
+
     test "validate password confirmation", %{conn: conn} do
       {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)

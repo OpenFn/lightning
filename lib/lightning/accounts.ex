@@ -774,7 +774,8 @@ defmodule Lightning.Accounts do
   defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
-      if Bcrypt.verify_pass(password, user.hashed_password) do
+      if is_binary(user.hashed_password) and
+           Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
         [current_password: "does not match password"]
