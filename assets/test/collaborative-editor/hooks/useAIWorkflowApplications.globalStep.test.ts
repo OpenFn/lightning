@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { MonacoHandle } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
 import type { AIModeResult } from '../../../js/collaborative-editor/hooks/useAIMode';
 import { useAIWorkflowApplications } from '../../../js/collaborative-editor/hooks/useAIWorkflowApplications';
+import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import type { Job } from '../../../js/collaborative-editor/types';
 import type { Message } from '../../../js/collaborative-editor/types/ai-assistant';
 import {
@@ -30,6 +31,7 @@ vi.mock('../../../js/yaml/util', () => ({
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     alert: vi.fn(),
+    warning: vi.fn(),
     success: vi.fn(),
   },
 }));
@@ -173,7 +175,7 @@ describe('useAIWorkflowApplications - global messages', () => {
       expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
     });
 
-    it('shows no diff when the open step is missing from the YAML', () => {
+    it('warns when the open step is missing from the YAML (id not preserved)', () => {
       vi.mocked(convertWorkflowSpecToState).mockReturnValue({
         id: 'wf-1',
         name: 'Test Workflow',
@@ -189,9 +191,10 @@ describe('useAIWorkflowApplications - global messages', () => {
 
       expect(mockShowDiff).not.toHaveBeenCalled();
       expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
+      expect(notifications.warning).toHaveBeenCalled();
     });
 
-    it('does nothing for invalid YAML', () => {
+    it('alerts for invalid YAML', () => {
       const { result } = renderApplications();
 
       result.current.handlePreviewGlobalStep('invalid yaml', 'msg-1');
@@ -199,6 +202,7 @@ describe('useAIWorkflowApplications - global messages', () => {
       expect(mockShowDiff).not.toHaveBeenCalled();
       expect(mockClearDiff).not.toHaveBeenCalled();
       expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
+      expect(notifications.alert).toHaveBeenCalled();
     });
 
     it('does nothing when no job is open (workflow_template mode)', () => {

@@ -1116,11 +1116,7 @@ defmodule Lightning.AiAssistant do
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
-        process_stream(
-          session,
-          body,
-          &build_global_message(&1, session)
-        )
+        process_stream(session, body, &build_global_message/1)
 
       error ->
         handle_error_response(error, session)
@@ -1491,7 +1487,7 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  defp build_global_message(body, _session) do
+  defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
     message_attrs = %{
