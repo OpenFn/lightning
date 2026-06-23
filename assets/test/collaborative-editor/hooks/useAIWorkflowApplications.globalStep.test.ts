@@ -255,6 +255,25 @@ describe('useAIWorkflowApplications - global messages', () => {
       });
     });
 
+    it('clears an active step diff when applying a global message', async () => {
+      const globalMessage = createGlobalMessage();
+      const { result } = renderApplications({
+        currentSession: { messages: [globalMessage] },
+        previewingMessageId: globalMessage.id,
+      });
+
+      await result.current.handleApplyWorkflow(
+        globalMessage.code!,
+        globalMessage.id
+      );
+
+      await waitFor(() => {
+        expect(mockClearDiff).toHaveBeenCalled();
+        expect(mockSetPreviewingMessageId).toHaveBeenCalledWith(null);
+        expect(mockImportWorkflow).toHaveBeenCalled();
+      });
+    });
+
     it('still no-ops for a non-global message in job_code mode', async () => {
       const consoleError = vi
         .spyOn(console, 'error')

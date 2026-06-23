@@ -186,6 +186,15 @@ export function useAIWorkflowApplications({
         );
         return;
       }
+
+      // A global message applied while a step is open leaves an active diff in
+      // the open step. Clear it so the editor returns to an editable state.
+      const monaco = monacoRef?.current;
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
+        setPreviewingMessageId(null);
+      }
+
       setApplyingMessageId(messageId);
 
       // Signal to all collaborators that we're starting to apply
@@ -232,6 +241,9 @@ export function useAIWorkflowApplications({
       doneApplyingWorkflow,
       jobs,
       setApplyingMessageId,
+      monacoRef,
+      previewingMessageId,
+      setPreviewingMessageId,
     ]
   );
 
