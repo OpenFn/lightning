@@ -853,6 +853,35 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Sets the password for an SSO user that has no local password yet.
+
+  Unlike `update_user_password/3`, this does not require a current password,
+  since the user never had one. It is guarded so it can only be used on accounts
+  without an existing password.
+
+  ## Examples
+
+      iex> set_user_password(sso_user, %{password: ...})
+      {:ok, %User{}}
+
+  """
+  def set_user_password(%User{hashed_password: nil} = user, attrs) do
+    changeset = User.password_changeset(user, attrs)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Given a user and a confirmation email, this function sets a scheduled deletion
   date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
   set, this date defaults to NOW but the automatic user purge cronjob will never

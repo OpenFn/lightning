@@ -108,7 +108,13 @@
     id="password-form"
     class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
-    <div class="text-xl mb-8">Change password</div>
+    <div class="text-xl mb-8">
+      {if @has_password, do: "Change password", else: "Set password"}
+    </div>
+    <p :if={!@has_password} class="text-sm text-gray-500 -mt-6 mb-8">
+      You signed in via single sign-on and don't have a password yet. Set one
+      here to also be able to sign in with your email and password.
+    </p>
     <div class="space-y-6">
       <div class="space-y-4">
         <.input
@@ -128,7 +134,7 @@
           autocomplete="new-password"
         />
       </div>
-      <div class="space-y-4">
+      <div :if={@has_password} class="space-y-4">
         <.input
           type="password"
           field={f[:current_password]}
@@ -147,7 +153,7 @@
       disabled={!@password_changeset.valid?}
       phx-disable-with="Saving..."
     >
-      Update password
+      {if @has_password, do: "Update password", else: "Set password"}
     </.button>
   </.form>
 </div>

@@ -391,6 +391,15 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
+  Returns `true` if the user has a local password set.
+
+  SSO-only users have no password (`hashed_password` is `nil`) until they set
+  one via the password reset flow or the profile page.
+  """
+  def has_password?(%__MODULE__{hashed_password: hashed_password}),
+    do: is_binary(hashed_password)
+
+  @doc """
   Validates the current password otherwise adds an error to the changeset.
   """
   def validate_current_password(changeset, password) do

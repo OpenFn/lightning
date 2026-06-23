@@ -147,6 +147,37 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Projects"
     end
 
+    test "SSO user with no password sets a password without current password",
+         %{conn: conn} do
+      user = insert(:user, hashed_password: nil)
+      conn = log_in_user(conn, user)
+
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
+
+      assert html =~ "Set password"
+      refute html =~ "Current password"
+
+      {:ok, conn} =
+        profile_live
+        |> form("#password-form",
+          user: %{
+            password: "password1234",
+            password_confirmation: "password1234"
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn)
+
+      html =
+        get(recycle(conn), redirected_to(conn, 302))
+        |> html_response(200)
+
+      assert html =~ "Password set successfully."
+
+      assert Lightning.Accounts.User.has_password?(Lightning.Repo.reload!(user))
+    end
+
     test "validate password confirmation", %{conn: conn} do
       {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
