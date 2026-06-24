@@ -168,24 +168,15 @@ defmodule LightningWeb.OidcController do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
          {:ok, token} <- Handler.get_token(handler, code),
          userinfo <- Handler.get_userinfo(handler, token),
-         {:ok, email} <- fetch_email(userinfo),
          {:ok, uid} <- fetch_uid(userinfo) do
       case intent do
         :link ->
           handle_sso_link(conn, conn.assigns.current_user, provider, uid)
 
         :login ->
-          handle_sso_login(conn, provider, uid, email, userinfo)
+          handle_sso_login(conn, provider, uid, userinfo)
       end
     else
-      {:error, :no_email} ->
-        conn
-        |> put_flash(
-          :error,
-          "Could not retrieve your email from the provider. Please ensure your email address is accessible."
-        )
-        |> redirect(to: failure_redirect(conn, intent))
-
       {:error, _reason} ->
         conn
         |> put_flash(:error, "Authentication failed")
@@ -248,23 +239,38 @@ defmodule LightningWeb.OidcController do
     end
   end
 
-  defp handle_sso_login(conn, provider, uid, email, userinfo) do
-    case Accounts.get_user_by_identity(provider, uid) do
-      %User{} = user ->
-        do_log_in(conn, user)
+  defp handle_sso_login(conn, provider, uid, userinfo) do
+    with {:ok, email} <- get_provider_email(userinfo, conn) do
+      case Accounts.get_user_by_identity(provider, uid) do
+        %User{} = user ->
+          do_log_in(conn, user)
 
-      nil ->
-        if email_verified?(userinfo) do
-          handle_unlinked_identity(conn, provider, uid, email, userinfo)
-        else
-          conn
-          |> put_flash(
-            :error,
-            "Your #{AuthProviders.display_name(provider)} email address has not been verified. Please verify it with #{AuthProviders.display_name(provider)} and try signing in again."
-          )
-          |> redirect(to: Routes.user_session_path(conn, :new))
-        end
+        nil ->
+          if email_verified?(userinfo) do
+            handle_unlinked_identity(conn, provider, uid, email, userinfo)
+          else
+            conn
+            |> put_flash(
+              :error,
+              "Your #{AuthProviders.display_name(provider)} email address has not been verified. Please verify it with #{AuthProviders.display_name(provider)} and try signing in again."
+            )
+            |> redirect(to: Routes.user_session_path(conn, :new))
+          end
+      end
     end
+  end
+
+  defp get_provider_email(%{"email" => email}, _conn) when is_binary(email) do
+    {:ok, email}
+  end
+
+  defp get_provider_email(_userinfo, conn) do
+    conn
+    |> put_flash(
+      :error,
+      "Could not retrieve your email from the provider. Please ensure your email address is accessible."
+    )
+    |> redirect(to: failure_redirect(conn, :login))
   end
 
   defp handle_unlinked_identity(conn, provider, uid, email, userinfo) do
@@ -313,22 +319,12 @@ defmodule LightningWeb.OidcController do
     |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
   end
 
-  defp fetch_email(userinfo) do
-    case extract_email(userinfo) do
-      nil -> {:error, :no_email}
-      email -> {:ok, email}
-    end
-  end
-
   defp fetch_uid(userinfo) do
     case extract_uid(userinfo) do
       nil -> {:error, :no_uid}
       uid -> {:ok, uid}
     end
   end
-
-  defp extract_email(%{"email" => email}) when is_binary(email), do: email
-  defp extract_email(_), do: nil
 
   defp email_verified?(%{"email_verified" => verified}),
     do: verified in [true, "true"]

@@ -568,6 +568,32 @@ defmodule LightningWeb.OidcControllerTest do
       assert same_id == user.id
     end
 
+    test "links the identity even when the provider returns no email", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = user_fixture()
+      expect_token(bypass, handler.wellknown)
+
+      # GitHub users with a private email expose no address; linking must not
+      # depend on it.
+      expect_userinfo(bypass, handler.wellknown, %{"sub" => "no-email-uid"})
+
+      conn = link_callback(conn, handler, user, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) == ~p"/profile"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Linked your"
+
+      assert %Lightning.Accounts.User{id: same_id} =
+               Lightning.Accounts.get_user_by_identity(
+                 handler.name,
+                 "no-email-uid"
+               )
+
+      assert same_id == user.id
+    end
+
     test "flashes info when identity is already linked to the same account", %{
       conn: conn,
       bypass: bypass,
