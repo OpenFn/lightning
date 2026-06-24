@@ -62,6 +62,47 @@ defmodule LightningWeb.OidcControllerTest do
     {:ok, handler: handler, bypass: bypass}
   end
 
+  # A handler that is *also* persisted as an `AuthConfig` row, i.e. the
+  # admin-configured generic OIDC provider. Such providers use the legacy
+  # email-matching login flow rather than per-identity linking.
+  def setup_legacy_handler(_) do
+    bypass = Bypass.open()
+
+    wellknown = %AuthProviders.WellKnown{
+      authorization_endpoint: "#{endpoint_url(bypass)}/authorization_endpoint",
+      token_endpoint: "#{endpoint_url(bypass)}/token_endpoint",
+      userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint"
+    }
+
+    handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+
+    {:ok, handler} =
+      AuthProviders.Handler.new(handler_name,
+        wellknown: wellknown,
+        client_id: "id",
+        client_secret: "secret",
+        redirect_uri: "http://localhost/callback_url"
+      )
+
+    AuthProviders.create_handler(handler)
+
+    # The DB row is what marks this as the legacy generic provider. The store
+    # handler above is what serves the actual OAuth round-trip in the test.
+    {:ok, _config} =
+      AuthProviders.create(%{
+        name: handler_name,
+        client_id: "id",
+        client_secret: "secret",
+        discovery_url:
+          "#{endpoint_url(bypass)}/.well-known/openid-configuration",
+        redirect_uri: "http://localhost/callback_url"
+      })
+
+    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+
+    {:ok, handler: handler, bypass: bypass}
+  end
+
   # Drives the real authorize redirect so the session-bound `state` (and its
   # session nonce) are minted, then returns the conn (carrying the session) and
   # the state to replay on the callback.
@@ -990,6 +1031,77 @@ defmodule LightningWeb.OidcControllerTest do
                ~r/window\.onload\s*=\s*function\(\)\s*\{\s*window\.close\(\);\s*\}/,
                response.resp_body
              )
+    end
+  end
+
+  describe "GET /authenticate/:provider/callback (legacy generic provider)" do
+    setup :setup_legacy_handler
+
+    test "logs in an existing user matched by email, without an identity", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "ignored-for-legacy"
+      })
+
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) == "/projects"
+
+      # The legacy flow matches by email only; it never creates an identity.
+      refute Lightning.Accounts.get_user_by_identity(
+               handler.name,
+               "ignored-for-legacy"
+             )
+    end
+
+    test "rejects an unknown email without creating an account", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+      email = "no-such-user-#{System.unique_integer([:positive])}@example.com"
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => email,
+        "sub" => "whatever"
+      })
+
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Could not find user account"
+
+      refute Lightning.Accounts.get_user_by_email(email)
+    end
+
+    test "sends an MFA-enabled user through the TOTP step", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+
+      user =
+        insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "email" => user.email,
+        "sub" => "ignored"
+      })
+
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) =~ "/users/two-factor"
     end
   end
 end

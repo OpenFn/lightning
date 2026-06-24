@@ -89,11 +89,11 @@
               <.button type="submit" theme="primary">
                 Register
               </.button>
-              <%= if @auth_providers != [] do %>
+              <%= if @providers.social != [] do %>
                 <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
                   <span class="px-2 bg-white">or</span>
                 </div>
-                <%= for provider <- @auth_providers do %>
+                <%= for provider <- @providers.social do %>
                   <.button_link theme="secondary" href={provider.url}>
                     <div class="flex items-center justify-center gap-1.5">
                       <LightningWeb.Components.SsoIcons.provider_icon

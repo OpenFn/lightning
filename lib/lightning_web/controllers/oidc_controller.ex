@@ -174,7 +174,9 @@ defmodule LightningWeb.OidcController do
           handle_sso_link(conn, conn.assigns.current_user, provider, uid)
 
         :login ->
-          handle_sso_login(conn, provider, uid, userinfo)
+          if legacy_provider?(provider),
+            do: handle_legacy_login(conn, userinfo),
+            else: handle_sso_login(conn, provider, uid, userinfo)
       end
     else
       {:error, _reason} ->
@@ -182,6 +184,25 @@ defmodule LightningWeb.OidcController do
         |> put_flash(:error, "Authentication failed")
         |> redirect(to: failure_redirect(conn, intent))
     end
+  end
+
+  # simple account email matching
+  defp handle_legacy_login(conn, userinfo) do
+    with {:ok, email} <- get_provider_email(userinfo, conn) do
+      case Accounts.get_user_by_email(email) do
+        %User{} = user ->
+          do_log_in(conn, user)
+
+        nil ->
+          conn
+          |> put_flash(:error, "Could not find user account")
+          |> redirect(to: Routes.user_session_path(conn, :new))
+      end
+    end
+  end
+
+  defp legacy_provider?(provider) do
+    not is_nil(AuthProviders.get_existing(provider))
   end
 
   defp handle_sso_link(conn, %User{} = current_user, provider, uid) do

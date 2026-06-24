@@ -53,11 +53,11 @@
               <.button type="submit" theme="primary">
                 Log in
               </.button>
-              <%= if @auth_providers != [] do %>
+              <%= if @providers.social != [] or @providers.external_url do %>
                 <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
                   <span class="px-2 bg-white">or</span>
                 </div>
-                <%= for provider <- @auth_providers do %>
+                <%= for provider <- @providers.social do %>
                   <.button_link theme="secondary" href={provider.url}>
                     <div class="flex items-center justify-center gap-1.5">
                       <LightningWeb.Components.SsoIcons.provider_icon
@@ -72,6 +72,22 @@
                     </div>
                   </.button_link>
                 <% end %>
+                <.button_link
+                  :if={@providers.external_url}
+                  theme="secondary"
+                  class="w-full text-center"
+                  href={@providers.external_url}
+                >
+                  <div class="-ml-1 inline-flex items-center">
+                    <.icon
+                      name="hero-identification"
+                      class="h-4 w-4 inline-block"
+                    />
+                    <span class="ml-1 inline-block align-middle">
+                      via external provider
+                    </span>
+                  </div>
+                </.button_link>
               <% end %>
             </div>
             <div class="hidden sm:block" aria-hidden="true">

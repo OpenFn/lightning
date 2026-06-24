@@ -8,28 +8,38 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   import Mox
 
-  def create_handler(endpoint_url) do
-    wellknown = %AuthProviders.WellKnown{
-      authorization_endpoint: "#{endpoint_url}/authorization_endpoint",
-      token_endpoint: "#{endpoint_url}/token_endpoint",
-      userinfo_endpoint: "#{endpoint_url}/userinfo_endpoint"
-    }
+  # Enables a built-in social provider by setting its ENV-backed app config,
+  # restoring the original value after the test.
+  defp configure_sso_env(key) do
+    original = Application.get_env(:lightning, key)
 
-    handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+    Application.put_env(:lightning, key,
+      client_id: "id",
+      client_secret: "secret",
+      redirect_uri: "http://localhost/authenticate/#{key}/callback"
+    )
 
-    {:ok, handler} =
-      AuthProviders.Handler.new(handler_name,
-        wellknown: wellknown,
-        client_id: "id",
-        client_secret: "secret",
-        redirect_uri: "http://localhost/callback_url"
-      )
+    on_exit(fn -> restore_env(key, original) end)
+  end
 
-    {:ok, _} = AuthProviders.create_handler(handler)
+  defp clear_sso_env(key) do
+    original = Application.get_env(:lightning, key)
+    Application.delete_env(:lightning, key)
+    on_exit(fn -> restore_env(key, original) end)
+  end
 
-    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+  defp restore_env(key, nil), do: Application.delete_env(:lightning, key)
+  defp restore_env(key, value), do: Application.put_env(:lightning, key, value)
 
-    handler
+  # The admin-portal generic OIDC provider is persisted as an AuthConfig row.
+  defp create_external_provider(name) do
+    AuthProviders.create(%{
+      name: name,
+      client_id: "id",
+      client_secret: "secret",
+      discovery_url: "http://localhost/.well-known/openid-configuration",
+      redirect_uri: "http://localhost/authenticate/#{name}/callback"
+    })
   end
 
   setup :verify_on_exit!
@@ -74,17 +84,47 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert redirected_to(conn) == "/projects"
     end
 
-    test "shows a 'Sign in with' button for external providers", %{conn: conn} do
-      handler = create_handler("foo")
+    test "shows 'Sign in with' buttons when the SSO envs are configured", %{
+      conn: conn
+    } do
+      configure_sso_env(:github_oauth)
+      clear_sso_env(:google_oauth)
 
       conn = get(conn, Routes.user_session_path(conn, :new))
       response = html_response(conn, 200)
-      assert response =~ "Sign in with"
 
-      # The button must route through our `:show` action (which mints the
-      # session-bound state) rather than linking straight to the provider.
-      assert response =~ ~s(href="/authenticate/#{handler.name}")
-      refute response =~ handler.wellknown.authorization_endpoint
+      assert response =~ "Sign in with GitHub"
+      assert response =~ ~s(href="/authenticate/github")
+      refute response =~ "via external provider"
+    end
+
+    test "shows the 'via external provider' button when configured in the admin portal",
+         %{conn: conn} do
+      clear_sso_env(:github_oauth)
+      clear_sso_env(:google_oauth)
+
+      {:ok, _config} = create_external_provider("keycloak")
+
+      conn = get(conn, Routes.user_session_path(conn, :new))
+      response = html_response(conn, 200)
+
+      assert response =~ "via external provider"
+      assert response =~ ~s(href="/authenticate/keycloak")
+      refute response =~ "Sign in with"
+    end
+
+    test "social and external buttons are independent of each other", %{
+      conn: conn
+    } do
+      configure_sso_env(:github_oauth)
+      {:ok, _config} = create_external_provider("keycloak")
+
+      conn = get(conn, Routes.user_session_path(conn, :new))
+      response = html_response(conn, 200)
+
+      # Both appear, neither suppresses the other.
+      assert response =~ "Sign in with GitHub"
+      assert response =~ "via external provider"
     end
   end
 

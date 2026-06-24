@@ -9,7 +9,7 @@ defmodule LightningWeb.UserRegistrationController do
 
     render(conn, "new.html",
       changeset: changeset,
-      auth_providers: LightningWeb.UserSessionController.auth_providers()
+      providers: LightningWeb.UserSessionController.provider_buttons()
     )
   end
 
@@ -26,7 +26,7 @@ defmodule LightningWeb.UserRegistrationController do
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "new.html",
           changeset: changeset,
-          auth_providers: LightningWeb.UserSessionController.auth_providers()
+          providers: LightningWeb.UserSessionController.provider_buttons()
         )
     end
   end

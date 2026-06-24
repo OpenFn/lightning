@@ -8,7 +8,7 @@ defmodule LightningWeb.UserSessionController do
   def new(conn, _params) do
     render(conn, "new.html",
       error_message: nil,
-      auth_providers: auth_providers()
+      providers: provider_buttons()
     )
   end
 
@@ -21,7 +21,7 @@ defmodule LightningWeb.UserSessionController do
         conn
         |> put_flash(:error, "This user account is disabled")
         |> render("new.html",
-          auth_providers: auth_providers()
+          providers: provider_buttons()
         )
 
       %User{scheduled_deletion: x} when x != nil ->
@@ -31,7 +31,7 @@ defmodule LightningWeb.UserSessionController do
           "This user account is scheduled for deletion"
         )
         |> render("new.html",
-          auth_providers: auth_providers()
+          providers: provider_buttons()
         )
 
       %User{mfa_enabled: true} = user ->
@@ -54,14 +54,14 @@ defmodule LightningWeb.UserSessionController do
           "This account uses single sign-on. Please log in with your SSO provider."
         )
         |> render("new.html",
-          auth_providers: auth_providers()
+          providers: provider_buttons()
         )
 
       _ ->
         conn
         |> put_flash(:error, "Invalid email or password")
         |> render("new.html",
-          auth_providers: auth_providers()
+          providers: provider_buttons()
         )
     end
   end
@@ -86,18 +86,46 @@ defmodule LightningWeb.UserSessionController do
     |> UserAuth.log_out_user()
   end
 
-  def auth_providers do
-    case Lightning.AuthProviders.get_handlers() do
-      {:ok, []} ->
-        []
+  @doc """
+  Returns the two independent kinds of SSO buttons for the login page:
 
-      {:ok, handlers} ->
-        Enum.map(handlers, fn handler ->
-          %{
-            name: handler.name,
-            url: ~p"/authenticate/#{handler.name}"
-          }
-        end)
+    * `social` — the built-in GitHub/Google buttons, shown when their `SSO_*`
+      envs are set (derived straight from the env-based handler builders).
+    * `external_url` — the generic "via external provider" button, shown when a
+      provider is configured in the admin portal (an `AuthConfig` row).
+
+  Each is driven solely by its own source, so one never suppresses the other.
+  """
+  def provider_buttons do
+    %{
+      social: social_providers(),
+      external_url: external_provider_url()
+    }
+  end
+
+  defp social_providers do
+    [
+      Lightning.AuthProviders.GithubHandler,
+      Lightning.AuthProviders.GoogleHandler
+    ]
+    |> Enum.flat_map(fn handler_module ->
+      case handler_module.build() do
+        {:ok, handler} ->
+          [%{name: handler.name, url: ~p"/authenticate/#{handler.name}"}]
+
+        _ ->
+          []
+      end
+    end)
+  end
+
+  defp external_provider_url do
+    case Lightning.AuthProviders.get_existing() do
+      %Lightning.AuthProviders.AuthConfig{name: name} ->
+        ~p"/authenticate/#{name}"
+
+      _ ->
+        nil
     end
   end
 end
