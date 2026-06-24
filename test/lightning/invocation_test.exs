@@ -1881,7 +1881,7 @@ defmodule Lightning.InvocationTest do
                  FROM dataclips
                  WHERE id = $1::uuid
                  """,
-                 [second_dataclip.id]
+                 [Ecto.UUID.dump!(second_dataclip.id)]
                )
 
       assert :ok = Runs.wipe_dataclips(run)
