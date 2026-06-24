@@ -310,14 +310,11 @@ defmodule Lightning.Accounts do
        do: true
 
   defp can_remove_identity?(%User{} = user, %UserIdentity{id: identity_id}) do
-    other_count =
+    Repo.exists?(
       from(i in UserIdentity,
-        where: i.user_id == ^user.id and i.id != ^identity_id,
-        select: count(i.id)
+        where: i.user_id == ^user.id and i.id != ^identity_id
       )
-      |> Repo.one()
-
-    other_count > 0
+    )
   end
 
   @doc """
