@@ -486,7 +486,7 @@ defmodule LightningWeb.OidcControllerTest do
                "Could not retrieve your email"
     end
 
-    test "prefers the userinfo email and skips the emails endpoint when present",
+    test "keeps the userinfo email but confirms it via the emails endpoint",
          %{conn: conn, bypass: bypass, handler: handler} do
       expect_token(bypass, handler.wellknown)
 
@@ -495,13 +495,41 @@ defmodule LightningWeb.OidcControllerTest do
         "email" => "public@example.com"
       })
 
-      # No expect_user_emails/3 stub: if the endpoint were called, Bypass would
-      # fail the test, proving the extra request is skipped.
+      expect_user_emails(bypass, handler.wellknown, [
+        %{"email" => "public@example.com", "primary" => true, "verified" => true}
+      ])
 
       conn = login_callback(conn, handler, %{"code" => "callback_code"})
 
       assert get_session(conn, :sso_pending_signup)["email"] ==
                "public@example.com"
+    end
+
+    test "rejects sign-in when the userinfo email is not verified by the endpoint",
+         %{conn: conn, bypass: bypass, handler: handler} do
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{
+        "sub" => "gh-uid-5",
+        "email" => "public@example.com"
+      })
+
+      expect_user_emails(bypass, handler.wellknown, [
+        %{
+          "email" => "public@example.com",
+          "primary" => true,
+          "verified" => false
+        }
+      ])
+
+      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "has not been verified"
+
+      refute get_session(conn, :sso_pending_signup)
     end
   end
 

@@ -128,18 +128,21 @@ defmodule Lightning.AuthProviders.Handler do
     end
   end
 
-  # Some providers (e.g. GitHub) omit `email` from userinfo; fall back to the
-  # emails endpoint and pick the primary, verified address.
+  # Some providers (e.g. GitHub) don't carry a verification status in userinfo.
+  # The `/user/emails` endpoint is authoritative, so we derive `email_verified`
+  # from it rather than assuming a present userinfo email is verified.
   defp maybe_resolve_email(
          client,
          %{user_emails_endpoint: endpoint},
          %{} = userinfo
        )
        when is_binary(endpoint) do
+    emails = fetch_emails(client, endpoint)
+
     if is_binary(userinfo["email"]) do
-      Map.put(userinfo, "email_verified", true)
+      Map.put(userinfo, "email_verified", verified?(emails, userinfo["email"]))
     else
-      case fetch_primary_verified_email(client, endpoint) do
+      case select_primary_verified_email(emails) do
         nil ->
           userinfo
 
@@ -153,14 +156,23 @@ defmodule Lightning.AuthProviders.Handler do
 
   defp maybe_resolve_email(_client, _wellknown, userinfo), do: userinfo
 
-  defp fetch_primary_verified_email(client, endpoint) do
+  defp fetch_emails(client, endpoint) do
     case OAuth2.Client.get(client, endpoint) do
-      {:ok, %OAuth2.Response{body: emails}} when is_list(emails) ->
-        select_primary_verified_email(emails)
+      {:ok, %OAuth2.Response{body: emails}} when is_list(emails) -> emails
+      _ -> []
+    end
+  end
+
+  defp verified?(emails, email) do
+    target = String.downcase(email)
+
+    Enum.any?(emails, fn
+      %{"verified" => true, "email" => candidate} when is_binary(candidate) ->
+        String.downcase(candidate) == target
 
       _ ->
-        nil
-    end
+        false
+    end)
   end
 
   defp select_primary_verified_email(emails) do

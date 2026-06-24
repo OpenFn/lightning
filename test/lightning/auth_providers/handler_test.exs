@@ -80,18 +80,41 @@ defmodule Lightning.AuthProviders.HandlerTest do
       assert userinfo["email_verified"] == true
     end
 
-    test "treats a present public profile email as verified without a second call",
+    test "confirms a present userinfo email against the emails endpoint", ctx do
+      expect_userinfo(ctx.bypass, ctx.handler.wellknown, %{
+        "sub" => "1",
+        "email" => "public@example.com"
+      })
+
+      expect_user_emails(ctx.bypass, ctx.handler.wellknown, [
+        %{"email" => "public@example.com", "primary" => true, "verified" => true}
+      ])
+
+      {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
+
+      assert userinfo["email"] == "public@example.com"
+      assert userinfo["email_verified"] == true
+    end
+
+    test "marks a present userinfo email unverified when the endpoint disagrees",
          ctx do
       expect_userinfo(ctx.bypass, ctx.handler.wellknown, %{
         "sub" => "1",
         "email" => "public@example.com"
       })
 
-      # No expect_user_emails/3 stub: Bypass fails the test if /user/emails is hit.
+      expect_user_emails(ctx.bypass, ctx.handler.wellknown, [
+        %{
+          "email" => "public@example.com",
+          "primary" => true,
+          "verified" => false
+        }
+      ])
+
       {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
 
       assert userinfo["email"] == "public@example.com"
-      assert userinfo["email_verified"] == true
+      assert userinfo["email_verified"] == false
     end
 
     test "leaves userinfo unresolved when no verified email is available", ctx do
