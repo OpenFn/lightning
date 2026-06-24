@@ -271,6 +271,8 @@ defmodule Lightning.Accounts do
     * `{:error, :not_linked}` when no such identity belongs to the user
     * `{:error, :would_lock_out}` when removing would leave an SSO-only user
       with no way to log in
+    * `{:error, :delete_failed}` when the identity exists but its deletion
+      failed at the database level
   """
   def unlink_user_identity(%User{} = user, identity_id) do
     case Ecto.UUID.cast(identity_id) do
@@ -297,7 +299,7 @@ defmodule Lightning.Accounts do
         true ->
           case Repo.delete(identity) do
             {:ok, deleted} -> deleted
-            {:error, _changeset} -> Repo.rollback(:not_linked)
+            {:error, _changeset} -> Repo.rollback(:delete_failed)
           end
       end
     end)
