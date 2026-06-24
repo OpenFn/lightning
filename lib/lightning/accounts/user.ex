@@ -337,8 +337,7 @@ defmodule Lightning.Accounts.User do
     user
     |> cast(attrs, [:first_name, :last_name, :email])
     |> validate_required([:first_name, :last_name, :email])
-    |> validate_email_format()
-    |> validate_email_exists()
+    |> validate_email()
     |> put_change(
       :confirmed_at,
       DateTime.utc_now() |> DateTime.truncate(:second)
