@@ -160,6 +160,8 @@ defmodule Lightning.Application do
         end
       end)
 
+    Lightning.OpenTelemetry.setup()
+
     children =
       [
         Lightning.PromEx,

@@ -884,6 +884,8 @@ defmodule Lightning.Config.Bootstrap do
 
     setup_storage()
 
+    setup_opentelemetry()
+
     config :lightning, :env, config_env()
 
     # Commenting this out because the React modules aren't being used in prod
@@ -1228,5 +1230,69 @@ defmodule Lightning.Config.Bootstrap do
 
     You can generate new worker keys using: mix lightning.gen_worker_keys
     """
+  end
+
+  defp setup_opentelemetry() do
+    disabled? =
+      case env!("OTEL_SDK_DISABLED", &otel_parse_sdk_disabled/1, nil) do
+        nil -> not env!("TRACING_ENABLED", &Utils.ensure_boolean/1, false)
+        sdk_disabled_set -> sdk_disabled_set
+      end
+
+    config :lightning, :otel,
+      enabled: not disabled?,
+      ecto_enabled: env!("TRACING_ECTO_ENABLED", &Utils.ensure_boolean/1, false)
+
+    # Defaults only. `OTEL_TRACES_SAMPLER`/`OTEL_TRACES_SAMPLER_ARG`,
+    # `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` override these.
+    config :opentelemetry,
+      sdk_disabled: disabled?,
+      span_processor: :batch,
+      traces_exporter: :otlp,
+      sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.05}}},
+      resource: %{
+        service: %{
+          name: "lightning",
+          version: to_string(Application.spec(:lightning, :vsn))
+        }
+      }
+
+    otlp_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_ENDPOINT")
+    otlp_traces_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+
+    if not disabled? and is_nil(otlp_endpoint) and is_nil(otlp_traces_endpoint) do
+      raise ArgumentError, """
+      Tracing is enabled but no OTLP endpoint is configured.
+
+      Set OTEL_EXPORTER_OTLP_ENDPOINT (e.g. http://localhost:4318 for a local
+      collector), or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT to export only traces,
+      or turn tracing off with TRACING_ENABLED=false.
+      """
+    end
+
+    if otlp_endpoint do
+      config :opentelemetry_exporter, otlp_endpoint: otlp_endpoint
+    end
+
+    if otlp_traces_endpoint do
+      config :opentelemetry_exporter, otlp_traces_endpoint: otlp_traces_endpoint
+    end
+  end
+
+  defp otel_parse_sdk_disabled("true"), do: true
+  defp otel_parse_sdk_disabled("false"), do: false
+  defp otel_parse_sdk_disabled(""), do: nil
+
+  defp otel_parse_sdk_disabled(other) do
+    raise ArgumentError,
+          ~s(OTEL_SDK_DISABLED must be "true" or "false", got: #{inspect(other)})
+  end
+
+  # Empty means unset, as for OTEL_SDK_DISABLED.
+  defp otel_endpoint(var) do
+    case env!(var, :string, nil) do
+      "" -> nil
+      endpoint -> endpoint
+    end
   end
 end

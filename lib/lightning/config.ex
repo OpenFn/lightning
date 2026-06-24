@@ -260,6 +260,16 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def otel_ecto_enabled? do
+      otel_config() |> Keyword.get(:ecto_enabled, false)
+    end
+
+    @impl true
+    def otel_enabled?, do: otel_config() |> Keyword.get(:enabled, false)
+
+    defp otel_config, do: Application.get_env(:lightning, :otel, [])
+
+    @impl true
     def credential_transfer_token_validity_in_days do
       2
     end
@@ -471,6 +481,8 @@ defmodule Lightning.Config do
   @callback runtime_manager_port() :: integer()
   @callback max_credential_sensitive_values() :: pos_integer()
   @callback service_account() :: Lightning.ServiceAccount.t() | nil
+  @callback otel_ecto_enabled?() :: boolean()
+  @callback otel_enabled?() :: boolean()
 
   @doc """
   Returns the Apollo server configuration.
@@ -750,6 +762,9 @@ defmodule Lightning.Config do
   def service_account do
     impl().service_account()
   end
+
+  def otel_ecto_enabled?, do: impl().otel_ecto_enabled?()
+  def otel_enabled?, do: impl().otel_enabled?()
 
   defp impl do
     Application.get_env(:lightning, __MODULE__, API)
