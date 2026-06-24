@@ -52,7 +52,7 @@ defmodule Lightning.AuthProviders.HandlerTest do
         %{"email" => "nope@example.com", "primary" => false, "verified" => false}
       ])
 
-      userinfo = Handler.get_userinfo(ctx.handler, ctx.token)
+      {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
 
       assert userinfo["email"] == "primary@example.com"
       assert userinfo["email_verified"] == true
@@ -74,7 +74,7 @@ defmodule Lightning.AuthProviders.HandlerTest do
         }
       ])
 
-      userinfo = Handler.get_userinfo(ctx.handler, ctx.token)
+      {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
 
       assert userinfo["email"] == "verified@example.com"
       assert userinfo["email_verified"] == true
@@ -88,7 +88,7 @@ defmodule Lightning.AuthProviders.HandlerTest do
       })
 
       # No expect_user_emails/3 stub: Bypass fails the test if /user/emails is hit.
-      userinfo = Handler.get_userinfo(ctx.handler, ctx.token)
+      {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
 
       assert userinfo["email"] == "public@example.com"
       assert userinfo["email_verified"] == true
@@ -105,7 +105,7 @@ defmodule Lightning.AuthProviders.HandlerTest do
         }
       ])
 
-      userinfo = Handler.get_userinfo(ctx.handler, ctx.token)
+      {:ok, userinfo} = Handler.get_userinfo(ctx.handler, ctx.token)
 
       refute Map.has_key?(userinfo, "email")
       refute userinfo["email_verified"]
@@ -130,10 +130,28 @@ defmodule Lightning.AuthProviders.HandlerTest do
         "email_verified" => true
       })
 
-      userinfo = Handler.get_userinfo(handler, OAuth2.AccessToken.new("token"))
+      {:ok, userinfo} =
+        Handler.get_userinfo(handler, OAuth2.AccessToken.new("token"))
 
       assert userinfo["email"] == "g@example.com"
       assert userinfo["email_verified"] == true
+    end
+
+    test "returns an error tuple instead of raising when userinfo fails" do
+      bypass = Bypass.open()
+
+      wellknown = %WellKnown{
+        authorization_endpoint: "#{endpoint_url(bypass)}/authorization_endpoint",
+        token_endpoint: "#{endpoint_url(bypass)}/token_endpoint",
+        userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint"
+      }
+
+      handler = build_handler("google", wellknown)
+
+      expect_userinfo(bypass, wellknown, {500, ~s({"error": "boom"})})
+
+      assert {:error, _reason} =
+               Handler.get_userinfo(handler, OAuth2.AccessToken.new("token"))
     end
   end
 end

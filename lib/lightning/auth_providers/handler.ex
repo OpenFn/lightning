@@ -115,14 +115,17 @@ defmodule Lightning.AuthProviders.Handler do
   end
 
   @spec get_userinfo(handler :: __MODULE__.t(), token :: OAuth2.AccessToken.t()) ::
-          map()
+          {:ok, map()} | {:error, term()}
   def get_userinfo(handler, token) do
     client = %{handler.client | token: token}
 
-    userinfo =
-      OAuth2.Client.get!(client, handler.wellknown.userinfo_endpoint).body
+    case OAuth2.Client.get(client, handler.wellknown.userinfo_endpoint) do
+      {:ok, %OAuth2.Response{body: userinfo}} ->
+        {:ok, maybe_resolve_email(client, handler.wellknown, userinfo)}
 
-    maybe_resolve_email(client, handler.wellknown, userinfo)
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   # Some providers (e.g. GitHub) omit `email` from userinfo; fall back to the

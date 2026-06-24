@@ -167,7 +167,7 @@ defmodule LightningWeb.OidcController do
   defp complete_sso_callback(conn, provider, code, intent) do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
          {:ok, token} <- Handler.get_token(handler, code),
-         userinfo <- Handler.get_userinfo(handler, token),
+         {:ok, userinfo} <- Handler.get_userinfo(handler, token),
          {:ok, uid} <- fetch_uid(userinfo) do
       case intent do
         :link ->
