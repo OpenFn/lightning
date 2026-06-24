@@ -53,6 +53,17 @@ defmodule Lightning.Workflows.WorkflowTest do
       assert cs3.valid?
     end
 
+    test "a malformed project_id is a changeset error, not an Ecto.ChangeError on save" do
+      cs =
+        Workflow.changeset(%Workflow{}, %{
+          name: "w",
+          project_id: "__ID_WF_Foo_____"
+        })
+
+      refute cs.valid?
+      assert "is not a valid UUID" in errors_on(cs).project_id
+    end
+
     test "assoc_constraint(:project)" do
       cs =
         Workflow.changeset(%Workflow{}, %{

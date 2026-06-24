@@ -183,6 +183,23 @@ jobs:
           command: |
             sudo -u lightning mix sobelow --threshold medium || echo "sobelow" >> /tmp/lint_failed
       - run:
+          name: "Check for known-vulnerable Hex dependencies"
+          when: always
+          command: |
+            # GHSA-g2wm-735q-3f56: cowlib cookie encoder CRLF injection (low);
+            #   no patched release available yet.
+            # GHSA-55hg-8qxv-qj4p / GHSA-833p-95jq-929q / GHSA-mrhx-6pw9-q5fh:
+            #   phoenix_storybook advisories. Dev-only dep, not compiled into
+            #   prod and storybook routes are dev-only. Tracked for removal.
+            sudo -u lightning mix deps.audit \
+              --ignore-advisory-ids GHSA-g2wm-735q-3f56,GHSA-55hg-8qxv-qj4p,GHSA-833p-95jq-929q,GHSA-mrhx-6pw9-q5fh \
+              || echo "deps.audit" >> /tmp/lint_failed
+      - run:
+          name: "Check for retired Hex packages"
+          when: always
+          command: |
+            sudo -u lightning mix hex.audit || echo "hex.audit" >> /tmp/lint_failed
+      - run:
           name: "Verify all checks passed"
           when: always
           command: |

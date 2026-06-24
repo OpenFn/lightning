@@ -247,4 +247,32 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
       assert updated.available_projects == projects
     end
   end
+
+  describe "default_project_credentials/1" do
+    test "returns an empty list without a project context" do
+      assert Helpers.default_project_credentials(nil) == []
+    end
+
+    test "returns only the project itself for a root project" do
+      project = insert(:project)
+
+      assert [%{project_id: project_id}] =
+               Helpers.default_project_credentials(project)
+
+      assert project_id == project.id
+    end
+
+    test "returns only the sandbox itself, not its ancestors" do
+      root = insert(:project)
+      child = insert(:project, parent_id: root.id)
+      grandchild = insert(:project, parent_id: child.id)
+
+      project_ids =
+        grandchild
+        |> Helpers.default_project_credentials()
+        |> Enum.map(& &1.project_id)
+
+      assert project_ids == [grandchild.id]
+    end
+  end
 end

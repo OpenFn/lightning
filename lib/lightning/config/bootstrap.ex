@@ -203,21 +203,26 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
-    local_adaptors_repo =
-      env!(
-        "OPENFN_ADAPTORS_REPO",
-        :string,
-        Utils.get_env([
-          :lightning,
-          Lightning.AdaptorRegistry,
-          :local_adaptors_repo
-        ])
-      )
+    # Comma-separated to match the ws-worker parser, so the picker view and
+    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    local_adaptors_repos =
+      env!("OPENFN_ADAPTORS_REPO", :string, nil)
+      |> case do
+        nil ->
+          []
 
-    use_local_adaptors_repo? =
+        value when is_binary(value) ->
+          value
+          |> String.split(",", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.map(&Path.expand/1)
+      end
+
+    use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
       |> tap(fn v ->
-        if v && !is_binary(local_adaptors_repo) do
+        if v && local_adaptors_repos == [] do
           raise """
           LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
           """
@@ -231,8 +236,8 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
         ),
-      local_adaptors_repo:
-        use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
+      local_adaptors_repos:
+        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
     config :lightning,
       schemas_path:
@@ -270,7 +275,9 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
+      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
+      {"* * * * *", Lightning.LogLines.SearchVectorWorker},
+      {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
 
     cleanup_cron =
@@ -300,7 +307,12 @@ defmodule Lightning.Config.Bootstrap do
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
-        ai_assistant: 10
+        ai_assistant: 10,
+        # Shared by Lightning.LogLines.SearchVectorWorker and
+        # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives
+        # each worker its own slot so their snowball re-enqueue chains run in
+        # parallel and never starve one another.
+        search_indexing: 2
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to

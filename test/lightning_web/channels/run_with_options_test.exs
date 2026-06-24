@@ -114,7 +114,7 @@ defmodule LightningWeb.RunWithOptionsTest do
       tmp_dir: tmp_dir
     } do
       Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+        [local_adaptors_repos: [tmp_dir]]
       end)
 
       user = insert(:user)

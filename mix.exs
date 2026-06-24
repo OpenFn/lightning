@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.5",
+      version: "2.16.8-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -80,6 +80,9 @@ defmodule Lightning.MixProject do
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
+      # Ecto pins ~> 2.0, but decimal 3.0 is API-compatible and patches
+      # GHSA-rhv4-8758-jx7v (unbounded exponent DoS in `Decimal.new`).
+      {:decimal, "~> 3.0", override: true},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
@@ -104,6 +107,7 @@ defmodule Lightning.MixProject do
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
@@ -132,7 +136,7 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.15.3"},
+      {:tesla, "~> 1.18.2"},
       {:tidewave, "~> 0.5.4", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},

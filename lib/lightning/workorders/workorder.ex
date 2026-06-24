@@ -21,8 +21,10 @@ defmodule Lightning.WorkOrder do
           workflow: Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
+  @active_states [:pending, :running]
+
   @state_values Enum.concat(
-                  [:rejected, :pending, :running],
+                  [:rejected | @active_states],
                   Run.final_states()
                 )
 
@@ -30,6 +32,11 @@ defmodule Lightning.WorkOrder do
   Returns all possible states for a work order.
   """
   def states, do: @state_values
+
+  @doc """
+  Returns the list of active (in-progress) work order states.
+  """
+  def active_states, do: @active_states
 
   @derive {Jason.Encoder,
            only: [

@@ -356,6 +356,22 @@ defmodule LightningWeb.RunChannelTest do
       refute body
     end
 
+    @tag project_retention_policy: :erase_all
+    test "fetch:dataclip does not wipe :global dataclip body for projects with erase_all retention policy",
+         %{socket: socket, dataclip: dataclip} do
+      dataclip
+      |> Ecto.Changeset.change(type: :global, body: %{})
+      |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, "{}"}
+
+      %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
+      assert is_nil(wiped_at)
+      assert body == %{}
+    end
+
     @tag project_retention_policy: :retain_all
     test "fetch:dataclip wipes dataclip body for projects with retain_all retention policy",
          context do
@@ -638,7 +654,33 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref,
                    :error,
-                   "Could not reach the oauth provider. Try again later"
+                   "Could not reach the OAuth provider. Try again later"
+    end
+
+    @tag capture_log: true
+    test "replies cleanly when the OAuth provider times out", %{
+      credential: credential,
+      user: user
+    } do
+      credential = Repo.preload(credential, :oauth_client)
+      endpoint = credential.oauth_client.token_endpoint
+
+      Lightning.AuthProviders.OauthHTTPClient.Mock
+      |> Mox.expect(:call, fn
+        %Tesla.Env{method: :post, url: ^endpoint}, _opts ->
+          {:error, :timeout}
+      end)
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      # The timeout is an untyped transport error; the channel must reply with
+      # an error rather than crashing with a FunctionClauseError.
+      assert_reply ref,
+                   :error,
+                   "Could not reach the OAuth provider. Try again later"
     end
   end
 

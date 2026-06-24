@@ -20,10 +20,188 @@ and this project adheres to
 - Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
   external identity provider and link or unlink providers from their profile
   settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
+- Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
+  multiple local adaptor repos in precedence order (earlier paths win on name
+  collisions, and shadowed entries are logged). Lets a private repo override or
+  extend the canonical adaptors in local mode.
+  [#4714](https://github.com/OpenFn/lightning/pull/4714)
 
 ### Changed
 
+- Bump worker to 1.27.0
+
 ### Fixed
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
+### Changed
+
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
+### Fixed
+
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
+
+## [2.16.7] - 2026-06-04
+
+### Changed
+
+- Stop reporting expected credential-resolution failures (OAuth re-auth needed,
+  misconfigured project environment, transient provider errors) to Sentry. These
+  are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
+  instead of `error`; only a genuinely missing project still logs at `error`.
+  [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
+### Fixed
+
+- Fix icon vertical alignment in sandbox alert banners
+  [#4730](https://github.com/OpenFn/lightning/issues/4730)
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
+- Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
+  search indexing off the insert path. The full-text search vector is now
+  backfilled by a background worker rather than computed synchronously on every
+  insert, so log search is eventually-consistent (typically within a minute).
+  [#4425](https://github.com/OpenFn/lightning/issues/4425)
+- Dataclip inserts no longer roll back when building the full-text search vector
+  is slow. The `jsonb_to_tsvector` work that ran in an `AFTER INSERT` trigger
+  could hold the connection past the timeout and roll back the insert, losing
+  the whole run. The search vector is now built off the insert path by a
+  background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
+  `search_indexing` queue with the log-lines worker), making dataclip search
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
+- Fix `purge_deleted` Oban job crashing when a soft-deleted project has
+  associated OAuth clients. The `project_oauth_clients` join rows are now
+  cleaned up alongside the other project-scoped deletes in
+  `ProjectHook.handle_delete_project/1`.
+  [#4807](https://github.com/OpenFn/lightning/pull/4807)
+- Bump Tesla from 1.15.3 to 1.18.2 to pick up the streaming-error fix
+  ([elixir-tesla/tesla#819](https://github.com/elixir-tesla/tesla/pull/819)).
+  The older adapter raised `CaseClauseError` when Finch reported a transport
+  error mid-stream, taking down the AI assistant worker; 1.16+ handles the
+  3-tuple error shape gracefully.
+  [#4781](https://github.com/OpenFn/lightning/issues/4781)
+- Slow GitHub responses cause repo list to fail to load on project settings
+  [#4810](https://github.com/OpenFn/lightning/issues/4810)
+- Workflow channel raises an exception when fetching trigger auth methods for an
+  unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
+## [2.16.6] - 2026-05-27
+
+### Fixed
+
+- Run channel crashes when wiping `global` dataclip
+  [#4795](https://github.com/OpenFn/lightning/issues/4795)
+
+### Security
+
+- Bumped `plug` (1.19.2), `cowboy` (2.15.0), `cowlib` (2.16.1), `postgrex`
+  (0.22.2) and overrode `decimal` to 3.1.0 to clear seven advisories surfaced by
+  `mix deps.audit`: multipart-header DoS in plug and cowboy
+  ([GHSA-468c-vq7p-gh64][a1], [GHSA-jfc2-q6qh-g5x8][a2]), cowlib
+  resource-consumption, decompression-bomb and CRLF-injection issues
+  ([GHSA-32p9-57cr-4x65][a3], [GHSA-84f2-rp86-235p][a4],
+  [GHSA-hv23-4qp7-8c8r][a5]), Postgrex channel-name SQL injection
+  ([GHSA-r73h-97w8-m54h][a6]) and a `decimal` unbounded-exponent DoS
+  ([GHSA-rhv4-8758-jx7v][a7]). One low-severity unpatched cowlib cookie issue
+  ([GHSA-g2wm-735q-3f56][a8]) remains; we don't construct cookies server-side
+  from untrusted input, so it isn't reachable here.
+  [#4789](https://github.com/OpenFn/lightning/pull/4789)
+
+[a1]: https://github.com/advisories/GHSA-468c-vq7p-gh64
+[a2]: https://github.com/advisories/GHSA-jfc2-q6qh-g5x8
+[a3]: https://github.com/advisories/GHSA-32p9-57cr-4x65
+[a4]: https://github.com/advisories/GHSA-84f2-rp86-235p
+[a5]: https://github.com/advisories/GHSA-hv23-4qp7-8c8r
+[a6]: https://github.com/advisories/GHSA-r73h-97w8-m54h
+[a7]: https://github.com/advisories/GHSA-rhv4-8758-jx7v
+[a8]: https://github.com/advisories/GHSA-g2wm-735q-3f56
 
 ## [2.16.5] - 2026-05-21
 
