@@ -56,7 +56,6 @@ export function WorkflowEditor({
   const {
     closeRunPanel,
     openRunPanel,
-    toggleCreateWorkflowPanel,
     openAIAssistantPanel,
     closeAIAssistantPanel,
     collapseCreateWorkflowPanel,
@@ -499,27 +498,6 @@ export function WorkflowEditor({
           )}
         </div>
       )}
-      {/* Toggle button when collapsed */}
-      {isNewWorkflow && isCreateWorkflowPanelCollapsed && (
-        <Tooltip content="Open the create workflow panel (⌘+/)" side="right">
-          <button
-            type="button"
-            onClick={() => {
-              // Close AI Assistant panel when expanding create panel
-              if (isAIAssistantPanelOpen) {
-                closeAIAssistantPanel();
-              }
-              toggleCreateWorkflowPanel();
-            }}
-            style={{ zIndex: Z_INDEX.SIDE_PANEL_TOGGLE }}
-            className="absolute left-0 top-6 bg-white border border-gray-200 rounded-r-md p-1 shadow-sm hover:bg-gray-50 transition-colors"
-            aria-label="Expand create workflow panel"
-          >
-            <span className="hero-chevron-right h-4 w-4 text-gray-600" />
-          </button>
-        </Tooltip>
-      )}
-
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
