@@ -505,6 +505,7 @@ export function WorkflowEditor({
         {/* Show placeholder when workflow is empty and landing screen is not covering it */}
         {isNewWorkflow &&
           !showLandingScreen &&
+          !isAIAssistantPanelOpen &&
           workflow.jobs.length === 0 &&
           workflow.triggers.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

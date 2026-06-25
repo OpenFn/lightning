@@ -183,16 +183,19 @@ function LandingScreenWrapper({
   aiAssistantEnabled: boolean;
 }) {
   const showLandingScreen = useShowLandingScreen();
-  const { openYAMLImportModal } = useUICommands();
+  const { openYAMLImportModal, dismissLandingScreen, openAIAssistantPanel } =
+    useUICommands();
 
   if (!showLandingScreen) return null;
 
   return (
     <>
-      {/* TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates) */}
       <LandingScreen
         aiAssistantEnabled={aiAssistantEnabled}
-        onBuildWithAI={() => {}}
+        onBuildWithAI={(prompt: string) => {
+          dismissLandingScreen();
+          openAIAssistantPanel(prompt);
+        }}
         onBuildFromScratch={() => {}}
         onBrowseTemplates={() => {}}
         onImportYAML={openYAMLImportModal}
