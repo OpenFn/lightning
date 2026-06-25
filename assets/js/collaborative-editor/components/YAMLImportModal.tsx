@@ -1,13 +1,17 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import pDebounce from 'p-debounce';
-import { useState, useCallback, useContext, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { Tooltip } from '../../components/Tooltip';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { WorkflowError } from '../../yaml/workflow-errors';
-import { StoreContext } from '../contexts/StoreProvider';
-import { useShowYAMLImportModal, useUICommands } from '../hooks/useUI';
+import {
+  useImportPanelState,
+  useImportYamlContent,
+  useShowYAMLImportModal,
+  useUICommands,
+} from '../hooks/useUI';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 
@@ -58,21 +62,11 @@ interface YAMLImportContentProps {
 }
 
 function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
-  const context = useContext(StoreContext);
-  if (!context) {
-    throw new Error('YAMLImportContent must be used within StoreContext');
-  }
-  const uiStore = context.uiStore;
-
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
+  const { setImportState, setImportYamlContent } = useUICommands();
 
-  const storedYamlContent = uiStore.withSelector(
-    state => state.importPanel.yamlContent
-  )();
-  const importState = uiStore.withSelector(
-    state => state.importPanel.importState
-  )();
-  const setImportState = uiStore.setImportState;
+  const storedYamlContent = useImportYamlContent();
+  const importState = useImportPanelState();
 
   const [yamlContent, setYamlContent] = useState(storedYamlContent);
   const [errors, setErrors] = useState<WorkflowError[]>([]);
@@ -115,14 +109,14 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
 
   const handleYAMLChange = (content: string) => {
     setYamlContent(content);
-    uiStore.setImportYamlContent(content);
+    setImportYamlContent(content);
     void validateYAML(content);
   };
 
   const handleFileUpload = (content: string) => {
     setMode('paste');
     setYamlContent(content);
-    uiStore.setImportYamlContent(content);
+    setImportYamlContent(content);
     void validateYAML(content);
   };
 
@@ -144,8 +138,7 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
       await saveWorkflow({ silent: true });
       setYamlContent('');
       setValidatedState(null);
-      setImportState('initial');
-      uiStore.clearImportPanel();
+      onClose();
       onSuccess();
     } catch {
       setImportState('valid');

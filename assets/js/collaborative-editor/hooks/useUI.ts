@@ -63,6 +63,9 @@ export const useUICommands = () => {
     dismissLandingScreen: uiStore.dismissLandingScreen,
     openYAMLImportModal: uiStore.openYAMLImportModal,
     closeYAMLImportModal: uiStore.closeYAMLImportModal,
+    // Import panel write commands
+    setImportState: uiStore.setImportState,
+    setImportYamlContent: uiStore.setImportYamlContent,
   };
 };
 
@@ -181,3 +184,16 @@ export const useImportPanelState =
 
     return useSyncExternalStore(uiStore.subscribe, selectImportState);
   };
+
+/**
+ * Hook to get the stored YAML content from the import panel
+ */
+export const useImportYamlContent = (): string => {
+  const uiStore = useUIStore();
+
+  const selectYamlContent = uiStore.withSelector(
+    state => state.importPanel.yamlContent
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectYamlContent);
+};
