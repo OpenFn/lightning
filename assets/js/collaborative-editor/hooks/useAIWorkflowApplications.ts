@@ -104,6 +104,8 @@ export function useAIWorkflowApplications({
   currentSession,
   currentUserId,
   aiMode,
+  isNewWorkflow,
+  onValidationError,
   workflowActions,
   monacoRef,
   jobs,
@@ -122,6 +124,8 @@ export function useAIWorkflowApplications({
   } | null;
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
+  isNewWorkflow: boolean;
+  onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -129,6 +133,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
     doneApplyingJobCode: (messageId: string) => Promise<void>;
     updateJob: (jobId: string, updates: { body: string }) => void;
+    saveWorkflow: (options?: { silent?: boolean }) => Promise<unknown>;
   };
   monacoRef: RefObject<MonacoHandle> | null;
   jobs: Job[];
@@ -146,6 +151,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode,
     doneApplyingJobCode,
     updateJob,
+    saveWorkflow,
   } = workflowActions;
 
   /**
@@ -199,14 +205,35 @@ export function useAIWorkflowApplications({
         );
 
         await importWorkflow(workflowStateWithCreds);
+
+        if (isNewWorkflow) {
+          try {
+            await saveWorkflow({ silent: true });
+          } catch (saveError) {
+            console.error('[AI Assistant] Failed to save workflow:', saveError);
+            notifications.alert({
+              title: 'Failed to save workflow',
+              description:
+                saveError instanceof Error
+                  ? saveError.message
+                  : 'Unknown error occurred',
+            });
+          }
+        }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
-        notifications.alert({
-          title: 'Failed to apply workflow',
-          description:
-            error instanceof Error ? error.message : 'Invalid workflow YAML',
-        });
+        const errorMessage =
+          error instanceof Error ? error.message : 'Invalid workflow YAML';
+
+        if (isNewWorkflow && onValidationError) {
+          onValidationError(errorMessage);
+        } else {
+          notifications.alert({
+            title: 'Failed to apply workflow',
+            description: errorMessage,
+          });
+        }
       } finally {
         setApplyingMessageId(null);
         // Only signal completion if we successfully coordinated
@@ -224,6 +251,9 @@ export function useAIWorkflowApplications({
       doneApplyingWorkflow,
       jobs,
       setApplyingMessageId,
+      isNewWorkflow,
+      onValidationError,
+      saveWorkflow,
     ]
   );
 
