@@ -6,7 +6,7 @@ import { YAMLImportModal } from '../../../../js/collaborative-editor/components/
 // --- Workflow mocks ---
 
 const mockImportWorkflow = vi.fn().mockResolvedValue(undefined);
-const mockSaveWorkflow = vi.fn().mockResolvedValue(undefined);
+const mockSaveWorkflow = vi.fn().mockResolvedValue({ ok: true });
 
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({
