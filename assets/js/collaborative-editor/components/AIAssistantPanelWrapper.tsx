@@ -61,7 +61,7 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import type { JobCodeContext } from '../types/ai-assistant';
+import type { JobCodeContext, Message } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -548,6 +548,7 @@ export function AIAssistantPanelWrapper({
     startApplyingJobCode,
     doneApplyingJobCode,
     updateJob,
+    saveWorkflow,
   } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
@@ -557,6 +558,20 @@ export function AIAssistantPanelWrapper({
   const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
   const applyingJobCodeMessageId = useWorkflowState(
     state => state.applyingJobCodeMessageId
+  );
+
+  const onValidationError = useCallback(
+    (errorMessage: string) => {
+      const message: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: errorMessage,
+        status: 'error',
+        inserted_at: new Date().toISOString(),
+      };
+      aiStore._addMessage(message);
+    },
+    [aiStore]
   );
 
   // Hook to handle workflow/job code application logic
@@ -573,6 +588,8 @@ export function AIAssistantPanelWrapper({
           : null,
       currentUserId: user?.id,
       aiMode,
+      isNewWorkflow,
+      onValidationError,
       workflowActions: {
         importWorkflow,
         startApplyingWorkflow,
@@ -580,6 +597,7 @@ export function AIAssistantPanelWrapper({
         startApplyingJobCode,
         doneApplyingJobCode,
         updateJob,
+        saveWorkflow,
       },
       monacoRef,
       jobs,
