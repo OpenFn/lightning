@@ -115,7 +115,7 @@ export function LandingScreen({
           <WorkflowOptionCard
             testId="build-from-scratch-card"
             icon="hero-plus-circle"
-            title="Build from Scratch"
+            title="Build from scratch"
             description="Start with an empty canvas and pick a trigger as your first step."
             onClick={onBuildFromScratch}
           />
