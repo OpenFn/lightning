@@ -94,6 +94,9 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
   const mockClearDiff = vi.fn();
   const mockShowDiff = vi.fn();
 
+  const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+  const mockOnValidationError = vi.fn();
+
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,
@@ -101,6 +104,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     startApplyingJobCode: mockStartApplyingJobCode,
     doneApplyingJobCode: mockDoneApplyingJobCode,
     updateJob: mockUpdateJob,
+    saveWorkflow: mockSaveWorkflow,
   };
 
   const createMockMonacoRef = () => ({
@@ -149,6 +153,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -181,6 +186,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -214,6 +220,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -252,6 +259,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -285,6 +293,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -313,6 +322,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -345,6 +355,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
       })
     );
@@ -353,6 +364,177 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     await waitFor(() => {
       expect(mockDoneApplyingWorkflow).not.toHaveBeenCalled();
+    });
+  });
+
+  it('auto-saves after importWorkflow when isNewWorkflow is true', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: mockSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        appliedMessageIdsRef: { current: new Set() },
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
+      expect(mockSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+    });
+
+    const importOrder = mockImportWorkflow.mock.invocationCallOrder[0];
+    const saveOrder = mockSaveWorkflow.mock.invocationCallOrder[0];
+    expect(importOrder).toBeLessThan(saveOrder);
+  });
+
+  it('does not auto-save when isNewWorkflow is false', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: mockSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        appliedMessageIdsRef: { current: new Set() },
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
+    });
+
+    expect(mockSaveWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('routes validation error to onValidationError callback when isNewWorkflow is true', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: mockWorkflowActions,
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        onValidationError: mockOnValidationError,
+        appliedMessageIdsRef: { current: new Set() },
+      })
+    );
+
+    await result.current.handleApplyWorkflow('invalid yaml', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockOnValidationError).toHaveBeenCalledWith(expect.any(String));
+      expect(notifications.alert).not.toHaveBeenCalled();
+    });
+  });
+
+  it('falls back to toast for validation errors when isNewWorkflow is false', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: mockWorkflowActions,
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        appliedMessageIdsRef: { current: new Set() },
+      })
+    );
+
+    await result.current.handleApplyWorkflow('invalid yaml', 'msg-1');
+
+    await waitFor(() => {
+      expect(notifications.alert).toHaveBeenCalledWith({
+        title: 'Failed to apply workflow',
+        description: expect.any(String) as string,
+      });
+    });
+  });
+
+  it('shows save-failure toast and does not call onValidationError when save rejects', async () => {
+    const failingSaveWorkflow = vi.fn(() =>
+      Promise.reject(new Error('Network error'))
+    );
+
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: failingSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        onValidationError: mockOnValidationError,
+        appliedMessageIdsRef: { current: new Set() },
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
+      expect(notifications.alert).toHaveBeenCalledWith({
+        title: 'Failed to save workflow',
+        description: 'Network error',
+      });
+      expect(mockOnValidationError).not.toHaveBeenCalled();
     });
   });
 });
