@@ -36,6 +36,14 @@ defmodule Lightning.MixProject do
       ],
       compilers: Mix.compilers(),
       hex: hex_audit(),
+      releases: [
+        lightning: [
+          applications: [
+            opentelemetry_exporter: :permanent,
+            opentelemetry: :temporary
+          ]
+        ]
+      ],
 
       # Docs
       name: "Lightning",
