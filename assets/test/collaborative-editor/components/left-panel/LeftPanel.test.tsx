@@ -25,84 +25,43 @@ vi.mock(
   })
 );
 
-vi.mock(
-  '../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel',
-  () => ({
-    YAMLImportPanel: vi.fn(({ onBack }) => (
-      <div data-testid="yaml-import-panel">
-        <button onClick={onBack} data-testid="mock-back-button">
-          Back
-        </button>
-      </div>
-    )),
-  })
-);
-
 describe('LeftPanel', () => {
   let mockOnMethodChange: ReturnType<typeof vi.fn>;
-  let mockOnImport: ReturnType<typeof vi.fn>;
-  let mockOnSave: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockOnMethodChange = vi.fn();
-    mockOnImport = vi.fn();
-    mockOnSave = vi.fn().mockResolvedValue(undefined);
   });
 
   describe('rendering based on method', () => {
     it('renders TemplatePanel when method is "template"', () => {
       render(
-        <LeftPanel
-          method="template"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
+        <LeftPanel method="template" onMethodChange={mockOnMethodChange} />
       );
 
       expect(screen.getByTestId('template-panel')).toBeInTheDocument();
-      expect(screen.queryByTestId('yaml-import-panel')).not.toBeInTheDocument();
-    });
-
-    it('renders YAMLImportPanel when method is "import"', () => {
-      render(
-        <LeftPanel
-          method="import"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
-      );
-
-      expect(screen.getByTestId('yaml-import-panel')).toBeInTheDocument();
-      expect(screen.queryByTestId('template-panel')).not.toBeInTheDocument();
     });
 
     it('renders AI placeholder when method is "ai"', () => {
-      render(
-        <LeftPanel
-          method="ai"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
-      );
+      render(<LeftPanel method="ai" onMethodChange={mockOnMethodChange} />);
 
       expect(
         screen.getByText('AI workflow creation coming soon...')
       ).toBeInTheDocument();
       expect(screen.queryByTestId('template-panel')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('yaml-import-panel')).not.toBeInTheDocument();
+    });
+
+    it('renders nothing for "import" method (modal handles it)', () => {
+      render(<LeftPanel method="import" onMethodChange={mockOnMethodChange} />);
+
+      expect(screen.queryByTestId('template-panel')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('AI workflow creation coming soon...')
+      ).not.toBeInTheDocument();
     });
 
     it('renders nothing when method is null', () => {
       const { container } = render(
-        <LeftPanel
-          method={null}
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
+        <LeftPanel method={null} onMethodChange={mockOnMethodChange} />
       );
 
       expect(container.firstChild).toBeNull();
@@ -112,44 +71,19 @@ describe('LeftPanel', () => {
   describe('method switching', () => {
     it('calls onMethodChange with "import" when TemplatePanel import is clicked', () => {
       render(
-        <LeftPanel
-          method="template"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
+        <LeftPanel method="template" onMethodChange={mockOnMethodChange} />
       );
 
       screen.getByTestId('mock-import-button').click();
 
       expect(mockOnMethodChange).toHaveBeenCalledWith('import');
     });
-
-    it('calls onMethodChange with "template" when YAMLImportPanel back is clicked', () => {
-      render(
-        <LeftPanel
-          method="import"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
-      );
-
-      screen.getByTestId('mock-back-button').click();
-
-      expect(mockOnMethodChange).toHaveBeenCalledWith('template');
-    });
   });
 
   describe('panel container', () => {
     it('has full width and height classes', () => {
       const { container } = render(
-        <LeftPanel
-          method="template"
-          onMethodChange={mockOnMethodChange}
-          onImport={mockOnImport}
-          onSave={mockOnSave}
-        />
+        <LeftPanel method="template" onMethodChange={mockOnMethodChange} />
       );
 
       const panel = container.firstChild as HTMLElement;
