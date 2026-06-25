@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from '../../components/Tooltip';
 import {
   useAIStorageKey,
   useAISessionType,
@@ -15,11 +16,10 @@ import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
-import { Tooltip } from '../../components/Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   onNewConversation?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   onShowSessions?: () => void;
@@ -233,7 +233,7 @@ export function AIAssistantPanel({
       if (onShowSessions) {
         onShowSessions();
       }
-    } else {
+    } else if (onClose) {
       onClose();
     }
   };
@@ -390,27 +390,31 @@ export function AIAssistantPanel({
                 </div>
               )}
             </div>
-            <Tooltip
-              content={sessionId ? 'Close current session' : 'Close assistant'}
-            >
-              <button
-                type="button"
-                onClick={handleClose}
-                className={cn(
-                  'inline-flex items-center justify-center',
-                  'h-8 w-8 rounded-md',
-                  'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                  'transition-all duration-150',
-                  'flex-shrink-0'
-                )}
-                aria-label={
+            {onClose && (
+              <Tooltip
+                content={
                   sessionId ? 'Close current session' : 'Close assistant'
                 }
               >
-                <span className="hero-x-mark h-5 w-5" />
-              </button>
-            </Tooltip>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className={cn(
+                    'inline-flex items-center justify-center',
+                    'h-8 w-8 rounded-md',
+                    'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                    'transition-all duration-150',
+                    'shrink-0'
+                  )}
+                  aria-label={
+                    sessionId ? 'Close current session' : 'Close assistant'
+                  }
+                >
+                  <span className="hero-x-mark h-5 w-5" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
