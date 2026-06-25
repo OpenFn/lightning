@@ -100,6 +100,7 @@ export const defaultUIState: UIState = {
     importState: 'initial',
   },
   showLandingScreen: false,
+  showYAMLImportModal: false,
 };
 
 // =============================================================================
@@ -360,6 +361,8 @@ export function createMockUIStore(
       };
     }),
     dismissLandingScreen: vi.fn(),
+    openYAMLImportModal: vi.fn(),
+    closeYAMLImportModal: vi.fn(),
   };
 
   return {
