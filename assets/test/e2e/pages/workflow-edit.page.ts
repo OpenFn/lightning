@@ -26,7 +26,10 @@ export class WorkflowEditPage extends LiveViewPage {
   readonly buildWithAIInput = this.page.getByTestId('build-with-ai-input');
   readonly buildWithAIButton = this.page.getByTestId('build-with-ai-button');
   readonly browseTemplatesCard = this.page.getByTestId('browse-templates-card');
-  readonly importYAMLCard = this.page.getByTestId('import-yaml-card');
+  readonly importYAMLLink = this.page.getByTestId('import-yaml-link');
+  readonly buildFromScratchCard = this.page.getByTestId(
+    'build-from-scratch-card'
+  );
 
   constructor(page: Page) {
     super(page);

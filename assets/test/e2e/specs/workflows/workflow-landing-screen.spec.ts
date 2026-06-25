@@ -104,10 +104,10 @@ test.describe('landing screen — AI-disabled @landing-screen', () => {
     await expect(workflowEdit.browseTemplatesCard).toBeVisible();
   });
 
-  test('Import YAML card is visible', async ({ page }) => {
+  test('Import YAML link is visible', async ({ page }) => {
     const workflowEdit = new WorkflowEditPage(page);
     await navigateToNewWorkflow(page, projectId);
-    await expect(workflowEdit.importYAMLCard).toBeVisible();
+    await expect(workflowEdit.importYAMLLink).toBeVisible();
   });
 
   test('Build with AI input is absent when AI is disabled', async ({
@@ -171,7 +171,7 @@ test.describe('landing screen — AI-enabled @landing-screen @ai', () => {
     await expect(workflowEdit.buildWithAIInput).toBeVisible();
     await expect(workflowEdit.buildWithAIButton).toBeVisible();
     await expect(workflowEdit.browseTemplatesCard).toBeVisible();
-    await expect(workflowEdit.importYAMLCard).toBeVisible();
+    await expect(workflowEdit.importYAMLLink).toBeVisible();
   });
 
   test('Build it button is disabled when prompt is empty', async ({ page }) => {
