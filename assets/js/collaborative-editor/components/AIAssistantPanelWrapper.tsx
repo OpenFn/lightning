@@ -103,6 +103,9 @@ export function AIAssistantPanelWrapper({
   const isPinnedVersion =
     currentVersion !== undefined && currentVersion !== null;
 
+  const { isReadOnly } = useWorkflowReadOnly();
+  const isNewWorkflow = useIsNewWorkflow();
+
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
   const [focusTrigger, setFocusTrigger] = useState(0);
@@ -128,7 +131,7 @@ export function AIAssistantPanelWrapper({
       toggleAIAssistantPanel();
     },
     0,
-    { enabled: !isPinnedVersion && aiAssistantEnabled }
+    { enabled: !isPinnedVersion && aiAssistantEnabled && !isNewWorkflow }
   );
 
   const aiStore = useAIStore();
@@ -157,10 +160,7 @@ export function AIAssistantPanelWrapper({
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
 
-  // Check readonly state and new workflow status
   // AI can apply changes if: not readonly OR is a new workflow (being created)
-  const { isReadOnly } = useWorkflowReadOnly();
-  const isNewWorkflow = useIsNewWorkflow();
   const canApplyChanges = !isReadOnly || isNewWorkflow;
   const isWriteDisabled = !canApplyChanges;
 
@@ -683,7 +683,7 @@ export function AIAssistantPanelWrapper({
           <div className="flex-1 overflow-hidden">
             <AIAssistantPanel
               isOpen={isAIAssistantPanelOpen}
-              onClose={handleClosePanel}
+              onClose={isNewWorkflow ? undefined : handleClosePanel}
               onNewConversation={handleNewConversation}
               onSessionSelect={handleSessionSelect}
               onShowSessions={handleShowSessions}
