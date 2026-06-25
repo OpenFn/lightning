@@ -19,12 +19,14 @@ import { LandingScreen } from '../../../js/collaborative-editor/components/Landi
 function renderLandingScreen(props: {
   aiAssistantEnabled?: boolean;
   onBuildWithAI?: (prompt: string) => void;
+  onBuildFromScratch?: () => void;
   onBrowseTemplates?: () => void;
   onImportYAML?: () => void;
 }) {
   const defaults = {
     aiAssistantEnabled: true,
     onBuildWithAI: vi.fn(),
+    onBuildFromScratch: vi.fn(),
     onBrowseTemplates: vi.fn(),
     onImportYAML: vi.fn(),
   };
@@ -118,12 +120,13 @@ describe('LandingScreen - Keyboard submission', () => {
 // =============================================================================
 
 describe('LandingScreen - AI assistant visibility', () => {
-  test('shows build-with-ai-input, browse-templates-card, and import-yaml-card when AI is enabled', () => {
+  test('shows build-with-ai-input, both cards, and yaml link when AI is enabled', () => {
     renderLandingScreen({ aiAssistantEnabled: true });
 
     expect(screen.getByTestId('build-with-ai-input')).toBeInTheDocument();
+    expect(screen.getByTestId('build-from-scratch-card')).toBeInTheDocument();
     expect(screen.getByTestId('browse-templates-card')).toBeInTheDocument();
-    expect(screen.getByTestId('import-yaml-card')).toBeInTheDocument();
+    expect(screen.getByTestId('import-yaml-link')).toBeInTheDocument();
   });
 
   test('shows "Recommended" badge when AI is enabled', () => {
@@ -136,12 +139,13 @@ describe('LandingScreen - AI assistant visibility', () => {
     expect(screen.queryByText('Recommended')).not.toBeInTheDocument();
   });
 
-  test('omits build-with-ai-input but still shows both cards when AI is disabled', () => {
+  test('omits build-with-ai-input but still shows both cards and yaml link when AI is disabled', () => {
     renderLandingScreen({ aiAssistantEnabled: false });
 
     expect(screen.queryByTestId('build-with-ai-input')).not.toBeInTheDocument();
+    expect(screen.getByTestId('build-from-scratch-card')).toBeInTheDocument();
     expect(screen.getByTestId('browse-templates-card')).toBeInTheDocument();
-    expect(screen.getByTestId('import-yaml-card')).toBeInTheDocument();
+    expect(screen.getByTestId('import-yaml-link')).toBeInTheDocument();
   });
 });
 
@@ -150,16 +154,24 @@ describe('LandingScreen - AI assistant visibility', () => {
 // =============================================================================
 
 describe('LandingScreen - Card click handlers', () => {
-  test('clicking Browse Templates and Import YAML cards calls respective handlers without errors', async () => {
+  test('clicking cards and yaml link calls respective handlers', async () => {
     const user = userEvent.setup();
+    const onBuildFromScratch = vi.fn();
     const onBrowseTemplates = vi.fn();
     const onImportYAML = vi.fn();
-    renderLandingScreen({ onBrowseTemplates, onImportYAML });
+    renderLandingScreen({
+      onBuildFromScratch,
+      onBrowseTemplates,
+      onImportYAML,
+    });
+
+    await user.click(screen.getByTestId('build-from-scratch-card'));
+    expect(onBuildFromScratch).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByTestId('browse-templates-card'));
     expect(onBrowseTemplates).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByTestId('import-yaml-card'));
+    await user.click(screen.getByTestId('import-yaml-link'));
     expect(onImportYAML).toHaveBeenCalledTimes(1);
   });
 });

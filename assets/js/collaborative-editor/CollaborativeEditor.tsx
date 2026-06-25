@@ -188,6 +188,7 @@ function LandingScreenWrapper({
     <LandingScreen
       aiAssistantEnabled={aiAssistantEnabled}
       onBuildWithAI={() => {}}
+      onBuildFromScratch={() => {}}
       onBrowseTemplates={() => {}}
       onImportYAML={() => {}}
     />

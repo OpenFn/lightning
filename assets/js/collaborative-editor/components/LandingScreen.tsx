@@ -13,6 +13,7 @@ interface WorkflowOptionCardProps {
 interface LandingScreenProps {
   aiAssistantEnabled: boolean;
   onBuildWithAI: (prompt: string) => void;
+  onBuildFromScratch: () => void;
   onBrowseTemplates: () => void;
   onImportYAML: () => void;
 }
@@ -20,6 +21,7 @@ interface LandingScreenProps {
 export function LandingScreen({
   aiAssistantEnabled,
   onBuildWithAI,
+  onBuildFromScratch,
   onBrowseTemplates,
   onImportYAML,
 }: LandingScreenProps) {
@@ -111,11 +113,11 @@ export function LandingScreen({
 
         <div className="grid md:grid-cols-2 gap-4">
           <WorkflowOptionCard
-            testId="import-yaml-card"
-            icon="hero-arrow-up-tray"
-            title="Import from YAML"
-            description="Upload or paste a YAML file to create a workflow from an existing definition."
-            onClick={onImportYAML}
+            testId="build-from-scratch-card"
+            icon="hero-plus-circle"
+            title="Build from Scratch"
+            description="Start with an empty canvas and pick a trigger as your first step."
+            onClick={onBuildFromScratch}
           />
           <WorkflowOptionCard
             testId="browse-templates-card"
@@ -125,6 +127,18 @@ export function LandingScreen({
             onClick={onBrowseTemplates}
           />
         </div>
+
+        <p className="text-sm text-center text-gray-500">
+          or{' '}
+          <button
+            type="button"
+            data-testid="import-yaml-link"
+            onClick={onImportYAML}
+            className="underline hover:text-gray-700 transition-colors"
+          >
+            import a YAML file manually
+          </button>
+        </p>
       </div>
     </div>
   );
