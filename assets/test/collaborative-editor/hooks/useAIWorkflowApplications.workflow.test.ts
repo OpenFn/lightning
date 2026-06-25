@@ -530,10 +530,13 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(notifications.alert).toHaveBeenCalledWith({
-        title: 'Failed to save workflow',
-        description: 'Network error',
-      });
+      expect(notifications.alert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Failed to save workflow',
+          description: 'Network error',
+          action: expect.objectContaining({ label: 'Retry' }) as object,
+        })
+      );
       expect(mockOnValidationError).not.toHaveBeenCalled();
     });
   });

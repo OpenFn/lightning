@@ -191,6 +191,7 @@ export function useAIWorkflowApplications({
       // Returns false if coordination failed (other users won't be notified)
       const coordinated = await startApplyingWorkflow(messageId);
 
+      let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
 
@@ -210,6 +211,7 @@ export function useAIWorkflowApplications({
           try {
             await saveWorkflow({ silent: true });
           } catch (saveError) {
+            saveSucceeded = false;
             console.error('[AI Assistant] Failed to save workflow:', saveError);
             notifications.alert({
               title: 'Failed to save workflow',
@@ -217,6 +219,10 @@ export function useAIWorkflowApplications({
                 saveError instanceof Error
                   ? saveError.message
                   : 'Unknown error occurred',
+              action: {
+                label: 'Retry',
+                onClick: () => void handleApplyWorkflow(yaml, messageId),
+              },
             });
           }
         }
@@ -240,7 +246,11 @@ export function useAIWorkflowApplications({
         // (otherwise other users weren't notified of the start)
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
-          flowEvents.dispatch('fit-view');
+          // Only fit-view on full success — skip if save failed so the canvas
+          // doesn't zoom in on an unpersisted workflow
+          if (saveSucceeded !== false) {
+            flowEvents.dispatch('fit-view');
+          }
         }
       }
     },
