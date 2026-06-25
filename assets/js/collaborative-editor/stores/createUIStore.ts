@@ -119,6 +119,7 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       aiAssistantInitialMessage: null,
       createWorkflowPanelCollapsed,
       showLandingScreen: isNewWorkflow,
+      showYAMLImportModal: false,
       templatePanel: {
         templates: [],
         loading: false,
@@ -330,6 +331,21 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('dismissLandingScreen');
   };
 
+  const openYAMLImportModal = () => {
+    state = produce(state, draft => {
+      draft.showYAMLImportModal = true;
+    });
+    notify('openYAMLImportModal');
+  };
+
+  const closeYAMLImportModal = () => {
+    state = produce(state, draft => {
+      draft.showYAMLImportModal = false;
+      draft.importPanel = { yamlContent: '', importState: 'initial' };
+    });
+    notify('closeYAMLImportModal');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -364,6 +380,8 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     setImportState,
     clearImportPanel,
     dismissLandingScreen,
+    openYAMLImportModal,
+    closeYAMLImportModal,
   };
 };
 

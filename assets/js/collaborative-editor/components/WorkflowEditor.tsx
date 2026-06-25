@@ -8,7 +8,6 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
-import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
@@ -16,7 +15,6 @@ import {
   useRunPanelContext,
   useTemplatePanel,
   useUICommands,
-  //useIsCreateWorkflowPanelCollapsed, // TODO-AI-FIRST clean up
   useIsAIAssistantPanelOpen,
   useShowLandingScreen,
 } from '../hooks/useUI';
@@ -30,7 +28,6 @@ import { useKeyboardShortcut } from '../keyboard';
 import { Z_INDEX } from '../utils/constants';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
-import flowEvents from './diagram/react-flow-events';
 import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
@@ -65,6 +62,7 @@ export function WorkflowEditor({
     collapseCreateWorkflowPanel,
     expandCreateWorkflowPanel,
     setTemplateSearchQuery,
+    openYAMLImportModal,
   } = useUICommands();
   // TODO-AI-FIRST: remove in #4856
   const isCreateWorkflowPanelCollapsed = true;
@@ -405,36 +403,6 @@ export function WorkflowEditor({
   };
 
   /**
-   * Imports a workflow state into the canvas.
-   *
-   * This function validates the workflow name to ensure uniqueness, then imports
-   * the workflow. If validation fails, it still imports the workflow (the server
-   * will handle name conflicts on save).
-   *
-   * Note: This is intentionally synchronous from the caller's perspective.
-   * The async validation happens in the background, but import proceeds
-   * immediately after validation completes or fails.
-   */
-  const handleImport = useCallback(
-    (workflowState: YAMLWorkflowState) => {
-      void workflowStore
-        .importWorkflow(workflowState)
-        .then(() => {
-          flowEvents.dispatch('fit-view');
-        })
-        .catch((error: unknown) => {
-          console.error('Failed to import workflow:', error);
-        });
-    },
-    [workflowStore]
-  );
-
-  const handleSaveAndClose = async () => {
-    await saveWorkflow();
-    collapseCreateWorkflowPanel();
-  };
-
-  /**
    * Keyboard shortcuts for new workflow creation panels.
    *
    * These shortcuts only work when creating a new workflow (isNewWorkflow=true):
@@ -472,31 +440,18 @@ export function WorkflowEditor({
     }
   );
 
-  // Cmd/Ctrl+\ to toggle import panel (see JSDoc above for full shortcut docs)
+  // Cmd/Ctrl+\ to open YAML import modal when on landing screen (see JSDoc above for full shortcut docs)
   useKeyboardShortcut(
     'Control+\\, Meta+\\',
     () => {
       if (!isNewWorkflow) return;
-
-      if (leftPanelMethod === 'import' && !isCreateWorkflowPanelCollapsed) {
-        // Already open in import mode - collapse it
-        collapseCreateWorkflowPanel();
-      } else {
-        // Close AI Assistant panel when expanding create panel
-        if (isAIAssistantPanelOpen) {
-          closeAIAssistantPanel();
-        }
-        // Open in import mode
-        handleMethodChange('import');
-        if (isCreateWorkflowPanelCollapsed) {
-          expandCreateWorkflowPanel();
-        }
+      if (showLandingScreen) {
+        openYAMLImportModal();
       }
+      // left-panel path removed — see #4876
     },
     0,
-    {
-      enabled: isNewWorkflow,
-    }
+    { enabled: isNewWorkflow }
   );
 
   useKeyboardShortcut(
@@ -532,8 +487,6 @@ export function WorkflowEditor({
                 <LeftPanel
                   method={leftPanelMethod}
                   onMethodChange={handleMethodChange}
-                  onImport={handleImport}
-                  onSave={handleSaveAndClose}
                 />
               </div>
               <button

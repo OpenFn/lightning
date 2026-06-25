@@ -61,6 +61,8 @@ export const useUICommands = () => {
     selectTemplate: uiStore.selectTemplate,
     setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
     dismissLandingScreen: uiStore.dismissLandingScreen,
+    openYAMLImportModal: uiStore.openYAMLImportModal,
+    closeYAMLImportModal: uiStore.closeYAMLImportModal,
   };
 };
 
@@ -139,6 +141,17 @@ export const useShowLandingScreen = (): boolean => {
     state => state.showLandingScreen
   );
   return useSyncExternalStore(uiStore.subscribe, selectShowLandingScreen);
+};
+
+/**
+ * Hook to check if the YAML import modal is open
+ */
+export const useShowYAMLImportModal = (): boolean => {
+  const uiStore = useUIStore();
+  const selectShowYAMLImportModal = uiStore.withSelector(
+    state => state.showYAMLImportModal
+  );
+  return useSyncExternalStore(uiStore.subscribe, selectShowYAMLImportModal);
 };
 
 /**

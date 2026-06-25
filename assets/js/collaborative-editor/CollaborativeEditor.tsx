@@ -16,6 +16,7 @@ import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
+import { YAMLImportModal } from './components/YAMLImportModal';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
@@ -26,7 +27,11 @@ import {
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen, useShowLandingScreen } from './hooks/useUI';
+import {
+  useIsRunPanelOpen,
+  useShowLandingScreen,
+  useUICommands,
+} from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
@@ -85,14 +90,12 @@ function BreadcrumbContent({
 }: BreadcrumbContentProps) {
   const isNewWorkflow = useIsNewWorkflow();
   const projectFromStore = useProject();
-
   const workflowFromStore = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-
   const isRunPanelOpen = useIsRunPanelOpen();
-
   const { params } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
+  const handleVersionSelect = useVersionSelect();
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -101,8 +104,6 @@ function BreadcrumbContent({
   const projectColor = projectColorFallback ?? null;
   const isSandbox = projectIsSandboxFallback === 'true';
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
-
-  const handleVersionSelect = useVersionSelect();
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -182,16 +183,22 @@ function LandingScreenWrapper({
   aiAssistantEnabled: boolean;
 }) {
   const showLandingScreen = useShowLandingScreen();
+  const { openYAMLImportModal } = useUICommands();
+
   if (!showLandingScreen) return null;
-  // TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates), #4859 (Import YAML)
+
   return (
-    <LandingScreen
-      aiAssistantEnabled={aiAssistantEnabled}
-      onBuildWithAI={() => {}}
-      onBuildFromScratch={() => {}}
-      onBrowseTemplates={() => {}}
-      onImportYAML={() => {}}
-    />
+    <>
+      {/* TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates) */}
+      <LandingScreen
+        aiAssistantEnabled={aiAssistantEnabled}
+        onBuildWithAI={() => {}}
+        onBuildFromScratch={() => {}}
+        onBrowseTemplates={() => {}}
+        onImportYAML={openYAMLImportModal}
+      />
+      <YAMLImportModal />
+    </>
   );
 }
 
