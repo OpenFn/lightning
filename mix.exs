@@ -29,6 +29,14 @@ defmodule Lightning.MixProject do
         verify: :test
       ],
       compilers: Mix.compilers(),
+      releases: [
+        lightning: [
+          applications: [
+            opentelemetry_exporter: :permanent,
+            opentelemetry: :temporary
+          ]
+        ]
+      ],
 
       # Docs
       name: "Lightning",

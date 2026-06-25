@@ -812,6 +812,16 @@ defmodule Lightning.Config.Bootstrap do
           "lightning-cluster"
         )
 
+    config :opentelemetry,
+      span_processor: :batch,
+      traces_exporter: :otlp,
+      sampler: :always_on,
+      resource: %{service: %{name: "lightning"}}
+
+    config :opentelemetry_exporter,
+      otlp_protocol: :http_protobuf,
+      otlp_endpoint: "http://tempo:4318"
+
     # ==============================================================================
 
     setup_storage()
