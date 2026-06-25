@@ -14,6 +14,7 @@ import {
 } from '../hooks/useUI';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { notifications } from '../lib/notifications';
 
 import { ValidationErrorDisplay } from './yaml-import/ValidationErrorDisplay';
 import { YAMLCodeEditor } from './yaml-import/YAMLCodeEditor';
@@ -135,12 +136,26 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
     setImportState('importing');
     try {
       await importWorkflow(validatedState);
-      await saveWorkflow({ silent: true });
+      // saveWorkflow returns null (not throws) when the WebSocket is disconnected
+      const saved = await saveWorkflow({ silent: true });
+      if (!saved) {
+        notifications.alert({
+          title: 'Not connected',
+          description: 'Connect to the server before importing a workflow.',
+        });
+        setImportState('valid');
+        return;
+      }
       setYamlContent('');
       setValidatedState(null);
       onClose();
       onSuccess();
-    } catch {
+    } catch (error) {
+      console.error('Failed to create workflow from YAML:', error);
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description: 'Please check your connection and try again.',
+      });
       setImportState('valid');
     }
   };
@@ -215,7 +230,7 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
                 void handleSave();
               }}
               disabled={isButtonDisabled}
-              className="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+              className="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
             >
               {(importState === 'parsing' || importState === 'importing') && (
                 <svg

@@ -101,7 +101,7 @@ export function LandingScreen({
                   type="button"
                   onClick={handleSubmit}
                   disabled={!isValid}
-                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Build it
                   <span className="hero-arrow-right h-4 w-4 stroke-4"></span>
