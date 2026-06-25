@@ -33,12 +33,16 @@ export function LandingScreen({
 
   return (
     <div
-      className="absolute
-      inset-0 z-10 flex items-center justify-center"
+      role="region"
+      aria-labelledby="landing-screen-heading"
+      className="absolute inset-0 z-10 flex items-center justify-center"
       data-testid="landing-screen"
     >
       <div className="w-full md:max-w-xl flex flex-col gap-6 px-6 lg:px-2">
-        <h1 className="text-3xl font-semibold text-gray-900">
+        <h1
+          id="landing-screen-heading"
+          className="text-3xl font-semibold text-gray-900"
+        >
           Where would you like to start today?
         </h1>
 
@@ -52,7 +56,9 @@ export function LandingScreen({
                 Build with AI
               </label>
               <span className="text-semantic-success flex gap-2 items-center px-3 py-1 bg-surface-subtle rounded-lg text-xs font-medium">
+                {/* Custom sparkle — no heroicons equivalent */}
                 <svg
+                  aria-hidden="true"
                   width="10"
                   height="10"
                   viewBox="0 0 10 10"
@@ -66,8 +72,11 @@ export function LandingScreen({
             </div>
             <div className="rounded-lg border border-border-subtle bg-white focus-within:ring focus-within:ring-gray-300 transition-shadow">
               <textarea
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
                 id="build-with-ai-input"
                 data-testid="build-with-ai-input"
+                aria-describedby="build-with-ai-hint"
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => {
@@ -80,13 +89,17 @@ export function LandingScreen({
                 rows={4}
                 className="w-full rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent"
               />
+              <span id="build-with-ai-hint" className="sr-only">
+                Press Enter to submit. Use Shift+Enter or Alt+Enter for a new
+                line.
+              </span>
               <div className="flex justify-end px-3 py-2">
                 <button
                   data-testid="build-with-ai-button"
                   type="button"
                   onClick={handleSubmit}
                   disabled={!isValid}
-                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:cursor-not-allowed"
+                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Build it
                   <span className="hero-arrow-right h-4 w-4 stroke-4"></span>
@@ -129,13 +142,13 @@ function WorkflowOptionCard({
       data-testid={testId}
       type="button"
       onClick={onClick}
-      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-within:ring focus-within:ring-gray-300"
+      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300"
     >
       <span className="w-fit inline-flex items-center justify-center rounded-lg bg-gray-100 p-2 mb-3">
         <span className={cn('h-5 w-5 text-gray-700', icon)} />
       </span>
       <p className="text-sm font-semibold text-gray-900">{title}</p>
-      <p className="mt-1 text-sm text-gray-500">{description}</p>
+      <p className="mt-1 text-sm text-gray-600">{description}</p>
     </button>
   );
 }

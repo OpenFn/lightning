@@ -180,16 +180,14 @@ function LandingScreenWrapper({
 }) {
   const showLandingScreen = useShowLandingScreen();
   if (!showLandingScreen) return null;
+  // TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates), #4859 (Import YAML)
   return (
-    <>
-      {/* TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates), #4859 (Import YAML) */}
-      <LandingScreen
-        aiAssistantEnabled={aiAssistantEnabled}
-        onBuildWithAI={() => {}}
-        onBrowseTemplates={() => {}}
-        onImportYAML={() => {}}
-      />
-    </>
+    <LandingScreen
+      aiAssistantEnabled={aiAssistantEnabled}
+      onBuildWithAI={() => {}}
+      onBrowseTemplates={() => {}}
+      onImportYAML={() => {}}
+    />
   );
 }
 
