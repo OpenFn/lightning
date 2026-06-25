@@ -816,8 +816,8 @@ defmodule Lightning.Config.Bootstrap do
 
     config :opentelemetry,
       span_processor: :batch,
-      # traces_exporter: :otlp,
-      traces_exporter: {:otel_exporter_stdout, []},
+      traces_exporter: :otlp,
+      # traces_exporter: {:otel_exporter_stdout, []},
       sampler: :always_on,
       resource: %{service: %{name: "lightning"}}
 
