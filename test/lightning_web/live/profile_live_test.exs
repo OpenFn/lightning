@@ -882,7 +882,8 @@ defmodule LightningWeb.ProfileLiveTest do
 
   describe "Identities Component" do
     setup do
-      handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+      # Identity linking only surfaces built-in social providers, so use one.
+      handler_name = "github"
 
       wellknown = %Lightning.AuthProviders.WellKnown{
         authorization_endpoint: "https://example.com/authorize",

@@ -66,6 +66,7 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
 
     providers =
       handlers
+      |> Enum.filter(&social_sso_provider?/1)
       |> Enum.map(fn handler ->
         %{
           name: handler.name,
@@ -75,6 +76,13 @@ defmodule LightningWeb.ProfileLive.IdentitiesComponent do
       |> Enum.sort_by(& &1.name)
 
     assign(socket, providers: providers)
+  end
+
+  defp social_sso_provider?(handler) do
+    handler.name in [
+      AuthProviders.GithubHandler.handler_name(),
+      AuthProviders.GoogleHandler.handler_name()
+    ]
   end
 
   @impl true
