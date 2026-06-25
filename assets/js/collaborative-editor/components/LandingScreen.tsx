@@ -101,7 +101,7 @@ export function LandingScreen({
                   type="button"
                   onClick={handleSubmit}
                   disabled={!isValid}
-                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:hover:text-black disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring focus-visible:ring-gray-300 rounded"
                 >
                   Build it
                   <span className="hero-arrow-right h-4 w-4 stroke-4"></span>
@@ -134,7 +134,7 @@ export function LandingScreen({
             type="button"
             data-testid="import-yaml-link"
             onClick={onImportYAML}
-            className="underline hover:text-gray-700 transition-colors"
+            className="underline hover:text-gray-700 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300 rounded"
           >
             import a YAML file manually
           </button>

@@ -194,12 +194,6 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
         </button>
       </div>
 
-      {errors.length > 0 && (
-        <div className="px-6 pb-3">
-          <ValidationErrorDisplay errors={errors} />
-        </div>
-      )}
-
       {/* Content area */}
       <div className="h-80 px-6 pb-4">
         {mode === 'upload' ? (
@@ -212,6 +206,12 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
           />
         )}
       </div>
+
+      {errors.length > 0 && (
+        <div className="px-6 pb-3">
+          <ValidationErrorDisplay errors={errors} />
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between px-6 py-5 border-t border-gray-100">
