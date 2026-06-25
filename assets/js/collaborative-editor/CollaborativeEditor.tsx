@@ -22,6 +22,7 @@ import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import {
+  useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
@@ -68,7 +69,6 @@ interface BreadcrumbContentProps {
   projectIsSandboxFallback?: string;
   projectColorFallback?: string | null;
   projectEnvFallback?: string;
-  isNewWorkflow?: boolean;
   aiAssistantEnabled: boolean;
 }
 
@@ -81,9 +81,9 @@ function BreadcrumbContent({
   projectIsSandboxFallback,
   projectColorFallback,
   projectEnvFallback,
-  isNewWorkflow = false,
   aiAssistantEnabled,
 }: BreadcrumbContentProps) {
+  const isNewWorkflow = useIsNewWorkflow();
   const projectFromStore = useProject();
 
   const workflowFromStore = useWorkflowState(state => state.workflow);
@@ -158,6 +158,9 @@ function BreadcrumbContent({
     handleVersionSelect,
     isNewWorkflow,
   ]);
+
+  // Hide header until the first save clears isNewWorkflow in the store.
+  if (isNewWorkflow) return null;
 
   return (
     <Header
@@ -238,30 +241,27 @@ export const CollaborativeEditor: WithActionProps<
                     <VersionDebugLogger />
                     <Toaster />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                      {!isNewWorkflow && (
-                        <BreadcrumbContent
-                          workflowId={workflowId}
-                          workflowName={workflowName}
-                          isNewWorkflow={isNewWorkflow}
-                          aiAssistantEnabled={aiAssistantEnabled}
-                          {...(projectId !== undefined && {
-                            projectIdFallback: projectId,
-                          })}
-                          {...(projectName !== undefined && {
-                            projectNameFallback: projectName,
-                          })}
-                          {...(projectDisplayName !== null && {
-                            projectDisplayNameFallback: projectDisplayName,
-                          })}
-                          projectIsSandboxFallback={projectIsSandbox}
-                          {...(projectColor !== null && {
-                            projectColorFallback: projectColor,
-                          })}
-                          {...(projectEnv !== undefined && {
-                            projectEnvFallback: projectEnv,
-                          })}
-                        />
-                      )}
+                      <BreadcrumbContent
+                        workflowId={workflowId}
+                        workflowName={workflowName}
+                        aiAssistantEnabled={aiAssistantEnabled}
+                        {...(projectId !== undefined && {
+                          projectIdFallback: projectId,
+                        })}
+                        {...(projectName !== undefined && {
+                          projectNameFallback: projectName,
+                        })}
+                        {...(projectDisplayName !== null && {
+                          projectDisplayNameFallback: projectDisplayName,
+                        })}
+                        projectIsSandboxFallback={projectIsSandbox}
+                        {...(projectColor !== null && {
+                          projectColorFallback: projectColor,
+                        })}
+                        {...(projectEnv !== undefined && {
+                          projectEnvFallback: projectEnv,
+                        })}
+                      />
                       <div className="flex-1 min-h-0 overflow-hidden relative">
                         <LoadingBoundary>
                           <div className="h-full w-full">
