@@ -517,17 +517,16 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repo is set to false when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
+    test "local_adaptors_repos defaults to [] when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
       Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
       Bootstrap.configure()
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == false
+      assert adaptor_registry[:local_adaptors_repos] == []
     end
 
-    test "local_adaptors_repo is set when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set" do
-      # configure both
+    test "local_adaptors_repos is a one-element list when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set with a single path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
@@ -536,7 +535,40 @@ defmodule Lightning.Config.BootstrapTest do
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == "/path"
+      assert adaptor_registry[:local_adaptors_repos] == ["/path"]
+    end
+
+    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == [
+               "/private/repo",
+               "/canonical/adaptors"
+             ]
+    end
+
+    test "local_adaptors_repos drops empty segments and trims whitespace" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == ["/a", "/b"]
     end
   end
 
