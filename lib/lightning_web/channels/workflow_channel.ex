@@ -14,9 +14,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Utils
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
@@ -381,6 +384,44 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("switch_to_draft", _params, socket) do
     transition_lifecycle_state(socket, :draft)
+  end
+
+  @impl true
+  def handle_in("list_sandboxes", _params, socket) do
+    project = socket.assigns.project
+    workflow = socket.assigns.workflow
+
+    sandboxes =
+      project.id
+      |> Projects.list_active_sandboxes_for_editing(workflow.name)
+      |> Enum.map(&render_editable_sandbox/1)
+
+    {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
+  end
+
+  @impl true
+  def handle_in("edit_in_sandbox", params, socket) do
+    parent = socket.assigns.project
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    name = sandbox_name(params, workflow, parent)
+
+    with :ok <- authorize_provision_sandbox(user, parent),
+         :ok <- limit_new_sandbox(parent),
+         {:ok, sandbox} <-
+           Projects.provision_sandbox(parent, user, %{
+             name: name,
+             env: "dev",
+             color: random_sandbox_color()
+           }),
+         {:ok, cloned_workflow} <-
+           promote_cloned_workflow(sandbox, workflow.name, user) do
+      {:reply, {:ok, %{project_id: sandbox.id, workflow_id: cloned_workflow.id}},
+       socket}
+    else
+      error -> workflow_error_reply(socket, error)
+    end
   end
 
   @impl true
@@ -1146,6 +1187,93 @@ defmodule LightningWeb.WorkflowChannel do
            type: "unauthorized",
            message: "You don't have permission to edit this workflow"
          }}
+    end
+  end
+
+  defp authorize_provision_sandbox(user, parent) do
+    if Permissions.can?(:sandboxes, :provision_sandbox, user, parent) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to create a sandbox here"
+       }}
+    end
+  end
+
+  defp limit_new_sandbox(parent) do
+    case ProjectLimiter.limit_new_sandbox(parent.id) do
+      :ok -> :ok
+      {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  defp promote_cloned_workflow(sandbox, workflow_name, user) do
+    cloned =
+      from(w in Lightning.Workflows.Workflow,
+        where:
+          w.project_id == ^sandbox.id and w.name == ^workflow_name and
+            is_nil(w.deleted_at),
+        limit: 1
+      )
+      |> Repo.one()
+
+    case cloned do
+      %Lightning.Workflows.Workflow{} = workflow ->
+        Workflows.go_live(workflow, user)
+
+      nil ->
+        {:error, :internal_error}
+    end
+  end
+
+  defp sandbox_name(params, workflow, parent) do
+    raw =
+      case params do
+        %{"name" => name} when is_binary(name) and name != "" -> name
+        _ -> default_sandbox_name(workflow, parent)
+      end
+
+    Lightning.Helpers.url_safe_name(raw)
+  end
+
+  defp default_sandbox_name(workflow, parent) do
+    base = workflow.name || parent.name || "sandbox"
+    "#{base}-sandbox"
+  end
+
+  defp random_sandbox_color do
+    LightningWeb.SandboxLive.Components.color_palette_hex_colors()
+    |> Enum.random()
+  end
+
+  defp render_editable_sandbox({sandbox, joinable_workflow_id}) do
+    %{
+      id: sandbox.id,
+      name: sandbox.name,
+      color: sandbox.color,
+      updated_at: sandbox.updated_at,
+      collaborators: Enum.map(sandbox.project_users, &render_collaborator/1),
+      workflow_id: joinable_workflow_id
+    }
+  end
+
+  defp render_collaborator(%{user: user}) do
+    %{
+      id: user.id,
+      name: collaborator_name(user),
+      email: user.email
+    }
+  end
+
+  defp collaborator_name(user) do
+    [user.first_name, user.last_name]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> Enum.join(" ")
+    |> case do
+      "" -> user.email
+      name -> name
     end
   end
 

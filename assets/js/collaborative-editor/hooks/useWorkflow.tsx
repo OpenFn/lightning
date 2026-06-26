@@ -674,6 +674,12 @@ export const useWorkflowActions = () => {
       return wrappedSaveAndSyncWorkflow();
     },
 
+    // Sandbox editing. listSandboxes is a query (fetch candidates) and
+    // editInSandbox is a command (provision + clone). Navigation lives in the
+    // calling component, consistent with the legacy-editor switch.
+    listSandboxes: store.listSandboxes,
+    editInSandbox: store.editInSandbox,
+
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
 

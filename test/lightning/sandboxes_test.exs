@@ -389,6 +389,10 @@ defmodule Lightning.Projects.SandboxesTest do
       assert s_triggers != []
       assert Enum.all?(s_triggers, &match?(false, &1.enabled))
 
+      # Cloned workflows must start as drafts so their :state stays coherent with
+      # their disabled triggers.
+      assert Enum.all?(s_wfs, &(&1.state == :draft))
+
       s_edges =
         from(e in Edge,
           join: w in assoc(e, :workflow),

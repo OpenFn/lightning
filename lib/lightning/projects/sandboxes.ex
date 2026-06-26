@@ -761,6 +761,10 @@ defmodule Lightning.Projects.Sandboxes do
           enable_job_logs: parent_workflow.enable_job_logs,
           positions: %{}
         })
+        # Cloned triggers are inserted disabled, so the workflow must start as a
+        # draft to keep state and trigger-enabled status coherent. The caller can
+        # promote a specific clone to :live afterwards (e.g. "Edit in sandbox").
+        |> Ecto.Changeset.put_change(:state, :draft)
         |> Repo.insert()
 
       Map.put(mapping, parent_workflow.id, sandbox_workflow.id)
