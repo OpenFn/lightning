@@ -75,13 +75,11 @@ honest analysis matter more than the executable proof.
 - **Phase 1 — Inventory:** ✅ COMPLETE (`docs/page-inventory.md` written: route map, surface-by-surface inventory of all ~26 routed LiveViews/feature areas, and cross-cutting catalogues for contexts/schemas/Oban/PubSub/channels/policies/presence, plus a decoupling-difficulty ranking)
 - **Phase 2 — Architecture + API:** ✅ COMPLETE (`docs/architecture.md` = two-component design + service boundary + auth/sessions/real-time crossing; `docs/api.md` = REST contract with Credentials fully specified, grounded in the real `*_json.ex`/`FallbackController`/schema shapes, and the JSON:API-vs-flat inconsistency resolved)
 - **Phase 3 — Vertical slice (Credentials):** ✅ COMPLETE (new `decoupling-experiment/credentials_service/` Phoenix+Ecto service: real Cloak-encrypted schemas, Credentials context, REST controller/JSON per `docs/api.md`, auth-in-a-plug; **compiles and `mix test` = 17 tests, 0 failures**. Toolchain provisioned: Elixir 1.17.3/OTP25 + Postgres 16. Other surfaces are documented stubs in `stubs.ex`. Findings captured in `decoupling-experiment/README.md`.)
-- **Phase 4 — Honest analysis:** ⬜ NOT STARTED
+- **Phase 4 — Honest analysis:** ✅ COMPLETE (`docs/migration-analysis.md` written in full: TL;DR, arch+API recap, the per-surface "Difficult to move" table with §3a slice-proven blockers, the recommendation + strongest counter-case, §5 staging plan evaluating the app-shell-first hypothesis, §6 professional-React-developer perspective answering all three questions.)
 
-**Next action:** Begin Phase 4 — write `docs/migration-analysis.md` in full
-(recap arch+API, the per-surface "Difficult to move" table grounded in the slice,
-the recommendation + strongest counter-case, the §5 staging plan, and the §6
-professional-React-developer perspective). Then commit + push. This is the last
-phase and the second-highest priority.
+**Next action:** EXPERIMENT COMPLETE. All five phases (0-4) done, committed, and
+pushed to `claude/lightning-decoupling-experiment-o3f0rd`. Both mid-run user
+requirements honored (staging §5; React-dev perspective §6). Nothing outstanding.
 
 **Phase 3 findings to fold into Phase 4 (observed while extracting Credentials):**
 encryption key must travel with the data (Cloak); `user_id`/`project_id` become
