@@ -167,15 +167,15 @@ it is out of scope here.
 
 ## Migration strategy: strangler-fig, not big-bang
 
-The two implementations of the workflow editor already prove the strangler-fig
-pattern is viable in this codebase: a new React-over-channel surface
-(`collaborate.ex`) runs side by side with the legacy LiveView surface
-(`edit.ex`), selected per route. Generalize that: a reverse proxy (or the Phoenix
-router itself) routes each surface to either the React SPA or the surviving
-LiveView, and surfaces are peeled off one at a time, easiest first. The full
-ordered sequence (app shell first, then retire the LiveView-rendered tables) is
-evaluated in `docs/migration-analysis.md` §5, grounded in what the Phase 3 slice
-reveals.
+The workflow editor already shows the target shape working in production: a
+React-over-channel surface (`collaborate.ex`) mounted as a thin LiveView shell,
+proving a React surface can run inside this app alongside conventional LiveView
+pages. Generalize that into a migration: a reverse proxy (or the Phoenix router
+itself) routes each surface to either the React SPA or the surviving LiveView,
+surfaces are peeled off one at a time (easiest first), and un-migrated pages keep
+working on LiveView throughout. The full ordered sequence (app shell first, then
+retire the LiveView-rendered tables) is evaluated in `docs/migration-analysis.md`
+§5, grounded in what the Phase 3 slice reveals.
 
 ## Open questions / risks
 

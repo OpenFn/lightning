@@ -201,7 +201,7 @@ credential body values are NEVER returned in any response.** Only metadata and t
     "main":    { "username": "u", "password": "p" },
     "staging": { "username": "u2", "password": "p2" }
   },
-  // (✅ legacy single-env form still accepted: "body": { ... } → stored as "main")
+  // (✅ older single-env form still accepted: "body": { ... } → stored as "main")
   "project_ids": ["<uuid>", "..."] // 🆕 (today: "project_credentials":[{"project_id"}])
 }
 ```

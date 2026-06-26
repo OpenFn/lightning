@@ -41,14 +41,14 @@ Lightning today is a **Phoenix LiveView monolith** with four distinct runtime su
 - *Browser/LiveView:* session cookie → `current_user`, resolved at LiveView **mount** by `on_mount` hooks (`LightningWeb.InitAssigns`, then `LightningWeb.Hooks.:project_scope`). Authorization is woven into the LiveView lifecycle, not a request plug.
 - *API/Worker:* bearer tokens. `/api` uses `authenticate_bearer` resolving a `User` or `ProjectRepoConnection`; `/collections` uses JWT via `LightningWeb.Plugs.ApiAuth`; workers use a `WORKER_SECRET`-signed JWT plus per-run scoped tokens.
 
-**The decoupling exemplar already in the tree.** The workflow editor exists in
-*two* implementations: the legacy LiveView editor (`workflow_live/edit.ex`, ~3800
-lines, heavily coupled) and the **new collaborative editor** (`workflow_live/collaborate.ex`),
-which is a thin LiveView shell mounting a React island whose real logic runs over
-`WorkflowChannel` + a server-side Y.Doc (`Lightning.Collaboration.Session`). The
-collaborative editor is, in effect, what a decoupled surface looks like already:
-React client + channel/RPC + CRDT, with the LiveView reduced to a mount point.
-This is the most important single observation in the inventory.
+**The decoupling exemplar already in the tree.** The workflow editor
+(`workflow_live/collaborate.ex`) is a thin LiveView shell that mounts a React
+island whose real logic runs over `WorkflowChannel` + a server-side Y.Doc
+(`Lightning.Collaboration.Session`). It is, in effect, what a decoupled surface
+looks like already: a React client talking to the backend over a channel (RPC +
+CRDT), with the LiveView reduced to a mount point. This is the most important
+single observation in the inventory. The target shape is not hypothetical: the
+most complex surface in the app is already built that way.
 
 ---
 
@@ -83,8 +83,7 @@ Custom plugs used inline: `authenticate_bearer` (resolves `User`/`ProjectRepoCon
 |---|---|---|
 | `/projects` (`/`) | `DashboardLive.Index` | `:default` |
 | `/projects/:project_id/w` | `WorkflowLive.Index` | `:default` (project scope) |
-| `/projects/:project_id/w/new`, `/w/:id` | `WorkflowLive.Collaborate` (new editor) | `:default` |
-| `/projects/:project_id/w/new/legacy`, `/w/:id/legacy` | `WorkflowLive.Edit` (legacy editor) | `:default` |
+| `/projects/:project_id/w/new`, `/w/:id` | `WorkflowLive.Collaborate` (workflow editor) | `:default` |
 | `/projects/:project_id/jobs` | `JobLive.Index` | `:default` |
 | `/projects/:project_id/history`, `/history/channels` | `RunLive.Index` | `:default` |
 | `/projects/:project_id/runs/:id` | `RunLive.Show` | `:default` |
@@ -139,19 +138,22 @@ Each block lists: modules · contexts · schemas touched · genuine server-side 
 - **Policies:** `ProjectUsers :access_project` per card.
 - **Difficulty:** 🟢 straight CRUD + sort.
 
-### 2. Workflow editor / canvas 🔴 (legacy) / 🟠 (collaborative)
+### 2. Workflow editor / canvas 🟠
 
-The hardest surface, and the most important. Two implementations:
+The most complex surface in the app, and already built in the decoupled shape.
+The editor (`workflow_live/collaborate.ex`) is a thin LiveView shell that mounts a
+React island (`phx-hook="ReactComponent"`, `phx-update="ignore"`); all real logic
+runs over `WorkflowChannel` (`workflow:collaborate:{id}`):
 
-- **Legacy `workflow_live/edit.ex` (🔴):** server holds the authoritative `changeset` + `workflow_params` for the unsaved draft and reconciles with the client via a **bidirectional JSON-patch loop** (`handle_event("push-change", %{patches})` → apply → rebuild changeset → `{:reply, %{patches: delta}}`). Selection/mode/run-follow/version are encoded in the URL as a **state machine**. Writes are gated on **Phoenix Presence edit-priority** (`Workflows.Presence`), not just the authenticated user. Heavy `push_event`→JS-hook imperatives, `jsx`-embedded React (`WorkflowEditor.tsx` etc.), optimistic-lock/snapshot versioning intertwined with socket state.
-- **Collaborative `workflow_live/collaborate.ex` (🟠):** thin shell; draft lives in a server-side **Y.Doc** owned by `Collaboration.Session`, synced as binary Yjs frames over `WorkflowChannel`. The LiveView holds almost no editor state. Reference data (`request_credentials`, `request_adaptors`, `get_context`, templates) is async RPC over the channel that *would* map to REST GETs.
+- **Editing state** lives in a server-side **Y.Doc** owned by a per-editor `Lightning.Collaboration.Session` GenServer, synced as binary Yjs frames. The LiveView holds almost no editor state. Saving serializes the Y.Doc back to a `Workflow` with `lock_version` optimistic locking.
+- **Reference data** is async RPC over the channel: `request_adaptors`, `request_credentials`, `request_metadata`, `request_current_user`, `get_context`, `get_limits`, `request_versions`, `request_history`, `request_run_steps`, `request_trigger_auth_methods`, `list_templates`/`publish_template`, `validate_workflow_name`. These map cleanly to REST GET/POST endpoints.
 - **Sub-components (🟡):** `editor_pane.ex` (Monaco + `Task.start`/`send_update` for adaptor metadata), `job_live/{adaptor_picker,credential_picker,cron_setup_component,kafka_setup_component}.ex` (parent/child changeset-fragment coordination via `phx-target={@myself}` + `on_change` closures), `webhook_auth_method_*` modals, `github_sync_modal.ex` (`assign_async`).
-- **Contexts:** `Workflows` (+`Snapshot`, `Presence`, `WorkflowTemplates`), `Invocation` (manual-run dataclips/steps), `Runs` (follow run), `WorkOrders` (`Manual`, retry, `limit_run_creation`), `VersionControl`, `AiAssistant`, `Credentials`, `OauthClients`, `Projects`; also direct `Repo` (flagged as TODO) and `AdaptorRegistry`.
+- **Contexts:** `Workflows` (+`Snapshot`, `Presence`, `WorkflowTemplates`), `Invocation` (manual-run dataclips/steps), `Runs`, `WorkOrders` (`Manual`, retry, `limit_run_creation`), `VersionControl`, `AiAssistant`, `Credentials`, `OauthClients`, `Projects`, `AdaptorRegistry`.
 - **Schemas:** `workflows`, `jobs`, `triggers`, `workflow_edges`, `workflow_snapshots`, `workflow_versions`, `webhook_auth_methods`; reads `dataclips`/`steps`/`runs`.
-- **PubSub:** subscribes `workflow_events:{project_id}`, `run_events:{run_id}`, `ai_session:{session_id}`; the channel subscribes `project:{project_id}` (history panel) and broadcasts `workflow_saved`, `credentials_updated`, applying-state to peers.
-- **Real-time:** Presence edit-lock; Y.Doc CRDT; channel binary sync; PubSub-driven `handle_info`.
-- **Policies:** `:create_workflow`/`:edit_workflow`/`:access_read` (re-checked mid-session in the channel so role changes take effect).
-- **Difficulty:** legacy 🔴 (CRDT-like patching + presence + RPC-over-socket); collaborative 🟠 (genuinely connection-oriented, but already isolated behind a channel). Pure core `workflow_params.ex` (JSON-patch ↔ changeset) and the serializers are portable.
+- **PubSub:** the channel subscribes `project:{project_id}` (history panel → `history_updated`) and broadcasts `workflow_saved`, `credentials_updated`, `webhook_auth_methods_updated`, and AI applying-state to peers.
+- **Real-time:** Y.Doc CRDT over binary channel frames; `Workflows.Presence` for awareness; PubSub-driven history updates.
+- **Policies:** `:create_workflow`/`:edit_workflow`/`:access_read`, re-checked mid-session in the channel so role changes take effect.
+- **Difficulty:** 🟠 genuinely connection-oriented (CRDT collaboration), but already isolated behind a channel + React island, so the decoupling here is largely done: the reference-data RPC could move to REST while the Y.Doc sync stays on the channel. `WorkflowSerializer`/`WorkflowResolver` (Y.Doc ↔ `Workflow`) and `workflow_params.ex` are portable pure logic.
 
 ### 3. Runs & Work Orders / History 🟠
 
@@ -346,16 +348,15 @@ Entry point `Lightning.Policies.Permissions.can/4` + `can?/4`. Modules: `Project
 
 From hardest to easiest to put behind a stateless REST API:
 
-1. **🔴 Server-side Yjs/Y.Doc collaboration** (`collaboration/*`, `WorkflowChannel` yjs handlers): live CRDT + `:pg` replication; effectively cannot be stateless. (But the new collaborative editor already isolates this behind a channel + React island.)
+1. **🔴 Server-side Yjs/Y.Doc collaboration** (`collaboration/*`, `WorkflowChannel` yjs handlers): live CRDT + `:pg` replication; effectively cannot be stateless. (But the collaborative editor already isolates this behind a channel + React island.)
 2. **🔴 Worker dispatch** (`WorkerChannel` + `WorkListener` + `WorkerPresence` + run-scoped JWTs): pull-based push loop with presence-derived capacity.
-3. **🔴 Presence / edit-priority** (`Workflows.Presence`): pure connection state.
+3. **🔴 Presence** (`Workflows.Presence`): pure connection state (editor awareness).
 4. **🟠 Real-time run/log/history streaming** (`run_events:*`, `project:*` → RunChannel/LiveView): needs SSE/websocket; the underlying *reads* are REST-able.
 5. **🟠 Synchronous webhook-response rendezvous** (`work_order:*:webhook_response`): request blocks on a PubSub `receive`.
 6. **🟠 AI streaming** (`ai_session:*`, `AiAssistantChannel`, `MessageProcessor`): request side already async/REST-friendly; only the token stream needs SSE.
-7. **🟡 Legacy workflow-editor JSON-patch loop** (`workflow_live/edit.ex`): superseded by the collaborative editor.
-8. **🟡 OAuth callback bridges** (`{:forward,…}`→`send_update` in Credentials/Project Settings/Profile): popup callback can't return to the originating tab.
-9. **🟢 Oban workers**: already stateless/DB-backed; only result delivery is client-coupled.
-10. **🟢 Bodyguard policies**: pure functions; most portable layer.
-11. **🟢 The bulk of admin/list/CRUD surfaces** (Dashboard, Projects/Users/Audit/AuthProviders, Collections, Sandboxes, Auth pages, credential/project CRUD): standard CRUD + in-socket sort/filter + modal routing.
+7. **🟡 OAuth callback bridges** (`{:forward,…}`→`send_update` in Credentials/Project Settings/Profile): popup callback can't return to the originating tab.
+8. **🟢 Oban workers**: already stateless/DB-backed; only result delivery is client-coupled.
+9. **🟢 Bodyguard policies**: pure functions; most portable layer.
+10. **🟢 The bulk of admin/list/CRUD surfaces** (Dashboard, Projects/Users/Audit/AuthProviders, Collections, Sandboxes, Auth pages, credential/project CRUD): standard CRUD + in-socket sort/filter + modal routing.
 
 **The single most useful finding:** the app *already contains* a worked example of the decoupled target (the collaborative editor: thin LiveView shell + React island + channel/RPC + Y.Doc), and *already contains* a REST API skeleton (`controllers/api/*` with policies + JSON views). A decoupling effort is less a greenfield rewrite than an extension of two patterns already in the tree.
