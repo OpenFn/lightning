@@ -584,6 +584,59 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "import_document/2 workflow state inference" do
+    setup do
+      Mox.verify_on_exit!()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      %{user: insert(:user)}
+    end
+
+    test "infers :live when a trigger is enabled", %{user: user} do
+      %{body: body, project_id: project_id} = valid_document()
+
+      {:ok, %{id: ^project_id, workflows: [workflow]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :live, triggers: [%{enabled: true}]} = workflow
+    end
+
+    test "infers :draft when all triggers are disabled", %{user: user} do
+      %{body: %{"workflows" => [workflow]} = body} = valid_document()
+
+      disabled_triggers =
+        Enum.map(workflow["triggers"], &Map.put(&1, "enabled", false))
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", disabled_triggers)
+        ])
+
+      {:ok, %{workflows: [imported]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: false}]} = imported
+    end
+
+    test "explicit state in attrs wins over inference", %{user: user} do
+      %{body: %{"workflows" => [workflow]} = body} = valid_document()
+
+      # Triggers are enabled (would infer :live) but state is explicitly :draft.
+      body =
+        Map.put(body, "workflows", [Map.put(workflow, "state", "draft")])
+
+      {:ok, %{workflows: [imported]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: true}]} = imported
+    end
+  end
+
   describe "import_document/2 with an existing project" do
     setup do
       Mox.verify_on_exit!()

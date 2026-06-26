@@ -1,14 +1,6 @@
-import { useCallback } from 'react';
-
-import { usePermissions } from '../../hooks/useSessionContext';
-import {
-  useWorkflowActions,
-  useWorkflowReadOnly,
-} from '../../hooks/useWorkflow';
+import { useWorkflowReadOnly } from '../../hooks/useWorkflow';
 import type { Workflow } from '../../types/workflow';
 import { NewRunButton } from '../NewRunButton';
-import { Toggle } from '../Toggle';
-import { Tooltip } from '../../../components/Tooltip';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
@@ -49,41 +41,11 @@ export function TriggerInspector({
   onClose,
   onOpenRunPanel,
 }: TriggerInspectorProps) {
-  const permissions = usePermissions();
-  const { updateTrigger } = useWorkflowActions();
-  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const { isReadOnly } = useWorkflowReadOnly();
 
-  const handleEnabledChange = useCallback(
-    (enabled: boolean) => {
-      updateTrigger(trigger.id, { enabled });
-    },
-    [trigger.id, updateTrigger]
-  );
-
-  // Determine toggle disabled state and tooltip
-  const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
-
-  const toggleTooltip =
-    isReadOnly || !permissions?.can_edit_workflow
-      ? tooltipMessage || 'You do not have permission to edit this workflow'
-      : 'Enable or disable this trigger';
-
-  // Build footer with enabled toggle and run button
+  // Build footer with run button
   const footer = (
     <InspectorFooter
-      leftButtons={
-        <Tooltip content={toggleTooltip} side="top">
-          <span className="inline-block">
-            <Toggle
-              id={`trigger-enabled-${trigger.id}`}
-              checked={trigger.enabled}
-              onChange={handleEnabledChange}
-              label="Enabled"
-              disabled={isToggleDisabled}
-            />
-          </span>
-        </Tooltip>
-      }
       rightButtons={
         <NewRunButton
           onClick={() => onOpenRunPanel({ triggerId: trigger.id })}

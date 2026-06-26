@@ -157,10 +157,6 @@ const EdgeShape = EdgeSchema.shape;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
-  // Compute enabled from triggers
-  draft.enabled =
-    draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
-
   // Compute selected node
   if (draft.selectedJobId) {
     draft.selectedNode =
@@ -197,7 +193,6 @@ function produceInitialState() {
       selectedEdgeId: null,
 
       // Initialize computed state
-      enabled: null,
       selectedNode: null,
       selectedEdge: null,
 
@@ -1041,19 +1036,6 @@ export const createWorkflowStore = () => {
         });
       });
     }
-  };
-
-  const setEnabled = (enabled: boolean) => {
-    const ydoc = ensureYDoc();
-
-    const triggersArray = ydoc.getArray('triggers');
-    const triggers = triggersArray.toArray() as Y.Map<unknown>[];
-
-    ydoc.transact(() => {
-      triggers.forEach(trigger => {
-        trigger.set('enabled', enabled);
-      });
-    });
   };
 
   /**
@@ -1943,7 +1925,6 @@ export const createWorkflowStore = () => {
     updateEdge,
     removeEdge,
     updateTrigger,
-    setEnabled,
     clearAllTriggers,
     getJobBodyYText,
     updatePositions,

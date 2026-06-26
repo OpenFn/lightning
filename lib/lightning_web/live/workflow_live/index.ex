@@ -6,9 +6,9 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.Live.Helpers.TableHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
-  alias LightningWeb.WorkflowLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
@@ -220,9 +220,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
     workflow_id
-    |> Workflows.get_workflow!(include: [:triggers])
-    |> Workflows.update_triggers_enabled_state(state)
-    |> Helpers.save_workflow(actor)
+    |> Workflows.get_workflow!()
+    |> transition_workflow_state(state, actor)
     |> case do
       {:ok, _workflow} ->
         {:noreply,
@@ -273,6 +272,21 @@ defmodule LightningWeb.WorkflowLive.Index do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
     end
+  end
+
+  defp transition_workflow_state(workflow, enable?, actor)
+       when enable? in [true, "true"] do
+    case WorkflowUsageLimiter.limit_workflow_activation(
+           true,
+           workflow.project_id
+         ) do
+      :ok -> Workflows.go_live(workflow, actor)
+      {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  defp transition_workflow_state(workflow, _disable?, actor) do
+    Workflows.switch_to_draft(workflow, actor)
   end
 
   defp build_query_params(search_term, sort_key, sort_direction) do

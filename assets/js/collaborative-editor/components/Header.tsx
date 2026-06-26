@@ -29,7 +29,6 @@ import {
   useCanSave,
   useNodeSelection,
   useWorkflowActions,
-  useWorkflowEnabled,
   useWorkflowReadOnly,
   useWorkflowSettingsErrors,
   useWorkflowState,
@@ -44,7 +43,6 @@ import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
-import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
@@ -218,7 +216,6 @@ export function Header({
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-  const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow, goLive, switchToDraft } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
@@ -484,27 +481,6 @@ export function Header({
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
-              {!isPinnedVersion && (
-                <Tooltip
-                  content={
-                    isNewWorkflow && isWorkflowEmpty
-                      ? 'Add a workflow to enable'
-                      : null
-                  }
-                  side="bottom"
-                >
-                  <span className="inline-flex items-center">
-                    <Switch
-                      checked={enabled ?? false}
-                      onChange={setEnabled}
-                      disabled={
-                        isReadOnly || (isNewWorkflow && isWorkflowEmpty)
-                      }
-                    />
-                  </span>
-                </Tooltip>
-              )}
-
               <div>
                 <Tooltip
                   content={
