@@ -1343,6 +1343,42 @@ defmodule Lightning.ProjectsTest do
              """
     end
 
+    test "credentials include their connected system reference" do
+      user = insert(:user, email: "system-user@lightning.com")
+      system = insert(:connected_system, name: "Regional Health Tracker")
+
+      credential =
+        insert(:credential,
+          name: "rht-cred",
+          user: user,
+          connected_system: system
+        )
+
+      plain_credential =
+        insert(:credential, name: "plain-cred", user: user)
+
+      project = insert(:project, name: "project-with-systems")
+
+      insert(:project_credential, project: project, credential: credential)
+      insert(:project_credential, project: project, credential: plain_credential)
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ """
+               system-user@lightning.com-rht-cred:
+                 name: rht-cred
+                 owner: system-user@lightning.com
+                 connected_system: Regional Health Tracker
+             """
+
+      assert generated_yaml =~ """
+               system-user@lightning.com-plain-cred:
+                 name: plain-cred
+                 owner: system-user@lightning.com
+                 connected_system: null
+             """
+    end
+
     test "webhook_response_config is included in the export" do
       project = insert(:project, name: "project 1")
 

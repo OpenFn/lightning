@@ -218,6 +218,13 @@ defmodule Lightning.Factories do
     }
   end
 
+  def connected_system_factory do
+    %Lightning.ConnectedSystems.ConnectedSystem{
+      name: sequence(:connected_system_name, &"connected-system-#{&1}"),
+      type: "dhis2"
+    }
+  end
+
   def credential_body_factory do
     %Lightning.Credentials.CredentialBody{
       name: "main",
