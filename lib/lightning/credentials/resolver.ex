@@ -55,6 +55,7 @@ defmodule Lightning.Credentials.Resolver do
           | :project_not_found
           | :environment_mismatch
           | Credentials.oauth_refresh_error()
+          | term()
 
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 

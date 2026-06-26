@@ -152,6 +152,14 @@ export class AIChannelRegistry {
    * Buffer a streaming text chunk and start draining word-by-word.
    */
   private bufferStreamingChunk(content: string): void {
+    // A text chunk arriving over the wire supersedes any active status
+    // (e.g. "Thinking...", "Writing code..."). Clearing here — at network
+    // arrival, not in the slow char-by-char drain — means a status Apollo
+    // streams *after* the text answer survives, while one followed by more
+    // text is correctly dismissed.
+    if (this.store.getSnapshot().streamingStatus) {
+      this.store.setStreamingStatus(null);
+    }
     this.streamingBuffer += content;
     this.startDraining();
   }

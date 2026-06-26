@@ -1548,11 +1548,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
-    test "renders the job form correctly when local_adaptors_repo is NOT set", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
+    test "renders the job form correctly when local_adaptors_repos is NOT set",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
       {:ok, view, _html} =
         live(
           conn,
@@ -1575,14 +1576,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag :tmp_dir
-    test "renders the job form correctly when local_adaptors_repo is set", %{
+    test "renders the job form correctly when local_adaptors_repos is set", %{
       conn: conn,
       project: project,
       workflow: workflow,
       tmp_dir: tmp_dir
     } do
       Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+        [local_adaptors_repos: [tmp_dir]]
       end)
 
       expected_adaptors = ["foo", "bar", "baz"]

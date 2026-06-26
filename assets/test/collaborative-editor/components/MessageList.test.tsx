@@ -155,6 +155,44 @@ describe('MessageList', () => {
       expect(screen.getByText('Question')).toBeInTheDocument();
       expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
     });
+
+    it('should show streaming status below the text answer once content has streamed', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          streamingContent="Here is the answer"
+          streamingStatus="Generating code..."
+        />
+      );
+
+      // Pre-text loading indicator is gone once content streams in
+      expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
+
+      // Status renders below the streamed text, reusing the bouncing dots
+      const status = screen.getByTestId('streaming-status');
+      expect(status).toHaveTextContent('Generating code...');
+      expect(status.querySelectorAll('.animate-bounce')).toHaveLength(3);
+    });
+
+    it('should not show streaming status when none is set', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          streamingContent="Here is the answer"
+        />
+      );
+
+      expect(screen.queryByTestId('streaming-status')).not.toBeInTheDocument();
+    });
   });
 
   describe('Message Status', () => {

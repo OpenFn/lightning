@@ -55,69 +55,74 @@
           field={f[:invited_collaborators]}
           prepend={[%InvitedCollaborators.InvitedCollaborator{}]}
         >
-          <div class="flex flex-wrap space-x-4">
-            <div class="flex-1">
-              <.input
-                type="text"
-                field={cf[:first_name]}
-                placeholder="First Name"
-                required="true"
-                class="w-full"
-              />
+          <div class="relative">
+            <div class="flex flex-wrap space-x-4">
+              <div class="flex-1">
+                <.input
+                  type="text"
+                  field={cf[:first_name]}
+                  placeholder="First Name"
+                  required="true"
+                  class="w-full"
+                />
+              </div>
+              <div class="flex-1">
+                <.input
+                  type="text"
+                  field={cf[:last_name]}
+                  placeholder="Last Name"
+                  required="true"
+                  class="w-full"
+                />
+              </div>
+              <div class="flex-1">
+                <.input
+                  type="email"
+                  field={cf[:email]}
+                  required="true"
+                  class="w-full"
+                  display_errors={false}
+                  phx-debounce="300"
+                />
+              </div>
+              <div>
+                <.input
+                  type="select"
+                  prompt="Select Role"
+                  field={cf[:role]}
+                  options={
+                    Enum.map(
+                      ["viewer", "editor", "admin"],
+                      &{String.capitalize(&1), &1}
+                    )
+                  }
+                  required="true"
+                  class="w-full"
+                />
+              </div>
+              <div class="flex items-center">
+                <input
+                  type="hidden"
+                  name={"#{f.name}[collaborators_sort][]"}
+                  value={cf.index}
+                />
+                <.button
+                  :if={Enum.count(f[:invited_collaborators].value) > 1}
+                  type="button"
+                  name={"#{f.name}[collaborators_drop][]"}
+                  value={cf.index}
+                  phx-click={JS.dispatch("change")}
+                  theme="secondary"
+                  class="inline-flex items-center"
+                >
+                  <Heroicons.minus_circle class="w-5 h-5" />
+                </.button>
+              </div>
             </div>
-            <div class="flex-1">
-              <.input
-                type="text"
-                field={cf[:last_name]}
-                placeholder="Last Name"
-                required="true"
-                class="w-full"
-              />
-            </div>
-            <div class="flex-1">
-              <.input
-                type="email"
-                field={cf[:email]}
-                required="true"
-                class="w-full"
-                display_errors={false}
-              />
-            </div>
-            <div>
-              <.input
-                type="select"
-                prompt="Select Role"
-                field={cf[:role]}
-                options={
-                  Enum.map(
-                    ["viewer", "editor", "admin"],
-                    &{String.capitalize(&1), &1}
-                  )
-                }
-                required="true"
-                class="w-full"
-              />
-            </div>
-            <div class="flex items-center">
-              <input
-                type="hidden"
-                name={"#{f.name}[collaborators_sort][]"}
-                value={cf.index}
-              />
-              <.button
-                :if={Enum.count(f[:invited_collaborators].value) > 1}
-                type="button"
-                name={"#{f.name}[collaborators_drop][]"}
-                value={cf.index}
-                phx-click={JS.dispatch("change")}
-                theme="secondary"
-                class="inline-flex items-center"
-              >
-                <Heroicons.minus_circle class="w-5 h-5" />
-              </.button>
+            <div class="absolute top-full left-0">
+              <.error_field field={cf[:email]} />
             </div>
           </div>
-          <.error_field field={cf[:email]} />
         </.inputs_for>
       </div>
       <.modal_footer class="mx-6 mt-6">

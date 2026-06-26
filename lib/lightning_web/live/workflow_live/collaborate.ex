@@ -18,6 +18,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Channels.WorkflowJSON
+  alias LightningWeb.CredentialLive
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount({LightningWeb.Hooks, :check_limits})
@@ -45,6 +46,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_credential_modal: false,
        credential_schema: nil,
        credential_to_edit: nil,
+       new_credential_project_credentials:
+         CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?()
@@ -223,11 +226,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           %Lightning.Credentials.Credential{
             schema: @credential_schema,
             user_id: @current_user.id,
-            project_credentials: [
-              %Lightning.Projects.ProjectCredential{
-                project_id: @project.id
-              }
-            ]
+            project_credentials: @new_credential_project_credentials
           }
       }
       on_save={
