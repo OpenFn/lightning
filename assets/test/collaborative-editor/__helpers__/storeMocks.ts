@@ -99,6 +99,8 @@ export const defaultUIState: UIState = {
     yamlContent: '',
     importState: 'initial',
   },
+  showLandingScreen: false,
+  showYAMLImportModal: false,
 };
 
 // =============================================================================
@@ -358,6 +360,9 @@ export function createMockUIStore(
         importPanel: { yamlContent: '', importState: 'initial' },
       };
     }),
+    dismissLandingScreen: vi.fn(),
+    openYAMLImportModal: vi.fn(),
+    closeYAMLImportModal: vi.fn(),
   };
 
   return {

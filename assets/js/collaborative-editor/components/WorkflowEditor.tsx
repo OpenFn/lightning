@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
-import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { Tooltip } from '../../components/Tooltip';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
@@ -15,8 +15,8 @@ import {
   useRunPanelContext,
   useTemplatePanel,
   useUICommands,
-  useIsCreateWorkflowPanelCollapsed,
   useIsAIAssistantPanelOpen,
+  useShowLandingScreen,
 } from '../hooks/useUI';
 import {
   useNodeSelection,
@@ -28,14 +28,12 @@ import { useKeyboardShortcut } from '../keyboard';
 import { Z_INDEX } from '../utils/constants';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
-import flowEvents from './diagram/react-flow-events';
 import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 import { TemplateDetailsCard } from './TemplateDetailsCard';
-import { Tooltip } from '../../components/Tooltip';
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -50,6 +48,7 @@ export function WorkflowEditor({
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
+  const showLandingScreen = useShowLandingScreen();
   const { saveWorkflow } = useWorkflowActions();
 
   const isRunPanelOpen = useIsRunPanelOpen();
@@ -57,14 +56,15 @@ export function WorkflowEditor({
   const {
     closeRunPanel,
     openRunPanel,
-    toggleCreateWorkflowPanel,
     openAIAssistantPanel,
     closeAIAssistantPanel,
     collapseCreateWorkflowPanel,
     expandCreateWorkflowPanel,
     setTemplateSearchQuery,
+    openYAMLImportModal,
   } = useUICommands();
-  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
+  // TODO-AI-FIRST: remove in #4856
+  const isCreateWorkflowPanelCollapsed = true;
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
   // Get selected template from UI store (for template details card)
@@ -402,36 +402,6 @@ export function WorkflowEditor({
   };
 
   /**
-   * Imports a workflow state into the canvas.
-   *
-   * This function validates the workflow name to ensure uniqueness, then imports
-   * the workflow. If validation fails, it still imports the workflow (the server
-   * will handle name conflicts on save).
-   *
-   * Note: This is intentionally synchronous from the caller's perspective.
-   * The async validation happens in the background, but import proceeds
-   * immediately after validation completes or fails.
-   */
-  const handleImport = useCallback(
-    (workflowState: YAMLWorkflowState) => {
-      void workflowStore
-        .importWorkflow(workflowState)
-        .then(() => {
-          flowEvents.dispatch('fit-view');
-        })
-        .catch((error: unknown) => {
-          console.error('Failed to import workflow:', error);
-        });
-    },
-    [workflowStore]
-  );
-
-  const handleSaveAndClose = async () => {
-    await saveWorkflow();
-    collapseCreateWorkflowPanel();
-  };
-
-  /**
    * Keyboard shortcuts for new workflow creation panels.
    *
    * These shortcuts only work when creating a new workflow (isNewWorkflow=true):
@@ -469,31 +439,18 @@ export function WorkflowEditor({
     }
   );
 
-  // Cmd/Ctrl+\ to toggle import panel (see JSDoc above for full shortcut docs)
+  // Cmd/Ctrl+\ to open YAML import modal when on landing screen (see JSDoc above for full shortcut docs)
   useKeyboardShortcut(
     'Control+\\, Meta+\\',
     () => {
       if (!isNewWorkflow) return;
-
-      if (leftPanelMethod === 'import' && !isCreateWorkflowPanelCollapsed) {
-        // Already open in import mode - collapse it
-        collapseCreateWorkflowPanel();
-      } else {
-        // Close AI Assistant panel when expanding create panel
-        if (isAIAssistantPanelOpen) {
-          closeAIAssistantPanel();
-        }
-        // Open in import mode
-        handleMethodChange('import');
-        if (isCreateWorkflowPanelCollapsed) {
-          expandCreateWorkflowPanel();
-        }
+      if (showLandingScreen) {
+        openYAMLImportModal();
       }
+      // left-panel path removed — see #4876
     },
     0,
-    {
-      enabled: isNewWorkflow,
-    }
+    { enabled: isNewWorkflow }
   );
 
   useKeyboardShortcut(
@@ -529,8 +486,6 @@ export function WorkflowEditor({
                 <LeftPanel
                   method={leftPanelMethod}
                   onMethodChange={handleMethodChange}
-                  onImport={handleImport}
-                  onSave={handleSaveAndClose}
                 />
               </div>
               <button
@@ -543,32 +498,13 @@ export function WorkflowEditor({
           )}
         </div>
       )}
-      {/* Toggle button when collapsed */}
-      {isNewWorkflow && isCreateWorkflowPanelCollapsed && (
-        <Tooltip content="Open the create workflow panel (⌘+/)" side="right">
-          <button
-            type="button"
-            onClick={() => {
-              // Close AI Assistant panel when expanding create panel
-              if (isAIAssistantPanelOpen) {
-                closeAIAssistantPanel();
-              }
-              toggleCreateWorkflowPanel();
-            }}
-            style={{ zIndex: Z_INDEX.SIDE_PANEL_TOGGLE }}
-            className="absolute left-0 top-6 bg-white border border-gray-200 rounded-r-md p-1 shadow-sm hover:bg-gray-50 transition-colors"
-            aria-label="Expand create workflow panel"
-          >
-            <span className="hero-chevron-right h-4 w-4 text-gray-600" />
-          </button>
-        </Tooltip>
-      )}
-
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
-        {/* Show placeholder when workflow is empty */}
+        {/* TODO-AI-FIRST: remove this placeholder once the landing screen (#4856) always covers the new-workflow state */}
+        {/* Show placeholder when workflow is empty and landing screen is not covering it */}
         {isNewWorkflow &&
+          !showLandingScreen &&
           workflow.jobs.length === 0 &&
           workflow.triggers.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

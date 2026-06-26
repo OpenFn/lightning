@@ -44,6 +44,12 @@ export interface UIState {
   /** Create workflow panel collapsed state */
   createWorkflowPanelCollapsed: boolean;
 
+  /** Whether the landing screen overlay is visible (only true at /new before a path is committed) */
+  showLandingScreen: boolean;
+
+  /** Whether the YAML import modal is open */
+  showYAMLImportModal: boolean;
+
   /** Template panel state */
   templatePanel: {
     templates: WorkflowTemplate[];
@@ -99,6 +105,15 @@ export interface UICommands {
 
   /** Toggle create workflow panel collapsed state */
   toggleCreateWorkflowPanel: () => void;
+
+  /** Dismiss the landing screen — called by downstream issues when a path is committed */
+  dismissLandingScreen: () => void;
+
+  /** Open the YAML import modal */
+  openYAMLImportModal: () => void;
+
+  /** Close the YAML import modal and reset import panel content */
+  closeYAMLImportModal: () => void;
 
   /** Set templates list */
   setTemplates: (templates: WorkflowTemplate[]) => void;

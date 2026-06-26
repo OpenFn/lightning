@@ -2,29 +2,36 @@ import { useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
-import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
+import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
+import { YAMLImportModal } from './components/YAMLImportModal';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import {
+  useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen } from './hooks/useUI';
+import {
+  useIsRunPanelOpen,
+  useShowLandingScreen,
+  useUICommands,
+} from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
@@ -67,7 +74,6 @@ interface BreadcrumbContentProps {
   projectIsSandboxFallback?: string;
   projectColorFallback?: string | null;
   projectEnvFallback?: string;
-  isNewWorkflow?: boolean;
   aiAssistantEnabled: boolean;
 }
 
@@ -80,18 +86,16 @@ function BreadcrumbContent({
   projectIsSandboxFallback,
   projectColorFallback,
   projectEnvFallback,
-  isNewWorkflow = false,
   aiAssistantEnabled,
 }: BreadcrumbContentProps) {
+  const isNewWorkflow = useIsNewWorkflow();
   const projectFromStore = useProject();
-
   const workflowFromStore = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-
   const isRunPanelOpen = useIsRunPanelOpen();
-
   const { params } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
+  const handleVersionSelect = useVersionSelect();
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -100,8 +104,6 @@ function BreadcrumbContent({
   const projectColor = projectColorFallback ?? null;
   const isSandbox = projectIsSandboxFallback === 'true';
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
-
-  const handleVersionSelect = useVersionSelect();
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -152,11 +154,14 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
-    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
+    isNewWorkflow,
   ]);
+
+  // Hide header until the first save clears isNewWorkflow in the store.
+  if (isNewWorkflow) return null;
 
   return (
     <Header
@@ -169,6 +174,31 @@ function BreadcrumbContent({
     >
       {breadcrumbElements}
     </Header>
+  );
+}
+
+function LandingScreenWrapper({
+  aiAssistantEnabled,
+}: {
+  aiAssistantEnabled: boolean;
+}) {
+  const showLandingScreen = useShowLandingScreen();
+  const { openYAMLImportModal } = useUICommands();
+
+  if (!showLandingScreen) return null;
+
+  return (
+    <>
+      {/* TODO-AI-FIRST Stubs — wired up in Issues #4857 (Build with AI), #4858 (Browse Templates) */}
+      <LandingScreen
+        aiAssistantEnabled={aiAssistantEnabled}
+        onBuildWithAI={() => {}}
+        onBuildFromScratch={() => {}}
+        onBrowseTemplates={() => {}}
+        onImportYAML={openYAMLImportModal}
+      />
+      <YAMLImportModal />
+    </>
   );
 }
 
@@ -222,7 +252,6 @@ export const CollaborativeEditor: WithActionProps<
                       <BreadcrumbContent
                         workflowId={workflowId}
                         workflowName={workflowName}
-                        isNewWorkflow={isNewWorkflow}
                         aiAssistantEnabled={aiAssistantEnabled}
                         {...(projectId !== undefined && {
                           projectIdFallback: projectId,
@@ -251,6 +280,9 @@ export const CollaborativeEditor: WithActionProps<
                           </div>
                         </LoadingBoundary>
                       </div>
+                      <LandingScreenWrapper
+                        aiAssistantEnabled={aiAssistantEnabled}
+                      />
                     </div>
                     <AIAssistantPanelWrapper
                       aiAssistantEnabled={aiAssistantEnabled}

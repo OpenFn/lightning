@@ -60,6 +60,12 @@ export const useUICommands = () => {
     // Template panel commands
     selectTemplate: uiStore.selectTemplate,
     setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
+    dismissLandingScreen: uiStore.dismissLandingScreen,
+    openYAMLImportModal: uiStore.openYAMLImportModal,
+    closeYAMLImportModal: uiStore.closeYAMLImportModal,
+    // Import panel write commands
+    setImportState: uiStore.setImportState,
+    setImportYamlContent: uiStore.setImportYamlContent,
   };
 };
 
@@ -130,6 +136,28 @@ export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
 };
 
 /**
+ * Hook to check if the landing screen overlay is visible
+ */
+export const useShowLandingScreen = (): boolean => {
+  const uiStore = useUIStore();
+  const selectShowLandingScreen = uiStore.withSelector(
+    state => state.showLandingScreen
+  );
+  return useSyncExternalStore(uiStore.subscribe, selectShowLandingScreen);
+};
+
+/**
+ * Hook to check if the YAML import modal is open
+ */
+export const useShowYAMLImportModal = (): boolean => {
+  const uiStore = useUIStore();
+  const selectShowYAMLImportModal = uiStore.withSelector(
+    state => state.showYAMLImportModal
+  );
+  return useSyncExternalStore(uiStore.subscribe, selectShowYAMLImportModal);
+};
+
+/**
  * Hook to get the entire template panel state
  * Returns properly typed state - no type assertions needed
  */
@@ -156,3 +184,16 @@ export const useImportPanelState =
 
     return useSyncExternalStore(uiStore.subscribe, selectImportState);
   };
+
+/**
+ * Hook to get the stored YAML content from the import panel
+ */
+export const useImportYamlContent = (): string => {
+  const uiStore = useUIStore();
+
+  const selectYamlContent = uiStore.withSelector(
+    state => state.importPanel.yamlContent
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectYamlContent);
+};

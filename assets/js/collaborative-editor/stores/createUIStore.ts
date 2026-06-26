@@ -73,7 +73,7 @@ const logger = _logger.ns('UIStore').seal();
 /**
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
-export const createUIStore = (): UIStore => {
+export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
   // Load initial panel states from URL params with mutual exclusivity
   // AI Assistant panel and Create Workflow panel cannot both be open
   const loadInitialPanelStates = (): {
@@ -118,6 +118,8 @@ export const createUIStore = (): UIStore => {
       aiAssistantPanelOpen,
       aiAssistantInitialMessage: null,
       createWorkflowPanelCollapsed,
+      showLandingScreen: isNewWorkflow,
+      showYAMLImportModal: false,
       templatePanel: {
         templates: [],
         loading: false,
@@ -322,6 +324,28 @@ export const createUIStore = (): UIStore => {
     notify('clearImportPanel');
   };
 
+  const dismissLandingScreen = () => {
+    state = produce(state, draft => {
+      draft.showLandingScreen = false;
+    });
+    notify('dismissLandingScreen');
+  };
+
+  const openYAMLImportModal = () => {
+    state = produce(state, draft => {
+      draft.showYAMLImportModal = true;
+    });
+    notify('openYAMLImportModal');
+  };
+
+  const closeYAMLImportModal = () => {
+    state = produce(state, draft => {
+      draft.showYAMLImportModal = false;
+      draft.importPanel = { yamlContent: '', importState: 'initial' };
+    });
+    notify('closeYAMLImportModal');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -355,6 +379,9 @@ export const createUIStore = (): UIStore => {
     setImportYamlContent,
     setImportState,
     clearImportPanel,
+    dismissLandingScreen,
+    openYAMLImportModal,
+    closeYAMLImportModal,
   };
 };
 
