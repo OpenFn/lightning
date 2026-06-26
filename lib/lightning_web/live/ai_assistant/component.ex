@@ -18,8 +18,6 @@ defmodule LightningWeb.AiAssistant.Component do
 
   require Logger
 
-  @dialyzer {:nowarn_function, process_ast: 2}
-
   @default_page_size 20
   @message_preview_length 50
   @typing_animation_delay_ms 100
@@ -1558,78 +1556,82 @@ defmodule LightningWeb.AiAssistant.Component do
     Calendar.strftime(datetime, "%I:%M %p")
   end
 
+  # Default per-element HTML attributes injected into rendered markdown so
+  # assistant messages pick up Tailwind styling. Keyed by HTML tag name.
+  @assistant_messages_attributes %{
+    "a" => %{
+      class: "text-primary-400 hover:text-primary-600",
+      target: "_blank"
+    },
+    "h1" => %{class: "text-2xl font-bold mb-6"},
+    "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
+    "ol" => %{class: "list-decimal pl-8 space-y-1"},
+    "ul" => %{class: "list-disc pl-8 space-y-1"},
+    "li" => %{class: "text-gray-800"},
+    "p" => %{class: "mt-1 mb-2 text-gray-800"},
+    "pre" => %{
+      class:
+        "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"
+    }
+  }
+
+  # Match Earmark's default of passing raw HTML through untouched. The content
+  # is AI-generated markdown rendered for the same user who prompted it.
+  #
+  # Earmark defaulted to `gfm: true`, so enable the GFM extensions (tables,
+  # strikethrough, bare-URL autolinks, task lists) to keep assistant replies —
+  # which frequently contain tables — rendering as they did before.
+  @mdex_options [
+    extension: [
+      table: true,
+      strikethrough: true,
+      autolink: true,
+      tasklist: true
+    ],
+    render: [unsafe: true]
+  ]
+
   attr :id, :string, required: true
   attr :content, :string, required: true
   attr :attributes, :map, default: %{}
 
   def formatted_content(assigns) do
-    assistant_messages_attributes = %{
-      "a" => %{
-        class: "text-primary-400 hover:text-primary-600",
-        target: "_blank"
-      },
-      "h1" => %{class: "text-2xl font-bold mb-6"},
-      "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
-      "ol" => %{class: "list-decimal pl-8 space-y-1"},
-      "ul" => %{class: "list-disc pl-8 space-y-1"},
-      "li" => %{class: "text-gray-800"},
-      "p" => %{class: "mt-1 mb-2 text-gray-800"},
-      "pre" => %{
-        class:
-          "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"
-      }
-    }
-
     merged_attributes =
-      Map.merge(assistant_messages_attributes, assigns.attributes)
+      Map.merge(@assistant_messages_attributes, assigns.attributes)
 
-    assigns =
-      case Earmark.Parser.as_ast(assigns.content) do
-        {:ok, ast, _} ->
-          process_ast(ast, merged_attributes) |> raw()
+    rendered =
+      case MDEx.to_html(assigns.content, @mdex_options) do
+        {:ok, html} ->
+          html |> inject_attributes(merged_attributes) |> raw()
 
-        _ ->
+        {:error, _reason} ->
           assigns.content
       end
-      |> then(&assign(assigns, :content, &1))
+
+    assigns = assign(assigns, :content, rendered)
 
     ~H"""
     <article id={@id}>{@content}</article>
     """
   end
 
-  defp process_ast(ast, attributes) do
-    ast
-    |> Earmark.Transform.map_ast(&process_node(&1, attributes))
-    |> Earmark.Transform.transform()
+  # MDEx node structs cannot carry arbitrary HTML attributes, so inject the
+  # per-element classes into the rendered HTML instead.
+  defp inject_attributes(html, attributes) do
+    Enum.reduce(attributes, html, fn {tag, attrs}, acc ->
+      inject_tag_attributes(acc, tag, attrs)
+    end)
   end
 
-  defp process_node({element_type, attrs, _content, _meta} = node, attributes) do
-    case Map.get(attributes, element_type) do
-      nil -> node
-      attribute_map -> apply_attributes(node, element_type, attrs, attribute_map)
-    end
-  end
+  defp inject_tag_attributes(html, tag, attrs) do
+    attrs_string =
+      Enum.map_join(attrs, " ", fn {key, value} -> ~s(#{key}="#{value}") end)
 
-  defp process_node(other, _attributes), do: other
-
-  defp apply_attributes(node, "code", attrs, attribute_map) do
-    case find_class_attr(attrs) do
-      {_, [lang]} ->
-        trimmed_lang = String.trim(lang)
-        Earmark.AstTools.merge_atts_in_node(node, class: trimmed_lang)
-
-      _ ->
-        Earmark.AstTools.merge_atts_in_node(node, attribute_map)
-    end
-  end
-
-  defp apply_attributes(node, _element_type, _attrs, attribute_map) do
-    Earmark.AstTools.merge_atts_in_node(node, attribute_map)
-  end
-
-  defp find_class_attr(attrs) do
-    Enum.find(attrs, fn {attr, _} -> attr == "class" end)
+    String.replace(
+      html,
+      ~r/<#{Regex.escape(tag)}(?=[\s>])/,
+      ~s(<#{tag} #{attrs_string})
+    )
   end
 
   attr :user, Lightning.Accounts.User, default: nil

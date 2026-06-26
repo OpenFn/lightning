@@ -102,7 +102,6 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/storybook.js
          js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
@@ -143,13 +142,6 @@ config :tailwind,
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/app.css
-    ),
-    cd: Path.expand("..", __DIR__)
-  ],
-  storybook: [
-    args: ~w(
-      --input=assets/css/storybook.css
-      --output=priv/static/assets/storybook.css
     ),
     cd: Path.expand("..", __DIR__)
   ]

@@ -310,18 +310,6 @@ defmodule LightningWeb.Router do
   end
 
   do_in(:dev) do
-    import PhoenixStorybook.Router
-
-    scope "/" do
-      storybook_assets()
-    end
-
-    scope "/" do
-      pipe_through :browser
-
-      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
-    end
-
     scope "/dev" do
       pipe_through :browser
 
