@@ -33,8 +33,7 @@ config :lightning, LightningWeb.Endpoint,
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
     esbuild:
       {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
-    storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
 config :lightning,
@@ -112,8 +111,7 @@ config :lightning, LightningWeb.Endpoint,
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
       ~r"lib/lightning_web/(live|components|views)/.*(ex|heex)$",
-      ~r"lib/lightning_web/templates/.*(eex)$",
-      ~r"storybook/.*(exs)$"
+      ~r"lib/lightning_web/templates/.*(eex)$"
     ]
   ]
 

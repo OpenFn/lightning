@@ -120,10 +120,6 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:phoenix_live_view, "~> 1.0.17"},
-      # Pulls in the retired `earmark` as a dev-only transitive dep. Upgrading
-      # to phoenix_storybook ~> 1.2 (which uses mdex) drops earmark entirely but
-      # requires Phoenix 1.8 / LiveView 1.1, so it is tracked separately.
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
