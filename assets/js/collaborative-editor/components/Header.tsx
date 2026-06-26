@@ -4,11 +4,12 @@ import { toast } from 'sonner';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { Tooltip } from '../../components/Tooltip';
+import { cn } from '../../utils/cn';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { channelRequest } from '../hooks/useChannel';
-import { getCsrfToken } from '../lib/csrf';
 import { useActiveRun } from '../hooks/useHistory';
 import { useSession } from '../hooks/useSession';
 import {
@@ -34,6 +35,7 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import { isFinalState } from '../types/history';
 
@@ -41,12 +43,12 @@ import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
+import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from '../../components/Tooltip';
 
 /**
  * Save button component - visible in React DevTools
@@ -202,6 +204,7 @@ export function Header({
   children,
   projectId,
   workflowId,
+  isSandbox = false,
   isRunPanelOpen = false,
   isIDEOpen = false,
   aiAssistantEnabled = false,
@@ -209,6 +212,7 @@ export function Header({
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
+  isSandbox?: boolean;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
   aiAssistantEnabled?: boolean;
@@ -239,6 +243,7 @@ export function Header({
   const lifecycleState = sessionWorkflow?.state;
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
+  const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -521,6 +526,15 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
+              {isSandbox && (
+                <span
+                  data-testid="workflow-sandbox-badge"
+                  className="inline-flex items-center gap-1 self-center rounded-md bg-primary-100 px-2 py-1 text-xs font-medium text-primary-800"
+                >
+                  <span className="hero-beaker h-3.5 w-3.5" />
+                  sandbox
+                </span>
+              )}
               {lifecycleState && !isNewWorkflow && (
                 <span
                   data-testid="workflow-lifecycle-badge"
@@ -565,6 +579,21 @@ export function Header({
                   className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Switch to draft
+                </button>
+              )}
+              {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
+                <button
+                  type="button"
+                  data-testid="edit-in-sandbox-button"
+                  onClick={() => {
+                    setShowEditInSandboxPicker(true);
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50'
+                  )}
+                >
+                  <span className="hero-beaker h-4 w-4" />
+                  Edit in sandbox
                 </button>
               )}
               {projectId &&
@@ -661,6 +690,13 @@ export function Header({
             description="This will stop the workflow from processing data."
             confirmLabel="Switch to draft"
             variant="danger"
+          />
+
+          <EditInSandboxPicker
+            isOpen={showEditInSandboxPicker}
+            onClose={() => {
+              setShowEditInSandboxPicker(false);
+            }}
           />
         </div>
       </div>

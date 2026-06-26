@@ -56,6 +56,26 @@ export const BaseWorkflowSchema = z.object({
 export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;
 
 /**
+ * A sandbox project that can be joined or branched from when editing a live
+ * workflow. `workflow_id` is the id of this workflow's clone inside the
+ * sandbox, and is null when the workflow does not exist in that sandbox.
+ */
+export interface SandboxCollaborator {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface Sandbox {
+  id: string;
+  name: string;
+  color: string | null;
+  updated_at: string;
+  collaborators: SandboxCollaborator[];
+  workflow_id: string | null;
+}
+
+/**
  * Creates a workflow schema with dynamic project concurrency validation
  *
  * @param projectConcurrency - The project's max concurrency limit (null = unlimited)

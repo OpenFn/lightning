@@ -1897,6 +1897,47 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Lists a parent project's active sandboxes for the "Edit in sandbox" picker.
+
+  Returns only the direct children of `parent_id` that are not scheduled for
+  deletion, sorted by `updated_at` descending as a "last edited" proxy (there is
+  no dedicated last-editor field). Each sandbox preloads its `project_users` (and
+  their users) for collaborator display, and resolves the clone of the workflow
+  named `workflow_name` so the caller can offer a direct "join" target. The
+  resolved workflow id is returned as `:joinable_workflow_id`, or `nil` when the
+  sandbox has no workflow with that name.
+  """
+  @spec list_active_sandboxes_for_editing(Ecto.UUID.t(), String.t()) :: [
+          {Project.t(), Ecto.UUID.t() | nil}
+        ]
+  def list_active_sandboxes_for_editing(parent_id, workflow_name)
+      when is_binary(parent_id) and is_binary(workflow_name) do
+    sandboxes =
+      from(p in Project,
+        where: p.parent_id == ^parent_id and is_nil(p.scheduled_deletion),
+        order_by: [desc: p.updated_at],
+        preload: [project_users: :user]
+      )
+      |> Repo.all()
+
+    sandbox_ids = Enum.map(sandboxes, & &1.id)
+
+    joinable_workflow_ids =
+      from(w in Workflow,
+        where:
+          w.project_id in ^sandbox_ids and w.name == ^workflow_name and
+            is_nil(w.deleted_at),
+        select: {w.project_id, w.id}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(sandboxes, fn sandbox ->
+      {sandbox, Map.get(joinable_workflow_ids, sandbox.id)}
+    end)
+  end
+
+  @doc """
   Checks if a sandbox with the given name exists under the parent project.
 
   Returns `true` if a sandbox exists, `false` otherwise.
