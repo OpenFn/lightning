@@ -197,9 +197,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       code_elements = Floki.find(parsed_html, "code")
       assert length(code_elements) > 0
 
-      # The code element should have the language as its class
+      # MDEx emits the standard `language-` prefix on fenced code blocks
       code_element = hd(code_elements)
-      assert Floki.attribute(code_element, "class") == ["javascript"]
+      assert Floki.attribute(code_element, "class") == ["language-javascript"]
     end
 
     test "applies styling classes to standard markdown elements" do

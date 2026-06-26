@@ -1606,20 +1606,9 @@ defmodule LightningWeb.AiAssistant.Component do
   # MDEx node structs cannot carry arbitrary HTML attributes, so inject the
   # per-element classes into the rendered HTML instead.
   defp inject_attributes(html, attributes) do
-    html
-    |> strip_code_language_prefix()
-    |> then(fn html ->
-      Enum.reduce(attributes, html, fn {tag, attrs}, acc ->
-        inject_tag_attributes(acc, tag, attrs)
-      end)
+    Enum.reduce(attributes, html, fn {tag, attrs}, acc ->
+      inject_tag_attributes(acc, tag, attrs)
     end)
-  end
-
-  # Earmark emitted fenced code blocks as `<code class="javascript">`, whereas
-  # MDEx (comrak) uses the standard `language-` prefix. Drop it to preserve the
-  # previous output.
-  defp strip_code_language_prefix(html) do
-    String.replace(html, ~r/<code class="language-/, ~s(<code class="))
   end
 
   defp inject_tag_attributes(html, tag, attrs) do
