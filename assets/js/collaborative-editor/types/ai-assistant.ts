@@ -54,6 +54,8 @@ export interface Message {
   user_id?: string;
   user?: MessageUser | null;
   job_id?: string;
+  /** Human-readable error surfaced when status is "error" (e.g. Apollo 401). */
+  error?: string;
 }
 
 /**
@@ -190,7 +192,11 @@ export interface AIAssistantStore {
   _clearSessionList: () => void;
   _prependSession: (session: SessionSummary) => void;
   _addMessage: (message: Message) => void;
-  _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
+  _updateMessageStatus: (
+    messageId: string,
+    status: MessageStatus,
+    errorMessage?: string
+  ) => void;
   _setSessionList: (response: SessionListResponse) => void;
   _appendSessionList: (response: SessionListResponse) => void;
   _initializeContext: (

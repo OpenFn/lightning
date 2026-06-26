@@ -291,7 +291,8 @@ defmodule LightningWeb.AiAssistantChannel do
           if user_message do
             broadcast(socket, "message_error", %{
               message_id: user_message.id,
-              status: "error"
+              status: "error",
+              error: (user_message.meta || %{})["error_message"]
             })
           end
 
@@ -742,7 +743,8 @@ defmodule LightningWeb.AiAssistantChannel do
       inserted_at: message.inserted_at,
       user_id: message.user_id,
       user: format_user(message.user),
-      job_id: job_id
+      job_id: job_id,
+      error: (message.meta || %{})["error_message"]
     }
   end
 

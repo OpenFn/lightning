@@ -386,4 +386,153 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.content == "Workflow response"
     end
   end
+
+  describe "error message surfacing" do
+    test "persists Apollo 401 errors to message meta as a friendly message", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # Apollo rejects the request with a 401 (bad/expired token or limit hit)
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get}, _opts -> {:ok, %Tesla.Env{status: 200}}
+        %{method: :post}, _opts -> {:ok, %Tesla.Env{status: 401, body: %{}}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      errored =
+        AiAssistant.get_session!(session.id).messages
+        |> Enum.find(&(&1.id == user_message.id))
+
+      assert errored.status == :error
+
+      assert errored.meta["error_message"] ==
+               "Token invalid or limit reached. Contact your administrator."
+    end
+
+    test "persists the Apollo body message to meta on other failures", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
+
+        %{method: :post}, _opts ->
+          {:ok,
+           %Tesla.Env{status: 500, body: %{"message" => "Apollo is on fire"}}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      errored =
+        AiAssistant.get_session!(session.id).messages
+        |> Enum.find(&(&1.id == user_message.id))
+
+      assert errored.status == :error
+      assert errored.meta["error_message"] == "Apollo is on fire"
+    end
+
+    test "update_message_status/3 merges the error message into meta without clobbering existing keys",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow
+        )
+
+      message =
+        insert(:chat_message,
+          role: :user,
+          status: :processing,
+          user: user,
+          chat_session: session,
+          meta: %{"follow_run_id" => "keep-me"}
+        )
+
+      {:ok, _session, updated} =
+        MessageProcessor.update_message_status(message, :error, "boom")
+
+      assert updated.status == :error
+      assert updated.meta["error_message"] == "boom"
+      assert updated.meta["follow_run_id"] == "keep-me"
+    end
+
+    test "update_message_status/2 leaves meta untouched when no error message is given",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow
+        )
+
+      message =
+        insert(:chat_message,
+          role: :user,
+          status: :processing,
+          user: user,
+          chat_session: session,
+          meta: %{"follow_run_id" => "keep-me"}
+        )
+
+      {:ok, _session, updated} =
+        MessageProcessor.update_message_status(message, :error)
+
+      assert updated.status == :error
+      refute Map.has_key?(updated.meta, "error_message")
+      assert updated.meta["follow_run_id"] == "keep-me"
+    end
+  end
 end

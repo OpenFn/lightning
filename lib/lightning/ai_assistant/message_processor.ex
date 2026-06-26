@@ -184,7 +184,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
       {:error, error_message} ->
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(message, :error, error_message)
 
         {:error, error_message}
     end
@@ -290,11 +290,15 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec update_message_status(
           ChatMessage.t(),
-          atom()
+          atom(),
+          String.t() | nil
         ) ::
           {:ok, ChatSession.t(), ChatMessage.t()}
-  def update_message_status(message, status) do
-    changes = build_status_changes(status)
+  def update_message_status(message, status, error_message \\ nil) do
+    changes =
+      status
+      |> build_status_changes()
+      |> maybe_put_error_message(message, error_message)
 
     updated_message =
       message
@@ -330,6 +334,19 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       processing_completed_at: DateTime.utc_now()
     }
   end
+
+  # Persists the error string onto the message meta so it can be surfaced to
+  # the frontend (live via the message_error broadcast, and on reload via
+  # format_message) instead of a generic "Failed to send".
+  @spec maybe_put_error_message(map(), ChatMessage.t(), String.t() | nil) ::
+          map()
+  defp maybe_put_error_message(changes, message, error_message)
+       when is_binary(error_message) do
+    meta = Map.put(message.meta || %{}, "error_message", error_message)
+    Map.put(changes, :meta, meta)
+  end
+
+  defp maybe_put_error_message(changes, _message, _error_message), do: changes
 
   @doc false
   @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::

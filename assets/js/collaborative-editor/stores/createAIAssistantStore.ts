@@ -444,11 +444,19 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Update message status
    * @internal Called by useAIAssistantChannel hook
    */
-  const _updateMessageStatus = (messageId: string, status: MessageStatus) => {
+  const _updateMessageStatus = (
+    messageId: string,
+    status: MessageStatus,
+    errorMessage?: string
+  ) => {
     state = produce(state, draft => {
       const message = draft.messages.find(m => m.id === messageId);
       if (message) {
         message.status = status;
+
+        if (status === 'error' && errorMessage) {
+          message.error = errorMessage;
+        }
 
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;

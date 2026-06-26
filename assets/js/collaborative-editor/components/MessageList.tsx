@@ -652,7 +652,8 @@ export function MessageList({
                     >
                       <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
                       <span className="text-sm text-red-700 flex-1">
-                        Failed to send message. Please try again.
+                        {message.error ||
+                          'Failed to send message. Please try again.'}
                       </span>
                       {onRetryMessage && (
                         <button
@@ -748,7 +749,7 @@ export function MessageList({
                     >
                       <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
                       <span className="text-xs text-red-700 flex-1">
-                        Failed to send
+                        {message.error || 'Failed to send'}
                       </span>
                       {onRetryMessage && (
                         <button
