@@ -72,13 +72,21 @@ honest analysis matter more than the executable proof.
 > Update this block at the end of every phase, then commit.
 
 - **Phase 0 — Plan:** ✅ COMPLETE
-- **Phase 1 — Inventory:** ⬜ NOT STARTED
+- **Phase 1 — Inventory:** 🔄 IN PROGRESS (4 mapping agents: router ✅ + contexts/schemas ✅ done; LiveViews + channels/PubSub/Oban/policies in flight)
 - **Phase 2 — Architecture + API:** ⬜ NOT STARTED
 - **Phase 3 — Vertical slice (Credentials):** ⬜ NOT STARTED
 - **Phase 4 — Honest analysis:** ⬜ NOT STARTED
 
-**Next action:** Begin Phase 1 — walk the repo (router, LiveViews, contexts,
-channels, Oban workers, policies, PubSub) and write `docs/page-inventory.md`
-mapping each page/route to the backend logic it depends on.
+**Next action:** Finish Phase 1 — synthesize the 4 mapping agents' output into
+`docs/page-inventory.md`, then commit + push.
 
 **Decisions already made:** API = REST; Phase 3 slice = Credentials. (See table above.)
+
+**Additional requirements (added mid-run by Brandon):**
+- **Phase 4 must include a staging/sequencing recommendation** for how to
+  actually do the migration. Working hypothesis to evaluate (agree/refine/push
+  back, grounded in the slice): *rebuild the app shell first (React nav/layout/auth
+  against the REST API), then incrementally retire the LiveView-rendered tables/grids
+  and rebuild them properly as React components backed by REST — strangler-fig,
+  one surface at a time, not big-bang.* Section 5 of `docs/migration-analysis.md`
+  is stubbed for this.
