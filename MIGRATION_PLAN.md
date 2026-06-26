@@ -73,15 +73,16 @@ honest analysis matter more than the executable proof.
 
 - **Phase 0 — Plan:** ✅ COMPLETE
 - **Phase 1 — Inventory:** ✅ COMPLETE (`docs/page-inventory.md` written: route map, surface-by-surface inventory of all ~26 routed LiveViews/feature areas, and cross-cutting catalogues for contexts/schemas/Oban/PubSub/channels/policies/presence, plus a decoupling-difficulty ranking)
-- **Phase 2 — Architecture + API:** ⬜ NOT STARTED
+- **Phase 2 — Architecture + API:** ✅ COMPLETE (`docs/architecture.md` = two-component design + service boundary + auth/sessions/real-time crossing; `docs/api.md` = REST contract with Credentials fully specified, grounded in the real `*_json.ex`/`FallbackController`/schema shapes, and the JSON:API-vs-flat inconsistency resolved)
 - **Phase 3 — Vertical slice (Credentials):** ⬜ NOT STARTED
 - **Phase 4 — Honest analysis:** ⬜ NOT STARTED
 
-**Next action:** Begin Phase 2 — write `docs/architecture.md` (two-component
-design, service boundary, auth/sessions/real-time across the boundary; lean on
-the finding that the collaborative editor + `controllers/api/*` already model the
-target) and `docs/api.md` (the REST contract, with Credentials fully specified as
-the Phase 3 slice). Then commit + push.
+**Next action:** Begin Phase 3 — extract the Credentials surface into a new service
+skeleton that compiles and whose `mix test` passes for the slice. FIRST resolve the
+toolchain constraint (no Elixir/mix installed; target Erlang 27.3.3 / Elixir
+1.18.3). If provisioning fails, deliver the slice as review-ready code with a
+documented verification gap (per the plan's fallback). Scaffold other surfaces as
+documented stubs only. Then commit + push.
 
 **Key Phase 1 findings to carry forward:** (1) the app already contains the
 decoupled target shape (collaborative editor = thin LiveView shell + React island
