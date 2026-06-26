@@ -251,6 +251,38 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
                &(Floki.attribute(&1, "class") == ["text-gray-800"])
              )
     end
+
+    test "renders GFM extensions (tables, strikethrough, autolinks)" do
+      content = """
+      | Name | Role |
+      |------|------|
+      | Ada  | Dev  |
+
+      ~~deprecated~~ and see https://example.com for details.
+      """
+
+      html =
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      # GFM tables render as a real table, not raw pipe text
+      assert Floki.find(parsed_html, "table") != []
+      assert Floki.find(parsed_html, "th") |> Floki.text() =~ "Name"
+      assert Floki.find(parsed_html, "td") |> Floki.text() =~ "Ada"
+
+      # Strikethrough
+      assert Floki.find(parsed_html, "del") |> Floki.text() == "deprecated"
+
+      # Bare URL is autolinked
+      assert Enum.any?(
+               Floki.find(parsed_html, "a"),
+               &(Floki.attribute(&1, "href") == ["https://example.com"])
+             )
+    end
   end
 
   describe "error_message/1" do

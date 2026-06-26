@@ -1577,7 +1577,19 @@ defmodule LightningWeb.AiAssistant.Component do
 
   # Match Earmark's default of passing raw HTML through untouched. The content
   # is AI-generated markdown rendered for the same user who prompted it.
-  @mdex_options [render: [unsafe: true]]
+  #
+  # Earmark defaulted to `gfm: true`, so enable the GFM extensions (tables,
+  # strikethrough, bare-URL autolinks, task lists) to keep assistant replies —
+  # which frequently contain tables — rendering as they did before.
+  @mdex_options [
+    extension: [
+      table: true,
+      strikethrough: true,
+      autolink: true,
+      tasklist: true
+    ],
+    render: [unsafe: true]
+  ]
 
   attr :id, :string, required: true
   attr :content, :string, required: true
