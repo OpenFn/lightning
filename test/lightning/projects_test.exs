@@ -1141,6 +1141,30 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml == expected_yaml
     end
 
+    test "includes a credential's connected system slug, and omits it when absent" do
+      project = insert(:project, name: "systems-project")
+      user = insert(:user, email: "dev@example.com")
+      system = insert(:connected_system, name: "National ID", slug: "national-id")
+
+      linked =
+        insert(:credential,
+          name: "national-id-prod",
+          user: user,
+          connected_system_id: system.id
+        )
+
+      unlinked = insert(:credential, name: "loose-cred", user: user)
+
+      insert(:project_credential, project: project, credential: linked)
+      insert(:project_credential, project: project, credential: unlinked)
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ "connected_system: national-id"
+      # the unlinked credential contributes no connected_system key
+      refute generated_yaml =~ "connected_system: loose-cred"
+    end
+
     test "adds quotes to values with special charaters" do
       project = insert(:project, name: "project: 1")
 

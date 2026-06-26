@@ -225,6 +225,84 @@ defmodule Lightning.Projects.ProvisionerTest do
              } = audit
     end
 
+    test "accepts a credential referencing an existing connected system" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      credential = insert(:credential, name: "Test Credential", user: user)
+      system = insert(:connected_system, slug: "national-id")
+
+      %{body: body} = valid_document()
+
+      credentials_payload = [
+        %{
+          "id" => Ecto.UUID.generate(),
+          "name" => credential.name,
+          "owner" => user.email,
+          "connected_system" => system.slug
+        }
+      ]
+
+      body_with_credentials =
+        Map.put(body, "project_credentials", credentials_payload)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, project} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body_with_credentials
+               )
+
+      assert [%{credential_id: credential_id}] = project.project_credentials
+      # Import validates the reference but does not write the link onto the
+      # user-owned credential (plan call-out #1).
+      assert Repo.get(Lightning.Credentials.Credential, credential_id).connected_system_id ==
+               nil
+    end
+
+    test "rejects a credential referencing an unknown connected system" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      credential = insert(:credential, name: "Test Credential", user: user)
+
+      %{body: body} = valid_document()
+
+      credentials_payload = [
+        %{
+          "id" => Ecto.UUID.generate(),
+          "name" => credential.name,
+          "owner" => user.email,
+          "connected_system" => "does-not-exist"
+        }
+      ]
+
+      body_with_credentials =
+        Map.put(body, "project_credentials", credentials_payload)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:error, changeset} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body_with_credentials
+               )
+
+      assert changeset |> errors_on() |> inspect() =~
+               "No connected system found with slug"
+    end
+
     test "importing with nil project delegates to empty Project struct" do
       Mox.verify_on_exit!()
 

@@ -17,6 +17,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Collections.Collection
+  alias Lightning.ConnectedSystems
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects.Project
@@ -739,20 +740,30 @@ defmodule Lightning.Projects.Provisioner do
               cred.name == cred_params["name"]
             end)
 
-          if credential do
-            change(%ProjectCredential{
-              id: cred_params["id"],
-              credential_id: credential.id
-            })
-          else
-            change(%ProjectCredential{
-              id: cred_params["id"]
-            })
-            |> add_error(
-              :credential,
-              "No credential found with name #{cred_params["name"]}"
-            )
-          end
+          credential_change =
+            if credential do
+              change(%ProjectCredential{
+                id: cred_params["id"],
+                credential_id: credential.id
+              })
+            else
+              change(%ProjectCredential{
+                id: cred_params["id"]
+              })
+              |> add_error(
+                :credential,
+                "No credential found with name #{cred_params["name"]}"
+              )
+            end
+
+          # The Connected System reference is validated (it must resolve to a
+          # local system by slug) but not written: credentials are matched, not
+          # mutated, by provisioning, and they are user-owned. The system link
+          # is set through the UI. See the Connected Systems plan, call-out #1.
+          validate_connected_system_ref(
+            credential_change,
+            cred_params["connected_system"]
+          )
         end)
 
       project_credentials =
@@ -765,6 +776,22 @@ defmodule Lightning.Projects.Provisioner do
       )
     else
       changeset
+    end
+  end
+
+  defp validate_connected_system_ref(changeset, nil), do: changeset
+
+  defp validate_connected_system_ref(changeset, slug) do
+    case ConnectedSystems.get_connected_system_by_slug(slug) do
+      {:ok, _connected_system} ->
+        changeset
+
+      {:error, :not_found} ->
+        add_error(
+          changeset,
+          :connected_system,
+          "No connected system found with slug #{slug}"
+        )
     end
   end
 

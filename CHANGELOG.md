@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Introduce a **Connected Systems** registry: an instance-wide, secret-free
+  catalog of the external systems an organization works with (name + type, with
+  optional description, docs URL, contact, and access instructions). A new
+  "Systems" page under instance settings lists the registry, credentials can
+  reference a connected system, and the system's stable slug is included in the
+  project YAML export and validated on provisioning import.
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or

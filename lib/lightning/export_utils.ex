@@ -29,7 +29,7 @@ defmodule Lightning.ExportUtils do
     ],
     collection: [:name],
     channel: [:name, :destination_url, :enabled, :destination_credential],
-    credential: [:name, :owner],
+    credential: [:name, :owner, :connected_system],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
     trigger: [
@@ -430,7 +430,13 @@ defmodule Lightning.ExportUtils do
       node_type: :credential,
       owner: project_credential.credential.user.email
     }
+    |> maybe_put_connected_system(project_credential.credential.connected_system)
   end
+
+  defp maybe_put_connected_system(map, %{slug: slug}),
+    do: Map.put(map, :connected_system, slug)
+
+  defp maybe_put_connected_system(map, _), do: map
 
   defp build_collection_yaml_tree(collection) do
     %{
@@ -499,7 +505,7 @@ defmodule Lightning.ExportUtils do
   def generate_new_yaml(project, nil) do
     project =
       Lightning.Repo.preload(project,
-        project_credentials: [credential: :user],
+        project_credentials: [credential: [:user, :connected_system]],
         collections: [],
         channels: [destination_auth_method: :project_credential]
       )
@@ -516,7 +522,7 @@ defmodule Lightning.ExportUtils do
   def generate_new_yaml(project, snapshots) when is_list(snapshots) do
     project =
       Lightning.Repo.preload(project,
-        project_credentials: [credential: :user],
+        project_credentials: [credential: [:user, :connected_system]],
         collections: [],
         channels: [destination_auth_method: :project_credential]
       )

@@ -201,6 +201,16 @@ defmodule Lightning.Factories do
     |> Map.merge(attrs)
   end
 
+  def connected_system_factory do
+    name = sequence(:connected_system_name, &"Connected System #{&1}")
+
+    %Lightning.ConnectedSystems.ConnectedSystem{
+      name: name,
+      slug: Lightning.Helpers.url_safe_name(name),
+      type: "http"
+    }
+  end
+
   def project_credential_factory do
     %Lightning.Projects.ProjectCredential{
       project: build(:project),

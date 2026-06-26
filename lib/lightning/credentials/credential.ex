@@ -6,6 +6,7 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
+  alias Lightning.ConnectedSystems.ConnectedSystem
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
 
@@ -25,6 +26,7 @@ defmodule Lightning.Credentials.Credential do
 
     belongs_to :user, User
     belongs_to :oauth_client, OauthClient
+    belongs_to :connected_system, ConnectedSystem
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
@@ -41,6 +43,7 @@ defmodule Lightning.Credentials.Credential do
       :external_id,
       :user_id,
       :oauth_client_id,
+      :connected_system_id,
       :schema,
       :scheduled_deletion,
       :transfer_status
@@ -56,6 +59,7 @@ defmodule Lightning.Credentials.Credential do
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
+    |> assoc_constraint(:connected_system)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
