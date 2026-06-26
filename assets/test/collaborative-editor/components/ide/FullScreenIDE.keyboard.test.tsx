@@ -301,10 +301,6 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     selectNode: vi.fn(),
     selectedNodeId: null,
   }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
-  }),
   useWorkflowSettingsErrors: () => ({
     hasErrors: false,
   }),

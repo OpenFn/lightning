@@ -136,7 +136,6 @@ export namespace Workflow {
     selectedEdgeId: string | null;
 
     // Computed/derived state
-    enabled: boolean | null; // Computed from triggers
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
 
@@ -170,7 +169,6 @@ export namespace Workflow {
     addJob: (job: Partial<Session.Job>) => void;
     removeJob: (id: string) => void;
     updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
-    setEnabled: (enabled: boolean) => void;
 
     // Pattern 3: Direct immer update only (local UI state)
     selectJob: (id: string | null) => void;

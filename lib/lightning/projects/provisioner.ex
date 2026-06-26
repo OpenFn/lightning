@@ -613,7 +613,7 @@ defmodule Lightning.Projects.Provisioner do
 
   defp workflow_changeset(workflow, attrs, valid_project_credentials) do
     workflow
-    |> cast(attrs, [:id, :name, :delete, :deleted_at])
+    |> cast(attrs, [:id, :name, :state, :delete, :deleted_at])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_soft_delete_workflow()
@@ -621,7 +621,30 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:jobs, with: &job_changeset(&1, &2, valid_project_credentials))
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
+    |> maybe_infer_workflow_state(attrs)
     |> Workflow.validate()
+  end
+
+  defp maybe_infer_workflow_state(changeset, attrs) do
+    if state_present_in_attrs?(attrs) do
+      changeset
+    else
+      inferred = if any_trigger_enabled?(changeset), do: :live, else: :draft
+      put_change(changeset, :state, inferred)
+    end
+  end
+
+  defp state_present_in_attrs?(attrs) do
+    Map.has_key?(attrs, "state") or Map.has_key?(attrs, :state)
+  end
+
+  defp any_trigger_enabled?(changeset) do
+    changeset
+    |> get_assoc(:triggers)
+    |> Enum.reject(&(&1.action == :delete))
+    |> Enum.any?(fn trigger_changeset ->
+      get_field(trigger_changeset, :enabled) == true
+    end)
   end
 
   defp job_changeset(job, attrs, valid_project_credentials) do

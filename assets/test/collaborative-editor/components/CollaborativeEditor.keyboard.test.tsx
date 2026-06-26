@@ -335,10 +335,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     canRun: true,
     tooltipMessage: '',
   }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
-  }),
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: '',

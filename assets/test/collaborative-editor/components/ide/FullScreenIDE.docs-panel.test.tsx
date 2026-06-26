@@ -211,10 +211,6 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     currentNode: { node: null, type: null, id: null },
     selectNode: vi.fn(),
   }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
-  }),
   useWorkflowActions: () => ({
     selectJob: vi.fn(),
     saveWorkflow: vi.fn(),

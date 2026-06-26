@@ -191,63 +191,11 @@ describe('TriggerInspector - Footer Button States', () => {
       }
     );
 
-    // Footer should be rendered with toggle and run button
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
+    // Footer should be rendered with the run button.
+    // The standalone enabled toggle was removed; trigger enabled is now
+    // owned by the workflow lifecycle (Go live / Switch to draft).
+    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
-  });
-
-  test('toggle is disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions
-    const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    const toggle = screen.getByLabelText(/enabled/i);
-    expect(toggle).toBeDisabled();
-  });
-
-  test('toggle is disabled when user lacks edit permission', () => {
-    // beforeEach sets can_edit_workflow: false, which is what this test needs
-    const trigger = workflowStore.getSnapshot().triggers[0];
-    const mockOnClose = vi.fn();
-    const mockOnOpenRunPanel = vi.fn();
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={mockOnClose}
-        onOpenRunPanel={mockOnOpenRunPanel}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-
-    const toggle = screen.getByLabelText(/enabled/i);
-    expect(toggle).toBeDisabled();
   });
 
   test('footer is rendered with all buttons visible', () => {
@@ -293,8 +241,8 @@ describe('TriggerInspector - Footer Button States', () => {
       }
     );
 
-    // Both toggle and run button should be present
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
+    // Only the run button should be present (no enabled toggle).
+    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
   });
 });

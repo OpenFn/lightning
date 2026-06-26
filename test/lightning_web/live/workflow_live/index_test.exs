@@ -315,6 +315,54 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert view |> has_element?("#new-workflow-button[type=button]")
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
+
+    test "toggling a workflow keeps state and triggers coherent", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :draft)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # Draft workflow: toggle is off.
+      refute view |> has_element?("##{workflow.id}[checked]")
+
+      # Enabling routes through go_live: state becomes :live and triggers enabled.
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :live,
+               triggers: [%{enabled: true}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      assert view |> has_element?("##{workflow.id}[checked]")
+
+      # Disabling routes through switch_to_draft: back to :draft, triggers off.
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :draft,
+               triggers: [%{enabled: false}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
   end
 
   describe "creating workflows" do

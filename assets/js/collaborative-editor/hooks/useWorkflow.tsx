@@ -155,7 +155,6 @@ export const useWorkflowSelector = <T,>(
  * @example
  * // Simple state selections - ideal use cases
  * const jobs = useWorkflowState(state => state.jobs);
- * const enabled = useWorkflowState(state => state.enabled);
  * const triggers = useWorkflowState(state => state.triggers);
  *
  * @example
@@ -212,16 +211,6 @@ export const usePositions = () => {
 // =============================================================================
 // SPECIALIZED HOOKS
 // =============================================================================
-
-export const useWorkflowEnabled = () => {
-  return useWorkflowSelector(
-    (state, store) => ({
-      enabled: state.enabled,
-      setEnabled: store.setEnabled,
-    }),
-    []
-  );
-};
 
 /**
  * Hook for accessing current selected job with YText body.
@@ -373,7 +362,6 @@ export const useWorkflowActions = () => {
     removeEdge: store.removeEdge,
 
     updateTrigger: store.updateTrigger,
-    setEnabled: store.setEnabled,
 
     updatePositions: store.updatePositions,
     updatePosition: store.updatePosition,
