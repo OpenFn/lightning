@@ -74,15 +74,24 @@ honest analysis matter more than the executable proof.
 - **Phase 0 — Plan:** ✅ COMPLETE
 - **Phase 1 — Inventory:** ✅ COMPLETE (`docs/page-inventory.md` written: route map, surface-by-surface inventory of all ~26 routed LiveViews/feature areas, and cross-cutting catalogues for contexts/schemas/Oban/PubSub/channels/policies/presence, plus a decoupling-difficulty ranking)
 - **Phase 2 — Architecture + API:** ✅ COMPLETE (`docs/architecture.md` = two-component design + service boundary + auth/sessions/real-time crossing; `docs/api.md` = REST contract with Credentials fully specified, grounded in the real `*_json.ex`/`FallbackController`/schema shapes, and the JSON:API-vs-flat inconsistency resolved)
-- **Phase 3 — Vertical slice (Credentials):** ⬜ NOT STARTED
+- **Phase 3 — Vertical slice (Credentials):** ✅ COMPLETE (new `decoupling-experiment/credentials_service/` Phoenix+Ecto service: real Cloak-encrypted schemas, Credentials context, REST controller/JSON per `docs/api.md`, auth-in-a-plug; **compiles and `mix test` = 17 tests, 0 failures**. Toolchain provisioned: Elixir 1.17.3/OTP25 + Postgres 16. Other surfaces are documented stubs in `stubs.ex`. Findings captured in `decoupling-experiment/README.md`.)
 - **Phase 4 — Honest analysis:** ⬜ NOT STARTED
 
-**Next action:** Begin Phase 3 — extract the Credentials surface into a new service
-skeleton that compiles and whose `mix test` passes for the slice. FIRST resolve the
-toolchain constraint (no Elixir/mix installed; target Erlang 27.3.3 / Elixir
-1.18.3). If provisioning fails, deliver the slice as review-ready code with a
-documented verification gap (per the plan's fallback). Scaffold other surfaces as
-documented stubs only. Then commit + push.
+**Next action:** Begin Phase 4 — write `docs/migration-analysis.md` in full
+(recap arch+API, the per-surface "Difficult to move" table grounded in the slice,
+the recommendation + strongest counter-case, the §5 staging plan, and the §6
+professional-React-developer perspective). Then commit + push. This is the last
+phase and the second-highest priority.
+
+**Phase 3 findings to fold into Phase 4 (observed while extracting Credentials):**
+encryption key must travel with the data (Cloak); `user_id`/`project_id` become
+opaque cross-context FKs (identity + project-membership contracts needed);
+deletion is an `Ecto.Multi` spanning context boundaries (only the local
+`project_credentials` delete stays atomic; nulling `jobs.project_credential_id` +
+OAuth revoke + owner email become cross-service ops); OAuth refresh is
+hot-path/network/transactional (stubbed); audit trail emits inside the Multi
+(stubbed); `oauth_clients.client_secret` plaintext at rest (faithful gap); the
+REST/controller/JSON/auth-plug layer was the easy part.
 
 **Key Phase 1 findings to carry forward:** (1) the app already contains the
 decoupled target shape (collaborative editor = thin LiveView shell + React island
@@ -105,3 +114,8 @@ via `project_credentials` join, Credentials context is itself an Oban worker.
   and rebuild them properly as React components backed by REST — strangler-fig,
   one surface at a time, not big-bang.* Section 5 of `docs/migration-analysis.md`
   is stubbed for this.
+- **Phase 4 must include a professional React developer's perspective** (§6 of
+  `docs/migration-analysis.md`, stubbed): is the current architecture slowing
+  frontend work down? would the migration increase velocity or be wasted effort?
+  how automatable is the migration (with automated testing)? Answers must be
+  grounded in the inventory + the Credentials slice, not generic talking points.

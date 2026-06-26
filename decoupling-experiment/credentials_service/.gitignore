@@ -1,0 +1,10 @@
+# Build artifacts and fetched deps — never committed.
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+credentials_service-*.tar
+.elixir_ls/
