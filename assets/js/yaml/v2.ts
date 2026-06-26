@@ -54,6 +54,7 @@ import type {
   StateJob,
   StateKafkaConfiguration,
   StateTrigger,
+  WebhookResponseConfig,
   WorkflowSpec,
   WorkflowState,
 } from './types';
@@ -185,6 +186,7 @@ interface V2TriggerStep extends V2KafkaConfig {
   cron_expression?: string;
   cron_cursor?: string;
   webhook_reply?: string;
+  webhook_response_config?: WebhookResponseConfig;
   next?: V2NextValue;
 }
 
@@ -233,6 +235,7 @@ interface CanonicalTriggerStep extends V2KafkaConfig {
   cron_expression?: string;
   cron_cursor?: string;
   webhook_reply?: string;
+  webhook_response_config?: WebhookResponseConfig;
   next?: string | Record<string, CanonicalEdge>;
 }
 
@@ -368,8 +371,27 @@ const triggerStateToCanonical = (
   // Spec-defined flat fields go on the trigger itself.
   if (trigger.type === 'cron' && trigger.cron_expression) {
     base.cron_expression = trigger.cron_expression;
-  } else if (trigger.type === 'webhook' && trigger.webhook_reply) {
-    base.webhook_reply = trigger.webhook_reply;
+  } else if (trigger.type === 'webhook') {
+    if (trigger.webhook_reply) {
+      base.webhook_reply = trigger.webhook_reply;
+    }
+
+    // `webhook_response_config` nests under the webhook trigger root, carrying
+    // only the HTTP status codes that are set (matches the Elixir emitter). An
+    // all-empty config is omitted entirely.
+    const config = trigger.webhook_response_config;
+    if (config) {
+      const responseConfig: WebhookResponseConfig = {};
+      if (config.success_code != null) {
+        responseConfig.success_code = config.success_code;
+      }
+      if (config.error_code != null) {
+        responseConfig.error_code = config.error_code;
+      }
+      if (Object.keys(responseConfig).length > 0) {
+        base.webhook_response_config = responseConfig;
+      }
+    }
   }
 
   // Lightning extension fields live flat at the trigger root (matches the
@@ -641,6 +663,7 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
       type: 'webhook',
       enabled,
       webhook_reply: trigger.webhook_reply ?? null,
+      webhook_response_config: trigger.webhook_response_config ?? null,
       pos: undefined,
     };
     return out;

@@ -70,6 +70,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
         cron_expression: "0 0 * * *"          # cron only (spec: flat field)
         cron_cursor: <step-id>                # cron only (Lightning ext, flat)
         webhook_reply: <string>               # webhook only (spec: flat field)
+        webhook_response_config:              # webhook only (Lightning ext)
+          success_code: <int>                 #   omitted entirely when unset
+          error_code: <int>
         hosts: ["broker:9092", ...]           # kafka only (Lightning ext, flat)
         topics: [...]                         # kafka only
         initial_offset_reset_policy: latest   # kafka only
@@ -123,6 +126,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   | cron expression (flat on trig)   | `cron_expression:`           |
   | cron cursor (flat on trig, ext)  | `cron_cursor:`               |
   | webhook reply (flat on trig)     | `webhook_reply:`             |
+  | webhook response codes (trig)    | `webhook_response_config:`   |
+  | project channels (Lightning ext) | `channels:` (array)          |
+  | channel destination credential   | `destination_credential:`    |
   | kafka brokers (flat on trig)     | `hosts:`                     |
   | kafka topics (flat on trig)      | `topics:`                    |
   | kafka offset policy              | `initial_offset_reset_policy:` |
@@ -272,13 +278,33 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp maybe_put_trigger_spec_fields(base, %{type: :webhook} = trigger) do
-    case trigger.webhook_reply do
-      nil -> base
-      reply -> Map.put(base, :webhook_reply, Atom.to_string(reply))
-    end
+    base
+    |> maybe_put_webhook_reply(trigger.webhook_reply)
+    |> maybe_put_webhook_response_config(trigger.webhook_response_config)
   end
 
   defp maybe_put_trigger_spec_fields(base, _trigger), do: base
+
+  defp maybe_put_webhook_reply(base, nil), do: base
+
+  defp maybe_put_webhook_reply(base, reply) when is_atom(reply),
+    do: Map.put(base, :webhook_reply, Atom.to_string(reply))
+
+  # `webhook_response_config` is a Lightning extension carrying the HTTP status
+  # codes returned to the caller. It nests under the webhook trigger root with
+  # only the codes the user has set; an all-nil config is omitted entirely.
+  defp maybe_put_webhook_response_config(base, %{} = config) do
+    fields =
+      [success_code: config.success_code, error_code: config.error_code]
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    case fields do
+      [] -> base
+      pairs -> Map.put(base, :webhook_response_config, Map.new(pairs))
+    end
+  end
+
+  defp maybe_put_webhook_response_config(base, _), do: base
 
   # `cron_cursor: <step-id>` is a Lightning extension that lives flat on the
   # trigger root (the spec's `Trigger` interface doesn't forbid extra fields).
@@ -506,6 +532,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           :cron_expression,
           :cron_cursor,
           :webhook_reply,
+          :webhook_response_config,
           :hosts,
           :topics,
           :initial_offset_reset_policy,
@@ -551,6 +578,27 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   defp emit_record_field(:next, target) when is_binary(target) do
     [emit_scalar_field("next", target)]
+  end
+
+  # Nested map for the webhook trigger's response config. Only the codes that
+  # are set were carried into the canonical map, so emit them in spec order.
+  defp emit_record_field(:webhook_response_config, %{} = config) do
+    child =
+      [:success_code, :error_code]
+      |> Enum.flat_map(fn key ->
+        case Map.fetch(config, key) do
+          {:ok, value} when not is_nil(value) ->
+            ["  " <> emit_scalar_field(Atom.to_string(key), value)]
+
+          _ ->
+            []
+        end
+      end)
+
+    case child do
+      [] -> []
+      lines -> ["webhook_response_config:" | lines]
+    end
   end
 
   defp emit_record_field(:next, %{} = next_map) do
@@ -706,15 +754,49 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.flat_map(&project_credential_to_canonical/1)
 
+    # Channels are a Lightning extension (not in the portability spec). Emitted
+    # as an array of objects, mirroring the `credentials:` shape; the
+    # `destination_credential` ref uses the same `email|name` key form as a
+    # job's `configuration:`.
+    channels_canonical =
+      (project.channels || [])
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&channel_to_canonical/1)
+
     %{
       id: hyphenate(project.name),
       name: project.name,
       description: project.description,
       collections: collections_canonical,
       credentials: credentials_canonical,
+      channels: channels_canonical,
       workflows: workflows_canonical
     }
   end
+
+  defp channel_to_canonical(channel) do
+    %{
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      destination_credential: channel_destination_credential_key(channel)
+    }
+  end
+
+  # The destination credential is reached through the channel's
+  # `:destination` auth method → project_credential → credential → user. Falls
+  # back to nil when the channel has no destination credential configured.
+  defp channel_destination_credential_key(%{
+         destination_auth_method: %{
+           project_credential: %{
+             credential: %{name: name, user: %{email: email}}
+           }
+         }
+       })
+       when is_binary(name) and is_binary(email),
+       do: "#{email}|#{name}"
+
+  defp channel_destination_credential_key(_), do: nil
 
   # Snapshots have the same field set as a Workflow but use embedded schemas.
   # We adapt the snapshot into a `%Workflow{}` struct so the existing
@@ -741,6 +823,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
         collections: [],
+        channels: [
+          destination_auth_method: [project_credential: [credential: :user]]
+        ],
         workflows: [
           :triggers,
           :edges,
@@ -753,6 +838,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   defp assocs_loaded?(%Project{} = p) do
     not match?(%Ecto.Association.NotLoaded{}, p.workflows) and
       not match?(%Ecto.Association.NotLoaded{}, p.collections) and
+      not match?(%Ecto.Association.NotLoaded{}, p.channels) and
       not match?(%Ecto.Association.NotLoaded{}, p.project_credentials)
   end
 
@@ -782,6 +868,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       emit_top_description(Map.get(project_canonical, :description)),
       emit_collections_array(Map.get(project_canonical, :collections, [])),
       emit_credentials_array(Map.get(project_canonical, :credentials, [])),
+      emit_channels_array(Map.get(project_canonical, :channels, [])),
       emit_workflows_array(Map.get(project_canonical, :workflows, []))
     ]
     |> Enum.reject(&(&1 == ""))
@@ -840,6 +927,40 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       _ -> "credentials:\n" <> Enum.join(items, "\n")
     end
   end
+
+  # Lightning extension: channels as a YAML sequence of objects. Each item
+  # carries name, destination_url, enabled, and a `destination_credential`
+  # reference (`email|name`, or `null` when the channel has no destination
+  # credential).
+  defp emit_channels_array([]), do: ""
+  defp emit_channels_array(nil), do: ""
+
+  defp emit_channels_array(channels) when is_list(channels) do
+    items = Enum.map(channels, &emit_channel_item/1)
+
+    case items do
+      [] -> ""
+      _ -> "channels:\n" <> Enum.join(items, "\n")
+    end
+  end
+
+  defp emit_channel_item(channel) do
+    [first | rest] = [
+      "name: #{quote_if_needed(to_string(channel.name))}",
+      "destination_url: #{quote_if_needed(to_string(channel.destination_url))}",
+      "enabled: #{channel.enabled}",
+      "destination_credential: " <>
+        channel_credential_value(channel.destination_credential)
+    ]
+
+    ["  - #{first}" | Enum.map(rest, fn line -> "    #{line}" end)]
+    |> Enum.join("\n")
+  end
+
+  defp channel_credential_value(nil), do: "null"
+
+  defp channel_credential_value(key) when is_binary(key),
+    do: quote_if_needed(key)
 
   # Spec: `workflows: WorkflowSpec[]`. Emit as a YAML sequence of objects.
   defp emit_workflows_array([]), do: ""

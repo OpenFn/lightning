@@ -1135,10 +1135,11 @@ defmodule Lightning.ProjectsTest do
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      # v2 emits the spec-required `id` (hyphenated) plus `name`, and omits
-      # empty top-level sections rather than emitting `null`.
+      # v2 emits the spec-required `id` (hyphenated) plus `name` and
+      # `schema_version`, and omits empty top-level sections rather than
+      # emitting `null`.
       assert generated_yaml ==
-               "id: newly-created-project\nname: newly-created-project\n"
+               "id: newly-created-project\nname: newly-created-project\nschema_version: '4.0'\n"
     end
 
     test "adds quotes to values with special characters" do
@@ -1219,6 +1220,7 @@ defmodule Lightning.ProjectsTest do
 
       expected_yaml = """
       name: project_multiline_special
+      schema_version: '4.0'
       description: |
         This is a multiline description.
         It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
@@ -1329,13 +1331,11 @@ defmodule Lightning.ProjectsTest do
 
       assert generated_yaml =~ """
              channels:
-               my-channel:
-                 name: my-channel
+               - name: my-channel
                  destination_url: 'https://example.com/destination'
                  enabled: true
-                 destination_credential: channel-user@lightning.com-channel-cred
-               no-cred-channel:
-                 name: #{channel_only_name.name}
+                 destination_credential: channel-user@lightning.com|channel-cred
+               - name: #{channel_only_name.name}
                  destination_url: 'https://example.com/other'
                  enabled: false
                  destination_credential: null
@@ -1372,14 +1372,14 @@ defmodule Lightning.ProjectsTest do
 
       expected_trigger_yaml =
         """
-            triggers:
-              webhook:
+              - id: webhook
+                name: webhook
+                enabled: true
                 type: webhook
                 webhook_reply: after_completion
                 webhook_response_config:
                   success_code: 200
                   error_code: 500
-                enabled: true
         """
 
       assert generated_yaml =~ expected_trigger_yaml

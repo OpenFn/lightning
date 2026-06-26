@@ -44,6 +44,14 @@
         "cron_expression": { "type": "string" },
         "cron_cursor": { "type": "string" },
         "webhook_reply": { "type": "string" },
+        "webhook_response_config": {
+          "type": "object",
+          "properties": {
+            "success_code": { "type": "number" },
+            "error_code": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
         "hosts": { "type": "array", "items": { "type": "string" } },
         "topics": { "type": "array", "items": { "type": "string" } },
         "initial_offset_reset_policy": { "type": "string" },
