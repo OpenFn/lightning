@@ -241,6 +241,7 @@ defmodule LightningWeb.Router do
 
         live "/history", RunLive.Index, :index
         live "/history/channels", RunLive.Index, :channel_logs
+        live "/history/channels/:id", ChannelRequestLive.Show, :show
         live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
@@ -305,18 +306,6 @@ defmodule LightningWeb.Router do
   end
 
   do_in(:dev) do
-    import PhoenixStorybook.Router
-
-    scope "/" do
-      storybook_assets()
-    end
-
-    scope "/" do
-      pipe_through :browser
-
-      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
-    end
-
     scope "/dev" do
       pipe_through :browser
 

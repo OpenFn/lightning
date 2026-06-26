@@ -22,6 +22,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias LightningWeb.ProjectLive.Settings
 
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
@@ -1023,6 +1024,50 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ credential_name
       end)
+    end
+
+    test "new credential in a sandbox pre-selects only the active sandbox",
+         %{conn: conn, user: user} do
+      root =
+        insert(:project,
+          name: "root-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      intermediate = insert(:project, name: "intermediate", parent_id: root.id)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox-project",
+          parent_id: intermediate.id,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      # Only the active sandbox is pre-selected. Ancestors are attached at
+      # merge time, not speculatively at credential creation.
+      assert has_element?(
+               view,
+               "#remove-project-credential-button-new-#{sandbox.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{intermediate.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{root.id}"
+             )
     end
 
     test "support users can create new credentials in the project credentials page",
@@ -2178,6 +2223,48 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "view-extension slot wrappers" do
+    test "concurrency_input_slot/1 forwards project, field, and disabled" do
+      project = insert(:project)
+      changeset = Lightning.Projects.Project.changeset(project, %{})
+      form = Phoenix.HTML.FormData.to_form(changeset, [])
+      field = form[:concurrency]
+
+      echo =
+        render_component(
+          &Settings.concurrency_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          field: field,
+          project: project,
+          disabled: true
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-field-id") == [field.id]
+      assert Floki.attribute(echo, "data-disabled") == ["true"]
+    end
+
+    test "usage_caps_input_slot/1 forwards project and current_user" do
+      project = insert(:project)
+      user = insert(:user)
+
+      echo =
+        render_component(
+          &Settings.usage_caps_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          project: project,
+          current_user: user
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-current-user-id") == [user.id]
+    end
+  end
+
   describe "webhook-security" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
@@ -2756,7 +2843,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      assert html =~
+               "The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?"
 
       # retain_all is the default
       assert ["checked"] ==
@@ -2785,7 +2874,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "heads-up-description"
 
       # 3 radio buttons descriptions
-      assert "Retain input/output data for all workflow runs" =
+      assert "Retain all input/output data" =
                view
                |> element(~s{label#[for="retain_all"]})
                |> render()
@@ -2852,7 +2941,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored." =
                view
                |> element("#heads-up-description")
                |> render()
@@ -3391,6 +3480,105 @@ defmodule LightningWeb.ProjectLiveTest do
         assert Floki.find(html, "button[name$='[collaborators_drop][]']")
                |> Enum.count() == 0
       end
+    end
+
+    test "validate event with invalid email shows error in modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      modal = element(view, "#add_collaborators_modal")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "not-an-email", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(modal) =~ "Email address not valid."
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "valid@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(modal) =~ "Email address not valid."
+    end
+
+    test "validate event with invalid email shows error in invite modal", %{
+      conn: conn
+    } do
+      project = insert(:project, name: "my-project")
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      # Submit with a non-existent email to open the invite form
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "newuser@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert has_element?(view, "#invite_collaborators_modal_form")
+
+      invite_modal = element(view, "#invite_collaborators_modal")
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "not-an-email",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(invite_modal) =~ "Email address not valid."
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "valid@example.com",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(invite_modal) =~ "Email address not valid."
     end
 
     test "adding a non existent user triggers the invite users process", %{

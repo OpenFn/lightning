@@ -42,6 +42,7 @@ defmodule Lightning.Channels.Handler do
 
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
+  alias Lightning.Channels.PersistencePolicy
   alias Lightning.Repo
 
   require Logger
@@ -60,9 +61,18 @@ defmodule Lightning.Channels.Handler do
       channel_snapshot_id: state.snapshot.id,
       request_id: state.request_id,
       client_identity: state.client_identity,
+      client_webhook_auth_method_id:
+        Map.get(state, :client_webhook_auth_method_id),
+      client_auth_type: Map.get(state, :client_auth_type),
+      destination_credential_id: Map.get(state, :destination_credential_id),
       state: :pending,
       started_at: state.started_at
     }
+
+    persist? = Map.fetch!(state, :persist_observations)
+
+    attrs =
+      PersistencePolicy.wipe_request_attrs(attrs, persist_observations: persist?)
 
     case %ChannelRequest{} |> ChannelRequest.changeset(attrs) |> Repo.insert() do
       {:ok, channel_request} ->
@@ -105,15 +115,23 @@ defmodule Lightning.Channels.Handler do
       type: event_type,
       request_method: state.request_method,
       request_path: state.request_path,
+      request_query_string: Map.get(state, :query_string),
       request_headers: encode_headers(state.request_headers),
       request_body_preview: get_in(result, [:request_observation, :preview]),
       request_body_hash: get_in(result, [:request_observation, :hash]),
+      request_body_size: get_in(result, [:request_observation, :size]),
       response_status: result.status,
       response_headers: encode_headers(Map.get(state, :response_headers)),
       response_body_preview: get_in(result, [:response_observation, :preview]),
       response_body_hash: get_in(result, [:response_observation, :hash]),
-      latency_ms: div(result.duration_us, 1000),
-      ttfb_ms: state |> Map.get(:ttfb_us) |> maybe_div(1000),
+      response_body_size: get_in(result, [:response_observation, :size]),
+      latency_us: result.timing.total_us,
+      ttfb_us: Map.get(state, :ttfb_us),
+      request_send_us: get_in(result, [:timing, :send_us]),
+      response_duration_us: get_in(result, [:timing, :recv_us]),
+      queue_us: get_in(result, [:timing, :queue_us]),
+      connect_us: get_in(result, [:timing, :connect_us]),
+      reused_connection: get_in(result, [:timing, :reused_connection]),
       error_message: if(result.error, do: classify_error(result.error))
     }
 
@@ -121,6 +139,13 @@ defmodule Lightning.Channels.Handler do
       state: request_state,
       completed_at: DateTime.utc_now()
     }
+
+    persist? = Map.fetch!(state, :persist_observations)
+
+    event_attrs =
+      PersistencePolicy.wipe_event_attrs(event_attrs,
+        persist_observations: persist?
+      )
 
     with {:ok, _event} <-
            %ChannelEvent{}
@@ -175,12 +200,11 @@ defmodule Lightning.Channels.Handler do
 
   defp encode_headers(nil), do: nil
 
-  # Encodes as array-of-pairs rather than a map because HTTP allows
+  # Returns as array-of-pairs rather than a map because HTTP allows
   # duplicate header keys (e.g. multiple Set-Cookie headers).
+  # Stored as native jsonb in the database.
   defp encode_headers(headers) do
-    headers
-    |> Enum.map(fn {k, v} -> [k, v] end)
-    |> Jason.encode!()
+    Enum.map(headers, fn {k, v} -> [k, v] end)
   end
 
   defp classify_error({:timeout, :connect_timeout}), do: "connect_timeout"
@@ -192,7 +216,4 @@ defmodule Lightning.Channels.Handler do
        do: Atom.to_string(reason)
 
   defp classify_error(error), do: inspect(error)
-
-  defp maybe_div(nil, _), do: nil
-  defp maybe_div(us, divisor), do: div(us, divisor)
 end

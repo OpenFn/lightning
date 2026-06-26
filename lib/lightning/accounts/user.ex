@@ -53,6 +53,29 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
+  @doc """
+  Returns true when the user's email is on the @openfn.org domain.
+
+  Used to derive Langfuse tracking flags (metrics_opt_in / persona) when
+  making AI chat calls to Apollo.
+  """
+  @spec core_contributor?(t()) :: boolean()
+  def core_contributor?(%__MODULE__{email: email}) when is_binary(email) do
+    email |> String.downcase() |> String.ends_with?("@openfn.org")
+  end
+
+  def core_contributor?(_), do: false
+
+  @doc """
+  Returns the Langfuse persona string for a user.
+
+  `"core-contributor"` for @openfn.org users, `"user"` otherwise.
+  """
+  @spec langfuse_persona(t()) :: String.t()
+  def langfuse_persona(%__MODULE__{} = user) do
+    if core_contributor?(user), do: "core-contributor", else: "user"
+  end
+
   def changeset(user, attrs) do
     user
     |> cast(attrs, [
@@ -168,16 +191,6 @@ defmodule Lightning.Accounts.User do
     |> put_change(:role, :superuser)
   end
 
-  def validate_email_format(changeset) do
-    changeset
-    |> validate_required(:email, message: "can't be blank")
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
-    |> validate_length(:email, max: 160)
-    |> update_change(:email, &String.downcase/1)
-  end
-
   def validate_email_exists(changeset) do
     changeset
     |> validate_change(:email, fn :email, email ->
@@ -191,7 +204,7 @@ defmodule Lightning.Accounts.User do
 
   def validate_email(changeset) do
     changeset
-    |> validate_email_format()
+    |> Lightning.Validators.validate_email_format()
     |> validate_email_exists()
   end
 

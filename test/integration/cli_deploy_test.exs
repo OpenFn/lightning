@@ -515,15 +515,30 @@ defmodule Lightning.CliDeployTest do
         {hyphenize(collection.name), expected_collection_state(collection)}
       end)
 
+    channels =
+      Map.new(project.channels, fn channel ->
+        {hyphenize(channel.name), expected_channel_state(channel)}
+      end)
+
     Map.merge(state, %{
       workflows: workflows,
       project_credentials: credentials,
-      collections: collections
+      collections: collections,
+      channels: channels
     })
   end
 
   defp expected_collection_state(collection) do
     Map.take(collection, [:id, :name])
+  end
+
+  defp expected_channel_state(channel) do
+    channel
+    |> Map.take([:id, :name, :destination_url, :enabled])
+    |> Map.put(
+      :destination_credential_id,
+      channel.destination_auth_method.project_credential_id
+    )
   end
 
   defp expected_project_credential_state(project_credential) do

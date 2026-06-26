@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.3",
+      version: "2.16.8-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -80,6 +80,9 @@ defmodule Lightning.MixProject do
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
+      # Ecto pins ~> 2.0, but decimal 3.0 is API-compatible and patches
+      # GHSA-rhv4-8758-jx7v (unbounded exponent DoS in `Decimal.new`).
+      {:decimal, "~> 3.0", override: true},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
@@ -104,6 +107,7 @@ defmodule Lightning.MixProject do
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
@@ -116,7 +120,6 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:phoenix_live_view, "~> 1.0.17"},
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -132,7 +135,7 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.15.3"},
+      {:tesla, "~> 1.18.2"},
       {:tidewave, "~> 0.5.4", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
@@ -148,10 +151,11 @@ defmodule Lightning.MixProject do
       {:eqrcode, "~> 0.2"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
-      {:earmark, "~> 1.4"},
+      {:mdex, "~> 0.13"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      {:tls_certificate_check, "~> 1.32"},
       philter_dep(),
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
@@ -162,7 +166,7 @@ defmodule Lightning.MixProject do
     if path = System.get_env("PHILTER_PATH") do
       {:philter, path: path}
     else
-      {:philter, "~> 0.2.1"}
+      {:philter, "~> 0.3.0"}
     end
   end
 
@@ -217,7 +221,7 @@ defmodule Lightning.MixProject do
         "README.md": [title: "Lightning"],
         "RUNNINGLOCAL.md": [title: "Running Locally"],
         "DEPLOYMENT.md": [title: "Deployment"],
-        "benchmarking/README.md": [
+        "tooling/benchmarking/README.md": [
           title: "Benchmarking",
           filename: "benchmarking.md"
         ],

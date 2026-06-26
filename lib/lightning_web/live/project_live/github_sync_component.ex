@@ -344,9 +344,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       repos =
         installations
-        |> Task.async_stream(fn installation ->
-          {installation["id"], fetch_repos(installation["id"])}
-        end)
+        |> Task.async_stream(
+          fn installation ->
+            {installation["id"], fetch_repos(installation["id"])}
+          end,
+          timeout: 30_000,
+          on_timeout: :kill_task
+        )
         |> Stream.filter(&match?({:ok, _}, &1))
         |> Map.new(fn {:ok, val} -> val end)
 

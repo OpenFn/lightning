@@ -82,12 +82,14 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div class="space-y-8">
       <div class="space-y-3">
-        <div>
+        <%= if is_nil(@root_project.parent_id) do %>
           <.root_project_card
             root_project={@root_project}
             is_current={@current_project.id == @root_project.id}
           />
-        </div>
+        <% else %>
+          <.sandbox_card sandbox={@root_project} />
+        <% end %>
         <div>
           <%= if Enum.empty?(@active_sandboxes) and Enum.empty?(@scheduled_sandboxes) do %>
             <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
@@ -132,10 +134,13 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
   attr :root_project, Project, required: true
+  attr :descendants, :list, default: []
 
   def confirm_delete_modal(assigns) do
     assigns =
-      assign(assigns, :confirm_form, to_form(assigns.changeset, as: :confirm))
+      assigns
+      |> assign(:confirm_form, to_form(assigns.changeset, as: :confirm))
+      |> assign(:descendant_count, length(assigns.descendants))
 
     ~H"""
     <.modal
@@ -163,7 +168,13 @@ defmodule LightningWeb.SandboxLive.Components do
 
       <section class="space-y-4">
         <p class="text-gray-700">
-          Deleting a sandbox removes it (along with its descendants) from OpenFn.
+          Deleting a sandbox removes it from OpenFn.
+          <span :if={@descendant_count == 1}>
+            Its child sandbox will also be deleted.
+          </span>
+          <span :if={@descendant_count > 1}>
+            Its {@descendant_count} child sandboxes will also be deleted.
+          </span>
         </p>
 
         <p class="text-gray-700">
@@ -238,6 +249,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :diverged_workflows, :list, default: []
   attr :source_workflows, :list, required: true
   attr :selected_workflow_ids, :any, required: true
+  attr :credentials, :list, default: []
+  attr :selected_credential_ids, :any, default: %MapSet{}
 
   def merge_modal(assigns) do
     assigns =
@@ -249,6 +262,13 @@ defmodule LightningWeb.SandboxLive.Components do
         merge_select_all_state(
           assigns.selected_workflow_ids,
           assigns.source_workflows
+        )
+      )
+      |> assign(
+        :credentials_select_all_state,
+        merge_select_all_state(
+          assigns.selected_credential_ids,
+          assigns.credentials
         )
       )
 
@@ -381,6 +401,54 @@ defmodule LightningWeb.SandboxLive.Components do
             </ul>
           </div>
 
+          <div
+            :if={@credentials != []}
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @credentials_select_all_state == :empty && "cursor-default",
+              @credentials_select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-credentials"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-credentials"
+                disabled={@credentials_select_all_state == :empty}
+                checked={@credentials_select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @credentials_select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Credentials to add
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_credential_ids)} of {length(@credentials)} selected
+              </span>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={credential <- @credentials}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-credential"
+                phx-value-id={credential.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_credential_ids, credential.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {credential.name}
+                </span>
+              </li>
+            </ul>
+          </div>
+
           <Common.alert
             id="merge-deletion-warning"
             type="warning"
@@ -389,8 +457,7 @@ defmodule LightningWeb.SandboxLive.Components do
             <:message>
               It can be restored from the sandbox list for {grace_period_label()}, then permanently removed.
               <div :if={@descendant_count == 1} class="mt-2">
-                Child sandbox <strong>{List.first(@descendants).name}</strong>
-                will also be deleted.
+                Its child sandbox will also be deleted.
               </div>
               <div :if={@descendant_count > 1} class="mt-2">
                 Its {@descendant_count} child sandboxes will also be deleted.
@@ -497,6 +564,10 @@ defmodule LightningWeb.SandboxLive.Components do
                 {@root_project.name}
               </h3>
               <.badge
+                :if={
+                  has_environment?(@root_project) or
+                    not Project.sandbox?(@root_project)
+                }
                 id={"env-badge-#{@root_project.id}"}
                 env={
                   if has_environment?(@root_project),
@@ -532,7 +603,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0 opacity-60"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
@@ -576,7 +647,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
@@ -621,20 +692,35 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, :map, required: true
 
   defp sandbox_actions(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    disabled? =
+      not assigns.sandbox.can_cancel_deletion or
+        assigns.sandbox.restore_blocked_by_limit?
+
+    tooltip =
+      cond do
+        not assigns.sandbox.can_cancel_deletion ->
+          "You are not authorized to cancel deletion of this sandbox"
+
+        assigns.sandbox.restore_blocked_by_limit? ->
+          assigns.sandbox.restore_blocked_message
+
+        true ->
+          false
+      end
+
+    assigns = assign(assigns, disabled?: disabled?, tooltip: tooltip)
+
     ~H"""
     <div id={"cancel-deletion-sandbox-#{@sandbox.id}"} class="flex-shrink-0 ml-4">
       <.button
         theme="secondary"
         type="button"
-        disabled={not @sandbox.can_cancel_deletion}
-        tooltip={
-          not @sandbox.can_cancel_deletion &&
-            "You are not authorized to cancel deletion of this sandbox"
-        }
+        disabled={@disabled?}
+        tooltip={@tooltip}
         phx-click={
-          if @sandbox.can_cancel_deletion,
-            do: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id}),
-            else: %JS{}
+          if @disabled?,
+            do: %JS{},
+            else: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id})
         }
       >
         Restore
@@ -671,16 +757,6 @@ defmodule LightningWeb.SandboxLive.Components do
             do: "hover:bg-slate-100",
             else: "cursor-not-allowed"
         }
-      />
-
-      <.action_button
-        id={"duplicate-sandbox-#{@sandbox.id}"}
-        icon_type="heroicon"
-        icon_name="hero-clipboard-document"
-        label="Duplicate (coming soon)"
-        disabled={true}
-        icon_class="text-slate-300"
-        button_class="cursor-not-allowed"
       />
 
       <.action_button

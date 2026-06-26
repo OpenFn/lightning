@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   use Mix.Task
 
   @default_path "priv/openfn"
-  @cli_version "1.35.2"
+  @cli_version "1.38.1"
 
   def run(args) do
     case Rambo.run("/usr/bin/env", ~w(which node)) do

@@ -28,7 +28,11 @@ export type StateWebhookTrigger = {
   id: string;
   enabled: boolean;
   type: 'webhook';
-  webhook_reply: 'before_start' | 'after_completion' | 'custom' | null;
+  webhook_reply: 'before_start' | 'after_completion' | null | undefined;
+  webhook_response_config?: {
+    success_code?: number | null;
+    error_code?: number | null;
+  } | null;
 };
 
 /**
@@ -110,11 +114,17 @@ export type SpecCronTrigger = {
   pos: Position | undefined;
 };
 
+export type WebhookResponseConfig = {
+  success_code?: number | null;
+  error_code?: number | null;
+};
+
 export type SpecWebhookTrigger = {
   id?: string;
   type: 'webhook';
   enabled: boolean;
   webhook_reply: string | null;
+  webhook_response_config?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 

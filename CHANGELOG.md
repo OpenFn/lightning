@@ -22,6 +22,11 @@ and this project adheres to
   workflow format. Canonical V1 and V2 fixtures live under
   `test/fixtures/portability/`, with CLI-deploy integration coverage.
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
+  multiple local adaptor repos in precedence order (earlier paths win on name
+  collisions, and shadowed entries are logged). Lets a private repo override or
+  extend the canonical adaptors in local mode.
+  [#4714](https://github.com/OpenFn/lightning/pull/4714)
 
 ### Changed
 
@@ -30,6 +35,12 @@ and this project adheres to
   frontend by `assets/js/yaml/v2.ts` (driving the inspector code view, template
   publish panel, and YAML import editor).
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
+  [#4878](https://github.com/OpenFn/lightning/issues/4878)
+- Removed the unused dev-only `phoenix_storybook` dependency, clearing its
+  advisories from the `mix deps.audit` ignore list.
+  [#4846](https://github.com/OpenFn/lightning/issues/4846)
+- Bump worker to 1.27.0
 
 ### Fixed
 
@@ -39,10 +50,306 @@ and this project adheres to
   `(root_project_id, repo, branch)`, closing a check-then-insert race that could
   let two concurrent inserts both pass an in-memory ancestor check at READ
   COMMITTED. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
+### Changed
+
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
+### Fixed
+
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
+
+## [2.16.7] - 2026-06-04
+
+### Changed
+
+- Stop reporting expected credential-resolution failures (OAuth re-auth needed,
+  misconfigured project environment, transient provider errors) to Sentry. These
+  are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
+  instead of `error`; only a genuinely missing project still logs at `error`.
+  [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
+### Fixed
+
+- Fix icon vertical alignment in sandbox alert banners
+  [#4730](https://github.com/OpenFn/lightning/issues/4730)
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
+- Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
+  search indexing off the insert path. The full-text search vector is now
+  backfilled by a background worker rather than computed synchronously on every
+  insert, so log search is eventually-consistent (typically within a minute).
+  [#4425](https://github.com/OpenFn/lightning/issues/4425)
+- Dataclip inserts no longer roll back when building the full-text search vector
+  is slow. The `jsonb_to_tsvector` work that ran in an `AFTER INSERT` trigger
+  could hold the connection past the timeout and roll back the insert, losing
+  the whole run. The search vector is now built off the insert path by a
+  background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
+  `search_indexing` queue with the log-lines worker), making dataclip search
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
+- Fix `purge_deleted` Oban job crashing when a soft-deleted project has
+  associated OAuth clients. The `project_oauth_clients` join rows are now
+  cleaned up alongside the other project-scoped deletes in
+  `ProjectHook.handle_delete_project/1`.
+  [#4807](https://github.com/OpenFn/lightning/pull/4807)
+- Bump Tesla from 1.15.3 to 1.18.2 to pick up the streaming-error fix
+  ([elixir-tesla/tesla#819](https://github.com/elixir-tesla/tesla/pull/819)).
+  The older adapter raised `CaseClauseError` when Finch reported a transport
+  error mid-stream, taking down the AI assistant worker; 1.16+ handles the
+  3-tuple error shape gracefully.
+  [#4781](https://github.com/OpenFn/lightning/issues/4781)
+- Slow GitHub responses cause repo list to fail to load on project settings
+  [#4810](https://github.com/OpenFn/lightning/issues/4810)
+- Workflow channel raises an exception when fetching trigger auth methods for an
+  unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
+## [2.16.6] - 2026-05-27
+
+### Fixed
+
+- Run channel crashes when wiping `global` dataclip
+  [#4795](https://github.com/OpenFn/lightning/issues/4795)
+
+### Security
+
+- Bumped `plug` (1.19.2), `cowboy` (2.15.0), `cowlib` (2.16.1), `postgrex`
+  (0.22.2) and overrode `decimal` to 3.1.0 to clear seven advisories surfaced by
+  `mix deps.audit`: multipart-header DoS in plug and cowboy
+  ([GHSA-468c-vq7p-gh64][a1], [GHSA-jfc2-q6qh-g5x8][a2]), cowlib
+  resource-consumption, decompression-bomb and CRLF-injection issues
+  ([GHSA-32p9-57cr-4x65][a3], [GHSA-84f2-rp86-235p][a4],
+  [GHSA-hv23-4qp7-8c8r][a5]), Postgrex channel-name SQL injection
+  ([GHSA-r73h-97w8-m54h][a6]) and a `decimal` unbounded-exponent DoS
+  ([GHSA-rhv4-8758-jx7v][a7]). One low-severity unpatched cowlib cookie issue
+  ([GHSA-g2wm-735q-3f56][a8]) remains; we don't construct cookies server-side
+  from untrusted input, so it isn't reachable here.
+  [#4789](https://github.com/OpenFn/lightning/pull/4789)
+
+[a1]: https://github.com/advisories/GHSA-468c-vq7p-gh64
+[a2]: https://github.com/advisories/GHSA-jfc2-q6qh-g5x8
+[a3]: https://github.com/advisories/GHSA-32p9-57cr-4x65
+[a4]: https://github.com/advisories/GHSA-84f2-rp86-235p
+[a5]: https://github.com/advisories/GHSA-hv23-4qp7-8c8r
+[a6]: https://github.com/advisories/GHSA-r73h-97w8-m54h
+[a7]: https://github.com/advisories/GHSA-rhv4-8758-jx7v
+[a8]: https://github.com/advisories/GHSA-g2wm-735q-3f56
+
+## [2.16.5] - 2026-05-21
+
+### Fixed
+
+- Restore webhook responses to include `data` and `meta` fields, with `data`
+  containing the actual response body and `meta` containing run metadata.
+  [#4785](https://github.com/OpenFn/lightning/issues/4785)
+
+## [2.16.4] - 2026-05-20
+
+## [2.16.4-pre2] - 2026-05-20
+
+### Fixed
+
+- Drop webhook response body when status is 204 or 304
+  [#4778](https://github.com/OpenFn/lightning/issues/4778)
+
+## [2.16.4-pre1] - 2026-05-19
+
+### Fixed
+
+- The breadcrumb project picker now shows the full ancestor path on the project
+  settings page (previously it collapsed to the sandbox's own name).
+  [#4769](https://github.com/OpenFn/lightning/issues/4769)
+- Sandboxes no longer appear in the sandboxes list, the project picker, or via
+  the sandbox URL unless the user has access
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- The Merge button on a sandbox now requires admin or owner on the source
+  sandbox (or admin/owner on the root project)
+  [#4762](https://github.com/OpenFn/lightning/issues/4762)
+- Sandbox policies no longer treat `User.role: :superuser` as a project-access
+  bypass [#4762](https://github.com/OpenFn/lightning/issues/4762)
+
+## [2.16.4-pre] - 2026-05-18
+
+### Added
+
+- Apollo AI chat requests now carry optional Langfuse tracking fields
+  (`metrics_opt_in` + `meta.{session_id, user}`); opt-in is automatic for
+  `@openfn.org` users. [#4739](https://github.com/OpenFn/lightning/pull/4739)
+- Allow users to respond back with custom webhook responses via the
+  `webhookResponse` field in the job state.
+  [#3102](https://github.com/OpenFn/lightning/issues/3102)
+- New `usage_caps_input` view-extension slot on the project settings page
+  (`/projects/:project_id/settings`). Same pattern as the existing
+  `concurrency_input` slot: downstream apps register a component via
+  `metadata: %{usage_caps_input: SomeComponent}` on the settings route and
+  Lightning renders it in the settings view. No-op for OSS Lightning by default.
+  [#4725](https://github.com/OpenFn/lightning/issues/4725)
+- Sandbox nesting now caps at 5 levels deep (override with the
+  `MAX_SANDBOX_NESTING_DEPTH` env var). The **Create Sandbox** button is
+  disabled at the cap, and `Sandboxes.provision/3` returns
+  `{:error, :nesting_too_deep}` if a scripted caller tries to bypass it.
+- Channel request detail page, reached by clicking a row in the channel history
+  table. Shows a client / destination / timing summary, a nested timing
+  visualization with per-phase breakdown and TTFB marker, foldable request and
+  response headers and body, and humanized transport and credential errors.
+  Captures richer request metadata (query string, body sizes, per-direction
+  durations, Finch phase timings) and attributes both the matched client webhook
+  auth method and the destination project credential on every proxied request.
+  Feature-gated behind experimental features.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
+- Support channels in the provisioner API
+  [#4522](https://github.com/OpenFn/lightning/issues/4522)
+- Do not persist channel request/response data when project has zero-persistence
+  enabled [#4622](https://github.com/OpenFn/lightning/issues/4622)
+- Prometheus metrics for the channels HTTP reverse-proxy via a new PromEx
+  plugin. Emits `lightning_channel_proxy_inbound_total{outcome}` (counter on
+  every `/channels/*` hit, tagged with
+  `:resolved | :invalid_uuid | :unknown_channel`), and
+  `lightning_channel_proxy_requests_started_total`
+  - `lightning_channel_proxy_request_duration_milliseconds` (tagged with
+    `project_id`) on resolved requests. A self-contained Prometheus + Grafana
+    stack and example dashboard for local development ships in
+    `tooling/observability/`.
+    [#4508](https://github.com/OpenFn/lightning/issues/4508)
+
+### Changed
+
+- `Lightning.Projects.Sandboxes.provision/3` no longer accepts `:collaborators`.
+  The sandbox's `project_users` are now derived from the parent project: every
+  parent user is copied with their role preserved, the parent owner is demoted
+  to `:admin`, and the actor is set as the sandbox owner. To add a user who is
+  not already on the parent, call `Lightning.Projects.add_project_users/3` after
+  `provision/3` returns.
+  [#4744](https://github.com/OpenFn/lightning/issues/4744)
+- `Lightning.Projects.delete_project_user!/1` now raises `ArgumentError` when
+  called with a project's `:owner` row. The settings UI already prevented this;
+  the guard closes the gap for Mix tasks, IEx, and scripted callers that would
+  otherwise have left a project ownerless.
 - `./bin/bootstrap` on aarch64 Linux now requires Rust upfront and builds the
   Rambo native binary via `mix compile.rambo` post-compile, matching the darwin
   path. x86_64 Linux is unchanged.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- Include `webhook_reply` and `cron_cursor_job_id` in the workflow version hash
+  so that changes to these trigger fields are properly detected by CLI deploy
+  and sandbox merge [#4596](https://github.com/OpenFn/lightning/issues/4596)
+- Bump `@openfn/ws-worker` from
+  [`1.24.2` to `1.25.0`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.25.0/packages/ws-worker/CHANGELOG.md#1250)
+- Use `tls_certificate_check` for SMTP TLS options, adding TLS 1.2 support. OTP
+  trusted CA certificates will now be used (usualy the OS CA store), failing
+  which the library's bundled CA store will be used; use
+  `tls_certificate_check`'s `override_trusted_authorities/1` to customise
+  [#4755](https://github.com/OpenFn/lightning/issues/4755)
+- Removed `Duplicate` button from Sandbox UI
+  [#4767](https://github.com/OpenFn/lightning/pull/4767)
+
+### Fixed
+
+- Drop the PromEx `oban_queue_poll_metrics` group, which crashes on boot against
+  our named `Lightning.Oban` supervisor (waiting on upstream
+  [PromEx #278](https://github.com/akoutmos/prom_ex/pull/278)).
+- Restoring a sandbox now respects the workspace's active sandbox limit.
+  `Sandboxes.cancel_scheduled_sandbox_deletion/2` runs the same usage-limit
+  action as new sandbox creation, and the Restore button in the sandbox list is
+  disabled (with the limiter's tooltip) when the active sandbox count is already
+  at the limit.
+- `Cmd/Ctrl+Enter` now runs the workflow directly; `Cmd/Ctrl+Shift+Enter` opens
+  "run with custom input". When a retryable run is loaded, the primary action
+  switches to retry. [#4736](https://github.com/OpenFn/lightning/issues/4736)
+- Copy token button on the Personal Access Tokens page now shows a 'Copied!'
+  tooltip on click and no longer causes the icon to flicker
+  [#2463](https://github.com/OpenFn/lightning/issues/2463)
+- ExportWorker now marks the ProjectFile as `:failed` when the export process
+  errors, preventing records from being stuck permanently as `:in_progress` with
+  a nil path. The data retention cron also handles orphaned files with nil paths
+  gracefully instead of crashing.
+  [#4454](https://github.com/OpenFn/lightning/issues/4454)
 - `mix lightning.install_runtime` no longer reports success when Rambo's binary
   fails to start; both `Rambo.run/2` calls now raise with the underlying reason.
   [#4735](https://github.com/OpenFn/lightning/pull/4735)
@@ -50,6 +357,28 @@ and this project adheres to
   existing, restoring the intended missing-cache fallback that Cachex 4.x broke
   by raising `ArgumentError` from `:ets.lookup` instead of returning
   `{:error, _}`. [#4735](https://github.com/OpenFn/lightning/pull/4735)
+- AI Assistant: fix an issue where inline code snippets render with extra
+  backticks [#4703](https://github.com/OpenFn/lightning/issues/4703)
+- The dataclip viewer now renders "Dataclip not found" when the backend returns
+  404, instead of the generic "Failed to load content" message used for all
+  error states. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `GET /projects/:project_id/jobs/:job_id/dataclips` no longer returns a 500
+  when the `limit` query param is missing, empty, non-numeric, or non-integer.
+  It now returns 400 with a clear error and defaults to 10 when the param is
+  absent. [#4746](https://github.com/OpenFn/lightning/pull/4746)
+- `mix lightning.install_schemas` now tolerates transient jsdelivr CDN timeouts
+  by retrying each fetch with escalating recv_timeouts, logs and skips packages
+  that genuinely can't be fetched (with the underlying reason), and reports a
+  tally of installed vs. skipped packages instead of aborting the whole task on
+  a single failure. [#4750](https://github.com/OpenFn/lightning/issues/4750)
+
+### Security
+
+- `PATCH /projects/:project_id/dataclips/:dataclip_id` now rejects requests
+  where the URL `project_id` and the dataclip's project disagree. Previously, a
+  user with edit access on project A and view access to a dataclip in project B
+  could rename the dataclip via project A's URL scope.
+  [#4746](https://github.com/OpenFn/lightning/pull/4746)
 
 ## [2.16.3] - 2026-05-07
 
@@ -152,6 +481,11 @@ and this project adheres to
   [#4510](https://github.com/OpenFn/lightning/issues/4510)
 - Worker plan payload now includes `project_id` so workers can scope callbacks
   (e.g. the collections API) to the project that owns the run.
+- bumped local worker to 1.24.0
+- Channel timing fields are now stored in microseconds (previously milliseconds)
+  and request and response headers are stored as native jsonb on
+  `channel_events`. Handler adapted to Philter 0.3.0 timing map.
+  [#4541](https://github.com/OpenFn/lightning/issues/4541)
 - Bumped local worker to 1.24.0
 - Updated the Merge Sandbox UI to be cleaner, clearer, and only include changed
   workflows by default [#4651](https://github.com/OpenFn/lightning/issues/4651)

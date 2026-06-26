@@ -55,6 +55,7 @@ defmodule Lightning.Credentials.Resolver do
           | :project_not_found
           | :environment_mismatch
           | Credentials.oauth_refresh_error()
+          | term()
 
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 
@@ -95,6 +96,7 @@ defmodule Lightning.Credentials.Resolver do
         {:ok, ResolvedCredential.from(credential, body)}
 
       {:error, reason} ->
+        log_resolution_error(reason)
         {:error, {reason, credential}}
     end
   end
@@ -105,14 +107,11 @@ defmodule Lightning.Credentials.Resolver do
         {:ok, ResolvedCredential.from(credential, body)}
 
       {:error, :environment_not_found} ->
-        Logger.error(
-          "Credential environment does not match project environment",
-          project_env: project_env
-        )
-
+        log_resolution_error(:environment_mismatch, project_env: project_env)
         {:error, {:environment_mismatch, credential}}
 
       {:error, reason} ->
+        log_resolution_error(reason)
         {:error, {reason, credential}}
     end
   end
@@ -147,11 +146,11 @@ defmodule Lightning.Credentials.Resolver do
         {:ok, env}
 
       %Project{env: nil} ->
-        Logger.error("Project has no environment configured")
+        log_resolution_error(:environment_not_configured)
         {:error, :environment_not_configured}
 
       nil ->
-        Logger.error("Project not found for run")
+        log_resolution_error(:project_not_found)
         {:error, :project_not_found}
     end
   end
@@ -216,4 +215,27 @@ defmodule Lightning.Credentials.Resolver do
         nil
     end
   end
+
+  defp log_resolution_error(reason, metadata \\ [])
+
+  defp log_resolution_error(:project_not_found, meta),
+    do: Logger.error("Project not found for run", meta)
+
+  defp log_resolution_error(:environment_not_configured, meta),
+    do: Logger.warning("Project has no environment configured", meta)
+
+  defp log_resolution_error(:environment_mismatch, meta),
+    do:
+      Logger.warning(
+        "Credential environment does not match project environment",
+        meta
+      )
+
+  defp log_resolution_error(:reauthorization_required, meta),
+    do: Logger.info("OAuth refresh token has expired", meta)
+
+  defp log_resolution_error(:temporary_failure, meta),
+    do: Logger.info("Could not reach the OAuth provider", meta)
+
+  defp log_resolution_error(_reason, _meta), do: :ok
 end

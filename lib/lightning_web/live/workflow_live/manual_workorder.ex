@@ -113,9 +113,9 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         id={"selected-dataclip-#{@selected_dataclip.id}"}
       />
     </div>
-    <LightningWeb.Components.Viewers.wiped_dataclip_viewer
+    <LightningWeb.Components.Viewers.wiped_data_viewer
       :if={@selected_dataclip && @selected_dataclip.wiped_at}
-      input_or_output={:input}
+      data_label={:input}
       project_id={@project.id}
       admin_contacts={@admin_contacts}
       can_edit_data_retention={@can_edit_data_retention}
@@ -140,8 +140,8 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   defp missing_dataclip_viewer(assigns) do
     ~H"""
     <%= if dataclip_wiped?(@step, @selected_dataclip) do %>
-      <LightningWeb.Components.Viewers.wiped_dataclip_viewer
-        input_or_output={:input}
+      <LightningWeb.Components.Viewers.wiped_data_viewer
+        data_label={:input}
         project_id={@project.id}
         admin_contacts={@admin_contacts}
         can_edit_data_retention={@can_edit_data_retention}
@@ -159,7 +159,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             <span>to select/build an input.</span>
           </div>
         </:footer>
-      </LightningWeb.Components.Viewers.wiped_dataclip_viewer>
+      </LightningWeb.Components.Viewers.wiped_data_viewer>
     <% else %>
       <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
         <div class="mb-4">

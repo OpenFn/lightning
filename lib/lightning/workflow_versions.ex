@@ -21,6 +21,7 @@ defmodule Lightning.WorkflowVersions do
   alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Validators.Hex
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
 
@@ -246,7 +247,14 @@ defmodule Lightning.WorkflowVersions do
       :body
     ]
 
-    trigger_keys = [:type, :cron_expression, :enabled]
+    trigger_keys = [
+      :type,
+      :cron_expression,
+      :enabled,
+      :webhook_reply,
+      :webhook_response_config,
+      :cron_cursor_job_id
+    ]
 
     edge_keys = [
       :name,
@@ -317,6 +325,10 @@ defmodule Lightning.WorkflowVersions do
     :crypto.hash(:sha256, joined_data)
     |> Base.encode16(case: :lower)
     |> binary_part(0, 12)
+  end
+
+  defp serialize_value(%WebhookResponseConfig{} = val) do
+    val |> Map.take([:success_code, :error_code]) |> serialize_value()
   end
 
   defp serialize_value(val) when is_map(val) do

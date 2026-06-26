@@ -1,5 +1,7 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
+  use Lightning.Factories.ChannelFactories
+
   alias Lightning.Workflows.Snapshot
 
   def webhook_auth_method_factory do
@@ -371,6 +373,10 @@ defmodule Lightning.Factories do
       submitted_at: now,
       report_date: DateTime.to_date(now)
     }
+  end
+
+  def webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
   def triggers_kafka_configuration_factory do
@@ -885,48 +891,5 @@ defmodule Lightning.Factories do
 
   def sandbox_for(parent, attrs \\ %{}) do
     build(:project, Map.merge(%{parent: parent}, attrs))
-  end
-
-  def channel_factory do
-    %Lightning.Channels.Channel{
-      project: build(:project),
-      name: sequence(:channel_name, &"channel-#{&1}"),
-      destination_url:
-        sequence(
-          :channel_destination_url,
-          &"https://example.com/destination/#{&1}"
-        ),
-      enabled: true
-    }
-  end
-
-  def channel_auth_method_factory do
-    %Lightning.Channels.ChannelAuthMethod{
-      role: :client,
-      webhook_auth_method: build(:webhook_auth_method)
-    }
-  end
-
-  def channel_snapshot_factory do
-    %Lightning.Channels.ChannelSnapshot{
-      lock_version: 1,
-      name: sequence(:channel_snapshot_name, &"channel-#{&1}"),
-      destination_url: "https://example.com/destination",
-      enabled: true
-    }
-  end
-
-  def channel_request_factory do
-    %Lightning.Channels.ChannelRequest{
-      request_id: sequence(:channel_request_id, &"req-#{&1}"),
-      state: :pending,
-      started_at: DateTime.utc_now()
-    }
-  end
-
-  def channel_event_factory do
-    %Lightning.Channels.ChannelEvent{
-      type: :destination_response
-    }
   end
 end

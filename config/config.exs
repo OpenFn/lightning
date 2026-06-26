@@ -102,7 +102,6 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/storybook.js
          js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
@@ -145,13 +144,6 @@ config :tailwind,
       --output=priv/static/assets/app.css
     ),
     cd: Path.expand("..", __DIR__)
-  ],
-  storybook: [
-    args: ~w(
-      --input=assets/css/storybook.css
-      --output=priv/static/assets/storybook.css
-    ),
-    cd: Path.expand("..", __DIR__)
   ]
 
 # Configures Elixir's Logger
@@ -186,6 +178,10 @@ config :philter, finch_name: Lightning.Finch
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
 config :lightning, :claim_work_mem, nil
+
+config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10
+
+config :lightning, :dataclip_search_indexing, batch_size: 250, max_batches: 10
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 

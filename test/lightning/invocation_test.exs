@@ -1599,6 +1599,9 @@ defmodule Lightning.InvocationTest do
         timestamp: Timex.now()
       )
 
+      flush_log_search_index()
+      flush_dataclip_search_index()
+
       %{
         project: project,
         dataclip: dataclip,
@@ -1695,6 +1698,18 @@ defmodule Lightning.InvocationTest do
 
     test "search on logs does NOT return 'stem' matches... only exact matches",
          %{project: project} do
+      # Positive control: the log vector is populated, so an exact token matches.
+      # Without this, a regression that leaves search_vector NULL would make the
+      # negative assertions below pass vacuously.
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "playing",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+
       assert [] =
                Invocation.search_workorders(
                  project,
@@ -1789,6 +1804,9 @@ defmodule Lightning.InvocationTest do
          %{
            project: project
          } do
+      # Positive control: the dataclip body vector is populated, so a known body
+      # token matches. Without this, a regression that leaves search_vector NULL
+      # would make the negative assertion below pass vacuously.
       assert [_found] =
                Invocation.search_workorders(
                  project,
@@ -1942,6 +1960,9 @@ defmodule Lightning.InvocationTest do
         message: "Processing findme with log_only_value",
         timestamp: Timex.now()
       )
+
+      flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
