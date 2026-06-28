@@ -1,0 +1,74 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Introduction" />
+
+# Lightning UI
+
+A living catalogue of the visual building blocks used across Lightning — the
+React components that ship in `assets/js/`, plus React **clones** of the
+server-rendered (Phoenix LiveView / HEEx) components so that _every_ visual
+element of the app is represented in one place.
+
+## How it's wired
+
+- **Framework:** Storybook 10 + `@storybook/react-vite`.
+- **Styling:** the real application stylesheet (`assets/css/app.css`) is loaded
+  in `.storybook/preview.ts`, and Tailwind v4 runs through `@tailwindcss/vite`
+  using the app's own `tailwind.config.ts`. Design tokens, custom utilities,
+  heroicon/lucide masks and fonts therefore match production exactly.
+- The only thing stripped out is the `petal_components` CSS import, which lives
+  under `deps/` and needs the Elixir toolchain. See `.storybook/main.ts`.
+
+## How stories are organised
+
+| Section            | What lives there                                                        |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Foundations**    | Colors, typography and icons — the raw design tokens.                   |
+| **Components**     | Stories for real React components imported from `assets/js/`.           |
+| **LiveView Clones**| React re-creations of HEEx/LiveView components (see below).             |
+
+## The "LiveView Clone" convention
+
+A lot of Lightning's UI is rendered on the server with HEEx and never existed as
+a React component. To represent those visual elements here without a running
+Phoenix server, we re-create them as small, presentational React components and
+title the story with a **`(LiveView Clone)`** suffix, e.g.
+_History Table (LiveView Clone)_.
+
+Clones live in `assets/js/storybook/liveview/`. Each one:
+
+- mirrors the markup and Tailwind classes of its Elixir source as closely as
+  possible (so it looks identical), but
+- is **purely presentational** — no `phx-*` bindings, LiveView events or data
+  loading — and
+- documents the Elixir source it was cloned from at the top of the file.
+
+> ⚠️ Clones are visual references, not the source of truth. If you change the
+> HEEx component, update its clone here too. They are intentionally _not_ wired
+> into the app.
+
+## Adding a story
+
+Create a `*.stories.tsx` file anywhere under `assets/js/`:
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/react-vite';
+
+import { MyComponent } from '#/path/to/MyComponent';
+
+const meta = {
+  title: 'Components/My Component',
+  component: MyComponent,
+} satisfies Meta<typeof MyComponent>;
+
+export default meta;
+
+export const Default: StoryObj<typeof meta> = {
+  args: {
+    /* ... */
+  },
+};
+```
+
+Run it locally with `npm run storybook` (from `assets/`), or build the static
+site with `npm run build-storybook`.

@@ -1,7 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { Config } from 'tailwindcss';
+
+// Directory of this config file. The standalone Tailwind CLI (used for the app
+// build) evaluates this file as CommonJS where `__dirname` is defined, while
+// `@tailwindcss/vite` (used by Storybook) evaluates it as an ES module where it
+// is not. Resolve it in a way that works for both without changing the CLI's
+// existing behaviour.
+const configDir =
+  typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
 
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
@@ -82,7 +93,7 @@ export default {
     // See your `CoreComponents.icon/1` for more information.
     //
     plugin(function ({ matchComponents, theme }) {
-      let iconsDir = path.join(__dirname, './vendor/heroicons/optimized');
+      let iconsDir = path.join(configDir, './vendor/heroicons/optimized');
       let values = {};
       let icons = [
         ['', '/24/outline'],
@@ -130,7 +141,7 @@ export default {
     //
     plugin(function ({ matchComponents, theme }) {
       let iconsDir = path.join(
-        __dirname,
+        configDir,
         './vendor/lucide/optimized/24/outline'
       );
       let values: Record<string, { name: string; fullPath: string }> = {};
