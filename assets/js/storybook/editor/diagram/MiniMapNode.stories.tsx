@@ -57,7 +57,7 @@ function MiniMapStage({
 }
 
 const meta = {
-  title: 'Components/Workflow Diagram/MiniMapNode',
+  title: 'Editor/Diagram/MiniMapNode',
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

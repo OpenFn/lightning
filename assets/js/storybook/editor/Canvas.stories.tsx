@@ -209,7 +209,7 @@ function EditorHeader() {
 }
 
 const meta = {
-  title: 'Pages/Workflow Editor',
+  title: 'Editor/Canvas',
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

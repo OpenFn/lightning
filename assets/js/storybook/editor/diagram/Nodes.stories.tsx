@@ -69,7 +69,7 @@ const triggerNode = (
 ): FlowNode => ({ id, type: 'trigger', position, data });
 
 const meta = {
-  title: 'Components/Workflow Diagram/Nodes',
+  title: 'Editor/Diagram/Nodes',
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

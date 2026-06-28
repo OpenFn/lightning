@@ -81,7 +81,7 @@ function IconGallery() {
 }
 
 const meta = {
-  title: 'Components/Workflow Diagram/Icons',
+  title: 'Editor/Diagram/Icons',
   component: IconGallery,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof IconGallery>;

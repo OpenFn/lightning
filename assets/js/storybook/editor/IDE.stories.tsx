@@ -1,18 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 
+import { Button } from '#/collaborative-editor/components/Button';
+import { Tabs } from '#/collaborative-editor/components/Tabs';
 import { cn } from '#/utils/cn';
 
 /**
  * Composite view: the full-screen job IDE
- * (collaborative-editor/components/ide/FullScreenIDE.tsx). Re-creates the IDE
- * layout — the heading bar (job selector, adaptor display, Docs/Metadata
- * toggles, History + Run, close), and the three resizable regions (Input, the
- * code editor, and the run/output viewer).
+ * (collaborative-editor/components/ide/FullScreenIDE.tsx). The heading-bar
+ * buttons use the real `Button` component and the run/output panel uses the
+ * real `Tabs` component.
  *
- * Presentational only: the center editor is a static stand-in for the
- * CollaborativeMonaco editor (no Monaco runtime), and the panels show mock
- * data.
+ * The center editor (the real CollaborativeMonaco — Monaco bound to the Y.Doc)
+ * and the Input / run-output panel bodies (ManualRunPanel / RunViewerPanel,
+ * bound to the editor stores) can't run in Storybook, so they are reproduced
+ * from their source to show the layout.
  */
 type Token = { t: string; c?: string };
 
@@ -54,7 +56,7 @@ const LOG_LINES: { src: string; srcClass: string; msg: string }[] = [
   { src: 'RUN', srcClass: 'text-sky-400', msg: 'Run completed in 1.24s' },
 ];
 
-function HeaderButton({
+function HeaderToggle({
   active,
   icon,
   children,
@@ -121,9 +123,7 @@ function InputPanel() {
           <span className="rounded-full bg-green-500 px-2 py-1 font-mono text-xs text-green-900">
             http_request
           </span>
-          <span className="font-mono text-xs text-gray-500">
-            d4c3b2a1-…
-          </span>
+          <span className="font-mono text-xs text-gray-500">d4c3b2a1-…</span>
         </div>
         <pre className="overflow-auto rounded-md bg-slate-50 p-3 font-mono text-xs text-slate-700 ring-1 ring-gray-200">
           {`{
@@ -141,33 +141,25 @@ function InputPanel() {
   );
 }
 
+type OutputTab = 'input' | 'output' | 'log';
+
+const OUTPUT_TABS: { value: OutputTab; label: string }[] = [
+  { value: 'input', label: 'Input' },
+  { value: 'output', label: 'Output' },
+  { value: 'log', label: 'Log' },
+];
+
 function OutputPanel() {
-  const tabs = ['Input', 'Output', 'Log'];
-  const [active, setActive] = useState('Log');
+  const [tab, setTab] = useState<OutputTab>('log');
   return (
     <div className="flex h-full flex-col border-l border-gray-200 bg-white">
-      <div className="flex-none border-b border-gray-200 px-1" role="tablist">
-        <div className="flex">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={tab === active}
-              onClick={() => {
-                setActive(tab);
-              }}
-              className={cn(
-                'border-b-2 px-3 py-2 text-sm font-medium',
-                tab === active
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              )}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div className="flex-none px-2 pt-1">
+        <Tabs<OutputTab>
+          value={tab}
+          onChange={setTab}
+          options={OUTPUT_TABS}
+          variant="underline"
+        />
       </div>
       <div className="flex-1 overflow-auto bg-slate-800 p-3 font-mono text-xs leading-5">
         {LOG_LINES.map((line, i) => (
@@ -182,7 +174,7 @@ function OutputPanel() {
 }
 
 const meta = {
-  title: 'Pages/Workflow IDE',
+  title: 'Editor/IDE',
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 
@@ -217,35 +209,27 @@ export const FullScreen: Story = {
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <HeaderButton active icon="hero-document-text">
+              <HeaderToggle active icon="hero-document-text">
                 Docs
-              </HeaderButton>
-              <HeaderButton icon="hero-sparkles">Metadata</HeaderButton>
+              </HeaderToggle>
+              <HeaderToggle icon="hero-sparkles">Metadata</HeaderToggle>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500"
-            >
-              <span className="hero-clock h-4 w-4" />
-              History
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500"
-            >
-              <span className="hero-play-solid h-4 w-4" />
-              Run
-              <span className="hero-chevron-down-mini ml-0.5 h-4 w-4 text-white/80" />
-            </button>
-            <button
-              type="button"
-              aria-label="Close IDE"
-              className="rounded p-1 transition-colors hover:bg-gray-100"
-            >
-              <span className="hero-x-mark h-5 w-5 text-gray-500" />
-            </button>
+            <Button variant="primary">
+              <span className="flex items-center gap-1.5">
+                <span className="hero-clock h-4 w-4" />
+                History
+              </span>
+            </Button>
+            <Button variant="primary">
+              <span className="flex items-center gap-1.5">
+                <span className="hero-play-solid h-4 w-4" />
+                Run
+                <span className="hero-chevron-down-mini h-4 w-4 text-white/80" />
+              </span>
+            </Button>
+            <Button variant="nakedClose" aria-label="Close IDE" />
           </div>
         </div>
       </div>

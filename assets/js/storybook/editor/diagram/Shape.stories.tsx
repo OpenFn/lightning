@@ -32,7 +32,7 @@ function ShapeCanvas({ children }: { children: React.ReactNode }) {
 }
 
 const meta = {
-  title: 'Components/Workflow Diagram/Shape',
+  title: 'Editor/Diagram/Shape',
   component: Shape,
   parameters: { layout: 'centered' },
   args: {

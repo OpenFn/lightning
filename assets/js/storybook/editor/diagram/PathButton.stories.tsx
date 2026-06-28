@@ -23,7 +23,7 @@ function PathButtonStage({ children }: { children: React.ReactNode }) {
 }
 
 const meta = {
-  title: 'Components/Workflow Diagram/PathButton',
+  title: 'Editor/Diagram/PathButton',
   component: PathButton,
   parameters: { layout: 'centered' },
   args: { id: 'node-connector' },

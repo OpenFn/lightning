@@ -20,7 +20,8 @@ js/storybook/
   Introduction.mdx        # in-Storybook landing page
   _shared/showcase.tsx    # small presentational helpers (Showcase/Section/Row/Specimen)
   foundations/            # Colors, Typography, Icons (design tokens)
-  pages/                  # composite views: whole screens assembled from parts
+  editor/                 # the collaborative workflow editor (Canvas, IDE, Diagram/*)
+  pages/                  # LiveView page composites assembled from parts
   components/             # stories for real React components from assets/js/
   liveview/               # React clones of HEEx/LiveView components
 ```
@@ -30,7 +31,8 @@ Story titles map to the sidebar:
 | Title prefix          | Contents                                                  |
 | --------------------- | --------------------------------------------------------- |
 | `Foundations/*`       | Design tokens (color scales, type, icons).                |
-| `Pages/*`             | Composite screens (App Shell, Dashboard, Project Settings, History) showing how the parts connect into a whole. |
+| `Editor/*`            | The collaborative workflow editor — the `Canvas` and full-screen `IDE` composites (built from the real `from-workflow` transform, node/edge renderers and inspector) plus `Diagram/*` node/edge pieces. |
+| `Pages/*`             | LiveView page composites (App Shell, Dashboard, Project Settings, History) showing how the parts connect into a whole. |
 | `Components/*`        | Real React components imported from `assets/js/`.         |
 | `LiveView Clones/*`   | React re-creations of HEEx components (see below).        |
 

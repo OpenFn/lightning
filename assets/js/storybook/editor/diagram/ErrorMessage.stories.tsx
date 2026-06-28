@@ -11,7 +11,7 @@ import { Showcase, Section } from '../../_shared/showcase';
  * none.
  */
 const meta = {
-  title: 'Components/Workflow Diagram/ErrorMessage',
+  title: 'Editor/Diagram/ErrorMessage',
   component: ErrorMessage,
   parameters: { layout: 'centered' },
   args: { children: 'Adaptor is required' },
