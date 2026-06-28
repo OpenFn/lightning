@@ -20,17 +20,23 @@ js/storybook/
   Introduction.mdx        # in-Storybook landing page
   _shared/showcase.tsx    # small presentational helpers (Showcase/Section/Row/Specimen)
   foundations/            # Colors, Typography, Icons (design tokens)
+  pages/                  # composite views: whole screens assembled from parts
   components/             # stories for real React components from assets/js/
   liveview/               # React clones of HEEx/LiveView components
 ```
 
 Story titles map to the sidebar:
 
-| Title prefix          | Contents                                              |
-| --------------------- | ----------------------------------------------------- |
-| `Foundations/*`       | Design tokens (color scales, type, icons).            |
-| `Components/*`        | Real React components imported from `assets/js/`.     |
-| `LiveView Clones/*`   | React re-creations of HEEx components (see below).    |
+| Title prefix          | Contents                                                  |
+| --------------------- | --------------------------------------------------------- |
+| `Foundations/*`       | Design tokens (color scales, type, icons).                |
+| `Pages/*`             | Composite screens (App Shell, Dashboard, Project Settings, History) showing how the parts connect into a whole. |
+| `Components/*`        | Real React components imported from `assets/js/`.         |
+| `LiveView Clones/*`   | React re-creations of HEEx components (see below).        |
+
+The left app sidebar (`#sidebar-panel`/`#side-menu`) and shared page frame live in
+`liveview/_shell.tsx`; the clone deliberately reuses the real element ids and
+classes so collapse/expand and the theme scopes are driven by `app.css` itself.
 
 ## The "LiveView Clone" convention
 
