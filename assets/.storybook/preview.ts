@@ -24,6 +24,7 @@ const preview: Preview = {
           'Introduction',
           'Foundations',
           ['Colors', 'Typography', 'Icons'],
+          'Pages',
           'Components',
           'LiveView Clones',
           '*',
