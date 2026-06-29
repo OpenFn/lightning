@@ -10,6 +10,15 @@ defmodule Lightning.AuthProviders do
   alias Lightning.AuthProviders.WellKnown
   alias Lightning.Repo
 
+  @doc """
+  Returns a human-friendly name for a provider, e.g. `"github"` -> `"GitHub"`.
+  """
+  @spec display_name(provider :: String.t()) :: String.t()
+  # Explicit clauses needed for providers whose correct name has mid-word
+  # capitalisation that String.capitalize/1 can't produce.
+  def display_name("github"), do: "GitHub"
+  def display_name(provider), do: String.capitalize(provider)
+
   @spec get_existing() :: AuthConfig.t() | nil
   def get_existing do
     from(ap in AuthConfig) |> Repo.one()
@@ -86,21 +95,6 @@ defmodule Lightning.AuthProviders do
       end)
 
     Handler.new(name, opts)
-  end
-
-  @doc """
-  Retrieve the authorization url for a given handler or handler name.
-  """
-  @spec get_authorize_url(String.t() | Handler.t()) :: String.t() | nil
-  def get_authorize_url(name) when is_binary(name) do
-    case get_handler(name) do
-      {:ok, handler} -> get_authorize_url(handler)
-      {:error, :not_found} -> nil
-    end
-  end
-
-  def get_authorize_url(%Handler{} = handler) do
-    Handler.authorize_url(handler)
   end
 
   defp find_and_build(name) do
