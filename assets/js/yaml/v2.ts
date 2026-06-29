@@ -21,20 +21,21 @@
 // `StepEdge = boolean | string | ConditionalStepEdge` and
 // `ConditionalStepEdge = { condition?: string /* JS body */, label?, disabled? }`.
 //
-// Lightning's internal `condition_type` enum maps to canonical JS strings:
-//   :always           → omit `condition` (or boolean true shortcut)
-//   :on_job_success   → `condition: '!state.errors'`
-//   :on_job_failure   → `condition: '!!state.errors'`
+// Lightning's internal `condition_type` enum maps to the `condition:` value:
+//   :always           → `condition: always`
+//   :on_job_success   → `condition: on_job_success`
+//   :on_job_failure   → `condition: on_job_failure`
 //   :js_expression    → `condition: <user JS body>`
 //
-// On parse the canonical strings are matched verbatim to round-trip back to
-// the original `condition_type`. Anything else under `condition` is treated
-// as a `:js_expression` body. Boolean `true` is `:always`; boolean `false`
-// becomes `:js_expression` with body "false" (Lightning has no `never`).
+// On parse the three named literals are matched verbatim back to their
+// `condition_type`; any other value (including a JS body like `!state.errors`)
+// round-trips as a `:js_expression`. Boolean `true` under `condition` is
+// `:always`; boolean `false` becomes `:js_expression` with body "false"
+// (Lightning has no `never`).
 //
-// `next:` collapse: when a step has a single unconditional outgoing edge
-// (no condition / label / disabled), the value collapses to the bare target
-// id string. Multi-target or non-:always edges always emit the object form.
+// `next:` is always emitted in the verbose object form (one entry per target,
+// each carrying its `condition`), matching the Elixir emitter — the bare
+// target-id-string shortcut is never produced (see `buildNextField`).
 
 import Ajv from 'ajv';
 import YAML from 'yaml';
@@ -514,8 +515,8 @@ const needsQuoting = (s: string): boolean => {
   // (e.g. "4.0" must stay a string for schema_version).
   if (/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return true;
   // Mirrors `Lightning.Workflows.YamlFormat.V2.quote_if_needed/1`:
-  // ^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$  (and not reserved)
-  return !/^[A-Za-z0-9][A-Za-z0-9_\-@./> ]*[A-Za-z0-9]$/.test(s);
+  // ^[A-Za-z0-9][A-Za-z0-9_\-@./> |]*[A-Za-z0-9]$  (and not reserved).
+  return !/^[A-Za-z0-9][A-Za-z0-9_\-@./> |]*[A-Za-z0-9]$/.test(s);
 };
 
 const emitCanonicalYaml = (workflow: CanonicalWorkflow): string => {
@@ -646,7 +647,7 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
 };
 
 const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
-  const enabled = trigger.enabled ?? true;
+  const enabled = trigger.enabled ?? false;
 
   if (trigger.type === 'cron') {
     const out: SpecCronTrigger = {
@@ -705,10 +706,17 @@ const iterateNext = (
 };
 
 // Per `lightning.d.ts:102`, `condition` is the union
-// `'always' | 'on_job_success' | 'on_job_failure' | string`. Map the three
-// named literals back to Lightning's `condition_type` enum; anything else
-// (including legacy `'!state.errors'` JS-body emissions from older v2
-// documents) is treated as a JS expression body.
+// `'always' | 'on_job_success' | 'on_job_failure' | string`. The three named
+// literals are reserved keywords — they are not valid standalone Lightning JS
+// conditions (which always reference `state`), so a bare `always` /
+// `on_job_success` / `on_job_failure` maps back to the named `condition_type`.
+//
+// Everything else is preserved verbatim as a `:js_expression` body. In
+// particular a real JS condition like `!state.errors` round-trips as a JS
+// expression rather than being silently rewritten to `on_job_success` — older
+// Lightning builds emitted those bodies for the named types, but they are
+// behaviourally equivalent, so importing them as JS expressions keeps the
+// user's expression intact instead of dropping it.
 const conditionTypeFromValue = (
   condition: string | undefined
 ): { condition_type: string; condition_expression?: string } => {
@@ -723,12 +731,6 @@ const conditionTypeFromValue = (
   if (trimmed === 'always') return { condition_type: 'always' };
   if (trimmed === 'on_job_success') return { condition_type: 'on_job_success' };
   if (trimmed === 'on_job_failure') return { condition_type: 'on_job_failure' };
-
-  // Backwards-compat: Lightning previously emitted these JS bodies for the
-  // named conditions. Accept them so older v2 documents in the wild keep
-  // round-tripping cleanly.
-  if (trimmed === '!state.errors') return { condition_type: 'on_job_success' };
-  if (trimmed === '!!state.errors') return { condition_type: 'on_job_failure' };
 
   return {
     condition_type: 'js_expression',

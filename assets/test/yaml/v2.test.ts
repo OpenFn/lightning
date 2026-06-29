@@ -42,7 +42,9 @@ import {
   cronWithCursorState,
   jsExpressionEdgeState,
   kafkaTriggerState,
+  pipeConditionEdgeState,
   simpleWebhookState,
+  webhookWithResponseConfigState,
 } from './__fixtures__/v2States';
 
 // ── Fixture loading ─────────────────────────────────────────────────────────
@@ -243,6 +245,69 @@ describe('v2 deep round-trip preserves trigger / edge content', () => {
     expect(edge.condition_expression).toBe(
       '!!state.data && state.data.length > 0\n'
     );
+  });
+
+  it('preserves webhook_response_config status codes', () => {
+    const out = roundTripToState(webhookWithResponseConfigState());
+    const webhook = findTriggerByType(out, 'webhook');
+    if (webhook.type !== 'webhook') throw new Error('unreachable');
+    expect(webhook.webhook_response_config).toEqual({
+      success_code: 202,
+      error_code: 422,
+    });
+  });
+
+  it('round-trips a JS-expression body that collides with a named condition', () => {
+    // `!state.errors` is a real JS condition a user can author; it must
+    // round-trip as a :js_expression and NOT be silently rewritten to the
+    // named `on_job_success` type (which would drop the expression).
+    const input = jsExpressionEdgeState();
+    input.edges[1].condition_expression = '!state.errors';
+    const out = roundTripToState(input);
+    const outSource = out.jobs.find(j => j.name === 'source step');
+    const outTarget = out.jobs.find(j => j.name === 'target step');
+    if (!outSource || !outTarget) throw new Error('jobs missing');
+    const edge = findEdgeBySourceAndTarget(out, outSource.id, outTarget.id);
+    expect(edge.condition_type).toBe('js_expression');
+    expect(edge.condition_expression).toBe('!state.errors');
+  });
+
+  it('leaves a `||` condition body unquoted (parity with the Elixir emitter)', () => {
+    const yaml = v2.serializeWorkflow(pipeConditionEdgeState());
+    // The condition must be emitted as a plain (unquoted) scalar so the JS and
+    // Elixir serializers produce byte-identical YAML for pipe-bearing values.
+    expect(yaml).toContain('condition: state.a || state.b');
+    expect(yaml).not.toContain("'state.a || state.b'");
+
+    // And it still round-trips intact.
+    const out = roundTripToState(pipeConditionEdgeState());
+    const outSource = out.jobs.find(j => j.name === 'source step');
+    const outTarget = out.jobs.find(j => j.name === 'target step');
+    if (!outSource || !outTarget) throw new Error('jobs missing');
+    const edge = findEdgeBySourceAndTarget(out, outSource.id, outTarget.id);
+    expect(edge.condition_type).toBe('js_expression');
+    expect(edge.condition_expression).toBe('state.a || state.b');
+  });
+
+  it('defaults a trigger with no `enabled:` to false on parse', () => {
+    // Matches the serializer, the Elixir emitter, and the Trigger schema
+    // default — both directions of the module must agree.
+    const yaml = `
+name: no-enabled
+steps:
+  - id: webhook
+    name: webhook
+    type: webhook
+    next:
+      a: { condition: always }
+  - id: a
+    name: a
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+`;
+    const spec = v2.parseWorkflow(yaml);
+    expect(spec.triggers['webhook']?.enabled).toBe(false);
   });
 
   it('preserves named condition_types on branching edges', () => {

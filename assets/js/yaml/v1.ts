@@ -78,6 +78,9 @@ export const convertWorkflowSpecToState = (
         type: 'webhook',
         enabled,
         webhook_reply: specTrigger.webhook_reply,
+        ...(specTrigger.webhook_response_config
+          ? { webhook_response_config: specTrigger.webhook_response_config }
+          : {}),
       };
     } else {
       trigger = {

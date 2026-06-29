@@ -54,6 +54,66 @@ export const simpleWebhookState = (): WorkflowState => {
   };
 };
 
+export const webhookWithResponseConfigState = (): WorkflowState => {
+  const greet = makeJob({ name: 'greet' });
+  const webhook: StateTrigger = {
+    id: 'trigger-webhook',
+    type: 'webhook',
+    enabled: true,
+    webhook_reply: 'after_completion',
+    webhook_response_config: {
+      success_code: 202,
+      error_code: 422,
+    },
+  };
+  return {
+    id: 'wf-webhook-resp',
+    name: 'webhook with response config',
+    jobs: [greet],
+    triggers: [webhook],
+    edges: [
+      baseEdge({
+        source_trigger_id: webhook.id,
+        target_job_id: greet.id,
+      }),
+    ],
+    positions: null,
+  };
+};
+
+// A JS-expression edge whose body contains `||` (logical-or) — exercises the
+// quote whitelist, which must leave `|` unquoted to stay byte-identical with
+// the Elixir emitter.
+export const pipeConditionEdgeState = (): WorkflowState => {
+  const source = makeJob({ name: 'source step' });
+  const target = makeJob({ name: 'target step' });
+  const webhook: StateTrigger = {
+    id: 'trigger-webhook',
+    type: 'webhook',
+    enabled: true,
+    webhook_reply: null,
+  };
+  return {
+    id: 'wf-pipe',
+    name: 'pipe condition edge',
+    jobs: [source, target],
+    triggers: [webhook],
+    edges: [
+      baseEdge({
+        source_trigger_id: webhook.id,
+        target_job_id: source.id,
+      }),
+      baseEdge({
+        source_job_id: source.id,
+        target_job_id: target.id,
+        condition_type: 'js_expression',
+        condition_expression: 'state.a || state.b',
+      }),
+    ],
+    positions: null,
+  };
+};
+
 export const cronWithCursorState = (): WorkflowState => {
   const cursor = makeJob({ name: 'cursor step' });
   const cron: StateTrigger = {
@@ -207,6 +267,11 @@ export const SYNTHETIC_STATES: Array<{
   state: () => WorkflowState;
 }> = [
   { name: 'simple-webhook', state: simpleWebhookState },
+  {
+    name: 'webhook-with-response-config',
+    state: webhookWithResponseConfigState,
+  },
+  { name: 'pipe-condition-edge', state: pipeConditionEdgeState },
   { name: 'cron-with-cursor', state: cronWithCursorState },
   { name: 'js-expression-edge', state: jsExpressionEdgeState },
   { name: 'multi-trigger', state: multiTriggerState },
