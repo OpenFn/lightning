@@ -1555,7 +1555,7 @@ defmodule Lightning.InvocationTest do
             "date_of_birth" => "1992-04-10",
             "fav_color" => "vert foncé"
           },
-          type: :global,
+          type: :http_request,
           project: project
         )
 
@@ -1798,6 +1798,106 @@ defmodule Lightning.InvocationTest do
                    "search_fields" => ["body"]
                  })
                ).entries
+    end
+
+    test "excludes wiped dataclips from body search even when the search_vector remains populated",
+         %{
+           project: project,
+           dataclip: dataclip,
+           workorder: workorder,
+           run: run
+         } do
+      search_params =
+        SearchParams.new(%{
+          "search_term" => "date_of",
+          "search_fields" => ["body"]
+        })
+
+      assert [found_workorder] =
+               Invocation.search_workorders(project, search_params).entries
+
+      assert found_workorder.id == workorder.id
+
+      assert :ok = Runs.wipe_dataclips(run)
+
+      wiped_dataclip =
+        Repo.get!(Lightning.Invocation.Dataclip, dataclip.id)
+
+      assert is_nil(wiped_dataclip.body)
+      assert wiped_dataclip.wiped_at
+
+      flush_dataclip_search_index()
+
+      assert [] = Invocation.search_workorders(project, search_params).entries
+    end
+
+    test "non-wiped dataclips with the same body token still match body search",
+         %{
+           project: project,
+           run: run
+         } do
+      second_dataclip =
+        insert(:dataclip,
+          body: %{
+            "player" => "Marta",
+            "date_of_birth" => "1986-02-19"
+          },
+          type: :http_request,
+          project: project
+        )
+
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
+        build_workflow(project: project, name: "chw-follow-up")
+
+      second_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: second_dataclip,
+          snapshot: snapshot
+        )
+
+      second_run =
+        insert(:run,
+          work_order: second_workorder,
+          dataclip: second_dataclip,
+          snapshot: snapshot,
+          starting_trigger: trigger
+        )
+
+      {:ok, _step} =
+        Runs.start_step(second_run, %{
+          "job_id" => job.id,
+          "input_dataclip_id" => second_dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      flush_dataclip_search_index()
+
+      assert %{rows: [[false]]} =
+               Repo.query!(
+                 """
+                 SELECT search_vector IS NULL
+                 FROM dataclips
+                 WHERE id = $1::uuid
+                 """,
+                 [Ecto.UUID.dump!(second_dataclip.id)]
+               )
+
+      assert :ok = Runs.wipe_dataclips(run)
+
+      flush_dataclip_search_index()
+
+      assert [found_workorder] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "date_of",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+
+      assert found_workorder.id == second_workorder.id
     end
 
     test "search on dataclips can find partial string matches at the start of values",
