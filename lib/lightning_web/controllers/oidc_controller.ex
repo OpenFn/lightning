@@ -89,6 +89,16 @@ defmodule LightningWeb.OidcController do
     close_browser_window(conn)
   end
 
+  # A callback that matches none of the expected shapes (no query string, an
+  # unexpected param combination, or bare-URL hits from scanners and crawlers)
+  # can't be tied back to a flow we started. Return a plain 400 rather than
+  # letting Phoenix raise an ActionClauseError and 500.
+  def new(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> text("Bad Request")
+  end
+
   @doc """
   Renders the confirmation page shown after a successful SSO callback that
   would create a brand-new account. We ask the user to confirm before
