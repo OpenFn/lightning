@@ -80,7 +80,7 @@ test.describe('Collaborative Editor Navigation', () => {
       await collabEditor.verifyUrl({
         projectId: testData.projects.openhie.id,
         workflowId: testData.workflows.openhie.id,
-        path: '/legacy',
+        path: '',
       });
 
       // Wait for React component to mount
