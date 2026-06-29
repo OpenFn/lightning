@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1634D937.js"></script>
+    <script defer src="dist/sidebar_items-A14D888C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -172,6 +172,15 @@ and business logic.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Accounts.UserIdentity.html" translate="no">Lightning.Accounts.UserIdentity</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Schema for tracking SSO provider identities linked to user accounts.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Accounts.UserNotifier.html" translate="no">Lightning.Accounts.UserNotifier</a>
 
   </div>
@@ -326,29 +335,20 @@ writing jobs.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.AuthProviders.Common.html" translate="no">Lightning.AuthProviders.Common</a>
+    <a href="Lightning.AuthProviders.GithubHandler.html" translate="no">Lightning.AuthProviders.GithubHandler</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Provides common functionality for handling OAuth authentication across different providers.</p></div>
+    <div class="summary-synopsis"><p>Builds a Handler for GitHub OAuth2 SSO login from environment configuration.</p></div>
 
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.AuthProviders.Common.TokenBody.html" translate="no">Lightning.AuthProviders.Common.TokenBody</a>
+    <a href="Lightning.AuthProviders.GoogleHandler.html" translate="no">Lightning.AuthProviders.GoogleHandler</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Defines a schema for OAuth token information.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.AuthProviders.Google.html" translate="no">Lightning.AuthProviders.Google</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Handles the specifics of the Google OAuth authentication process.</p></div>
+    <div class="summary-synopsis"><p>Builds a Handler for Google OAuth2 SSO login from environment configuration.</p></div>
 
 </div>
 <div class="summary-row">
@@ -364,19 +364,6 @@ any OIDC compliant provider.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.AuthProviders.OAuthBehaviour.html" translate="no">Lightning.AuthProviders.OAuthBehaviour</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Defines a behaviour for OAuth providers within the Lightning application,
-specifying a common interface for OAuth operations.
-This interface ensures consistency and interoperability among different
-authentication providers (e.g., Google, Salesforce)
-by defining a set of required functions that each provider must implement.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Lightning.AuthProviders.OauthHTTPClient.html" translate="no">Lightning.AuthProviders.OauthHTTPClient</a>
 
   </div>
@@ -384,15 +371,6 @@ by defining a set of required functions that each provider must implement.</p></
     <div class="summary-synopsis"><p>Handles OAuth interactions for generic providers, including token fetching,
 refreshing, and user information retrieval. This module uses Tesla to make HTTP
 requests configured with middleware appropriate for OAuth specific tasks.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.AuthProviders.Salesforce.html" translate="no">Lightning.AuthProviders.Salesforce</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Handles the specifics of the Salesforce OAuth authentication process.</p></div>
 
 </div>
 <div class="summary-row">
@@ -2942,6 +2920,16 @@ to the parent project on merge.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.Components.SsoIcons.html" translate="no">LightningWeb.Components.SsoIcons</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>SVG icons for SSO providers, shared between sign-in, sign-up, and the profile
+identities section.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.Components.Table.html" translate="no">LightningWeb.Components.Table</a>
 
   </div>
@@ -3499,6 +3487,15 @@ It verifies the presence of correct API keys or Basic Authentication credentials
   </div>
 
     <div class="summary-synopsis"><p>Form component update profile email and password</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.ProfileLive.IdentitiesComponent.html" translate="no">LightningWeb.ProfileLive.IdentitiesComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Component to manage linked SSO identities on a User's profile.</p></div>
 
 </div>
 <div class="summary-row">

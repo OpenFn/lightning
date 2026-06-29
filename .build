@@ -4,6 +4,7 @@ Lightning.Accounts.Events.html
 Lightning.Accounts.User.RolesEnum.html
 Lightning.Accounts.User.html
 Lightning.Accounts.UserBackupCode.html
+Lightning.Accounts.UserIdentity.html
 Lightning.Accounts.UserNotifier.html
 Lightning.Accounts.UserTOTP.html
 Lightning.Accounts.UserToken.html
@@ -21,13 +22,10 @@ Lightning.Auditing.Audit.html
 Lightning.Auditing.html
 Lightning.AuthProviders.AuthConfig.html
 Lightning.AuthProviders.CacheWarmer.html
-Lightning.AuthProviders.Common.TokenBody.html
-Lightning.AuthProviders.Common.html
-Lightning.AuthProviders.Google.html
+Lightning.AuthProviders.GithubHandler.html
+Lightning.AuthProviders.GoogleHandler.html
 Lightning.AuthProviders.Handler.html
-Lightning.AuthProviders.OAuthBehaviour.html
 Lightning.AuthProviders.OauthHTTPClient.html
-Lightning.AuthProviders.Salesforce.html
 Lightning.AuthProviders.Store.html
 Lightning.AuthProviders.WellKnown.html
 Lightning.AuthProviders.html
@@ -308,6 +306,7 @@ LightningWeb.Components.NewInputs.html
 LightningWeb.Components.Oauth.html
 LightningWeb.Components.Pills.html
 LightningWeb.Components.SandboxSettingsBanner.html
+LightningWeb.Components.SsoIcons.html
 LightningWeb.Components.Table.html
 LightningWeb.Components.Viewers.html
 LightningWeb.CredentialLive.CredentialFormComponent.html
@@ -373,6 +372,7 @@ LightningWeb.ProfileLive.Components.html
 LightningWeb.ProfileLive.Edit.html
 LightningWeb.ProfileLive.ExperimentalFeaturesComponent.html
 LightningWeb.ProfileLive.FormComponent.html
+LightningWeb.ProfileLive.IdentitiesComponent.html
 LightningWeb.ProfileLive.MfaComponent.html
 LightningWeb.ProjectFileController.html
 LightningWeb.ProjectLive.Collaborators.Collaborator.html
@@ -455,8 +455,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-7BA516F0.js
-dist/sidebar_items-1634D937.js
+dist/search_data-F194ACD2.js
+dist/sidebar_items-A14D888C.js
 index.html
 provisioning.html
 readme.html

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1634D937.js"></script>
+    <script defer src="dist/sidebar_items-A14D888C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -162,11 +162,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_authorize_url/1" data-no-tooltip="" translate="no">get_authorize_url(name)</a>
+        <a href="#display_name/1" data-no-tooltip="" translate="no">display_name(provider)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Retrieve the authorization url for a given handler or handler name.</p></div>
+        <div class="summary-synopsis"><p>Returns a human-friendly name for a provider, e.g. <code class="inline">&quot;github&quot;</code> -&gt; <code class="inline">&quot;GitHub&quot;</code>.</p></div>
 
     </div>
 
@@ -250,7 +250,7 @@ Lightning
       <h1 class="signature" translate="no">build_handler(name, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L90" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -272,7 +272,7 @@ Lightning
       <h1 class="signature" translate="no">create(attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L36" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -294,7 +294,7 @@ Lightning
       <h1 class="signature" translate="no">create_handler(config)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L70" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -325,7 +325,7 @@ Lightning
       <h1 class="signature" translate="no">delete!(model)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L43" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L52" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -337,17 +337,17 @@ Lightning
 
   </section>
 </section>
-<section class="detail" id="get_authorize_url/1">
+<section class="detail" id="display_name/1">
 
   <div class="detail-header">
-    <a href="#get_authorize_url/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#display_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_authorize_url(name)</h1>
+      <h1 class="signature" translate="no">display_name(provider)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L19" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -358,12 +358,11 @@ Lightning
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_authorize_url(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()) ::
-  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> display_name(provider :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
 
       </div>
 
-<p>Retrieve the authorization url for a given handler or handler name.</p>
+<p>Returns a human-friendly name for a provider, e.g. <code class="inline">&quot;github&quot;</code> -&gt; <code class="inline">&quot;GitHub&quot;</code>.</p>
   </section>
 </section>
 <section class="detail" id="get_existing/0">
@@ -376,7 +375,7 @@ Lightning
       <h1 class="signature" translate="no">get_existing()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L14" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -404,7 +403,7 @@ Lightning
       <h1 class="signature" translate="no">get_existing(name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L19" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L28" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -432,7 +431,7 @@ Lightning
       <h1 class="signature" translate="no">get_handler(name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L58" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -461,7 +460,7 @@ Lightning
       <h1 class="signature" translate="no">get_handlers()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L64" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -489,7 +488,7 @@ Lightning
       <h1 class="signature" translate="no">new()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L32" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -511,7 +510,7 @@ Lightning
       <h1 class="signature" translate="no">remove_handler(name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L82" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -541,7 +540,7 @@ Lightning
       <h1 class="signature" translate="no">update(model, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

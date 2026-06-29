@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1634D937.js"></script>
+    <script defer src="dist/sidebar_items-A14D888C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -126,14 +126,6 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#auth_handler_url/0" data-no-tooltip="" translate="no">auth_handler_url()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#create/2" data-no-tooltip="" translate="no">create(conn, map)</a>
 
       </div>
@@ -164,6 +156,16 @@ Lightning
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#provider_buttons/0" data-no-tooltip="" translate="no">provider_buttons()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the two independent kinds of SSO buttons for the login page</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -178,28 +180,6 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="auth_handler_url/0">
-
-  <div class="detail-header">
-    <a href="#auth_handler_url/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">auth_handler_url()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L79" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="create/2">
 
   <div class="detail-header">
@@ -232,7 +212,7 @@ Lightning
       <h1 class="signature" translate="no">delete(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L83" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -254,7 +234,7 @@ Lightning
       <h1 class="signature" translate="no">exchange_token(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L59" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L69" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -286,6 +266,30 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="provider_buttons/0">
+
+  <div class="detail-header">
+    <a href="#provider_buttons/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">provider_buttons()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L99" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the two independent kinds of SSO buttons for the login page:</p><ul><li><code class="inline">social</code> — the built-in GitHub/Google buttons, shown when their <code class="inline">SSO_*</code>
+envs are set (derived straight from the env-based handler builders).</li><li><code class="inline">external_url</code> — the generic &quot;via external provider&quot; button, shown when a
+provider is configured in the admin portal (an <code class="inline">AuthConfig</code> row).</li></ul><p>Each is driven solely by its own source, so one never suppresses the other.</p>
   </section>
 </section>
 

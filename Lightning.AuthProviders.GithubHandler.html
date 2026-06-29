@@ -8,11 +8,11 @@
     <meta name="project" content="Lightning v2.16.8-pre">
 
 
-    <title>Lightning.AuthProviders.Salesforce — Lightning v2.16.8-pre</title>
+    <title>Lightning.AuthProviders.GithubHandler — Lightning v2.16.8-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1634D937.js"></script>
+    <script defer src="dist/sidebar_items-A14D888C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.AuthProviders.Salesforce</span> 
+      <span translate="no">Lightning.AuthProviders.GithubHandler</span> 
       <small class="app-vsn" translate="no">(Lightning v2.16.8-pre)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/salesforce.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/github_handler.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,7 +111,7 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Handles the specifics of the Salesforce OAuth authentication process.</p>
+<p>Builds a Handler for GitHub OAuth2 SSO login from environment configuration.</p><p>Set SSO_GITHUB_CLIENT_ID and SSO_GITHUB_CLIENT_SECRET to enable GitHub login.</p>
     </section>
 
 </div>
@@ -130,7 +130,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#provider_name/0" data-no-tooltip="" translate="no">provider_name()</a>
+        <a href="#build/0" data-no-tooltip="" translate="no">build()</a>
 
       </div>
 
@@ -138,23 +138,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#scopes/0" data-no-tooltip="" translate="no">scopes()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#scopes_doc_url/0" data-no-tooltip="" translate="no">scopes_doc_url()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#wellknown_url/1" data-no-tooltip="" translate="no">wellknown_url(sandbox)</a>
+        <a href="#handler_name/0" data-no-tooltip="" translate="no">handler_name()</a>
 
       </div>
 
@@ -174,17 +158,17 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="provider_name/0">
+<section class="detail" id="build/0">
 
   <div class="detail-header">
-    <a href="#provider_name/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#build/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">provider_name()</h1>
+      <h1 class="signature" translate="no">build()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/salesforce.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/github_handler.ex#L20" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -193,64 +177,27 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
-  </section>
-</section>
-<section class="detail" id="scopes/0">
+          <pre translate="no"><span class="attribute">@spec</span> build() ::
+  {:ok, <a href="Lightning.AuthProviders.Handler.html#t:t/0">Lightning.AuthProviders.Handler.t</a>()} | {:error, :not_configured}</pre>
 
-  <div class="detail-header">
-    <a href="#scopes/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">scopes()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/salesforce.ex#L12" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
+      </div>
 
 
   </section>
 </section>
-<section class="detail" id="scopes_doc_url/0">
+<section class="detail" id="handler_name/0">
 
   <div class="detail-header">
-    <a href="#scopes_doc_url/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#handler_name/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">scopes_doc_url()</h1>
+      <h1 class="signature" translate="no">handler_name()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/salesforce.ex#L21" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="wellknown_url/1">
-
-  <div class="detail-header">
-    <a href="#wellknown_url/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">wellknown_url(sandbox)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/salesforce.ex#L25" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/github_handler.ex#L17" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

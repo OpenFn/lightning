@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1634D937.js"></script>
+    <script defer src="dist/sidebar_items-A14D888C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -126,7 +126,55 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/2" data-no-tooltip="" translate="no">new(conn, map)</a>
+        <a href="#cancel_signup/2" data-no-tooltip="" translate="no">cancel_signup(conn, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Cancels a pending SSO signup, clearing the stashed state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#complete_signup/2" data-no-tooltip="" translate="no">complete_signup(conn, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Confirms a pending SSO signup. Creates the account, links the identity, and
+logs the user in.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#confirm_signup/2" data-no-tooltip="" translate="no">confirm_signup(conn, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Renders the confirmation page shown after a successful SSO callback that
+would create a brand-new account. We ask the user to confirm before
+provisioning so they aren't surprised by an account they didn't realise was
+being created.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#link/2" data-no-tooltip="" translate="no">link(conn, map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Initiates an SSO link flow for an already-authenticated user. The intent,
+provider and current user are carried in a session-bound <code class="inline">state</code> and the
+user is redirected to the provider's authorize URL. On callback the
+controller links the resulting identity to the current account rather than
+logging in.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/2" data-no-tooltip="" translate="no">new(conn, params)</a>
 
       </div>
 
@@ -159,6 +207,102 @@ returned here, and the authorization code is used to log them in.</p></div>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="cancel_signup/2">
+
+  <div class="detail-header">
+    <a href="#cancel_signup/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cancel_signup(conn, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L157" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Cancels a pending SSO signup, clearing the stashed state.</p>
+  </section>
+</section>
+<section class="detail" id="complete_signup/2">
+
+  <div class="detail-header">
+    <a href="#complete_signup/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">complete_signup(conn, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L115" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Confirms a pending SSO signup. Creates the account, links the identity, and
+logs the user in.</p>
+  </section>
+</section>
+<section class="detail" id="confirm_signup/2">
+
+  <div class="detail-header">
+    <a href="#confirm_signup/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">confirm_signup(conn, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Renders the confirmation page shown after a successful SSO callback that
+would create a brand-new account. We ask the user to confirm before
+provisioning so they aren't surprised by an account they didn't realise was
+being created.</p>
+  </section>
+</section>
+<section class="detail" id="link/2">
+
+  <div class="detail-header">
+    <a href="#link/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">link(conn, map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L42" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Initiates an SSO link flow for an already-authenticated user. The intent,
+provider and current user are carried in a session-bound <code class="inline">state</code> and the
+user is redirected to the provider's authorize URL. On callback the
+controller links the resulting identity to the current account rather than
+logging in.</p>
+  </section>
+</section>
 <section class="detail" id="new/2">
 
   <div class="detail-header">
@@ -166,10 +310,10 @@ returned here, and the authorization code is used to log them in.</p></div>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">new(conn, map)</h1>
+      <h1 class="signature" translate="no">new(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L32" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L59" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -192,7 +336,7 @@ returned here, and the authorization code is used to log them in.</p>
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/oidc_controller.ex#L22" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
