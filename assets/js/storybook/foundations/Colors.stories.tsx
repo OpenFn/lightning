@@ -229,6 +229,7 @@ function Palette() {
 
 const meta = {
   title: 'Foundations/Colors',
+  tags: ['foundation'],
   component: Palette,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof Palette>;

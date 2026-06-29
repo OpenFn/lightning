@@ -163,6 +163,7 @@ function LvTextInput({
 
 const meta = {
   title: 'LiveView Clones/Confirm Modals (LiveView Clone)',
+  tags: ['redundant'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

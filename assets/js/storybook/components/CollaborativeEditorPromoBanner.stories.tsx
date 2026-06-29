@@ -12,6 +12,7 @@ import { CollaborativeEditorPromoBanner } from '#/workflow-diagram/Collaborative
  */
 const meta = {
   title: 'Components/Collaborative Editor Promo Banner',
+  tags: ['useful'],
   component: CollaborativeEditorPromoBanner,
   parameters: { layout: 'fullscreen' },
   args: {

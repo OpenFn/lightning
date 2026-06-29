@@ -18,6 +18,7 @@ const ALIGNS = ['start', 'center', 'end'] as const;
 
 const meta = {
   title: 'Components/Tooltip',
+  tags: ['core'],
   component: Tooltip,
   parameters: { layout: 'centered' },
   args: {

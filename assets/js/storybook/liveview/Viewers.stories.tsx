@@ -226,6 +226,7 @@ function WipedDataViewer({
 
 const meta = {
   title: 'LiveView Clones/Viewers (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

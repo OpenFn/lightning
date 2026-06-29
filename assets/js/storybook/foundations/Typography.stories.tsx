@@ -85,6 +85,7 @@ function TypeSpecimens() {
 
 const meta = {
   title: 'Foundations/Typography',
+  tags: ['foundation'],
   component: TypeSpecimens,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof TypeSpecimens>;

@@ -21,6 +21,7 @@ const TYPES: DataclipType[] = [
 
 const meta = {
   title: 'Components/Dataclip Type Pill',
+  tags: ['useful'],
   component: DataclipTypePill,
   parameters: { layout: 'centered' },
   args: { type: 'saved_input', size: 'default' },

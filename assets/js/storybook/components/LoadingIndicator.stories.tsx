@@ -10,6 +10,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Loading Indicator',
+  tags: ['redundant'],
   component: LoadingIndicator,
   parameters: { layout: 'centered' },
   args: { text: 'Loading' },

@@ -23,6 +23,7 @@ const noop = () => {};
 
 const meta = {
   title: 'Components/Tabs',
+  tags: ['core'],
   component: Tabs,
   parameters: { layout: 'centered' },
   args: { value: 'input', onChange: noop, options: OPTIONS },

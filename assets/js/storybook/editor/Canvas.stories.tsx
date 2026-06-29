@@ -210,6 +210,7 @@ function EditorHeader() {
 
 const meta = {
   title: 'Editor/Canvas',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

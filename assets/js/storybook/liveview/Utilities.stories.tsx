@@ -10,6 +10,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'LiveView Clones/Utilities (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

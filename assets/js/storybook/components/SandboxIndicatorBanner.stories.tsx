@@ -14,6 +14,7 @@ import { Showcase, Section } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Sandbox Indicator Banner',
+  tags: ['useful'],
   component: SandboxIndicatorBanner,
   parameters: { layout: 'fullscreen' },
   args: {

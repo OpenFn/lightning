@@ -133,6 +133,7 @@ function PlaceholderPanel({ tab }: { tab: SettingsTab }) {
 
 const meta = {
   title: 'Pages/Project Settings',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

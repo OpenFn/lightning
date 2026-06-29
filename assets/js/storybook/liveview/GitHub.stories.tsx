@@ -46,6 +46,7 @@ function ConnectToGithubLink({
 
 const meta = {
   title: 'LiveView Clones/GitHub (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

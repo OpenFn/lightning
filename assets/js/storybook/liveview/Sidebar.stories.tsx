@@ -21,6 +21,7 @@ function SidebarFrame({ children }: { children: React.ReactNode }) {
 
 const meta = {
   title: 'LiveView Clones/Sidebar (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

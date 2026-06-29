@@ -14,6 +14,7 @@ const noop = () => {};
 
 const meta = {
   title: 'Components/Switch',
+  tags: ['redundant'],
   component: Switch,
   parameters: { layout: 'centered' },
   args: { checked: false, disabled: false, onChange: noop },

@@ -12,6 +12,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/State Pill',
+  tags: ['useful'],
   component: StatePill,
   parameters: { layout: 'centered' },
   args: { state: 'success' },

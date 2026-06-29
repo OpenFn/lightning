@@ -84,6 +84,7 @@ function PillTabs() {
 
 const meta = {
   title: 'Pages/History',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

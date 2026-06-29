@@ -217,6 +217,7 @@ function Banner({
 
 const meta = {
   title: 'LiveView Clones/Alerts (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

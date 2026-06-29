@@ -160,6 +160,7 @@ function SandboxSettingsBanner({
 
 const meta = {
   title: 'LiveView Clones/Banners (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

@@ -11,6 +11,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Badge',
+  tags: ['core'],
   component: Badge,
   parameters: { layout: 'centered' },
   args: { variant: 'default', children: 'Badge' },

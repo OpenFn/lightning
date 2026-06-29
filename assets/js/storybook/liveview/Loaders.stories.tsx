@@ -46,6 +46,7 @@ function OfflineIndicator() {
 
 const meta = {
   title: 'LiveView Clones/Loaders (LiveView Clone)',
+  tags: ['redundant'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

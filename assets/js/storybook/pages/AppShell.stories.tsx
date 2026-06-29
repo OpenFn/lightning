@@ -19,6 +19,7 @@ import {
  */
 const meta = {
   title: 'Pages/App Shell',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

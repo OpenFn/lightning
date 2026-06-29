@@ -100,6 +100,7 @@ const SIZES: ButtonSize[] = ['sm', 'md', 'lg'];
 
 const meta = {
   title: 'LiveView Clones/Button (LiveView Clone)',
+  tags: ['core'],
   component: LvButton,
   parameters: { layout: 'centered' },
   args: { theme: 'primary', size: 'md', disabled: false, children: 'Button' },

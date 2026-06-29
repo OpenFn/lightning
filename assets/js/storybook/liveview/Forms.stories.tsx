@@ -203,6 +203,7 @@ function Toggle({
 
 const meta = {
   title: 'LiveView Clones/Form Inputs (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

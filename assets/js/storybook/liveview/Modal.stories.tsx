@@ -71,6 +71,7 @@ function ModalPanel({
 
 const meta = {
   title: 'LiveView Clones/Modal (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

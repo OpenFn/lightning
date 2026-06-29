@@ -35,6 +35,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 
 const meta = {
   title: 'Pages/Dashboard',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

@@ -87,6 +87,7 @@ function OpenfnLogoCollapsed({
 
 const meta = {
   title: 'LiveView Clones/Logo (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

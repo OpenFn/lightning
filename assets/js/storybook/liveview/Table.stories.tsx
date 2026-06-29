@@ -199,6 +199,7 @@ const WORK_ORDERS: WorkOrder[] = [
 
 const meta = {
   title: 'LiveView Clones/Table (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

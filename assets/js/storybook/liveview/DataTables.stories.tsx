@@ -36,6 +36,7 @@ function EnvCount({ count, envs }: { count: number; envs: string }) {
 
 const meta = {
   title: 'LiveView Clones/Data Tables (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

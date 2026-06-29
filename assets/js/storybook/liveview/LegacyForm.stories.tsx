@@ -293,6 +293,7 @@ function Divider() {
 
 const meta = {
   title: 'LiveView Clones/Legacy Form (LiveView Clone)',
+  tags: ['redundant'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

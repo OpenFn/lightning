@@ -58,6 +58,7 @@ function MiniMapStage({
 
 const meta = {
   title: 'Editor/Diagram/MiniMapNode',
+  tags: ['useful'],
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

@@ -175,6 +175,7 @@ function OutputPanel() {
 
 const meta = {
   title: 'Editor/IDE',
+  tags: ['composite'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

@@ -383,6 +383,7 @@ function OauthStatus({
 
 const meta = {
   title: 'LiveView Clones/OAuth (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

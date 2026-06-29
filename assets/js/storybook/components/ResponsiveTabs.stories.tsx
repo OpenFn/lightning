@@ -49,6 +49,7 @@ const OPTIONS: TabSpec[] = [
 
 const meta = {
   title: 'Components/Tabs (Responsive)',
+  tags: ['redundant'],
   component: Tabs,
   parameters: { layout: 'padded' },
   args: {

@@ -71,6 +71,7 @@ function Flash({ kind, message }: { kind: FlashKind; message: string }) {
 
 const meta = {
   title: 'LiveView Clones/Flash (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

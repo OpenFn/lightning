@@ -124,6 +124,7 @@ function Datetime({
 
 const meta = {
   title: 'LiveView Clones/Dropdown (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

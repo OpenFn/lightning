@@ -8,6 +8,7 @@ import { RunSkeleton } from '#/collaborative-editor/components/run-viewer/RunSke
  */
 const meta = {
   title: 'Components/Run Skeleton',
+  tags: ['useful'],
   component: RunSkeleton,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof RunSkeleton>;

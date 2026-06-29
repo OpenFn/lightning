@@ -107,6 +107,7 @@ function NameBadge({ name, children }: { name: string; children: ReactNode }) {
 
 const meta = {
   title: 'LiveView Clones/Pills (LiveView Clone)',
+  tags: ['core'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

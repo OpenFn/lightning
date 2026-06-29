@@ -82,6 +82,7 @@ function IconGallery() {
 
 const meta = {
   title: 'Editor/Diagram/Icons',
+  tags: ['useful'],
   component: IconGallery,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof IconGallery>;

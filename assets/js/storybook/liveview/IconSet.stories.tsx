@@ -255,6 +255,7 @@ function IconGrid({ entries }: { entries: IconEntry[] }) {
 
 const meta = {
   title: 'LiveView Clones/Icon Set (LiveView Clone)',
+  tags: ['redundant'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

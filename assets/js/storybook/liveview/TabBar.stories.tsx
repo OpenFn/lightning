@@ -44,6 +44,7 @@ function PillTabs({ tabs }: { tabs: Tab[] }) {
 
 const meta = {
   title: 'LiveView Clones/Tab Bar (LiveView Clone)',
+  tags: ['redundant'],
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

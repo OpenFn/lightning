@@ -9,6 +9,7 @@ import Empty from '#/metadata-explorer/Empty';
  */
 const meta = {
   title: 'Components/Metadata Explorer Empty',
+  tags: ['useful'],
   component: Empty,
   parameters: { layout: 'centered' },
   args: { adaptor: '@openfn/language-http' },

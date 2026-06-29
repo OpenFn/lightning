@@ -13,6 +13,7 @@ const noop = () => {};
 
 const meta = {
   title: 'Components/Run Badge',
+  tags: ['redundant'],
   component: RunBadge,
   parameters: { layout: 'centered' },
   args: {

@@ -11,6 +11,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Spinner',
+  tags: ['core'],
   component: Spinner,
   parameters: { layout: 'centered' },
   args: { size: 'md' },

@@ -17,6 +17,7 @@ import { Showcase, Section } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Breadcrumbs',
+  tags: ['useful'],
   component: Breadcrumbs,
   parameters: { layout: 'padded' },
   args: { children: [] },

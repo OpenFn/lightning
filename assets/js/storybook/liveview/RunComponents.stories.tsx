@@ -331,6 +331,7 @@ function AsyncFiller({ message }: { message: string }) {
 
 const meta = {
   title: 'LiveView Clones/Run Components (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

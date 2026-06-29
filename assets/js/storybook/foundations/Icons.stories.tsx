@@ -147,6 +147,7 @@ function IconGallery() {
 
 const meta = {
   title: 'Foundations/Icons',
+  tags: ['foundation'],
   component: IconGallery,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof IconGallery>;

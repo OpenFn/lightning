@@ -12,6 +12,7 @@ import { Showcase, Section } from '../../_shared/showcase';
  */
 const meta = {
   title: 'Editor/Diagram/ErrorMessage',
+  tags: ['useful'],
   component: ErrorMessage,
   parameters: { layout: 'centered' },
   args: { children: 'Adaptor is required' },

@@ -14,6 +14,7 @@ const noop = () => {};
 
 const meta = {
   title: 'Components/Toggle',
+  tags: ['core'],
   component: Toggle,
   parameters: { layout: 'centered' },
   args: {

@@ -12,6 +12,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Shortcut Keys',
+  tags: ['useful'],
   component: ShortcutKeys,
   parameters: { layout: 'centered' },
   args: { keys: ['mod', 's'] },

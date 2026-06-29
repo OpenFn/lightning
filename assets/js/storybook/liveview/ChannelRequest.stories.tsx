@@ -244,6 +244,7 @@ function Card({ children }: { children: ReactNode }) {
 
 const meta = {
   title: 'LiveView Clones/Channel Request (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

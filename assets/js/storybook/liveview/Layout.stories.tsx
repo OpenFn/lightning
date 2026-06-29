@@ -246,6 +246,7 @@ function DarkPanel({
 
 const meta = {
   title: 'LiveView Clones/Layout (LiveView Clone)',
+  tags: ['useful'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 
