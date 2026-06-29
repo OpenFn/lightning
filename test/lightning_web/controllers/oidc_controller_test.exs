@@ -1014,6 +1014,20 @@ defmodule LightningWeb.OidcControllerTest do
       )
     end
 
+    test "returns 400 for a callback with no params", %{conn: conn} do
+      response = get(conn, "/authenticate/callback")
+
+      assert response.status == 400
+      assert response.resp_body =~ "Bad Request"
+    end
+
+    test "returns 400 for an unexpected param combination", %{conn: conn} do
+      response = get(conn, "/authenticate/callback?foo=bar")
+
+      assert response.status == 400
+      assert response.resp_body =~ "Bad Request"
+    end
+
     defp perform_broadcast_test(conn, state, component_id, type, value, key) do
       response =
         conn
