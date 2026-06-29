@@ -3,6 +3,9 @@
   "title": "WorkflowSpec",
   "type": "object",
   "properties": {
+    "schema_version": {
+      "type": "string"
+    },
     "id": {
       "type": ["string", "null"]
     },
@@ -69,6 +72,21 @@
                 "error_code": { "type": ["integer", "null"] }
               },
               "additionalProperties": false
+            },
+            "kafka_configuration": {
+              "type": "object",
+              "properties": {
+                "hosts": { "type": "array", "items": { "type": "string" } },
+                "topics": { "type": "array", "items": { "type": "string" } },
+                "initial_offset_reset_policy": { "type": "string" },
+                "connect_timeout": { "type": "number" },
+                "group_id": { "type": "string" },
+                "sasl": { "type": "string" },
+                "ssl": { "type": "boolean" },
+                "username": { "type": "string" },
+                "password": { "type": "string" }
+              },
+              "additionalProperties": true
             },
             "pos": {
               "type": "object",

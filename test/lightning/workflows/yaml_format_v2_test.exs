@@ -1,0 +1,384 @@
+defmodule Lightning.Workflows.YamlFormatV2Test do
+  use Lightning.DataCase, async: true
+
+  alias Lightning.Workflows.YamlFormat.V2
+
+  import Lightning.Factories
+
+  describe "serialize_workflow/1 from a Workflow struct" do
+    setup do
+      job_a =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "step alpha",
+          adaptor: "@openfn/language-http@latest",
+          body: "fn(state => state)\n"
+        )
+
+      job_b =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "step beta",
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge_t =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: job_a.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      edge_a_b =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: job_a.id,
+          target_job_id: job_b.id,
+          condition_type: :on_job_success,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "round trip workflow",
+        jobs: [job_a, job_b],
+        triggers: [trigger],
+        edges: [edge_t, edge_a_b]
+      }
+
+      %{workflow: workflow, jobs: [job_a, job_b], trigger: trigger}
+    end
+
+    test "emits v2 shape (steps array, hyphenated ids, no v1 keys)", %{
+      workflow: workflow
+    } do
+      assert {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      assert yaml =~ "name: round trip workflow"
+      assert yaml =~ ~r/^\s*steps:/m
+
+      # Hyphenated step ids derived from job/trigger names.
+      assert yaml =~ "- id: webhook"
+      assert yaml =~ "- id: step-alpha"
+      assert yaml =~ "- id: step-beta"
+
+      # No v1 keys leak through.
+      refute yaml =~ ~r/^\s*jobs:/m
+      refute yaml =~ ~r/^\s*edges:/m
+    end
+
+    test "downcases workflow and step ids derived from mixed-case names" do
+      job =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "Fetch Records",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: job.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "MixedCase Workflow",
+        jobs: [job],
+        triggers: [trigger],
+        edges: [edge]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Ids derive from names via a single chokepoint (`hyphenate/1`) that
+      # lowercases as well as space→hyphen. References (`start:`, `next:`
+      # keys) inherit from the same function, so they stay in sync.
+      assert yaml =~ "id: mixedcase-workflow"
+      assert yaml =~ "- id: fetch-records"
+      assert yaml =~ ~r/^\s*start: webhook$/m
+      assert yaml =~ ~r/fetch-records:\s*\n\s*condition: always/
+
+      # Original `name:` strings keep their case — only the id is normalized.
+      assert yaml =~ "name: MixedCase Workflow"
+      assert yaml =~ "name: Fetch Records"
+    end
+
+    test ":always edges emit verbose form with `condition: always`", %{
+      workflow: workflow
+    } do
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # webhook trigger -> step-alpha is the only :always edge. Per
+      # `portability.d.ts:60` the bare-string `next:` shortcut is being
+      # removed from the spec; verbose-only emission is what we ship.
+      assert yaml =~ ~r/step-alpha:\s*\n\s*condition: always/
+      refute yaml =~ ~r/next: step-alpha/
+    end
+
+    test "non-:always edges emit the named condition literal", %{
+      workflow: workflow
+    } do
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # step-alpha -> step-beta is :on_job_success. Per lightning.d.ts:102 the
+      # spec accepts the literal alongside arbitrary JS bodies; we emit the
+      # literal so the output reads as the kitchen-sink example.
+      assert yaml =~ ~r/step-beta:\s*\n\s*condition: on_job_success/
+    end
+
+    test "emits `expression:` (not `body:`) for step code", %{workflow: workflow} do
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+      assert yaml =~ "expression: |"
+      refute yaml =~ ~r/^\s*body:/m
+    end
+
+    test "emits flat `cron_expression:` and `cron_cursor:` directly on the trigger" do
+      cursor_job =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "cursor step",
+          body: "fn(state => state)\n"
+        )
+
+      cron =
+        build(:trigger,
+          id: Ecto.UUID.generate(),
+          type: :cron,
+          enabled: true,
+          cron_expression: "0 6 * * *",
+          cron_cursor_job_id: cursor_job.id
+        )
+
+      edge =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: cron.id,
+          source_job_id: nil,
+          target_job_id: cursor_job.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "cron flow",
+        jobs: [cursor_job],
+        triggers: [cron],
+        edges: [edge]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Both fields land flat at the trigger root — spec doesn't forbid extra
+      # fields and the kitchen-sink convention (mod the UUID bug) is flat.
+      assert yaml =~ ~r/cron_expression: '0 6 \* \* \*'/
+      assert yaml =~ ~r/cron_cursor: cursor-step/
+      refute yaml =~ "openfn:"
+      refute yaml =~ "cron_cursor_job"
+    end
+
+    test "kafka trigger emits hosts/topics/etc. flat at the trigger root" do
+      consumer =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "consume",
+          body: "fn(state => state)\n"
+        )
+
+      kafka_trigger =
+        build(:trigger,
+          id: Ecto.UUID.generate(),
+          type: :kafka,
+          enabled: true,
+          kafka_configuration: %Lightning.Workflows.Triggers.KafkaConfiguration{
+            hosts: [["localhost", "9092"]],
+            topics: ["events"],
+            initial_offset_reset_policy: "earliest",
+            connect_timeout: 30
+          }
+        )
+
+      edge =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: kafka_trigger.id,
+          source_job_id: nil,
+          target_job_id: consumer.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "kafka flow",
+        jobs: [consumer],
+        triggers: [kafka_trigger],
+        edges: [edge]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # All kafka config lives flat on the trigger — no `kafka:` wrapper, no
+      # `openfn:` block. Hosts are joined as `host:port` for human readability.
+      assert yaml =~ ~r/^\s*hosts:\s*\n\s*- 'localhost:9092'/m
+      assert yaml =~ ~r/^\s*topics:\s*\n\s*- events/m
+      assert yaml =~ "initial_offset_reset_policy: earliest"
+      assert yaml =~ "connect_timeout: 30"
+      refute yaml =~ "openfn:"
+      refute yaml =~ ~r/^\s*kafka:/m
+      refute yaml =~ "kafka_configuration"
+    end
+
+    test "js_expression edges emit the JS body inline as `condition`" do
+      a =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "a",
+          body: "fn(state => state)\n"
+        )
+
+      b =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "b",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge_t =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: a.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      js_edge =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: a.id,
+          target_job_id: b.id,
+          condition_type: :js_expression,
+          condition_expression: "state.go === true\n",
+          condition_label: "go condition",
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "js edge flow",
+        jobs: [a, b],
+        triggers: [trigger],
+        edges: [edge_t, js_edge]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Per the portability spec, `condition` is the JS expression body.
+      # Multi-line bodies emit as a `|` literal block.
+      assert yaml =~ "condition: |"
+      assert yaml =~ "state.go === true"
+      assert yaml =~ "label: go condition"
+
+      # No more discriminator literal or sibling `expression:` field.
+      refute yaml =~ "condition: js_expression"
+      refute yaml =~ ~r/^\s*expression: \|\s*\n\s*state\.go/m
+      refute yaml =~ "condition_expression"
+      refute yaml =~ "condition_type"
+    end
+
+    test ":always edges emit verbose `condition: always` (multi-target)" do
+      a =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "a",
+          body: "fn(state => state)\n"
+        )
+
+      b =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "b",
+          body: "fn(state => state)\n"
+        )
+
+      c =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "c",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge_t =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: a.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      # Two outgoing :always edges from `a`.
+      edge_a_b =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: a.id,
+          target_job_id: b.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      edge_a_c =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: nil,
+          source_job_id: a.id,
+          target_job_id: c.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "always flow",
+        jobs: [a, b, c],
+        triggers: [trigger],
+        edges: [edge_t, edge_a_b, edge_a_c]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Verbose form: every target gets a `condition: always` literal.
+      assert yaml =~ ~r/^\s*b:\s*\n\s*condition: always/m
+      assert yaml =~ ~r/^\s*c:\s*\n\s*condition: always/m
+      # No collapse to bare-string `next: <id>` shortcut.
+      refute yaml =~ ~r/next: [a-z]+\s*$/m
+    end
+  end
+end

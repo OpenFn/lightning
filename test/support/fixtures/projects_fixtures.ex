@@ -50,7 +50,8 @@ defmodule Lightning.ProjectsFixtures do
         project: nil
       )
 
-    workflow_1_trigger = Factories.build(:trigger)
+    workflow_1_trigger =
+      Factories.build(:trigger, webhook_reply: :after_completion)
 
     workflow_1_job_1 =
       Factories.build(:job,
@@ -92,12 +93,6 @@ defmodule Lightning.ProjectsFixtures do
         condition_type: :on_job_success
       )
 
-    workflow_2_trigger =
-      Factories.build(:trigger,
-        type: :cron,
-        cron_expression: "0 23 * * *"
-      )
-
     workflow_2_job_1 =
       Factories.build(:job,
         name: "some cronjob",
@@ -110,6 +105,13 @@ defmodule Lightning.ProjectsFixtures do
         name: "on cron failure",
         # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
         inserted_at: DateTime.utc_now() |> Timex.shift(seconds: 4)
+      )
+
+    workflow_2_trigger =
+      Factories.build(:trigger,
+        type: :cron,
+        cron_expression: "0 23 * * *",
+        cron_cursor_job_id: workflow_2_job_1.id
       )
 
     workflow_2 =

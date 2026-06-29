@@ -1,0 +1,582 @@
+/**
+ * v2 (CLI-aligned / portability spec) YAML format tests.
+ *
+ * Phase 2 of issue #4718. Covers the JS-side success criteria:
+ *   - Round-trip via `WorkflowState` (state → serialize → parse → state)
+ *   - Round-trip from on-disk v2 fixtures (parse → serialize → parse)
+ *   - Cross-language parity: parsing the v1 and v2 fixture for the same
+ *     scenario yields equivalent `WorkflowSpec` content.
+ *   - AJV schema rejection: documents missing `steps:` are rejected at the
+ *     schema layer; documents whose `next:` points at a non-existent step id
+ *     are rejected at parse time (`JobNotFoundError`).
+ *
+ * The wire shape is the unified `steps:` array (triggers AND jobs in one
+ * list, distinguished by a `type:` discriminator on triggers). Spec-defined
+ * trigger fields (`cron_expression`, `webhook_reply`) and Lightning-only
+ * extensions (`cron_cursor`, `kafka` config) all live flat at the trigger
+ * root. This matches the Elixir `Lightning.Workflows.YamlFormat.V2` module
+ * and the @openfn/cli lexicon. See
+ * `test/fixtures/portability/v2/canonical_workflow.yaml` for the spec witness.
+ */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import Ajv from 'ajv';
+import YAML from 'yaml';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import workflowV2Schema from '../../js/yaml/schema/workflow-spec-v2.json';
+import type {
+  StateEdge,
+  StateTrigger,
+  WorkflowState,
+} from '../../js/yaml/types';
+import * as v1 from '../../js/yaml/v1';
+import * as v2 from '../../js/yaml/v2';
+import { SchemaValidationError } from '../../js/yaml/workflow-errors';
+
+import {
+  SYNTHETIC_STATES,
+  branchingJobsState,
+  cronWithCursorState,
+  jsExpressionEdgeState,
+  kafkaTriggerState,
+  pipeConditionEdgeState,
+  simpleWebhookState,
+  webhookWithResponseConfigState,
+} from './__fixtures__/v2States';
+
+// ── Fixture loading ─────────────────────────────────────────────────────────
+
+const FIXTURES_ROOT = resolve(__dirname, '../../../test/fixtures/portability');
+
+// Kitchen-sink fixtures: each format has one comprehensive workflow that
+// exercises every supported feature (multi-trigger, kafka config, cron
+// cursor, webhook reply, JS-expression edge with label + disabled,
+// branching, all condition types). New features must be added here so
+// regressions surface.
+const readKitchenSink = (
+  format: 'v1' | 'v2'
+): { text: string; path: string } => {
+  const path = `${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`;
+  return { text: readFileSync(path, 'utf-8'), path };
+};
+
+// Synthetic `WorkflowState` factories live in `__fixtures__/v2States.ts` so
+// they can be reused across test files without bloating any single suite.
+//
+// ── Round-trip: state → YAML → spec ─────────────────────────────────────────
+
+describe('v2.serializeWorkflow / parseWorkflow round-trip on synthetic state', () => {
+  it.each(SYNTHETIC_STATES)(
+    'preserves structure for $name',
+    ({ state: makeState }) => {
+      const state = makeState();
+      const yaml = v2.serializeWorkflow(state);
+
+      // Sanity: serialized output is a v2 doc — single unified `steps:`
+      // array combining trigger and job entries (no top-level `triggers:`).
+      const parsedYaml = YAML.parse(yaml) as Record<string, unknown>;
+      expect(parsedYaml).toHaveProperty('steps');
+      expect(Array.isArray(parsedYaml['steps'])).toBe(true);
+      expect(parsedYaml).not.toHaveProperty('triggers');
+      expect(parsedYaml).not.toHaveProperty('jobs');
+
+      // Re-parse via v2.parseWorkflow (string input) → WorkflowSpec.
+      const spec = v2.parseWorkflow(yaml);
+      expect(spec.name).toBe(state.name);
+
+      // Every job in state is represented as a step in the parsed spec
+      // (keyed by hyphenated name).
+      state.jobs.forEach(job => {
+        const key = job.name.replace(/\s+/g, '-');
+        expect(spec.jobs[key]).toBeDefined();
+        expect(spec.jobs[key]?.name).toBe(job.name);
+        expect(spec.jobs[key]?.adaptor).toBe(job.adaptor);
+        expect(spec.jobs[key]?.body).toBe(job.body);
+      });
+
+      // Every trigger maps to a spec trigger keyed by its `type` (the v2
+      // serializer uses type as the stable id).
+      state.triggers.forEach(trigger => {
+        const triggerSpec = spec.triggers[trigger.type];
+        expect(triggerSpec).toBeDefined();
+        expect(triggerSpec?.type).toBe(trigger.type);
+        expect(triggerSpec?.enabled).toBe(trigger.enabled);
+      });
+
+      // Edge count matches — v2 represents edges via `next:` but the spec
+      // shape keeps them in a flat map keyed `source->target`.
+      expect(Object.keys(spec.edges).length).toBe(state.edges.length);
+
+      // No edge points at a non-existent step.
+      Object.values(spec.edges).forEach(edge => {
+        expect(spec.jobs[edge.target_job]).toBeDefined();
+        if (edge.source_job) {
+          expect(spec.jobs[edge.source_job]).toBeDefined();
+        }
+        if (edge.source_trigger) {
+          expect(spec.triggers[edge.source_trigger]).toBeDefined();
+        }
+      });
+    }
+  );
+
+  it.each(SYNTHETIC_STATES)(
+    'second round-trip is structurally stable for $name',
+    ({ state: makeState }) => {
+      const state = makeState();
+      const yaml1 = v2.serializeWorkflow(state);
+      const spec1 = v2.parseWorkflow(yaml1);
+
+      const state2 = v1.convertWorkflowSpecToState(spec1);
+      const yaml2 = v2.serializeWorkflow(state2);
+      const spec2 = v2.parseWorkflow(yaml2);
+
+      // Same shape on a second pass.
+      expect(Object.keys(spec2.jobs).sort()).toEqual(
+        Object.keys(spec1.jobs).sort()
+      );
+      expect(Object.keys(spec2.triggers).sort()).toEqual(
+        Object.keys(spec1.triggers).sort()
+      );
+      expect(Object.keys(spec2.edges).sort()).toEqual(
+        Object.keys(spec1.edges).sort()
+      );
+    }
+  );
+});
+
+// ── Deep round-trip: trigger / edge content survives state→YAML→state ──────
+//
+// The structural round-trip above only checks that the right number of
+// jobs/triggers/edges come back. This block goes further and asserts that
+// the *content* on each trigger and edge is preserved end-to-end. Without
+// these assertions a regression that drops `cron_expression`, `cron_cursor`,
+// `webhook_reply`, the kafka config, or `condition_label` would slip through.
+
+const findTriggerByType = (
+  state: WorkflowState,
+  type: StateTrigger['type']
+): StateTrigger => {
+  const t = state.triggers.find(x => x.type === type);
+  if (!t) throw new Error(`expected a ${type} trigger in state`);
+  return t;
+};
+
+const findEdgeBySourceAndTarget = (
+  state: WorkflowState,
+  source_job_id: string,
+  target_job_id: string
+): StateEdge => {
+  const e = state.edges.find(
+    x => x.source_job_id === source_job_id && x.target_job_id === target_job_id
+  );
+  if (!e) throw new Error('expected edge to exist after round-trip');
+  return e;
+};
+
+const roundTripToState = (input: WorkflowState): WorkflowState =>
+  v1.convertWorkflowSpecToState(v2.parseWorkflow(v2.serializeWorkflow(input)));
+
+describe('v2 deep round-trip preserves trigger / edge content', () => {
+  it('preserves webhook_reply', () => {
+    const out = roundTripToState(simpleWebhookState());
+    const webhook = findTriggerByType(out, 'webhook');
+    if (webhook.type !== 'webhook') throw new Error('unreachable');
+    expect(webhook.webhook_reply).toBe('after_completion');
+  });
+
+  it('preserves cron_expression and cron_cursor (by job id)', () => {
+    const input = cronWithCursorState();
+    const out = roundTripToState(input);
+    const cron = findTriggerByType(out, 'cron');
+    if (cron.type !== 'cron') throw new Error('unreachable');
+    expect(cron.cron_expression).toBe('0 6 * * *');
+
+    // The cursor job id is regenerated by v1.convertWorkflowSpecToState
+    // (specJob.id is undefined off the wire), but it MUST resolve to the
+    // job whose name was the cursor in the input.
+    const inputCursor = input.jobs.find(j => j.name === 'cursor step');
+    const outCursorByName = out.jobs.find(j => j.name === 'cursor step');
+    expect(inputCursor).toBeDefined();
+    expect(outCursorByName).toBeDefined();
+    expect(cron.cron_cursor_job_id).toBe(outCursorByName?.id);
+  });
+
+  it('preserves a populated kafka_configuration', () => {
+    const out = roundTripToState(kafkaTriggerState());
+    const kafka = findTriggerByType(out, 'kafka');
+    if (kafka.type !== 'kafka') throw new Error('unreachable');
+
+    expect(kafka.kafka_configuration).toBeDefined();
+    const cfg = kafka.kafka_configuration;
+    expect(cfg).not.toBeNull();
+    if (!cfg) return;
+
+    // hosts/topics on the wire are lists of strings; on state they're
+    // comma-separated `_string` form. The round-trip normalizes spacing.
+    expect(cfg.hosts_string).toBe('broker-a:9092, broker-b:9092');
+    expect(cfg.topics_string).toBe('orders, shipments');
+    expect(cfg.ssl).toBe(true);
+    expect(cfg.sasl).toBe('scram_sha_256');
+    expect(cfg.username).toBe('svc-orders');
+    expect(cfg.password).toBe('pw-shh');
+    expect(cfg.initial_offset_reset_policy).toBe('earliest');
+    expect(cfg.connect_timeout).toBe(30);
+    expect(cfg.group_id).toBe('lightning-orders');
+  });
+
+  it('preserves edge condition_type and condition_label on a js_expression edge', () => {
+    const input = jsExpressionEdgeState();
+    const out = roundTripToState(input);
+
+    const inputSource = input.jobs.find(j => j.name === 'source step');
+    const inputTarget = input.jobs.find(j => j.name === 'target step');
+    const outSource = out.jobs.find(j => j.name === 'source step');
+    const outTarget = out.jobs.find(j => j.name === 'target step');
+    expect(inputSource && inputTarget && outSource && outTarget).toBeTruthy();
+    if (!outSource || !outTarget) return;
+
+    const edge = findEdgeBySourceAndTarget(out, outSource.id, outTarget.id);
+    expect(edge.condition_type).toBe('js_expression');
+    expect(edge.condition_label).toBe('Only when payload present');
+    expect(edge.condition_expression).toBe(
+      '!!state.data && state.data.length > 0\n'
+    );
+  });
+
+  it('preserves webhook_response_config status codes', () => {
+    const out = roundTripToState(webhookWithResponseConfigState());
+    const webhook = findTriggerByType(out, 'webhook');
+    if (webhook.type !== 'webhook') throw new Error('unreachable');
+    expect(webhook.webhook_response_config).toEqual({
+      success_code: 202,
+      error_code: 422,
+    });
+  });
+
+  it('round-trips a JS-expression body that collides with a named condition', () => {
+    // `!state.errors` is a real JS condition a user can author; it must
+    // round-trip as a :js_expression and NOT be silently rewritten to the
+    // named `on_job_success` type (which would drop the expression).
+    const input = jsExpressionEdgeState();
+    input.edges[1].condition_expression = '!state.errors';
+    const out = roundTripToState(input);
+    const outSource = out.jobs.find(j => j.name === 'source step');
+    const outTarget = out.jobs.find(j => j.name === 'target step');
+    if (!outSource || !outTarget) throw new Error('jobs missing');
+    const edge = findEdgeBySourceAndTarget(out, outSource.id, outTarget.id);
+    expect(edge.condition_type).toBe('js_expression');
+    expect(edge.condition_expression).toBe('!state.errors');
+  });
+
+  it('leaves a `||` condition body unquoted (parity with the Elixir emitter)', () => {
+    const yaml = v2.serializeWorkflow(pipeConditionEdgeState());
+    // The condition must be emitted as a plain (unquoted) scalar so the JS and
+    // Elixir serializers produce byte-identical YAML for pipe-bearing values.
+    expect(yaml).toContain('condition: state.a || state.b');
+    expect(yaml).not.toContain("'state.a || state.b'");
+
+    // And it still round-trips intact.
+    const out = roundTripToState(pipeConditionEdgeState());
+    const outSource = out.jobs.find(j => j.name === 'source step');
+    const outTarget = out.jobs.find(j => j.name === 'target step');
+    if (!outSource || !outTarget) throw new Error('jobs missing');
+    const edge = findEdgeBySourceAndTarget(out, outSource.id, outTarget.id);
+    expect(edge.condition_type).toBe('js_expression');
+    expect(edge.condition_expression).toBe('state.a || state.b');
+  });
+
+  it('defaults a trigger with no `enabled:` to false on parse', () => {
+    // Matches the serializer, the Elixir emitter, and the Trigger schema
+    // default — both directions of the module must agree.
+    const yaml = `
+name: no-enabled
+steps:
+  - id: webhook
+    name: webhook
+    type: webhook
+    next:
+      a: { condition: always }
+  - id: a
+    name: a
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+`;
+    const spec = v2.parseWorkflow(yaml);
+    expect(spec.triggers['webhook']?.enabled).toBe(false);
+  });
+
+  it('preserves named condition_types on branching edges', () => {
+    const out = roundTripToState(branchingJobsState());
+    const fanOut = out.jobs.find(j => j.name === 'fan out');
+    const branchA = out.jobs.find(j => j.name === 'branch a');
+    const branchB = out.jobs.find(j => j.name === 'branch b');
+    if (!fanOut || !branchA || !branchB) throw new Error('jobs missing');
+
+    const edgeA = findEdgeBySourceAndTarget(out, fanOut.id, branchA.id);
+    const edgeB = findEdgeBySourceAndTarget(out, fanOut.id, branchB.id);
+    expect(edgeA.condition_type).toBe('on_job_success');
+    expect(edgeB.condition_type).toBe('on_job_failure');
+  });
+});
+
+// ── On-disk fixture round-trip ──────────────────────────────────────────────
+
+describe('v2 fixture round-trip', () => {
+  it('round-trips the canonical workflow', () => {
+    const { text } = readKitchenSink('v2');
+    const spec = v2.parseWorkflow(text);
+
+    expect(spec).toBeDefined();
+    expect(typeof spec.name).toBe('string');
+    expect(spec.jobs).toBeDefined();
+    expect(spec.triggers).toBeDefined();
+    expect(spec.edges).toBeDefined();
+
+    // No dangling next refs in the parsed spec.
+    Object.values(spec.edges).forEach(edge => {
+      expect(spec.jobs[edge.target_job]).toBeDefined();
+    });
+
+    // Re-serialize from a state derived from the parsed spec.
+    const state = v1.convertWorkflowSpecToState(spec);
+    const yaml2 = v2.serializeWorkflow(state);
+    const spec2 = v2.parseWorkflow(yaml2);
+
+    // Structural equivalence on the second parse.
+    expect(Object.keys(spec2.jobs).sort()).toEqual(
+      Object.keys(spec.jobs).sort()
+    );
+    expect(Object.keys(spec2.triggers).sort()).toEqual(
+      Object.keys(spec.triggers).sort()
+    );
+    expect(Object.keys(spec2.edges).sort()).toEqual(
+      Object.keys(spec.edges).sort()
+    );
+  });
+});
+
+// ── Cross-language fixture parity ───────────────────────────────────────────
+//
+// The v1 and v2 canonical workflow describe the same workflow in two
+// formats. Parsing them must produce equivalent `WorkflowSpec` content
+// (modulo trigger keying — v1 keys by `type`; v2 step `id` is also the type
+// for triggers, so the keys line up).
+
+describe('cross-language fixture parity', () => {
+  it('v1 and v2 canonical workflows parse to equivalent specs', () => {
+    const v1Text = readKitchenSink('v1').text;
+    const v2Text = readKitchenSink('v2').text;
+
+    const v1Spec = v1.parseWorkflowYAML(v1Text);
+    const v2Spec = v2.parseWorkflow(v2Text);
+
+    expect(v1Spec.name).toBe(v2Spec.name);
+    expect(Object.keys(v1Spec.jobs).sort()).toEqual(
+      Object.keys(v2Spec.jobs).sort()
+    );
+    expect(Object.keys(v1Spec.triggers).sort()).toEqual(
+      Object.keys(v2Spec.triggers).sort()
+    );
+
+    Object.entries(v1Spec.jobs).forEach(([key, j1]) => {
+      const j2 = v2Spec.jobs[key];
+      expect(j2).toBeDefined();
+      expect(j2?.name).toBe(j1.name);
+      expect(j2?.adaptor).toBe(j1.adaptor);
+      expect(j2?.body).toBe(j1.body);
+    });
+
+    Object.entries(v1Spec.triggers).forEach(([key, t1]) => {
+      const t2 = v2Spec.triggers[key];
+      expect(t2).toBeDefined();
+      expect(t2?.type).toBe(t1.type);
+      expect(t2?.enabled).toBe(t1.enabled);
+    });
+  });
+});
+
+// ── AJV schema rejection ────────────────────────────────────────────────────
+
+describe('v2 AJV schema rejection', () => {
+  const ajv = new Ajv({ allErrors: true });
+  const validate = ajv.compile(workflowV2Schema);
+
+  it('rejects a doc missing `steps:`', () => {
+    const doc = { name: 'no steps' };
+    expect(validate(doc)).toBe(false);
+    const requiredErrors = validate.errors?.filter(
+      e => e.keyword === 'required'
+    );
+    expect(requiredErrors?.length).toBeGreaterThan(0);
+    expect(
+      requiredErrors?.some(e => e.params['missingProperty'] === 'steps')
+    ).toBe(true);
+  });
+
+  it('accepts a minimal valid v2 doc', () => {
+    const doc = {
+      name: 'minimal',
+      steps: [
+        {
+          id: 'a',
+          name: 'a',
+          adaptor: '@openfn/language-common@latest',
+          expression: 'fn(s => s)',
+        },
+      ],
+    };
+    expect(validate(doc)).toBe(true);
+  });
+
+  it('rejects an unknown top-level property', () => {
+    const doc = {
+      steps: [
+        {
+          id: 'a',
+          name: 'a',
+          adaptor: '@openfn/language-common@latest',
+          expression: 'fn(s => s)',
+        },
+      ],
+      not_a_real_field: true,
+    };
+    expect(validate(doc)).toBe(false);
+  });
+
+  it('rejects a step missing required fields', () => {
+    const doc = {
+      steps: [{ id: 'a' }],
+    };
+    expect(validate(doc)).toBe(false);
+  });
+
+  it('accepts an edge whose `condition` is any JS expression body', () => {
+    // Per the portability spec, `condition` is a JS expression body — there
+    // is no enum. The schema accepts any string here; semantic interpretation
+    // is the parser's job.
+    const doc = {
+      steps: [
+        {
+          id: 'a',
+          name: 'a',
+          adaptor: '@openfn/language-common@latest',
+          expression: 'fn(s => s)',
+          next: { b: { condition: '!state.errors && state.foo > 0' } },
+        },
+        {
+          id: 'b',
+          name: 'b',
+          adaptor: '@openfn/language-common@latest',
+          expression: 'fn(s => s)',
+        },
+      ],
+    };
+    expect(validate(doc)).toBe(true);
+  });
+});
+
+// The AJV schema is structural — it does not know which step ids exist,
+// so it cannot catch a `next:` that references a missing step. That check
+// runs at parse time inside `v2.parseWorkflow` (it throws JobNotFoundError
+// as it walks the `next:` map).
+
+describe('v2 parseWorkflow rejects dangling next references', () => {
+  it('throws JobNotFoundError when a step `next:` targets a non-existent step', () => {
+    const yaml = `
+name: dangling
+steps:
+  - id: a
+    name: a
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+    next:
+      ghost: true
+`;
+    expect(() => v2.parseWorkflow(yaml)).toThrow();
+
+    try {
+      v2.parseWorkflow(yaml);
+    } catch (err) {
+      // Structural assertion: it's a workflow error referencing the missing
+      // target id. Either JobNotFoundError or a SchemaValidationError that
+      // mentions the dangling reference is acceptable.
+      const e = err as { name?: string; message?: string };
+      const isExpected =
+        e.name === 'JobNotFoundError' ||
+        (typeof e.message === 'string' && e.message.includes('ghost'));
+      expect(isExpected).toBe(true);
+    }
+  });
+
+  it('throws when a trigger `next:` targets a non-existent step', () => {
+    const yaml = `
+name: dangling-trigger
+steps:
+  - id: webhook
+    name: webhook
+    type: webhook
+    enabled: true
+    next: ghost
+  - id: a
+    name: a
+    adaptor: '@openfn/language-common@latest'
+    expression: |
+      fn(state => state)
+`;
+    expect(() => v2.parseWorkflow(yaml)).toThrow();
+  });
+});
+
+// ── detectFormat sanity ─────────────────────────────────────────────────────
+
+describe('v2.detectFormat', () => {
+  // The ambiguous and null/non-object branches log via console.warn. Silence
+  // them so test output stays clean; restore after each test.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('returns v2 for a doc with steps and no jobs', () => {
+    expect(v2.detectFormat({ steps: [] })).toBe('v2');
+  });
+
+  it('returns v1 for a doc with jobs/triggers/edges shape', () => {
+    expect(
+      v2.detectFormat({
+        jobs: { a: {} },
+        triggers: { webhook: { type: 'webhook' } },
+        edges: {},
+      })
+    ).toBe('v1');
+  });
+
+  it('returns v1 for a doc with both jobs and steps (legacy bias)', () => {
+    expect(v2.detectFormat({ jobs: {}, steps: [] })).toBe('v1');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('both `jobs:` and `steps:`')
+    );
+  });
+
+  it('returns v1 for null / non-object input', () => {
+    expect(v2.detectFormat(null)).toBe('v1');
+    expect(v2.detectFormat([])).toBe('v1');
+    expect(v2.detectFormat('hello')).toBe('v1');
+  });
+});
+
+// SchemaValidationError is intentionally referenced so the import isn't
+// flagged as unused; it doubles as documentation that this is the error
+// class missing-`steps:` would surface through `parseWorkflow`.
+void SchemaValidationError;

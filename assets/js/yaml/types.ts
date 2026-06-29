@@ -35,10 +35,33 @@ export type StateWebhookTrigger = {
   } | null;
 };
 
+/**
+ * Kafka configuration carried on a `StateKafkaTrigger`.
+ *
+ * Mirrors the shape the workflow store hydrates from Y.Doc (which the Elixir
+ * `Lightning.Collaboration.WorkflowSerializer` populates from
+ * `Triggers.KafkaConfiguration`): hosts and topics live as comma-separated
+ * `_string` form on state, and become flat lists in the portability format.
+ *
+ * `connect_timeout` is in seconds (matches the Elixir schema default of 30).
+ */
+export type StateKafkaConfiguration = {
+  hosts_string: string;
+  topics_string: string;
+  initial_offset_reset_policy: string;
+  connect_timeout: number;
+  group_id?: string | null;
+  sasl?: string | null;
+  ssl?: boolean;
+  username?: string | null;
+  password?: string | null;
+};
+
 export type StateKafkaTrigger = {
   id: string;
   enabled: boolean;
   type: 'kafka';
+  kafka_configuration?: StateKafkaConfiguration | null;
 };
 
 export type StateTrigger =
@@ -109,6 +132,7 @@ export type SpecKafkaTrigger = {
   id?: string;
   type: 'kafka';
   enabled: boolean;
+  kafka_configuration?: StateKafkaConfiguration | null;
 };
 
 export type SpecTrigger =

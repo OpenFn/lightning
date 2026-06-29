@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   @moduledoc """
   Installs the following NodeJS packages:
 
-  - core
+  - cli
   - language-common
   """
 

@@ -34,6 +34,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.YamlFormat.V2
   alias Lightning.WorkOrder
 
   require Logger
@@ -889,6 +890,44 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns the topmost ancestor (root) project id for the given project. For a
+  root project (`parent_id == nil`) returns its own id. Returns `nil` if the
+  project does not exist.
+
+  Used by the GitHub-sync guard to ensure no two projects sharing the same
+  ultimate root claim the same `(repo, branch)` pair.
+  """
+  @spec root_id(Project.t() | Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def root_id(%Project{id: id, parent_id: nil}) when is_binary(id), do: id
+
+  def root_id(%Project{id: id, parent_id: parent_id})
+      when is_binary(parent_id) and is_binary(id) do
+    root_id(id)
+  end
+
+  def root_id(project_id) when is_binary(project_id) do
+    initial =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: a in "project_chain",
+        on: a.parent_id == p.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    "project_chain"
+    |> recursive_ctes(true)
+    |> with_cte("project_chain", as: ^union_all(initial, ^recursion))
+    |> where([c], is_nil(c.parent_id))
+    |> select([c], type(c.id, Ecto.UUID))
+    |> Repo.one()
+  end
+
+  @doc """
   Returns every descendant project of `project_id`, ordered by name.
 
   Unlike `list_workspace_projects/2`, the input is treated as the subtree
@@ -1396,21 +1435,35 @@ defmodule Lightning.Projects do
   @doc """
   Exports a project as yaml.
 
+  The `format` is required and selects the serializer:
+    * `:v1` — legacy Lightning format (`Lightning.ExportUtils`). Hard-wired
+      for the provisioner API so external CLIs that consume
+      `GET /api/provision/yaml` keep working.
+    * `:v2` — portability spec format (`Lightning.Workflows.YamlFormat.V2`).
+      Used by the in-app "Export project as YAML" download.
+
+  `snapshot_ids` may be `nil` (export current workflows) or a list of
+  snapshot ids (export those specific snapshots).
+
   ## Examples
 
-      iex> export_project(:yaml, project_id)
+      iex> export_project(:yaml, project_id, nil, :v2)
       {:ok, string}
 
   """
-  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
+  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t()] | nil, :v1 | :v2) ::
           {:ok, binary}
-  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+  def export_project(:yaml, project_id, snapshot_ids, format)
+      when format in [:v1, :v2] do
     project = get_project!(project_id)
 
     snapshots =
       if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
 
-    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
+    case format do
+      :v1 -> ExportUtils.generate_new_yaml(project, snapshots)
+      :v2 -> V2.serialize_project(project, snapshots)
+    end
   end
 
   @doc """

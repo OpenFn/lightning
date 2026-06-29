@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorkflowSpecV2",
+  "type": "object",
+  "definitions": {
+    "edgeObject": {
+      "type": "object",
+      "properties": {
+        "condition": { "type": "string" },
+        "label": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "stepEdge": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string" },
+        { "$ref": "#/definitions/edgeObject" }
+      ]
+    },
+    "next": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": { "$ref": "#/definitions/stepEdge" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "triggerStep": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["webhook", "cron", "kafka"]
+        },
+        "enabled": { "type": "boolean" },
+        "cron_expression": { "type": "string" },
+        "cron_cursor": { "type": "string" },
+        "webhook_reply": { "type": "string" },
+        "webhook_response_config": {
+          "type": "object",
+          "properties": {
+            "success_code": { "type": "number" },
+            "error_code": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "hosts": { "type": "array", "items": { "type": "string" } },
+        "topics": { "type": "array", "items": { "type": "string" } },
+        "initial_offset_reset_policy": { "type": "string" },
+        "connect_timeout": { "type": "number" },
+        "group_id": { "type": "string" },
+        "sasl": { "type": "string" },
+        "ssl": { "type": "boolean" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "next": { "$ref": "#/definitions/next" }
+      },
+      "required": ["id", "type"],
+      "additionalProperties": false
+    },
+    "jobStep": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "adaptor": { "type": "string" },
+        "expression": { "type": "string" },
+        "configuration": { "type": ["string", "null"] },
+        "next": { "$ref": "#/definitions/next" }
+      },
+      "required": ["id", "name", "adaptor", "expression"],
+      "additionalProperties": false
+    },
+    "step": {
+      "oneOf": [
+        { "$ref": "#/definitions/triggerStep" },
+        { "$ref": "#/definitions/jobStep" }
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "name": { "type": ["string", "null"] },
+    "start": { "type": "string" },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/step" }
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": false
+}

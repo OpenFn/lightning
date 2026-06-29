@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- V2 workflow and project YAML format that conforms to the OpenFn portability
+  spec, so files exported from Lightning are interchangeable with the CLI's
+  workflow format. Canonical V1 and V2 fixtures live under
+  `test/fixtures/portability/`, with CLI-deploy integration coverage.
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or
@@ -25,6 +30,11 @@ and this project adheres to
 
 ### Changed
 
+- Project and workflow YAML serialization moved out of `Lightning.ExportUtils`
+  into a versioned `Lightning.Workflows.YamlFormat.V2` module, mirrored on the
+  frontend by `assets/js/yaml/v2.ts` (driving the inspector code view, template
+  publish panel, and YAML import editor).
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
   [#4878](https://github.com/OpenFn/lightning/issues/4878)
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
@@ -33,6 +43,13 @@ and this project adheres to
 - Bump worker to 1.27.0
 
 ### Fixed
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. Enforcement moved to a Postgres unique index on
+  `(root_project_id, repo, branch)`, closing a check-then-insert race that could
+  let two concurrent inserts both pass an in-memory ancestor check at READ
+  COMMITTED. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 
 ## [2.16.8-pre] - 2026-06-18
 
