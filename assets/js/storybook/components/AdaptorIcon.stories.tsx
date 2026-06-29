@@ -14,7 +14,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Adaptor Icon',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: AdaptorIcon,
   parameters: { layout: 'centered' },
   args: { name: '@openfn/language-salesforce@latest', size: 'md' },

@@ -544,7 +544,7 @@ function WelcomeBanner({ userName }: { userName: string }) {
 
 const meta = {
   title: 'LiveView Clones/Dashboard (LiveView Clone)',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

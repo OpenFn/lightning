@@ -78,7 +78,7 @@ function VersionChip({
 
 const meta = {
   title: 'LiveView Clones/Chips (LiveView Clone)',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

@@ -349,7 +349,7 @@ function ScheduledSandboxCard({ sandbox }: { sandbox: Sandbox }) {
 
 const meta = {
   title: 'LiveView Clones/Sandbox (LiveView Clone)',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

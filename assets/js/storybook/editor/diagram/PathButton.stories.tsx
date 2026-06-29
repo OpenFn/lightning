@@ -24,7 +24,7 @@ function PathButtonStage({ children }: { children: React.ReactNode }) {
 
 const meta = {
   title: 'Editor/Diagram/PathButton',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: PathButton,
   parameters: { layout: 'centered' },
   args: { id: 'node-connector' },

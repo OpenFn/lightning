@@ -346,7 +346,7 @@ function TagInput({
 
 const meta = {
   title: 'LiveView Clones/Input Variants (LiveView Clone)',
-  tags: ['useful'],
+  tags: ['useful', 'modular'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

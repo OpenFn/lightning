@@ -21,7 +21,7 @@ function CheckMark() {
 
 const meta = {
   title: 'LiveView Clones/Admin Tables (LiveView Clone)',
-  tags: ['useful'],
+  tags: ['useful', 'modular'],
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

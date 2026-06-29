@@ -10,7 +10,7 @@ import { DisclaimerScreen } from '#/collaborative-editor/components/DisclaimerSc
  */
 const meta = {
   title: 'Components/Disclaimer Screen',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: DisclaimerScreen,
   parameters: { layout: 'fullscreen' },
   args: {

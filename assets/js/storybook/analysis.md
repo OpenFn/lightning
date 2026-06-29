@@ -30,6 +30,45 @@ canonical version per concept; the duplicate is listed as Redundant. Long term
 the highest-leverage move is a single documented class contract shared by both
 worlds (one set of Tailwind classes, rendered from either HEEx or React).
 
+## Modular vs bespoke (within Useful)
+
+Of the 39 Useful components, **10 (26%) are modular** (assembled from reusable
+building blocks) and **29 (74%) are bespoke** one-offs built from raw markup.
+Stricter still: only **6 (~15%) compose a Core component directly** (Table,
+Alert, Button or the shared input foundation).
+
+Being a one-off is fine; re-implementing something the Core set already provides
+is not. Every Useful story carries a second tag so this is filterable:
+
+- **modular** - composes reusable parts; a change to the foundation propagates
+  here for free.
+- **bespoke** - a one-off raw implementation.
+
+**Modular (10):** Data Tables, Admin Tables _(Table)_ · Banners, Sandbox
+Indicator Banner _(Alert)_ · Run Retry Button _(Button)_ · Input Variants
+_(input foundation)_ · Run Components _(list_item/step_item)_ · Sidebar,
+Navigation _(menu_item + breadcrumb)_ · Diagram Nodes _(Shape + icons)_.
+
+**Bespoke that _should_ be modular (priority refactors).** Each re-implements a
+Core pattern from scratch; routing them through the foundation lifts the modular
+share and removes drift:
+
+| Bespoke component(s) | Should compose |
+| -------------------- | -------------- |
+| State Pill, Dataclip Type Pill, Trigger Type Badge, Chips, Channel Request badges | base **Pill / Badge** |
+| Dashboard metric/state cards | a shared **Card** |
+| Metadata Explorer Empty (+ the per-table empty states) | a shared **EmptyState** |
+| Diagram Error Message | **Alert** |
+| Breadcrumbs (two implementations exist) | one shared **Breadcrumbs** |
+| Run Skeleton | a shared **Skeleton** |
+
+The remaining bespoke components (OAuth, GitHub, Sandbox, Viewers, Disclaimer
+Screen, Logo, Adaptor Icon, the diagram leaf primitives, the Layout shell,
+Tabbed Selector, Shortcut Keys, Elapsed Indicator, Log Level Filter) are
+reasonable one-offs: genuinely feature-specific, or themselves low-level
+primitives. Fine to stay bespoke, though most would still benefit from leaning
+on the shared Pill/Card/Icon where they currently inline those patterns.
+
 ---
 
 ## Stack ranking (with cut lines)
@@ -190,6 +229,8 @@ them toward reusable.
 Each story is tagged with its bucket so the catalogue is filterable:
 
 - `core`, `useful`, `redundant` - the classification above.
+- `modular` / `bespoke` - on every Useful story: is it built on reusable
+  foundation, or a one-off? (26% modular today.)
 - `composite` - `Pages/*`, `Editor/Canvas`, `Editor/IDE` (assemblies).
 - `foundation` - `Foundations/*` (tokens).
 

@@ -18,7 +18,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Run Retry Button',
-  tags: ['useful'],
+  tags: ['useful', 'modular'],
   component: RunRetryButton,
   parameters: { layout: 'centered' },
   args: {

@@ -70,7 +70,7 @@ const triggerNode = (
 
 const meta = {
   title: 'Editor/Diagram/Nodes',
-  tags: ['useful'],
+  tags: ['useful', 'modular'],
   parameters: { layout: 'centered' },
 } satisfies Meta;
 

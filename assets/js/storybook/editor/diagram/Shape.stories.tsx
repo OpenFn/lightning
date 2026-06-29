@@ -33,7 +33,7 @@ function ShapeCanvas({ children }: { children: React.ReactNode }) {
 
 const meta = {
   title: 'Editor/Diagram/Shape',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: Shape,
   parameters: { layout: 'centered' },
   args: {

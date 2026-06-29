@@ -11,7 +11,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Elapsed Indicator',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: ElapsedIndicator,
   parameters: { layout: 'centered' },
   args: {

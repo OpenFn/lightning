@@ -17,7 +17,7 @@ const noop = () => {};
 
 const meta = {
   title: 'Components/Log Level Filter',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: LogLevelFilter,
   parameters: { layout: 'centered' },
   args: { selectedLevel: 'info', onLevelChange: noop },

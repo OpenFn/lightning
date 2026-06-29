@@ -11,7 +11,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Step Icon',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: StepIcon,
   parameters: { layout: 'centered' },
   args: { exitReason: 'success', errorType: null },

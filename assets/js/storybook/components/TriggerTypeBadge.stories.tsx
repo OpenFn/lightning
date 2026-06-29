@@ -11,7 +11,7 @@ import { Showcase, Section, Row, Specimen } from '../_shared/showcase';
  */
 const meta = {
   title: 'Components/Trigger Type Badge',
-  tags: ['useful'],
+  tags: ['useful', 'bespoke'],
   component: TriggerTypeBadge,
   parameters: { layout: 'centered' },
   args: { type: 'webhook' },
