@@ -574,6 +574,10 @@ export function AIAssistantPanelWrapper({
     [aiStore]
   );
 
+  // Track whether we applied via streaming so the auto-apply effect in the
+  // hook can skip the duplicate when the final new_message arrives
+  const appliedViaStreamingRef = useRef(false);
+
   // Hook to handle workflow/job code application logic
   const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
     useAIWorkflowApplications({
@@ -607,6 +611,7 @@ export function AIAssistantPanelWrapper({
       previewingMessageId,
       setApplyingMessageId,
       appliedMessageIdsRef,
+      appliedViaStreamingRef,
     });
 
   // Auto-preview job code when AI responds with code
@@ -626,9 +631,6 @@ export function AIAssistantPanelWrapper({
   const appliedStreamingChangesRef = useRef<Record<string, unknown> | null>(
     null
   );
-  // Track whether we applied via streaming so we can skip the duplicate
-  // auto-apply when the final new_message arrives
-  const appliedViaStreamingRef = useRef(false);
   useEffect(() => {
     if (!streamingChanges || !canApplyChanges) return;
     // Avoid re-applying the same streaming changes object
@@ -644,7 +646,6 @@ export function AIAssistantPanelWrapper({
     } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
       const code = streamingChanges['code'] as string;
       if (code) {
-        appliedViaStreamingRef.current = true;
         handlePreviewJobCode(code, '__streaming__');
       }
     }
@@ -655,22 +656,6 @@ export function AIAssistantPanelWrapper({
     handleApplyWorkflow,
     handlePreviewJobCode,
   ]);
-
-  // When a new assistant message with code arrives after we already applied
-  // via streaming, mark it as already applied to prevent duplicate auto-apply
-  // and update previewingMessageId to the real ID to prevent diff flicker
-  useEffect(() => {
-    if (!appliedViaStreamingRef.current) return;
-
-    const latestAssistantMessage = [...messages]
-      .reverse()
-      .find(m => m.role === 'assistant' && m.code && m.status === 'success');
-
-    if (latestAssistantMessage) {
-      appliedMessageIdsRef.current.add(latestAssistantMessage.id);
-      appliedViaStreamingRef.current = false;
-    }
-  }, [messages, appliedMessageIdsRef]);
 
   return (
     <div

@@ -497,6 +497,70 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
+  it('skips auto-apply and marks message applied when appliedViaStreamingRef is set', async () => {
+    const appliedMessageIdsRef = { current: new Set<string>() };
+    const appliedViaStreamingRef = { current: false };
+
+    const userMessage = {
+      id: 'user-msg-1',
+      role: 'user' as const,
+      content: 'Build me a workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:00Z',
+      user_id: 'user-123',
+    };
+
+    const assistantMessage = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is your workflow',
+      code: 'name: Test',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:01Z',
+    };
+
+    type Props = {
+      currentSession: { messages: (typeof userMessage)[] } | null;
+    };
+
+    const { rerender } = renderHook(
+      ({ currentSession }: Props) =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: mockWorkflowActions,
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: true,
+          appliedMessageIdsRef,
+          appliedViaStreamingRef,
+        }),
+      { initialProps: { currentSession: { messages: [userMessage] } } }
+    );
+
+    // Simulate streaming having already applied the YAML
+    appliedViaStreamingRef.current = true;
+
+    rerender({
+      currentSession: { messages: [userMessage, assistantMessage] },
+    });
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
+      expect(mockSaveWorkflow).not.toHaveBeenCalled();
+      expect(appliedMessageIdsRef.current.has('msg-1')).toBe(true);
+      expect(appliedViaStreamingRef.current).toBe(false);
+    });
+  });
+
   it('shows save-failure toast and does not call onValidationError when save rejects', async () => {
     const failingSaveWorkflow = vi.fn(() =>
       Promise.reject(new Error('Network error'))

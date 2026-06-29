@@ -115,6 +115,7 @@ export function useAIWorkflowApplications({
   previewingMessageId,
   setApplyingMessageId,
   appliedMessageIdsRef,
+  appliedViaStreamingRef,
 }: {
   sessionId: string | null;
   page: SessionType | null;
@@ -143,6 +144,7 @@ export function useAIWorkflowApplications({
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
   appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
+  appliedViaStreamingRef?: React.MutableRefObject<boolean>;
 }) {
   const {
     importWorkflow,
@@ -194,7 +196,6 @@ export function useAIWorkflowApplications({
       let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
-
         validateIds(workflowSpec);
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
@@ -455,6 +456,16 @@ export function useAIWorkflowApplications({
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
+      appliedMessageIdsRef.current.add(latestMessage.id);
+
+      // Streaming already applied this YAML — skip the re-import to avoid
+      // a transient dirty state (Y.Doc write → unsaved red dot) between
+      // the import and save that would otherwise follow.
+      if (appliedViaStreamingRef?.current) {
+        appliedViaStreamingRef.current = false;
+        return;
+      }
+
       // Find the user message that triggered this AI response
       // Look for the most recent user message before this assistant message
       const latestMessageIndex = messages.findIndex(
@@ -472,8 +483,6 @@ export function useAIWorkflowApplications({
         precedingUserMessage?.user_id === currentUserId ||
         // Fallback: if no user_id on message (legacy), allow apply
         !precedingUserMessage?.user_id;
-
-      appliedMessageIdsRef.current.add(latestMessage.id);
 
       if (isCurrentUserAuthor) {
         void handleApplyWorkflow(latestMessage.code, latestMessage.id);
