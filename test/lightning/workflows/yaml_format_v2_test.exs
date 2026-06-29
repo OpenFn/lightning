@@ -75,6 +75,50 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ ~r/^\s*edges:/m
     end
 
+    test "downcases workflow and step ids derived from mixed-case names" do
+      job =
+        build(:job,
+          id: Ecto.UUID.generate(),
+          name: "Fetch Records",
+          body: "fn(state => state)\n"
+        )
+
+      trigger =
+        build(:trigger, id: Ecto.UUID.generate(), type: :webhook, enabled: true)
+
+      edge =
+        build(:edge,
+          id: Ecto.UUID.generate(),
+          source_trigger_id: trigger.id,
+          source_job_id: nil,
+          target_job_id: job.id,
+          condition_type: :always,
+          enabled: true
+        )
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "MixedCase Workflow",
+        jobs: [job],
+        triggers: [trigger],
+        edges: [edge]
+      }
+
+      {:ok, yaml} = V2.serialize_workflow(workflow)
+
+      # Ids derive from names via a single chokepoint (`hyphenate/1`) that
+      # lowercases as well as space→hyphen. References (`start:`, `next:`
+      # keys) inherit from the same function, so they stay in sync.
+      assert yaml =~ "id: mixedcase-workflow"
+      assert yaml =~ "- id: fetch-records"
+      assert yaml =~ ~r/^\s*start: webhook$/m
+      assert yaml =~ ~r/fetch-records:\s*\n\s*condition: always/
+
+      # Original `name:` strings keep their case — only the id is normalized.
+      assert yaml =~ "name: MixedCase Workflow"
+      assert yaml =~ "name: Fetch Records"
+    end
+
     test ":always edges emit verbose form with `condition: always`", %{
       workflow: workflow
     } do

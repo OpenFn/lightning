@@ -462,7 +462,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   defp put_unless_nil(map, key, value), do: Map.put(map, key, value)
 
   defp hyphenate(string) when is_binary(string),
-    do: String.replace(string, " ", "-")
+    do: string |> String.downcase() |> String.replace(" ", "-")
 
   defp hyphenate(other), do: other
 

@@ -14,6 +14,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
   alias Lightning.Config
+  alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects
@@ -1434,21 +1435,35 @@ defmodule Lightning.Projects do
   @doc """
   Exports a project as yaml.
 
+  The `format` is required and selects the serializer:
+    * `:v1` — legacy Lightning format (`Lightning.ExportUtils`). Hard-wired
+      for the provisioner API so external CLIs that consume
+      `GET /api/provision/yaml` keep working.
+    * `:v2` — portability spec format (`Lightning.Workflows.YamlFormat.V2`).
+      Used by the in-app "Export project as YAML" download.
+
+  `snapshot_ids` may be `nil` (export current workflows) or a list of
+  snapshot ids (export those specific snapshots).
+
   ## Examples
 
-      iex> export_project(:yaml, project_id)
+      iex> export_project(:yaml, project_id, nil, :v2)
       {:ok, string}
 
   """
-  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
+  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t()] | nil, :v1 | :v2) ::
           {:ok, binary}
-  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+  def export_project(:yaml, project_id, snapshot_ids, format)
+      when format in [:v1, :v2] do
     project = get_project!(project_id)
 
     snapshots =
       if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
 
-    {:ok, _yaml} = V2.serialize_project(project, snapshots)
+    case format do
+      :v1 -> ExportUtils.generate_new_yaml(project, snapshots)
+      :v2 -> V2.serialize_project(project, snapshots)
+    end
   end
 
   @doc """

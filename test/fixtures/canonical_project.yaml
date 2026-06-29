@@ -1,0 +1,87 @@
+name: a-test-project
+description: |
+  This is only a test
+collections:
+  cannonical-collection:
+    name: cannonical-collection
+credentials:
+  cannonical-user@lightning.com-new-credential:
+    name: new credential
+    owner: cannonical-user@lightning.com
+workflows:
+  workflow-1:
+    name: workflow 1
+    jobs:
+      webhook-job:
+        name: webhook job
+        adaptor: '@openfn/language-common@latest'
+        credential: cannonical-user@lightning.com-new-credential
+        body: |
+          console.log('webhook job')
+          fn(state => state)
+      on-fail:
+        name: on fail
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('on fail')
+          fn(state => state)
+      on-success:
+        name: on success
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+    triggers:
+      webhook:
+        type: webhook
+        webhook_reply: after_completion
+        enabled: true
+    edges:
+      webhook->webhook-job:
+        source_trigger: webhook
+        target_job: webhook-job
+        condition_type: always
+        enabled: true
+      webhook-job->on-fail:
+        source_job: webhook-job
+        target_job: on-fail
+        condition_type: on_job_failure
+        enabled: true
+      webhook-job->on-success:
+        source_job: webhook-job
+        target_job: on-success
+        condition_type: on_job_success
+        enabled: true
+  workflow-2:
+    name: workflow 2
+    jobs:
+      some-cronjob:
+        name: some cronjob
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+      on-cron-failure:
+        name: on cron failure
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '0 23 * * *'
+        cron_cursor_job: some-cronjob
+        enabled: true
+    edges:
+      cron->some-cronjob:
+        source_trigger: cron
+        target_job: some-cronjob
+        condition_type: always
+        enabled: true
+      some-cronjob->on-cron-failure:
+        source_job: some-cronjob
+        target_job: on-cron-failure
+        condition_type: on_job_success
+        enabled: true
