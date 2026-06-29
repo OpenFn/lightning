@@ -37,6 +37,11 @@ and this project adheres to
 
 ### Fixed
 
+- Return a 400 instead of a 500 on malformed SSO callbacks. A request to
+  `/authenticate/callback` with no query string or an unexpected param
+  combination no longer raises `Phoenix.ActionClauseError`.
+  [#4806](https://github.com/OpenFn/lightning/issues/4806)
+
 ## [2.16.8-pre] - 2026-06-18
 
 ### Added
