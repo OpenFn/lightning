@@ -169,6 +169,12 @@ export function useAIWorkflowApplications({
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
+  // Stable ref so the save-failure Retry toast always calls the latest version
+  // of handleApplyWorkflow rather than the one captured when the toast fired.
+  const handleApplyWorkflowRef = useRef<
+    ((yaml: string, messageId: string) => Promise<void>) | null
+  >(null);
+
   /**
    * Apply workflow YAML to the canvas
    *
@@ -193,6 +199,9 @@ export function useAIWorkflowApplications({
       // Returns false if coordination failed (other users won't be notified)
       const coordinated = await startApplyingWorkflow(messageId);
 
+      // Track outcomes independently: applySucceeded covers parse/validate/import;
+      // saveSucceeded covers the subsequent save for new workflows.
+      let applySucceeded = false;
       let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
@@ -207,6 +216,7 @@ export function useAIWorkflowApplications({
         );
 
         await importWorkflow(workflowStateWithCreds);
+        applySucceeded = true;
 
         if (isNewWorkflow) {
           try {
@@ -222,7 +232,8 @@ export function useAIWorkflowApplications({
                   : 'Unknown error occurred',
               action: {
                 label: 'Retry',
-                onClick: () => void handleApplyWorkflow(yaml, messageId),
+                onClick: () =>
+                  void handleApplyWorkflowRef.current?.(yaml, messageId),
               },
             });
           }
@@ -243,13 +254,14 @@ export function useAIWorkflowApplications({
         }
       } finally {
         setApplyingMessageId(null);
-        // Only signal completion if we successfully coordinated
-        // (otherwise other users weren't notified of the start)
+        // Always signal completion when coordinated so collaborators aren't
+        // left stuck in "APPLYING..." state, even if apply itself failed.
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
-          // Only fit-view on full success — skip if save failed so the canvas
-          // doesn't zoom in on an unpersisted workflow
-          if (saveSucceeded !== false) {
+          // Only fit-view when the canvas was actually updated and persisted.
+          // Skip when importWorkflow failed (applySucceeded false) or when
+          // save failed so we don't zoom in on an unpersisted workflow.
+          if (applySucceeded && saveSucceeded) {
             flowEvents.dispatch('fit-view');
           }
         }
@@ -267,6 +279,9 @@ export function useAIWorkflowApplications({
       saveWorkflow,
     ]
   );
+
+  // Keep ref pointing at the latest callback so the Retry toast closure never goes stale
+  handleApplyWorkflowRef.current = handleApplyWorkflow;
 
   /**
    * Preview job code diff in Monaco editor
@@ -447,6 +462,9 @@ export function useAIWorkflowApplications({
       messagesWithCode.forEach(msg => {
         appliedMessageIdsRef.current.add(msg.id);
       });
+      // Streaming may have set this before the session finished loading.
+      // Clear it now so the guard doesn't silently skip the next real response.
+      if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
       return;
     }
 

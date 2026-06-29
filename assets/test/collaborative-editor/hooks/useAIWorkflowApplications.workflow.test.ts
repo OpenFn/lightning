@@ -561,6 +561,102 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
+  it('resets appliedViaStreamingRef during session-load so subsequent responses are not skipped', async () => {
+    const appliedMessageIdsRef = { current: new Set<string>() };
+    const appliedViaStreamingRef = { current: false };
+
+    const userMessage1 = {
+      id: 'user-msg-1',
+      role: 'user' as const,
+      content: 'Build me a workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:00Z',
+      user_id: 'user-123',
+    };
+    const assistantMessage1 = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is workflow 1',
+      code: 'name: Test 1',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:01Z',
+    };
+    const userMessage2 = {
+      id: 'user-msg-2',
+      role: 'user' as const,
+      content: 'Refine the workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:02Z',
+      user_id: 'user-123',
+    };
+    const assistantMessage2 = {
+      id: 'msg-2',
+      role: 'assistant' as const,
+      content: 'Here is workflow 2',
+      code: 'name: Test 2',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:03Z',
+    };
+
+    type Props = {
+      currentSession: { messages: (typeof userMessage1)[] } | null;
+    };
+
+    const { rerender } = renderHook(
+      ({ currentSession }: Props) =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: mockWorkflowActions,
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: true,
+          appliedMessageIdsRef,
+          appliedViaStreamingRef,
+        }),
+      { initialProps: { currentSession: null } }
+    );
+
+    // Simulate streaming having fired before the first new_message arrives
+    appliedViaStreamingRef.current = true;
+
+    // First new_message: session loading for the first time (hasLoadedSessionRef = false)
+    rerender({
+      currentSession: { messages: [userMessage1, assistantMessage1] },
+    });
+
+    await waitFor(() => {
+      // Session-load path marks messages applied but does not re-import
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
+      // Fix: ref must be cleared so the next real response isn't skipped
+      expect(appliedViaStreamingRef.current).toBe(false);
+    });
+
+    // Second response arrives — ref is now false, so auto-apply proceeds
+    rerender({
+      currentSession: {
+        messages: [
+          userMessage1,
+          assistantMessage1,
+          userMessage2,
+          assistantMessage2,
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('shows save-failure toast and does not call onValidationError when save rejects', async () => {
     const failingSaveWorkflow = vi.fn(() =>
       Promise.reject(new Error('Network error'))
