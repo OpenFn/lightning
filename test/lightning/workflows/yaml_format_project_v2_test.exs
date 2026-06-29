@@ -59,6 +59,38 @@ defmodule Lightning.Workflows.YamlFormatProjectV2Test do
       assert yaml =~ ~r/^\s*- name: ext-creds/m
       assert yaml =~ ~r/owner: u-\d+@example\.com/
     end
+
+    test "resolves a job's `configuration:` from the project credentials by id" do
+      user = insert(:user, email: "cred-owner@example.com")
+      project = insert(:project, name: "cred-project")
+
+      credential =
+        insert(:credential, name: "http creds", schema: "http", user: user)
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      workflow = insert(:workflow, name: "cred-flow", project: project)
+      insert(:trigger, type: :webhook, enabled: true, workflow: workflow)
+
+      insert(:job,
+        name: "uses creds",
+        workflow: workflow,
+        body: "fn(state => state)\n",
+        project_credential_id: project_credential.id
+      )
+
+      # Preload WITHOUT the per-job credential chain — the reference must be
+      # resolved from the project-level `project_credentials` list by id.
+      project =
+        Lightning.Repo.preload(project,
+          project_credentials: [credential: :user],
+          workflows: [:jobs, :triggers, :edges]
+        )
+
+      assert {:ok, yaml} = V2.serialize_project(project)
+      assert yaml =~ "configuration: cred-owner@example.com|http creds"
+    end
   end
 
   # ── helpers ────────────────────────────────────────────────────────────────

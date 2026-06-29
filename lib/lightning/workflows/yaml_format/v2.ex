@@ -203,7 +203,14 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
   # ── Workflow → canonical map ────────────────────────────────────────────────
 
-  defp workflow_struct_to_canonical(%Workflow{} = workflow) do
+  # `opts` may carry `:credential_keys` — a `project_credential_id => key`
+  # lookup built from the project's preloaded credentials. When present, jobs
+  # resolve their `configuration:` reference from it; when absent (a standalone
+  # workflow with no project context), they fall back to the job's own
+  # preloaded `project_credential`.
+  defp workflow_struct_to_canonical(%Workflow{} = workflow, opts \\ []) do
+    credential_keys = Keyword.get(opts, :credential_keys)
+
     jobs = workflow.jobs || []
     triggers = workflow.triggers || []
     edges = workflow.edges || []
@@ -224,7 +231,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       jobs
       |> Enum.sort_by(&job_sort_key/1)
       |> Enum.map(fn job ->
-        job_to_canonical(job, edges, job_id_to_key)
+        job_to_canonical(job, edges, job_id_to_key, credential_keys)
       end)
 
     # `start` is the entry trigger's step-id, per WorkflowSpec.start in
@@ -356,7 +363,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     |> Map.new()
   end
 
-  defp job_to_canonical(job, edges, job_id_to_key) do
+  defp job_to_canonical(job, edges, job_id_to_key, credential_keys) do
     base = %{
       id: hyphenate(job.name),
       name: job.name,
@@ -365,32 +372,18 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
 
     base
     |> maybe_put(:adaptor, adaptor_value(job.adaptor))
-    |> maybe_put(:configuration, job_credential_key(job))
+    |> maybe_put(:configuration, job_credential_key(job, credential_keys))
     |> add_next_for_step(job, edges, job_id_to_key)
   end
+
+  defp job_credential_key(job, credential_keys) when is_map(credential_keys),
+    do: Map.get(credential_keys, job.project_credential_id)
+
+  defp job_credential_key(job, nil), do: credential_key(job.project_credential)
 
   defp adaptor_value(nil), do: nil
   defp adaptor_value(""), do: nil
   defp adaptor_value(adaptor) when is_binary(adaptor), do: adaptor
-
-  # `user:` lives on the credential, not on the project_credential. The shape
-  # is `job.project_credential.credential.user.email` plus
-  # `job.project_credential.credential.name` (matches the project-level
-  # credential emission in `project_credential_to_canonical/1`).
-  defp job_credential_key(%{
-         project_credential: %{
-           credential: %{name: name, user: %{email: email}}
-         }
-       })
-       when is_binary(name) and is_binary(email) do
-    "#{email}|#{name}"
-  end
-
-  defp job_credential_key(%{project_credential: %Ecto.Association.NotLoaded{}}),
-    do: nil
-
-  defp job_credential_key(%{project_credential: nil}), do: nil
-  defp job_credential_key(_), do: nil
 
   defp add_next_for_trigger(base, trigger, edges, job_id_to_key) do
     outgoing =
@@ -729,15 +722,19 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   defp project_struct_to_canonical(%Project{} = project, snapshots) do
     project = preload_project_for_export(project)
 
+    credential_keys = credential_keys_by_id(project.project_credentials || [])
+
     workflows_canonical =
       if is_list(snapshots) do
         snapshots
         |> Enum.sort_by(& &1.name)
-        |> Enum.map(&snapshot_to_canonical_workflow/1)
+        |> Enum.map(&snapshot_to_canonical_workflow(&1, credential_keys))
       else
         (project.workflows || [])
         |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-        |> Enum.map(&workflow_struct_to_canonical/1)
+        |> Enum.map(
+          &workflow_struct_to_canonical(&1, credential_keys: credential_keys)
+        )
       end
 
     # Collections are emitted as a string list of names (spec: `string[]`),
@@ -761,7 +758,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     channels_canonical =
       (project.channels || [])
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&channel_to_canonical/1)
+      |> Enum.map(&channel_to_canonical(&1, credential_keys))
 
     %{
       id: hyphenate(project.name),
@@ -774,34 +771,29 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     }
   end
 
-  defp channel_to_canonical(channel) do
+  defp channel_to_canonical(channel, credential_keys) do
     %{
       name: channel.name,
       destination_url: channel.destination_url,
       enabled: channel.enabled,
-      destination_credential: channel_destination_credential_key(channel)
+      destination_credential:
+        channel_destination_credential_key(channel, credential_keys)
     }
   end
 
-  # The destination credential is reached through the channel's
-  # `:destination` auth method → project_credential → credential → user. Falls
-  # back to nil when the channel has no destination credential configured.
-  defp channel_destination_credential_key(%{
-         destination_auth_method: %{
-           project_credential: %{
-             credential: %{name: name, user: %{email: email}}
-           }
-         }
-       })
-       when is_binary(name) and is_binary(email),
-       do: "#{email}|#{name}"
+  defp channel_destination_credential_key(
+         %{destination_auth_method: %{project_credential_id: pc_id}},
+         credential_keys
+       )
+       when is_binary(pc_id),
+       do: Map.get(credential_keys, pc_id)
 
-  defp channel_destination_credential_key(_), do: nil
+  defp channel_destination_credential_key(_, _), do: nil
 
   # Snapshots have the same field set as a Workflow but use embedded schemas.
   # We adapt the snapshot into a `%Workflow{}` struct so the existing
   # workflow→canonical translation applies unchanged.
-  defp snapshot_to_canonical_workflow(snapshot) do
+  defp snapshot_to_canonical_workflow(snapshot, credential_keys) do
     pseudo_workflow = %Workflow{
       name: snapshot.name,
       jobs: snapshot.jobs,
@@ -809,28 +801,20 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       edges: snapshot.edges
     }
 
-    workflow_struct_to_canonical(pseudo_workflow)
+    workflow_struct_to_canonical(pseudo_workflow,
+      credential_keys: credential_keys
+    )
   end
 
   defp preload_project_for_export(%Project{} = project) do
     if assocs_loaded?(project) do
       project
     else
-      # Job-level `configuration:` emission needs
-      # job.project_credential.credential.user.email — the same chain as the
-      # project-level credentials list, but reached through the workflow's
-      # jobs. Preload it explicitly so `job_credential_key/1` matches.
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
         collections: [],
-        channels: [
-          destination_auth_method: [project_credential: [credential: :user]]
-        ],
-        workflows: [
-          :triggers,
-          :edges,
-          jobs: [project_credential: [credential: :user]]
-        ]
+        channels: [:destination_auth_method],
+        workflows: [:triggers, :edges, :jobs]
       )
     end
   end
@@ -856,6 +840,26 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp project_credential_to_canonical(_), do: []
+
+  defp credential_keys_by_id(project_credentials)
+       when is_list(project_credentials) do
+    project_credentials
+    |> Enum.flat_map(fn pc ->
+      case credential_key(pc) do
+        nil -> []
+        key -> [{pc.id, key}]
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp credential_keys_by_id(_), do: %{}
+
+  defp credential_key(%{credential: %{name: name, user: %{email: email}}})
+       when is_binary(name) and is_binary(email),
+       do: "#{email}|#{name}"
+
+  defp credential_key(_), do: nil
 
   # ── Project canonical map → string emitter ──────────────────────────────────
 
