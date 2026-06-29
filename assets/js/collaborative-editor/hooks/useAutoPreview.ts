@@ -94,9 +94,10 @@ export function useAutoPreview({
           new Date(b.inserted_at).getTime() - new Date(a.inserted_at).getTime()
       )[0];
 
-    if (!latestCodeMessage || !latestCodeMessage.job_id) {
-      return;
-    }
+    if (!latestCodeMessage) return;
+    // Global messages have no job_id but carry a full workflow YAML; the
+    // onPreview callback handles extracting the open step's body from it.
+    if (!latestCodeMessage.job_id && !latestCodeMessage.from_global) return;
 
     // Skip if we've already auto-previewed this message
     if (stateRef.current.lastAutoPreviewedMessageId === latestCodeMessage.id) {

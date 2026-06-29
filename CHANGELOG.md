@@ -49,6 +49,12 @@ and this project adheres to
 
 ### Changed
 
+- Global chat can now change multiple workflow steps in a single response. It
+  receives a full workflow YAML from the Apollo AI server with each step's job
+  code embedded, and applies the changes together. When a step is open in the
+  editor, its diff is previewed before applying; previewing several step diffs
+  at once is a follow-up.
+  [#4890](https://github.com/OpenFn/lightning/issues/4890)
 - Redesigned the trigger inspector in the collaborative editor: selecting a
   trigger now opens a read-only resting panel with an **Edit** button that leads
   into a guided wizard (Choose → Configure → Finish), replacing the previous
