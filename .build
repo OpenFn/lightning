@@ -435,6 +435,7 @@ LightningWeb.html
 Mix.Tasks.Lightning.DownloadAdaptorRegistryCache.html
 Mix.Tasks.Lightning.GenEncryptionKey.html
 Mix.Tasks.Lightning.GenWorkerKeys.html
+Mix.Tasks.Lightning.GenWorkflowHash.html
 Mix.Tasks.Lightning.InstallAdaptorIcons.html
 Mix.Tasks.Lightning.InstallRuntime.html
 Mix.Tasks.Lightning.InstallSchemas.html
@@ -455,8 +456,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-BA3C65B5.js
-dist/sidebar_items-A14D888C.js
+dist/search_data-18E30E46.js
+dist/sidebar_items-1CADA6EC.js
 index.html
 provisioning.html
 readme.html
