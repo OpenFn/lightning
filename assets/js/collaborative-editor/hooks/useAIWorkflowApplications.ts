@@ -246,6 +246,10 @@ export function useAIWorkflowApplications({
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
+        // If streaming set this ref before the apply failed, clear it so the
+        // next real new_message isn't silently skipped by the auto-apply guard.
+        if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
+
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid workflow YAML';
 
