@@ -546,13 +546,28 @@ defmodule Lightning.Runs.Handlers do
            },
            _run_options
          ) do
-      Dataclip.new(%{
-        id: dataclip_id,
-        project_id: project_id,
-        body: output_dataclip |> maybe_decode_dataclip() |> ensure_map(),
-        type: :step_result
-      })
-      |> Repo.insert()
+      changeset =
+        Dataclip.new(%{
+          id: dataclip_id,
+          project_id: project_id,
+          body: output_dataclip |> maybe_decode_dataclip() |> ensure_map(),
+          type: :step_result
+        })
+
+      if contains_null_byte?(Ecto.Changeset.get_field(changeset, :body)) do
+        {:error,
+         Dataclip.new(%{
+           id: dataclip_id,
+           project_id: project_id,
+           type: :step_result
+         })
+         |> Ecto.Changeset.add_error(
+           :body,
+           "contains a null byte (\\u0000) which PostgreSQL cannot store"
+         )}
+      else
+        Repo.insert(changeset)
+      end
     end
 
     # Older workers JSON-encode output_dataclip into a string before sending
@@ -573,5 +588,19 @@ defmodule Lightning.Runs.Handlers do
 
     defp ensure_map(%{} = map), do: map
     defp ensure_map(value), do: %{"value" => value}
+
+    defp contains_null_byte?(value) when is_binary(value),
+      do: String.contains?(value, <<0>>)
+
+    defp contains_null_byte?(value) when is_map(value),
+      do:
+        Enum.any?(value, fn {k, v} ->
+          contains_null_byte?(k) or contains_null_byte?(v)
+        end)
+
+    defp contains_null_byte?(value) when is_list(value),
+      do: Enum.any?(value, &contains_null_byte?/1)
+
+    defp contains_null_byte?(_value), do: false
   end
 end
