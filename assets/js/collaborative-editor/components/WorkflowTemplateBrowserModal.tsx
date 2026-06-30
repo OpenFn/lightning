@@ -122,7 +122,7 @@ export function WorkflowTemplateBrowserModal() {
           </div>
 
           {/* Content */}
-          <div className="px-6 pb-5 overflow-y-auto max-h-96">
+          <div className="px-6 py-5 overflow-y-auto max-h-96">
             {loading ? (
               <p className="text-sm text-gray-500 text-center py-8">
                 Loading templates...
@@ -171,11 +171,11 @@ function TemplateSelectCard({
       className="w-full h-full text-left rounded-lg border border-gray-200 bg-white p-3
         hover:border-gray-300 hover:bg-gray-50 transition-colors
         disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus-visible:ring focus-visible:ring-gray-300"
+        focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-400"
     >
       <p className="text-sm font-medium text-gray-900">{template.name}</p>
       {template.description && (
-        <p className="mt-0.5 text-sm text-gray-500 line-clamp-2">
+        <p className="mt-0.5 text-sm text-gray-500 line-clamp-3">
           {template.description}
         </p>
       )}
