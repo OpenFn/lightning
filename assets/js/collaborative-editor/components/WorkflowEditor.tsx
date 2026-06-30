@@ -133,6 +133,10 @@ export function WorkflowEditor({
   }, [isRunPanelOpen, runPanelContext, params, updateSearchParams]);
 
   useEffect(() => {
+    // On /new, URL params can't drive panel state — the landing screen is the
+    // only valid entry point and the canvas/panels shouldn't be reachable.
+    if (isNewWorkflow) return;
+
     const panelParam = params['panel'] ?? null;
 
     if (panelParam === 'run' && !isRunPanelOpen) {
@@ -187,6 +191,7 @@ export function WorkflowEditor({
       }, 0);
     }
   }, [
+    isNewWorkflow,
     params,
     isRunPanelOpen,
     currentNode.type,
@@ -365,6 +370,8 @@ export function WorkflowEditor({
     clearCanvas,
   ]);
 
+  // TODO-AI-FIRST (#4856): remove this entire method URL sync once the left-panel
+  // create flow (template/import/ai) is deleted — ?method= will no longer exist.
   // Sync method to URL (similar to AI panel's chat param sync)
   const isSyncingMethodRef = useRef(false);
   useEffect(() => {
@@ -379,7 +386,7 @@ export function WorkflowEditor({
     }, 0);
   }, [isCreateWorkflowPanelCollapsed, leftPanelMethod, updateSearchParams]);
 
-  const isIDEOpen = params['panel'] === 'editor';
+  const isIDEOpen = !isNewWorkflow && params['panel'] === 'editor';
   const selectedJobId = params['job'] ?? null;
 
   const handleCloseIDE = useCallback(() => {
@@ -390,11 +397,14 @@ export function WorkflowEditor({
     selectNode(null);
   };
 
+  // On /new, no nodes exist yet and the landing screen is the only valid UI.
+  // Block Inspector and IDE so URL params like ?panel=settings can't open them.
   const showInspector =
-    params['panel'] === 'settings' ||
-    params['panel'] === 'code' ||
-    params['panel'] === 'publish-template' ||
-    Boolean(currentNode.node);
+    !isNewWorkflow &&
+    (params['panel'] === 'settings' ||
+      params['panel'] === 'code' ||
+      params['panel'] === 'publish-template' ||
+      Boolean(currentNode.node));
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
     // Always clear template URL params when switching methods - start fresh each time
@@ -501,7 +511,9 @@ export function WorkflowEditor({
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
-        {/* TODO-AI-FIRST: remove this placeholder once the landing screen (#4856) always covers the new-workflow state */}
+        {/* TODO-AI-FIRST (#4856): delete this entire placeholder block once the left-panel
+            create flow is removed — the landing screen always covers the new-workflow state
+            and this fallback UI (with its old Browse/AI/scratch buttons) should never appear */}
         {/* Show placeholder when workflow is empty and landing screen is not covering it */}
         {isNewWorkflow &&
           !showLandingScreen &&
