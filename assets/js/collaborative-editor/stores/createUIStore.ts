@@ -130,7 +130,7 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       aiAssistantPanelOpen,
       aiAssistantInitialMessage: null,
       createWorkflowPanelCollapsed,
-      showLandingScreen: isNewWorkflow,
+      showLandingScreen: true,
       showYAMLImportModal: false,
       templatePanel: {
         templates: [],
