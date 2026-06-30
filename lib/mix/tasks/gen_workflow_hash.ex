@@ -58,7 +58,11 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
     Logger.configure(level: :error)
     Mix.Task.run("app.config")
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
-    {:ok, _} = Lightning.Repo.start_link(pool_size: 1)
+
+    case Lightning.Repo.start_link(pool_size: 1) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+    end
   end
 
   defp print_hash(workflow_id, opts) do
@@ -67,8 +71,11 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
         Mix.raise("Workflow #{workflow_id} not found")
 
       workflow ->
-        workflow
-        |> WorkflowVersions.generate_hash(opts)
+        if Keyword.get(opts, :hash, true) do
+          WorkflowVersions.generate_hash(workflow)
+        else
+          WorkflowVersions.canonical_form(workflow)
+        end
         |> IO.puts()
     end
   end
