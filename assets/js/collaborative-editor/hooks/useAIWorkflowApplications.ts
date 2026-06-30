@@ -238,7 +238,22 @@ export function useAIWorkflowApplications({
               duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
               action: {
                 label: 'Retry',
-                onClick: () => void saveWorkflowRef.current?.({ silent: true }),
+                onClick: () =>
+                  void saveWorkflowRef
+                    .current?.({ silent: true })
+                    ?.catch((retryError: unknown) => {
+                      console.error(
+                        '[AI Assistant] Retry save failed:',
+                        retryError
+                      );
+                      notifications.alert({
+                        title: 'Failed to save workflow',
+                        description:
+                          retryError instanceof Error
+                            ? retryError.message
+                            : 'Unknown error occurred',
+                      });
+                    }),
               },
             });
           }
