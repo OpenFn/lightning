@@ -104,6 +104,8 @@ export function useAIWorkflowApplications({
   currentSession,
   currentUserId,
   aiMode,
+  isNewWorkflow,
+  onValidationError,
   workflowActions,
   monacoRef,
   jobs,
@@ -113,6 +115,7 @@ export function useAIWorkflowApplications({
   previewingMessageId,
   setApplyingMessageId,
   appliedMessageIdsRef,
+  appliedViaStreamingRef,
 }: {
   sessionId: string | null;
   page: SessionType | null;
@@ -122,6 +125,8 @@ export function useAIWorkflowApplications({
   } | null;
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
+  isNewWorkflow: boolean;
+  onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -129,6 +134,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
     doneApplyingJobCode: (messageId: string) => Promise<void>;
     updateJob: (jobId: string, updates: { body: string }) => void;
+    saveWorkflow: (options?: { silent?: boolean }) => Promise<unknown>;
   };
   monacoRef: RefObject<MonacoHandle> | null;
   jobs: Job[];
@@ -138,6 +144,7 @@ export function useAIWorkflowApplications({
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
   appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
+  appliedViaStreamingRef?: React.MutableRefObject<boolean>;
 }) {
   const {
     importWorkflow,
@@ -146,6 +153,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode,
     doneApplyingJobCode,
     updateJob,
+    saveWorkflow,
   } = workflowActions;
 
   /**
@@ -160,6 +168,11 @@ export function useAIWorkflowApplications({
   useEffect(() => {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
+
+  // Stable ref for save-only retries (importWorkflow already succeeded)
+  const saveWorkflowRef = useRef<
+    ((opts?: { silent?: boolean }) => Promise<unknown>) | null
+  >(null);
 
   /**
    * Apply workflow YAML to the canvas
@@ -185,9 +198,12 @@ export function useAIWorkflowApplications({
       // Returns false if coordination failed (other users won't be notified)
       const coordinated = await startApplyingWorkflow(messageId);
 
+      // Track outcomes independently: applySucceeded covers parse/validate/import;
+      // saveSucceeded covers the subsequent save for new workflows.
+      let applySucceeded = false;
+      let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
-
         validateIds(workflowSpec);
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
@@ -199,21 +215,88 @@ export function useAIWorkflowApplications({
         );
 
         await importWorkflow(workflowStateWithCreds);
+        applySucceeded = true;
+
+        if (isNewWorkflow) {
+          try {
+            const saved = await saveWorkflow({ silent: true });
+            if (!saved) {
+              throw new Error(
+                'Your connection was lost. Reconnect and try again.'
+              );
+            }
+          } catch (saveError) {
+            saveSucceeded = false;
+            if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
+            console.error('[AI Assistant] Failed to save workflow:', saveError);
+            notifications.alert({
+              title: 'Failed to save workflow',
+              description:
+                saveError instanceof Error
+                  ? saveError.message
+                  : 'Unknown error occurred',
+              duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
+              action: {
+                label: 'Retry',
+                onClick: () => {
+                  void (async () => {
+                    try {
+                      const saved = await saveWorkflowRef.current?.({
+                        silent: true,
+                      });
+                      if (!saved)
+                        throw new Error(
+                          'Your connection was lost. Reconnect and try again.'
+                        );
+                    } catch (retryError: unknown) {
+                      console.error(
+                        '[AI Assistant] Retry save failed:',
+                        retryError
+                      );
+                      notifications.alert({
+                        title: 'Failed to save workflow',
+                        description:
+                          retryError instanceof Error
+                            ? retryError.message
+                            : 'Unknown error occurred',
+                      });
+                    }
+                  })();
+                },
+              },
+            });
+          }
+        }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
-        notifications.alert({
-          title: 'Failed to apply workflow',
-          description:
-            error instanceof Error ? error.message : 'Invalid workflow YAML',
-        });
+        // If streaming set this ref before the apply failed, clear it so the
+        // next real new_message isn't silently skipped by the auto-apply guard.
+        if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
+
+        const errorMessage =
+          error instanceof Error ? error.message : 'Invalid workflow YAML';
+
+        if (isNewWorkflow && onValidationError) {
+          onValidationError(errorMessage);
+        } else {
+          notifications.alert({
+            title: 'Failed to apply workflow',
+            description: errorMessage,
+          });
+        }
       } finally {
         setApplyingMessageId(null);
-        // Only signal completion if we successfully coordinated
-        // (otherwise other users weren't notified of the start)
+        // Always signal completion when coordinated so collaborators aren't
+        // left stuck in "APPLYING..." state, even if apply itself failed.
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
-          flowEvents.dispatch('fit-view');
+          // Only fit-view when the canvas was actually updated and persisted.
+          // Skip when importWorkflow failed (applySucceeded false) or when
+          // save failed so we don't zoom in on an unpersisted workflow.
+          if (applySucceeded && saveSucceeded) {
+            flowEvents.dispatch('fit-view');
+          }
         }
       }
     },
@@ -224,8 +307,14 @@ export function useAIWorkflowApplications({
       doneApplyingWorkflow,
       jobs,
       setApplyingMessageId,
+      isNewWorkflow,
+      onValidationError,
+      saveWorkflow,
     ]
   );
+
+  // Keep ref pointing at the latest callback so Retry toast closures never go stale
+  saveWorkflowRef.current = saveWorkflow;
 
   /**
    * Preview job code diff in Monaco editor
@@ -406,6 +495,9 @@ export function useAIWorkflowApplications({
       messagesWithCode.forEach(msg => {
         appliedMessageIdsRef.current.add(msg.id);
       });
+      // Streaming may have set this before the session finished loading.
+      // Clear it now so the guard doesn't silently skip the next real response.
+      if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
       return;
     }
 
@@ -415,6 +507,16 @@ export function useAIWorkflowApplications({
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
+      appliedMessageIdsRef.current.add(latestMessage.id);
+
+      // Streaming already applied this YAML — skip the re-import to avoid
+      // a transient dirty state (Y.Doc write → unsaved red dot) between
+      // the import and save that would otherwise follow.
+      if (appliedViaStreamingRef?.current) {
+        appliedViaStreamingRef.current = false;
+        return;
+      }
+
       // Find the user message that triggered this AI response
       // Look for the most recent user message before this assistant message
       const latestMessageIndex = messages.findIndex(
@@ -432,8 +534,6 @@ export function useAIWorkflowApplications({
         precedingUserMessage?.user_id === currentUserId ||
         // Fallback: if no user_id on message (legacy), allow apply
         !precedingUserMessage?.user_id;
-
-      appliedMessageIdsRef.current.add(latestMessage.id);
 
       if (isCurrentUserAuthor) {
         void handleApplyWorkflow(latestMessage.code, latestMessage.id);

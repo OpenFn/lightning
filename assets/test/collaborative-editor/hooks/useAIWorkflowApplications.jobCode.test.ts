@@ -39,6 +39,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
   const mockClearDiff = vi.fn();
   const mockShowDiff = vi.fn();
 
+  const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,
@@ -46,6 +48,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
     startApplyingJobCode: mockStartApplyingJobCode,
     doneApplyingJobCode: mockDoneApplyingJobCode,
     updateJob: mockUpdateJob,
+    saveWorkflow: mockSaveWorkflow,
   };
 
   const createMockMonacoRef = () => ({
@@ -97,6 +100,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -125,6 +129,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -153,6 +158,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1', // Already previewing
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -182,6 +188,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1', // Existing preview
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -208,6 +215,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -238,6 +246,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -268,6 +277,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -301,6 +311,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -328,6 +339,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1',
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -356,6 +368,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -384,6 +397,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
@@ -416,6 +430,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
         })
       );
