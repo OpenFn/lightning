@@ -169,12 +169,6 @@ export function useAIWorkflowApplications({
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  // Stable ref so the save-failure Retry toast always calls the latest version
-  // of handleApplyWorkflow rather than the one captured when the toast fired.
-  const handleApplyWorkflowRef = useRef<
-    ((yaml: string, messageId: string) => Promise<void>) | null
-  >(null);
-
   // Stable ref for save-only retries (importWorkflow already succeeded)
   const saveWorkflowRef = useRef<
     ((opts?: { silent?: boolean }) => Promise<unknown>) | null
@@ -319,8 +313,7 @@ export function useAIWorkflowApplications({
     ]
   );
 
-  // Keep refs pointing at the latest callbacks so Retry toast closures never go stale
-  handleApplyWorkflowRef.current = handleApplyWorkflow;
+  // Keep ref pointing at the latest callback so Retry toast closures never go stale
   saveWorkflowRef.current = saveWorkflow;
 
   /**
