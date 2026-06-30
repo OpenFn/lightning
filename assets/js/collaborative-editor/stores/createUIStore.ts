@@ -132,6 +132,7 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       createWorkflowPanelCollapsed,
       showLandingScreen: true,
       showYAMLImportModal: false,
+      showTemplateBrowserModal: false,
       templatePanel: {
         templates: [],
         loading: false,
@@ -358,6 +359,20 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('closeYAMLImportModal');
   };
 
+  const openTemplateBrowserModal = () => {
+    state = produce(state, draft => {
+      draft.showTemplateBrowserModal = true;
+    });
+    notify('openTemplateBrowserModal');
+  };
+
+  const closeTemplateBrowserModal = () => {
+    state = produce(state, draft => {
+      draft.showTemplateBrowserModal = false;
+    });
+    notify('closeTemplateBrowserModal');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -394,6 +409,8 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     dismissLandingScreen,
     openYAMLImportModal,
     closeYAMLImportModal,
+    openTemplateBrowserModal,
+    closeTemplateBrowserModal,
   };
 };
 

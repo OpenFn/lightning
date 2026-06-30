@@ -16,6 +16,7 @@ import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
+import { WorkflowTemplateBrowserModal } from './components/WorkflowTemplateBrowserModal';
 import { YAMLImportModal } from './components/YAMLImportModal';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
@@ -183,8 +184,12 @@ function LandingScreenWrapper({
   aiAssistantEnabled: boolean;
 }) {
   const showLandingScreen = useShowLandingScreen();
-  const { openYAMLImportModal, dismissLandingScreen, openAIAssistantPanel } =
-    useUICommands();
+  const {
+    openYAMLImportModal,
+    openTemplateBrowserModal,
+    dismissLandingScreen,
+    openAIAssistantPanel,
+  } = useUICommands();
 
   if (!showLandingScreen) return null;
 
@@ -197,10 +202,11 @@ function LandingScreenWrapper({
           openAIAssistantPanel(prompt);
         }}
         onBuildFromScratch={() => {}}
-        onBrowseTemplates={() => {}}
+        onBrowseTemplates={openTemplateBrowserModal}
         onImportYAML={openYAMLImportModal}
       />
       <YAMLImportModal />
+      <WorkflowTemplateBrowserModal />
     </>
   );
 }
