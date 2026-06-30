@@ -663,7 +663,7 @@ defmodule Lightning.Config.Bootstrap do
       tags: %{host: host},
       release: release[:label],
       enable_source_code_context: true,
-      root_source_code_path: File.cwd!()
+      root_source_code_paths: [File.cwd!()]
 
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
