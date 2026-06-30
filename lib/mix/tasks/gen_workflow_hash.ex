@@ -24,10 +24,10 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
   """
   use Mix.Task
 
-  require Logger
-
   alias Lightning.Workflows
   alias Lightning.WorkflowVersions
+
+  require Logger
 
   @impl Mix.Task
   def run(args) do
