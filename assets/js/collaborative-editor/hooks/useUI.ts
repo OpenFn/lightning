@@ -65,6 +65,8 @@ export const useUICommands = () => {
     dismissLandingScreen: uiStore.dismissLandingScreen,
     openYAMLImportModal: uiStore.openYAMLImportModal,
     closeYAMLImportModal: uiStore.closeYAMLImportModal,
+    openTemplateBrowserModal: uiStore.openTemplateBrowserModal,
+    closeTemplateBrowserModal: uiStore.closeTemplateBrowserModal,
     // Import panel write commands
     setImportState: uiStore.setImportState,
     setImportYamlContent: uiStore.setImportYamlContent,
@@ -162,6 +164,20 @@ export const useShowYAMLImportModal = (): boolean => {
     state => state.showYAMLImportModal
   );
   return useSyncExternalStore(uiStore.subscribe, selectShowYAMLImportModal);
+};
+
+/**
+ * Hook to check if the template browser modal is open
+ */
+export const useShowTemplateBrowserModal = (): boolean => {
+  const uiStore = useUIStore();
+  const selectShowTemplateBrowserModal = uiStore.withSelector(
+    state => state.showTemplateBrowserModal
+  );
+  return useSyncExternalStore(
+    uiStore.subscribe,
+    selectShowTemplateBrowserModal
+  );
 };
 
 /**
