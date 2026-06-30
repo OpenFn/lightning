@@ -175,6 +175,11 @@ export function useAIWorkflowApplications({
     ((yaml: string, messageId: string) => Promise<void>) | null
   >(null);
 
+  // Stable ref for save-only retries (importWorkflow already succeeded)
+  const saveWorkflowRef = useRef<
+    ((opts?: { silent?: boolean }) => Promise<unknown>) | null
+  >(null);
+
   /**
    * Apply workflow YAML to the canvas
    *
@@ -230,10 +235,10 @@ export function useAIWorkflowApplications({
                 saveError instanceof Error
                   ? saveError.message
                   : 'Unknown error occurred',
+              duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
               action: {
                 label: 'Retry',
-                onClick: () =>
-                  void handleApplyWorkflowRef.current?.(yaml, messageId),
+                onClick: () => void saveWorkflowRef.current?.({ silent: true }),
               },
             });
           }
@@ -280,8 +285,9 @@ export function useAIWorkflowApplications({
     ]
   );
 
-  // Keep ref pointing at the latest callback so the Retry toast closure never goes stale
+  // Keep refs pointing at the latest callbacks so Retry toast closures never go stale
   handleApplyWorkflowRef.current = handleApplyWorkflow;
+  saveWorkflowRef.current = saveWorkflow;
 
   /**
    * Preview job code diff in Monaco editor
