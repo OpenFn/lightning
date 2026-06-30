@@ -385,6 +385,73 @@ defmodule Lightning.RunsTest do
       assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
     end
 
+    test "returns an error changeset when output dataclip contains a null byte" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Runs.complete_step(%{
+                 step_id: step.id,
+                 reason: "success",
+                 output_dataclip: ~s({"foo": "bar\\u0000baz"}),
+                 output_dataclip_id: Ecto.UUID.generate(),
+                 run_id: run.id,
+                 project_id: workflow.project_id
+               })
+    end
+
+    test "returns an error changeset when output dataclip contains a nested null byte" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Runs.complete_step(%{
+                 step_id: step.id,
+                 reason: "success",
+                 output_dataclip: ~s({"items": ["ok", "bad\\u0000value"]}),
+                 output_dataclip_id: Ecto.UUID.generate(),
+                 run_id: run.id,
+                 project_id: workflow.project_id
+               })
+    end
+
+    test "completes when a null byte is only in top-level configuration" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      assert {:ok, _step} =
+               Runs.complete_step(%{
+                 step_id: step.id,
+                 reason: "success",
+                 output_dataclip:
+                   ~s({"configuration": {"token": "abc\\u0000def"}, "data": "ok"}),
+                 output_dataclip_id: Ecto.UUID.generate(),
+                 run_id: run.id,
+                 project_id: workflow.project_id
+               })
+    end
+
     # Regression for #4800: dataclip inserts no longer build the search_vector
     # synchronously (the AFTER INSERT trigger was dropped). Saving an output
     # dataclip via the handler must succeed and the row must be retrievable with
