@@ -225,7 +225,12 @@ export function useAIWorkflowApplications({
 
         if (isNewWorkflow) {
           try {
-            await saveWorkflow({ silent: true });
+            const saved = await saveWorkflow({ silent: true });
+            if (!saved) {
+              throw new Error(
+                'Your connection was lost. Reconnect and try again.'
+              );
+            }
           } catch (saveError) {
             saveSucceeded = false;
             console.error('[AI Assistant] Failed to save workflow:', saveError);
@@ -238,10 +243,17 @@ export function useAIWorkflowApplications({
               duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
               action: {
                 label: 'Retry',
-                onClick: () =>
-                  void saveWorkflowRef
-                    .current?.({ silent: true })
-                    ?.catch((retryError: unknown) => {
+                onClick: () => {
+                  void (async () => {
+                    try {
+                      const saved = await saveWorkflowRef.current?.({
+                        silent: true,
+                      });
+                      if (!saved)
+                        throw new Error(
+                          'Your connection was lost. Reconnect and try again.'
+                        );
+                    } catch (retryError: unknown) {
                       console.error(
                         '[AI Assistant] Retry save failed:',
                         retryError
@@ -253,7 +265,9 @@ export function useAIWorkflowApplications({
                             ? retryError.message
                             : 'Unknown error occurred',
                       });
-                    }),
+                    }
+                  })();
+                },
               },
             });
           }
