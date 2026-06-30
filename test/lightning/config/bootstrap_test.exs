@@ -405,24 +405,23 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      assert get_env(:lightning, Lightning.Mailer) == [
+      config = get_env(:lightning, Lightning.Mailer)
+
+      assert config == [
                adapter: Swoosh.Adapters.SMTP,
                username: "foo",
                password: "bar",
                relay: "baz",
                tls: :always,
-               tls_options: [
-                 versions: [:"tlsv1.3"],
-                 verify: :verify_peer,
-                 cacerts: :public_key.cacerts_get(),
-                 server_name_indication: to_charlist("baz"),
-                 depth: 5,
-                 customize_hostname_check: [
-                   match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-                 ]
-               ],
+               tls_options: :tls_certificate_check.options("baz"),
                port: 587
              ]
+
+      tls_options = Keyword.get(config, :tls_options)
+
+      assert {:verify, :verify_peer} in tls_options
+      assert is_list(Keyword.get(tls_options, :cacerts))
+      assert Keyword.has_key?(tls_options, :customize_hostname_check)
     end
   end
 
@@ -518,17 +517,16 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repo is set to false when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
+    test "local_adaptors_repos defaults to [] when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
       Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
       Bootstrap.configure()
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == false
+      assert adaptor_registry[:local_adaptors_repos] == []
     end
 
-    test "local_adaptors_repo is set when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set" do
-      # configure both
+    test "local_adaptors_repos is a one-element list when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set with a single path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
@@ -537,7 +535,40 @@ defmodule Lightning.Config.BootstrapTest do
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == "/path"
+      assert adaptor_registry[:local_adaptors_repos] == ["/path"]
+    end
+
+    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == [
+               "/private/repo",
+               "/canonical/adaptors"
+             ]
+    end
+
+    test "local_adaptors_repos drops empty segments and trims whitespace" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == ["/a", "/b"]
     end
   end
 
@@ -572,6 +603,20 @@ defmodule Lightning.Config.BootstrapTest do
                    fn ->
                      Bootstrap.configure()
                    end
+    end
+  end
+
+  describe "max_sandbox_nesting_depth" do
+    test "defaults to 5" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 5
+    end
+
+    test "can be set to a different value via MAX_SANDBOX_NESTING_DEPTH" do
+      Dotenvy.source([%{"MAX_SANDBOX_NESTING_DEPTH" => "10"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 10
     end
   end
 

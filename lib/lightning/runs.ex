@@ -179,9 +179,13 @@ defmodule Lightning.Runs do
     |> select([d], d)
     |> Lightning.Invocation.Query.wipe_dataclips()
     |> Repo.update_all([])
-    |> then(fn {1, [dataclip]} ->
-      Events.dataclip_updated(run.id, dataclip)
-      :ok
+    |> then(fn
+      {1, [dataclip]} ->
+        Events.dataclip_updated(run.id, dataclip)
+        :ok
+
+      {0, []} ->
+        :ok
     end)
   end
 

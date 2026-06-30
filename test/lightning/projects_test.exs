@@ -448,6 +448,32 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
     end
 
+    test "delete_project/1 deletes project with associated oauth clients" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      oauth_client = insert(:oauth_client)
+
+      project_oauth_client =
+        insert(:project_oauth_client,
+          project: project,
+          oauth_client: oauth_client
+        )
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(
+               Lightning.Projects.ProjectOauthClient,
+               project_oauth_client.id
+             )
+
+      assert Repo.get(Lightning.Credentials.OauthClient, oauth_client.id),
+             "The OAuth client itself should survive — only the join row is project-scoped"
+    end
+
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
@@ -487,6 +513,316 @@ defmodule Lightning.ProjectsTest do
       assert project_1 in user_projects
       assert project_2 in user_projects
       assert [project_1] == Projects.get_projects_for_user(other_user)
+    end
+
+    test "get_project_tree_for_user/1 returns empty for a user with no memberships" do
+      user = user_fixture()
+      _other_project = project_fixture()
+
+      assert Projects.get_project_tree_for_user(user) == []
+    end
+
+    test "get_project_tree_for_user/1 does not cascade visibility from a root owner to descendants the owner has no row on" do
+      owner = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: owner.id, role: :owner}])
+
+      _sandbox = insert(:project, parent: root)
+      _nested = insert(:project, parent: insert(:project, parent: root))
+
+      ids =
+        owner
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+
+      assert ids == [root.id]
+    end
+
+    test "get_project_tree_for_user/1 hides descendants the user has no project_users row on" do
+      editor = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: editor.id, role: :editor}])
+
+      visible_sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: editor, role: :viewer}]
+        )
+
+      _hidden_sandbox = insert(:project, parent: root)
+
+      ids =
+        editor
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, visible_sandbox.id])
+    end
+
+    test "get_project_tree_for_user/1 ignores superuser role and shows only projects with direct membership" do
+      superuser = insert(:user, role: :superuser)
+
+      root =
+        project_fixture(project_users: [%{user_id: superuser.id, role: :viewer}])
+
+      _sandbox = insert(:project, parent: root)
+
+      ids =
+        superuser
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+
+      assert ids == [root.id]
+    end
+
+    test "get_project_tree_for_user/1 shows support users only the projects whose own allow_support_access is true" do
+      support_user = insert(:user, support_user: true)
+
+      root = insert(:project, allow_support_access: true)
+
+      flagged_sandbox =
+        insert(:project, parent: root, allow_support_access: true)
+
+      _unflagged_sandbox =
+        insert(:project, parent: root, allow_support_access: false)
+
+      ids =
+        support_user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, flagged_sandbox.id])
+    end
+
+    test "get_project_tree_for_user/1 prunes an active descendant whose intermediate ancestor was scheduled for deletion outside the cascade" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      middle = insert(:project, parent: root)
+
+      active_leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      Repo.update_all(
+        from(p in Project, where: p.id == ^middle.id),
+        set: [
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        ]
+      )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == [root.id]
+      refute middle.id in ids
+      refute active_leaf.id in ids
+    end
+
+    test "get_project_tree_for_user/1 prunes the subtree under a scheduled ancestor" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      scheduled_branch =
+        insert(:project, parent: root, scheduled_deletion: now)
+
+      _scheduled_leaf =
+        insert(:project,
+          parent: scheduled_branch,
+          scheduled_deletion: now
+        )
+
+      active_branch =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([root.id, active_branch.id])
+    end
+
+    test "get_project_tree_for_user/1 surfaces a sandbox the user is a direct member of, even with no role on its absolute root" do
+      user = user_fixture()
+
+      root = insert(:project, name: "absolute-root")
+      _middle = insert(:project, name: "middle", parent: root)
+
+      sandbox =
+        insert(:project,
+          name: "deep-sandbox",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      leaf =
+        insert(:project,
+          name: "deep-leaf",
+          parent: sandbox,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([sandbox.id, leaf.id])
+      refute root.id in ids
+    end
+
+    test "get_project_tree_for_user/1 reparents a visible descendant onto its nearest visible ancestor when intermediates are hidden" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :editor}])
+
+      hidden_middle = insert(:project, parent: root)
+
+      nested_member =
+        insert(:project,
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(user)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Map.has_key?(by_id, root.id)
+      assert Map.has_key?(by_id, nested_member.id)
+      refute Map.has_key?(by_id, hidden_middle.id)
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[nested_member.id].parent_id == root.id
+    end
+
+    test "get_project_tree_for_user/1 reparents a directly-visible grandchild onto the root when the intermediate is hidden" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      middle = insert(:project, parent: root)
+
+      grandchild =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == grandchild.id)) == 1
+      refute Map.has_key?(by_id, middle.id)
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[grandchild.id].parent_id == root.id
+    end
+
+    test "get_project_tree_for_user/1 reparents past two consecutive hidden intermediates" do
+      user = user_fixture()
+
+      root =
+        project_fixture(project_users: [%{user_id: user.id, role: :owner}])
+
+      hidden_a = insert(:project, parent: root)
+      hidden_b = insert(:project, parent: hidden_a)
+
+      deep_visible =
+        insert(:project,
+          parent: hidden_b,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == deep_visible.id)) == 1
+      refute Map.has_key?(by_id, hidden_a.id)
+      refute Map.has_key?(by_id, hidden_b.id)
+
+      assert by_id[deep_visible.id].parent_id == root.id
+    end
+
+    test "get_project_tree_for_user/1 shadows a sandbox membership under a support-access root for a support user" do
+      support_user = insert(:user, support_user: true)
+
+      root = insert(:project, allow_support_access: true)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: support_user, role: :viewer}]
+        )
+
+      projects = Projects.get_project_tree_for_user(support_user)
+      ids = Enum.map(projects, & &1.id)
+      by_id = Map.new(projects, &{&1.id, &1})
+
+      assert Enum.count(ids, &(&1 == root.id)) == 1
+      assert Enum.count(ids, &(&1 == sandbox.id)) == 1
+
+      assert by_id[root.id].parent_id == nil
+      assert by_id[sandbox.id].parent_id == root.id
+    end
+
+    test "get_project_tree_for_user/1 surfaces only directly-accessible projects across multiple workspaces" do
+      user = user_fixture()
+
+      admin_root =
+        project_fixture(project_users: [%{user_id: user.id, role: :admin}])
+
+      _admin_sandbox = insert(:project, parent: admin_root)
+
+      editor_root =
+        project_fixture(project_users: [%{user_id: user.id, role: :editor}])
+
+      editor_visible =
+        insert(:project,
+          parent: editor_root,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      _editor_hidden = insert(:project, parent: editor_root)
+
+      ids =
+        user
+        |> Projects.get_project_tree_for_user()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids ==
+               Enum.sort([
+                 admin_root.id,
+                 editor_root.id,
+                 editor_visible.id
+               ])
     end
 
     test "get_project_user_role/2" do
@@ -615,12 +951,190 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "visible_sandboxes/3" do
+    setup do
+      superuser = insert(:user, role: :superuser)
+      user = insert(:user)
+      other_user = insert(:user)
+
+      root_project = insert(:project)
+      root_project_owner = insert(:user)
+
+      insert(:project_user,
+        user: root_project_owner,
+        project: root_project,
+        role: :owner
+      )
+
+      sandbox = insert(:project, parent: root_project)
+
+      sandbox_with_owner = insert(:project, parent: root_project)
+      sandbox_owner = insert(:user)
+
+      insert(:project_user,
+        user: sandbox_owner,
+        project: sandbox_with_owner,
+        role: :owner
+      )
+
+      sandbox_with_admin = insert(:project, parent: root_project)
+      sandbox_admin = insert(:user)
+
+      insert(:project_user,
+        user: sandbox_admin,
+        project: sandbox_with_admin,
+        role: :admin
+      )
+
+      root_project = Repo.preload(root_project, :project_users)
+      sandbox = Repo.preload(sandbox, :project_users)
+      sandbox_with_owner = Repo.preload(sandbox_with_owner, :project_users)
+      sandbox_with_admin = Repo.preload(sandbox_with_admin, :project_users)
+
+      %{
+        superuser: superuser,
+        user: user,
+        other_user: other_user,
+        root_project: root_project,
+        root_project_owner: root_project_owner,
+        sandbox: sandbox,
+        sandbox_with_owner: sandbox_with_owner,
+        sandbox_owner: sandbox_owner,
+        sandbox_with_admin: sandbox_with_admin,
+        sandbox_admin: sandbox_admin
+      }
+    end
+
+    test "superuser role alone returns no sandboxes", %{
+      superuser: superuser,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, superuser) == []
+    end
+
+    test "root project owner with no row on a sandbox does not see it", %{
+      root_project_owner: owner,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, owner) == []
+    end
+
+    test "root project admin with no row on a sandbox does not see it", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :admin)
+      sandboxes = [sandbox, sandbox_with_owner, sandbox_with_admin]
+
+      assert Projects.visible_sandboxes(sandboxes, user) == []
+    end
+
+    test "root project editor only sees sandboxes they are a member of", %{
+      user: user,
+      root_project: root_project,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      insert(:project_user, user: user, project: root_project, role: :editor)
+      insert(:project_user, user: user, project: sandbox, role: :viewer)
+
+      sandbox = Repo.preload(sandbox, :project_users, force: true)
+
+      visible =
+        Projects.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          user
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox.id]
+    end
+
+    test "user with no role on the root sees only sandboxes they belong to",
+         %{
+           sandbox_owner: sandbox_owner,
+           sandbox: sandbox,
+           sandbox_with_owner: sandbox_with_owner,
+           sandbox_with_admin: sandbox_with_admin
+         } do
+      visible =
+        Projects.visible_sandboxes(
+          [sandbox, sandbox_with_owner, sandbox_with_admin],
+          sandbox_owner
+        )
+
+      assert Enum.map(visible, & &1.id) == [sandbox_with_owner.id]
+    end
+
+    test "user with no role anywhere sees no sandboxes", %{
+      other_user: other_user,
+      sandbox: sandbox,
+      sandbox_with_owner: sandbox_with_owner,
+      sandbox_with_admin: sandbox_with_admin
+    } do
+      assert Projects.visible_sandboxes(
+               [sandbox, sandbox_with_owner, sandbox_with_admin],
+               other_user
+             ) == []
+    end
+
+    test "support user sees a sandbox whose own allow_support_access is true" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+
+      sandbox_a =
+        insert(:project, parent: root, allow_support_access: true)
+
+      sandbox_b =
+        insert(:project, parent: root, allow_support_access: true)
+
+      sandbox_a = Repo.preload(sandbox_a, :project_users)
+      sandbox_b = Repo.preload(sandbox_b, :project_users)
+
+      assert Projects.visible_sandboxes([sandbox_a, sandbox_b], support_user) ==
+               [sandbox_a, sandbox_b]
+    end
+
+    test "support user does not see a sandbox whose own allow_support_access is false, even when the root allows it" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+
+      sandbox =
+        insert(:project, parent: root, allow_support_access: false)
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Projects.visible_sandboxes([sandbox], support_user) == []
+    end
+
+    test "raises ArgumentError when a sandbox's project_users are not preloaded" do
+      user = insert(:user)
+      root = insert(:project)
+      sandbox = insert(:project, parent: root)
+
+      assert_raise ArgumentError, ~r/project_users.*preloaded.*sandbox/, fn ->
+        Projects.visible_sandboxes([sandbox], user)
+      end
+    end
+  end
+
   describe "export_project/2 as yaml:" do
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
 
       expected_yaml =
-        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
+        "name: newly-created-project\ndescription: null\ncollections: null\nchannels: null\ncredentials: null\nworkflows: null"
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
@@ -778,6 +1292,116 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml =~ expected_yaml_trigger
+    end
+
+    test "channels are included in the export with their destination credential" do
+      user = insert(:user, email: "channel-user@lightning.com")
+      credential = insert(:credential, name: "channel-cred", user: user)
+
+      project = insert(:project, name: "project-with-channel")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          name: "my-channel",
+          destination_url: "https://example.com/destination",
+          enabled: true
+        )
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: project_credential
+      )
+
+      channel_only_name =
+        insert(:channel,
+          project: project,
+          name: "no-cred-channel",
+          destination_url: "https://example.com/other",
+          enabled: false
+        )
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ """
+             channels:
+               my-channel:
+                 name: my-channel
+                 destination_url: 'https://example.com/destination'
+                 enabled: true
+                 destination_credential: channel-user@lightning.com-channel-cred
+               no-cred-channel:
+                 name: #{channel_only_name.name}
+                 destination_url: 'https://example.com/other'
+                 enabled: false
+                 destination_credential: null
+             """
+    end
+
+    test "webhook_response_config is included in the export" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true,
+          webhook_reply: :after_completion,
+          webhook_response_config:
+            build(:webhook_response_config,
+              success_code: 200,
+              error_code: 500
+            )
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => state)]
+        )
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      expected_trigger_yaml =
+        """
+            triggers:
+              webhook:
+                type: webhook
+                webhook_reply: after_completion
+                webhook_response_config:
+                  success_code: 200
+                  error_code: 500
+                enabled: true
+        """
+
+      assert generated_yaml =~ expected_trigger_yaml
+    end
+
+    test "webhook_response_config is omitted when it's is nil" do
+      project = insert(:project, name: "project 2")
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job = build(:job, body: ~s[fn(state => state)])
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      refute generated_yaml =~ "webhook_response_config"
     end
 
     test "exports canonical project" do
@@ -2479,6 +3103,30 @@ defmodule Lightning.ProjectsTest do
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
     end
+
+    test "raises when removing the project owner" do
+      owner = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: editor.id, role: :editor}
+          ]
+        )
+
+      owner_project_user =
+        Enum.find(project.project_users, &(&1.user_id == owner.id))
+
+      assert_raise ArgumentError,
+                   "Cannot remove the owner of a project. Transfer ownership first.",
+                   fn ->
+                     Projects.delete_project_user!(owner_project_user)
+                   end
+
+      assert Repo.get(Lightning.Projects.ProjectUser, owner_project_user.id)
+    end
   end
 
   describe "sandboxes (list/create/workspace)" do
@@ -2933,6 +3581,133 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "list_descendants/1" do
+    test "returns [] for a project with no children" do
+      project = insert(:project)
+      assert Projects.list_descendants(project.id) == []
+    end
+
+    test "returns every descendant of the subtree root, ordered by name" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "alpha", parent: root)
+      grandchild = insert(:project, name: "bravo", parent: child)
+
+      assert Projects.list_descendants(root.id) |> Enum.map(& &1.id) ==
+               [child.id, grandchild.id]
+    end
+
+    test "does not include the subtree root itself" do
+      root = insert(:project)
+      _child = insert(:project, parent: root)
+
+      refute root.id in Enum.map(Projects.list_descendants(root.id), & &1.id)
+    end
+
+    test "returns scheduled-for-deletion descendants alongside active ones" do
+      root = insert(:project)
+      active = insert(:project, name: "active", parent: root)
+
+      scheduled =
+        insert(:project,
+          name: "scheduled",
+          parent: root,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      ids =
+        Projects.list_descendants(root.id) |> Enum.map(& &1.id) |> Enum.sort()
+
+      assert ids == Enum.sort([active.id, scheduled.id])
+    end
+  end
+
+  describe "depth_of/1" do
+    test "returns 0 for a root project" do
+      root = insert(:project)
+      assert Projects.depth_of(root.id) == 0
+    end
+
+    test "returns 1 for a direct child sandbox" do
+      root = insert(:project)
+      sandbox = insert(:project, parent: root)
+      assert Projects.depth_of(sandbox.id) == 1
+    end
+
+    test "returns the correct depth for a deep chain" do
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+
+      assert Projects.depth_of(l3.id) == 3
+    end
+
+    test "caps at max_project_tree_depth for chains deeper than the bound" do
+      # max_sandbox_nesting_depth = 2 so max_project_tree_depth = 3. Build a
+      # chain deeper than the bound to prove `list_ancestors/1` stops walking.
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+
+      # True depth of l4 is 4, but the CTE bound stops at 3.
+      assert Projects.depth_of(l4.id) == 3
+    end
+  end
+
+  describe "max_project_tree_depth/0" do
+    test "returns max_sandbox_nesting_depth + 1 (CTE buffer above legit depth)" do
+      assert Projects.max_project_tree_depth() ==
+               Lightning.Config.max_sandbox_nesting_depth() + 1
+    end
+  end
+
+  describe "descendants_query/1 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      ids = Projects.descendant_ids([root.id])
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
+    end
+  end
+
+  describe "list_workspace_projects/2 depth bound" do
+    test "stops walking past max_project_tree_depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      root = insert(:project)
+      l1 = insert(:project, parent: root)
+      l2 = insert(:project, parent: l1)
+      l3 = insert(:project, parent: l2)
+      l4 = insert(:project, parent: l3)
+      l5 = insert(:project, parent: l4)
+
+      %{descendants: descendants} = Projects.list_workspace_projects(root.id)
+      ids = Enum.map(descendants, & &1.id)
+
+      assert l1.id in ids
+      assert l2.id in ids
+      assert l3.id in ids
+      assert l4.id in ids
+      refute l5.id in ids
+    end
+  end
+
   describe "sandbox facade delegates" do
     test "provision_sandbox/3 creates a child project and sets parent_id" do
       owner = insert(:user)
@@ -3173,6 +3948,139 @@ defmodule Lightning.ProjectsTest do
       current = build_parent_chain(current)
 
       assert Projects.descendant_of?(current, root)
+    end
+  end
+
+  describe "access_root_for_user/2" do
+    test "returns the project itself when the user has direct membership on it" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      assert Projects.access_root_for_user(project, user).id == project.id
+    end
+
+    test "returns the topmost accessible ancestor when the user is on the root and on a descendant" do
+      user = insert(:user)
+      root = insert(:project, project_users: [%{user: user, role: :owner}])
+      middle = insert(:project, parent: root)
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == root.id
+    end
+
+    test "returns the deepest ancestor the user has access to when intermediates are hidden" do
+      user = insert(:user)
+      root = insert(:project)
+
+      middle =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == middle.id
+    end
+
+    test "falls back to the project itself when no ancestor is accessible" do
+      user = insert(:user)
+      root = insert(:project)
+      middle = insert(:project, parent: root)
+
+      leaf =
+        insert(:project,
+          parent: middle,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      assert Projects.access_root_for_user(leaf, user).id == leaf.id
+    end
+
+    test "honors support users via per-project allow_support_access" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: true)
+
+      leaf =
+        insert(:project,
+          parent: root,
+          allow_support_access: true
+        )
+
+      assert Projects.access_root_for_user(leaf, support_user).id == root.id
+    end
+
+    test "does not surface an ancestor whose allow_support_access is false to a support user" do
+      support_user = insert(:user, support_user: true)
+      root = insert(:project, allow_support_access: false)
+
+      leaf =
+        insert(:project,
+          parent: root,
+          allow_support_access: true
+        )
+
+      assert Projects.access_root_for_user(leaf, support_user).id == leaf.id
+    end
+  end
+
+  describe "display_name_within_access_root/2" do
+    test "returns the project name alone when access_root is the project itself" do
+      project = insert(:project, name: "acme-workspace")
+
+      assert Projects.display_name_within_access_root(project, project) ==
+               "acme-workspace"
+    end
+
+    test "joins names from the access root down to the project, stopping at the root" do
+      root = insert(:project, name: "acme-workspace")
+      middle = insert(:project, name: "acme-staging", parent: root)
+      leaf = insert(:project, name: "acme-staging-dev", parent: middle)
+
+      assert Projects.display_name_within_access_root(leaf, root) ==
+               "acme-workspace/acme-staging/acme-staging-dev"
+    end
+
+    test "truncates at a deeper access root, hiding ancestors above it" do
+      root = insert(:project, name: "hidden-root")
+      access = insert(:project, name: "user-access-root", parent: root)
+      leaf = insert(:project, name: "leaf", parent: access)
+
+      assert Projects.display_name_within_access_root(leaf, access) ==
+               "user-access-root/leaf"
+    end
+
+    test "falls back to the full ancestor chain when access_root is not in the project's chain" do
+      root = insert(:project, name: "acme-workspace")
+      project = insert(:project, name: "acme-staging", parent: root)
+      unrelated = insert(:project, name: "beta-workspace")
+
+      assert Projects.display_name_within_access_root(project, unrelated) ==
+               "acme-workspace/acme-staging"
+    end
+  end
+
+  describe "subscribe/0" do
+    test "delivers project lifecycle events to the calling process" do
+      assert :ok = Projects.subscribe()
+
+      project = insert(:project)
+      Lightning.Projects.Events.project_created(project)
+
+      assert_receive %Lightning.Projects.Events.ProjectCreated{project: ^project}
+
+      Lightning.Projects.Events.project_deleted(project)
+
+      assert_receive %Lightning.Projects.Events.ProjectDeleted{project: ^project}
     end
   end
 

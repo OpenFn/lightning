@@ -7,13 +7,18 @@ defmodule LightningWeb.ChannelRequestLive.Show do
     only: [timing_section: 1]
 
   alias Lightning.Channels
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias LightningWeb.ChannelRequestLive.Helpers
+  alias LightningWeb.Components.Viewers
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    %{current_user: current_user, project: project} = socket.assigns
+    %{current_user: current_user, project: project, project_user: project_user} =
+      socket.assigns
 
     if Lightning.Accounts.experimental_features_enabled?(current_user) do
       case Channels.get_channel_request_for_project(project.id, id) do
@@ -26,7 +31,15 @@ defmodule LightningWeb.ChannelRequestLive.Show do
              active_menu_item: :runs,
              page_title: "Channel Request",
              request_id: id,
-             channel_request: channel_request
+             channel_request: channel_request,
+             admin_contacts: Projects.list_project_admin_emails(project.id),
+             can_edit_data_retention:
+               Permissions.can?(
+                 ProjectUsers,
+                 :edit_data_retention,
+                 current_user,
+                 project_user
+               )
            )}
       end
     else
@@ -42,7 +55,10 @@ defmodule LightningWeb.ChannelRequestLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb_items items={[
                 {"History", ~p"/projects/#{@project}/history"},
                 {"Channels", ~p"/projects/#{@project}/history/channels"}
@@ -75,10 +91,20 @@ defmodule LightningWeb.ChannelRequestLive.Show do
 
           <.timing_section :if={error_cat != :credential} event={event} />
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            <.request_section event={event} />
-            <.response_section event={event} error_category={error_cat} />
-          </div>
+          <%= if cr.is_wiped do %>
+            <Viewers.wiped_data_viewer
+              id="payload-wiped-viewer"
+              data_label={:request_response}
+              project_id={@project.id}
+              admin_contacts={@admin_contacts}
+              can_edit_data_retention={@can_edit_data_retention}
+            />
+          <% else %>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <.request_section event={event} />
+              <.response_section event={event} error_category={error_cat} />
+            </div>
+          <% end %>
 
           <.context_section
             channel_request={cr}

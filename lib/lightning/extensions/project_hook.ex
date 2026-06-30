@@ -32,6 +32,7 @@ defmodule Lightning.Extensions.ProjectHook do
     Projects.project_workflows_query(project) |> Repo.delete_all()
     Projects.project_users_query(project) |> Repo.delete_all()
     Projects.project_credentials_query(project) |> Repo.delete_all()
+    Projects.project_oauth_clients_query(project) |> Repo.delete_all()
     Projects.delete_project_dataclips(project)
 
     project

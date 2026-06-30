@@ -310,8 +310,7 @@ defmodule Lightning.Projects.SandboxesTest do
         Sandboxes.provision(parent, actor, %{
           name: "sandbox-x",
           color: "#abcdef",
-          env: "staging",
-          collaborators: [%{user_id: actor.id, role: :owner}]
+          env: "staging"
         })
 
       sandbox = Repo.preload(sandbox, [:project_users, :project_credentials])
@@ -946,6 +945,215 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "merge/4 workflows and credentials" do
+    test "merges a new workflow from a sandbox into the parent" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # Add a brand-new workflow to the sandbox only.
+      insert(:simple_workflow, project: sandbox, name: "NewFlow")
+
+      refute Repo.exists?(
+               from(w in Workflow,
+                 where: w.project_id == ^parent.id and w.name == "NewFlow"
+               )
+             )
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      new_workflow =
+        Workflow
+        |> Repo.get_by!(project_id: parent.id, name: "NewFlow")
+        |> Repo.preload([:jobs, :triggers, :edges])
+
+      assert length(new_workflow.jobs) == 1
+      assert length(new_workflow.triggers) == 1
+      assert length(new_workflow.edges) == 1
+    end
+
+    test "merges a credential added to an existing step in the sandbox" do
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j2: parent_a2}} =
+        build_parent_fixture!(:owner)
+
+      # Start with A2 (an existing parent step) having no credential.
+      Repo.update!(Ecto.Changeset.change(parent_a2, project_credential_id: nil))
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # The sandbox clones the parent's credential as its own project_credential
+      # referencing the same underlying credential.
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # In the sandbox, add that credential to the previously-uncredentialed
+      # step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A2")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The credential added in the sandbox propagates to the parent, mapped to
+      # the parent's project_credential for the same underlying credential.
+      assert Repo.reload!(parent_a2).project_credential_id == pc.id
+    end
+
+    test "merges a new workflow in the sandbox with a step that references a credential" do
+      %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # Add a brand-new workflow to the sandbox whose step references the
+      # (sandbox-scoped) credential.
+      new_wf = insert(:simple_workflow, project: sandbox, name: "NewFlow")
+      [new_job] = Repo.preload(new_wf, :jobs).jobs
+
+      new_job
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      # The new workflow merges into the parent, mapping the (sandbox-scoped)
+      # credential to the parent's project_credential for the same underlying
+      # credential. Without remapping, import would reject the new job's
+      # sandbox-scoped project_credential_id ("credential doesnt exist or isn't
+      # available in this project").
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_new_wf =
+        Repo.get_by!(Workflow, project_id: parent.id, name: "NewFlow")
+
+      merged_job =
+        Repo.get_by!(Job, workflow_id: parent_new_wf.id, name: new_job.name)
+
+      assert merged_job.project_credential_id == pc.id
+    end
+
+    test "merges a credential removed from an existing step in the sandbox" do
+      # A1 references the credential in the parent (per build_parent_fixture!).
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j1: parent_a1}} =
+        build_parent_fixture!(:owner)
+
+      assert parent_a1.project_credential_id == pc.id
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # In the sandbox, remove the credential from the step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: nil)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The removal propagates to the parent: the step no longer references a
+      # credential.
+      assert Repo.reload!(parent_a1).project_credential_id == nil
+    end
+  end
+
+  describe "merge/4 sandbox-only credentials" do
+    # Adds a credential that exists only in the sandbox (the target has no
+    # project_credential for its underlying credential) and wires the sandbox's
+    # A1 step to reference it. Returns the sandbox project_credential so the
+    # test can choose whether to select it for attachment.
+    defp add_sandbox_only_credential!(sandbox, actor) do
+      cred =
+        insert(:credential,
+          name: "sandbox-only",
+          body: %{"token" => "only-here"},
+          user: actor
+        )
+
+      sandbox_pc =
+        insert(:project_credential, project: sandbox, credential: cred)
+
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      {cred, sandbox_pc}
+    end
+
+    test "attaches a selected sandbox-only credential to the target and the merged job references it" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: [sandbox_pc.id]
+               })
+
+      parent_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: parent.id,
+          credential_id: cred.id
+        )
+
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == parent_pc.id
+    end
+
+    test "does not attach a deselected sandbox-only credential" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, _sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: []
+               })
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      # The merged step drops the credential it could not map.
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == nil
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
@@ -1178,16 +1386,58 @@ defmodule Lightning.Projects.SandboxesTest do
       assert %{name: [_error_msg]} = errors_on(changeset)
     end
 
-    test "handles foreign key constraint violations in collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      non_existent_user_id = Ecto.UUID.generate()
+    test "rejects when the parent is already at the configured nesting depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
 
-      assert_raise Ecto.ConstraintError, ~r/foreign_key_constraint/, fn ->
-        Sandboxes.provision(parent, actor, %{
-          name: "test-fk-error",
-          collaborators: [%{user_id: non_existent_user_id, role: :editor}]
-        })
-      end
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+      l2 = insert(:project, parent: l1)
+      ensure_member!(l2, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(l2, actor, %{name: "too-deep"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^l2.id),
+               :count,
+               :id
+             ) == 0
+    end
+
+    test "succeeds when the parent is one level below the nesting cap" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+
+      assert {:ok, %Project{} = sandbox} =
+               Sandboxes.provision(l1, actor, %{name: "just-below"})
+
+      assert sandbox.parent_id == l1.id
+    end
+
+    test "rejects every sandbox creation when the cap is set to 0" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(root, actor, %{name: "no-sandboxes"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^root.id),
+               :count,
+               :id
+             ) == 0
     end
 
     test "rolls back transaction on keychain validation failure" do
@@ -1327,25 +1577,145 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "collaborators" do
-    test "adds non-owner collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      other = insert(:user)
+  describe "project_users derivation from parent" do
+    test "copies every parent user with their role preserved, actor stays owner" do
+      %{actor: actor, other: other, parent: parent} =
+        build_parent_fixture!(:owner)
 
       {:ok, sandbox} =
-        Sandboxes.provision(parent, actor, %{
-          name: "sb-with-collab",
-          collaborators: [
-            %{user_id: other.id, role: :editor},
-            %{user_id: actor.id, role: :owner}
-          ]
-        })
+        Sandboxes.provision(parent, actor, %{name: "sb-derived"})
 
       sandbox = Repo.preload(sandbox, :project_users)
 
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == other.id and &1.role == :editor)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "preserves the :viewer role" do
+      actor = insert(:user)
+      viewer = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(parent, viewer, :viewer)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == viewer.id and &1.role == :viewer)
+             )
+    end
+
+    test "demotes the parent owner to :admin on the sandbox" do
+      actor = insert(:user)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :editor)
+      ensure_member!(parent, parent_owner, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-demote-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == parent_owner.id and &1.role == :admin)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "actor is sandbox owner even if they had a non-owner role on parent" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-actor-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(
+               sandbox.project_users,
+               &(&1.user_id == actor.id)
+             ) == 1
+    end
+
+    test "superuser actor who is not on the parent cannot provision a sandbox" do
+      superuser = insert(:user, role: :superuser)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, parent_owner, :owner)
+
+      assert {:error, :unauthorized} =
+               Sandboxes.provision(parent, superuser, %{name: "sb-superuser"})
+    end
+
+    test "still provisions cleanly when the parent has only the actor on it" do
+      actor = insert(:user)
+      parent = insert(:project, name: "solo-parent")
+
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "solo-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert [%{user_id: user_id, role: :owner}] = sandbox.project_users
+      assert user_id == actor.id
+    end
+
+    test "still provisions cleanly when the parent has no :owner row" do
+      # `Projects.delete_project_user!/1` and direct repo deletions bypass
+      # the Project changeset's single-owner guarantee, so the ownerless
+      # state is reachable in practice.
+      actor = insert(:user)
+      editor = insert(:user)
+      parent = insert(:project, name: "ownerless-parent")
+
+      ensure_member!(parent, actor, :admin)
+      ensure_member!(parent, editor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "ownerless-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == editor.id and &1.role == :editor)
              )
 
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
@@ -2223,6 +2593,49 @@ defmodule Lightning.Projects.SandboxesTest do
                  non_existent_id,
                  actor
                )
+    end
+
+    test "refuses to restore when the active sandbox limit is reached" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      message = %Lightning.Extensions.Message{
+        text: "Sandbox limit reached"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      assert {:error, :too_many_sandboxes, ^message} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "permission check runs before the limit check" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes,
+           %Lightning.Extensions.Message{text: "limit reached"}}
+        end
+      )
+
+      assert {:error, :unauthorized} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
     end
   end
 end

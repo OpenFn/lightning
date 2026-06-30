@@ -308,6 +308,13 @@ defmodule Lightning.Factories do
     }
   end
 
+  def user_identity_factory do
+    %Lightning.Accounts.UserIdentity{
+      provider: "github",
+      uid: sequence(:user_identity_uid, &"uid-#{&1}")
+    }
+  end
+
   def user_token_factory do
     %Lightning.Accounts.UserToken{
       token: fn -> Ecto.UUID.generate() end
@@ -345,6 +352,10 @@ defmodule Lightning.Factories do
       submitted_at: now,
       report_date: DateTime.to_date(now)
     }
+  end
+
+  def webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
   def triggers_kafka_configuration_factory do

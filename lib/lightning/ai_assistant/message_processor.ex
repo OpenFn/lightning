@@ -153,6 +153,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
 
+    if workflow_yaml in [nil, ""] do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page

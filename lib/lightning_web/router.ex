@@ -64,7 +64,11 @@ defmodule LightningWeb.Router do
     post "/users/confirm", UserConfirmationController, :create
 
     get "/authenticate/callback", OidcController, :new
+    get "/authenticate/signup/confirm", OidcController, :confirm_signup
+    post "/authenticate/signup/confirm", OidcController, :complete_signup
+    get "/authenticate/signup/cancel", OidcController, :cancel_signup
     get "/authenticate/:provider", OidcController, :show
+    get "/authenticate/:provider/link", OidcController, :link
     get "/authenticate/:provider/callback", OidcController, :new
 
     get "/oauth/:provider/callback", OauthController, :new
@@ -306,18 +310,6 @@ defmodule LightningWeb.Router do
   end
 
   do_in(:dev) do
-    import PhoenixStorybook.Router
-
-    scope "/" do
-      storybook_assets()
-    end
-
-    scope "/" do
-      pipe_through :browser
-
-      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
-    end
-
     scope "/dev" do
       pipe_through :browser
 

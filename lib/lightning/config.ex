@@ -82,12 +82,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def oauth_provider(key) do
-      Application.get_env(:lightning, :oauth_clients)
-      |> Keyword.get(key)
-    end
-
-    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -95,6 +89,34 @@ defmodule Lightning.Config do
     @impl true
     def activity_cleanup_chunk_size do
       Application.get_env(:lightning, :activity_cleanup_chunk_size)
+    end
+
+    @impl true
+    def log_lines_search_indexing_batch_size do
+      log_lines_search_indexing_config() |> Keyword.fetch!(:batch_size)
+    end
+
+    @impl true
+    def log_lines_search_indexing_max_batches do
+      log_lines_search_indexing_config() |> Keyword.fetch!(:max_batches)
+    end
+
+    defp log_lines_search_indexing_config do
+      Application.get_env(:lightning, :log_lines_search_indexing, [])
+    end
+
+    @impl true
+    def dataclip_search_indexing_batch_size do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:batch_size)
+    end
+
+    @impl true
+    def dataclip_search_indexing_max_batches do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:max_batches)
+    end
+
+    defp dataclip_search_indexing_config do
+      Application.get_env(:lightning, :dataclip_search_indexing, [])
     end
 
     @impl true
@@ -110,6 +132,18 @@ defmodule Lightning.Config do
     @impl true
     def google(key) do
       Application.get_env(:lightning, Lightning.Google, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
+    def github_oauth(key) do
+      Application.get_env(:lightning, :github_oauth, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
+    def google_oauth(key) do
+      Application.get_env(:lightning, :google_oauth, [])
       |> Keyword.get(key)
     end
 
@@ -211,6 +245,11 @@ defmodule Lightning.Config do
     @impl true
     def max_dataclip_size_bytes do
       Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
+    end
+
+    @impl true
+    def max_sandbox_nesting_depth do
+      Application.get_env(:lightning, :max_sandbox_nesting_depth, 5)
     end
 
     @impl true
@@ -454,6 +493,8 @@ defmodule Lightning.Config do
   @callback env() :: :dev | :test | :prod
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
+  @callback github_oauth(key :: atom()) :: any()
+  @callback google_oauth(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_alternate_storage_enabled?() :: boolean()
@@ -465,11 +506,11 @@ defmodule Lightning.Config do
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
   @callback max_dataclip_size_bytes() :: non_neg_integer()
+  @callback max_sandbox_nesting_depth() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
   @callback metrics_unclaimed_run_threshold_seconds() :: integer()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
@@ -477,6 +518,10 @@ defmodule Lightning.Config do
   @callback promex_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
+  @callback log_lines_search_indexing_batch_size() :: pos_integer()
+  @callback log_lines_search_indexing_max_batches() :: pos_integer()
+  @callback dataclip_search_indexing_batch_size() :: pos_integer()
+  @callback dataclip_search_indexing_max_batches() :: pos_integer()
   @callback default_ecto_database_timeout() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
@@ -579,16 +624,28 @@ defmodule Lightning.Config do
     impl().repo_connection_token_signer()
   end
 
-  def oauth_provider(key) do
-    impl().oauth_provider(key)
-  end
-
   def purge_deleted_after_days do
     impl().purge_deleted_after_days()
   end
 
   def activity_cleanup_chunk_size do
     impl().activity_cleanup_chunk_size()
+  end
+
+  def log_lines_search_indexing_batch_size do
+    impl().log_lines_search_indexing_batch_size()
+  end
+
+  def log_lines_search_indexing_max_batches do
+    impl().log_lines_search_indexing_max_batches()
+  end
+
+  def dataclip_search_indexing_batch_size do
+    impl().dataclip_search_indexing_batch_size()
+  end
+
+  def dataclip_search_indexing_max_batches do
+    impl().dataclip_search_indexing_max_batches()
   end
 
   def default_ecto_database_timeout do
@@ -605,6 +662,14 @@ defmodule Lightning.Config do
 
   def google(key) do
     impl().google(key)
+  end
+
+  def github_oauth(key) do
+    impl().github_oauth(key)
+  end
+
+  def google_oauth(key) do
+    impl().google_oauth(key)
   end
 
   def cors_origin do
@@ -661,6 +726,16 @@ defmodule Lightning.Config do
 
   def max_dataclip_size_bytes do
     impl().max_dataclip_size_bytes()
+  end
+
+  @doc """
+  Maximum depth of nested sandboxes. A direct child sandbox is depth 1, a
+  sandbox of a sandbox is depth 2, etc. Root projects are depth 0 and not
+  subject to this limit. Defaults to 5. Set to 0 to disable sandbox
+  creation entirely.
+  """
+  def max_sandbox_nesting_depth do
+    impl().max_sandbox_nesting_depth()
   end
 
   def kafka_alternate_storage_enabled? do

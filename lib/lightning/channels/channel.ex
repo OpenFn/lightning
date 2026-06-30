@@ -25,6 +25,7 @@ defmodule Lightning.Channels.Channel do
     field :destination_url, :string
     field :enabled, :boolean, default: true
     field :lock_version, :integer, default: 0
+    field :delete, :boolean, virtual: true
 
     belongs_to :project, Project
 
@@ -57,13 +58,7 @@ defmodule Lightning.Channels.Channel do
       :enabled
     ])
     |> validate_required([:name, :destination_url, :project_id])
-    |> Validators.validate_url(:destination_url)
-    |> assoc_constraint(:project)
-    |> unique_constraint([:project_id, :name],
-      error_key: :name,
-      message: "A channel with this name already exists in this project"
-    )
-    |> optimistic_lock(:lock_version)
+    |> validate()
     |> cast_assoc(:client_auth_methods,
       with: fn struct, attrs ->
         ChannelAuthMethod.changeset(struct, put_role(attrs, "client"))
@@ -74,6 +69,24 @@ defmodule Lightning.Channels.Channel do
         ChannelAuthMethod.changeset(struct, put_role(attrs, "destination"))
       end
     )
+  end
+
+  @doc """
+  Shared validation rules for a channel changeset.
+
+  Used by `changeset/2` and by callers (such as the provisioner) that
+  build a channel changeset with a different shape of input fields but
+  need the same business-rule validations.
+  """
+  def validate(changeset) do
+    changeset
+    |> Validators.validate_url(:destination_url)
+    |> assoc_constraint(:project)
+    |> unique_constraint([:project_id, :name],
+      error_key: :name,
+      message: "A channel with this name already exists in this project"
+    )
+    |> optimistic_lock(:lock_version)
   end
 
   defp put_role(attrs, role) when is_map(attrs) do

@@ -60,6 +60,12 @@ Note that for secure deployments, it's recommended to use a combination of
   as run_results via the websocket connection from a worker.
 - `MAX_CREDENTIAL_SENSITIVE_VALUES` - the maximum number of sensitive values
   that can be stored in a credential. Defaults to 50.
+- `MAX_SANDBOX_NESTING_DEPTH` - the maximum depth at which sandboxes can be
+  nested. A direct child sandbox is depth 1, a sandbox of a sandbox is depth 2,
+  etc. Provision attempts beyond this depth return
+  `{:error, :nesting_too_deep}`, and the **Create Sandbox** button on the
+  Sandboxes page is disabled with a tooltip when the current project is at the
+  cap. Defaults to 5. Set to `0` to disable sandbox creation entirely.
 
 ### GitHub
 
@@ -354,38 +360,61 @@ been marked as recovered.
 Once all files have either been recovered or discarded, the triggers can be
 enabled once more.
 
-### Google Oauth2
+### Single Sign-On (SSO)
 
-Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
-application' type.
+Lightning supports SSO **sign-in** with GitHub and Google, letting users
+authenticate with an external identity provider instead of an email/password.
 
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
+> SSO sign-in is distinct from two other, similarly-named features. Don't mix up
+> their environment variables:
+>
+> - **GitHub App** (`GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`,
+>   `GITHUB_APP_CLIENT_SECRET`, `GITHUB_CERT`) — used for project **version
+>   control / repo sync**, with callback `/oauth/github/callback`. See
+>   [GitHub](#github) above. This is **not** sign-in.
+> - **Credential OAuth** — clients that **jobs** use to connect to external
+>   systems (e.g. Google Sheets, Salesforce). These are configured per-project
+>   in the UI, not via these environment variables.
 
-Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:
+Enable a provider by setting its client ID and secret. Each provider has its own
+callback (redirect) URL that you must register in the provider's OAuth app
+settings. The redirect URL is derived automatically from your configured
+host/scheme/port — you only need to register the matching URL below.
 
-| **Variable**           | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | Which is `client_id` from the client details. |
-| `GOOGLE_CLIENT_SECRET` | `client_secret` from the client details.      |
+| Provider | Variables                                          | Redirect / Callback URL                                  |
+| -------- | -------------------------------------------------- | -------------------------------------------------------- |
+| GitHub   | `SSO_GITHUB_CLIENT_ID`, `SSO_GITHUB_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/github/callback` |
+| Google   | `SSO_GOOGLE_CLIENT_ID`, `SSO_GOOGLE_CLIENT_SECRET` | `https://<ENDPOINT DOMAIN>/authenticate/google/callback` |
 
-### Salesforce Oauth2
+For **GitHub**, create an **OAuth App** (Settings → Developer settings → OAuth
+Apps — _not_ a GitHub App) and request the `read:user` and `user:email` scopes.
+GitHub's userinfo endpoint omits the email for users without a public profile
+email, so Lightning resolves the primary, verified address via the granted
+`user:email` scope.
 
-Using your Salesforce developer account, create a new Oauth 2.0 connected
-application.
+For **Google**, provision an OAuth 2.0 Client (type "Web application") and add
+the SSO callback above to its authorized redirect URIs.
 
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
+> ℹ️ The `SSO_`-prefixed variables are **used only for SSO sign-in** and are
+> deliberately distinct from any other feature's settings — create a dedicated
+> OAuth client for SSO and register only the SSO callback above. In particular,
+> the OAuth clients your **jobs** use to connect to Google Sheets, Salesforce,
+> etc. are configured per-project in the UI and are unaffected.
 
-Grant permissions as desired.
+### OAuth credential connections (Google, Salesforce, etc.)
 
-Once the client has been created set the following environment variables:
+OAuth clients that **jobs** use to connect to external systems (Google Sheets,
+Salesforce, and similar) are no longer configured via environment variables.
+They are registered in the UI under **Credentials → OAuth clients** and scoped
+to the projects that use them; the client id, secret, and redirect/callback URL
+are entered in that form.
 
-| **Variable**               | Description                                                           |
-| -------------------------- | --------------------------------------------------------------------- |
-| `SALESFORCE_CLIENT_ID`     | Which is `Consumer Key` from the "Manage Consumer Details" screen.    |
-| `SALESFORCE_CLIENT_SECRET` | Which is `Consumer Secret` from the "Manage Consumer Details" screen. |
+> The older `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and
+> `SALESFORCE_CLIENT_ID` / `SALESFORCE_CLIENT_SECRET` environment variables are
+> no longer read by Lightning and can be removed from your deployment. They are
+> unrelated to the [Single Sign-On (SSO)](#single-sign-on-sso) `SSO_`-prefixed
+> variables above, which configure user **sign-in** rather than credential
+> connections.
 
 ### Webhook Retry Configuration
 

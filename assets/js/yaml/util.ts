@@ -82,6 +82,18 @@ export const convertWorkflowStateToSpec = (
 
     if (trigger.type === 'webhook') {
       triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
+      const config = trigger.webhook_response_config;
+      if (
+        config &&
+        (config.success_code != null || config.error_code != null)
+      ) {
+        triggerDetails.webhook_response_config = {
+          ...(config.success_code != null && {
+            success_code: config.success_code,
+          }),
+          ...(config.error_code != null && { error_code: config.error_code }),
+        };
+      }
     }
 
     // TODO: handle kafka config
@@ -186,6 +198,7 @@ export const convertWorkflowSpecToState = (
         type: 'webhook',
         enabled,
         webhook_reply: specTrigger.webhook_reply,
+        webhook_response_config: specTrigger.webhook_response_config ?? null,
       };
     } else {
       trigger = {
