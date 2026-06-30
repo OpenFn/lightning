@@ -425,7 +425,7 @@ export const useWorkflowActions = () => {
             searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.history.replaceState(null, '', newUrl);
+            window.liveSocket?.historyPatch(newUrl, 'replace');
 
             // Clear template state in UI store
             uiStore.selectTemplate(null);
