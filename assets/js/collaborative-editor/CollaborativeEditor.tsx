@@ -12,11 +12,11 @@ import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
+import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
-import { WorkflowTemplateBrowserModal } from './components/WorkflowTemplateBrowserModal';
 import { YAMLImportModal } from './components/YAMLImportModal';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
@@ -206,7 +206,7 @@ function LandingScreenWrapper({
         onImportYAML={openYAMLImportModal}
       />
       <YAMLImportModal />
-      <WorkflowTemplateBrowserModal />
+      <TemplateBrowserModalWrapper />
     </>
   );
 }
