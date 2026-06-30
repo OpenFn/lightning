@@ -233,6 +233,7 @@ export function useAIWorkflowApplications({
             }
           } catch (saveError) {
             saveSucceeded = false;
+            if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
             console.error('[AI Assistant] Failed to save workflow:', saveError);
             notifications.alert({
               title: 'Failed to save workflow',

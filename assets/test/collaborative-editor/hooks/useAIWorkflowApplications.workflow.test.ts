@@ -700,4 +700,78 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
       expect(mockOnValidationError).not.toHaveBeenCalled();
     });
   });
+
+  it('resets appliedViaStreamingRef when save rejects after a successful streaming apply', async () => {
+    const appliedViaStreamingRef = { current: true };
+    const failingSaveWorkflow = vi.fn(() =>
+      Promise.reject(new Error('Network error'))
+    );
+
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: failingSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        appliedMessageIdsRef: { current: new Set() },
+        appliedViaStreamingRef,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
+      expect(appliedViaStreamingRef.current).toBe(false);
+    });
+  });
+
+  it('resets appliedViaStreamingRef when save returns null (disconnected) after a successful streaming apply', async () => {
+    const appliedViaStreamingRef = { current: true };
+    const disconnectedSaveWorkflow = vi.fn(() => Promise.resolve(null));
+
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: disconnectedSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        appliedMessageIdsRef: { current: new Set() },
+        appliedViaStreamingRef,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
+      expect(appliedViaStreamingRef.current).toBe(false);
+    });
+  });
 });
