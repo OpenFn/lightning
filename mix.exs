@@ -106,12 +106,12 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_test_watch, "~> 1.4.0", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
-      {:oban, "~> 2.19"},
+      {:oban, "~> 2.23"},
       {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
@@ -157,7 +157,7 @@ defmodule Lightning.MixProject do
       {:statistics, "~> 0.6", only: :dev},
       {:tls_certificate_check, "~> 1.32"},
       philter_dep(),
-      {:y_ex, "~> 0.8.0"},
+      {:y_ex, "~> 0.10.5"},
       {:chameleon, "~> 2.5"}
     ]
   end

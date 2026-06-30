@@ -28,10 +28,8 @@ defmodule Lightning.LogLines.SearchVectorWorker do
     queue: :search_indexing,
     priority: 1,
     max_attempts: 10,
-    # Restrict uniqueness to queued states. Oban's defaults also dedup against
-    # :executing/:completed, so a running snowball would match itself and fail
-    # to enqueue its successor — breaking the chain after one hop.
-    unique: [period: 55, keys: [:trigger], states: [:available, :scheduled]]
+    # Restrict uniqueness to incomplete states: [:available, :scheduled, :executing, :retryable]
+    unique: [period: 55, keys: [:trigger], states: :incomplete]
 
   alias Lightning.Repo
 
