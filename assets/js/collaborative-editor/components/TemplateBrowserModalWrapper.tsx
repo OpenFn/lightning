@@ -15,7 +15,7 @@ import { TemplateBrowserModal } from './TemplateBrowserModal';
 export function TemplateBrowserModalWrapper() {
   const isOpen = useShowTemplateBrowserModal();
   const { closeTemplateBrowserModal, dismissLandingScreen } = useUICommands();
-  const { provider } = useSession();
+  const provider = useSession(s => s.provider);
   const channel = provider?.channel;
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
@@ -30,9 +30,9 @@ export function TemplateBrowserModalWrapper() {
 
   // Lazy fetch — only when modal opens, not on every /new load
   useEffect(() => {
-    if (!isOpen || !channel) return;
-
+    if (!isOpen) return;
     setSearchQuery('');
+    if (!channel) return;
 
     const load = async () => {
       setLoading(true);

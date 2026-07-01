@@ -21,9 +21,8 @@ function matchesQuery(
 
 export function filterTemplates(
   templates: WorkflowTemplate[],
-  query: string
+  q: string
 ): WorkflowTemplate[] {
-  const q = query.trim().toLowerCase();
   if (!q) return templates;
   return templates.filter(t => matchesQuery(t, q));
 }
@@ -55,8 +54,8 @@ export function TemplateBrowserModal({
   const userTemplates = templates.filter(
     (t): t is WorkflowTemplate => (t as BaseTemplate).isBase !== true
   );
-  const filteredUserTemplates = filterTemplates(userTemplates, searchQuery);
   const q = searchQuery.trim().toLowerCase();
+  const filteredUserTemplates = filterTemplates(userTemplates, q);
   const anyBaseTemplateMatches =
     q.length > 0 && baseTemplates.some(t => matchesQuery(t, q));
 
