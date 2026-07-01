@@ -19,7 +19,7 @@ export function TemplateBrowserModalWrapper() {
   const channel = provider?.channel;
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<Template[]>(BASE_TEMPLATES);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
