@@ -7,8 +7,9 @@
  * - Description fallback
  */
 
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+
 import { TemplateDetailsCard } from '../../../js/collaborative-editor/components/TemplateDetailsCard';
 import type { Template } from '../../../js/collaborative-editor/types/template';
 
