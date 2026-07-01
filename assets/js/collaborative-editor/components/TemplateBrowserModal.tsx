@@ -50,10 +50,10 @@ export function TemplateBrowserModal({
   onSearchChange,
 }: TemplateBrowserModalProps) {
   const baseTemplates = templates.filter(
-    (t): t is BaseTemplate => 'isBase' in t
+    (t): t is BaseTemplate => (t as BaseTemplate).isBase === true
   );
   const userTemplates = templates.filter(
-    (t): t is WorkflowTemplate => !('isBase' in t)
+    (t): t is WorkflowTemplate => (t as BaseTemplate).isBase !== true
   );
   const filteredUserTemplates = filterTemplates(userTemplates, searchQuery);
   const q = searchQuery.trim().toLowerCase();
@@ -112,13 +112,14 @@ export function TemplateBrowserModal({
               </span>
               <input
                 type="text"
+                aria-label="Search templates"
                 placeholder="Search templates"
                 value={searchQuery}
                 onChange={e => onSearchChange(e.target.value)}
                 disabled={loading}
                 className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
                   text-gray-900 placeholder:text-gray-400
-                  focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-400
+                  focus:outline-none focus-visible:ring-1 focus-visible:border-gray-300 focus-visible:ring-gray-300
                   disabled:opacity-50"
               />
             </div>
@@ -196,7 +197,7 @@ function TemplateSelectCard({
       className="w-full h-full text-left rounded-lg border border-gray-200 bg-white p-3
         hover:border-gray-300 hover:bg-gray-50 transition-colors
         disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-400"
+        focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300"
     >
       <p className="text-sm font-medium text-gray-900">{template.name}</p>
       {template.description && (
