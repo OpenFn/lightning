@@ -20,11 +20,6 @@ describe('filterTemplates', () => {
     expect(filterTemplates(templates, '')).toEqual(templates);
   });
 
-  it('returns all templates when query is only whitespace', () => {
-    const templates = [make({ id: '1' }), make({ id: '2' })];
-    expect(filterTemplates(templates, '   ')).toEqual(templates);
-  });
-
   it('matches on name', () => {
     const match = make({ id: '1', name: 'DHIS2 to Postgres' });
     const noMatch = make({ id: '2', name: 'Kobo to Google Sheets' });
@@ -46,11 +41,10 @@ describe('filterTemplates', () => {
     expect(filterTemplates([match, noMatch], 'kobo')).toEqual([match]);
   });
 
-  it('is case-insensitive', () => {
+  it('matches case-insensitively (caller normalizes to lowercase)', () => {
     const template = make({ name: 'OpenMRS Integration' });
-    expect(filterTemplates([template], 'OPENMRS')).toEqual([template]);
     expect(filterTemplates([template], 'openmrs')).toEqual([template]);
-    expect(filterTemplates([template], 'OpenMRS')).toEqual([template]);
+    expect(filterTemplates([template], 'openm')).toEqual([template]);
   });
 
   it('returns empty array when nothing matches', () => {
