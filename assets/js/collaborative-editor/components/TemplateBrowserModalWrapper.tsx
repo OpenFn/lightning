@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { fetchTemplates } from '../api/templates';
 import { BASE_TEMPLATES } from '../constants/baseTemplates';
+import { useActionLock } from '../hooks/useActionLock';
 import { useSession } from '../hooks/useSession';
 import { useShowTemplateBrowserModal, useUICommands } from '../hooks/useUI';
 import { useWorkflowActions } from '../hooks/useWorkflow';
@@ -21,7 +22,6 @@ export function TemplateBrowserModalWrapper() {
 
   const [templates, setTemplates] = useState<Template[]>(BASE_TEMPLATES);
   const [loading, setLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useKeyboardShortcut('Escape', closeTemplateBrowserModal, 100, {
@@ -52,33 +52,30 @@ export function TemplateBrowserModalWrapper() {
     void load();
   }, [isOpen, channel]);
 
-  const handleSelect = async (template: Template) => {
-    if (isSaving) return;
-    setIsSaving(true);
-    try {
-      const spec = parseWorkflowYAML(template.code);
-      const state = convertWorkflowSpecToState(spec);
-      await importWorkflow(state);
-      const saved = await saveWorkflow({ silent: true });
-      if (!saved) {
+  const { run: handleSelect, isPending: isSaving } = useActionLock(
+    async (template: Template) => {
+      try {
+        const spec = parseWorkflowYAML(template.code);
+        const state = convertWorkflowSpecToState(spec);
+        await importWorkflow(state);
+        const saved = await saveWorkflow({ silent: true });
+        if (!saved) {
+          notifications.alert({
+            title: 'Not connected',
+            description: 'Connect to the server before creating a workflow.',
+          });
+          return;
+        }
+        closeTemplateBrowserModal();
+        dismissLandingScreen();
+      } catch {
         notifications.alert({
-          title: 'Not connected',
-          description: 'Connect to the server before creating a workflow.',
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
         });
-        setIsSaving(false);
-        return;
       }
-      setIsSaving(false);
-      closeTemplateBrowserModal();
-      dismissLandingScreen();
-    } catch {
-      notifications.alert({
-        title: 'Failed to create workflow',
-        description: 'Please check your connection and try again.',
-      });
-      setIsSaving(false);
     }
-  };
+  );
 
   return (
     <TemplateBrowserModal
