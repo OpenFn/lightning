@@ -20,6 +20,7 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.Projects.Provisioner
   alias Lightning.Workflows
   alias Lightning.WorkflowVersions
+  alias LightningWeb.API.Helpers
 
   action_fallback(LightningWeb.FallbackController)
 
@@ -129,7 +130,8 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, params) do
-    with project = %Project{} <-
+    with :ok <- Helpers.validate_uuid(params["id"]),
+         project = %Project{} <-
            Projects.get_project(params["id"]) || {:error, :not_found},
          :ok <-
            Permissions.can(
@@ -186,7 +188,8 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show_yaml(conn, %{"id" => id} = params) do
-    with %Projects.Project{} = project <-
+    with :ok <- Helpers.validate_uuid(id),
+         %Projects.Project{} = project <-
            Projects.get_project(id) || {:error, :not_found},
          :ok <-
            Permissions.can(
