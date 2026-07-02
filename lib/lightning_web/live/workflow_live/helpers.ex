@@ -404,7 +404,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new?method=template"
+      "/projects/proj-1/w/new"
 
       # With multiple query params
       iex> collaborative_editor_url(%{
@@ -494,7 +494,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp collaborative_base_url(%{"project_id" => project_id}, :new) do
-    "/projects/#{project_id}/w/new?method=template"
+    "/projects/#{project_id}/w/new"
   end
 
   defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
