@@ -150,47 +150,6 @@ export function classicalToCollaborativeParams(
 }
 
 /**
- * Builds a complete classical editor URL from collaborative editor context
- *
- * @param options - URL building options
- * @returns Complete URL string for classical editor
- *
- * @example
- * const url = buildClassicalEditorUrl({
- *   projectId: 'proj-123',
- *   workflowId: 'wf-456',
- *   searchParams: new URLSearchParams('run=789&job=abc&panel=editor'),
- *   isNewWorkflow: false
- * });
- * // Returns: /projects/proj-123/w/wf-456?a=789&s=abc&m=expand
- */
-export function buildClassicalEditorUrl(options: {
-  projectId: string;
-  workflowId: string | null;
-  searchParams: URLSearchParams;
-  isNewWorkflow?: boolean;
-}): string {
-  const {
-    projectId,
-    workflowId,
-    searchParams,
-    isNewWorkflow = false,
-  } = options;
-
-  const classicalParams = collaborativeToClassicalParams(searchParams);
-  const queryString =
-    classicalParams.toString().length > 0
-      ? `?${classicalParams.toString()}`
-      : '';
-
-  const basePath = isNewWorkflow
-    ? `/projects/${projectId}/w/new/legacy`
-    : `/projects/${projectId}/w/${workflowId}/legacy`;
-
-  return `${basePath}${queryString}`;
-}
-
-/**
  * Type guard to check if a value is a valid panel type
  */
 export function isValidPanelType(

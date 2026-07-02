@@ -332,13 +332,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                    fn ->
                      view |> element("#new-workflow-button") |> render_click()
                    end
-
-      # visit page directly
-      {:ok, _, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
-        |> follow_redirect(conn)
-
-      assert html =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -351,22 +344,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute has_element?(view, "#new-workflow-button:disabled")
       assert has_element?(view, "#new-workflow-button")
 
-      # go directly
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
+      # the collaborative editor mounts for new workflows
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
 
-      assert html =~ "Describe your workflow"
-      assert has_element?(view, "form#search-templates-form")
-
-      select_template(view, "base-webhook-template")
-
-      view |> element("button#create_workflow_btn") |> render_click()
-
-      # the panel disappears
-      html = render(view)
-
-      refute html =~ "Describe your workflow"
-      refute has_element?(view, "form#search-templates-form")
+      assert html =~ "collaborative-editor-react"
     end
 
     test "only users with MFA enabled can create workflows for a project with MFA requirement",

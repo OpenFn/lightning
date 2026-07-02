@@ -105,11 +105,8 @@ config :esbuild,
          js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
-         js/job-editor/JobEditor.tsx
-         js/workflow-editor/WorkflowEditor.tsx
          js/workflow-store/WorkflowStore.tsx
          js/manual-run-panel/ManualRunPanel.tsx
-         js/panel/panels/WorkflowRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
