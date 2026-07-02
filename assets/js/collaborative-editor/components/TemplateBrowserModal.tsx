@@ -92,7 +92,7 @@ export function TemplateBrowserModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-5">
-            <h2 className="text-xl text-gray-900">Templates</h2>
+            <h2 className="text-xl font-medium text-gray-900">Templates</h2>
             <button
               type="button"
               onClick={onClose}
@@ -132,7 +132,7 @@ export function TemplateBrowserModal({
               </p>
             ) : (
               <div
-                className={cn('grid gap-4', {
+                className={cn('grid gap-x-4 gap-y-6', {
                   'grid-cols-1': cols === 1,
                   'grid-cols-2': cols === 2,
                   'grid-cols-3': cols === 3,
