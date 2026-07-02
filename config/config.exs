@@ -189,6 +189,11 @@ config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 1_000,
   max_database_limit: 500
 
+# Currently there is not a version of tzdata that supports a secure version of Hackney, so we
+# disable the only part of tzdata that would use Hackney. This does mean that auto-updating
+# of timezone data is dependent on package updates.
+config :tzdata, :autoupdate, :disabled
+
 # Configuration for injecting a custom feedback mechanism or component collection
 # for the AI Assistant. This can include interactive elements such as a button
 # that triggers a modal with a survey form, or a PostHog component to capture

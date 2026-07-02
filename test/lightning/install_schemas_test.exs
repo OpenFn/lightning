@@ -16,9 +16,6 @@ defmodule Lightning.InstallSchemasTest do
   @second_attempt_opts [recv_timeout: 15_000, pool: :default]
   @third_attempt_opts [recv_timeout: 5_000, pool: :default]
 
-  @ok_200 {:ok, 200, "headers", :client}
-  @ok_400 {:ok, 400, "headers", :client}
-
   @schemas_path Application.compile_env(:lightning, :schemas_path)
 
   # --- helpers ----------------------------------------------------------
@@ -27,14 +24,16 @@ defmodule Lightning.InstallSchemasTest do
     "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
   end
 
+  defp expect_registry(status_code, body) do
+    response = {:ok, status_code, "headers", body}
+
+    expect_registry(response)
+  end
+
   defp expect_registry(response) do
     expect(:hackney, :request, fn
       :get, @registry_url, [], "", @registry_request_options -> response
     end)
-  end
-
-  defp expect_body(body) do
-    expect(:hackney, :body, fn :client, _timeout -> body end)
   end
 
   # Stub a single jsdelivr fetch attempt for `package_name` at the given
@@ -45,6 +44,11 @@ defmodule Lightning.InstallSchemasTest do
     expect(:hackney, :request, fn
       :get, ^url, [], "", ^opts -> response
     end)
+  end
+
+  defp expect_schema_request(package_name, opts, status_code, body) do
+    response = {:ok, status_code, "headers", body}
+    expect_schema_request(package_name, opts, response)
   end
 
   # Stub all three escalating attempts for `package_name` with the same
@@ -68,20 +72,17 @@ defmodule Lightning.InstallSchemasTest do
       #   language-common  -> excluded by default
       #   language-asana   -> installed on first attempt
       #   language-primero -> skipped after exhausting all retries
-      expect_registry(@ok_200)
-
-      expect_body(
-        {:ok,
-         ~s({"@openfn/language-common": "write", "@openfn/language-asana": "write", "@openfn/language-primero": "write"})}
+      expect_registry(
+        200,
+        ~s({"@openfn/language-common": "write", "@openfn/language-asana": "write", "@openfn/language-primero": "write"})
       )
 
       expect_schema_request(
         "@openfn/language-asana",
         @first_attempt_opts,
-        @ok_200
+        200,
+        ~s({"name": "language-asana"})
       )
-
-      expect_body({:ok, ~s({"name": "language-asana"})})
 
       expect_all_attempts_error("@openfn/language-primero", :timeout)
 
@@ -131,10 +132,9 @@ defmodule Lightning.InstallSchemasTest do
       expect_schema_request(
         "@openfn/language-asana",
         @second_attempt_opts,
-        @ok_200
+        200,
+        ~s({"name": "language-asana"})
       )
-
-      expect_body({:ok, ~s({"name": "language-asana"})})
 
       File
       |> expect(:open!, fn "test/fixtures/schemas/asana.json", [:write] ->
@@ -193,10 +193,9 @@ defmodule Lightning.InstallSchemasTest do
       expect_schema_request(
         "@openfn/language-asana",
         @first_attempt_opts,
-        @ok_400
+        400,
+        ""
       )
-
-      expect_body({:ok, ""})
 
       {result, log} =
         with_log(fn ->
@@ -210,8 +209,7 @@ defmodule Lightning.InstallSchemasTest do
     end
 
     test "fetch_schemas raises when the registry request errors" do
-      expect_registry(@ok_200)
-      expect_body({:error, %HTTPoison.Error{}})
+      expect_registry({:error, :some_error})
 
       assert_raise RuntimeError,
                    ~r/Unable to connect to NPM; no adaptors fetched: /,
@@ -219,8 +217,7 @@ defmodule Lightning.InstallSchemasTest do
     end
 
     test "fetch_schemas raises when the registry returns a non-200 status" do
-      expect_registry(@ok_400)
-      expect_body({:ok, ""})
+      expect_registry(400, "")
 
       assert_raise RuntimeError,
                    "Unable to access openfn user packages. status=400",
@@ -232,8 +229,7 @@ defmodule Lightning.InstallSchemasTest do
       # the name "unknown" because results weren't zipped against the input
       # names. We feed fetch_schemas a worker that always raises and assert
       # the skip tuple still carries the package name.
-      expect_registry(@ok_200)
-      expect_body({:ok, ~s({"@openfn/language-boom": "write"})})
+      expect_registry(200, ~s({"@openfn/language-boom": "write"}))
 
       crashing_fun = fn _name -> raise "boom" end
 
