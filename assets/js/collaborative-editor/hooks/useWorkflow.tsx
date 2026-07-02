@@ -38,6 +38,7 @@ import React, {
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
 import {
   formatChannelErrorMessage,
@@ -351,6 +352,7 @@ export const useNodeSelection = () => {
 export const useWorkflowActions = () => {
   const store = useWorkflowStoreContext();
   const context = useContext(StoreContext);
+  const { navigate } = useLiveViewActions();
 
   if (!context) {
     throw new Error('useWorkflowActions must be used within StoreProvider');
@@ -425,7 +427,7 @@ export const useWorkflowActions = () => {
             searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.liveSocket?.historyPatch(newUrl, 'replace');
+            navigate(newUrl, { replace: true });
 
             // Clear template state in UI store
             uiStore.selectTemplate(null);

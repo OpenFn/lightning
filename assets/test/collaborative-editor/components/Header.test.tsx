@@ -12,6 +12,7 @@ import { describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
@@ -154,11 +155,22 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   }
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   // Create wrapper (still needed for React context)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );
