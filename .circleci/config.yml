@@ -188,8 +188,21 @@ jobs:
           command: |
             # GHSA-g2wm-735q-3f56: cowlib cookie encoder CRLF injection (low);
             #   no patched release available yet.
+            #
+            # hackney advisories below are fixed in hackney 4.0.1, but we cannot
+            # upgrade yet: hackney 4.x is a breaking API change (request/body
+            # return shapes changed) and our dependency graph is not ready.
+            # tzdata (all releases, incl. latest 1.1.4) pins hackney ~> 1.17 and
+            # calls :hackney.get/:hackney.body directly, which crashes on 4.x;
+            # httpoison < 3.0 has the same incompatibility and gcs_signed_url
+            # pins httpoison ~> 2.0. Revisit once tzdata ships a hackney-4.x
+            # compatible release.
+            #   GHSA-gp9c-pm5m-5cxr (high)     ssl:connect post-handshake timeout
+            #   GHSA-pj7v-xfvx-wmjq (moderate) SSRF allowlist bypass
+            #   GHSA-j9wq-vxxc-94wf (moderate) CR/LF injection in query param
+            #   GHSA-mp55-p8c9-rfw2 (low)      CRLF injection via domain/path
             sudo -u lightning mix deps.audit \
-              --ignore-advisory-ids GHSA-g2wm-735q-3f56 \
+              --ignore-advisory-ids GHSA-g2wm-735q-3f56,GHSA-gp9c-pm5m-5cxr,GHSA-pj7v-xfvx-wmjq,GHSA-j9wq-vxxc-94wf,GHSA-mp55-p8c9-rfw2 \
               || echo "deps.audit" >> /tmp/lint_failed
       - run:
           name: "Check for retired Hex packages"
