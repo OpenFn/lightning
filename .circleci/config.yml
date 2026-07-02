@@ -171,21 +171,31 @@ jobs:
       - run:
           name: "Check code formatting"
           command: |
-            sudo -u lightning mix format --check-formatted || echo "format" >> /tmp/lint_failed
+            mkdir -p /tmp/lint
+            sudo -u lightning mix format --check-formatted > /tmp/lint/format.log 2>&1 \
+              || echo "format" >> /tmp/lint_failed
+            cat /tmp/lint/format.log
       - run:
           name: "Check code style with Credo"
           when: always
           command: |
-            sudo -u lightning mix credo --strict --all || echo "credo" >> /tmp/lint_failed
+            mkdir -p /tmp/lint
+            sudo -u lightning mix credo --strict --all > /tmp/lint/credo.log 2>&1 \
+              || echo "credo" >> /tmp/lint_failed
+            cat /tmp/lint/credo.log
       - run:
           name: "Check for security vulnerabilities"
           when: always
           command: |
-            sudo -u lightning mix sobelow --threshold medium || echo "sobelow" >> /tmp/lint_failed
+            mkdir -p /tmp/lint
+            sudo -u lightning mix sobelow --threshold medium > /tmp/lint/sobelow.log 2>&1 \
+              || echo "sobelow" >> /tmp/lint_failed
+            cat /tmp/lint/sobelow.log
       - run:
           name: "Check for known-vulnerable Hex dependencies"
           when: always
           command: |
+            mkdir -p /tmp/lint
             # GHSA-g2wm-735q-3f56: cowlib cookie encoder CRLF injection (low);
             #   no patched release available yet.
             #
@@ -203,12 +213,17 @@ jobs:
             #   GHSA-mp55-p8c9-rfw2 (low)      CRLF injection via domain/path
             sudo -u lightning mix deps.audit \
               --ignore-advisory-ids GHSA-g2wm-735q-3f56,GHSA-gp9c-pm5m-5cxr,GHSA-pj7v-xfvx-wmjq,GHSA-j9wq-vxxc-94wf,GHSA-mp55-p8c9-rfw2 \
+              > /tmp/lint/deps_audit.log 2>&1 \
               || echo "deps.audit" >> /tmp/lint_failed
+            cat /tmp/lint/deps_audit.log
       - run:
           name: "Check for retired Hex packages"
           when: always
           command: |
-            sudo -u lightning mix hex.audit || echo "hex.audit" >> /tmp/lint_failed
+            mkdir -p /tmp/lint
+            sudo -u lightning mix hex.audit > /tmp/lint/hex_audit.log 2>&1 \
+              || echo "hex.audit" >> /tmp/lint_failed
+            cat /tmp/lint/hex_audit.log
       - run:
           name: "Verify all checks passed"
           when: always
@@ -216,6 +231,18 @@ jobs:
             if [ -f /tmp/lint_failed ]; then
               echo "The following checks failed:"
               cat /tmp/lint_failed
+              echo
+              while IFS= read -r check; do
+                # map the check name to its captured log file
+                log="/tmp/lint/$(echo "$check" | tr '.' '_').log"
+                echo "==================== ${check} ===================="
+                if [ -f "$log" ]; then
+                  cat "$log"
+                else
+                  echo "(no output captured)"
+                fi
+                echo
+              done < /tmp/lint_failed
               exit 1
             fi
 
