@@ -932,6 +932,57 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "create_webhook_workflow/2" do
+    test "creates a workflow with a webhook trigger, a job, and an always edge" do
+      project = insert(:project)
+      user = insert(:user)
+
+      assert {:ok, workflow, trigger_id} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      workflow =
+        Repo.preload(workflow, [:triggers, :jobs, :edges])
+
+      assert workflow.name == "New Workflow"
+      assert workflow.project_id == project.id
+
+      assert [%Trigger{id: ^trigger_id, type: :webhook, enabled: true}] =
+               workflow.triggers
+
+      assert [
+               %{
+                 name: "Transform Data",
+                 adaptor: "@openfn/language-common@latest",
+                 body: body
+               }
+             ] = workflow.jobs
+
+      assert body =~ "Job Writing Guide"
+
+      [job] = workflow.jobs
+
+      assert [
+               %{
+                 source_trigger_id: ^trigger_id,
+                 target_job_id: job_id,
+                 condition_type: :always,
+                 enabled: true
+               }
+             ] = workflow.edges
+
+      assert job_id == job.id
+    end
+
+    test "returns {:error, changeset} for an invalid project_id" do
+      user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.create_webhook_workflow(Ecto.UUID.generate(), user)
+
+      assert %{project: ["does not exist"]} = errors_on(changeset)
+    end
+  end
+
   describe "save_workflow/3 rescue" do
     setup do
       Mimic.copy(Lightning.WorkflowVersions)

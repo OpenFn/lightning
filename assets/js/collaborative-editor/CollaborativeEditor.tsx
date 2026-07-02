@@ -19,7 +19,10 @@ import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
 import { YAMLImportModal } from './components/YAMLImportModal';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
-import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
+import {
+  LiveViewActionsProvider,
+  useLiveViewActions,
+} from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
@@ -190,6 +193,7 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
+  const { pushEvent } = useLiveViewActions();
 
   if (!showLandingScreen) return null;
 
@@ -201,7 +205,7 @@ function LandingScreenWrapper({
           dismissLandingScreen();
           openAIAssistantPanel(prompt);
         }}
-        onBuildFromScratch={() => {}}
+        onBuildFromScratch={() => pushEvent('build_from_scratch', {})}
         onBrowseTemplates={openTemplateBrowserModal}
         onImportYAML={openYAMLImportModal}
       />

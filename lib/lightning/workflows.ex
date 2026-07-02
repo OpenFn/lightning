@@ -203,6 +203,48 @@ defmodule Lightning.Workflows do
     |> save_workflow(actor, opts)
   end
 
+  @doc """
+  Creates a new workflow with a webhook trigger, one job, and one always-on edge.
+  Used by the "Build from Scratch" entry point on the new workflow screen.
+  Returns `{:ok, workflow, trigger_id}` or `{:error, changeset}`.
+  """
+  @spec create_webhook_workflow(String.t(), struct()) ::
+          {:ok, Workflow.t(), String.t()} | {:error, Ecto.Changeset.t()}
+  def create_webhook_workflow(project_id, actor) do
+    trigger_id = Ecto.UUID.generate()
+    job_id = Ecto.UUID.generate()
+
+    attrs = %{
+      name: "New Workflow",
+      project_id: project_id,
+      triggers: [%{id: trigger_id, type: :webhook, enabled: true}],
+      jobs: [
+        %{
+          id: job_id,
+          name: "Transform Data",
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          // Check out the Job Writing Guide for help getting started:
+          // https://docs.openfn.org/documentation/jobs/job-writing-guide
+          """
+        }
+      ],
+      edges: [
+        %{
+          source_trigger_id: trigger_id,
+          target_job_id: job_id,
+          condition_type: :always,
+          enabled: true
+        }
+      ]
+    }
+
+    case save_workflow(attrs, actor) do
+      {:ok, workflow} -> {:ok, workflow, trigger_id}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
   # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
   # Repo.transaction — that stays in the try/rescue block of the caller so
   # rescue wraps only the transaction, not this builder.

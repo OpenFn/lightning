@@ -12,6 +12,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   alias Lightning.AiAssistant
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Workflows
@@ -176,6 +177,38 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_webhook_auth_modal: false,
        webhook_auth_method: nil
      )}
+  end
+
+  def handle_event("build_from_scratch", _params, socket) do
+    with :ok <-
+           Permissions.can(
+             ProjectUsers,
+             :create_workflow,
+             socket.assigns.current_user,
+             socket.assigns.project
+           ),
+         {:ok, workflow, trigger_id} <-
+           Workflows.create_webhook_workflow(
+             socket.assigns.project.id,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       push_navigate(socket,
+         to:
+           ~p"/projects/#{socket.assigns.project}/w/#{workflow}?#{%{trigger: trigger_id}}"
+       )}
+    else
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "You don't have permission to create workflows"
+         )}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to create workflow")}
+    end
   end
 
   @impl true
