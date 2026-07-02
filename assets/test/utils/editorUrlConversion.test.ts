@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildClassicalEditorUrl,
   classicalToCollaborativeParams,
   collaborativeToClassicalParams,
   getMappingConfig,
@@ -167,58 +166,6 @@ describe('editorUrlConversion', () => {
       expect(output.get('method')).toBe('ai');
       expect(output.get('w-chat')).toBe('chat-1');
       expect(output.get('j-chat')).toBe('chat-2');
-    });
-  });
-
-  describe('buildClassicalEditorUrl', () => {
-    it('builds URL for existing workflow', () => {
-      const url = buildClassicalEditorUrl({
-        projectId: 'proj-123',
-        workflowId: 'wf-456',
-        searchParams: new URLSearchParams('run=run-789&job=job-abc'),
-        isNewWorkflow: false,
-      });
-
-      expect(url).toBe(
-        '/projects/proj-123/w/wf-456/legacy?a=run-789&s=job-abc'
-      );
-    });
-
-    it('builds URL for new workflow', () => {
-      const url = buildClassicalEditorUrl({
-        projectId: 'proj-123',
-        workflowId: null,
-        searchParams: new URLSearchParams('job=job-abc&panel=editor'),
-        isNewWorkflow: true,
-      });
-
-      expect(url).toBe('/projects/proj-123/w/new/legacy?s=job-abc&m=expand');
-    });
-
-    it('builds URL without query params when empty', () => {
-      const url = buildClassicalEditorUrl({
-        projectId: 'proj-123',
-        workflowId: 'wf-456',
-        searchParams: new URLSearchParams(),
-        isNewWorkflow: false,
-      });
-
-      expect(url).toBe('/projects/proj-123/w/wf-456/legacy');
-    });
-
-    it('handles complex parameter conversion', () => {
-      const url = buildClassicalEditorUrl({
-        projectId: 'proj-1',
-        workflowId: 'wf-1',
-        searchParams: new URLSearchParams(
-          'run=r-1&trigger=t-1&panel=run&v=5&method=ai'
-        ),
-        isNewWorkflow: false,
-      });
-
-      expect(url).toBe(
-        '/projects/proj-1/w/wf-1/legacy?a=r-1&s=t-1&m=workflow_input&v=5&method=ai'
-      );
     });
   });
 
