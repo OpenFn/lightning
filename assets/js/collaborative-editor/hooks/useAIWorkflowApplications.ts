@@ -205,7 +205,27 @@ export function useAIWorkflowApplications({
     try {
       const saved = await saveWorkflow({ silent: true });
       if (!saved) {
-        throw new Error('Your connection was lost. Reconnect and try again.');
+        // saveWorkflow returns null (rather than throwing) when the socket
+        // is disconnected, so the wrapper shows no toast of its own for
+        // this case — surface one here.
+        streamingApplyActions.setSaveFailed(true);
+        notifications.alert({
+          // Stable id: repeated failures (auto-retry, Retry clicks) update
+          // the existing toast in place instead of stacking duplicates
+          id: SAVE_FAILED_TOAST_ID,
+          title: 'Failed to save workflow',
+          description: 'Your connection was lost. Reconnect and try again.',
+          duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
+          action: {
+            label: 'Retry',
+            onClick: () => {
+              // Failure re-shows this same persistent toast, so the user can
+              // keep retrying until the save lands
+              void saveNewWorkflowRef.current?.();
+            },
+          },
+        });
+        return false;
       }
       streamingApplyActions.setSaveFailed(false);
       // A retry may have succeeded while a failure toast was still showing
@@ -213,27 +233,11 @@ export function useAIWorkflowApplications({
       notifications.dismiss(SAVE_FAILED_TOAST_ID);
       return true;
     } catch (saveError) {
+      // Real save errors already surface their own toast (with Retry) from
+      // the saveWorkflow wrapper in useWorkflow.tsx — showing a second one
+      // here would double up on a single failure. Just track state.
       streamingApplyActions.setSaveFailed(true);
       console.error('[AI Assistant] Failed to save workflow:', saveError);
-      notifications.alert({
-        // Stable id: repeated failures (auto-retry, Retry clicks) update the
-        // existing toast in place instead of stacking duplicates
-        id: SAVE_FAILED_TOAST_ID,
-        title: 'Failed to save workflow',
-        description:
-          saveError instanceof Error
-            ? saveError.message
-            : 'Unknown error occurred',
-        duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            // Failure re-shows this same persistent toast, so the user can
-            // keep retrying until the save lands
-            void saveNewWorkflowRef.current?.();
-          },
-        },
-      });
       return false;
     }
   }, [saveWorkflow, streamingApplyActions]);

@@ -841,7 +841,11 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
-  it('shows save-failure toast and does not call onValidationError when save rejects', async () => {
+  it('does not show its own toast and does not call onValidationError when save rejects', async () => {
+    // A rejected saveWorkflow is the real-save-failure path — in production
+    // this is the wrapped saveWorkflow from useWorkflow.tsx, which already
+    // shows its own "Failed to save workflow" toast and re-throws. Showing
+    // another one here would double up on a single failure.
     const failingSaveWorkflow = vi.fn(() =>
       Promise.reject(new Error('Network error'))
     );
@@ -876,10 +880,53 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
+      expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(
+        true
+      );
+    });
+    expect(notifications.alert).not.toHaveBeenCalled();
+    expect(mockOnValidationError).not.toHaveBeenCalled();
+  });
+
+  it('shows its own toast when save returns null (disconnected)', async () => {
+    // Disconnect is signalled by a null return, not a throw, so the
+    // saveWorkflow wrapper shows no toast of its own for this case.
+    const disconnectedSaveWorkflow = vi.fn(() => Promise.resolve(null));
+
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: disconnectedSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        onValidationError: mockOnValidationError,
+        appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
       expect(notifications.alert).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Failed to save workflow',
-          description: 'Network error',
+          description: 'Your connection was lost. Reconnect and try again.',
           action: expect.objectContaining({ label: 'Retry' }) as object,
         })
       );
