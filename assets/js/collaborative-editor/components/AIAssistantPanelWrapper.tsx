@@ -14,6 +14,8 @@ const getRandomStatus = () =>
     Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
   ];
 
+import { randomUUID } from '#/common';
+
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
@@ -564,7 +566,7 @@ export function AIAssistantPanelWrapper({
   const onValidationError = useCallback(
     (errorMessage: string) => {
       const message: Message = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         role: 'assistant',
         content: errorMessage,
         status: 'error',
