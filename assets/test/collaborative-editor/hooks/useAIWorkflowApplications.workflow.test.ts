@@ -9,6 +9,8 @@
  * - Collaborative coordination
  */
 
+/* TODO-AI-FIRST reduce this test file */
+
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
