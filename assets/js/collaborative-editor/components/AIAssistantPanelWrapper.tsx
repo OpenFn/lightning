@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const INITIAL_LOADING_STATUSES = [
   'Thinking about the question...',
@@ -26,6 +26,7 @@ import {
   useAISessionId,
   useAISessionType,
   useAIStore,
+  useAIStreamingApply,
   useAIStreamingChanges,
   useAIStreamingContent,
   useAIStreamingStatus,
@@ -574,9 +575,18 @@ export function AIAssistantPanelWrapper({
     [aiStore]
   );
 
-  // Track whether we applied via streaming so the auto-apply effect in the
-  // hook can skip the duplicate when the final new_message arrives
-  const appliedViaStreamingRef = useRef(false);
+  // Pending streaming apply record (YAML already imported during streaming),
+  // read by the hook's auto-apply effect to skip the duplicate import when
+  // the final new_message arrives with the same YAML
+  const streamingApply = useAIStreamingApply();
+  const streamingApplyActions = useMemo(
+    () => ({
+      set: aiStore._setStreamingApply,
+      setSaveFailed: aiStore._setStreamingApplySaveFailed,
+      clear: aiStore._clearStreamingApply,
+    }),
+    [aiStore]
+  );
 
   // Hook to handle workflow/job code application logic
   const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
@@ -611,7 +621,8 @@ export function AIAssistantPanelWrapper({
       previewingMessageId,
       setApplyingMessageId,
       appliedMessageIdsRef,
-      appliedViaStreamingRef,
+      streamingApply,
+      streamingApplyActions,
     });
 
   // Auto-preview job code when AI responds with code
@@ -640,7 +651,8 @@ export function AIAssistantPanelWrapper({
     if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
       if (yaml) {
-        appliedViaStreamingRef.current = true;
+        // handleApplyWorkflow records the streaming apply in the store
+        // (after a successful import) so the final new_message can skip it
         void handleApplyWorkflow(yaml, '__streaming__');
       }
     } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {

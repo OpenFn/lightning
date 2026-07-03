@@ -81,6 +81,12 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
 
   const mockSaveWorkflow = vi.fn(() => Promise.resolve());
 
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
+
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,
@@ -173,6 +179,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             appliedMessageIdsRef,
+            streamingApply: null,
+            streamingApplyActions: mockStreamingApplyActions,
           }),
         { initialProps: { currentSession: null } }
       );
@@ -244,6 +252,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -293,6 +303,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             appliedMessageIdsRef,
+            streamingApply: null,
+            streamingApplyActions: mockStreamingApplyActions,
           }),
         { initialProps: { currentSession: null } }
       );
@@ -338,6 +350,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -377,6 +391,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -433,6 +449,8 @@ describe('useAIWorkflowApplications - Auto-Application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             appliedMessageIdsRef,
+            streamingApply: null,
+            streamingApplyActions: mockStreamingApplyActions,
           }),
         { initialProps: { currentSession: null } }
       );

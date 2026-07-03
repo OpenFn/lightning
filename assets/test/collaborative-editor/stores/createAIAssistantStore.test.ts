@@ -364,6 +364,48 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Apply', () => {
+    it('records, flags, and clears the streaming apply lifecycle', () => {
+      store._setStreamingApply('name: Test');
+      expect(store.getSnapshot().streamingApply).toEqual({
+        yaml: 'name: Test',
+        saveFailed: false,
+      });
+
+      store._setStreamingApplySaveFailed(true);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(true);
+
+      store._setStreamingApplySaveFailed(false);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(false);
+
+      store._clearStreamingApply();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('ignores saveFailed updates when no streaming apply is pending', () => {
+      store._setStreamingApplySaveFailed(true);
+
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('is cleared on session change but survives stream-end and disconnect', () => {
+      // The final new_message may arrive after the stream ends or after a
+      // reconnect — the record must survive both so the duplicate import
+      // can still be skipped.
+      store._setStreamingApply('name: Test');
+      store._clearStreaming();
+      store.disconnect();
+      expect(store.getSnapshot().streamingApply).not.toBeNull();
+
+      store.loadSession('session-2');
+      expect(store.getSnapshot().streamingApply).toBeNull();
+
+      store._setStreamingApply('name: Test 2');
+      store.clearSession();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();

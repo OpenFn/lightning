@@ -78,6 +78,7 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     alert: vi.fn(),
     success: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
@@ -96,6 +97,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
   const mockSaveWorkflow = vi.fn(() => Promise.resolve());
   const mockOnValidationError = vi.fn();
+
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
 
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
@@ -155,6 +162,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -188,6 +197,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -222,6 +233,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -261,6 +274,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -295,6 +310,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -324,6 +341,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -357,6 +376,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -388,6 +409,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -424,6 +447,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -455,6 +480,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         isNewWorkflow: true,
         onValidationError: mockOnValidationError,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -484,6 +511,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -497,9 +526,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
-  it('skips auto-apply and marks message applied when appliedViaStreamingRef is set', async () => {
+  it('skips re-import when the final message matches the streaming apply record', async () => {
     const appliedMessageIdsRef = { current: new Set<string>() };
-    const appliedViaStreamingRef = { current: false };
 
     const userMessage = {
       id: 'user-msg-1',
@@ -521,10 +549,11 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     type Props = {
       currentSession: { messages: (typeof userMessage)[] } | null;
+      streamingApply: { yaml: string; saveFailed: boolean } | null;
     };
 
     const { rerender } = renderHook(
-      ({ currentSession }: Props) =>
+      ({ currentSession, streamingApply }: Props) =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
           page: 'workflow_template',
@@ -541,29 +570,175 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
           appliedMessageIdsRef,
-          appliedViaStreamingRef,
+          streamingApply,
+          streamingApplyActions: mockStreamingApplyActions,
         }),
-      { initialProps: { currentSession: { messages: [userMessage] } } }
+      {
+        initialProps: {
+          currentSession: { messages: [userMessage] },
+          streamingApply: null,
+        },
+      }
     );
 
-    // Simulate streaming having already applied the YAML
-    appliedViaStreamingRef.current = true;
-
+    // Streaming already imported this exact YAML and saved successfully
     rerender({
       currentSession: { messages: [userMessage, assistantMessage] },
+      streamingApply: { yaml: 'name: Test', saveFailed: false },
     });
 
     await waitFor(() => {
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
-      expect(mockSaveWorkflow).not.toHaveBeenCalled();
       expect(appliedMessageIdsRef.current.has('msg-1')).toBe(true);
-      expect(appliedViaStreamingRef.current).toBe(false);
+      expect(mockStreamingApplyActions.clear).toHaveBeenCalled();
     });
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
+    expect(mockSaveWorkflow).not.toHaveBeenCalled();
   });
 
-  it('resets appliedViaStreamingRef during session-load so subsequent responses are not skipped', async () => {
+  it('retries the owed save without re-importing when the matching streaming apply is save-failed', async () => {
     const appliedMessageIdsRef = { current: new Set<string>() };
-    const appliedViaStreamingRef = { current: false };
+    const successfulSaveWorkflow = vi.fn(() => Promise.resolve(true));
+
+    const userMessage = {
+      id: 'user-msg-1',
+      role: 'user' as const,
+      content: 'Build me a workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:00Z',
+      user_id: 'user-123',
+    };
+
+    const assistantMessage = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is your workflow',
+      code: 'name: Test',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:01Z',
+    };
+
+    type Props = {
+      currentSession: { messages: (typeof userMessage)[] } | null;
+      streamingApply: { yaml: string; saveFailed: boolean } | null;
+    };
+
+    const { rerender } = renderHook(
+      ({ currentSession, streamingApply }: Props) =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: {
+            ...mockWorkflowActions,
+            saveWorkflow: successfulSaveWorkflow,
+          },
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: true,
+          appliedMessageIdsRef,
+          streamingApply,
+          streamingApplyActions: mockStreamingApplyActions,
+        }),
+      {
+        initialProps: {
+          currentSession: { messages: [userMessage] },
+          streamingApply: null,
+        },
+      }
+    );
+
+    // Streaming imported the YAML but its save failed — a save is still owed
+    rerender({
+      currentSession: { messages: [userMessage, assistantMessage] },
+      streamingApply: { yaml: 'name: Test', saveFailed: true },
+    });
+
+    await waitFor(() => {
+      expect(successfulSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+    });
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
+    expect(mockStreamingApplyActions.clear).toHaveBeenCalled();
+    // Successful retry clears the owed-save flag
+    expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(false);
+  });
+
+  it('applies normally when the final message YAML differs from the streaming apply record', async () => {
+    const appliedMessageIdsRef = { current: new Set<string>() };
+
+    const userMessage = {
+      id: 'user-msg-1',
+      role: 'user' as const,
+      content: 'Build me a workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:00Z',
+      user_id: 'user-123',
+    };
+
+    const assistantMessage = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is your workflow',
+      code: 'name: Test',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:01Z',
+    };
+
+    type Props = {
+      currentSession: { messages: (typeof userMessage)[] } | null;
+      streamingApply: { yaml: string; saveFailed: boolean } | null;
+    };
+
+    const { rerender } = renderHook(
+      ({ currentSession, streamingApply }: Props) =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: mockWorkflowActions,
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          appliedMessageIdsRef,
+          streamingApply,
+          streamingApplyActions: mockStreamingApplyActions,
+        }),
+      {
+        initialProps: {
+          currentSession: { messages: [userMessage] },
+          streamingApply: null,
+        },
+      }
+    );
+
+    // Stale record: streaming applied different YAML than the final message
+    rerender({
+      currentSession: { messages: [userMessage, assistantMessage] },
+      streamingApply: { yaml: 'name: Something else', saveFailed: false },
+    });
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalledTimes(1);
+    });
+    // The non-streaming apply supersedes (and clears) the stale record
+    expect(mockStreamingApplyActions.clear).toHaveBeenCalled();
+  });
+
+  it('clears the streaming apply record during session-load seeding so later responses are not skipped', async () => {
+    const appliedMessageIdsRef = { current: new Set<string>() };
 
     const userMessage1 = {
       id: 'user-msg-1',
@@ -600,10 +775,11 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     type Props = {
       currentSession: { messages: (typeof userMessage1)[] } | null;
+      streamingApply: { yaml: string; saveFailed: boolean } | null;
     };
 
     const { rerender } = renderHook(
-      ({ currentSession }: Props) =>
+      ({ currentSession, streamingApply }: Props) =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
           page: 'workflow_template',
@@ -620,27 +796,32 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
           appliedMessageIdsRef,
-          appliedViaStreamingRef,
+          streamingApply,
+          streamingApplyActions: mockStreamingApplyActions,
         }),
-      { initialProps: { currentSession: null } }
+      {
+        initialProps: {
+          currentSession: null,
+          // Streaming fired before the session finished loading
+          streamingApply: { yaml: 'name: Test 1', saveFailed: false },
+        },
+      }
     );
-
-    // Simulate streaming having fired before the first new_message arrives
-    appliedViaStreamingRef.current = true;
 
     // First new_message: session loading for the first time (hasLoadedSessionRef = false)
     rerender({
       currentSession: { messages: [userMessage1, assistantMessage1] },
+      streamingApply: { yaml: 'name: Test 1', saveFailed: false },
     });
 
     await waitFor(() => {
-      // Session-load path marks messages applied but does not re-import
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
-      // Fix: ref must be cleared so the next real response isn't skipped
-      expect(appliedViaStreamingRef.current).toBe(false);
+      // Session-load path marks messages applied but does not re-import;
+      // the streaming record is dropped, never consumed
+      expect(mockStreamingApplyActions.clear).toHaveBeenCalled();
     });
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
 
-    // Second response arrives — ref is now false, so auto-apply proceeds
+    // Second response arrives — record cleared, so auto-apply proceeds
     rerender({
       currentSession: {
         messages: [
@@ -650,6 +831,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           assistantMessage2,
         ],
       },
+      streamingApply: null,
     });
 
     await waitFor(() => {
@@ -683,6 +865,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         isNewWorkflow: true,
         onValidationError: mockOnValidationError,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -701,8 +885,51 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
-  it('resets appliedViaStreamingRef when save rejects after a successful streaming apply', async () => {
-    const appliedViaStreamingRef = { current: true };
+  it('records the streaming apply only after a successful import', async () => {
+    const successfulSaveWorkflow = vi.fn(() => Promise.resolve(true));
+
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: successfulSaveWorkflow,
+        },
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
+      })
+    );
+
+    // Failed apply (parse error): the record is never set, so the final
+    // message applies normally with no reset needed anywhere
+    await result.current.handleApplyWorkflow('invalid yaml', '__streaming__');
+    expect(mockStreamingApplyActions.set).not.toHaveBeenCalled();
+
+    // Successful apply: recorded, and the save success marks no save owed
+    await result.current.handleApplyWorkflow('name: Test', '__streaming__');
+
+    await waitFor(() => {
+      expect(mockStreamingApplyActions.set).toHaveBeenCalledWith('name: Test');
+      expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(
+        false
+      );
+    });
+  });
+
+  it('marks the streaming apply save-failed when save rejects', async () => {
     const failingSaveWorkflow = vi.fn(() =>
       Promise.reject(new Error('Network error'))
     );
@@ -727,20 +954,25 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
         appliedMessageIdsRef: { current: new Set() },
-        appliedViaStreamingRef,
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
-    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+    await result.current.handleApplyWorkflow('name: Test', '__streaming__');
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(appliedViaStreamingRef.current).toBe(false);
+      // Recorded after the successful import, then flagged so the final
+      // message settles the owed save
+      expect(mockStreamingApplyActions.set).toHaveBeenCalledWith('name: Test');
+      expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(
+        true
+      );
     });
   });
 
-  it('resets appliedViaStreamingRef when save returns null (disconnected) after a successful streaming apply', async () => {
-    const appliedViaStreamingRef = { current: true };
+  it('marks the streaming apply save-failed when save returns null (disconnected)', async () => {
     const disconnectedSaveWorkflow = vi.fn(() => Promise.resolve(null));
 
     const { result } = renderHook(() =>
@@ -763,15 +995,19 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
         appliedMessageIdsRef: { current: new Set() },
-        appliedViaStreamingRef,
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
-    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+    await result.current.handleApplyWorkflow('name: Test', '__streaming__');
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(appliedViaStreamingRef.current).toBe(false);
+      expect(mockStreamingApplyActions.set).toHaveBeenCalledWith('name: Test');
+      expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(
+        true
+      );
     });
   });
 });

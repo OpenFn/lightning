@@ -23,6 +23,7 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     alert: vi.fn(),
     success: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
@@ -40,6 +41,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
   const mockShowDiff = vi.fn();
 
   const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
 
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
@@ -102,6 +109,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -131,6 +140,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -160,6 +171,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -190,6 +203,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -217,6 +232,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -248,6 +265,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -279,6 +298,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -313,6 +334,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -341,6 +364,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -370,6 +395,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -399,6 +426,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -432,6 +461,8 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 

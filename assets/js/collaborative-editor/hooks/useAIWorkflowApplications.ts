@@ -17,10 +17,18 @@ import type {
   JobCodeContext,
   Message,
   SessionType,
+  StreamingApplyState,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
+
+/**
+ * Stable toast id for the "Failed to save workflow" alert so repeated
+ * failures update one toast instead of stacking, and a later success can
+ * dismiss it.
+ */
+const SAVE_FAILED_TOAST_ID = 'ai-workflow-save-failed';
 
 /**
  * Helper function to validate workflow IDs before applying
@@ -94,6 +102,8 @@ function validateIds(spec: Record<string, unknown>): void {
  * - Prevents duplicate applies in collaborative sessions
  * - Tracks applied messages to avoid re-applying on session load
  * - Only applies the latest message with code (skips intermediates)
+ * - Skips the final message's re-import when streaming already applied
+ *   the same YAML (streamingApply record in AIAssistantStore)
  *
  * Accepts raw dependencies (not callbacks) and creates callbacks internally
  * for cleaner usage and better memoization control.
@@ -115,7 +125,8 @@ export function useAIWorkflowApplications({
   previewingMessageId,
   setApplyingMessageId,
   appliedMessageIdsRef,
-  appliedViaStreamingRef,
+  streamingApply,
+  streamingApplyActions,
 }: {
   sessionId: string | null;
   page: SessionType | null;
@@ -144,7 +155,18 @@ export function useAIWorkflowApplications({
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
   appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
-  appliedViaStreamingRef?: React.MutableRefObject<boolean>;
+  /**
+   * Pending streaming apply record from AIAssistantStore: the YAML already
+   * imported to the canvas during streaming (see StreamingApplyState).
+   * The auto-apply effect compares the final message's code against it to
+   * skip the duplicate import that would dirty the Y.Doc.
+   */
+  streamingApply: StreamingApplyState | null;
+  streamingApplyActions: {
+    set: (yaml: string) => void;
+    setSaveFailed: (saveFailed: boolean) => void;
+    clear: () => void;
+  };
 }) {
   const {
     importWorkflow,
@@ -169,10 +191,55 @@ export function useAIWorkflowApplications({
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  // Stable ref for save-only retries (importWorkflow already succeeded)
-  const saveWorkflowRef = useRef<
-    ((opts?: { silent?: boolean }) => Promise<unknown>) | null
-  >(null);
+  // Stable ref so the Retry toast closure always calls the latest
+  // saveNewWorkflow (importWorkflow already succeeded; only the save retries)
+  const saveNewWorkflowRef = useRef<(() => Promise<boolean>) | null>(null);
+
+  /**
+   * Silently save a new workflow after an AI apply, with a persistent
+   * Retry toast on failure. Records the outcome on the pending streaming
+   * apply so the final new_message knows whether a save is still owed
+   * (no-op in the store when the apply didn't come from streaming).
+   */
+  const saveNewWorkflow = useCallback(async (): Promise<boolean> => {
+    try {
+      const saved = await saveWorkflow({ silent: true });
+      if (!saved) {
+        throw new Error('Your connection was lost. Reconnect and try again.');
+      }
+      streamingApplyActions.setSaveFailed(false);
+      // A retry may have succeeded while a failure toast was still showing
+      // (e.g. the final message settles the owed save) — dismiss it.
+      notifications.dismiss(SAVE_FAILED_TOAST_ID);
+      return true;
+    } catch (saveError) {
+      streamingApplyActions.setSaveFailed(true);
+      console.error('[AI Assistant] Failed to save workflow:', saveError);
+      notifications.alert({
+        // Stable id: repeated failures (auto-retry, Retry clicks) update the
+        // existing toast in place instead of stacking duplicates
+        id: SAVE_FAILED_TOAST_ID,
+        title: 'Failed to save workflow',
+        description:
+          saveError instanceof Error
+            ? saveError.message
+            : 'Unknown error occurred',
+        duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            // Failure re-shows this same persistent toast, so the user can
+            // keep retrying until the save lands
+            void saveNewWorkflowRef.current?.();
+          },
+        },
+      });
+      return false;
+    }
+  }, [saveWorkflow, streamingApplyActions]);
+
+  // Keep ref pointing at the latest callback so Retry toast closures never go stale
+  saveNewWorkflowRef.current = saveNewWorkflow;
 
   /**
    * Apply workflow YAML to the canvas
@@ -193,6 +260,12 @@ export function useAIWorkflowApplications({
         return;
       }
       setApplyingMessageId(messageId);
+
+      // Any non-streaming apply supersedes a pending streaming apply — the
+      // canvas will no longer hold the streamed YAML after this import.
+      if (messageId !== '__streaming__') {
+        streamingApplyActions.clear();
+      }
 
       // Signal to all collaborators that we're starting to apply
       // Returns false if coordination failed (other users won't be notified)
@@ -217,62 +290,19 @@ export function useAIWorkflowApplications({
         await importWorkflow(workflowStateWithCreds);
         applySucceeded = true;
 
+        if (messageId === '__streaming__') {
+          // Record the applied YAML so the auto-apply effect can skip the
+          // duplicate import when the final new_message carries the same YAML.
+          // Set only after a successful import, so failed applies never
+          // leave a stale record behind.
+          streamingApplyActions.set(yaml);
+        }
+
         if (isNewWorkflow) {
-          try {
-            const saved = await saveWorkflow({ silent: true });
-            if (!saved) {
-              throw new Error(
-                'Your connection was lost. Reconnect and try again.'
-              );
-            }
-          } catch (saveError) {
-            saveSucceeded = false;
-            if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
-            console.error('[AI Assistant] Failed to save workflow:', saveError);
-            notifications.alert({
-              title: 'Failed to save workflow',
-              description:
-                saveError instanceof Error
-                  ? saveError.message
-                  : 'Unknown error occurred',
-              duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
-              action: {
-                label: 'Retry',
-                onClick: () => {
-                  void (async () => {
-                    try {
-                      const saved = await saveWorkflowRef.current?.({
-                        silent: true,
-                      });
-                      if (!saved)
-                        throw new Error(
-                          'Your connection was lost. Reconnect and try again.'
-                        );
-                    } catch (retryError: unknown) {
-                      console.error(
-                        '[AI Assistant] Retry save failed:',
-                        retryError
-                      );
-                      notifications.alert({
-                        title: 'Failed to save workflow',
-                        description:
-                          retryError instanceof Error
-                            ? retryError.message
-                            : 'Unknown error occurred',
-                      });
-                    }
-                  })();
-                },
-              },
-            });
-          }
+          saveSucceeded = await saveNewWorkflow();
         }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
-
-        // If streaming set this ref before the apply failed, clear it so the
-        // next real new_message isn't silently skipped by the auto-apply guard.
-        if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
 
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid workflow YAML';
@@ -309,12 +339,10 @@ export function useAIWorkflowApplications({
       setApplyingMessageId,
       isNewWorkflow,
       onValidationError,
-      saveWorkflow,
+      saveNewWorkflow,
+      streamingApplyActions,
     ]
   );
-
-  // Keep ref pointing at the latest callback so Retry toast closures never go stale
-  saveWorkflowRef.current = saveWorkflow;
 
   /**
    * Preview job code diff in Monaco editor
@@ -495,9 +523,10 @@ export function useAIWorkflowApplications({
       messagesWithCode.forEach(msg => {
         appliedMessageIdsRef.current.add(msg.id);
       });
-      // Streaming may have set this before the session finished loading.
-      // Clear it now so the guard doesn't silently skip the next real response.
-      if (appliedViaStreamingRef) appliedViaStreamingRef.current = false;
+      // Streaming may have applied before the session finished loading; the
+      // final message was seeded above, so the record will never be consumed.
+      // Drop it.
+      streamingApplyActions.clear();
       return;
     }
 
@@ -509,11 +538,16 @@ export function useAIWorkflowApplications({
     ) {
       appliedMessageIdsRef.current.add(latestMessage.id);
 
-      // Streaming already applied this YAML — skip the re-import to avoid
-      // a transient dirty state (Y.Doc write → unsaved red dot) between
-      // the import and save that would otherwise follow.
-      if (appliedViaStreamingRef?.current) {
-        appliedViaStreamingRef.current = false;
+      // Streaming already imported this exact YAML to the canvas — skip the
+      // re-import, which would only dirty the Y.Doc (unsaved red dot). If
+      // the streaming apply's save is still owed, settle it now. When the
+      // YAML differs (streaming apply failed, or the final response changed),
+      // fall through and apply normally.
+      if (streamingApply && streamingApply.yaml === latestMessage.code) {
+        streamingApplyActions.clear();
+        if (streamingApply.saveFailed) {
+          void saveNewWorkflow();
+        }
         return;
       }
 
@@ -548,6 +582,9 @@ export function useAIWorkflowApplications({
     canApplyChanges,
     currentUserId,
     appliedMessageIdsRef,
+    streamingApply,
+    streamingApplyActions,
+    saveNewWorkflow,
   ]);
 
   return {
