@@ -2837,5 +2837,96 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       assert Lightning.Repo.aggregate(Lightning.Workflows.Workflow, :count) ==
                workflow_count_before
     end
+
+    test "suffixes the workflow name when clicked again in the same project",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      names =
+        for _ <- 1..2 do
+          {:ok, view, _html} =
+            live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+          view
+          |> element("#collaborative-editor-react")
+          |> render_hook("build_from_scratch", %{})
+
+          {path, _flash} = assert_redirect(view)
+
+          new_workflow_id =
+            path
+            |> String.split("/w/")
+            |> List.last()
+            |> String.split("?")
+            |> List.first()
+
+          Lightning.Workflows.get_workflow!(new_workflow_id).name
+        end
+
+      assert names == ["Untitled workflow", "Untitled workflow 1"]
+    end
+
+    test "shows an error flash when workflow creation fails" do
+      Mimic.copy(Lightning.Workflows)
+
+      Mimic.stub(
+        Lightning.Workflows,
+        :create_webhook_workflow,
+        fn _project_id, _actor -> {:error, %Ecto.Changeset{}} end
+      )
+
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          creating_workflow?: false,
+          current_user: user,
+          project: project
+        }
+      }
+
+      assert {:noreply, socket} =
+               LightningWeb.WorkflowLive.Collaborate.handle_event(
+                 "build_from_scratch",
+                 %{},
+                 socket
+               )
+
+      assert socket.assigns.flash == %{"error" => "Failed to create workflow"}
+      refute socket.assigns.creating_workflow?
+    end
+
+    test "ignores a second build_from_scratch event while one is already in flight" do
+      socket = %Phoenix.LiveView.Socket{assigns: %{creating_workflow?: true}}
+
+      workflow_count_before =
+        Lightning.Repo.aggregate(Lightning.Workflows.Workflow, :count)
+
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowLive.Collaborate.handle_event(
+                 "build_from_scratch",
+                 %{},
+                 socket
+               )
+
+      assert Lightning.Repo.aggregate(Lightning.Workflows.Workflow, :count) ==
+               workflow_count_before
+    end
   end
 end

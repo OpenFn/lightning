@@ -8,12 +8,14 @@ interface WorkflowOptionCardProps {
   description: string;
   onClick: () => void;
   testId: string;
+  disabled?: boolean;
 }
 
 interface LandingScreenProps {
   aiAssistantEnabled: boolean;
   onBuildWithAI: (prompt: string) => void;
   onBuildFromScratch: () => void;
+  isBuildingFromScratch: boolean;
   onBrowseTemplates: () => void;
   onImportYAML: () => void;
 }
@@ -22,6 +24,7 @@ export function LandingScreen({
   aiAssistantEnabled,
   onBuildWithAI,
   onBuildFromScratch,
+  isBuildingFromScratch,
   onBrowseTemplates,
   onImportYAML,
 }: LandingScreenProps) {
@@ -118,6 +121,7 @@ export function LandingScreen({
             title="Build from scratch"
             description="Start with an empty canvas and pick a trigger as your first step."
             onClick={onBuildFromScratch}
+            disabled={isBuildingFromScratch}
           />
           <WorkflowOptionCard
             testId="browse-templates-card"
@@ -150,13 +154,15 @@ function WorkflowOptionCard({
   description,
   onClick,
   testId,
+  disabled = false,
 }: WorkflowOptionCardProps) {
   return (
     <button
       data-testid={testId}
       type="button"
       onClick={onClick}
-      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300"
+      disabled={disabled}
+      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <span className="w-fit inline-flex items-center justify-center rounded-lg bg-gray-100 p-2 mb-3">
         <span className={cn('h-5 w-5 text-gray-700', icon)} />

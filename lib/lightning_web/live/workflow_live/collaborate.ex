@@ -51,7 +51,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
          CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
-       ai_assistant_enabled: AiAssistant.enabled?()
+       ai_assistant_enabled: AiAssistant.enabled?(),
+       creating_workflow?: false
      )}
   end
 
@@ -179,7 +180,17 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      )}
   end
 
+  def handle_event(
+        "build_from_scratch",
+        _params,
+        %{assigns: %{creating_workflow?: true}} = socket
+      ) do
+    {:noreply, socket}
+  end
+
   def handle_event("build_from_scratch", _params, socket) do
+    socket = assign(socket, creating_workflow?: true)
+
     with :ok <-
            Permissions.can(
              ProjectUsers,
@@ -200,14 +211,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     else
       {:error, :unauthorized} ->
         {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "You don't have permission to create workflows"
-         )}
+         socket
+         |> assign(creating_workflow?: false)
+         |> put_flash(:error, "You don't have permission to create workflows")}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to create workflow")}
+        {:noreply,
+         socket
+         |> assign(creating_workflow?: false)
+         |> put_flash(:error, "Failed to create workflow")}
     end
   end
 
@@ -418,7 +430,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
         workflow = %Workflow{
           id: workflow_id,
-          name: "Untitled Workflow",
+          name: "Untitled workflow",
           project_id: project.id
         }
 

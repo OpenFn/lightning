@@ -26,6 +26,7 @@ import {
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
+import { useActionLock } from './hooks/useActionLock';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -193,7 +194,14 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
-  const { pushEvent } = useLiveViewActions();
+  const { pushEventTo } = useLiveViewActions();
+  const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
+    useActionLock(
+      () =>
+        new Promise<void>(resolve => {
+          pushEventTo('build_from_scratch', {}, () => resolve());
+        })
+    );
 
   if (!showLandingScreen) return null;
 
@@ -205,7 +213,8 @@ function LandingScreenWrapper({
           dismissLandingScreen();
           openAIAssistantPanel(prompt);
         }}
-        onBuildFromScratch={() => pushEvent('build_from_scratch', {})}
+        onBuildFromScratch={() => void runBuildFromScratch()}
+        isBuildingFromScratch={isBuildingFromScratch}
         onBrowseTemplates={openTemplateBrowserModal}
         onImportYAML={openYAMLImportModal}
       />
