@@ -21,7 +21,7 @@ interface ActionProps {
   ) => () => void;
   el: HTMLElement;
   containerEl: HTMLElement;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
 }
 
 export type WithActionProps<T = Record<string, unknown>> =

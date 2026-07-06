@@ -12,6 +12,7 @@ import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
+import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
@@ -183,8 +184,12 @@ function LandingScreenWrapper({
   aiAssistantEnabled: boolean;
 }) {
   const showLandingScreen = useShowLandingScreen();
-  const { openYAMLImportModal, dismissLandingScreen, openAIAssistantPanel } =
-    useUICommands();
+  const {
+    openYAMLImportModal,
+    openTemplateBrowserModal,
+    dismissLandingScreen,
+    openAIAssistantPanel,
+  } = useUICommands();
 
   if (!showLandingScreen) return null;
 
@@ -197,10 +202,11 @@ function LandingScreenWrapper({
           openAIAssistantPanel(prompt);
         }}
         onBuildFromScratch={() => {}}
-        onBrowseTemplates={() => {}}
+        onBrowseTemplates={openTemplateBrowserModal}
         onImportYAML={openYAMLImportModal}
       />
       <YAMLImportModal />
+      <TemplateBrowserModalWrapper />
     </>
   );
 }

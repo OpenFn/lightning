@@ -50,6 +50,9 @@ export interface UIState {
   /** Whether the YAML import modal is open */
   showYAMLImportModal: boolean;
 
+  /** Whether the template browser modal is open */
+  showTemplateBrowserModal: boolean;
+
   /** Template panel state */
   templatePanel: {
     templates: WorkflowTemplate[];
@@ -114,6 +117,12 @@ export interface UICommands {
 
   /** Close the YAML import modal and reset import panel content */
   closeYAMLImportModal: () => void;
+
+  /** Open the template browser modal */
+  openTemplateBrowserModal: () => void;
+
+  /** Close the template browser modal */
+  closeTemplateBrowserModal: () => void;
 
   /** Set templates list */
   setTemplates: (templates: WorkflowTemplate[]) => void;

@@ -13,8 +13,10 @@ import type React from 'react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LiveViewActionsProvider } from '#/collaborative-editor/contexts/LiveViewActionsContext';
 import { StoreContext } from '#/collaborative-editor/contexts/StoreProvider';
 import { useValidation } from '#/collaborative-editor/hooks/useValidation';
+
 import {
   createMinimalWorkflowYDoc,
   createWorkflowYDoc,
@@ -60,10 +62,19 @@ describe('useValidation - Integration', () => {
       awarenessStore: {} as any,
     };
 
+    const mockLiveViewActions = {
+      pushEvent: vi.fn(),
+      pushEventTo: vi.fn(),
+      handleEvent: vi.fn(() => vi.fn()),
+      navigate: vi.fn(),
+    };
+
     return ({ children }: { children: React.ReactNode }) => (
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <LiveViewActionsProvider actions={mockLiveViewActions}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </LiveViewActionsProvider>
     );
   }
 

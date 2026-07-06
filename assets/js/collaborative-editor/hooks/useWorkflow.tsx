@@ -38,6 +38,7 @@ import React, {
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
 import {
   formatChannelErrorMessage,
@@ -351,6 +352,7 @@ export const useNodeSelection = () => {
 export const useWorkflowActions = () => {
   const store = useWorkflowStoreContext();
   const context = useContext(StoreContext);
+  const { navigate } = useLiveViewActions();
 
   if (!context) {
     throw new Error('useWorkflowActions must be used within StoreProvider');
@@ -425,7 +427,7 @@ export const useWorkflowActions = () => {
             searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.history.replaceState(null, '', newUrl);
+            navigate(newUrl, { replace: true });
 
             // Clear template state in UI store
             uiStore.selectTemplate(null);
@@ -451,8 +453,10 @@ export const useWorkflowActions = () => {
       // Helper: Handle save errors with appropriate notifications
       const handleSaveError = (
         error: unknown,
-        retrySaveWorkflow: () => Promise<unknown>
+        retrySaveWorkflow: () => Promise<unknown>,
+        silent?: boolean
       ) => {
+        if (silent) return;
         // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
           error.message = formatChannelErrorMessage({
@@ -519,7 +523,7 @@ export const useWorkflowActions = () => {
           handleSaveSuccess(response, options?.silent);
           return response;
         } catch (error) {
-          handleSaveError(error, wrappedSaveWorkflow);
+          handleSaveError(error, wrappedSaveWorkflow, options?.silent);
           // Re-throw error for any upstream error handling
           throw error;
         }
