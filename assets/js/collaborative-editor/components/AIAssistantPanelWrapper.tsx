@@ -591,41 +591,60 @@ export function AIAssistantPanelWrapper({
   );
 
   // Hook to handle workflow/job code application logic
-  const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
-    useAIWorkflowApplications({
-      sessionId,
-      page: aiMode?.page || 'workflow_template',
-      currentSession:
-        sessionId && messages.length > 0
-          ? {
-              messages,
-              workflowTemplateContext,
-            }
-          : null,
-      currentUserId: user?.id,
-      aiMode,
-      isNewWorkflow,
-      onValidationError,
-      workflowActions: {
-        importWorkflow,
-        startApplyingWorkflow,
-        doneApplyingWorkflow,
-        startApplyingJobCode,
-        doneApplyingJobCode,
-        updateJob,
-        saveWorkflow,
-      },
-      monacoRef,
-      jobs,
-      canApplyChanges,
-      connectionState,
-      setPreviewingMessageId,
-      previewingMessageId,
-      setApplyingMessageId,
-      appliedMessageIdsRef,
-      streamingApply,
-      streamingApplyActions,
-    });
+  const {
+    handleApplyWorkflow,
+    handlePreviewJobCode,
+    handlePreviewGlobalStep,
+    handleApplyJobCode,
+  } = useAIWorkflowApplications({
+    sessionId,
+    page: aiMode?.page || 'workflow_template',
+    currentSession:
+      sessionId && messages.length > 0
+        ? {
+            messages,
+            workflowTemplateContext,
+          }
+        : null,
+    currentUserId: user?.id,
+    aiMode,
+    isNewWorkflow,
+    onValidationError,
+    workflowActions: {
+      importWorkflow,
+      startApplyingWorkflow,
+      doneApplyingWorkflow,
+      startApplyingJobCode,
+      doneApplyingJobCode,
+      updateJob,
+      saveWorkflow,
+    },
+    monacoRef,
+    jobs,
+    canApplyChanges,
+    connectionState,
+    setPreviewingMessageId,
+    previewingMessageId,
+    setApplyingMessageId,
+    appliedMessageIdsRef,
+    streamingApply,
+    streamingApplyActions,
+  });
+
+  // Route auto-preview to the right handler: global messages carry a full
+  // workflow YAML (the open step's diff is extracted from it), job-code
+  // messages carry the job body directly.
+  const handleAutoPreview = useCallback(
+    (code: string, messageId: string) => {
+      const message = messages.find(m => m.id === messageId);
+      if (message?.from_global) {
+        handlePreviewGlobalStep(code, messageId);
+      } else {
+        handlePreviewJobCode(code, messageId);
+      }
+    },
+    [messages, handlePreviewGlobalStep, handlePreviewJobCode]
+  );
 
   // Auto-preview job code when AI responds with code
   // Only for the user who authored the triggering message
@@ -635,7 +654,7 @@ export function AIAssistantPanelWrapper({
       ? { id: sessionId, session_type: 'workflow_template', messages }
       : null,
     currentUserId: user?.id,
-    onPreview: handlePreviewJobCode,
+    onPreview: handleAutoPreview,
   });
 
   // Auto-apply streaming changes as soon as they arrive (before text finishes)
@@ -724,7 +743,12 @@ export function AIAssistantPanelWrapper({
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
-                  aiMode?.page === 'workflow_template' && !isApplyingWorkflow
+                  (aiMode?.page === 'workflow_template' ||
+                    // Global messages apply the full workflow even while a
+                    // job is open; handleApplyWorkflow still no-ops for
+                    // non-global messages outside workflow_template mode.
+                    messages.some(m => m.from_global && m.code)) &&
+                  !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }
@@ -740,6 +764,8 @@ export function AIAssistantPanelWrapper({
                 onPreviewJobCode={
                   aiMode?.page === 'job_code' ? handlePreviewJobCode : undefined
                 }
+                onPreviewGlobalStep={handlePreviewGlobalStep}
+                canPreviewGlobalStep={aiMode?.page === 'job_code'}
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
                   // to show "APPLYING..." state. Prioritize stored message ID from store,

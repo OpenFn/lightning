@@ -183,8 +183,8 @@ LOCAL_ADAPTORS=true mix phx.server
 ```
 
 Each path in `OPENFN_ADAPTORS_REPO` must contain a `packages` subdirectory.
-Paths that are missing or unreadable are logged and skipped, so the rest of
-the list still loads.
+Paths that are missing or unreadable are logged and skipped, so the rest of the
+list still loads.
 
 ### Problems with Apple Silicon
 

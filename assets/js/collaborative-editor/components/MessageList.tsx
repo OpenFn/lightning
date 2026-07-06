@@ -396,6 +396,10 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
+  /** Per-step diff preview for global messages (extracts the open job's body from the YAML) */
+  onPreviewGlobalStep?: ((yaml: string, messageId: string) => void) | undefined;
+  /** Whether a job is open in the IDE, enabling preview for global messages */
+  canPreviewGlobalStep?: boolean;
   applyingMessageId?: string | null | undefined;
   previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
@@ -412,6 +416,8 @@ export function MessageList({
   onApplyWorkflow,
   onApplyJobCode,
   onPreviewJobCode,
+  onPreviewGlobalStep,
+  canPreviewGlobalStep = false,
   applyingMessageId,
   previewingMessageId,
   showAddButtons = false,
@@ -634,7 +640,10 @@ export function MessageList({
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
-                          showPreview={!!message.job_id}
+                          showPreview={
+                            !!message.job_id ||
+                            (!!message.from_global && canPreviewGlobalStep)
+                          }
                           onApply={() => {
                             if (message.job_id) {
                               onApplyJobCode?.(message.code!, message.id);
@@ -643,7 +652,12 @@ export function MessageList({
                             }
                           }}
                           onPreview={() => {
-                            onPreviewJobCode?.(message.code!, message.id);
+                            if (message.from_global) {
+                              // Per-step diff from the full workflow YAML
+                              onPreviewGlobalStep?.(message.code!, message.id);
+                            } else {
+                              onPreviewJobCode?.(message.code!, message.id);
+                            }
                           }}
                           isApplying={!!applyingMessageId}
                           isPreviewActive={previewingMessageId === message.id}

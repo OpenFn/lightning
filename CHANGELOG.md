@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
+  external identity provider and link or unlink providers from their profile
+  settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or
@@ -25,9 +28,16 @@ and this project adheres to
 
 ### Changed
 
+- Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
+  [#4878](https://github.com/OpenFn/lightning/issues/4878)
+- Removed the unused dev-only `phoenix_storybook` dependency, clearing its
+  advisories from the `mix deps.audit` ignore list.
+  [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
 
 ### Fixed
+
+## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
 
@@ -41,6 +51,12 @@ and this project adheres to
 
 ### Changed
 
+- Global chat can now change multiple workflow steps in a single response. It
+  receives a full workflow YAML from the Apollo AI server with each step's job
+  code embedded, and applies the changes together. When a step is open in the
+  editor, its diff is previewed before applying; previewing several step diffs
+  at once is a follow-up.
+  [#4890](https://github.com/OpenFn/lightning/issues/4890)
 - Redesigned the trigger inspector in the collaborative editor: selecting a
   trigger now opens a read-only resting panel with an **Edit** button that leads
   into a guided wizard (Choose → Configure → Finish), replacing the previous

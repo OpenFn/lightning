@@ -986,6 +986,60 @@ defmodule Lightning.AiAssistantTest do
       assert saved_message.role == :user
     end
 
+    test "global assistant message in a job session gets no job and no from_unsaved_job" do
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "Global response",
+          meta: %{"from_global" => true}
+        })
+
+      saved_message = List.last(updated_session.messages)
+
+      assert %{
+               role: :assistant,
+               job_id: nil,
+               meta: %{"from_global" => true}
+             } = saved_message
+
+      refute Map.has_key?(saved_message.meta, "from_unsaved_job")
+    end
+
+    test "non-global assistant message in a job session still gets job and from_unsaved_job" do
+      user = insert(:user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "Job chat response"
+        })
+
+      saved_message = List.last(updated_session.messages)
+
+      assert %{role: :assistant, job_id: ^job_id} = saved_message
+      assert saved_message.meta["from_unsaved_job"] == unsaved_job_id
+    end
+
     test "enqueues user message for processing when pending", %{user: user} do
       job = insert(:job, workflow: build(:workflow))
       session = insert(:chat_session, job: job, user: user)
@@ -3593,13 +3647,16 @@ defmodule Lightning.AiAssistantTest do
       assert assistant_msg.content == "Here is your updated workflow"
       assert assistant_msg.code == "workflow:\n  name: updated"
       assert assistant_msg.role == :assistant
+      assert assistant_msg.meta == %{"from_global" => true}
+      assert is_nil(assistant_msg.job_id)
     end
 
-    test "extracts job_code on job step pages and resolves job", %{
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
+    test "uses workflow_yaml even on job step pages with a job_code attachment",
+         %{
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
       %{jobs: [job | _]} = workflow
 
       session =
@@ -3660,12 +3717,13 @@ defmodule Lightning.AiAssistantTest do
 
       assistant_msg = List.last(updated_session.messages)
       assert assistant_msg.content == "Fixed the job"
-      # On a job step page, prefers job_code over workflow_yaml
-      assert assistant_msg.code == "fn(state => state.data)"
-      assert assistant_msg.job_id == job.id
+      # Global responses always use workflow_yaml; job_code is ignored
+      assert assistant_msg.code == "workflow:\n  name: full"
+      assert assistant_msg.meta == %{"from_global" => true}
+      assert is_nil(assistant_msg.job_id)
     end
 
-    test "falls back to workflow_yaml when no job_code attachment", %{
+    test "uses workflow_yaml when no job_code attachment", %{
       user: user,
       project: project,
       workflow: workflow
@@ -3715,7 +3773,6 @@ defmodule Lightning.AiAssistantTest do
                AiAssistant.query_global_stream(session, "overview")
 
       assistant_msg = List.last(updated_session.messages)
-      # When no job_code attachment, falls back to workflow_yaml
       assert assistant_msg.code == "workflow:\n  name: overview"
       assert is_nil(assistant_msg.job_id)
     end
@@ -3858,7 +3915,7 @@ defmodule Lightning.AiAssistantTest do
       assert is_nil(assistant_msg.job_id)
     end
 
-    test "handles resolve_job_from_key with nil inputs", %{
+    test "stores no code when only job_code attachments are present", %{
       user: user,
       project: project,
       workflow: workflow
@@ -3868,64 +3925,6 @@ defmodule Lightning.AiAssistantTest do
           user: user,
           project: project,
           workflow: workflow,
-          session_type: "workflow_template",
-          meta: %{
-            "message_options" => %{
-              "use_global_assistant" => true,
-              "page" => "workflows/test/Some-job"
-            }
-          }
-        )
-
-      {:ok, session} =
-        AiAssistant.save_message(session, %{
-          role: :user,
-          content: "fix code",
-          user: user
-        })
-
-      complete_payload =
-        Jason.encode!(%{
-          "response" => "Fixed",
-          "attachments" => [
-            %{
-              "type" => "job_code",
-              "content" => "fn(state => state);",
-              "job_key" => nil
-            }
-          ],
-          "usage" => %{},
-          "meta" => %{}
-        })
-
-      sse_stream = [%{event: "complete", data: complete_payload}]
-
-      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
-      end)
-
-      {:ok, updated_session} =
-        AiAssistant.query_global_stream(session, "fix code",
-          workflow_yaml: "name: test",
-          page: "workflows/test/Some-job"
-        )
-
-      assistant_msg = List.last(updated_session.messages)
-      assert assistant_msg.code == "fn(state => state);"
-      # job_key is nil, so job shouldn't be resolved
-      assert is_nil(assistant_msg.job_id)
-    end
-
-    test "handles resolve_job_from_key with nil workflow_id", %{
-      user: user,
-      project: project
-    } do
-      # Session without a workflow (workflow_id is nil)
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          workflow: nil,
           session_type: "workflow_template",
           meta: %{
             "message_options" => %{
@@ -3969,67 +3968,9 @@ defmodule Lightning.AiAssistantTest do
         )
 
       assistant_msg = List.last(updated_session.messages)
-      assert assistant_msg.code == "fn(state => state);"
-      # workflow_id is nil, so job can't be resolved
-      assert is_nil(assistant_msg.job_id)
-    end
-
-    test "handles non-string job_key in attachment", %{
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          workflow: workflow,
-          session_type: "workflow_template",
-          meta: %{
-            "message_options" => %{
-              "use_global_assistant" => true,
-              "page" => "workflows/test/Some-job"
-            }
-          }
-        )
-
-      {:ok, session} =
-        AiAssistant.save_message(session, %{
-          role: :user,
-          content: "fix code",
-          user: user
-        })
-
-      # job_key is an integer instead of a string
-      complete_payload =
-        Jason.encode!(%{
-          "response" => "Fixed",
-          "attachments" => [
-            %{
-              "type" => "job_code",
-              "content" => "fn(state => state);",
-              "job_key" => 12345
-            }
-          ],
-          "usage" => %{},
-          "meta" => %{}
-        })
-
-      sse_stream = [%{event: "complete", data: complete_payload}]
-
-      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
-      end)
-
-      {:ok, updated_session} =
-        AiAssistant.query_global_stream(session, "fix code",
-          workflow_yaml: "name: test",
-          page: "workflows/test/Some-job"
-        )
-
-      assistant_msg = List.last(updated_session.messages)
-      assert assistant_msg.code == "fn(state => state);"
-      # Non-string job_key won't match any job name
+      # job_code attachments are ignored; only workflow_yaml is stored
+      assert is_nil(assistant_msg.code)
+      assert assistant_msg.meta == %{"from_global" => true}
       assert is_nil(assistant_msg.job_id)
     end
 

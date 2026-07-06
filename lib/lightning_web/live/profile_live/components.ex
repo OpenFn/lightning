@@ -65,6 +65,11 @@ defmodule LightningWeb.ProfileLive.Components do
         user={@current_user}
       />
       <.live_component
+        module={LightningWeb.ProfileLive.IdentitiesComponent}
+        id={"#{@current_user.id}_identities_section"}
+        user={@current_user}
+      />
+      <.live_component
         module={LightningWeb.ProfileLive.ExperimentalFeaturesComponent}
         id="experimental-features"
         user={@current_user}

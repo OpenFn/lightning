@@ -50,6 +50,8 @@ defmodule Lightning.Accounts.User do
     has_many :backup_codes, Lightning.Accounts.UserBackupCode,
       on_replace: :delete
 
+    has_many :user_identities, Lightning.Accounts.UserIdentity
+
     timestamps()
   end
 
@@ -327,6 +329,21 @@ defmodule Lightning.Accounts.User do
     change(user, confirmed_at: now)
   end
 
+  @doc """
+  A changeset for registering a user via SSO. No password is required;
+  the account is confirmed immediately at registration time.
+  """
+  def sso_registration_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:first_name, :last_name, :email])
+    |> validate_required([:first_name, :last_name, :email])
+    |> validate_email()
+    |> put_change(
+      :confirmed_at,
+      DateTime.utc_now() |> DateTime.truncate(:second)
+    )
+  end
+
   @spec remove_github_token_changeset(t()) :: Ecto.Changeset.t()
   def remove_github_token_changeset(user) do
     change(user, github_oauth_token: nil)
@@ -361,6 +378,15 @@ defmodule Lightning.Accounts.User do
     Bcrypt.no_user_verify()
     false
   end
+
+  @doc """
+  Returns `true` if the user has a local password set.
+
+  SSO-only users have no password (`hashed_password` is `nil`) until they set
+  one via the password reset flow or the profile page.
+  """
+  def has_password?(%__MODULE__{hashed_password: hashed_password}),
+    do: is_binary(hashed_password)
 
   @doc """
   Validates the current password otherwise adds an error to the changeset.
