@@ -19,6 +19,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
 
   defdelegate subscribe(project_id), to: Events
@@ -258,10 +259,17 @@ defmodule Lightning.Workflows do
     trigger_id = Ecto.UUID.generate()
     job_id = Ecto.UUID.generate()
 
+    # Mirror session path: auto-disable for new workflows at limit rather than blocking creation
+    trigger_enabled =
+      case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
+        :ok -> true
+        {:error, _, _} -> false
+      end
+
     attrs = %{
       name: unique_workflow_name(nil, project_id),
       project_id: project_id,
-      triggers: [%{id: trigger_id, type: :webhook, enabled: true}],
+      triggers: [%{id: trigger_id, type: :webhook, enabled: trigger_enabled}],
       jobs: [
         %{
           id: job_id,

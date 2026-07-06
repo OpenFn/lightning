@@ -996,6 +996,32 @@ defmodule Lightning.WorkflowsTest do
       assert second.name == "Untitled workflow 1"
     end
 
+    test "creates trigger and edge with enabled: false when at the activation limit" do
+      project = insert(:project)
+      user = insert(:user)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          {:error, :limit_exceeded,
+           %Lightning.Extensions.Message{
+             text: "Workflow activation limit exceeded"
+           }}
+        end
+      )
+
+      assert {:ok, workflow, trigger_id} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      workflow = Repo.preload(workflow, [:triggers, :edges])
+
+      assert [%{id: ^trigger_id, enabled: false}] = workflow.triggers
+
+      # edges from a trigger are always enabled (Edge.enable_if_source_trigger/1 enforces this)
+      assert [%{enabled: true}] = workflow.edges
+    end
+
     test "succeeds again after the previous workflow is deleted" do
       project = insert(:project)
       user = insert(:user)
