@@ -259,7 +259,6 @@ defmodule Lightning.Workflows do
     trigger_id = Ecto.UUID.generate()
     job_id = Ecto.UUID.generate()
 
-    # Mirror session path: auto-disable for new workflows at limit rather than blocking creation
     trigger_enabled =
       case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
         :ok -> true
@@ -273,7 +272,7 @@ defmodule Lightning.Workflows do
       jobs: [
         %{
           id: job_id,
-          name: "Transform Data",
+          name: "Untitled job",
           adaptor: "@openfn/language-common@latest",
           body: """
           // Check out the Job Writing Guide for help getting started:

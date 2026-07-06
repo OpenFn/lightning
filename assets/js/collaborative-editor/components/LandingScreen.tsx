@@ -162,7 +162,7 @@ function WorkflowOptionCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="rounded-xl flex flex-col border border-border-subtle bg-white p-5 text-left hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring focus-visible:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-subtle disabled:hover:bg-white"
     >
       <span className="w-fit inline-flex items-center justify-center rounded-lg bg-gray-100 p-2 mb-3">
         <span className={cn('h-5 w-5 text-gray-700', icon)} />

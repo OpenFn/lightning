@@ -40,6 +40,7 @@ import {
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
+import { notifications } from './lib/notifications';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -196,12 +197,25 @@ function LandingScreenWrapper({
   } = useUICommands();
   const { pushEventTo } = useLiveViewActions();
   const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
-    useActionLock(
-      () =>
-        new Promise<void>(resolve => {
-          pushEventTo('build_from_scratch', {}, () => resolve());
-        })
-    );
+    useActionLock(async () => {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error('build_from_scratch timed out')),
+            10_000
+          );
+          pushEventTo('build_from_scratch', {}, () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+      } catch {
+        notifications.alert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+      }
+    });
 
   if (!showLandingScreen) return null;
 

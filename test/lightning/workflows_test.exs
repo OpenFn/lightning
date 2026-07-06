@@ -951,7 +951,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert [
                %{
-                 name: "Transform Data",
+                 name: "Untitled job",
                  adaptor: "@openfn/language-common@latest",
                  body: body
                }
