@@ -216,7 +216,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
          |> assign(creating_workflow?: false)
          |> put_flash(:error, "You don't have permission to create workflows")}
 
-      {:error, _changeset} ->
+      {:error, _reason} ->
         {:noreply,
          socket
          |> assign(creating_workflow?: false)

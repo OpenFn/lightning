@@ -136,8 +136,7 @@ defmodule Lightning.Workflows do
           keyword()
         ) ::
           {:ok, Workflow.t()}
-          | {:error, Ecto.Changeset.t(Workflow.t())}
-          | {:error, :workflow_deleted}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | false | term()}
   def save_workflow(changeset_or_attrs, actor, opts \\ [])
 
   def save_workflow(
@@ -251,10 +250,13 @@ defmodule Lightning.Workflows do
   @doc """
   Creates a new workflow with a webhook trigger, one job, and one always-on edge.
   Used by the "Build from Scratch" entry point on the new workflow screen.
-  Returns `{:ok, workflow, trigger_id}` or `{:error, changeset}`.
+  Returns `{:ok, workflow, trigger_id}` or `{:error, reason}`, where `reason`
+  is usually an `Ecto.Changeset`, but see `save_workflow/3` for the other
+  shapes it can take.
   """
   @spec create_webhook_workflow(String.t(), struct()) ::
-          {:ok, Workflow.t(), String.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Workflow.t(), String.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | false | term()}
   def create_webhook_workflow(project_id, actor) do
     trigger_id = Ecto.UUID.generate()
     job_id = Ecto.UUID.generate()
@@ -292,7 +294,7 @@ defmodule Lightning.Workflows do
 
     case save_workflow(attrs, actor) do
       {:ok, workflow} -> {:ok, workflow, trigger_id}
-      {:error, changeset} -> {:error, changeset}
+      {:error, reason} -> {:error, reason}
     end
   end
 
