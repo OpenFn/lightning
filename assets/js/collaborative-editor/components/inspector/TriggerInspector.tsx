@@ -57,7 +57,10 @@ export function TriggerInspector({
 
   useEffect(() => {
     if (!startedOnPicker) return;
-    updateSearchParams({ trigger_view: null });
+    // Strip the param with `replace: true` so it patches the current history
+    // entry in place, rather than pushing a new one that would leave a
+    // phantom Back-button stop pointing right back at the picker.
+    updateSearchParams({ trigger_view: null }, { replace: true });
     // TriggerEditWizard already captured startOnPicker in its own initial
     // state by the time this effect runs, so clearing the flag here doesn't
     // affect the picker that's already open — it only prevents a *future*

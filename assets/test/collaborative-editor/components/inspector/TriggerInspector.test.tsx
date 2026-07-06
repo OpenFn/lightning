@@ -321,11 +321,13 @@ describe('TriggerInspector — build-from-scratch picker entry', () => {
       screen.queryByRole('heading', { name: 'On webhook call' })
     ).not.toBeInTheDocument();
 
-    // One-shot: the launch signal is consumed and stripped immediately,
+    // One-shot: the launch signal is consumed and stripped immediately via a
+    // replace-in-place updateSearchParams (no phantom Back-button entry),
     // leaving the rest of the URL (the trigger selection) untouched.
-    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      trigger_view: null,
-    });
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+      { trigger_view: null },
+      { replace: true }
+    );
   });
 
   test('renders the normal show panel when trigger_view is absent', () => {
