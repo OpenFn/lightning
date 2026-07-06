@@ -1137,40 +1137,11 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp ensure_unique_name(params, project) do
-    workflow_name =
-      params["name"]
-      |> to_string()
-      |> String.trim()
-      |> case do
-        "" -> "Untitled workflow"
-        name -> name
-      end
-
-    existing_workflows = Lightning.Projects.list_workflows(project)
-    unique_name = generate_unique_name(workflow_name, existing_workflows)
-
-    Map.put(params, "name", unique_name)
-  end
-
-  defp generate_unique_name(base_name, existing_workflows) do
-    existing_names = MapSet.new(existing_workflows, & &1.name)
-
-    if MapSet.member?(existing_names, base_name) do
-      find_available_name(base_name, existing_names)
-    else
-      base_name
-    end
-  end
-
-  defp find_available_name(base_name, existing_names) do
-    1
-    |> Stream.iterate(&(&1 + 1))
-    |> Stream.map(&"#{base_name} #{&1}")
-    |> Enum.find(&name_available?(&1, existing_names))
-  end
-
-  defp name_available?(name, existing_names) do
-    not MapSet.member?(existing_names, name)
+    Map.put(
+      params,
+      "name",
+      Lightning.Workflows.unique_workflow_name(params["name"], project.id)
+    )
   end
 
   defp verify_trigger_in_workflow(trigger, workflow_id) do

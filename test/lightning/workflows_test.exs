@@ -943,7 +943,7 @@ defmodule Lightning.WorkflowsTest do
       workflow =
         Repo.preload(workflow, [:triggers, :jobs, :edges])
 
-      assert workflow.name == "New Workflow"
+      assert workflow.name == "Untitled workflow"
       assert workflow.project_id == project.id
 
       assert [%Trigger{id: ^trigger_id, type: :webhook, enabled: true}] =
@@ -980,6 +980,104 @@ defmodule Lightning.WorkflowsTest do
                Workflows.create_webhook_workflow(Ecto.UUID.generate(), user)
 
       assert %{project: ["does not exist"]} = errors_on(changeset)
+    end
+
+    test "suffixes the name when called repeatedly in the same project" do
+      project = insert(:project)
+      user = insert(:user)
+
+      assert {:ok, first, _} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      assert {:ok, second, _} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      assert first.name == "Untitled workflow"
+      assert second.name == "Untitled workflow 1"
+    end
+
+    test "succeeds again after the previous workflow is deleted" do
+      project = insert(:project)
+      user = insert(:user)
+
+      assert {:ok, first, _} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      assert {:ok, _} = Workflows.mark_for_deletion(first, user)
+
+      # Soft deletion renames the workflow to "<name>_del", freeing the
+      # original name, so the new workflow gets it back unsuffixed.
+      assert {:ok, second, _} =
+               Workflows.create_webhook_workflow(project.id, user)
+
+      assert second.name == "Untitled workflow"
+    end
+  end
+
+  describe "unique_workflow_name/2" do
+    test "returns the base name unchanged when it is free" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow"
+    end
+
+    test "defaults nil or blank names to Untitled workflow" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name(nil, project.id) ==
+               "Untitled workflow"
+
+      assert Workflows.unique_workflow_name("", project.id) ==
+               "Untitled workflow"
+
+      assert Workflows.unique_workflow_name("   ", project.id) ==
+               "Untitled workflow"
+    end
+
+    test "trims surrounding whitespace" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name("  My Workflow  ", project.id) ==
+               "My Workflow"
+    end
+
+    test "appends an incrementing suffix on collision" do
+      project = insert(:project)
+      insert(:workflow, project: project, name: "My Workflow")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 1"
+
+      insert(:workflow, project: project, name: "My Workflow 1")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 2"
+    end
+
+    test "ignores workflows in other projects" do
+      project = insert(:project)
+      other_project = insert(:project)
+      insert(:workflow, project: other_project, name: "My Workflow")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow"
+    end
+
+    # Real delete paths rename to "<name>_del" (freeing the name), but the
+    # unique index is not partial, so any row still occupying a name — even
+    # a soft-deleted one — must be counted as a collision.
+    test "includes soft-deleted rows in the collision check" do
+      project = insert(:project)
+
+      insert(:workflow,
+        project: project,
+        name: "My Workflow",
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 1"
     end
   end
 
