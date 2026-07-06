@@ -2895,7 +2895,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
         assigns: %{
           __changed__: %{},
           flash: %{},
-          creating_workflow?: false,
           current_user: user,
           project: project
         }
@@ -2909,24 +2908,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
                )
 
       assert socket.assigns.flash == %{"error" => "Failed to create workflow"}
-      refute socket.assigns.creating_workflow?
-    end
-
-    test "ignores a second build_from_scratch event while one is already in flight" do
-      socket = %Phoenix.LiveView.Socket{assigns: %{creating_workflow?: true}}
-
-      workflow_count_before =
-        Lightning.Repo.aggregate(Lightning.Workflows.Workflow, :count)
-
-      assert {:noreply, ^socket} =
-               LightningWeb.WorkflowLive.Collaborate.handle_event(
-                 "build_from_scratch",
-                 %{},
-                 socket
-               )
-
-      assert Lightning.Repo.aggregate(Lightning.Workflows.Workflow, :count) ==
-               workflow_count_before
     end
   end
 end
