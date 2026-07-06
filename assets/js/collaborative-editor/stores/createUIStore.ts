@@ -80,6 +80,18 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     aiAssistantPanelOpen: boolean;
     createWorkflowPanelCollapsed: boolean;
   } => {
+    // TODO-AI-FIRST (#4856): once the left-panel create flow is fully removed,
+    // delete the method/hasMethod branch below and simplify to just the chat param.
+
+    // On /new the landing screen is the only valid entry point — ignore all URL
+    // params so ?chat=true or ?method=... can't bypass or corrupt it.
+    if (isNewWorkflow) {
+      return {
+        aiAssistantPanelOpen: false,
+        createWorkflowPanelCollapsed: true,
+      };
+    }
+
     try {
       const params = new URLSearchParams(window.location.search);
       const chatOpen = params.get('chat') === 'true';
@@ -118,7 +130,7 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       aiAssistantPanelOpen,
       aiAssistantInitialMessage: null,
       createWorkflowPanelCollapsed,
-      showLandingScreen: isNewWorkflow,
+      showLandingScreen: true,
       showYAMLImportModal: false,
       templatePanel: {
         templates: [],

@@ -11,6 +11,8 @@ import { StoreContext } from '../contexts/StoreProvider';
 import type { UIStoreInstance } from '../stores/createUIStore';
 import type { UIState } from '../types/ui';
 
+import { useIsNewWorkflow } from './useSessionContext';
+
 /**
  * Main hook for accessing the UIStore instance
  * Handles context access and error handling once
@@ -139,11 +141,16 @@ export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
  * Hook to check if the landing screen overlay is visible
  */
 export const useShowLandingScreen = (): boolean => {
+  const isNewWorkflow = useIsNewWorkflow();
   const uiStore = useUIStore();
   const selectShowLandingScreen = uiStore.withSelector(
     state => state.showLandingScreen
   );
-  return useSyncExternalStore(uiStore.subscribe, selectShowLandingScreen);
+  const showLandingScreen = useSyncExternalStore(
+    uiStore.subscribe,
+    selectShowLandingScreen
+  );
+  return isNewWorkflow && showLandingScreen;
 };
 
 /**

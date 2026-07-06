@@ -777,4 +777,21 @@ describe('AIAssistantPanel', () => {
       expect(panel).toHaveClass('w-[400px]');
     });
   });
+
+  describe('Close button', () => {
+    it('is visible when onClose is provided', () => {
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
+
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      expect(closeButton).toBeInTheDocument();
+    });
+
+    it('is absent when onClose is not provided', () => {
+      renderWithStore(<AIAssistantPanel isOpen={true} />);
+
+      expect(
+        screen.queryByRole('button', { name: /close/i })
+      ).not.toBeInTheDocument();
+    });
+  });
 });

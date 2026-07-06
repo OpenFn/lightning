@@ -89,6 +89,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingContent: null,
       streamingStatus: null,
       streamingChanges: null,
+      streamingApply: null,
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
@@ -220,6 +221,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingApply = null;
     });
 
     notify('clearSession');
@@ -235,6 +237,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.sessionId = sessionId;
       draft.messages = [];
       draft.isLoading = true;
+      draft.streamingApply = null;
     });
 
     notify('loadSession');
@@ -607,6 +610,56 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
+   * Record that a workflow YAML was successfully imported to the canvas
+   * during streaming, so the auto-apply of the final new_message can skip
+   * the duplicate import when it carries the same YAML.
+   *
+   * Deliberately NOT cleared by _clearStreaming or disconnect: the final
+   * message may arrive after the stream ends (or after a reconnect), and
+   * the skip must still happen then. Cleared when the session changes or
+   * when the next final message with code is processed.
+   * @internal Called by useAIWorkflowApplications after a streaming import
+   */
+  const _setStreamingApply = (yaml: string) => {
+    state = produce(state, draft => {
+      draft.streamingApply = { yaml, saveFailed: false };
+    });
+    notify('_setStreamingApply');
+  };
+
+  /**
+   * Mark whether the post-import auto-save of a streaming apply failed
+   * (a save is still owed). No-op when no streaming apply is pending, so
+   * callers on shared save paths don't need to know whether the current
+   * apply came from streaming.
+   * @internal Called by useAIWorkflowApplications save/retry paths
+   */
+  const _setStreamingApplySaveFailed = (saveFailed: boolean) => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      if (draft.streamingApply) {
+        draft.streamingApply.saveFailed = saveFailed;
+      }
+    });
+    notify('_setStreamingApplySaveFailed');
+  };
+
+  /**
+   * Clear the pending streaming apply record.
+   * @internal Called by useAIWorkflowApplications on session load and when
+   * the next final message with code is processed
+   */
+  const _clearStreamingApply = () => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      draft.streamingApply = null;
+    });
+    notify('_clearStreamingApply');
+  };
+
+  /**
    * Connect to workflow channel to listen for AI session creation events.
    * When another user creates an AI session, we receive the event and update
    * our session list if it matches the current context.
@@ -683,6 +736,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     setStreamingStatus,
     _setStreamingChanges,
     _clearStreaming,
+    _setStreamingApply,
+    _setStreamingApplySaveFailed,
+    _clearStreamingApply,
     _connectChannel,
   };
 };
