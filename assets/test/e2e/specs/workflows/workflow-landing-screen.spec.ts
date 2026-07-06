@@ -120,6 +120,36 @@ test.describe('landing screen — AI-disabled @landing-screen', () => {
     await expect(workflowEdit.buildWithAIInput).not.toBeAttached();
     await expect(workflowEdit.buildWithAIButton).not.toBeAttached();
   });
+
+  test('Build from scratch lands on the trigger picker, not the webhook show panel', async ({
+    page,
+  }) => {
+    const workflowEdit = new WorkflowEditPage(page);
+    await navigateToNewWorkflow(page, projectId);
+
+    await workflowEdit.buildFromScratchCard.click();
+    await page.waitForURL(url => !url.pathname.endsWith('/w/new'));
+    await page.waitForLoadState('networkidle');
+
+    // The build-from-scratch redirect carries a one-shot ?trigger_view=picker
+    // signal (#4895) so the wizard opens straight on "What triggers this
+    // workflow?" instead of the webhook show panel — inviting the user to
+    // actively choose rather than silently defaulting to webhook.
+    await expect(
+      page.getByRole('heading', { name: 'What triggers this workflow?' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'On webhook call' })
+    ).not.toBeVisible();
+
+    // The one-shot signal is stripped after being consumed.
+    expect(page.url()).not.toContain('trigger_view');
+
+    // Per #4895: not in the pink/new-workflow toolbar state — the workflow
+    // was already persisted by the redirect, so the normal Save button is
+    // present (unlike the landing screen, where it's absent entirely).
+    await expect(page.getByTestId('save-workflow-button')).toBeVisible();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -2751,7 +2751,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       {path, _flash} = assert_redirect(view)
 
-      assert %{"trigger" => trigger_id} =
+      assert %{"trigger" => trigger_id, "trigger_view" => "picker"} =
                URI.decode_query(URI.parse(path).query)
 
       assert path =~ ~r{^/projects/#{project.id}/w/[0-9a-f-]+\?}

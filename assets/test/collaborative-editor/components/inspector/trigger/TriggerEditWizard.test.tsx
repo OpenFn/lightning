@@ -140,12 +140,13 @@ function createConnectedWorkflowStore(
 
 interface SetupOptions {
   initialFocus?: 'authentication' | 'response';
+  startOnPicker?: boolean;
 }
 
 async function setup(
   trigger: Workflow.Trigger,
   workflowStore: WorkflowStoreInstance,
-  { initialFocus }: SetupOptions = {}
+  { initialFocus, startOnPicker }: SetupOptions = {}
 ) {
   const { wrapper, sessionChannel } = await createTriggerTestHarness({
     canEdit: true,
@@ -162,6 +163,7 @@ async function setup(
     <TriggerEditWizard
       trigger={trigger}
       initialFocus={initialFocus}
+      startOnPicker={startOnPicker}
       onClose={onClose}
       onDone={onDone}
     />,
@@ -658,5 +660,48 @@ describe('TriggerEditWizard — type switching via picker', () => {
     expect(
       screen.getByRole('heading', { name: 'On a schedule' })
     ).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// startOnPicker (build-from-scratch entry point)
+// ===========================================================================
+
+describe('TriggerEditWizard — startOnPicker', () => {
+  let ydoc: Y.Doc;
+
+  beforeEach(() => {
+    mockLiveViewActions.pushEvent.mockClear();
+    ydoc = createWorkflowYDoc({
+      triggers: { [TRIGGER_ID]: { id: TRIGGER_ID, type: 'webhook' } },
+    });
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'workflow-1');
+    workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
+  });
+
+  test('opens directly on the picker instead of Choose', async () => {
+    const workflowStore = createConnectedWorkflowStore(ydoc);
+    await setup(makeWebhookTrigger(), workflowStore, { startOnPicker: true });
+
+    expect(
+      screen.getByRole('heading', { name: 'What triggers this workflow?' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'On webhook call' })
+    ).not.toBeInTheDocument();
+  });
+
+  test('back arrow from the picker falls through to the normal Choose step', async () => {
+    const workflowStore = createConnectedWorkflowStore(ydoc);
+    await setup(makeWebhookTrigger(), workflowStore, { startOnPicker: true });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'On webhook call' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
   });
 });
