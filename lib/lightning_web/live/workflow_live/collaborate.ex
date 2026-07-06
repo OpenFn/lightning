@@ -206,7 +206,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       {:noreply,
        push_navigate(socket,
          to:
-           ~p"/projects/#{socket.assigns.project}/w/#{workflow}?#{%{trigger: trigger_id, trigger_view: "picker"}}"
+           ~p"/projects/#{socket.assigns.project}/w/#{workflow}?#{%{trigger: trigger_id, trigger_view: "picker"}}",
+         replace: true
        )}
     else
       {:error, :unauthorized} ->
