@@ -1434,10 +1434,10 @@ defmodule Lightning.AiAssistant do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
-        error_message = body["message"]
+        error_message = error_message_from_body(body)
 
         Logger.error(
-          "AI query failed for session #{session.id}: #{error_message}"
+          "AI query failed for session #{session.id} (status #{status}): #{error_message}"
         )
 
         {:error, error_message}
@@ -1458,6 +1458,12 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
+
+  defp error_message_from_body(%{"message" => message}) when is_binary(message),
+    do: message
+
+  defp error_message_from_body(_body),
+    do: "Oops! Something went wrong. Please try again."
 
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()

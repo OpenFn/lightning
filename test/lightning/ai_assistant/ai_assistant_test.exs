@@ -3392,6 +3392,39 @@ defmodule Lightning.AiAssistantTest do
       assert_received {:ai_assistant, :streaming_error,
                        %{error: "Streaming connection lost", session_id: _}}
     end
+
+    test "returns a clean binary error tuple for a non-2xx response with any body shape",
+         %{user: user, workflow: %{jobs: [job_1 | _]}} do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "help me",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      # Each shape (Stream function, %Stream{} struct, nested-message map)
+      # previously crashed the handler; assert it now yields a binary error.
+      for body <- [
+            Stream.unfold(:done, fn _ -> nil end),
+            Stream.map([], & &1),
+            %{"message" => %{"detail" => "invalid input"}}
+          ] do
+        expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+          {:ok, %Tesla.Env{status: 500, body: body}}
+        end)
+
+        assert {:error, message} = AiAssistant.query_stream(session, "help me")
+        assert is_binary(message)
+      end
+    end
   end
 
   describe "query_workflow_stream/3" do

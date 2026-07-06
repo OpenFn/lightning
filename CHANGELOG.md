@@ -37,6 +37,10 @@ and this project adheres to
 
 ### Fixed
 
+- Return a clean error instead of crashing when the AI assistant's streaming
+  endpoint responds with a non-success status.
+  [#4941](https://github.com/OpenFn/lightning/issues/4941)
+
 ## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
