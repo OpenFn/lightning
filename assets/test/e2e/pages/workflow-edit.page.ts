@@ -30,6 +30,10 @@ export class WorkflowEditPage extends LiveViewPage {
   readonly buildFromScratchCard = this.page.getByTestId(
     'build-from-scratch-card'
   );
+  readonly aiDisclaimerFooter = this.page.getByTestId('ai-disclaimer-footer');
+  readonly aiDisclaimerLearnMoreLink = this.page.getByRole('link', {
+    name: 'Learn more.',
+  });
 
   constructor(page: Page) {
     super(page);

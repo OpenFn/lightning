@@ -6,7 +6,10 @@ type AIDisclaimerFooterProps = {
 
 export function AIDisclaimerFooter({ muted = false }: AIDisclaimerFooterProps) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div
+      className="flex items-center gap-1.5"
+      data-testid="ai-disclaimer-footer"
+    >
       {!muted && (
         <span className="hero-exclamation-triangle h-3.5 w-3.5 text-amber-500 shrink-0" />
       )}

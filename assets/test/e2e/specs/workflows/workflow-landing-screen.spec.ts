@@ -119,6 +119,7 @@ test.describe('landing screen — AI-disabled @landing-screen', () => {
     await expect(workflowEdit.landingScreen).toBeVisible();
     await expect(workflowEdit.buildWithAIInput).not.toBeAttached();
     await expect(workflowEdit.buildWithAIButton).not.toBeAttached();
+    await expect(workflowEdit.aiDisclaimerFooter).not.toBeAttached();
   });
 });
 
@@ -172,6 +173,21 @@ test.describe('landing screen — AI-enabled @landing-screen @ai', () => {
     await expect(workflowEdit.buildWithAIButton).toBeVisible();
     await expect(workflowEdit.browseTemplatesCard).toBeVisible();
     await expect(workflowEdit.importYAMLLink).toBeVisible();
+  });
+
+  test('AI disclaimer footer is visible in the Build with AI card', async ({
+    page,
+  }) => {
+    const workflowEdit = new WorkflowEditPage(page);
+    await expect(workflowEdit.aiDisclaimerFooter).toBeVisible();
+    await expect(workflowEdit.aiDisclaimerLearnMoreLink).toHaveAttribute(
+      'href',
+      'https://www.openfn.org/ai'
+    );
+    await expect(workflowEdit.aiDisclaimerLearnMoreLink).toHaveAttribute(
+      'target',
+      '_blank'
+    );
   });
 
   test('Build it button is disabled when prompt is empty', async ({ page }) => {
