@@ -289,23 +289,6 @@ export const useSessionContextLoaded = (): boolean => {
 };
 
 /**
- * Hook to check if user has read AI assistant disclaimer
- * Returns false until session context loads, then reflects actual status
- */
-export const useHasReadAIDisclaimer = (): boolean => {
-  const sessionContextStore = useSessionContextStore();
-
-  const selectHasReadAIDisclaimer = sessionContextStore.withSelector(
-    state => state.hasReadAIDisclaimer
-  );
-
-  return useSyncExternalStore(
-    sessionContextStore.subscribe,
-    selectHasReadAIDisclaimer
-  );
-};
-
-/**
  * Hook to check if the user has experimental features enabled
  */
 export const useExperimentalFeaturesEnabled = (): boolean => {
@@ -319,26 +302,6 @@ export const useExperimentalFeaturesEnabled = (): boolean => {
     sessionContextStore.subscribe,
     selectExperimentalFeaturesEnabled
   );
-};
-
-/**
- * Hook to get setHasReadAIDisclaimer action
- * Returns function to update AI disclaimer read status (local state only)
- */
-export const useSetHasReadAIDisclaimer = () => {
-  const sessionContextStore = useSessionContextStore();
-
-  return sessionContextStore.setHasReadAIDisclaimer;
-};
-
-/**
- * Hook to get markAIDisclaimerRead action
- * Returns function to mark AI disclaimer as read and persist to backend
- */
-export const useMarkAIDisclaimerRead = () => {
-  const sessionContextStore = useSessionContextStore();
-
-  return sessionContextStore.markAIDisclaimerRead;
 };
 
 /**

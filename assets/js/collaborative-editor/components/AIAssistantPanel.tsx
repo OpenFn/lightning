@@ -14,7 +14,6 @@ import {
 import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
 
 import { ChatInput } from './ChatInput';
-import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
 
 interface AIAssistantPanelProps {
@@ -46,14 +45,6 @@ interface AIAssistantPanelProps {
    * Trigger value that when changed, re-focuses the chat input
    */
   focusTrigger?: number;
-  /**
-   * Whether to show the disclaimer screen overlay
-   */
-  showDisclaimer?: boolean;
-  /**
-   * Handler for when user accepts the disclaimer
-   */
-  onAcceptDisclaimer?: () => void;
   /**
    * Connection state for showing loading screen
    */
@@ -106,8 +97,6 @@ export function AIAssistantPanel({
   page = null,
   loadSessions: _loadSessions,
   focusTrigger,
-  showDisclaimer = false,
-  onAcceptDisclaimer,
   connectionState = 'connected',
   aiLimit = null,
   showGlobalAssistantOption = false,
@@ -661,20 +650,6 @@ export function AIAssistantPanel({
               {sessionId ? 'Loading messages...' : 'Loading conversations...'}
             </span>
           </div>
-        </div>
-      )}
-
-      {showDisclaimer && (
-        <div
-          className="absolute inset-0 z-50 bg-white"
-          role="dialog"
-          aria-modal="true"
-          aria-label="AI Assistant Terms"
-        >
-          <DisclaimerScreen
-            onAccept={onAcceptDisclaimer || (() => {})}
-            disabled={!onAcceptDisclaimer}
-          />
         </div>
       )}
     </aside>

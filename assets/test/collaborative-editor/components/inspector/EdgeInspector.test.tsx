@@ -165,7 +165,6 @@ describe('EdgeInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        has_read_ai_disclaimer: true,
       });
     });
   });

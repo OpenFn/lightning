@@ -45,12 +45,9 @@ import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
   useExperimentalFeaturesEnabled,
-  useHasReadAIDisclaimer,
   useIsNewWorkflow,
   useLimits,
-  useMarkAIDisclaimerRead,
   useProject,
-  useSessionContextLoaded,
   useUser,
 } from '../hooks/useSessionContext';
 import {
@@ -152,11 +149,8 @@ export function AIAssistantPanelWrapper({
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const sessionContextLoaded = useSessionContextLoaded();
-  const hasReadDisclaimer = useHasReadAIDisclaimer();
   const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
   const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
-  const markAIDisclaimerRead = useMarkAIDisclaimerRead();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const user = useUser();
@@ -509,13 +503,6 @@ export function AIAssistantPanelWrapper({
     setIsGlobalAssistantActive(active);
   }, []);
 
-  const handleMarkDisclaimerRead = useCallback(() => {
-    // Persist to backend via workflow channel and update local state
-    markAIDisclaimerRead();
-    // Also update AI store for consistency
-    aiStore.markDisclaimerRead();
-  }, [aiStore, markAIDisclaimerRead]);
-
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
@@ -732,8 +719,6 @@ export function AIAssistantPanelWrapper({
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
-              showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
-              onAcceptDisclaimer={handleMarkDisclaimerRead}
               aiLimit={limits.ai_assistant ?? null}
               showGlobalAssistantOption={experimentalFeaturesEnabled}
               isGlobalAssistantActive={isGlobalAssistantActive}

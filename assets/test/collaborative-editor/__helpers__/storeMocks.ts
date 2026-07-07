@@ -69,7 +69,6 @@ export const defaultSessionContextState: SessionContextState = {
   versionsLoading: false,
   versionsError: null,
   workflow_template: null,
-  hasReadAIDisclaimer: false,
   limits: {},
   isNewWorkflow: false,
   isLoading: false,
@@ -160,7 +159,6 @@ export function createMockSessionContextStore(
     clearError: vi.fn(),
     setLatestSnapshotLockVersion: vi.fn(),
     clearIsNewWorkflow: vi.fn(),
-    setHasReadAIDisclaimer: vi.fn(),
     getLimits: vi.fn().mockResolvedValue(undefined),
 
     // Internals

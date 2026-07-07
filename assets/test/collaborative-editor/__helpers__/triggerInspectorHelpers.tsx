@@ -165,7 +165,6 @@ export async function createTriggerTestHarness(
       project_repo_connection: null,
       webhook_auth_methods: webhookAuthMethods,
       workflow_template: null,
-      has_read_ai_disclaimer: false,
     });
   });
 

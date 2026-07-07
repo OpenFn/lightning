@@ -121,7 +121,6 @@ export const createSessionContextStore = (
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
-      hasReadAIDisclaimer: false,
       experimentalFeaturesEnabled: false,
       limits: {},
       isNewWorkflow,
@@ -189,7 +188,6 @@ export const createSessionContextStore = (
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
-        draft.hasReadAIDisclaimer = sessionContext.has_read_ai_disclaimer;
         draft.experimentalFeaturesEnabled =
           sessionContext.experimental_features_enabled;
         draft.limits = sessionContext.limits;
@@ -315,39 +313,6 @@ export const createSessionContextStore = (
       draft.isNewWorkflow = false;
     });
     notify('clearIsNewWorkflow');
-  };
-
-  /**
-   * Set AI disclaimer read status (local state only)
-   * Called when user accepts the AI assistant disclaimer
-   */
-  const setHasReadAIDisclaimer = (hasRead: boolean) => {
-    state = produce(state, draft => {
-      draft.hasReadAIDisclaimer = hasRead;
-    });
-    notify('setHasReadAIDisclaimer');
-  };
-
-  /**
-   * Mark AI disclaimer as read and persist to backend
-   * Called when user accepts the AI assistant disclaimer
-   */
-  const markAIDisclaimerRead = async (): Promise<void> => {
-    if (!_channelProvider?.channel) {
-      logger.warn('Cannot mark disclaimer read - no channel connected');
-      return;
-    }
-
-    try {
-      await channelRequest(
-        _channelProvider.channel,
-        'mark_ai_disclaimer_read',
-        {}
-      );
-      setHasReadAIDisclaimer(true);
-    } catch (error) {
-      logger.error('Failed to mark disclaimer read', error);
-    }
   };
 
   /**
@@ -643,8 +608,6 @@ export const createSessionContextStore = (
     clearError,
     setLatestSnapshotLockVersion,
     clearIsNewWorkflow,
-    setHasReadAIDisclaimer,
-    markAIDisclaimerRead,
     getLimits,
     setBaseWorkflow,
 
