@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { AIDisclaimerFooter } from './AIDisclaimerFooter';
+
 interface WorkflowOptionCardProps {
   icon: string;
   title: string;
@@ -95,7 +97,8 @@ export function LandingScreen({
                 Press Enter to submit. Use Shift+Enter or Alt+Enter for a new
                 line.
               </span>
-              <div className="flex justify-end px-3 py-2">
+              <div className="flex items-center justify-between px-3 py-2">
+                <AIDisclaimerFooter muted />
                 <button
                   data-testid="build-with-ai-button"
                   type="button"
