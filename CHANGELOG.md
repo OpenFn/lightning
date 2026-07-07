@@ -37,6 +37,12 @@ and this project adheres to
 
 ### Fixed
 
+- Sandbox merge no longer deletes a workflow that was added to the project after
+  the sandbox was branched. Such workflows were never part of the sandbox, so
+  they are excluded from the merge screen entirely. Workflows deleted inside the
+  sandbox still appear and now default to kept, so removing them from the project
+  is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+
 ## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
