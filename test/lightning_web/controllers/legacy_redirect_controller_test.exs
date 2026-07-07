@@ -38,7 +38,22 @@ defmodule LightningWeb.LegacyRedirectControllerTest do
                "/projects/#{project.id}/w/#{workflow.id}"
     end
 
-    test "redirects /w/:id/legacy preserving the (legacy) query string", %{
+    test "remaps the legacy 'a' (followed run) param to 'run'", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      conn =
+        get(conn, "/projects/#{project.id}/w/#{workflow.id}/legacy?a=run-1")
+
+      target = URI.parse(redirected_to(conn))
+
+      assert target.path == "/projects/#{project.id}/w/#{workflow.id}"
+      assert URI.decode_query(target.query) == %{"run" => "run-1"}
+    end
+
+    test "forwards other legacy params unchanged alongside the 'a' remap", %{
       conn: conn,
       project: project
     } do
@@ -50,8 +65,15 @@ defmodule LightningWeb.LegacyRedirectControllerTest do
           "/projects/#{project.id}/w/#{workflow.id}/legacy?s=some-job&m=expand&a=run-1"
         )
 
-      assert redirected_to(conn) ==
-               "/projects/#{project.id}/w/#{workflow.id}?s=some-job&m=expand&a=run-1"
+      target = URI.parse(redirected_to(conn))
+
+      assert target.path == "/projects/#{project.id}/w/#{workflow.id}"
+
+      assert URI.decode_query(target.query) == %{
+               "run" => "run-1",
+               "s" => "some-job",
+               "m" => "expand"
+             }
     end
   end
 end
