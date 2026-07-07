@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Report monthly active users (MAU) — distinct users active in the trailing 30
+  days — in the usage tracker submission, alongside the existing 90-day active
+  user count. Reported at both instance and project level, and bumps the usage
+  report schema to version 3.
+  [#4826](https://github.com/OpenFn/lightning/issues/4826)
 - Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
   external identity provider and link or unlink providers from their profile
   settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
