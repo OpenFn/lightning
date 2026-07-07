@@ -160,7 +160,7 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the email contains whitespace", %{attrs: attrs} do
@@ -169,19 +169,19 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the length of the email exceeds 160 characters", %{
       attrs: attrs
     } do
-      attrs = Map.put(attrs, :email, String.duplicate("@", 160))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 155) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 
       assert changeset.valid?
 
-      attrs = Map.put(attrs, :email, String.duplicate("@", 161))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 156) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 

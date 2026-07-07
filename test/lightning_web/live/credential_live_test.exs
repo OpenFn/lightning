@@ -2606,14 +2606,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Get the main environment body
       main_body = Enum.find(credential.credential_bodies, &(&1.name == "main"))
-      token = Lightning.AuthProviders.Common.TokenBody.new(main_body.body)
 
       assert %{
-               access_token: "ya29.a0AVvZ",
-               refresh_token: "1//03vpp6Li",
-               expires_at: _,
-               scope: "scope_1 scope_2"
-             } = token
+               "access_token" => "ya29.a0AVvZ",
+               "refresh_token" => "1//03vpp6Li",
+               "expires_at" => _,
+               "scope" => "scope_1 scope_2"
+             } = main_body.body
     end
 
     test "allow the user to edit an oauth credential", %{

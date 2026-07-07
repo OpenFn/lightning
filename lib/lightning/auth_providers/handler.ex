@@ -10,17 +10,19 @@ defmodule Lightning.AuthProviders.Handler do
   @type t :: %__MODULE__{
           name: String.t(),
           client: OAuth2.Client.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          scope: String.t()
         }
 
   @type opts :: [
           client_id: String.t(),
           client_secret: String.t(),
           redirect_uri: String.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          scope: String.t()
         ]
 
-  defstruct [:name, :client, :wellknown]
+  defstruct [:name, :client, :wellknown, scope: "openid email profile"]
 
   @doc """
   Create a new Provider struct, expects a name and opts:
@@ -41,6 +43,7 @@ defmodule Lightning.AuthProviders.Handler do
 
       :ok ->
         wellknown = opts[:wellknown]
+        scope = opts[:scope] || "openid email profile"
 
         client =
           OAuth2.Client.new(
@@ -54,7 +57,12 @@ defmodule Lightning.AuthProviders.Handler do
           |> OAuth2.Client.put_serializer("application/json", Jason)
 
         {:ok,
-         struct!(__MODULE__, name: name, client: client, wellknown: wellknown)}
+         struct!(__MODULE__,
+           name: name,
+           client: client,
+           wellknown: wellknown,
+           scope: scope
+         )}
     end
   end
 
@@ -78,9 +86,20 @@ defmodule Lightning.AuthProviders.Handler do
     new(model.name, opts)
   end
 
-  @spec authorize_url(handler :: __MODULE__.t()) :: String.t()
-  def authorize_url(handler) do
-    OAuth2.Client.authorize_url!(handler.client, scope: "openid email profile")
+  @doc """
+  Builds the provider authorize URL.
+
+  Extra `params` (e.g. `state:`) are forwarded to the OAuth2 client; the
+  configured `scope` is always included. Callers should pass an unguessable
+  `state` to protect the callback against CSRF.
+  """
+  @spec authorize_url(handler :: __MODULE__.t(), params :: keyword()) ::
+          String.t()
+  def authorize_url(handler, params \\ []) do
+    OAuth2.Client.authorize_url!(
+      handler.client,
+      Keyword.put(params, :scope, handler.scope)
+    )
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::
@@ -88,7 +107,7 @@ defmodule Lightning.AuthProviders.Handler do
   def get_token(handler, code) when is_binary(code) do
     case OAuth2.Client.get_token(handler.client,
            code: code,
-           scope: "openid email profile"
+           scope: handler.scope
          ) do
       {:ok, client} -> {:ok, client.token}
       {:error, %OAuth2.Response{body: body}} -> {:error, body}
@@ -96,12 +115,78 @@ defmodule Lightning.AuthProviders.Handler do
   end
 
   @spec get_userinfo(handler :: __MODULE__.t(), token :: OAuth2.AccessToken.t()) ::
-          map()
+          {:ok, map()} | {:error, term()}
   def get_userinfo(handler, token) do
-    OAuth2.Client.get!(
-      %{handler.client | token: token},
-      handler.wellknown.userinfo_endpoint
-    ).body
+    client = %{handler.client | token: token}
+
+    case OAuth2.Client.get(client, handler.wellknown.userinfo_endpoint) do
+      {:ok, %OAuth2.Response{body: userinfo}} ->
+        {:ok, maybe_resolve_email(client, handler.wellknown, userinfo)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Some providers (e.g. GitHub) don't carry a verification status in userinfo.
+  # The `/user/emails` endpoint is authoritative, so we derive `email_verified`
+  # from it rather than assuming a present userinfo email is verified.
+  defp maybe_resolve_email(
+         client,
+         %{user_emails_endpoint: endpoint},
+         %{} = userinfo
+       )
+       when is_binary(endpoint) do
+    emails = fetch_emails(client, endpoint)
+
+    if is_binary(userinfo["email"]) do
+      Map.put(userinfo, "email_verified", verified?(emails, userinfo["email"]))
+    else
+      case select_primary_verified_email(emails) do
+        nil ->
+          userinfo
+
+        email ->
+          userinfo
+          |> Map.put("email", email)
+          |> Map.put("email_verified", true)
+      end
+    end
+  end
+
+  defp maybe_resolve_email(_client, _wellknown, userinfo), do: userinfo
+
+  defp fetch_emails(client, endpoint) do
+    case OAuth2.Client.get(client, endpoint) do
+      {:ok, %OAuth2.Response{body: emails}} when is_list(emails) -> emails
+      _ -> []
+    end
+  end
+
+  defp verified?(emails, email) do
+    target = String.downcase(email)
+
+    Enum.any?(emails, fn
+      %{"verified" => true, "email" => candidate} when is_binary(candidate) ->
+        String.downcase(candidate) == target
+
+      _ ->
+        false
+    end)
+  end
+
+  defp select_primary_verified_email(emails) do
+    primary =
+      Enum.find_value(emails, fn
+        %{"primary" => true, "verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
+
+    primary ||
+      Enum.find_value(emails, fn
+        %{"verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
   end
 
   defp validate_opts(opts) do

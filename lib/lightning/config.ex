@@ -82,12 +82,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def oauth_provider(key) do
-      Application.get_env(:lightning, :oauth_clients)
-      |> Keyword.get(key)
-    end
-
-    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -138,6 +132,18 @@ defmodule Lightning.Config do
     @impl true
     def google(key) do
       Application.get_env(:lightning, Lightning.Google, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
+    def github_oauth(key) do
+      Application.get_env(:lightning, :github_oauth, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
+    def google_oauth(key) do
+      Application.get_env(:lightning, :google_oauth, [])
       |> Keyword.get(key)
     end
 
@@ -487,6 +493,8 @@ defmodule Lightning.Config do
   @callback env() :: :dev | :test | :prod
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
+  @callback github_oauth(key :: atom()) :: any()
+  @callback google_oauth(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_alternate_storage_enabled?() :: boolean()
@@ -503,7 +511,6 @@ defmodule Lightning.Config do
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
   @callback metrics_unclaimed_run_threshold_seconds() :: integer()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
@@ -617,10 +624,6 @@ defmodule Lightning.Config do
     impl().repo_connection_token_signer()
   end
 
-  def oauth_provider(key) do
-    impl().oauth_provider(key)
-  end
-
   def purge_deleted_after_days do
     impl().purge_deleted_after_days()
   end
@@ -659,6 +662,14 @@ defmodule Lightning.Config do
 
   def google(key) do
     impl().google(key)
+  end
+
+  def github_oauth(key) do
+    impl().github_oauth(key)
+  end
+
+  def google_oauth(key) do
+    impl().google_oauth(key)
   end
 
   def cors_origin do

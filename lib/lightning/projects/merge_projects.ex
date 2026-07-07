@@ -51,16 +51,26 @@ defmodule Lightning.Projects.MergeProjects do
         opts
       ) do
     source_project =
-      Repo.preload(source_project, workflows: [:jobs, :triggers, :edges])
+      Repo.preload(source_project,
+        workflows: [:jobs, :triggers, :edges],
+        project_credentials: []
+      )
 
     target_project =
-      Repo.preload(target_project, workflows: [:jobs, :triggers, :edges])
+      Repo.preload(target_project,
+        workflows: [:jobs, :triggers, :edges],
+        project_credentials: []
+      )
 
-    merge_project(
-      Map.from_struct(source_project),
-      Map.from_struct(target_project),
-      opts
-    )
+    credential_map =
+      build_credential_remap(
+        source_project.project_credentials,
+        target_project.project_credentials
+      )
+
+    Map.from_struct(source_project)
+    |> merge_project(Map.from_struct(target_project), opts)
+    |> remap_document_credentials(credential_map)
   end
 
   def merge_project(source_project, target_project, opts) do
@@ -553,10 +563,6 @@ defmodule Lightning.Projects.MergeProjects do
               if target_job do
                 job_attrs
                 |> Map.put(
-                  :project_credential_id,
-                  target_job.project_credential_id
-                )
-                |> Map.put(
                   :keychain_credential_id,
                   target_job.keychain_credential_id
                 )
@@ -584,6 +590,50 @@ defmodule Lightning.Projects.MergeProjects do
 
     {new_mapping, merged_from_source ++ deleted_targets}
   end
+
+  # Builds a map of `source_project_credential_id => target_project_credential_id`
+  # by matching on the shared underlying `credential_id`
+  defp build_credential_remap(
+         source_project_credentials,
+         target_project_credentials
+       ) do
+    target_by_credential =
+      Map.new(target_project_credentials, &{&1.credential_id, &1.id})
+
+    Map.new(source_project_credentials, fn pc ->
+      {pc.id, Map.get(target_by_credential, pc.credential_id)}
+    end)
+  end
+
+  defp remap_document_credentials(document, credential_map)
+       when map_size(credential_map) == 0,
+       do: document
+
+  defp remap_document_credentials(document, credential_map) do
+    Map.update(document, "workflows", [], fn workflows ->
+      Enum.map(workflows, &remap_workflow_credentials(&1, credential_map))
+    end)
+  end
+
+  defp remap_workflow_credentials(%{"jobs" => jobs} = workflow, credential_map) do
+    Map.put(
+      workflow,
+      "jobs",
+      Enum.map(jobs, &remap_job_credential(&1, credential_map))
+    )
+  end
+
+  defp remap_workflow_credentials(workflow, _credential_map), do: workflow
+
+  defp remap_job_credential(
+         %{"project_credential_id" => pc_id} = job,
+         credential_map
+       )
+       when not is_nil(pc_id) do
+    Map.put(job, "project_credential_id", Map.get(credential_map, pc_id, pc_id))
+  end
+
+  defp remap_job_credential(job, _credential_map), do: job
 
   defp build_merged_triggers(source_triggers, target_triggers, trigger_mappings) do
     # Process source triggers (matched and new)

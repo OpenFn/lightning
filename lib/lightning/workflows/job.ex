@@ -97,6 +97,12 @@ defmodule Lightning.Workflows.Job do
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
+    |> Validators.validate_uuid([
+      :id,
+      :workflow_id,
+      :project_credential_id,
+      :keychain_credential_id
+    ])
     |> Validators.validate_exclusive(
       [:project_credential_id, :keychain_credential_id],
       "cannot be set when the other credential type is also set"
@@ -122,7 +128,12 @@ defmodule Lightning.Workflows.Job do
     keychain_credential_id = get_field(changeset, :keychain_credential_id)
     workflow_id = get_field(changeset, :workflow_id)
 
-    if keychain_credential_id && workflow_id do
+    # Only query when both ids are present AND well-formed UUIDs. validate_uuid/2
+    # has already flagged a malformed id as a changeset error; issuing a Repo
+    # query with a malformed :binary_id here would raise Ecto.Query.CastError,
+    # defeating the whole point of surfacing it as a changeset error.
+    if Validators.valid_uuid?(keychain_credential_id) and
+         Validators.valid_uuid?(workflow_id) do
       case Lightning.Repo.get(Lightning.Workflows.Workflow, workflow_id) do
         %{project_id: project_id} ->
           case Lightning.Repo.get_by(

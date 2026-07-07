@@ -197,9 +197,91 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       code_elements = Floki.find(parsed_html, "code")
       assert length(code_elements) > 0
 
-      # The code element should have the language as its class
+      # MDEx emits the standard `language-` prefix on fenced code blocks
       code_element = hd(code_elements)
-      assert Floki.attribute(code_element, "class") == ["javascript"]
+      assert Floki.attribute(code_element, "class") == ["language-javascript"]
+    end
+
+    test "applies styling classes to standard markdown elements" do
+      content = """
+      # Title
+
+      ## Subtitle
+
+      Some paragraph text.
+
+      - bullet one
+      - bullet two
+
+      1. step one
+      2. step two
+      """
+
+      html =
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      assert Floki.attribute(Floki.find(parsed_html, "h1"), "class") == [
+               "text-2xl font-bold mb-6"
+             ]
+
+      assert Floki.attribute(Floki.find(parsed_html, "h2"), "class") == [
+               "text-xl font-semibold mb-4 mt-8"
+             ]
+
+      assert Floki.attribute(Floki.find(parsed_html, "ul"), "class") == [
+               "list-disc pl-8 space-y-1"
+             ]
+
+      assert Floki.attribute(Floki.find(parsed_html, "ol"), "class") == [
+               "list-decimal pl-8 space-y-1"
+             ]
+
+      assert "mt-1 mb-2 text-gray-800" in Floki.attribute(
+               Floki.find(parsed_html, "p"),
+               "class"
+             )
+
+      assert Enum.all?(
+               Floki.find(parsed_html, "li"),
+               &(Floki.attribute(&1, "class") == ["text-gray-800"])
+             )
+    end
+
+    test "renders GFM extensions (tables, strikethrough, autolinks)" do
+      content = """
+      | Name | Role |
+      |------|------|
+      | Ada  | Dev  |
+
+      ~~deprecated~~ and see https://example.com for details.
+      """
+
+      html =
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      # GFM tables render as a real table, not raw pipe text
+      assert Floki.find(parsed_html, "table") != []
+      assert Floki.find(parsed_html, "th") |> Floki.text() =~ "Name"
+      assert Floki.find(parsed_html, "td") |> Floki.text() =~ "Ada"
+
+      # Strikethrough
+      assert Floki.find(parsed_html, "del") |> Floki.text() == "deprecated"
+
+      # Bare URL is autolinked
+      assert Enum.any?(
+               Floki.find(parsed_html, "a"),
+               &(Floki.attribute(&1, "href") == ["https://example.com"])
+             )
     end
   end
 

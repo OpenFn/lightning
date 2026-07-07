@@ -14,6 +14,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserIdentity
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
   alias Lightning.Accounts.UserTOTP
@@ -172,7 +173,167 @@ defmodule Lightning.Accounts do
   def get_user_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
-    if User.valid_password?(user, password), do: user
+
+    cond do
+      is_nil(user) ->
+        User.valid_password?(user, password)
+        nil
+
+      is_nil(user.hashed_password) ->
+        User.valid_password?(user, password)
+        {:error, :sso_account}
+
+      User.valid_password?(user, password) ->
+        user
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Looks up a user by their SSO provider identity.
+
+  Returns the `%User{}` if found, otherwise `nil`.
+  """
+  def get_user_by_identity(provider, uid) do
+    from(u in User,
+      join: i in UserIdentity,
+      on: i.user_id == u.id,
+      where: i.provider == ^provider and i.uid == ^uid
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Links an SSO provider identity to a user.
+
+  Idempotent if already linked to the same user. Returns
+  `{:error, :identity_already_linked}` if the identity is claimed by another
+  user, and `{:error, :provider_already_linked}` if the user already has a
+  different identity for this provider (at most one identity per provider).
+  """
+  def link_user_identity(%User{id: user_id} = user, provider, uid) do
+    case get_identity(provider, uid) do
+      %UserIdentity{user_id: ^user_id} = identity ->
+        {:ok, identity}
+
+      %UserIdentity{} ->
+        {:error, :identity_already_linked}
+
+      nil ->
+        if provider_linked?(user, provider) do
+          {:error, :provider_already_linked}
+        else
+          %UserIdentity{}
+          |> UserIdentity.changeset(%{
+            user_id: user_id,
+            provider: provider,
+            uid: uid
+          })
+          |> Repo.insert()
+        end
+    end
+  end
+
+  defp get_identity(provider, uid) do
+    Repo.get_by(UserIdentity, provider: provider, uid: uid)
+  end
+
+  defp provider_linked?(%User{id: user_id}, provider) do
+    Repo.exists?(
+      from(i in UserIdentity,
+        where: i.user_id == ^user_id and i.provider == ^provider
+      )
+    )
+  end
+
+  @doc """
+  Returns the SSO identities linked to a user, ordered by provider name.
+  """
+  def list_user_identities(%User{id: user_id}) do
+    from(i in UserIdentity,
+      where: i.user_id == ^user_id,
+      order_by: [asc: i.provider]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Removes a linked SSO identity, addressed by its id and scoped to `user`.
+
+  Refuses to remove the last identity for an SSO-only user (no password set),
+  since that would lock them out. Such users can set a password by going
+  through the password reset flow first.
+
+  Returns:
+    * `{:ok, identity}` when the identity is removed
+    * `{:error, :not_linked}` when no such identity belongs to the user
+    * `{:error, :would_lock_out}` when removing would leave an SSO-only user
+      with no way to log in
+    * `{:error, :delete_failed}` when the identity exists but its deletion
+      failed at the database level
+  """
+  def unlink_user_identity(%User{} = user, identity_id) do
+    case Ecto.UUID.cast(identity_id) do
+      {:ok, identity_id} -> do_unlink_user_identity(user, identity_id)
+      :error -> {:error, :not_linked}
+    end
+  end
+
+  defp do_unlink_user_identity(%User{} = user, identity_id) do
+    Repo.transaction(fn ->
+      locked_user =
+        from(u in User, where: u.id == ^user.id, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      identity = Repo.get_by(UserIdentity, id: identity_id, user_id: user.id)
+
+      cond do
+        is_nil(locked_user) or is_nil(identity) ->
+          Repo.rollback(:not_linked)
+
+        not can_remove_identity?(locked_user, identity) ->
+          Repo.rollback(:would_lock_out)
+
+        true ->
+          case Repo.delete(identity) do
+            {:ok, deleted} -> deleted
+            {:error, _changeset} -> Repo.rollback(:delete_failed)
+          end
+      end
+    end)
+  end
+
+  defp can_remove_identity?(%User{hashed_password: hp}, _identity)
+       when is_binary(hp),
+       do: true
+
+  defp can_remove_identity?(%User{} = user, %UserIdentity{id: identity_id}) do
+    Repo.exists?(
+      from(i in UserIdentity,
+        where: i.user_id == ^user.id and i.id != ^identity_id
+      )
+    )
+  end
+
+  @doc """
+  Registers a brand-new user via SSO.
+
+  The user is created without a password and confirmed immediately.
+  A `user_registered` event is broadcast on success.
+  """
+  def register_user_from_sso(attrs, provider, uid) do
+    attrs = Map.put(attrs, :sso_identity, %{provider: provider, uid: uid})
+
+    Repo.transact(fn ->
+      AccountHook.handle_register_user(attrs)
+    end)
+    |> tap(fn result ->
+      with {:ok, user} <- result do
+        Events.user_registered(user)
+      end
+    end)
   end
 
   @doc """
@@ -612,7 +773,8 @@ defmodule Lightning.Accounts do
   defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
-      if Bcrypt.verify_pass(password, user.hashed_password) do
+      if is_binary(user.hashed_password) and
+           Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
         [current_password: "does not match password"]
@@ -676,6 +838,35 @@ defmodule Lightning.Accounts do
       user
       |> User.password_changeset(attrs)
       |> User.validate_current_password(password)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Sets the password for an SSO user that has no local password yet.
+
+  Unlike `update_user_password/3`, this does not require a current password,
+  since the user never had one. It is guarded so it can only be used on accounts
+  without an existing password.
+
+  ## Examples
+
+      iex> set_user_password(sso_user, %{password: ...})
+      {:ok, %User{}}
+
+  """
+  def set_user_password(%User{hashed_password: nil} = user, attrs) do
+    changeset = User.password_changeset(user, attrs)
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)

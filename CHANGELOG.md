@@ -22,6 +22,91 @@ and this project adheres to
   user count. Reported at both instance and project level, and bumps the usage
   report schema to version 3.
   [#4826](https://github.com/OpenFn/lightning/issues/4826)
+- Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
+  external identity provider and link or unlink providers from their profile
+  settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
+- Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
+  multiple local adaptor repos in precedence order (earlier paths win on name
+  collisions, and shadowed entries are logged). Lets a private repo override or
+  extend the canonical adaptors in local mode.
+  [#4714](https://github.com/OpenFn/lightning/pull/4714)
+
+### Changed
+
+- Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
+  [#4878](https://github.com/OpenFn/lightning/issues/4878)
+- Removed the unused dev-only `phoenix_storybook` dependency, clearing its
+  advisories from the `mix deps.audit` ignore list.
+  [#4846](https://github.com/OpenFn/lightning/issues/4846)
+- Bump worker to 1.27.0
+
+### Fixed
+
+## [2.16.8] - 2026-07-01
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
+### Changed
+
+- Global chat can now change multiple workflow steps in a single response. It
+  receives a full workflow YAML from the Apollo AI server with each step's job
+  code embedded, and applies the changes together. When a step is open in the
+  editor, its diff is previewed before applying; previewing several step diffs
+  at once is a follow-up.
+  [#4890](https://github.com/OpenFn/lightning/issues/4890)
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
+### Fixed
+
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
+
+## [2.16.7] - 2026-06-04
 
 ### Changed
 
@@ -30,9 +115,25 @@ and this project adheres to
   are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
   instead of `error`; only a genuinely missing project still logs at `error`.
   [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ### Fixed
 
+- Fix icon vertical alignment in sandbox alert banners
+  [#4730](https://github.com/OpenFn/lightning/issues/4730)
 - Fix issue where back button must be pressed 3 times to go back once from the
   Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
 - Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
@@ -65,6 +166,29 @@ and this project adheres to
   [#4810](https://github.com/OpenFn/lightning/issues/4810)
 - Workflow channel raises an exception when fetching trigger auth methods for an
   unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
 
 ## [2.16.6] - 2026-05-27
 

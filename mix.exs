@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.6",
+      version: "2.16.8",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -120,7 +120,6 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:phoenix_live_view, "~> 1.0.17"},
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -152,7 +151,7 @@ defmodule Lightning.MixProject do
       {:eqrcode, "~> 0.2"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
-      {:earmark, "~> 1.4"},
+      {:mdex, "~> 0.13"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
