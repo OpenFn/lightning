@@ -47,8 +47,7 @@ defmodule LightningWeb.AiAssistantChannel do
        %{
          session_id: session.id,
          session_type: session_type,
-         messages: format_messages(session.messages),
-         has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(user)
+         messages: format_messages(session.messages)
        },
        assign(socket,
          session_id: session.id,
@@ -112,14 +111,6 @@ defmodule LightningWeb.AiAssistantChannel do
     else
       reply_unauthorized_error("message not found or unauthorized", socket)
     end
-  end
-
-  @impl true
-  def handle_in("mark_disclaimer_read", _params, socket) do
-    user = socket.assigns.current_user
-
-    {:ok, _user} = AiAssistant.mark_disclaimer_read(user)
-    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true
