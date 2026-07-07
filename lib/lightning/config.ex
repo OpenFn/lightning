@@ -322,15 +322,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def ui_metrics_tracking_enabled? do
-      Keyword.get(ui_metrics_tracking_config(), :enabled)
-    end
-
-    defp ui_metrics_tracking_config do
-      Application.get_env(:lightning, :ui_metrics_tracking, [])
-    end
-
-    @impl true
     def credential_transfer_token_validity_in_days do
       2
     end
@@ -521,7 +512,6 @@ defmodule Lightning.Config do
   @callback storage() :: term()
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
-  @callback ui_metrics_tracking_enabled?() :: boolean()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cleartext_uuids_enabled?() :: boolean()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
@@ -775,10 +765,6 @@ defmodule Lightning.Config do
 
   def promex_enabled? do
     impl().promex_enabled?()
-  end
-
-  def ui_metrics_tracking_enabled? do
-    impl().ui_metrics_tracking_enabled?()
   end
 
   def credential_transfer_token_validity_in_days do

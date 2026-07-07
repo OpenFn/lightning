@@ -50,15 +50,6 @@ defmodule Lightning.Configtest do
       assert actual == not disabled
     end
 
-    test "indicates if the tracking of UI metrics is enabled" do
-      expected =
-        extract_from_config(:ui_metrics_tracking, :enabled)
-
-      actual = API.ui_metrics_tracking_enabled?()
-
-      assert expected == actual
-    end
-
     test "returns module responsible for injecting external metric plugins" do
       expected =
         extract_from_config(Lightning.Extensions, :external_metrics)
