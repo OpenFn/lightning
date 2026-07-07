@@ -419,7 +419,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
         workflow = %Workflow{
           id: workflow_id,
-          name: "Untitled workflow",
+          name: "Untitled Workflow",
           project_id: project.id
         }
 
