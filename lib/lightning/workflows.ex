@@ -136,7 +136,7 @@ defmodule Lightning.Workflows do
           keyword()
         ) ::
           {:ok, Workflow.t()}
-          | {:error, Ecto.Changeset.t(Workflow.t()) | false | term()}
+          | {:error, term()}
   def save_workflow(changeset_or_attrs, actor, opts \\ [])
 
   def save_workflow(
@@ -256,7 +256,7 @@ defmodule Lightning.Workflows do
   """
   @spec create_webhook_workflow(String.t(), struct()) ::
           {:ok, Workflow.t(), String.t()}
-          | {:error, Ecto.Changeset.t(Workflow.t()) | false | term()}
+          | {:error, term()}
   def create_webhook_workflow(project_id, actor) do
     trigger_id = Ecto.UUID.generate()
     job_id = Ecto.UUID.generate()
