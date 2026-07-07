@@ -194,11 +194,11 @@ are installed separately from the adaptor registry, into `priv/schemas/`.
 By default `mix lightning.install_schemas` will download schemas from the npm
 registry.
 
-Set LOCAL_ADAPTORS to true and `install_schemas` will reads each package's
+Set LOCAL_ADAPTORS to true and `install_schemas` will read each package's
 `configuration-schema.json` from the monorepo.
 
 ```sh
-LOCAL_ADAPTORS=true  mix lightning.install_schemas
+LOCAL_ADAPTORS=true mix lightning.install_schemas
 ```
 
 This clears and repopulates `priv/schemas/` from the local repo(s) ONLY. Re-run
