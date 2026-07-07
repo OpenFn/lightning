@@ -3,7 +3,7 @@ import React from 'react';
 import type { WithActionProps } from '#/react/lib/with-props';
 
 import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
+import { DEFAULT_TEXT } from './constants';
 
 import {
   useWorkflowStore,
