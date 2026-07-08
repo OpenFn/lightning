@@ -60,6 +60,7 @@ defmodule Lightning.InstallSchemasTest do
   describe "install_schemas mix task" do
     setup do
       stub(:hackney)
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn -> [] end)
       :ok
     end
 
