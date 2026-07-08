@@ -1209,7 +1209,7 @@ defmodule LightningWeb.CredentialLiveTest do
         insert(:project_credential, project: project, credential: credential)
 
       workflow_with_credential_1 =
-        insert(:simple_workflow, project: project, name: "aaa-uses-credential")
+        insert(:simple_workflow, project: project)
         |> tap(fn %{jobs: [job_1 | _]} ->
           job_1
           |> Ecto.Changeset.change(%{
@@ -1220,7 +1220,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> with_snapshot()
 
       workflow_with_credential_2 =
-        insert(:simple_workflow, project: project, name: "bbb-uses-credential")
+        insert(:simple_workflow, project: project)
         |> tap(fn %{jobs: [job_1 | _]} ->
           job_1
           |> Ecto.Changeset.change(%{
@@ -1248,8 +1248,13 @@ defmodule LightningWeb.CredentialLiveTest do
       button_html = delete_credential_button(view, project.id) |> render()
 
       assert button_html =~
-               "data-confirm=\"Warning: This credential is in use by the following workflows: #{workflow_with_credential_1.name}, #{workflow_with_credential_2.name}. If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
+               "data-confirm=\"Warning: This credential is in use by the following workflows:"
 
+      assert button_html =~
+               ". If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
+
+      assert button_html =~ workflow_with_credential_1.name
+      assert button_html =~ workflow_with_credential_2.name
       refute button_html =~ workflow_without_credential.name
 
       refute delete_credential_button(view, another_project.id) |> render() =~

@@ -39,6 +39,9 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- The credential revoke-access dialog now sorts the affected workflows
+  alphabetically. The order was previously left to the database and not
+  guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
 
 ### Fixed
 
@@ -49,9 +52,6 @@ and this project adheres to
   is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
-- The credential revoke-access dialog now lists the affected workflows in a
-  stable, alphabetical order instead of an arbitrary one.
-  [#4954](https://github.com/OpenFn/lightning/issues/4954)
 
 ## [2.16.8] - 2026-07-01
 
