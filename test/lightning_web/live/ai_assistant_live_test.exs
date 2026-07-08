@@ -18,13 +18,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     :ok
   end
 
-  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
-    Ecto.Changeset.change(user, %{
-      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
-    })
-    |> Lightning.Repo.update!()
-  end
-
   describe "AI Assistant - Job Code Mode" do
     setup :create_workflow
 
@@ -52,8 +45,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
-      assert html =~ "Get started with the AI Assistant"
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
     end
 
     @tag email: "user@openfn.org"
@@ -61,8 +56,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _]} = workflow,
-           user: user
+           workflow: %{jobs: [job_1 | _]} = workflow
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
@@ -102,8 +96,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :streaming_timeout -> 120_000
       end)
 
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(
           conn,
@@ -120,128 +112,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       refute render(view) =~
                "AI Assistant has not been configured for your instance"
-    end
-
-    @tag email: "user@openfn.org"
-    test "disclaimer ui is displayed when user has not read it", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-        :streaming_timeout -> 120_000
-      end)
-
-      refute user.preferences["ai_assistant.disclaimer_read_at"]
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
-          on_error: :raise
-        )
-
-      render_async(view)
-
-      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
-      assert html =~ "Get started with the AI Assistant"
-
-      refute has_element?(
-               view,
-               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
-             )
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
-      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
-      refute html =~ "Get started with the AI Assistant"
-
-      assert has_element?(
-               view,
-               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
-             )
-
-      assert Lightning.Repo.reload(user).preferences[
-               "ai_assistant.disclaimer_read_at"
-             ]
-    end
-
-    @tag email: "user@openfn.org"
-    test "disclaimer ui is displayed when user read it more than 24 hours ago",
-         %{
-           conn: conn,
-           project: project,
-           user: user,
-           workflow: %{jobs: [job_1 | _]} = workflow
-         } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-        :streaming_timeout -> 120_000
-      end)
-
-      date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
-
-      skip_disclaimer(user, date)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
-          on_error: :raise
-        )
-
-      render_async(view)
-
-      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
-      assert html =~ "Get started with the AI Assistant"
-
-      refute has_element?(
-               view,
-               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
-             )
-    end
-
-    @tag email: "user@openfn.org"
-    test "disclaimer ui is NOT displayed when user read it less than 24 hours ago",
-         %{
-           conn: conn,
-           project: project,
-           user: user,
-           workflow: %{jobs: [job_1 | _]} = workflow
-         } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-        :streaming_timeout -> 120_000
-      end)
-
-      skip_disclaimer(user)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
-        )
-
-      render_async(view)
-
-      html =
-        view
-        |> element("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
-        |> render()
-
-      refute html =~ "Get started with the AI Assistant"
-
-      assert has_element?(
-               view,
-               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
-             )
     end
 
     @tag email: "user@openfn.org"
@@ -266,13 +136,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       [:owner, :admin, :editor]
       |> Enum.map(fn role ->
-        timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
         user =
-          insert(:user,
-            email: "email-#{Enum.random(1..1_000)}@testemail.org",
-            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-          )
+          insert(:user, email: "email-#{Enum.random(1..1_000)}@testemail.org")
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -323,13 +188,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       [:viewer]
       |> Enum.map(fn role ->
-        timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-        user =
-          insert(:user,
-            email: "email-#{Enum.random(1..1_000)}@openfn.org",
-            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-          )
+        user = insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -380,7 +239,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "submit btn is disabled in case the job isnt saved yet", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -400,8 +258,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
             {:ok, %Tesla.Env{status: 200}}
         end
       )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
@@ -468,8 +324,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
-
       random_text = "Ping12345678"
 
       html =
@@ -512,8 +366,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
@@ -559,7 +411,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           messages: [
             %{role: :user, content: "Ping", user: user},
@@ -572,10 +423,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
-
-      refute render_async(view) =~ session.title
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       assert render_async(view) =~ session.title
 
@@ -627,8 +474,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
@@ -685,8 +530,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
-
       log =
         ExUnit.CaptureLog.capture_log(fn ->
           view
@@ -741,8 +584,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       assert has_element?(view, "#ai-assistant-error", error_message)
 
@@ -802,7 +643,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -858,8 +698,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -917,8 +755,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
-
       log =
         ExUnit.CaptureLog.capture_log(fn ->
           view
@@ -971,7 +807,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
@@ -1014,7 +849,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       older_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           updated_at: ~N[2024-01-01 10:00:00],
           title: "January Session",
@@ -1026,7 +860,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       newer_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           updated_at: ~N[2024-02-01 10:00:00],
           title: "February Session",
@@ -1035,8 +868,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
             %{role: :assistant, content: "Second response"}
           ]
         )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -1114,7 +945,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "input field is cleared after sending a message", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -1134,8 +964,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         }
       )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -1192,19 +1020,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           messages: [
             %{role: :user, content: "Hello", status: :error, user: user}
           ]
         )
-
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      Ecto.Changeset.change(user, %{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
 
       # Use manual testing mode to control job execution
       {:ok, view, _html} =
@@ -1288,7 +1108,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           messages: [
             %{role: :user, content: "First message", status: :error, user: user},
@@ -1303,13 +1122,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
             %{role: :user, content: "Third message", status: :error, user: user}
           ]
         )
-
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      Ecto.Changeset.change(user, %{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
 
       {:ok, view, _html} =
         live(
@@ -1358,7 +1170,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       single_message_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           messages: [
             %{role: :user, content: "Hello", status: :error, user: user}
@@ -1389,7 +1200,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "AI Assistant renders custom component for collecting feedback", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       on_exit(fn -> Application.delete_env(:lightning, :ai_feedback) end)
@@ -1420,11 +1230,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
         }
       )
 
-      skip_disclaimer(user)
-
       session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           messages: [
             %{role: :assistant, content: "Hello, World!"}
@@ -1512,8 +1319,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
-
       # checkbox is checked
       assert has_element?(
                view,
@@ -1595,8 +1400,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       # checkbox is checked
       assert has_element?(
@@ -1683,8 +1486,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-
-      view |> element("#get-started-with-ai-btn") |> render_click()
 
       # checkbox is unchecked
       assert has_element?(
@@ -1806,8 +1607,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      view |> element("#get-started-with-ai-btn") |> render_click()
-
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping", options: %{logs: "true"}})
@@ -1823,8 +1622,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode displays correctly for template generation", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
@@ -1837,8 +1635,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         %{method: :get, url: "http://localhost:4001" <> "/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -1859,8 +1655,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode creates sessions correctly", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -1886,8 +1681,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         }
       )
 
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
@@ -1909,8 +1702,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode generates and applies templates", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -1952,8 +1744,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           "usage" => %{}
         }
       )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2059,8 +1849,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode handles template generation errors", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -2082,8 +1871,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
              body: %{"message" => "Service temporarily unavailable"}
            }}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2124,7 +1911,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session1 =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "API Integration Workflow",
           messages: [
@@ -2135,7 +1921,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session2 =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Data Sync Workflow",
           messages: [
@@ -2148,12 +1933,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _other_session =
         insert(:workflow_chat_session,
-          user: user,
           project: other_project,
           title: "Other Project Workflow"
         )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2189,7 +1971,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       end)
 
       viewer_user = insert(:user, email: "viewer@test.org")
-      skip_disclaimer(viewer_user)
       insert(:project_user, project: project, user: viewer_user, role: :viewer)
 
       conn = log_in_user(conn, viewer_user)
@@ -2203,8 +1984,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode handles usage limits", %{
       conn: conn,
-      project: %{id: project_id} = project,
-      user: user
+      project: %{id: project_id} = project
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
@@ -2220,8 +2000,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           {:error, :exceeds_limit,
            %Lightning.Extensions.Message{text: error_message}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2244,8 +2022,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode session titles use project context", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -2263,19 +2040,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       session_with_title =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Custom Workflow Template"
         )
 
       session_without_title =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: nil
         )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -2302,8 +2075,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode doesn't validate job save state", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -2318,8 +2090,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2344,8 +2114,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     test "workflow mode clears template state on session start", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -2360,8 +2129,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
@@ -2401,9 +2168,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       user1 = insert(:user, email: "user1@test.org")
       user2 = insert(:user, email: "user2@test.org")
-
-      skip_disclaimer(user1)
-      skip_disclaimer(user2)
 
       insert(:project_user, project: project, user: user1, role: :editor)
       insert(:project_user, project: project, user: user2, role: :editor)
@@ -2453,7 +2217,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "mode registry returns correct handlers", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
@@ -2467,8 +2230,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         %{method: :get, url: "http://localhost:4001" <> "/"}, _opts ->
           {:ok, %Tesla.Env{status: 200}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2497,7 +2258,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "error handling is consistent across modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -2516,8 +2276,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         %{method: :post}, _opts ->
           {:error, :timeout}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2570,7 +2328,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "session management works independently for different modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -2591,19 +2348,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _job_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           title: "Job Debugging Session"
         )
 
       _workflow_session =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Workflow Creation Session"
         )
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2630,7 +2383,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "usage limits apply to both modes equally", %{
       conn: conn,
       project: %{id: project_id} = project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
@@ -2647,8 +2399,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           {:error, :exceeds_limit,
            %Lightning.Extensions.Message{text: error_message}}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2677,7 +2427,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "keyboard shortcuts work consistently across modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -2697,8 +2446,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         }
       )
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2727,63 +2474,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert render(workflow_form) =~ "phx-hook=\"SendMessageViaCtrlEnter\""
     end
 
-    test "disclaimer flow works for both modes", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-        :streaming_timeout -> 120_000
-      end)
-
-      refute user.preferences["ai_assistant.disclaimer_read_at"]
-
-      {:ok, job_view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
-        )
-
-      render_async(job_view)
-
-      job_html =
-        job_view
-        |> element("#job-#{job_1.id}-ai-assistant")
-        |> render()
-
-      assert job_html =~ "Get started with the AI Assistant"
-
-      {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
-
-      render_async(workflow_view)
-
-      workflow_html = render(workflow_view)
-      assert workflow_html =~ "Get started with the AI Assistant"
-
-      job_view |> element("#get-started-with-ai-btn") |> render_click()
-
-      user = Lightning.Repo.reload(user)
-      assert user.preferences["ai_assistant.disclaimer_read_at"]
-
-      {:ok, new_workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
-
-      render_async(new_workflow_view)
-
-      new_workflow_html = render(new_workflow_view)
-      refute new_workflow_html =~ "Get started with the AI Assistant"
-      assert has_element?(new_workflow_view, "#new-workflow-panel-assistant")
-    end
-
     test "both modes handle markdown formatting consistently", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -2821,8 +2514,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         }
       )
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2863,7 +2554,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "copy functionality works in both modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -2888,8 +2578,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         }
       )
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -2970,8 +2658,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         }
       )
 
-      skip_disclaimer(user)
-
       {:ok, job_view, _html} =
         live(
           conn,
@@ -3011,7 +2697,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "pagination works consistently across modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -3030,21 +2715,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       for i <- 1..25 do
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           title: "Job Session #{i}",
           updated_at: DateTime.add(DateTime.utc_now(), -i, :hour)
         )
 
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Workflow Session #{i}",
           updated_at: DateTime.add(DateTime.utc_now(), -i, :hour)
         )
       end
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -3090,7 +2771,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "sorting functionality works in both modes", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -3109,7 +2789,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _older_job_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           title: "Older Job Session",
           updated_at: ~N[2024-01-01 10:00:00]
@@ -3117,7 +2796,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _newer_job_session =
         insert(:job_chat_session,
-          user: user,
           job: job_1,
           title: "Newer Job Session",
           updated_at: ~N[2024-02-01 10:00:00]
@@ -3125,7 +2803,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _older_workflow_session =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Older Workflow Session",
           updated_at: ~N[2024-01-01 10:00:00]
@@ -3133,13 +2810,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       _newer_workflow_session =
         insert(:workflow_chat_session,
-          user: user,
           project: project,
           title: "Newer Workflow Session",
           updated_at: ~N[2024-02-01 10:00:00]
         )
-
-      skip_disclaimer(user)
 
       {:ok, job_view, _html} =
         live(
@@ -3180,7 +2854,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "component state persists across navigation", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -3236,8 +2909,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           end
       end)
 
-      skip_disclaimer(user)
-
       {:ok, job_view, _html} =
         live(
           conn,
@@ -3291,7 +2962,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "async result states work correctly", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -3315,8 +2985,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         }
       )
 
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(
           conn,
@@ -3339,7 +3007,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "error boundaries work correctly", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -3366,8 +3033,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
              }
            }}
       end)
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -3418,15 +3083,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # Create a session with a message that has a user with full name
       session =
         insert(:job_chat_session,
-          user: user,
           job: job,
           messages: [
             %{role: :user, content: "Test message", user: user},
             %{role: :assistant, content: "Test response"}
           ]
         )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -3446,7 +3108,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "renders avatar with partial name when user has nil last_name", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job | _]} = workflow
     } do
       stub_apollo_endpoint()
@@ -3471,8 +3132,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         )
 
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(
           conn,
@@ -3492,7 +3151,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
          %{
            conn: conn,
            project: project,
-           user: user,
            workflow: %{jobs: [job | _]} = workflow
          } do
       stub_apollo_endpoint()
@@ -3517,8 +3175,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           ]
         )
 
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(
           conn,
@@ -3536,7 +3192,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "renders question mark avatar for messages without user association", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job | _]} = workflow
     } do
       stub_apollo_endpoint()
@@ -3544,15 +3199,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # Create a session with a message that has no user (nil)
       session =
         insert(:job_chat_session,
-          user: user,
           job: job,
           messages: [
             %{role: :user, content: "Message without user", user: nil},
             %{role: :assistant, content: "Test response"}
           ]
         )
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(

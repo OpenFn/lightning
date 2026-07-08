@@ -129,6 +129,25 @@ describe('LandingScreen - AI assistant visibility', () => {
     expect(screen.getByTestId('import-yaml-link')).toBeInTheDocument();
   });
 
+  test('shows the AI disclaimer footer with a Learn more link when AI is enabled', () => {
+    renderLandingScreen({ aiAssistantEnabled: true });
+
+    expect(
+      screen.getByText(/Please use AI responsibly\. Never share PII\./)
+    ).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /learn more/i });
+    expect(link).toHaveAttribute('href', 'https://www.openfn.org/ai');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  test('does not show the AI disclaimer footer when AI is disabled', () => {
+    renderLandingScreen({ aiAssistantEnabled: false });
+
+    expect(
+      screen.queryByText(/Please use AI responsibly/)
+    ).not.toBeInTheDocument();
+  });
+
   test('shows "Recommended" badge when AI is enabled', () => {
     renderLandingScreen({ aiAssistantEnabled: true });
     expect(screen.getByText('Recommended')).toBeInTheDocument();

@@ -179,8 +179,6 @@ export interface AIAssistantState {
 
   jobCodeContext: JobCodeContext | null;
   workflowTemplateContext: WorkflowTemplateContext | null;
-
-  hasReadDisclaimer: boolean;
 }
 
 /**
@@ -210,8 +208,6 @@ export interface AIAssistantStore {
     limit?: number;
     append?: boolean;
   }) => Promise<void>;
-
-  markDisclaimerRead: () => void;
 
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;

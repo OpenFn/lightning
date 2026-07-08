@@ -240,8 +240,6 @@ defmodule LightningWeb.WorkflowChannel do
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
         workflow_template: render_workflow_template(workflow_template),
-        has_read_ai_disclaimer:
-          Lightning.AiAssistant.user_has_read_disclaimer?(user),
         experimental_features_enabled:
           Lightning.Accounts.experimental_features_enabled?(user),
         limits: render_limits(project.id),
@@ -262,14 +260,6 @@ defmodule LightningWeb.WorkflowChannel do
         limit: render_limit_result(limit_result)
       }
     end)
-  end
-
-  @impl true
-  def handle_in("mark_ai_disclaimer_read", _params, socket) do
-    {:ok, _user} =
-      Lightning.AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
-
-    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true

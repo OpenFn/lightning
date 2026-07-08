@@ -26,22 +26,12 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     %{workflow: workflow, snapshot: snapshot}
   end
 
-  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
-    Ecto.Changeset.change(user, %{
-      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
-    })
-    |> Lightning.Repo.update!()
-  end
-
   describe "component mounting and rendering" do
     test "renders the AI chat panel with correct structure", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
@@ -54,8 +44,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "generates and applies valid workflow template", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       valid_workflow_yaml = """
       name: Updated Workflow
@@ -88,8 +77,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           }
         ]
       })
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
@@ -150,8 +137,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "handles YAML parse errors from JavaScript", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       invalid_yaml = """
       name: Bad Workflow
@@ -165,8 +151,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         "response_yaml" => invalid_yaml,
         "usage" => %{}
       })
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
@@ -214,8 +198,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "handles validation errors when parsed workflow is invalid", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       stub_ai_with_health_check("http://localhost:4001", %{
         "response" => "Here's a workflow with validation issues",
@@ -229,8 +212,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         """,
         "usage" => %{}
       })
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
@@ -298,8 +279,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       workflow: workflow,
       user: user
     } do
-      skip_disclaimer(user)
-
       session =
         insert(:chat_session,
           project: project,
@@ -348,8 +327,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "handles multiple job errors with proper naming", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       Oban.Testing.with_testing_mode(:manual, fn ->
         workflow_yaml = """
@@ -400,8 +378,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
             }
           ]
         })
-
-        skip_disclaimer(user)
 
         {:ok, view, _html} =
           live(
@@ -500,8 +476,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "handles workflow yaml parse errors", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       Oban.Testing.with_testing_mode(:manual, fn ->
         workflow_yaml = "unparseable workflow"
@@ -530,8 +505,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
             }
           ]
         })
-
-        skip_disclaimer(user)
 
         {:ok, view, _html} =
           live(
@@ -594,16 +567,13 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "shows loading state when sending message", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
       stub_ai_with_health_check("http://localhost:4001", %{
         "response" => "Processing...",
         "response_yaml" => nil,
         "usage" => %{}
       })
-
-      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
@@ -624,11 +594,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "preserves workflow params between updates", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
@@ -670,11 +637,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
     test "logs YAML parse errors", %{
       conn: conn,
       project: project,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
-      skip_disclaimer(user)
-
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 

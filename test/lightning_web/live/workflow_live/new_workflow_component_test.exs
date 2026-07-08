@@ -50,13 +50,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     %{templates: templates}
   end
 
-  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
-    Ecto.Changeset.change(user, %{
-      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
-    })
-    |> Lightning.Repo.update!()
-  end
-
   describe "workflow creation methods" do
     @tag stub_apollo: false
     test "displays template and import options", %{conn: conn, project: project} do
@@ -389,8 +382,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     @tag stub_apollo: false
     test "switching to AI method without search term shows AI interface", %{
       conn: conn,
-      project: project,
-      user: user
+      project: project
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
@@ -405,8 +397,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       ai_assistant = element(view, "#new-workflow-panel-assistant")
 
       refute has_element?(ai_assistant)
-
-      skip_disclaimer(user)
 
       view
       |> element("#template-label-ai-dynamic-template")
@@ -423,8 +413,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     test "switching to AI method with search term creates session and shows AI interface",
          %{
            conn: conn,
-           project: project,
-           user: user
+           project: project
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
@@ -443,8 +432,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       view
       |> form("#search-templates-form", %{"search" => "sync data from API"})
       |> render_change()
-
-      skip_disclaimer(user)
 
       view
       |> element("#template-label-ai-dynamic-template")

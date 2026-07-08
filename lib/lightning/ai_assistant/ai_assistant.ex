@@ -15,7 +15,6 @@ defmodule Lightning.AiAssistant do
 
   alias Ecto.Changeset
   alias Ecto.Multi
-  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
@@ -71,64 +70,6 @@ defmodule Lightning.AiAssistant do
   @spec endpoint_available?() :: boolean()
   def endpoint_available? do
     ApolloClient.test() == :ok
-  end
-
-  @doc """
-  Checks if a user has acknowledged the AI assistant disclaimer recently.
-
-  Verifies that the user has read and accepted the AI assistant terms and conditions
-  within the last 24 hours. This ensures users are aware of AI limitations and usage terms.
-
-  ## Parameters
-
-  - `user` - The `%User{}` struct to check
-
-  ## Returns
-
-  `true` if disclaimer was read within 24 hours, `false` otherwise.
-  """
-  @spec user_has_read_disclaimer?(User.t()) :: boolean()
-  def user_has_read_disclaimer?(user) do
-    read_at =
-      user
-      |> Accounts.get_preference("ai_assistant.disclaimer_read_at")
-      |> case do
-        timestamp when is_binary(timestamp) -> String.to_integer(timestamp)
-        other -> other
-      end
-
-    case read_at && DateTime.from_unix(read_at) do
-      {:ok, datetime} ->
-        DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
-
-      _error ->
-        false
-    end
-  end
-
-  @doc """
-  Records that a user has read and accepted the AI assistant disclaimer.
-
-  Updates the user's preferences with a timestamp indicating when they
-  acknowledged the AI assistant terms and conditions.
-
-  ## Parameters
-
-  - `user` - The `%User{}` who read the disclaimer
-
-  ## Returns
-
-  `{:ok, user}` - Successfully recorded disclaimer acceptance.
-  """
-  @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
-  def mark_disclaimer_read(user) do
-    timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-    Accounts.update_user_preference(
-      user,
-      "ai_assistant.disclaimer_read_at",
-      timestamp
-    )
   end
 
   @doc """

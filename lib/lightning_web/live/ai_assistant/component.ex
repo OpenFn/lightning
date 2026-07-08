@@ -11,7 +11,6 @@ defmodule LightningWeb.AiAssistant.Component do
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.AiAssistant.Limiter
-  alias LightningWeb.AiAssistant.Quotes
   alias LightningWeb.Live.AiAssistant.ModeRegistry
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
@@ -31,7 +30,6 @@ defmodule LightningWeb.AiAssistant.Component do
        ai_limit_result: nil,
        pagination_meta: nil,
        sort_direction: :desc,
-       has_read_disclaimer: false,
        all_sessions: AsyncResult.ok([]),
        pending_message: AsyncResult.ok(nil),
        ai_enabled: AiAssistant.enabled?(),
@@ -196,8 +194,7 @@ defmodule LightningWeb.AiAssistant.Component do
     |> assign(assigns)
     |> assign(
       callbacks: assigns[:callbacks] || %{},
-      handler: handler,
-      has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(assigns.user)
+      handler: handler
     )
     |> assign_new(:changeset, fn _ ->
       handler.validate_form(%{"content" => nil})
@@ -223,12 +220,6 @@ defmodule LightningWeb.AiAssistant.Component do
   defp render_content(%{ai_enabled: false} = assigns) do
     ~H"""
     <.render_ai_not_configured />
-    """
-  end
-
-  defp render_content(%{has_read_disclaimer: false} = assigns) do
-    ~H"""
-    <.render_onboarding id={@id} myself={@myself} can_edit={@can_edit} />
     """
   end
 
@@ -293,11 +284,6 @@ defmodule LightningWeb.AiAssistant.Component do
          )
          |> save_message(socket.assigns.action, trimmed_content)}
     end
-  end
-
-  def handle_event("mark_disclaimer_read", _params, socket) do
-    {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.user)
-    {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
   def handle_event("toggle_sort", _params, socket) do
@@ -621,7 +607,6 @@ defmodule LightningWeb.AiAssistant.Component do
 
           <.chat_input
             id={"chat-input-#{@id}"}
-            disclaimer_id={"ai-assistant-disclaimer-#{@id}"}
             form_id={"ai-assistant-form-#{@id}"}
             form={form}
             disabled={
@@ -636,12 +621,10 @@ defmodule LightningWeb.AiAssistant.Component do
         </.form>
       </.async_result>
     </div>
-    <.disclaimer id={"ai-assistant-disclaimer-#{@id}"} />
     """
   end
 
   attr :id, :string
-  attr :disclaimer_id, :string
   attr :disabled, :boolean
   attr :tooltip, :string
   attr :form, :map, required: true
@@ -722,7 +705,7 @@ defmodule LightningWeb.AiAssistant.Component do
       <% end %>
 
       <div class="mt-2">
-        <.ai_footer disclaimer_id={@disclaimer_id} />
+        <.ai_footer />
       </div>
     </div>
     """
@@ -966,47 +949,9 @@ defmodule LightningWeb.AiAssistant.Component do
     end
   end
 
-  defp render_onboarding(assigns) do
-    assigns = assign(assigns, ai_quote: Quotes.random_enabled())
-
-    ~H"""
-    <div class="h-full flex flex-col">
-      <div class="flex-1 flex flex-col items-center md:justify-center relative">
-        <p class="text-gray-700 font-medium mb-8 w-1/2 text-center">
-          The AI Assistant is a chat agent designed to help you write job code.
-          <br /><br />
-          Remember that you, the human in control, are responsible for how its output is used.
-        </p>
-
-        <.button
-          theme="primary"
-          id="get-started-with-ai-btn"
-          phx-click="mark_disclaimer_read"
-          phx-target={@myself}
-          disabled={!@can_edit}
-        >
-          Get started with the AI Assistant
-        </.button>
-
-        <.disclaimer id={"ai-assistant-disclaimer-#{@id}"} />
-      </div>
-      <.ai_footer disclaimer_id={"ai-assistant-disclaimer-#{@id}"} />
-    </div>
-    """
-  end
-
   defp ai_footer(assigns) do
     ~H"""
     <div class="flex w-full">
-      <p class="flex-1 text-xs mt-1 text-left ml-1">
-        <a
-          href="#"
-          phx-click={JS.show(to: "##{@disclaimer_id}")}
-          class="text-primary-400 hover:text-primary-600"
-        >
-          About the AI Assistant
-        </a>
-      </p>
       <p class="flex-1 text-xs mt-1 text-right mr-1">
         <a
           href="https://www.openfn.org/ai"
@@ -1016,110 +961,6 @@ defmodule LightningWeb.AiAssistant.Component do
           OpenFn Responsible AI Policy
         </a>
       </p>
-    </div>
-    """
-  end
-
-  defp disclaimer(assigns) do
-    ~H"""
-    <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
-      <div class="h-full w-full overflow-y-auto">
-        <div class="bg-gray-50 p-4 flex justify-between border-solid border-b-1">
-          <span class="font-medium text-gray-700">
-            About the AI Assistant
-          </span>
-          <a href="#" phx-click={JS.hide(to: "##{@id}")}>
-            <.icon name="hero-x-mark" class="h-5 w-5" />
-          </a>
-        </div>
-        <div class="p-4 text-sm flex flex-col gap-4">
-          <p>
-            The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
-          </p>
-          <ul class="list-disc list-inside pl-4">
-            <li>Create a workflow template for you</li>
-            <li>Draft job code for you</li>
-            <li>Explain adaptor functions and how they are used</li>
-            <li>Proofread and debug your job code</li>
-            <li>Help understand why you are seeing an error</li>
-          </ul>
-          <p>
-            Messages are saved unencrypted to the OpenFn database and may be monitored for quality control.
-          </p>
-          <h2 class="font-bold">
-            Usage Tips
-          </h2>
-          <ul class="list-disc list-inside pl-4">
-            <li>All chats are saved to the Project and can be viewed at any time</li>
-            <li>Press <code>CTRL + ENTER</code> to send a message</li>
-            <li>
-              The Assistant can see your code and knows about OpenFn - just ask a question and don't worry too much about giving it context
-            </li>
-          </ul>
-          <h2 class="font-bold">
-            Using The Assistant Safely
-          </h2>
-          <p>
-            The AI assistant uses Claude by Anthropic, a third-party AI model.
-            Messages are stored on OpenFn servers and temporarily on Anthropic servers (up to 30 days) but are not used to train AI models. <a
-              href="https://privacy.claude.com/en/collections/10672411-data-handling-retention"
-              target="_blank"
-              class="text-primary-600 hover:text-primary-700"
-            >
-              Read more about this here
-            </a>.
-          </p>
-          <p>
-            Although we are constantly monitoring and improving the performance of the model, the Assistant can
-            sometimes provide incorrect or misleading responses. You should consider the responses critically and verify
-            the output where possible.
-          </p>
-          <p>
-            Remember that all responses are generated by an algorithm, and you are responsible for how its output is used.
-          </p>
-          <p>
-            Do not deploy autogenerated code in production environments without thorough testing.
-          </p>
-          <p>
-            Do not include real user data, personally identifiable information, or sensitive business data in your queries.
-          </p>
-          <h2 class="font-bold">
-            How it works
-          </h2>
-          <p>
-            The Assistant uses Claude Sonnet 3.7, by <a
-              href="https://www.anthropic.com/"
-              target="_blank"
-              class="text-primary-600"
-            >Anthropic</a>, a Large Language Model (LLM) designed with a commitment to safety and privacy.
-          </p>
-          <p>
-            Chat is saved with the Step and shared with all users with access to the Workflow.
-            All collaborators within a project can see questions asked by other users.
-          </p>
-          <p>
-            We include your step code in all queries sent to Claude, including some basic documentation,
-            ensuring the model is well informed and can see what you can see.
-            We do not send your input data, output data or logs to Anthropic.
-          </p>
-          <p>
-            The Assistant uses a mixture of hand-written prompts and information
-            from <a href="https://docs.openfn.org" target="none">docs.openfn.org</a>
-            to inform its responses.
-          </p>
-          <h2 class="font-bold">Responsible AI Policy</h2>
-          <p>
-            Read about our approach to AI in the
-            <a
-              href="https://www.openfn.org/ai"
-              target="_blank"
-              class="text-primary-600"
-            >
-              OpenFn Responsible AI Policy
-            </a>
-          </p>
-        </div>
-      </div>
     </div>
     """
   end

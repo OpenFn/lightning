@@ -12,9 +12,9 @@ import {
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
+import { useIsNewWorkflow } from '../hooks/useSessionContext';
 
 import { ChatInput } from './ChatInput';
-import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
 
 interface AIAssistantPanelProps {
@@ -46,14 +46,6 @@ interface AIAssistantPanelProps {
    * Trigger value that when changed, re-focuses the chat input
    */
   focusTrigger?: number;
-  /**
-   * Whether to show the disclaimer screen overlay
-   */
-  showDisclaimer?: boolean;
-  /**
-   * Handler for when user accepts the disclaimer
-   */
-  onAcceptDisclaimer?: () => void;
   /**
    * Connection state for showing loading screen
    */
@@ -106,8 +98,6 @@ export function AIAssistantPanel({
   page = null,
   loadSessions: _loadSessions,
   focusTrigger,
-  showDisclaimer = false,
-  onAcceptDisclaimer,
   connectionState = 'connected',
   aiLimit = null,
   showGlobalAssistantOption = false,
@@ -132,6 +122,7 @@ export function AIAssistantPanel({
   const { loadSessionList } = useAISessionListCommands();
   const selectedStepId = useSelectedStepId();
   const selectedRunId = useSelectedRunId();
+  const isNewWorkflow = useIsNewWorkflow();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -330,33 +321,36 @@ export function AIAssistantPanel({
                     'animate-in fade-in-0 zoom-in-95 duration-100'
                   )}
                 >
-                  <div className="py-1.5">
-                    <button
-                      type="button"
-                      data-testid="sessions-button"
-                      onClick={handleShowSessions}
-                      className={cn(
-                        'group flex items-center w-full',
-                        'px-4 py-2.5 text-sm font-medium',
-                        'text-gray-700 hover:bg-gray-50',
-                        'transition-colors duration-150',
-                        view === 'sessions' && 'bg-primary-50 text-primary-700'
-                      )}
-                    >
-                      <span
+                  {!isNewWorkflow && (
+                    <div className="py-1.5">
+                      <button
+                        type="button"
+                        data-testid="sessions-button"
+                        onClick={handleShowSessions}
                         className={cn(
-                          'hero-chat-bubble-left-right h-5 w-5 mr-3',
-                          view === 'sessions'
-                            ? 'text-primary-600'
-                            : 'text-gray-400 group-hover:text-gray-500'
+                          'group flex items-center w-full',
+                          'px-4 py-2.5 text-sm font-medium',
+                          'text-gray-700 hover:bg-gray-50',
+                          'transition-colors duration-150',
+                          view === 'sessions' &&
+                            'bg-primary-50 text-primary-700'
                         )}
-                      />
-                      <span className="flex-1 text-left">Conversations</span>
-                      {view === 'sessions' && (
-                        <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
-                      )}
-                    </button>
-                  </div>
+                      >
+                        <span
+                          className={cn(
+                            'hero-chat-bubble-left-right h-5 w-5 mr-3',
+                            view === 'sessions'
+                              ? 'text-primary-600'
+                              : 'text-gray-400 group-hover:text-gray-500'
+                          )}
+                        />
+                        <span className="flex-1 text-left">Conversations</span>
+                        {view === 'sessions' && (
+                          <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <div className="py-1.5">
                     <button
                       type="button"
@@ -661,20 +655,6 @@ export function AIAssistantPanel({
               {sessionId ? 'Loading messages...' : 'Loading conversations...'}
             </span>
           </div>
-        </div>
-      )}
-
-      {showDisclaimer && (
-        <div
-          className="absolute inset-0 z-50 bg-white"
-          role="dialog"
-          aria-modal="true"
-          aria-label="AI Assistant Terms"
-        >
-          <DisclaimerScreen
-            onAccept={onAcceptDisclaimer || (() => {})}
-            disabled={!onAcceptDisclaimer}
-          />
         </div>
       )}
     </aside>

@@ -95,7 +95,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       sessionListPagination: null,
       jobCodeContext: null,
       workflowTemplateContext: null,
-      hasReadDisclaimer: false,
     } as AIAssistantState,
     draft => draft
   );
@@ -195,17 +194,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     });
 
     notify('retryMessage');
-  };
-
-  /**
-   * Mark AI disclaimer as read
-   */
-  const markDisclaimerRead = () => {
-    state = produce(state, draft => {
-      draft.hasReadDisclaimer = true;
-    });
-
-    notify('markDisclaimerRead');
   };
 
   /**
@@ -714,7 +702,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     disconnect,
     setMessageSending,
     retryMessage,
-    markDisclaimerRead,
     clearSession,
     loadSession,
     loadSessionList,

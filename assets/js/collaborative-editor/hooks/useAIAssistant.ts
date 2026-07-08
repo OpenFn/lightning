@@ -31,7 +31,6 @@ export const useAICommands = () => {
     disconnect: store.disconnect,
     setMessageSending: store.setMessageSending,
     retryMessage: store.retryMessage,
-    markDisclaimerRead: store.markDisclaimerRead,
     clearSession: store.clearSession,
   };
 };
@@ -157,17 +156,6 @@ export const useAIIsSending = () => {
   return useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.isSending)
-  );
-};
-
-/**
- * Get disclaimer read state
- */
-export const useAIHasReadDisclaimer = () => {
-  const store = useAIStore();
-  return useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.hasReadDisclaimer)
   );
 };
 

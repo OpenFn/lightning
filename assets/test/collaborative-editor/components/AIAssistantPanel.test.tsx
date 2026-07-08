@@ -22,11 +22,16 @@ import { AIAssistantPanel } from '../../../js/collaborative-editor/components/AI
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
 import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
-import { createMockHistoryStore } from '../__helpers__/storeMocks';
+import {
+  createMockHistoryStore,
+  createMockSessionContextStore,
+  defaultSessionContextState,
+} from '../__helpers__/storeMocks';
 
 describe('AIAssistantPanel', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
   let mockHistoryStore: ReturnType<typeof createMockHistoryStore>;
+  let mockSessionContextStore: ReturnType<typeof createMockSessionContextStore>;
   let mockOnClose: ReturnType<typeof vi.fn>;
   let mockOnNewConversation: ReturnType<typeof vi.fn>;
   let mockOnSessionSelect: ReturnType<typeof vi.fn>;
@@ -41,6 +46,7 @@ describe('AIAssistantPanel', () => {
           {
             aiAssistantStore: mockStore,
             historyStore: mockHistoryStore,
+            sessionContextStore: mockSessionContextStore,
           } as any
         }
       >
@@ -52,6 +58,7 @@ describe('AIAssistantPanel', () => {
   beforeEach(() => {
     mockStore = createAIAssistantStore();
     mockHistoryStore = createMockHistoryStore();
+    mockSessionContextStore = createMockSessionContextStore();
     mockOnClose = vi.fn();
     mockOnNewConversation = vi.fn();
     mockOnSessionSelect = vi.fn();
@@ -298,6 +305,27 @@ describe('AIAssistantPanel', () => {
       );
       expect(policyLink.closest('a')).toHaveAttribute('target', '_blank');
     });
+
+    it('should hide Conversations when workflow is new', async () => {
+      const newWorkflowState = {
+        ...defaultSessionContextState,
+        isNewWorkflow: true,
+      };
+      mockSessionContextStore = createMockSessionContextStore({
+        getSnapshot: () => newWorkflowState,
+        withSelector:
+          <T,>(selector: (state: typeof newWorkflowState) => T) =>
+          () =>
+            selector(newWorkflowState),
+      });
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
+
+      const menuButton = screen.getByLabelText('More options');
+      await userEvent.click(menuButton);
+
+      expect(screen.queryByText('Conversations')).not.toBeInTheDocument();
+      expect(screen.getByText('About the AI Assistant')).toBeInTheDocument();
+    });
   });
 
   describe('About Modal', () => {
@@ -430,6 +458,7 @@ describe('AIAssistantPanel', () => {
             {
               aiAssistantStore: mockStore,
               historyStore: mockHistoryStore,
+              sessionContextStore: mockSessionContextStore,
             } as any
           }
         >
@@ -468,6 +497,7 @@ describe('AIAssistantPanel', () => {
             {
               aiAssistantStore: mockStore,
               historyStore: mockHistoryStore,
+              sessionContextStore: mockSessionContextStore,
             } as any
           }
         >
