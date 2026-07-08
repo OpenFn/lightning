@@ -34,6 +34,9 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- Replaced the full-screen AI disclaimer gate in the AI assistant with a
+  persistent disclaimer footer shown in the chat input and landing screen.
+  [#4911](https://github.com/OpenFn/lightning/issues/4911)
 
 ### Fixed
 
