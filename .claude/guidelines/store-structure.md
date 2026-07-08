@@ -100,7 +100,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 **Intent:** Provide the server's view of "who is editing, what project, and with what permissions." This is the authorization and metadata backbone — it shapes what the UI shows and allows.
 
-**Key State:** `user`, `project`, `config`, `permissions`, `latestSnapshotLockVersion`, `projectRepoConnection`, `webhookAuthMethods`, `versions`/`versionsLoading`/`versionsError`, `workflow_template`, `hasReadAIDisclaimer`, `limits` (runs/workflow_activation/github_sync), `isNewWorkflow`, `workflow` (base workflow metadata)
+**Key State:** `user`, `project`, `config`, `permissions`, `latestSnapshotLockVersion`, `projectRepoConnection`, `webhookAuthMethods`, `versions`/`versionsLoading`/`versionsError`, `workflow_template`, `limits` (runs/workflow_activation/github_sync), `isNewWorkflow`, `workflow` (base workflow metadata)
 
 **Key behavior:**
 - `requestSessionContext()` sends `get_context` push; response is Zod-validated via `SessionContextResponseSchema`
@@ -108,7 +108,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 - `getLimits(actionType)` fetches plan limits for `new_run`, `activate_workflow`, or `github_sync`
 - Listens for `session_context_updated`, `workflow_saved`, `webhook_auth_methods_updated`, `template_updated` channel events
 
-**Commands:** `requestSessionContext`, `requestVersions`, `clearVersions`, `setLatestSnapshotLockVersion`, `getLimits`, `markAIDisclaimerRead`, `setBaseWorkflow`
+**Commands:** `requestSessionContext`, `requestVersions`, `clearVersions`, `setLatestSnapshotLockVersion`, `getLimits`, `setBaseWorkflow`
 
 **Don't use for:** Collaborative workflow data, user presence, credentials, adaptors.
 
@@ -205,7 +205,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 **Intent:** Manage AI assistant chat sessions, messages, and collaborative AI use. Supports multiple users viewing the same session, with send-blocking while AI is responding.
 
-**Key State:** `connectionState` (`disconnected`/`connecting`/`connected`), `sessionId`, `sessionType` (`job_code`/`workflow_template`), `messages`, `isLoading`/`isSending`, `sessionList`/`sessionListLoading`/`sessionListPagination`, `jobCodeContext`/`workflowTemplateContext`, `hasReadDisclaimer`
+**Key State:** `connectionState` (`disconnected`/`connecting`/`connected`), `sessionId`, `sessionType` (`job_code`/`workflow_template`), `messages`, `isLoading`/`isSending`, `sessionList`/`sessionListLoading`/`sessionListPagination`, `jobCodeContext`/`workflowTemplateContext`
 
 **Key behavior:**
 - Two initialization paths: `connect()` (UI-initiated session creation) and `_initializeContext` (context setup before channel join)
@@ -216,7 +216,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 - `_setProcessingState(isProcessing)` blocks input for ALL users viewing the session during AI response generation
 - Actual AI channel management is handled externally by `useAIAssistantChannel` hook; this store only manages the state
 
-**Commands:** `connect`, `disconnect`, `setMessageSending`, `retryMessage`, `markDisclaimerRead`, `clearSession`, `loadSession`, `loadSessionList`, `updateContext`
+**Commands:** `connect`, `disconnect`, `setMessageSending`, `retryMessage`, `clearSession`, `loadSession`, `loadSessionList`, `updateContext`
 
 ---
 

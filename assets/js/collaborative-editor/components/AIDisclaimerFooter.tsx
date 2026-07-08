@@ -11,7 +11,7 @@ export function AIDisclaimerFooter({ muted = false }: AIDisclaimerFooterProps) {
       data-testid="ai-disclaimer-footer"
     >
       {!muted && (
-        <span className="hero-exclamation-triangle h-3.5 w-3.5 text-amber-500 shrink-0" />
+        <span className="hero-shield-exclamation h-3.5 w-3.5 text-amber-500 shrink-0" />
       )}
       <span
         className={cn(

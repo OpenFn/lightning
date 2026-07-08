@@ -275,20 +275,6 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
 };
 
 /**
- * Hook to check if session context has been loaded from server
- * Returns true once lastUpdated is set (session context received)
- */
-export const useSessionContextLoaded = (): boolean => {
-  const sessionContextStore = useSessionContextStore();
-
-  const selectLoaded = sessionContextStore.withSelector(
-    state => state.lastUpdated !== null
-  );
-
-  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
-};
-
-/**
  * Hook to check if the user has experimental features enabled
  */
 export const useExperimentalFeaturesEnabled = (): boolean => {
