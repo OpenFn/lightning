@@ -49,6 +49,10 @@ and this project adheres to
   is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- The credential revoke-access dialog now lists the affected workflows in a
+  stable, alphabetical order instead of an arbitrary one.
+  [#4954](https://github.com/OpenFn/lightning/issues/4954)
+
 ## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
