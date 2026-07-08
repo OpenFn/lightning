@@ -24,7 +24,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        authorize_url: nil,
        scopes_changed: false,
        previous_oauth_state: nil,
-       oauth_token: nil
+       oauth_token: nil,
+       token_action: :fetch
      )}
   end
 
@@ -132,7 +133,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
       {:ok,
        socket
-       |> assign(code: code, oauth_progress: :authenticating)
+       |> assign(
+         code: code,
+         oauth_progress: :authenticating,
+         token_action: :fetch
+       )
        |> start_async(:token, fn ->
          OauthHTTPClient.fetch_token(client, code)
        end)}
@@ -212,15 +217,22 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end
   end
 
-  def handle_async(:token, {:ok, {:error, http_error}}, socket) do
-    Logger.error(
-      "Failed to fetch token for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}: #{inspect(http_error)}"
-    )
+  def handle_async(:token, {:ok, {:error, error}}, socket) do
+    reauthorization_required =
+      socket.assigns.token_action == :refresh and
+        reauthorization_required?(error)
+
+    log_token_error(reauthorization_required, error, socket)
+
+    oauth_error =
+      if reauthorization_required,
+        do: {:refresh_failed, error},
+        else: {:http_error, error}
 
     {:noreply,
      socket
      |> assign(oauth_progress: :error)
-     |> assign(oauth_error: {:http_error, http_error})}
+     |> assign(oauth_error: oauth_error)}
   end
 
   def handle_async(:token, {:exit, reason}, socket) do
@@ -248,7 +260,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   def handle_async(:userinfo, {:ok, {:error, error}}, socket) do
     case error do
       %{status: 401} ->
-        Logger.error(
+        Logger.warning(
           "Token is invalid or revoked for environment '#{socket.assigns.current_tab}' for #{socket.assigns.selected_client.name}: #{inspect(error)}"
         )
 
@@ -359,6 +371,22 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(authorize_url: authorize_url)}
   end
 
+  defp log_token_error(true, error, socket) do
+    Logger.warning(
+      "Token refresh rejected for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}, reauthorization required: #{inspect(error)}"
+    )
+  end
+
+  defp log_token_error(false, error, socket) do
+    Logger.error(
+      "Failed to fetch token for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}: #{inspect(error)}"
+    )
+  end
+
+  defp reauthorization_required?(%{error: "invalid_grant"}), do: true
+  defp reauthorization_required?(%{status: 401}), do: true
+  defp reauthorization_required?(_), do: false
+
   defp refresh_token_or_fetch_userinfo(socket, selected_client, credential_body) do
     cond do
       not Map.has_key?(credential_body, "access_token") ->
@@ -381,7 +409,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     )
 
     socket
-    |> assign(oauth_progress: :authenticating)
+    |> assign(oauth_progress: :authenticating, token_action: :refresh)
     |> start_async(:token, fn ->
       OauthHTTPClient.refresh_token(client, token)
     end)
