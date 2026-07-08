@@ -34,6 +34,8 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- Replaced the legacy editor with the collaborative editor for all users
+  [#4402](https://github.com/OpenFn/lightning/issues/4402)
 
 ### Fixed
 
