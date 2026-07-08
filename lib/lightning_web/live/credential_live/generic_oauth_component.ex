@@ -371,13 +371,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      |> assign(authorize_url: authorize_url)}
   end
 
-  defp log_token_error(true, error, socket) do
+  defp log_token_error(reauthorization_required, error, socket)
+       when reauthorization_required do
     Logger.warning(
       "Token refresh rejected for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}, reauthorization required: #{inspect(error)}"
     )
   end
 
-  defp log_token_error(false, error, socket) do
+  defp log_token_error(_reauthorization_required, error, socket) do
     Logger.error(
       "Failed to fetch token for environment '#{socket.assigns.current_tab}' from #{socket.assigns.selected_client.name}: #{inspect(error)}"
     )
