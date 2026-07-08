@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-8A52EACA.js"></script>
+    <script defer src="dist/sidebar_items-E992DE7A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -180,7 +180,15 @@ the picker shows.</li></ul><p>Example configuration:</p><pre><code class="makeup
 </span></code></pre><p>You can also run the server directly in local mode with:</p><pre><code class="makeup sh" translate="no"><span class="">LOCAL_ADAPTORS=true mix phx.server
 </span></code></pre><p>Each path in <code class="inline">OPENFN_ADAPTORS_REPO</code> must contain a <code class="inline">packages</code> subdirectory.
 Paths that are missing or unreadable are logged and skipped, so the rest of the
-list still loads.</p><h3 id="problems-with-apple-silicon" class="section-heading"><a href="#problems-with-apple-silicon" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Apple Silicon</span></h3><p>You might run into some errors when running the docker containers on Apple
+list still loads.</p><h4>Credential schemas in local mode</h4><p>Credential schemas (used by the credential form's type picker and validation)
+are installed separately from the adaptor registry, into <code class="inline">priv/schemas/</code>.</p><p>By default <a href="Mix.Tasks.Lightning.InstallSchemas.html"><code class="inline">mix lightning.install_schemas</code></a> will download schemas from the npm
+registry.</p><p>Set LOCAL_ADAPTORS to true and <code class="inline">install_schemas</code> will read each package's
+<code class="inline">configuration-schema.json</code> from the monorepo.</p><pre><code class="makeup sh" translate="no"><span class="">LOCAL_ADAPTORS=true mix lightning.install_schemas
+</span></code></pre><p>This clears and repopulates <code class="inline">priv/schemas/</code> from the local repo(s) ONLY. Re-run
+it after adding or changing a <code class="inline">configuration-schema.json</code> to get the latest
+changes. Packages without a schema are skipped.</p><p>Remember to re-generate the production schemas when you've finished, or else
+your local app will use the local schema versions until <code class="inline">install_schemas</code> is
+next run!</p><h3 id="problems-with-apple-silicon" class="section-heading"><a href="#problems-with-apple-silicon" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Apple Silicon</span></h3><p>You might run into some errors when running the docker containers on Apple
 Silicon.
 <a href="benchmarking.md.html#problems-with-docker">We have documented the known ones here</a></p>
 
