@@ -19,7 +19,6 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
 
   defdelegate subscribe(project_id), to: Events
@@ -247,60 +246,6 @@ defmodule Lightning.Workflows do
       |> Enum.find(&(not MapSet.member?(existing_names, &1)))
     else
       base_name
-    end
-  end
-
-  @doc """
-  Creates a new workflow with a webhook trigger, one job, and one always-on edge.
-  Used by the "Build from Scratch" entry point on the new workflow screen.
-  Returns `{:ok, workflow, trigger_id}` or `{:error, reason}`, where `reason`
-  is usually an `Ecto.Changeset`, but see `save_workflow/3` for the other
-  shapes it can take.
-  """
-  @spec create_webhook_workflow(String.t(), struct()) ::
-          {:ok, Workflow.t(), String.t()}
-          | {:error,
-             Ecto.Changeset.t(Workflow.t())
-             | :workflow_deleted
-             | :snapshot_failed}
-  def create_webhook_workflow(project_id, actor) do
-    trigger_id = Ecto.UUID.generate()
-    job_id = Ecto.UUID.generate()
-
-    trigger_enabled =
-      case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
-        :ok -> true
-        {:error, _, _} -> false
-      end
-
-    attrs = %{
-      name: unique_workflow_name(nil, project_id),
-      project_id: project_id,
-      triggers: [%{id: trigger_id, type: :webhook, enabled: trigger_enabled}],
-      jobs: [
-        %{
-          id: job_id,
-          name: "Untitled job",
-          adaptor: "@openfn/language-common@latest",
-          body: """
-          // Check out the Job Writing Guide for help getting started:
-          // https://docs.openfn.org/documentation/jobs/job-writing-guide
-          """
-        }
-      ],
-      edges: [
-        %{
-          source_trigger_id: trigger_id,
-          target_job_id: job_id,
-          condition_type: :always,
-          enabled: true
-        }
-      ]
-    }
-
-    case save_workflow(attrs, actor) do
-      {:ok, workflow} -> {:ok, workflow, trigger_id}
-      {:error, reason} -> {:error, reason}
     end
   end
 
