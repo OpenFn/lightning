@@ -236,48 +236,6 @@ describe('useURLState', () => {
     });
   });
 
-  describe('updateSearchParams - replace option', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    test('patches the current history entry instead of pushing a new one', () => {
-      history.replaceState({}, '', '/workflow?trigger=abc&trigger_view=picker');
-
-      const { result } = renderHook(() => useURLState());
-      const pushSpy = vi.spyOn(history, 'pushState');
-      const replaceSpy = vi.spyOn(history, 'replaceState');
-
-      act(() => {
-        result.current.updateSearchParams(
-          { trigger_view: null },
-          { replace: true }
-        );
-      });
-
-      expect(pushSpy).not.toHaveBeenCalled();
-      expect(replaceSpy).toHaveBeenCalledTimes(1);
-      expect(result.current.params.trigger).toBe('abc');
-      expect(result.current.params.trigger_view).toBeUndefined();
-      expect(window.location.search).toBe('?trigger=abc');
-    });
-
-    test('still skips the write entirely for a no-op with replace: true', () => {
-      history.replaceState({}, '', '/workflow?panel=run');
-
-      const { result } = renderHook(() => useURLState());
-      const pushSpy = vi.spyOn(history, 'pushState');
-      const replaceSpy = vi.spyOn(history, 'replaceState');
-
-      act(() => {
-        result.current.updateSearchParams({ panel: 'run' }, { replace: true });
-      });
-
-      expect(pushSpy).not.toHaveBeenCalled();
-      expect(replaceSpy).not.toHaveBeenCalled();
-    });
-  });
-
   describe('replaceSearchParams - no-op writes', () => {
     afterEach(() => {
       vi.restoreAllMocks();

@@ -99,28 +99,18 @@ class URLStore {
   // Skip no-op writes so mount-time normalization doesn't stack duplicate
   // browser history entries (a no-op pushState never notifies subscribers
   // anyway, due to the guard in updateParams). Param order is ignored so a
-  // reorder-only write is also treated as a no-op. Pass `replace: true` to
-  // patch the current history entry in place instead of pushing a new one —
-  // for one-shot signals that shouldn't leave a Back-button stop pointing
-  // back at themselves.
-  private pushIfChanged = (newURL: URL, options?: { replace?: boolean }) => {
+  // reorder-only write is also treated as a no-op.
+  private pushIfChanged = (newURL: URL) => {
     if (this.urlsAreEquivalent(newURL, this.currentURL())) return;
-    if (options?.replace) {
-      history.replaceState({}, '', newURL);
-    } else {
-      history.pushState({}, '', newURL);
-    }
+    history.pushState({}, '', newURL);
   };
 
   /**
    * Update URL search params (merges with existing params).
    * Accepts strings, numbers, booleans; null removes param.
-   * Pass `{ replace: true }` to patch the current history entry instead of
-   * pushing a new one.
    */
   updateSearchParams = (
-    updates: Record<string, string | number | boolean | null>,
-    options?: { replace?: boolean }
+    updates: Record<string, string | number | boolean | null>
   ) => {
     const newURL = this.currentURL();
 
@@ -132,18 +122,15 @@ class URLStore {
       }
     });
 
-    this.pushIfChanged(newURL, options);
+    this.pushIfChanged(newURL);
   };
 
   /**
    * Replace all URL search params (clears existing params).
    * Accepts strings, numbers, booleans; null skips param.
-   * Pass `{ replace: true }` to patch the current history entry instead of
-   * pushing a new one.
    */
   replaceSearchParams = (
-    newParams: Record<string, string | number | boolean | null>,
-    options?: { replace?: boolean }
+    newParams: Record<string, string | number | boolean | null>
   ) => {
     const newURL = this.currentURL();
     newURL.search = '';
@@ -152,19 +139,17 @@ class URLStore {
         newURL.searchParams.set(key, String(value));
       }
     });
-    this.pushIfChanged(newURL, options);
+    this.pushIfChanged(newURL);
   };
 
   /**
    * Update the URL hash fragment.
    * Pass null to remove hash.
-   * Pass `{ replace: true }` to patch the current history entry instead of
-   * pushing a new one.
    */
-  updateHash = (hash: string | null, options?: { replace?: boolean }) => {
+  updateHash = (hash: string | null) => {
     const newURL = this.currentURL();
     newURL.hash = hash ? `#${hash}` : '';
-    this.pushIfChanged(newURL, options);
+    this.pushIfChanged(newURL);
   };
 }
 
