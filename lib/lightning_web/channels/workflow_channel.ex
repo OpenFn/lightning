@@ -1017,6 +1017,15 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(socket, {:error, :snapshot_failed}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }}, socket}
+  end
+
   defp workflow_error_reply(
          socket,
          {:error, %Lightning.Extensions.Message{text: text}}
