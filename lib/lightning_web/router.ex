@@ -257,7 +257,7 @@ defmodule LightningWeb.Router do
         # Redirect retired legacy editor URLs to the collaborative editor,
         # preserving the query string. The collaborative editor uses different
         # query param names than the legacy editor; the raw query string is
-        # forwarded as-is.
+        # forwarded as-is except the run param which maps a -> run.
         get "/w/new/legacy", LegacyRedirectController, :new
         get "/w/:id/legacy", LegacyRedirectController, :edit
 
