@@ -1773,6 +1773,66 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "project_workflows_using_credentials/1" do
+    test "returns each project's workflow names sorted alphabetically" do
+      project = insert(:project)
+
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      # inserted in reverse-alphabetical order so a query that dropped its
+      # ordering would return them out of order
+      for name <- ["ccc-workflow", "bbb-workflow", "aaa-workflow"] do
+        insert(:simple_workflow, project: project, name: name)
+        |> then(fn %{jobs: [job | _]} ->
+          job
+          |> Ecto.Changeset.change(%{
+            project_credential_id: project_credential.id
+          })
+          |> Repo.update!()
+        end)
+      end
+
+      assert Workflows.project_workflows_using_credentials([
+               project_credential.id
+             ]) ==
+               %{project.id => ["aaa-workflow", "bbb-workflow", "ccc-workflow"]}
+    end
+
+    test "only returns workflows whose jobs use the given credentials" do
+      project = insert(:project)
+
+      used =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      unused =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      insert(:simple_workflow, project: project, name: "uses-credential")
+      |> then(fn %{jobs: [job | _]} ->
+        job
+        |> Ecto.Changeset.change(%{project_credential_id: used.id})
+        |> Repo.update!()
+      end)
+
+      insert(:simple_workflow, project: project, name: "no-credential")
+
+      result = Workflows.project_workflows_using_credentials([used.id])
+
+      assert result == %{project.id => ["uses-credential"]}
+      assert Workflows.project_workflows_using_credentials([unused.id]) == %{}
+    end
+  end
+
   defp assert_trigger_state_audit(
          workflow_id,
          user_id,

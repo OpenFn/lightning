@@ -2716,6 +2716,80 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~ auth_method.password
     end
 
+    test "SSO user with MFA is only asked for a 2FA code when revealing a webhook secret",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          api_key: nil,
+          username: "testusername",
+          password: "someveryverystrongpassword1234"
+        )
+
+      user =
+        insert(:user,
+          hashed_password: nil,
+          mfa_enabled: true,
+          user_totp: build(:user_totp)
+        )
+
+      insert(:project_user, role: :admin, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      form_id = "webhook_auth_method"
+
+      html =
+        view |> element("##{form_id}_password_action_button") |> render_click()
+
+      assert html =~ "2FA Code"
+      # Signing in via SSO means there's no password, so none is requested
+      refute has_element?(view, "#reauthentication-form input[type='password']")
+    end
+
+    test "SSO user without MFA is told to set a password or enable 2FA when revealing a webhook secret",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          api_key: nil,
+          username: "testusername",
+          password: "someveryverystrongpassword1234"
+        )
+
+      user = insert(:user, hashed_password: nil, mfa_enabled: false)
+
+      insert(:project_user, role: :admin, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      form_id = "webhook_auth_method"
+
+      html =
+        view |> element("##{form_id}_password_action_button") |> render_click()
+
+      assert html =~ "set a password or enable two-factor authentication"
+      refute has_element?(view, "#reauthentication-form")
+    end
+
     test "owners and admins can delete a project webhook auth method",
          %{conn: conn} do
       project = insert(:project)

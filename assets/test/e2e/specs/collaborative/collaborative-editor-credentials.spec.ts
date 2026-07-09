@@ -1,13 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { getTestData } from '../../test-data';
+
 import { enableExperimentalFeatures } from '../../e2e-helper';
-import {
-  LoginPage,
-  ProjectsPage,
-  WorkflowsPage,
-  WorkflowEditPage,
-  WorkflowCollaborativePage,
-} from '../../pages';
+import { LoginPage, WorkflowCollaborativePage } from '../../pages';
+import { getTestData } from '../../test-data';
 
 test.describe('Collaborative Editor - Job Credentials', () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
@@ -32,29 +27,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   test('Save job without credential in collaborative editor', async ({
     page,
   }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill('input[name="workflow[name]"]', 'Test Workflow No Cred');
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('Configure job WITHOUT selecting a credential', async () => {
@@ -101,32 +79,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   });
 
   test('Save job with project credential', async ({ page }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill(
-        'input[name="workflow[name]"]',
-        'Test Workflow With Cred'
-      );
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('Select a project credential', async () => {
@@ -183,32 +141,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   });
 
   test('Clear credential after it was selected', async ({ page }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill(
-        'input[name="workflow[name]"]',
-        'Test Workflow Clear Cred'
-      );
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('First, select a credential', async () => {
@@ -258,32 +196,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   });
 
   test('Switch between project and keychain credentials', async ({ page }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill(
-        'input[name="workflow[name]"]',
-        'Test Workflow Switch Cred'
-      );
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('Check if keychain credentials exist', async () => {
@@ -370,32 +288,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   test('Multiple jobs with different credential configurations', async ({
     page,
   }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill(
-        'input[name="workflow[name]"]',
-        'Test Workflow Multi Jobs'
-      );
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('Configure first job with no credential', async () => {
@@ -489,32 +387,12 @@ test.describe('Collaborative Editor - Job Credentials', () => {
   test('Job created via diagram plus button has null credentials', async ({
     page,
   }) => {
-    await test.step('Navigate to project and create new workflow', async () => {
-      const projectsPage = new ProjectsPage(page);
-      await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-      const workflowsPage = new WorkflowsPage(page);
-      await workflowsPage.clickNewWorkflow();
-
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.selectWorkflowType('Event-based Workflow');
-      await page.fill(
-        'input[name="workflow[name]"]',
-        'Test Workflow Plus Button'
-      );
-      await workflowEdit.clickCreateWorkflow();
-    });
-
-    await test.step('Navigate to collaborative editor', async () => {
-      const workflowEdit = new WorkflowEditPage(page);
-      await workflowEdit.waitForConnected();
-      await workflowEdit.clickCollaborativeEditorToggle();
-    });
-
-    await test.step('Wait for collaborative editor to load', async () => {
+    await test.step('Open workflow in collaborative editor', async () => {
       const collabEditor = new WorkflowCollaborativePage(page);
-      await collabEditor.waitForReactComponentLoaded();
-      await collabEditor.waitForSynced();
+      await collabEditor.open({
+        projectId: testData.projects.openhie.id,
+        workflowId: testData.workflows.openhie.id,
+      });
     });
 
     await test.step('Add new job via plus button', async () => {

@@ -20,7 +20,7 @@ import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
 
-import createCompletionProvider from '../../editor/magic-completion';
+import createCompletionProvider from '../utils/magic-completion';
 
 import { LoadingIndicator } from './common/LoadingIndicator';
 import { Cursors } from './Cursors';
