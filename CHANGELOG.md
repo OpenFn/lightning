@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Report monthly active users (MAU) — distinct users active in the trailing 30
+  days — in the usage tracker submission, alongside the existing 90-day active
+  user count. Reported at both instance and project level, and bumps the usage
+  report schema to version 3.
+  [#4826](https://github.com/OpenFn/lightning/issues/4826)
 - Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
   external identity provider and link or unlink providers from their profile
   settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
@@ -34,10 +39,32 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- The credential revoke-access dialog now sorts the affected workflows
+  alphabetically. The order was previously left to the database and not
+  guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
+- Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
+  implicitly introduces a limit of 100 concurrent channels per Websocket
+  connection (transport). If worker instances are set with a concurrency higher
+  than 100, this will result in failures.
 - Replaced the legacy editor with the collaborative editor for all users
   [#4402](https://github.com/OpenFn/lightning/issues/4402)
 
 ### Fixed
+
+- Sandbox merge no longer deletes a workflow that was added to the project after
+  the sandbox was branched. Such workflows were never part of the sandbox, so
+  they are excluded from the merge screen entirely. Workflows deleted inside the
+  sandbox still appear and now default to kept, so removing them from the
+  project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+- Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
+  [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- When an OAuth provider reports that a credential's stored token has expired or
+  been revoked, the credential editor now shows a clear "reauthorize" prompt
+  instead of a generic error, and the condition is logged as a warning rather
+  than an application error.
+  [#4947](https://github.com/OpenFn/lightning/issues/4947)
+
+## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
 
