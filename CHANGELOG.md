@@ -39,6 +39,9 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- The credential revoke-access dialog now sorts the affected workflows
+  alphabetically. The order was previously left to the database and not
+  guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
 - Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
   implicitly introduces a limit of 100 concurrent channels per Websocket
   connection (transport). If worker instances are set with a concurrency higher

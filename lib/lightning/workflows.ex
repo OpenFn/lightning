@@ -74,7 +74,8 @@ defmodule Lightning.Workflows do
         join: j in assoc(w, :jobs),
         where: j.project_credential_id in ^project_credential_ids,
         select: %{name: w.name, project_id: w.project_id},
-        distinct: true
+        distinct: true,
+        order_by: w.name
 
     query
     |> Repo.all()
