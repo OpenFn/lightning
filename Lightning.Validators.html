@@ -305,10 +305,10 @@ when you also need to verify the email is unique in the users table.</p>
       </div>
 
 <p>Validate that only one of the fields is set at a time.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="0207450033-1">(</span><span class="w">
-  </span><span class="p" data-group-id="0207450033-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="0207450033-2">]</span><span class="p">,</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_exclusive</span><span class="p" data-group-id="0452579711-1">(</span><span class="w">
+  </span><span class="p" data-group-id="0452579711-2">[</span><span class="ss">:source_job_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:source_trigger_id</span><span class="p" data-group-id="0452579711-2">]</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;source_job_id and source_trigger_id are mutually exclusive&quot;</span><span class="w">
-</span><span class="p" data-group-id="0207450033-1">)</span></code></pre>
+</span><span class="p" data-group-id="0452579711-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate_one_required/3">
@@ -436,7 +436,7 @@ foreign keys left unset are unaffected.</p><blockquote><p><strong>Narrowing:</st
 rejects raw 16-byte binaries and unsubstituted placeholders that <code class="inline">cast</code>
 accepted. Confirmed no live caller relied on the laxer behaviour (uppercase
 canonical UUIDs still pass).</p></blockquote><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="5489570536-1">(</span><span class="p" data-group-id="5489570536-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="5489570536-2">]</span><span class="p" data-group-id="5489570536-1">)</span></code></pre>
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="n">validate_uuid</span><span class="p" data-group-id="9336556265-1">(</span><span class="p" data-group-id="9336556265-2">[</span><span class="ss">:id</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_id</span><span class="p" data-group-id="9336556265-2">]</span><span class="p" data-group-id="9336556265-1">)</span></code></pre>
   </section>
 </section>
 
