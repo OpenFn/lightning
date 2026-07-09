@@ -8,11 +8,11 @@
     <meta name="project" content="Lightning v2.16.8">
 
 
-    <title>LightningWeb.UiMetrics — Lightning v2.16.8</title>
+    <title>LightningWeb.LegacyRedirectController — Lightning v2.16.8</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-E992DE7A.js"></script>
+    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">LightningWeb.UiMetrics</span> 
+      <span translate="no">LightningWeb.LegacyRedirectController</span> 
       <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/ui_metrics.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/legacy_redirect_controller.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,8 +111,13 @@ Lightning
 
 
     <section id="moduledoc">
-<p>A temporary measure to allow WorkflowEditor and JobEditor UI components to
-report selected metrics and have these logged.</p>
+<p>Redirects retired legacy workflow editor URLs to the collaborative editor.</p><p>The legacy editor (<code class="inline">WorkflowLive.Edit</code>) has been sunset in favour of the
+collaborative editor (<code class="inline">WorkflowLive.Collaborate</code>). These actions keep old
+bookmarks working by redirecting <code class="inline">/projects/:project_id/w/.../legacy</code> URLs to
+their collaborative equivalents.</p><p>The collaborative editor renames the &quot;followed run&quot; param from <code class="inline">a</code> to <code class="inline">run</code>,
+so that one is remapped to keep old run bookmarks following the run. Other
+legacy params (e.g. <code class="inline">s</code>, <code class="inline">m</code>) depend on the editor's selection state to
+translate correctly, which isn't available here, so they're forwarded as-is.</p>
     </section>
 
 </div>
@@ -131,7 +136,7 @@ report selected metrics and have these logged.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_job_editor_metrics/2" data-no-tooltip="" translate="no">log_job_editor_metrics(job, metrics)</a>
+        <a href="#edit/2" data-no-tooltip="" translate="no">edit(conn, map)</a>
 
       </div>
 
@@ -139,7 +144,7 @@ report selected metrics and have these logged.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_workflow_editor_metrics/2" data-no-tooltip="" translate="no">log_workflow_editor_metrics(workflow, metrics)</a>
+        <a href="#new/2" data-no-tooltip="" translate="no">new(conn, map)</a>
 
       </div>
 
@@ -159,17 +164,17 @@ report selected metrics and have these logged.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="log_job_editor_metrics/2">
+<section class="detail" id="edit/2">
 
   <div class="detail-header">
-    <a href="#log_job_editor_metrics/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#edit/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">log_job_editor_metrics(job, metrics)</h1>
+      <h1 class="signature" translate="no">edit(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/ui_metrics.ex#L12" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/legacy_redirect_controller.ex#L21" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -181,17 +186,17 @@ report selected metrics and have these logged.</p>
 
   </section>
 </section>
-<section class="detail" id="log_workflow_editor_metrics/2">
+<section class="detail" id="new/2">
 
   <div class="detail-header">
-    <a href="#log_workflow_editor_metrics/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#new/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">log_workflow_editor_metrics(workflow, metrics)</h1>
+      <h1 class="signature" translate="no">new(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/ui_metrics.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/legacy_redirect_controller.ex#L17" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

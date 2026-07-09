@@ -274,8 +274,6 @@ LightningWeb.API.RunController.html
 LightningWeb.API.WorkOrdersController.html
 LightningWeb.API.WorkflowsController.html
 LightningWeb.AccountConfirmationModal.html
-LightningWeb.AiAssistant.Component.html
-LightningWeb.AiAssistant.Quotes.html
 LightningWeb.AiAssistantChannel.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.Auth.html
@@ -342,14 +340,8 @@ LightningWeb.InitAssigns.html
 LightningWeb.JobLive.AdaptorPicker.html
 LightningWeb.JobLive.CredentialPicker.html
 LightningWeb.JobLive.CronSetupComponent.html
-LightningWeb.JobLive.JobBuilderComponents.html
 LightningWeb.JobLive.KafkaSetupComponent.html
-LightningWeb.Live.AiAssistant.ErrorHandler.html
-LightningWeb.Live.AiAssistant.ModeBehavior.html
-LightningWeb.Live.AiAssistant.ModeRegistry.html
-LightningWeb.Live.AiAssistant.Modes.JobCode.Form.Options.html
-LightningWeb.Live.AiAssistant.Modes.JobCode.html
-LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate.html
+LightningWeb.LegacyRedirectController.html
 LightningWeb.Live.AiAssistant.PaginationMeta.html
 LightningWeb.Live.Helpers.TableHelpers.html
 LightningWeb.Live.MemoryDebug.html
@@ -402,7 +394,6 @@ LightningWeb.SandboxLive.Index.MergeWorkflow.html
 LightningWeb.SandboxLive.Index.html
 LightningWeb.Telemetry.html
 LightningWeb.TokensLive.Index.html
-LightningWeb.UiMetrics.html
 LightningWeb.UserAuth.html
 LightningWeb.UserConfirmationController.html
 LightningWeb.UserLive.Components.html
@@ -424,12 +415,8 @@ LightningWeb.WorkerSocket.html
 LightningWeb.WorkflowChannel.html
 LightningWeb.WorkflowController.html
 LightningWeb.WorkflowLive.Collaborate.html
-LightningWeb.WorkflowLive.EditorPane.html
 LightningWeb.WorkflowLive.Helpers.html
-LightningWeb.WorkflowLive.JobView.html
 LightningWeb.WorkflowLive.NewManualRun.html
-LightningWeb.WorkflowLive.NewWorkflowComponent.html
-LightningWeb.WorkflowLive.WorkflowAiChatComponent.html
 LightningWeb.WorkflowNewLive.WorkflowParams.html
 LightningWeb.html
 Mix.Tasks.Lightning.DownloadAdaptorRegistryCache.html
@@ -456,8 +443,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-48C7533F.js
-dist/sidebar_items-E992DE7A.js
+dist/search_data-5C64BE89.js
+dist/sidebar_items-ECBB467C.js
 index.html
 provisioning.html
 readme.html
