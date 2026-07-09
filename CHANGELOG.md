@@ -42,16 +42,25 @@ and this project adheres to
 - The credential revoke-access dialog now sorts the affected workflows
   alphabetically. The order was previously left to the database and not
   guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
+- Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
+  implicitly introduces a limit of 100 concurrent channels per Websocket
+  connection (transport). If worker instances are set with a concurrency higher
+  than 100, this will result in failures.
 
 ### Fixed
 
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
-  sandbox still appear and now default to kept, so removing them from the project
-  is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+  sandbox still appear and now default to kept, so removing them from the
+  project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- When an OAuth provider reports that a credential's stored token has expired or
+  been revoked, the credential editor now shows a clear "reauthorize" prompt
+  instead of a generic error, and the condition is logged as a warning rather
+  than an application error.
+  [#4947](https://github.com/OpenFn/lightning/issues/4947)
 
 ## [2.16.8] - 2026-07-01
 
