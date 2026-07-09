@@ -8,7 +8,6 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -28,6 +27,8 @@ import { createCredentialStore } from '../../../../js/collaborative-editor/store
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
+import type { UIStoreInstance } from '../../../../js/collaborative-editor/stores/createUIStore';
+import { createUIStore } from '../../../../js/collaborative-editor/stores/createUIStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
@@ -79,7 +80,8 @@ function createWrapper(
   credentialStore: CredentialStoreInstance,
   sessionContextStore: SessionContextStoreInstance,
   adaptorStore: AdaptorStoreInstance,
-  awarenessStore: AwarenessStoreInstance
+  awarenessStore: AwarenessStoreInstance,
+  uiStore: UIStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
   const mockStoreValue: StoreContextValue = {
     workflowStore,
@@ -87,6 +89,7 @@ function createWrapper(
     sessionContextStore,
     adaptorStore,
     awarenessStore,
+    uiStore,
   };
 
   const mockLiveViewActions = {
@@ -129,6 +132,7 @@ describe('TriggerInspector — show dispatch by type', () => {
   let credentialStore: CredentialStoreInstance;
   let adaptorStore: AdaptorStoreInstance;
   let awarenessStore: AwarenessStoreInstance;
+  let uiStore: UIStoreInstance;
 
   function makeSessionContextStore(triggerType: string): {
     sessionContextStore: SessionContextStoreInstance;
@@ -170,6 +174,7 @@ describe('TriggerInspector — show dispatch by type', () => {
     credentialStore = createCredentialStore();
     adaptorStore = createAdaptorStore();
     awarenessStore = createAwarenessStore();
+    uiStore = createUIStore();
   });
 
   // Each row: [description, triggerType, extra trigger fields, expected heading]
@@ -217,159 +222,14 @@ describe('TriggerInspector — show dispatch by type', () => {
           credentialStore,
           sessionContextStore,
           adaptorStore,
-          awarenessStore
+          awarenessStore,
+          uiStore
         ),
       }
     );
 
     expect(
       screen.getByRole('heading', { name: expectedHeading })
-    ).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Build-from-scratch picker entry (?trigger_view=picker)
-// ---------------------------------------------------------------------------
-
-describe('TriggerInspector — build-from-scratch picker entry', () => {
-  let credentialStore: CredentialStoreInstance;
-  let adaptorStore: AdaptorStoreInstance;
-  let awarenessStore: AwarenessStoreInstance;
-
-  function makeWebhookSessionContextStore(): SessionContextStoreInstance {
-    const sessionContextStore = createSessionContextStore();
-    const mockChannel = createMockPhoenixChannel();
-    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-    sessionContextStore._connectChannel(mockProvider as never);
-
-    act(() => {
-      (
-        mockChannel as never as {
-          _test: { emit: (e: string, m: unknown) => void };
-        }
-      )._test.emit('session_context', {
-        user: null,
-        project: null,
-        config: {
-          require_email_verification: false,
-          kafka_triggers_enabled: false,
-        },
-        permissions: {
-          can_edit_workflow: true,
-          can_run_workflow: true,
-          can_write_webhook_auth_method: true,
-        },
-        latest_snapshot_lock_version: 1,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
-        workflow_template: null,
-        has_read_ai_disclaimer: false,
-      });
-    });
-
-    return sessionContextStore;
-  }
-
-  function renderWebhookTrigger() {
-    const triggerId = 'trigger-webhook';
-    const ydoc = createWorkflowYDoc({
-      triggers: {
-        [triggerId]: { id: triggerId, type: 'webhook', enabled: true },
-      },
-    });
-    ydoc.getMap('workflow').set('lock_version', 1);
-
-    const workflowStore = createConnectedWorkflowStore(ydoc);
-    const sessionContextStore = makeWebhookSessionContextStore();
-    const trigger = workflowStore.getSnapshot().triggers[0];
-
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={vi.fn()}
-        onOpenRunPanel={vi.fn()}
-      />,
-      {
-        wrapper: createWrapper(
-          workflowStore,
-          credentialStore,
-          sessionContextStore,
-          adaptorStore,
-          awarenessStore
-        ),
-      }
-    );
-  }
-
-  beforeEach(() => {
-    credentialStore = createCredentialStore();
-    adaptorStore = createAdaptorStore();
-    awarenessStore = createAwarenessStore();
-    urlState.reset();
-  });
-
-  test('opens directly on the picker when trigger_view=picker, and strips the param', () => {
-    urlState.setParams({ trigger: 'trigger-webhook', trigger_view: 'picker' });
-
-    renderWebhookTrigger();
-
-    expect(
-      screen.getByText('What triggers this workflow?')
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'On webhook call' })
-    ).not.toBeInTheDocument();
-
-    // One-shot: the launch signal is consumed and stripped immediately via a
-    // replace-in-place updateSearchParams (no phantom Back-button entry),
-    // leaving the rest of the URL (the trigger selection) untouched.
-    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
-      { trigger_view: null },
-      { replace: true }
-    );
-  });
-
-  test('renders the normal show panel when trigger_view is absent', () => {
-    urlState.setParams({ trigger: 'trigger-webhook' });
-
-    renderWebhookTrigger();
-
-    expect(
-      screen.getByRole('heading', { name: 'On webhook call' })
-    ).toBeInTheDocument();
-    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalled();
-  });
-
-  test('a later Edit click lands on Choose, not the picker again', async () => {
-    urlState.setParams({ trigger: 'trigger-webhook', trigger_view: 'picker' });
-
-    renderWebhookTrigger();
-
-    expect(
-      screen.getByText('What triggers this workflow?')
-    ).toBeInTheDocument();
-
-    const user = userEvent.setup();
-
-    // Back out of the picker to Choose, then Cancel out of the wizard
-    // entirely, returning to the resting show panel.
-    await user.click(screen.getByRole('button', { name: 'Back' }));
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-    expect(
-      screen.getByRole('heading', { name: 'On webhook call' })
-    ).toBeInTheDocument();
-
-    // Re-entering edit via the show panel's Edit button must land on Choose,
-    // not re-trigger the one-shot picker entry from the original URL signal.
-    await user.click(screen.getByRole('button', { name: 'Edit trigger' }));
-
-    expect(
-      screen.queryByText('What triggers this workflow?')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'On webhook call' })
     ).toBeInTheDocument();
   });
 });

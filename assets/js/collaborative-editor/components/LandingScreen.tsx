@@ -40,7 +40,7 @@ export function LandingScreen({
     <div
       role="region"
       aria-labelledby="landing-screen-heading"
-      className="absolute inset-0 z-10 flex items-center justify-center"
+      className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100"
       data-testid="landing-screen"
     >
       <div className="w-full md:max-w-xl flex flex-col gap-6 px-6 lg:px-2">

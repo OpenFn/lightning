@@ -18,13 +18,6 @@ interface TriggerEditWizardProps {
    * start at Choose.
    */
   initialFocus?: 'authentication' | 'response' | undefined;
-  /**
-   * Open directly on the Picker step ("What triggers this workflow?")
-   * instead of Choose. Independent of `initialFocus` — the two are never set
-   * together, since this is only used for the one-shot build-from-scratch
-   * entry point, not the in-app deep links that produce `initialFocus`.
-   */
-  startOnPicker?: boolean;
   /** Close the inspector entirely. */
   onClose: () => void;
   /**
@@ -56,7 +49,6 @@ type Step = 'choose' | 'picker' | 'configure';
 export function TriggerEditWizard({
   trigger,
   initialFocus,
-  startOnPicker,
   onClose,
   onDone,
 }: TriggerEditWizardProps) {
@@ -90,13 +82,11 @@ export function TriggerEditWizard({
         }
   );
 
-  // Initial step: rest on Choose, jump straight to Configure on a deep-link,
-  // or jump straight to Picker on the build-from-scratch entry point. Once
-  // mounted, all navigation (back/pick-type/close) uses the wizard's normal
-  // step transitions regardless of how this initial step was chosen.
-  const [step, setStep] = useState<Step>(
-    startOnPicker ? 'picker' : initialFocus ? 'configure' : 'choose'
-  );
+  // Initial step: rest on Choose, or jump straight to Configure on a
+  // deep-link. Once mounted, all navigation (back/pick-type/close) uses the
+  // wizard's normal step transitions regardless of how this initial step was
+  // chosen.
+  const [step, setStep] = useState<Step>(initialFocus ? 'configure' : 'choose');
 
   const finish = useCallback(async () => {
     const result = await commit();

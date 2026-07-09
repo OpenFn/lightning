@@ -5,6 +5,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
+import { parseWorkflowYAML, convertWorkflowSpecToState } from '../yaml/util';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
@@ -18,11 +19,9 @@ import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
 import { YAMLImportModal } from './components/YAMLImportModal';
+import { BLANK_WORKFLOW_YAML } from './constants/baseTemplates';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
-import {
-  LiveViewActionsProvider,
-  useLiveViewActions,
-} from './contexts/LiveViewActionsContext';
+import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
@@ -38,7 +37,7 @@ import {
   useUICommands,
 } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useWorkflowState } from './hooks/useWorkflow';
+import { useWorkflowActions, useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
 import { notifications } from './lib/notifications';
 
@@ -195,20 +194,22 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
-  const { pushEventTo } = useLiveViewActions();
+  const { importWorkflow, saveWorkflow } = useWorkflowActions();
   const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
     useActionLock(async () => {
       try {
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(
-            () => reject(new Error('build_from_scratch timed out')),
-            10_000
-          );
-          pushEventTo('build_from_scratch', {}, () => {
-            clearTimeout(timeout);
-            resolve();
+        const spec = parseWorkflowYAML(BLANK_WORKFLOW_YAML);
+        const state = convertWorkflowSpecToState(spec);
+        await importWorkflow(state);
+        const saved = await saveWorkflow({ silent: true });
+        if (!saved) {
+          notifications.alert({
+            title: 'Not connected',
+            description: 'Connect to the server before creating a workflow.',
           });
-        });
+          return;
+        }
+        dismissLandingScreen();
       } catch {
         notifications.alert({
           title: 'Failed to create workflow',
