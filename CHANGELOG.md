@@ -46,6 +46,8 @@ and this project adheres to
   implicitly introduces a limit of 100 concurrent channels per Websocket
   connection (transport). If worker instances are set with a concurrency higher
   than 100, this will result in failures.
+- Replaced the legacy editor with the collaborative editor for all users
+  [#4402](https://github.com/OpenFn/lightning/issues/4402)
 
 ### Fixed
 

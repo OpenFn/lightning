@@ -3,13 +3,10 @@ import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
-import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
-import { channelRequest } from '../hooks/useChannel';
 import { getCsrfToken } from '../lib/csrf';
 import { useActiveRun } from '../hooks/useHistory';
-import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLimits,
@@ -228,7 +225,6 @@ export function Header({
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
   const { selectedTemplate } = useTemplatePanel();
-  const { provider } = useSession();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
@@ -365,25 +361,6 @@ export function Header({
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
-  const handleSwitchToLegacyEditor = useCallback(async () => {
-    if (!provider?.channel || !projectId || !workflowId) return;
-
-    try {
-      await channelRequest(provider.channel, 'switch_to_legacy_editor', {});
-
-      // Build legacy editor URL and navigate
-      const legacyUrl = buildClassicalEditorUrl({
-        projectId,
-        workflowId,
-        searchParams: new URLSearchParams(window.location.search),
-        isNewWorkflow,
-      });
-      window.location.href = legacyUrl;
-    } catch (error) {
-      console.error('Failed to switch to legacy editor:', error);
-    }
-  }, [provider, projectId, workflowId, isNewWorkflow]);
-
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
@@ -452,26 +429,6 @@ export function Header({
         <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
-          {projectId && workflowId && (
-            <Tooltip
-              content={
-                <span>
-                  Looking for the old version of the workflow builder? You can
-                  switch back for a few more days by clicking this icon. (But it
-                  will soon be retired!)
-                </span>
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={() => void handleSwitchToLegacyEditor()}
-                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-              >
-                <span className="hero-question-mark-circle"></span>
-              </button>
-            </Tooltip>
-          )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
