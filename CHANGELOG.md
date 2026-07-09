@@ -39,16 +39,21 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
+  implicitly introduces a limit of 100 concurrent channels per Websocket
+  connection (transport). If worker instances are set with a concurrency higher
+  than 100, this will result in failures.
 
 ### Fixed
 
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
-  sandbox still appear and now default to kept, so removing them from the project
-  is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+  sandbox still appear and now default to kept, so removing them from the
+  project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
+
 ## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
