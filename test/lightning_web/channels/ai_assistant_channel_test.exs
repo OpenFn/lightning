@@ -862,6 +862,39 @@ defmodule LightningWeb.AiAssistantChannelTest do
                  %{}
                )
     end
+
+    test "rejects job_code session when unsaved job workflow no longer exists",
+         %{
+           socket: socket,
+           user: user,
+           workflow: workflow
+         } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: nil,
+          session_type: "job_code",
+          meta: %{
+            "unsaved_job" => %{
+              "id" => Ecto.UUID.generate(),
+              "name" => "Unsaved Job",
+              "body" => "console.log('unsaved');",
+              "adaptor" => "@openfn/language-common@latest",
+              "workflow_id" => workflow.id
+            }
+          }
+        )
+
+      Lightning.Repo.delete!(workflow)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+    end
   end
 
   describe "handle_in unsaved job with proper metadata" do

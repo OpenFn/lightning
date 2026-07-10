@@ -132,10 +132,10 @@ import { produce } from 'immer';
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';
-import { z } from 'zod';
 
 import _logger from '#/utils/logger';
 
+import { DEFAULT_TEXT } from '../../workflow-store/constants';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { reconcileDanglingReferences } from '../adapters/reconcileDanglingReferences';
 import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
@@ -908,16 +908,11 @@ export const createWorkflowStore = () => {
     const jobsArray = ydoc.getArray('jobs');
     const jobMap = new Y.Map();
 
-    // Default body text shown in the Monaco editor for new jobs
-    const defaultBody = `// Check out the Job Writing Guide for help getting started:
-// https://docs.openfn.org/documentation/jobs/job-writing-guide
-`;
-
     ydoc.transact(() => {
       jobMap.set('id', job.id);
       jobMap.set('name', job.name);
       // Always initialize body as Y.Text with default if empty
-      jobMap.set('body', new Y.Text(job.body || defaultBody));
+      jobMap.set('body', new Y.Text(job.body || DEFAULT_TEXT));
       // Set adaptor field (defaults to common if not provided)
       jobMap.set('adaptor', job.adaptor);
       // Initialize credential fields to null

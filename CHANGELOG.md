@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Report monthly active users (MAU) — distinct users active in the trailing 30
+  days — in the usage tracker submission, alongside the existing 90-day active
+  user count. Reported at both instance and project level, and bumps the usage
+  report schema to version 3.
+  [#4826](https://github.com/OpenFn/lightning/issues/4826)
 - Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
   external identity provider and link or unlink providers from their profile
   settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
@@ -33,12 +38,28 @@ and this project adheres to
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
-- Bump worker to 1.27.0
 - Replaced the full-screen AI disclaimer gate in the AI assistant with a
   persistent disclaimer footer shown in the chat input and landing screen.
   [#4911](https://github.com/OpenFn/lightning/issues/4911)
+- Bump worker to 1.27.0
 
 ### Fixed
+
+- Sandbox merge no longer deletes a workflow that was added to the project after
+  the sandbox was branched. Such workflows were never part of the sandbox, so
+  they are excluded from the merge screen entirely. Workflows deleted inside the
+  sandbox still appear and now default to kept, so removing them from the
+  project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+- Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
+  [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- Prevent AI Assistant channel joins from crashing when a chat references a
+  deleted workflow or project. Missing records now fail authorization cleanly.
+  [#4914](https://github.com/OpenFn/lightning/issues/4914)
+- When an OAuth provider reports that a credential's stored token has expired or
+  been revoked, the credential editor now shows a clear "reauthorize" prompt
+  instead of a generic error, and the condition is logged as a warning rather
+  than an application error.
+  [#4947](https://github.com/OpenFn/lightning/issues/4947)
 
 ## [2.16.8] - 2026-07-01
 

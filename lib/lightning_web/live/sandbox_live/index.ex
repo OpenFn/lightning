@@ -14,7 +14,14 @@ defmodule LightningWeb.SandboxLive.Index do
   require Logger
 
   defmodule MergeWorkflow do
-    defstruct [:id, :name, :is_changed, :is_diverged, :is_new, :is_deleted]
+    defstruct [
+      :id,
+      :name,
+      :is_changed,
+      :is_diverged,
+      :is_new,
+      :is_deleted
+    ]
   end
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -281,16 +288,23 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("toggle-workflow", %{"id" => workflow_id}, socket) do
-    selected = socket.assigns.merge_selected_workflow_ids
+    in_list? =
+      Enum.any?(socket.assigns.merge_source_workflows, &(&1.id == workflow_id))
 
-    new_selected =
-      if MapSet.member?(selected, workflow_id) do
-        MapSet.delete(selected, workflow_id)
-      else
-        MapSet.put(selected, workflow_id)
-      end
+    if in_list? do
+      selected = socket.assigns.merge_selected_workflow_ids
 
-    {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+      new_selected =
+        if MapSet.member?(selected, workflow_id) do
+          MapSet.delete(selected, workflow_id)
+        else
+          MapSet.put(selected, workflow_id)
+        end
+
+      {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -890,14 +904,20 @@ defmodule LightningWeb.SandboxLive.Index do
         }
       end)
 
+    # Target-only workflows are those in the project but absent from the sandbox.
+    # A workflow added to the project after the fork was never in this sandbox,
+    # so it is not part of the merge and is dropped from the list entirely. What
+    # remains are workflows deleted in the sandbox: they default to unchecked so
+    # a merge never silently deletes them, and removal is opt-in.
     deleted_entries =
       target_workflows
       |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
+      |> Enum.reject(fn wf -> workflow_added_after_fork?(wf, source) end)
       |> Enum.map(fn wf ->
         %MergeWorkflow{
           id: wf.id,
           name: wf.name,
-          is_changed: true,
+          is_changed: false,
           is_diverged: false,
           is_new: false,
           is_deleted: true
@@ -908,31 +928,36 @@ defmodule LightningWeb.SandboxLive.Index do
     |> Enum.sort_by(fn wf -> wf.name end)
   end
 
+  defp workflow_added_after_fork?(%{inserted_at: %DateTime{} = wf_inserted}, %{
+         inserted_at: %DateTime{} = fork_time
+       }) do
+    DateTime.compare(wf_inserted, fork_time) == :gt
+  end
+
+  defp workflow_added_after_fork?(_workflow, _source), do: false
+
+  # Always pass an explicit selection so unchecked target-only workflows are
+  # kept, not deleted. Only workflows deleted in the sandbox reach this list as
+  # target-only, and only the ones the user checks are removed.
   defp resolve_selected_workflow_ids(assigns) do
-    all_ids = MapSet.new(assigns.merge_source_workflows, fn wf -> wf.id end)
+    deleted_ids =
+      assigns.merge_source_workflows
+      |> Enum.filter(fn wf -> wf.is_deleted end)
+      |> MapSet.new(fn wf -> wf.id end)
 
-    if MapSet.equal?(assigns.merge_selected_workflow_ids, all_ids) do
-      {nil, nil}
-    else
-      deleted_ids =
-        assigns.merge_source_workflows
-        |> Enum.filter(fn wf -> wf.is_deleted end)
-        |> MapSet.new(fn wf -> wf.id end)
+    selected = assigns.merge_selected_workflow_ids
 
-      selected = assigns.merge_selected_workflow_ids
+    selected_source_ids =
+      selected
+      |> Enum.reject(&MapSet.member?(deleted_ids, &1))
+      |> Enum.to_list()
 
-      selected_source_ids =
-        selected
-        |> Enum.reject(&MapSet.member?(deleted_ids, &1))
-        |> Enum.to_list()
+    selected_deleted_ids =
+      selected
+      |> Enum.filter(&MapSet.member?(deleted_ids, &1))
+      |> Enum.to_list()
 
-      selected_deleted_ids =
-        selected
-        |> Enum.filter(&MapSet.member?(deleted_ids, &1))
-        |> Enum.to_list()
-
-      {selected_source_ids, selected_deleted_ids}
-    end
+    {selected_source_ids, selected_deleted_ids}
   end
 
   defp preload_merge_projects(source, nil),
@@ -991,17 +1016,11 @@ defmodule LightningWeb.SandboxLive.Index do
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
-    opts =
-      if selected_workflow_ids do
-        %{
-          selected_workflow_ids: selected_workflow_ids,
-          deleted_target_workflow_ids: deleted_target_workflow_ids
-        }
-      else
-        %{}
-      end
-
-    opts = Map.put(opts, :selected_credential_ids, selected_credential_ids)
+    opts = %{
+      selected_workflow_ids: selected_workflow_ids,
+      deleted_target_workflow_ids: deleted_target_workflow_ids,
+      selected_credential_ids: selected_credential_ids
+    }
 
     case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->

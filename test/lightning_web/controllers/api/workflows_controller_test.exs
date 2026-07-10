@@ -3,7 +3,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
-  import Phoenix.LiveViewTest
 
   alias Lightning.Extensions.Message
   alias Lightning.Workflows
@@ -1010,8 +1009,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       refute Presence.has_any_presence?(workflow)
 
-      {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
+      # Simulate a user editing the workflow in the collaborative editor by
+      # tracking their presence on the workflow.
+      Presence.track_user_presence(user, workflow, self())
 
       patch = %{name: "work1.1"}
 
@@ -1534,8 +1534,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       refute Presence.has_any_presence?(workflow)
 
-      {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
+      # Simulate a user editing the workflow in the collaborative editor by
+      # tracking their presence on the workflow.
+      Presence.track_user_presence(user, workflow, self())
 
       workflow_update = %{workflow | name: "work1.1"}
 
