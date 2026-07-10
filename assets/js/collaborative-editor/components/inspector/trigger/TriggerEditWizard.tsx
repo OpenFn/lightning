@@ -82,10 +82,8 @@ export function TriggerEditWizard({
         }
   );
 
-  // Initial step: rest on Choose, or jump straight to Configure on a
-  // deep-link. Once mounted, all navigation (back/pick-type/close) uses the
-  // wizard's normal step transitions regardless of how this initial step was
-  // chosen.
+  // Initial step: rest on Choose, or jump straight to Configure on a deep-link.
+  // (The picker is still reachable mid-flow via the "Change" button.)
   const [step, setStep] = useState<Step>(initialFocus ? 'configure' : 'choose');
 
   const finish = useCallback(async () => {
