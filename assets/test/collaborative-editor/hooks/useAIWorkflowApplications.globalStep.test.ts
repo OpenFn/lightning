@@ -55,6 +55,12 @@ describe('useAIWorkflowApplications - global messages', () => {
     clear: vi.fn(),
   };
 
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
+
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,

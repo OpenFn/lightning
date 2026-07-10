@@ -20,6 +20,7 @@ function renderLandingScreen(props: {
   aiAssistantEnabled?: boolean;
   onBuildWithAI?: (prompt: string) => void;
   onBuildFromScratch?: () => void;
+  isBuildingFromScratch?: boolean;
   onBrowseTemplates?: () => void;
   onImportYAML?: () => void;
 }) {
@@ -27,6 +28,7 @@ function renderLandingScreen(props: {
     aiAssistantEnabled: true,
     onBuildWithAI: vi.fn(),
     onBuildFromScratch: vi.fn(),
+    isBuildingFromScratch: false,
     onBrowseTemplates: vi.fn(),
     onImportYAML: vi.fn(),
   };
@@ -192,5 +194,17 @@ describe('LandingScreen - Card click handlers', () => {
 
     await user.click(screen.getByTestId('import-yaml-link'));
     expect(onImportYAML).toHaveBeenCalledTimes(1);
+  });
+
+  test('build-from-scratch card is disabled while isBuildingFromScratch and does not call the handler', async () => {
+    const user = userEvent.setup();
+    const onBuildFromScratch = vi.fn();
+    renderLandingScreen({ onBuildFromScratch, isBuildingFromScratch: true });
+
+    const card = screen.getByTestId('build-from-scratch-card');
+    expect(card).toBeDisabled();
+
+    await user.click(card);
+    expect(onBuildFromScratch).not.toHaveBeenCalled();
   });
 });

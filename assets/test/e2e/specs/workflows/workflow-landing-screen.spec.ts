@@ -4,11 +4,15 @@
  * Validates the "Where would you like to start?" overlay that appears
  * when navigating to /w/new before any creation path is committed.
  *
- * Two describe blocks:
+ * Three describe blocks:
  *   - "AI-disabled" — always runs; covers the default E2E environment where
  *     no Apollo config is present (data-ai-assistant-enabled="false")
  *   - "AI-enabled" — guarded by a runtime skip when AI config is absent;
  *     exercises the Build with AI entry point
+ *   - "viewer permission denial" — a project viewer can reach /w/new (the
+ *     landing screen itself isn't permission-gated) but the underlying
+ *     channel join for a new workflow is denied server-side, so Build from
+ *     scratch must never succeed in persisting a workflow (#4895)
  *
  * NOTE: Do NOT run these tests directly. They require a running E2E server.
  * Use: cd assets && npm run test:e2e -- --grep "landing screen"
@@ -120,6 +124,80 @@ test.describe('landing screen — AI-disabled @landing-screen', () => {
     await expect(workflowEdit.buildWithAIInput).not.toBeAttached();
     await expect(workflowEdit.buildWithAIButton).not.toBeAttached();
     await expect(workflowEdit.aiDisclaimerFooter).not.toBeAttached();
+  });
+
+  test('Build from scratch creates a webhook workflow and lands on the canvas', async ({
+    page,
+  }) => {
+    const workflowEdit = new WorkflowEditPage(page);
+    await navigateToNewWorkflow(page, projectId);
+
+    // Build from scratch runs entirely client-side against the
+    // already-open collaborative session: importWorkflow -> saveWorkflow
+    // ({ silent: true }) -> dismissLandingScreen. `saveWorkflow`'s own success
+    // handler performs the one navigation, from /w/new to the real
+    // /w/<workflowId>.
+    await workflowEdit.buildFromScratchCard.click();
+    await expect(workflowEdit.landingScreen).not.toBeVisible();
+
+    await page.waitForURL(url => !url.pathname.endsWith('/new'));
+
+    // saveWorkflow({ silent: true }) already resolved (it's awaited before
+    // dismissLandingScreen runs), so the workflow is persisted and
+    // isNewWorkflow has already flipped false: the normal Save button is
+    // present (unlike the landing screen, where it's absent entirely) and
+    // there are no pending unsaved changes.
+    await expect(page.getByTestId('save-workflow-button')).toBeVisible();
+    await expect(page.locator('[data-is-dirty]')).not.toBeAttached();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Viewer permission-denial context
+// ---------------------------------------------------------------------------
+
+test.describe('landing screen — viewer permission denial @landing-screen', () => {
+  let testData: Awaited<ReturnType<typeof getTestData>>;
+  let projectId: string;
+
+  test.beforeAll(async () => {
+    testData = await getTestData();
+    projectId = testData.projects.openhie.id;
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    const loginPage = new LoginPage(page);
+    await loginPage.loginIfNeeded(
+      testData.users.viewer.email,
+      testData.users.viewer.password
+    );
+  });
+
+  test('viewer clicking Build from scratch never creates a workflow', async ({
+    page,
+  }) => {
+    const workflowEdit = new WorkflowEditPage(page);
+    await navigateToNewWorkflow(page, projectId);
+
+    // A viewer's channel join for action=new is rejected server-side
+    // (WorkflowChannel.join/3 requires :create_workflow, which a viewer
+    // lacks) before any collaborative session starts. The landing screen
+    // itself isn't gated on join success (showLandingScreen defaults to
+    // true client-side), so the card is still visible and clickable — the
+    // enforcement point is the channel join, not the UI.
+    await expect(workflowEdit.landingScreen).toBeVisible();
+    await expect(workflowEdit.buildFromScratchCard).toBeVisible();
+
+    await workflowEdit.buildFromScratchCard.click();
+
+    // Whatever the click does under the hood, it must never result in a
+    // persisted workflow: the save-workflow-button (only rendered once
+    // isNewWorkflow flips false, which only happens after a successful
+    // save) must never appear, and the landing screen must not be
+    // dismissed as if creation had succeeded.
+    await expect(page.getByTestId('save-workflow-button')).not.toBeVisible();
+    await expect(workflowEdit.landingScreen).toBeVisible();
   });
 });
 

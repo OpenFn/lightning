@@ -27,6 +27,8 @@ import { createCredentialStore } from '../../../../js/collaborative-editor/store
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
+import type { UIStoreInstance } from '../../../../js/collaborative-editor/stores/createUIStore';
+import { createUIStore } from '../../../../js/collaborative-editor/stores/createUIStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
@@ -34,7 +36,17 @@ import {
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__/urlStateMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
+
+const urlState = createMockURLState();
+
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // Mock useCanRun hook
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
@@ -68,7 +80,8 @@ function createWrapper(
   credentialStore: CredentialStoreInstance,
   sessionContextStore: SessionContextStoreInstance,
   adaptorStore: AdaptorStoreInstance,
-  awarenessStore: AwarenessStoreInstance
+  awarenessStore: AwarenessStoreInstance,
+  uiStore: UIStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
   const mockStoreValue: StoreContextValue = {
     workflowStore,
@@ -76,6 +89,7 @@ function createWrapper(
     sessionContextStore,
     adaptorStore,
     awarenessStore,
+    uiStore,
   };
 
   const mockLiveViewActions = {
@@ -118,6 +132,7 @@ describe('TriggerInspector — show dispatch by type', () => {
   let credentialStore: CredentialStoreInstance;
   let adaptorStore: AdaptorStoreInstance;
   let awarenessStore: AwarenessStoreInstance;
+  let uiStore: UIStoreInstance;
 
   function makeSessionContextStore(triggerType: string): {
     sessionContextStore: SessionContextStoreInstance;
@@ -158,6 +173,7 @@ describe('TriggerInspector — show dispatch by type', () => {
     credentialStore = createCredentialStore();
     adaptorStore = createAdaptorStore();
     awarenessStore = createAwarenessStore();
+    uiStore = createUIStore();
   });
 
   // Each row: [description, triggerType, extra trigger fields, expected heading]
@@ -205,7 +221,8 @@ describe('TriggerInspector — show dispatch by type', () => {
           credentialStore,
           sessionContextStore,
           adaptorStore,
-          awarenessStore
+          awarenessStore,
+          uiStore
         ),
       }
     );
