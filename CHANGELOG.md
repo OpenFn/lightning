@@ -51,6 +51,10 @@ and this project adheres to
 - Made dev and test database names configurable via `DEV_DATABASE_NAME` and
   `TEST_DATABASE_NAME` environment variables
   [#4963](https://github.com/OpenFn/lightning/pull/4963)
+- Updated nodejs version to 24.18.0
+  [#4962](https://github.com/OpenFn/lightning/pull/4962)
+- Updated bundled worker to 1.27.1 and cli to 1.38.4
+  [#4962](https://github.com/OpenFn/lightning/pull/4962)
 
 ### Fixed
 
