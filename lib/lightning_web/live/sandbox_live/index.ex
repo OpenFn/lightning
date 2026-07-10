@@ -912,6 +912,7 @@ defmodule LightningWeb.SandboxLive.Index do
     deleted_entries =
       target_workflows
       |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
+      # credo:disable-for-next-line Credo.Check.Refactor.RejectReject
       |> Enum.reject(fn wf -> workflow_added_after_fork?(wf, source) end)
       |> Enum.map(fn wf ->
         %MergeWorkflow{
