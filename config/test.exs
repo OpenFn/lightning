@@ -36,7 +36,9 @@ config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database:
+    System.get_env("TEST_DATABASE_NAME", "lightning_test") <>
+      "#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 15,
   queue_target: 100,
