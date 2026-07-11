@@ -998,6 +998,55 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                |> json_response(404)
     end
 
+    test "returns 404 when the workflow is deleted before update", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project)
+
+      workflow =
+        workflow
+        |> Ecto.Changeset.change(
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+        |> Repo.update!()
+
+      assert %{"id" => workflow_id, "errors" => ["Not Found"]} =
+               conn
+               |> patch(
+                 ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+                 Jason.encode!(%{name: "work1.1"})
+               )
+               |> json_response(404)
+
+      assert workflow_id == workflow.id
+    end
+
+    test "returns 500 when the workflow snapshot cannot be saved", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project)
+
+      insert(:snapshot,
+        workflow: workflow,
+        lock_version: workflow.lock_version + 1
+      )
+
+      assert %{
+               "id" => workflow_id,
+               "errors" => ["Could not save the workflow snapshot."]
+             } =
+               conn
+               |> patch(
+                 ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+                 Jason.encode!(%{name: "work1.1"})
+               )
+               |> json_response(500)
+
+      assert workflow_id == workflow.id
+    end
+
     test "returns 409 when the workflow is being edited on the UI" do
       %{conn: conn, user: user} =
         register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
