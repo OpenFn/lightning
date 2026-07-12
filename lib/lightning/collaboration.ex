@@ -150,6 +150,11 @@ defmodule Lightning.Collaborate do
   @spec start_document(
           instance :: Instance.t(),
           workflow :: Lightning.Workflows.Workflow.t(),
+          document_name :: String.t()
+        ) :: {:ok, pid()}
+  @spec start_document(
+          instance :: Instance.t(),
+          workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t(),
           opts :: Keyword.t()
         ) :: {:ok, pid()}
