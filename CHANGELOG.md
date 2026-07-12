@@ -50,7 +50,7 @@ and this project adheres to
   [#4402](https://github.com/OpenFn/lightning/issues/4402)
 - Made dev and test database names configurable via `DEV_DATABASE_NAME` and
   `TEST_DATABASE_NAME` environment variables
-  [#4963](https://github.com/OpenFn/lightning/pull/4693)
+  [#4963](https://github.com/OpenFn/lightning/pull/4963)
 
 ### Fixed
 
