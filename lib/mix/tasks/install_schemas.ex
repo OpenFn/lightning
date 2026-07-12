@@ -32,17 +32,24 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
   @spec run(any) :: any
   def run(args) do
-    HTTPoison.start()
+    # Evaluate runtime.exs so LOCAL_ADAPTORS/OPENFN_ADAPTORS_REPO are picked up;
+    # without this the local check always sees empty config and falls back to npm.
+    Mix.Task.run("app.config")
 
     dir = schemas_path()
 
     init_schema_dir(dir)
 
+    results =
+      if Lightning.AdaptorRegistry.local_adaptors_enabled?() do
+        install_from_local(dir)
+      else
+        HTTPoison.start()
+        args |> parse_excluded() |> fetch_schemas(&persist_schema(dir, &1))
+      end
+
     {installed, skipped} =
-      args
-      |> parse_excluded()
-      |> fetch_schemas(&persist_schema(dir, &1))
-      |> Enum.reduce({0, 0}, fn
+      Enum.reduce(results, {0, 0}, fn
         {:installed, _name}, {ok, skip} -> {ok + 1, skip}
         {:skipped, _name, _reason}, {ok, skip} -> {ok, skip + 1}
       end)
@@ -134,6 +141,57 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
         )
 
         {:skipped, package_name, reason}
+    end
+  end
+
+  # Read schemas straight from the local adaptor monorepos configured via
+  # LOCAL_ADAPTORS/OPENFN_ADAPTORS_REPO instead of fetching from npm/jsdelivr.
+  # Packages without a configuration-schema.json (e.g. common) are skipped.
+  def install_from_local(dir) do
+    repos = local_repos()
+
+    Mix.shell().info(
+      "Installing credential schemas from: #{Enum.join(repos, ", ")}"
+    )
+
+    repos
+    |> Enum.flat_map(&local_packages/1)
+    # First occurrence wins, matching AdaptorRegistry's repo precedence.
+    |> Enum.uniq_by(fn {name, _path} -> name end)
+    |> Enum.map(fn {name, path} -> persist_local_schema(dir, name, path) end)
+  end
+
+  defp local_repos do
+    Lightning.Config.adaptor_registry()[:local_adaptors_repos] || []
+  end
+
+  defp local_packages(repo_path) do
+    packages_path = Path.join(repo_path, "packages")
+
+    case File.ls(packages_path) do
+      {:ok, entries} ->
+        Enum.map(entries, fn pkg ->
+          {pkg, Path.join([packages_path, pkg, "configuration-schema.json"])}
+        end)
+
+      {:error, reason} ->
+        Logger.warning(
+          "Skipping local repo #{inspect(repo_path)}: " <>
+            "cannot list #{inspect(packages_path)} (#{:file.format_error(reason)})"
+        )
+
+        []
+    end
+  end
+
+  defp persist_local_schema(dir, name, schema_path) do
+    case File.read(schema_path) do
+      {:ok, body} ->
+        write_schema(dir, name, body)
+        {:installed, name}
+
+      {:error, reason} ->
+        {:skipped, name, reason}
     end
   end
 

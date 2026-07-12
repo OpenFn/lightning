@@ -33,7 +33,26 @@
     </div>
 
     <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700 mb-4">
-      <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+      <div
+        :if={!@has_password and !@current_user.mfa_enabled}
+        class="p-6 space-y-4 md:space-y-6 sm:p-8"
+      >
+        <h1 class="text-xl text-center font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+          Confirm access
+        </h1>
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          You signed in via single sign-on, so we can't confirm your identity
+          with a password. To continue, please
+          <.link navigate={~p"/profile"} class="link font-medium">
+            set a password or enable two-factor authentication
+          </.link>
+          on your profile, then try again.
+        </p>
+      </div>
+      <div
+        :if={@has_password or @current_user.mfa_enabled}
+        class="p-6 space-y-4 md:space-y-6 sm:p-8"
+      >
         <h1 class="text-xl text-center font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
           <%= if @active_option == :password do %>
             Password
@@ -111,7 +130,7 @@
                 Use your authenticator app instead
               </a>
             </li>
-            <li :if={@active_option == :totp}>
+            <li :if={@active_option == :totp and @has_password}>
               <a
                 id="use-password"
                 href="#"

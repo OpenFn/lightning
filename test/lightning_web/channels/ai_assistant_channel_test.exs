@@ -208,6 +208,53 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "message serialization" do
+    test "serializes from_global marker with nil job_id", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Global workflow response",
+              status: :success,
+              meta: %{"from_global" => true},
+              code: "workflow:\n  name: updated"
+            },
+            %{
+              role: :assistant,
+              content: "Job chat response",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [
+               %{
+                 from_global: true,
+                 job_id: nil,
+                 code: "workflow:\n  name: updated"
+               },
+               %{from_global: false}
+             ] = messages
+    end
+  end
+
   describe "workflow_template sessions" do
     test "successfully creates workflow template session", %{
       socket: socket,
@@ -839,6 +886,39 @@ defmodule LightningWeb.AiAssistantChannelTest do
                  socket,
                  AiAssistantChannel,
                  "ai_assistant:workflow_template:#{session.id}",
+                 %{}
+               )
+    end
+
+    test "rejects job_code session when unsaved job workflow no longer exists",
+         %{
+           socket: socket,
+           user: user,
+           workflow: workflow
+         } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: nil,
+          session_type: "job_code",
+          meta: %{
+            "unsaved_job" => %{
+              "id" => Ecto.UUID.generate(),
+              "name" => "Unsaved Job",
+              "body" => "console.log('unsaved');",
+              "adaptor" => "@openfn/language-common@latest",
+              "workflow_id" => workflow.id
+            }
+          }
+        )
+
+      Lightning.Repo.delete!(workflow)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
                  %{}
                )
     end
@@ -3198,6 +3278,51 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert message_options["use_global_assistant"] == true
       assert message_options["page"] == "/projects/p1/workflows/w1/jobs/j1"
+    end
+
+    test "first-turn global session opened with a step persists code and no job_id",
+         %{
+           socket: socket,
+           project: project,
+           workflow: workflow,
+           job: job
+         } do
+      # Global chat launched with a step open sends job_id in the join params.
+      # The session must still be created on the workflow_template path so the
+      # full workflow YAML is stored on the message, and no job is attached.
+      yaml = "workflow:\n  name: opened-from-step"
+
+      params = %{
+        "job_id" => job.id,
+        "workflow_id" => workflow.id,
+        "project_id" => project.id,
+        "content" => "what does this do",
+        "use_global_assistant" => true,
+        "page" => "workflows/Test Workflow/Test Job",
+        "code" => yaml
+      }
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      assert response.session_type == "workflow_template"
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      user_msg =
+        Enum.find(session.messages, fn m ->
+          m.role == :user && m.content == "what does this do"
+        end)
+
+      # The full workflow YAML reaches Apollo via the message code...
+      assert user_msg.code == yaml
+      # ...and the message carries no job_id, even though a step was open.
+      assert user_msg.job_id == nil
     end
   end
 end

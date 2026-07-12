@@ -395,6 +395,20 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
+  # Global chat is always a workflow_template session, even when launched with a
+  # step open (which puts a job_id in params). Route it to the workflow_template
+  # path so the full workflow YAML (`code`) and global meta are persisted and no
+  # job is attached to the message — matching the global-chat receive design and
+  # the turn-2 (new_message) path. Without this, the job_id clause below would
+  # drop `code` and Apollo would receive no workflow context on the first turn.
+  defp load_or_create_session(
+         session_id,
+         %{"use_global_assistant" => true} = params,
+         user
+       ) do
+    load_or_create_workflow_template_session(session_id, params, user)
+  end
+
   defp load_or_create_session(session_id, %{"job_id" => job_id} = params, user)
        when not is_nil(job_id) do
     case session_id do
@@ -404,6 +418,10 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp load_or_create_session(session_id, params, user) do
+    load_or_create_workflow_template_session(session_id, params, user)
+  end
+
+  defp load_or_create_workflow_template_session(session_id, params, user) do
     case session_id do
       "new" ->
         with {:project_id, project_id} when not is_nil(project_id) <-
@@ -608,14 +626,20 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp check_workflow_access_by_id(workflow_id, user, permission) do
-    workflow = Workflows.get_workflow(workflow_id)
-    project = Projects.get_project(workflow.project_id)
-    Permissions.can(:workflows, permission, user, project)
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, :unauthorized}
+
+      workflow ->
+        check_project_access(workflow.project_id, user, permission)
+    end
   end
 
   defp check_project_access(project_id, user, permission) do
-    project = Projects.get_project(project_id)
-    Permissions.can(:workflows, permission, user, project)
+    case Projects.get_project(project_id) do
+      nil -> {:error, :unauthorized}
+      project -> Permissions.can(:workflows, permission, user, project)
+    end
   end
 
   defp extract_session_options("job_code", params) do
@@ -725,13 +749,11 @@ defmodule LightningWeb.AiAssistantChannel do
         when not is_nil(unsaved_job_id) ->
           unsaved_job_id
 
-        %{"from_global_job_code" => job_key}
-        when not is_nil(job_key) ->
-          job_key
-
         _ ->
           message.job_id
       end
+
+    from_global = match?(%{"from_global" => true}, message.meta)
 
     %{
       id: message.id,
@@ -742,7 +764,8 @@ defmodule LightningWeb.AiAssistantChannel do
       inserted_at: message.inserted_at,
       user_id: message.user_id,
       user: format_user(message.user),
-      job_id: job_id
+      job_id: job_id,
+      from_global: from_global
     }
   end
 

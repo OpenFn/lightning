@@ -102,15 +102,9 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/storybook.js
-         js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
-         js/job-editor/JobEditor.tsx
-         js/workflow-editor/WorkflowEditor.tsx
-         js/workflow-store/WorkflowStore.tsx
          js/manual-run-panel/ManualRunPanel.tsx
-         js/panel/panels/WorkflowRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
@@ -143,13 +137,6 @@ config :tailwind,
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/app.css
-    ),
-    cd: Path.expand("..", __DIR__)
-  ],
-  storybook: [
-    args: ~w(
-      --input=assets/css/storybook.css
-      --output=priv/static/assets/storybook.css
     ),
     cd: Path.expand("..", __DIR__)
   ]

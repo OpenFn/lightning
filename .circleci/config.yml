@@ -186,6 +186,8 @@ jobs:
           name: "Check for known-vulnerable Hex dependencies"
           when: always
           command: |
+            # GHSA-g2wm-735q-3f56: cowlib cookie encoder CRLF injection (low);
+            #   no patched release available yet.
             sudo -u lightning mix deps.audit \
               --ignore-advisory-ids GHSA-g2wm-735q-3f56 \
               || echo "deps.audit" >> /tmp/lint_failed

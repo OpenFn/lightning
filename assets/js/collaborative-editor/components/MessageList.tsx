@@ -15,6 +15,18 @@ const PROSE_CLASSES =
   'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
 
 /**
+ * Three-dot bouncing "typing" indicator, shared by the pre-text loading
+ * indicator and the post-text streaming status.
+ */
+const BouncingDots = () => (
+  <>
+    <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+    <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+    <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+  </>
+);
+
+/**
  * Custom code block component for react-markdown
  * Renders code with COPY/ADD action buttons
  */
@@ -384,6 +396,10 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
+  /** Per-step diff preview for global messages (extracts the open job's body from the YAML) */
+  onPreviewGlobalStep?: ((yaml: string, messageId: string) => void) | undefined;
+  /** Whether a job is open in the IDE, enabling preview for global messages */
+  canPreviewGlobalStep?: boolean;
   applyingMessageId?: string | null | undefined;
   previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
@@ -400,6 +416,8 @@ export function MessageList({
   onApplyWorkflow,
   onApplyJobCode,
   onPreviewJobCode,
+  onPreviewGlobalStep,
+  canPreviewGlobalStep = false,
   applyingMessageId,
   previewingMessageId,
   showAddButtons = false,
@@ -546,6 +564,23 @@ export function MessageList({
                     className={PROSE_CLASSES}
                   />
 
+                  {/* Status (e.g. "Generating code...") Apollo may stream
+                      after the text answer, while we wait for code. Same
+                      visual as the pre-text loading indicator. */}
+                  {isStreaming(message) && streamingStatus && (
+                    <div
+                      className="flex items-center gap-2"
+                      data-testid="streaming-status"
+                    >
+                      <div className="flex items-center gap-1">
+                        <BouncingDots />
+                      </div>
+                      <span className="text-xs text-gray-400 italic">
+                        {streamingStatus}
+                      </span>
+                    </div>
+                  )}
+
                   {!isStreaming(message) && message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div
@@ -589,7 +624,10 @@ export function MessageList({
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
-                          showPreview={!!message.job_id}
+                          showPreview={
+                            !!message.job_id ||
+                            (!!message.from_global && canPreviewGlobalStep)
+                          }
                           onApply={() => {
                             if (message.job_id) {
                               onApplyJobCode?.(message.code!, message.id);
@@ -598,7 +636,12 @@ export function MessageList({
                             }
                           }}
                           onPreview={() => {
-                            onPreviewJobCode?.(message.code!, message.id);
+                            if (message.from_global) {
+                              // Per-step diff from the full workflow YAML
+                              onPreviewGlobalStep?.(message.code!, message.id);
+                            } else {
+                              onPreviewJobCode?.(message.code!, message.id);
+                            }
                           }}
                           isApplying={!!applyingMessageId}
                           isPreviewActive={previewingMessageId === message.id}
@@ -647,9 +690,7 @@ export function MessageList({
                   {!isStreaming(message) && message.status === 'processing' && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <div className="flex items-center gap-1">
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                        <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                        <BouncingDots />
                       </div>
                     </div>
                   )}
@@ -768,9 +809,7 @@ export function MessageList({
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
-                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                <BouncingDots />
               </div>
               <span className="text-xs text-gray-400 italic">
                 {streamingStatus}

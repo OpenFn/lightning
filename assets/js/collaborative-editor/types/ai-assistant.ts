@@ -54,6 +54,11 @@ export interface Message {
   user_id?: string;
   user?: MessageUser | null;
   job_id?: string;
+  /**
+   * True when this message came from the global AI assistant. Global
+   * messages carry a full workflow YAML in `code` and never a `job_id`.
+   */
+  from_global?: boolean;
 }
 
 /**
@@ -72,6 +77,10 @@ export interface JobCodeContext {
   job_body?: string;
   job_adaptor?: string;
   workflow_id?: string;
+
+  // Full serialized workflow YAML attached by global chat (sent as the message
+  // `code`). Present even with a step open, so it lives on the job context too.
+  code?: string;
 }
 
 /**
@@ -101,6 +110,10 @@ export type WorkflowTemplateContext =
 
       workflow_id?: string;
       project_id: string;
+
+      // Full serialized workflow YAML attached by global chat (sent as the
+      // message `code`), present even when a step is open.
+      code?: string;
     };
 
 /**
@@ -199,7 +212,7 @@ export interface AIAssistantStore {
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
   _appendStreamingChunk: (content: string) => void;
-  setStreamingStatus: (text: string) => void;
+  setStreamingStatus: (text: string | null) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;

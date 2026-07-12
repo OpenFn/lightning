@@ -91,15 +91,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   def handle_event("show_modal", %{"target" => "new_credential"}, socket) do
     if socket.assigns.can_create_project_credential do
       project_credentials =
-        if socket.assigns.project do
-          [
-            %Lightning.Projects.ProjectCredential{
-              project_id: socket.assigns.project.id
-            }
-          ]
-        else
-          []
-        end
+        LightningWeb.CredentialLive.Helpers.default_project_credentials(
+          socket.assigns.project
+        )
 
       {:noreply,
        assign(socket,

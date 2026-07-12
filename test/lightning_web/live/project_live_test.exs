@@ -1021,6 +1021,50 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    test "new credential in a sandbox pre-selects only the active sandbox",
+         %{conn: conn, user: user} do
+      root =
+        insert(:project,
+          name: "root-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      intermediate = insert(:project, name: "intermediate", parent_id: root.id)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox-project",
+          parent_id: intermediate.id,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      # Only the active sandbox is pre-selected. Ancestors are attached at
+      # merge time, not speculatively at credential creation.
+      assert has_element?(
+               view,
+               "#remove-project-credential-button-new-#{sandbox.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{intermediate.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{root.id}"
+             )
+    end
+
     test "support users can create new credentials in the project credentials page",
          %{
            conn: conn,
@@ -2672,6 +2716,80 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~ auth_method.password
     end
 
+    test "SSO user with MFA is only asked for a 2FA code when revealing a webhook secret",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          api_key: nil,
+          username: "testusername",
+          password: "someveryverystrongpassword1234"
+        )
+
+      user =
+        insert(:user,
+          hashed_password: nil,
+          mfa_enabled: true,
+          user_totp: build(:user_totp)
+        )
+
+      insert(:project_user, role: :admin, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      form_id = "webhook_auth_method"
+
+      html =
+        view |> element("##{form_id}_password_action_button") |> render_click()
+
+      assert html =~ "2FA Code"
+      # Signing in via SSO means there's no password, so none is requested
+      refute has_element?(view, "#reauthentication-form input[type='password']")
+    end
+
+    test "SSO user without MFA is told to set a password or enable 2FA when revealing a webhook secret",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          api_key: nil,
+          username: "testusername",
+          password: "someveryverystrongpassword1234"
+        )
+
+      user = insert(:user, hashed_password: nil, mfa_enabled: false)
+
+      insert(:project_user, role: :admin, project: project, user: user)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      form_id = "webhook_auth_method"
+
+      html =
+        view |> element("##{form_id}_password_action_button") |> render_click()
+
+      assert html =~ "set a password or enable two-factor authentication"
+      refute has_element?(view, "#reauthentication-form")
+    end
+
     test "owners and admins can delete a project webhook auth method",
          %{conn: conn} do
       project = insert(:project)
@@ -3431,6 +3549,105 @@ defmodule LightningWeb.ProjectLiveTest do
         assert Floki.find(html, "button[name$='[collaborators_drop][]']")
                |> Enum.count() == 0
       end
+    end
+
+    test "validate event with invalid email shows error in modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      modal = element(view, "#add_collaborators_modal")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "not-an-email", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(modal) =~ "Email address not valid."
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "valid@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(modal) =~ "Email address not valid."
+    end
+
+    test "validate event with invalid email shows error in invite modal", %{
+      conn: conn
+    } do
+      project = insert(:project, name: "my-project")
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      # Submit with a non-existent email to open the invite form
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "newuser@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert has_element?(view, "#invite_collaborators_modal_form")
+
+      invite_modal = element(view, "#invite_collaborators_modal")
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "not-an-email",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(invite_modal) =~ "Email address not valid."
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "valid@example.com",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(invite_modal) =~ "Email address not valid."
     end
 
     test "adding a non existent user triggers the invite users process", %{

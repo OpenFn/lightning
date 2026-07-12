@@ -142,6 +142,251 @@ defmodule Lightning.AccountsTest do
                  valid_user_password()
                )
     end
+
+    test "returns :sso_account error when the user has no password" do
+      user = insert(:user, hashed_password: nil, password: nil)
+
+      assert {:error, :sso_account} =
+               Accounts.get_user_by_email_and_password(user.email, "anything")
+    end
+  end
+
+  describe "get_user_by_identity/2" do
+    test "returns the user when an identity exists" do
+      user = insert(:user)
+
+      insert(:user_identity,
+        user: user,
+        provider: "github",
+        uid: "12345"
+      )
+
+      assert %User{id: id} = Accounts.get_user_by_identity("github", "12345")
+      assert id == user.id
+    end
+
+    test "returns nil when no identity matches" do
+      refute Accounts.get_user_by_identity("github", "nope")
+    end
+  end
+
+  describe "link_user_identity/3" do
+    test "creates a new identity for the user" do
+      user = insert(:user)
+
+      assert {:ok, identity} =
+               Accounts.link_user_identity(user, "github", "abc")
+
+      assert identity.user_id == user.id
+      assert identity.provider == "github"
+      assert identity.uid == "abc"
+    end
+
+    test "is idempotent when already linked to the same user" do
+      user = insert(:user)
+
+      existing =
+        insert(:user_identity, user: user, provider: "github", uid: "abc")
+
+      assert {:ok, identity} = Accounts.link_user_identity(user, "github", "abc")
+      # Returns the existing persisted row, not a fake unpersisted struct
+      assert identity.id == existing.id
+    end
+
+    test "errors when the (provider, uid) is claimed by a different user" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "abc")
+
+      user = insert(:user)
+
+      assert {:error, :identity_already_linked} =
+               Accounts.link_user_identity(user, "github", "abc")
+
+      # The identity still belongs to the original owner
+      assert %User{id: owner_id} = Accounts.get_user_by_identity("github", "abc")
+      assert owner_id == other_user.id
+    end
+
+    test "rejects a second identity for a provider the user already linked" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:error, :provider_already_linked} =
+               Accounts.link_user_identity(user, "github", "uid-b")
+
+      # Only the original identity remains
+      assert [%{uid: "uid-a"}] = Accounts.list_user_identities(user)
+    end
+
+    test "allows linking a different provider" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:ok, _identity} =
+               Accounts.link_user_identity(user, "google", "uid-b")
+
+      assert [%{provider: "github"}, %{provider: "google"}] =
+               Accounts.list_user_identities(user)
+    end
+
+    test "the database rejects a duplicate (user_id, provider) as a backstop" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      # Bypass the application guard to prove the DB constraint also holds (the
+      # backstop for a race between two concurrent links).
+      assert {:error, changeset} =
+               %Lightning.Accounts.UserIdentity{}
+               |> Lightning.Accounts.UserIdentity.changeset(%{
+                 user_id: user.id,
+                 provider: "github",
+                 uid: "uid-b"
+               })
+               |> Lightning.Repo.insert()
+
+      assert "is already linked to a different account for this provider" in errors_on(
+               changeset
+             ).user_id
+    end
+  end
+
+  describe "register_user_from_sso/3" do
+    test "creates a confirmed user and linked identity in one transaction" do
+      Events.subscribe()
+      email = unique_user_email()
+
+      assert {:ok, user} =
+               Accounts.register_user_from_sso(
+                 %{
+                   email: email,
+                   first_name: "Sso",
+                   last_name: "User"
+                 },
+                 "github",
+                 "id-1"
+               )
+
+      assert user.email == email
+      assert user.first_name == "Sso"
+      assert user.last_name == "User"
+      assert is_nil(user.hashed_password)
+      refute is_nil(user.confirmed_at)
+      assert_receive %Events.UserRegistered{user: ^user}
+
+      assert %User{id: same_id} = Accounts.get_user_by_identity("github", "id-1")
+      assert same_id == user.id
+    end
+
+    test "fails when the email is already taken" do
+      existing = insert(:user)
+
+      assert {:error, changeset} =
+               Accounts.register_user_from_sso(
+                 %{
+                   email: existing.email,
+                   first_name: "Other",
+                   last_name: "User"
+                 },
+                 "github",
+                 "id-2"
+               )
+
+      assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "rolls back without orphaning a user when the identity is already claimed" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "taken")
+
+      email = unique_user_email()
+
+      assert {:error, :identity_already_linked} =
+               Accounts.register_user_from_sso(
+                 %{email: email, first_name: "Sso", last_name: "User"},
+                 "github",
+                 "taken"
+               )
+
+      # The user insert is rolled back with the failed identity link
+      refute Accounts.get_user_by_email(email)
+    end
+  end
+
+  describe "list_user_identities/1" do
+    test "returns identities for the given user, ordered by provider" do
+      user = insert(:user)
+
+      insert(:user_identity, user: user, provider: "google", uid: "g1")
+      insert(:user_identity, user: user, provider: "github", uid: "h1")
+      insert(:user_identity, user: insert(:user), provider: "github", uid: "h2")
+
+      assert [a, b] = Accounts.list_user_identities(user)
+      assert a.provider == "github"
+      assert b.provider == "google"
+    end
+  end
+
+  describe "unlink_user_identity/2" do
+    test "removes the identity for a user with a password" do
+      user = insert(:user)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
+      assert [] = Accounts.list_user_identities(user)
+    end
+
+    test "returns :not_linked when the identity does not exist" do
+      user = insert(:user)
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, Ecto.UUID.generate())
+    end
+
+    test "returns :not_linked for a malformed identity id" do
+      user = insert(:user)
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, "not-a-uuid")
+    end
+
+    test "returns :not_linked when the identity belongs to another user" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      identity =
+        insert(:user_identity, user: other_user, provider: "github", uid: "h1")
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, identity.id)
+
+      assert [_] = Accounts.list_user_identities(other_user)
+    end
+
+    test "refuses to unlink the only identity of an SSO-only user" do
+      user = insert(:user, hashed_password: nil)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      assert {:error, :would_lock_out} =
+               Accounts.unlink_user_identity(user, identity.id)
+
+      assert [_] = Accounts.list_user_identities(user)
+    end
+
+    test "allows unlinking when an SSO-only user has another identity" do
+      user = insert(:user, hashed_password: nil)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      insert(:user_identity, user: user, provider: "google", uid: "g1")
+
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
+      assert [%{provider: "google"}] = Accounts.list_user_identities(user)
+    end
   end
 
   describe "get_user!/1" do
@@ -394,7 +639,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -471,7 +716,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -846,7 +1091,7 @@ defmodule Lightning.AccountsTest do
           email: "not valid"
         })
 
-      assert %{email: ["must have the @ sign and no spaces"]} =
+      assert %{email: ["must be a valid email address"]} =
                errors_on(changeset)
     end
 
