@@ -17,6 +17,7 @@ export function TemplateBrowserModalWrapper() {
   const isOpen = useShowTemplateBrowserModal();
   const { closeTemplateBrowserModal, dismissLandingScreen } = useUICommands();
   const provider = useSession(s => s.provider);
+  const isConnected = useSession(s => s.isConnected);
   const channel = provider?.channel;
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
@@ -54,26 +55,34 @@ export function TemplateBrowserModalWrapper() {
 
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
+      if (!isConnected) {
+        notifications.alert({
+          title: 'Not connected',
+          description: 'Connection lost — please wait a moment and try again.',
+        });
+        return;
+      }
       try {
         const spec = parseWorkflowYAML(template.code);
         const state = convertWorkflowSpecToState(spec);
         await importWorkflow(state);
-        const saved = await saveWorkflow({ silent: true });
-        if (!saved) {
-          notifications.alert({
-            title: 'Not connected',
-            description: 'Connect to the server before creating a workflow.',
-          });
-          return;
-        }
-        closeTemplateBrowserModal();
-        dismissLandingScreen();
       } catch {
         notifications.alert({
           title: 'Failed to create workflow',
           description: 'Please check your connection and try again.',
         });
+        return;
       }
+      try {
+        await saveWorkflow({ notify: 'error-only' });
+      } catch {
+        // Shared handler has shown a persistent Retry toast; a successful
+        // retry patches the URL and unmounts this modal via the
+        // isNewWorkflow gate.
+        return;
+      }
+      closeTemplateBrowserModal();
+      dismissLandingScreen();
     }
   );
 

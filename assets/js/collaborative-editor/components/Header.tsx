@@ -269,7 +269,7 @@ export function Header({
 
     setIsSubmitting(true);
     try {
-      await saveWorkflow({ silent: true });
+      await saveWorkflow({ notify: 'none' });
       const response = await dataclipApi.submitManualRun({
         workflowId,
         projectId,
@@ -304,7 +304,7 @@ export function Header({
 
     setIsSubmitting(true);
     try {
-      await saveWorkflow({ silent: true });
+      await saveWorkflow({ notify: 'none' });
 
       const firstStep = activeRun.steps[0];
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;

@@ -518,7 +518,7 @@ describe('useRunRetry - handleRun', () => {
       await result.current.handleRun();
     });
 
-    expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+    expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
     expect(dataclipApi.submitManualRun).toHaveBeenCalledWith({
       workflowId: 'workflow-456',
       projectId: 'project-123',
@@ -678,7 +678,7 @@ describe('useRunRetry - handleRetry', () => {
       await result.current.handleRetry();
     });
 
-    expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+    expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
     expect(fetch).toHaveBeenCalledWith(
       '/projects/project-123/runs/run-123/retry',
       {

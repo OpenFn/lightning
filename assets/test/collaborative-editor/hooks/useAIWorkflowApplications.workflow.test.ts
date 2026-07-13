@@ -163,6 +163,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -198,6 +199,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -234,6 +236,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -275,6 +278,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -311,6 +315,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -342,6 +347,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -377,6 +383,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -410,6 +417,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -420,7 +428,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(mockSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+      expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
     });
 
     const importOrder = mockImportWorkflow.mock.invocationCallOrder[0];
@@ -448,6 +456,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -480,6 +489,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: true,
         onValidationError: mockOnValidationError,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
@@ -512,6 +522,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -571,6 +582,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
+          isSessionConnected: true,
           appliedMessageIdsRef,
           streamingApply,
           streamingApplyActions: mockStreamingApplyActions,
@@ -585,7 +597,9 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     // Streaming already imported this exact YAML and saved successfully
     rerender({
-      currentSession: { messages: [userMessage, assistantMessage] },
+      currentSession: {
+        messages: [userMessage, assistantMessage] as (typeof userMessage)[],
+      },
       streamingApply: { yaml: 'name: Test', saveFailed: false },
     });
 
@@ -644,6 +658,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
+          isSessionConnected: true,
           appliedMessageIdsRef,
           streamingApply,
           streamingApplyActions: mockStreamingApplyActions,
@@ -658,12 +673,16 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     // Streaming imported the YAML but its save failed — a save is still owed
     rerender({
-      currentSession: { messages: [userMessage, assistantMessage] },
+      currentSession: {
+        messages: [userMessage, assistantMessage] as (typeof userMessage)[],
+      },
       streamingApply: { yaml: 'name: Test', saveFailed: true },
     });
 
     await waitFor(() => {
-      expect(successfulSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+      expect(successfulSaveWorkflow).toHaveBeenCalledWith({
+        notify: 'error-only',
+      });
     });
     expect(mockImportWorkflow).not.toHaveBeenCalled();
     expect(mockStreamingApplyActions.clear).toHaveBeenCalled();
@@ -714,6 +733,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
+          isSessionConnected: true,
           appliedMessageIdsRef,
           streamingApply,
           streamingApplyActions: mockStreamingApplyActions,
@@ -728,7 +748,9 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     // Stale record: streaming applied different YAML than the final message
     rerender({
-      currentSession: { messages: [userMessage, assistantMessage] },
+      currentSession: {
+        messages: [userMessage, assistantMessage] as (typeof userMessage)[],
+      },
       streamingApply: { yaml: 'name: Something else', saveFailed: false },
     });
 
@@ -797,6 +819,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
+          isSessionConnected: true,
           appliedMessageIdsRef,
           streamingApply,
           streamingApplyActions: mockStreamingApplyActions,
@@ -869,6 +892,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: true,
         onValidationError: mockOnValidationError,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
@@ -886,52 +910,6 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
     expect(notifications.alert).not.toHaveBeenCalled();
     expect(mockOnValidationError).not.toHaveBeenCalled();
-  });
-
-  it('shows its own toast when save returns null (disconnected)', async () => {
-    // Disconnect is signalled by a null return, not a throw, so the
-    // saveWorkflow wrapper shows no toast of its own for this case.
-    const disconnectedSaveWorkflow = vi.fn(() => Promise.resolve(null));
-
-    const { result } = renderHook(() =>
-      useAIWorkflowApplications({
-        sessionId: 'session-1',
-        page: 'workflow_template',
-        currentSession: null,
-        currentUserId: 'user-123',
-        aiMode: createMockAIMode('workflow_template'),
-        workflowActions: {
-          ...mockWorkflowActions,
-          saveWorkflow: disconnectedSaveWorkflow,
-        },
-        monacoRef: createMockMonacoRef(),
-        jobs: [],
-        canApplyChanges: true,
-        connectionState: 'connected' as ConnectionState,
-        setPreviewingMessageId: mockSetPreviewingMessageId,
-        previewingMessageId: null,
-        setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: true,
-        onValidationError: mockOnValidationError,
-        appliedMessageIdsRef: { current: new Set() },
-        streamingApply: null,
-        streamingApplyActions: mockStreamingApplyActions,
-      })
-    );
-
-    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
-
-    await waitFor(() => {
-      expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(notifications.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Failed to save workflow',
-          description: 'Your connection was lost. Reconnect and try again.',
-          action: expect.objectContaining({ label: 'Retry' }) as object,
-        })
-      );
-      expect(mockOnValidationError).not.toHaveBeenCalled();
-    });
   });
 
   it('records the streaming apply only after a successful import', async () => {
@@ -956,6 +934,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -1002,6 +981,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -1021,9 +1001,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
-  it('marks the streaming apply save-failed when save returns null (disconnected)', async () => {
-    const disconnectedSaveWorkflow = vi.fn(() => Promise.resolve(null));
-
+  it('gate blocks creation offline: new workflow, session disconnected', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
@@ -1031,10 +1009,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
-        workflowActions: {
-          ...mockWorkflowActions,
-          saveWorkflow: disconnectedSaveWorkflow,
-        },
+        workflowActions: mockWorkflowActions,
         monacoRef: createMockMonacoRef(),
         jobs: [],
         canApplyChanges: true,
@@ -1043,20 +1018,146 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
+        isSessionConnected: false,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
-    await result.current.handleApplyWorkflow('name: Test', '__streaming__');
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(notifications.alert).toHaveBeenCalledWith({
+        title: 'Not connected',
+        description: 'Connection lost — please wait a moment and try again.',
+      });
+    });
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
+    expect(mockStartApplyingWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('gate does not block existing workflows when session disconnected', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: mockWorkflowActions,
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: false,
+        appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(mockStreamingApplyActions.set).toHaveBeenCalledWith('name: Test');
-      expect(mockStreamingApplyActions.setSaveFailed).toHaveBeenCalledWith(
-        true
-      );
+    });
+    expect(notifications.alert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Not connected' })
+    );
+  });
+
+  it('blocked auto-apply is still manually applicable after reconnect', async () => {
+    const appliedMessageIdsRef = { current: new Set<string>() };
+
+    const userMessage = {
+      id: 'user-msg-1',
+      role: 'user' as const,
+      content: 'Build me a workflow',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:00Z',
+      user_id: 'user-123',
+    };
+
+    const assistantMessage = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is your workflow',
+      code: 'name: Test',
+      status: 'success' as const,
+      inserted_at: '2024-01-01T00:00:01Z',
+    };
+
+    type Props = {
+      currentSession: { messages: (typeof userMessage)[] } | null;
+      isSessionConnected: boolean;
+    };
+
+    const { result, rerender } = renderHook(
+      ({ currentSession, isSessionConnected }: Props) =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: mockWorkflowActions,
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: true,
+          isSessionConnected,
+          appliedMessageIdsRef,
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
+        }),
+      {
+        initialProps: {
+          currentSession: { messages: [userMessage] },
+          isSessionConnected: false,
+        },
+      }
+    );
+
+    // Auto-apply effect fires for the new assistant message while offline:
+    // the ref marks it applied even though the gate blocks the apply.
+    rerender({
+      currentSession: {
+        messages: [userMessage, assistantMessage] as (typeof userMessage)[],
+      },
+      isSessionConnected: false,
+    });
+
+    await waitFor(() => {
+      expect(notifications.alert).toHaveBeenCalledWith({
+        title: 'Not connected',
+        description: 'Connection lost — please wait a moment and try again.',
+      });
+    });
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
+    expect(appliedMessageIdsRef.current.has('msg-1')).toBe(true);
+
+    // Reconnect, then manually apply the same message: the ref bookkeeping
+    // must never make a blocked message permanently unappliable.
+    rerender({
+      currentSession: {
+        messages: [userMessage, assistantMessage] as (typeof userMessage)[],
+      },
+      isSessionConnected: true,
+    });
+
+    await result.current.handleApplyWorkflow(assistantMessage.code, 'msg-1');
+
+    await waitFor(() => {
+      expect(mockImportWorkflow).toHaveBeenCalled();
     });
   });
 });

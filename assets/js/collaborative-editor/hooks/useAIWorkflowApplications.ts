@@ -22,13 +22,7 @@ import type {
 } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
-
-/**
- * Stable toast id for the "Failed to save workflow" alert so repeated
- * failures update one toast instead of stacking, and a later success can
- * dismiss it.
- */
-const SAVE_FAILED_TOAST_ID = 'ai-workflow-save-failed';
+import type { SaveWorkflowOptions } from './useWorkflow';
 
 /**
  * Helper function to validate workflow IDs before applying
@@ -115,6 +109,7 @@ export function useAIWorkflowApplications({
   currentUserId,
   aiMode,
   isNewWorkflow,
+  isSessionConnected,
   onValidationError,
   workflowActions,
   monacoRef,
@@ -137,6 +132,11 @@ export function useAIWorkflowApplications({
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
   isNewWorkflow: boolean;
+  /**
+   * Workflow-session socket connectivity (distinct from `connectionState`,
+   * which tracks the separate assistant-conversation channel).
+   */
+  isSessionConnected: boolean;
   onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
@@ -145,7 +145,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
     doneApplyingJobCode: (messageId: string) => Promise<void>;
     updateJob: (jobId: string, updates: { body: string }) => void;
-    saveWorkflow: (options?: { silent?: boolean }) => Promise<unknown>;
+    saveWorkflow: (options?: SaveWorkflowOptions) => Promise<unknown>;
   };
   monacoRef: RefObject<MonacoHandle> | null;
   jobs: Job[];
@@ -191,59 +191,27 @@ export function useAIWorkflowApplications({
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  // Stable ref so the Retry toast closure always calls the latest
-  // saveNewWorkflow (importWorkflow already succeeded; only the save retries)
-  const saveNewWorkflowRef = useRef<(() => Promise<boolean>) | null>(null);
-
   /**
-   * Silently save a new workflow after an AI apply, with a persistent
-   * Retry toast on failure. Records the outcome on the pending streaming
-   * apply so the final new_message knows whether a save is still owed
-   * (no-op in the store when the apply didn't come from streaming).
+   * Save a new workflow after an AI apply. Failure feedback (persistent
+   * Retry toast) is owned by the shared save handler in useWorkflow.tsx.
+   * Records the outcome on the pending streaming apply so the final
+   * new_message knows whether a save is still owed (no-op in the store
+   * when the apply didn't come from streaming).
    */
   const saveNewWorkflow = useCallback(async (): Promise<boolean> => {
     try {
-      const saved = await saveWorkflow({ silent: true });
-      if (!saved) {
-        // saveWorkflow returns null (rather than throwing) when the socket
-        // is disconnected, so the wrapper shows no toast of its own for
-        // this case — surface one here.
-        streamingApplyActions.setSaveFailed(true);
-        notifications.alert({
-          // Stable id: repeated failures (auto-retry, Retry clicks) update
-          // the existing toast in place instead of stacking duplicates
-          id: SAVE_FAILED_TOAST_ID,
-          title: 'Failed to save workflow',
-          description: 'Your connection was lost. Reconnect and try again.',
-          duration: Infinity, // toast only dismisses by clicking 'x' so the user definitely sees the error
-          action: {
-            label: 'Retry',
-            onClick: () => {
-              // Failure re-shows this same persistent toast, so the user can
-              // keep retrying until the save lands
-              void saveNewWorkflowRef.current?.();
-            },
-          },
-        });
-        return false;
-      }
+      await saveWorkflow({ notify: 'error-only' });
       streamingApplyActions.setSaveFailed(false);
-      // A retry may have succeeded while a failure toast was still showing
-      // (e.g. the final message settles the owed save) — dismiss it.
-      notifications.dismiss(SAVE_FAILED_TOAST_ID);
       return true;
     } catch (saveError) {
-      // Real save errors already surface their own toast (with Retry) from
-      // the saveWorkflow wrapper in useWorkflow.tsx — showing a second one
-      // here would double up on a single failure. Just track state.
+      // Shared save handler (useWorkflow.tsx) has already shown a persistent
+      // Retry toast — its Retry button calls the shared wrappedSaveWorkflow
+      // directly, not this function, so no local retry plumbing is needed.
       streamingApplyActions.setSaveFailed(true);
       console.error('[AI Assistant] Failed to save workflow:', saveError);
       return false;
     }
   }, [saveWorkflow, streamingApplyActions]);
-
-  // Keep ref pointing at the latest callback so Retry toast closures never go stale
-  saveNewWorkflowRef.current = saveNewWorkflow;
 
   /**
    * Apply workflow YAML to the canvas
@@ -268,6 +236,18 @@ export function useAIWorkflowApplications({
             aiMode,
           }
         );
+        return;
+      }
+
+      // Creation flow: an import that can't be followed by a save would
+      // orphan the canvas. Fail fast instead of waiting out a 10s push
+      // timeout. (Existing workflows are fine: offline imports are normal
+      // unsaved collaborative edits that sync on reconnect.)
+      if (isNewWorkflow && !isSessionConnected) {
+        notifications.alert({
+          title: 'Not connected',
+          description: 'Connection lost — please wait a moment and try again.',
+        });
         return;
       }
 
@@ -359,6 +339,7 @@ export function useAIWorkflowApplications({
       jobs,
       setApplyingMessageId,
       isNewWorkflow,
+      isSessionConnected,
       onValidationError,
       saveNewWorkflow,
       streamingApplyActions,

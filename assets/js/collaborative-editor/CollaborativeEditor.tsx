@@ -26,6 +26,7 @@ import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
+import { useSession } from './hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -194,28 +195,36 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
+  const isConnected = useSession(s => s.isConnected);
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
   const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
     useActionLock(async () => {
+      if (!isConnected) {
+        notifications.alert({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+        return;
+      }
       try {
         const spec = parseWorkflowYAML(BLANK_WORKFLOW_YAML);
         const state = convertWorkflowSpecToState(spec);
         await importWorkflow(state);
-        const saved = await saveWorkflow({ silent: true });
-        if (!saved) {
-          notifications.alert({
-            title: 'Not connected',
-            description: 'Connect to the server before creating a workflow.',
-          });
-          return;
-        }
-        dismissLandingScreen();
       } catch {
         notifications.alert({
           title: 'Failed to create workflow',
           description: 'Please check your connection and try again.',
         });
+        return;
       }
+      try {
+        await saveWorkflow({ notify: 'error-only' });
+      } catch {
+        // Shared handler has shown a persistent Retry toast; a successful
+        // retry dismisses the landing screen via the isNewWorkflow gate.
+        return;
+      }
+      dismissLandingScreen();
     });
 
   if (!showLandingScreen) return null;

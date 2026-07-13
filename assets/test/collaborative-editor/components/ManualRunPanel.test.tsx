@@ -978,9 +978,9 @@ describe('ManualRunPanel', () => {
       // Click Run button
       await user.click(screen.getByText('Run From Here'));
 
-      // Verify saveWorkflow was called with { silent: true }
+      // Verify saveWorkflow was called with { notify: 'none' }
       await waitFor(() => {
-        expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+        expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
         expect(saveWorkflow).toHaveBeenCalledOnce();
       });
     });

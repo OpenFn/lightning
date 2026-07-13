@@ -6,6 +6,7 @@ import { Tooltip } from '../../components/Tooltip';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { WorkflowError } from '../../yaml/workflow-errors';
+import { useSession } from '../hooks/useSession';
 import {
   useImportPanelState,
   useImportYamlContent,
@@ -65,6 +66,7 @@ interface YAMLImportContentProps {
 function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
   const { setImportState, setImportYamlContent } = useUICommands();
+  const isConnected = useSession(s => s.isConnected);
 
   const storedYamlContent = useImportYamlContent();
   const importState = useImportPanelState();
@@ -133,23 +135,16 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
 
   const handleSave = async () => {
     if (!validatedState) return;
+    if (!isConnected) {
+      notifications.alert({
+        title: 'Not connected',
+        description: 'Connection lost — please wait a moment and try again.',
+      });
+      return;
+    }
     setImportState('importing');
     try {
       await importWorkflow(validatedState);
-      // saveWorkflow returns null (not throws) when the WebSocket is disconnected
-      const saved = await saveWorkflow({ silent: true });
-      if (!saved) {
-        notifications.alert({
-          title: 'Not connected',
-          description: 'Connect to the server before importing a workflow.',
-        });
-        setImportState('valid');
-        return;
-      }
-      setYamlContent('');
-      setValidatedState(null);
-      onClose();
-      onSuccess();
     } catch (error) {
       console.error('Failed to create workflow from YAML:', error);
       notifications.alert({
@@ -157,7 +152,19 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
         description: 'Please check your connection and try again.',
       });
       setImportState('valid');
+      return;
     }
+    try {
+      await saveWorkflow({ notify: 'error-only' });
+    } catch {
+      // Shared handler owns the Retry toast; keep the modal usable.
+      setImportState('valid');
+      return;
+    }
+    setYamlContent('');
+    setValidatedState(null);
+    onClose();
+    onSuccess();
   };
 
   const isButtonDisabled =
