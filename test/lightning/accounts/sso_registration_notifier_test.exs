@@ -3,6 +3,7 @@ defmodule Lightning.Accounts.SsoRegistrationNotifierTest do
 
   import Tesla.Mock
 
+  alias Lightning.Accounts
   alias Lightning.Accounts.SsoRegistrationNotifier
 
   @url "https://example.test/i/test-webhook"
@@ -33,7 +34,7 @@ defmodule Lightning.Accounts.SsoRegistrationNotifierTest do
     test "posts a multipart registration payload with all fields" do
       test_pid = self()
 
-      mock_global(fn %{method: :post, url: @url, body: body} ->
+      mock(fn %{method: :post, url: @url, body: body} ->
         send(test_pid, {:posted, form_fields(body)})
         %Tesla.Env{status: 200, body: ""}
       end)
@@ -66,7 +67,7 @@ defmodule Lightning.Accounts.SsoRegistrationNotifierTest do
     test "derives name from only the parts present, sends missing as empty" do
       test_pid = self()
 
-      mock_global(fn %{method: :post, body: body} ->
+      mock(fn %{method: :post, body: body} ->
         send(test_pid, {:posted, form_fields(body)})
         %Tesla.Env{status: 200, body: ""}
       end)
@@ -85,8 +86,8 @@ defmodule Lightning.Accounts.SsoRegistrationNotifierTest do
       assert fields["lastName"] == ""
     end
 
-    test "returns an error on a non-2xx response so Oban can retry" do
-      mock_global(fn %{method: :post} -> %Tesla.Env{status: 500, body: ""} end)
+    test "returns an error on a non-2xx response" do
+      mock(fn %{method: :post} -> %Tesla.Env{status: 500, body: ""} end)
 
       assert {:error, :unexpected_status} =
                perform_job(SsoRegistrationNotifier, %{
@@ -112,6 +113,31 @@ defmodule Lightning.Accounts.SsoRegistrationNotifierTest do
       # No Tesla.Mock is set, so any outbound call would fail; returning :ok
       # without raising proves nothing was posted.
       assert :ok = SsoRegistrationNotifier.enqueue(user)
+    end
+  end
+
+  describe "register_user_from_sso/3 integration" do
+    test "notifies the OpenFn trigger after a successful SSO registration" do
+      test_pid = self()
+
+      mock(fn %{method: :post, url: @url, body: body} ->
+        send(test_pid, {:notified, form_fields(body)})
+        %Tesla.Env{status: 200, body: ""}
+      end)
+
+      email = "sso-#{System.unique_integer([:positive])}@example.org"
+
+      assert {:ok, user} =
+               Accounts.register_user_from_sso(
+                 %{email: email, first_name: "Sso", last_name: "User"},
+                 "github",
+                 "notify-1"
+               )
+
+      assert_received {:notified, fields}
+      assert fields["type"] == "registration"
+      assert fields["email"] == email
+      assert fields["new_user_id"] == user.id
     end
   end
 end

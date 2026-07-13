@@ -8,7 +8,7 @@ defmodule Lightning.Accounts.SsoRegistrationNotifier do
   """
   use Oban.Worker,
     queue: :background,
-    max_attempts: 3
+    max_attempts: 1
 
   alias Lightning.Accounts.User
   alias Tesla.Multipart
@@ -36,6 +36,13 @@ defmodule Lightning.Accounts.SsoRegistrationNotifier do
     end
 
     :ok
+  rescue
+    error ->
+      Logger.warning(
+        "Could not enqueue SSO registration notify: #{inspect(error)}"
+      )
+
+      :ok
   end
 
   @impl Oban.Worker
@@ -61,8 +68,6 @@ defmodule Lightning.Accounts.SsoRegistrationNotifier do
         :ok
 
       {:ok, %Tesla.Env{status: status}} ->
-        # Fire-and-forget: log but don't fail the registration flow. Retrying
-        # a non-2xx is harmless, so let Oban retry up to max_attempts.
         Logger.warning("OpenFn registration notify returned status #{status}")
 
         {:error, :unexpected_status}
