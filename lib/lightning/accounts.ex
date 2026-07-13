@@ -12,6 +12,7 @@ defmodule Lightning.Accounts do
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts.Events
+  alias Lightning.Accounts.SsoRegistrationNotifier
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserIdentity
@@ -332,6 +333,7 @@ defmodule Lightning.Accounts do
     |> tap(fn result ->
       with {:ok, user} <- result do
         Events.user_registered(user)
+        SsoRegistrationNotifier.enqueue(user)
       end
     end)
   end

@@ -765,6 +765,9 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
+    config :lightning, :openfn_trigger,
+      url: env!("OPENFN_TRIGGER_URL", :string, nil)
+
     config :lightning, :kafka_triggers,
       alternate_storage_enabled:
         env!(

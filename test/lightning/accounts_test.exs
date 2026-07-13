@@ -310,6 +310,47 @@ defmodule Lightning.AccountsTest do
       # The user insert is rolled back with the failed identity link
       refute Accounts.get_user_by_email(email)
     end
+
+    test "notifies the OpenFn trigger when OPENFN_TRIGGER_URL is configured" do
+      url = "https://example.test/i/test-webhook"
+      previous = Application.get_env(:lightning, :openfn_trigger)
+      Application.put_env(:lightning, :openfn_trigger, url: url)
+
+      on_exit(fn ->
+        if previous do
+          Application.put_env(:lightning, :openfn_trigger, previous)
+        else
+          Application.delete_env(:lightning, :openfn_trigger)
+        end
+      end)
+
+      test_pid = self()
+
+      Tesla.Mock.mock_global(fn %{method: :post, url: ^url, body: body} ->
+        send(test_pid, {:notified, body})
+        %Tesla.Env{status: 200, body: ""}
+      end)
+
+      email = unique_user_email()
+
+      assert {:ok, user} =
+               Accounts.register_user_from_sso(
+                 %{email: email, first_name: "Sso", last_name: "User"},
+                 "github",
+                 "notify-1"
+               )
+
+      assert_receive {:notified, %Tesla.Multipart{parts: parts}}
+
+      fields =
+        Map.new(parts, fn part ->
+          {Keyword.get(part.dispositions, :name), part.body}
+        end)
+
+      assert fields["type"] == "registration"
+      assert fields["email"] == email
+      assert fields["new_user_id"] == user.id
+    end
   end
 
   describe "list_user_identities/1" do

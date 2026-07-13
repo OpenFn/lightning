@@ -216,6 +216,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def openfn_trigger_url do
+      Application.get_env(:lightning, :openfn_trigger, [])
+      |> Keyword.get(:url)
+    end
+
+    @impl true
     def usage_tracking_cron_opts do
       opts = usage_tracking()
 
@@ -518,6 +524,7 @@ defmodule Lightning.Config do
   @callback usage_tracking_enabled?() :: boolean()
   @callback usage_tracking_host() :: String.t()
   @callback usage_tracking_run_chunk_size() :: integer()
+  @callback openfn_trigger_url() :: String.t() | nil
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
   @callback adaptor_registry() :: Keyword.t()
@@ -699,6 +706,10 @@ defmodule Lightning.Config do
 
   def usage_tracking_run_chunk_size do
     impl().usage_tracking_run_chunk_size()
+  end
+
+  def openfn_trigger_url do
+    impl().openfn_trigger_url()
   end
 
   def kafka_triggers_enabled? do
