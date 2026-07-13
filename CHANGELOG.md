@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Notify a configurable webhook on SSO signup, via the optional
+  `OPENFN_TRIGGER_URL`. [#4961](https://github.com/OpenFn/lightning/issues/4961)
 - Report monthly active users (MAU) — distinct users active in the trailing 30
   days — in the usage tracker submission, alongside the existing 90-day active
   user count. Reported at both instance and project level, and bumps the usage
