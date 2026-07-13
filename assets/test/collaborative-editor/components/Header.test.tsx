@@ -6,7 +6,13 @@
  * proper integration within the Header component.
  */
 
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup as reactCleanup,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type React from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -42,20 +48,12 @@ vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
   default: () => ({}),
 }));
 
-// =============================================================================
-// TEST ISOLATION
-// =============================================================================
-
-// `createTestSetup` stashes the store/channel cleanup for the test currently
-// running here, so a single top-level `afterEach` can tear it down. Without
-// this, subscriptions from one test's Y.Doc/channel/provider stay alive and
-// leak state (and pending `waitFor`/timers) into the next test.
-let activeCleanup: (() => void) | null = null;
+let storeCleanup: (() => void) | null = null;
 
 afterEach(() => {
-  activeCleanup?.();
-  activeCleanup = null;
-  cleanup();
+  storeCleanup?.();
+  storeCleanup = null;
+  reactCleanup();
   urlState.reset();
 });
 
@@ -153,9 +151,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   );
 
-  // Track this test's cleanup so the top-level `afterEach` can always tear
-  // it down, even though most call sites never destructure `cleanup`.
-  activeCleanup = cleanup;
+  storeCleanup = cleanup;
 
   if (options.triggerSync) {
     // Trigger provider sync to enable save functionality
