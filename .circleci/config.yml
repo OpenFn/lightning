@@ -212,7 +212,6 @@ jobs:
             #   GHSA-j9wq-vxxc-94wf (moderate) CR/LF injection in query param
             #   GHSA-mp55-p8c9-rfw2 (low)      CRLF injection via domain/path
             sudo -u lightning mix deps.audit \
-              --ignore-advisory-ids GHSA-g2wm-735q-3f56,GHSA-gp9c-pm5m-5cxr,GHSA-pj7v-xfvx-wmjq,GHSA-j9wq-vxxc-94wf,GHSA-mp55-p8c9-rfw2 \
               > /tmp/lint/deps_audit.log 2>&1 \
               || echo "deps.audit" >> /tmp/lint_failed
             cat /tmp/lint/deps_audit.log
