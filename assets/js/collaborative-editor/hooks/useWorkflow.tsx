@@ -468,6 +468,15 @@ export const useWorkflowActions = () => {
       };
 
       // Helper: Handle save errors with appropriate notifications
+      //
+      // The Retry action below always calls wrappedSaveWorkflow with no
+      // options, so a successful retry runs with notify: 'all' regardless of
+      // the notify level the original (failed) call used. For creation flows
+      // (notify: 'error-only'), this means a successful retry does NOT run
+      // the flow's own success callback (dismissLandingScreen, closeModal,
+      // etc.) — those components must unmount themselves off the
+      // isNewWorkflow gate (cleared by handleSaveSuccess above) rather than
+      // relying on the original caller's promise resolving.
       const handleSaveError = (
         error: unknown,
         retrySaveWorkflow: () => Promise<unknown>,

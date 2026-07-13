@@ -618,6 +618,11 @@ export function useAIWorkflowApplications({
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
+      // Marked applied even if handleApplyWorkflow's offline gate below ends
+      // up blocking it (isNewWorkflow && !isSessionConnected) — this effect
+      // never retries a message once it's in the ref. The manual "Apply"
+      // button in MessageList is the only recovery path, since it calls
+      // handleApplyWorkflow directly rather than checking this ref.
       appliedMessageIdsRef.current.add(latestMessage.id);
 
       // Streaming already imported this exact YAML to the canvas — skip the
