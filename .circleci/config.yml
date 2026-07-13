@@ -196,20 +196,11 @@ jobs:
           when: always
           command: |
             mkdir -p /tmp/lint
-            # hackney advisories below are fixed in hackney 4.0.1, but we cannot
-            # upgrade yet: hackney 4.x is a breaking API change (request/body
-            # return shapes changed) and our dependency graph is not ready.
-            # tzdata (all releases, incl. latest 1.1.4) hard-pins hackney ~> 1.17
-            # and calls :hackney.get/:hackney.body directly, which crashes on
-            # 4.x; bumping to httpoison 3.0 (the release requiring hackney 4.x)
-            # is blocked by gcs_signed_url pinning httpoison ~> 2.0. Revisit once
-            # tzdata ships a hackney-4.x compatible release.
-            #   GHSA-gp9c-pm5m-5cxr (high)     ssl:connect post-handshake timeout
-            #   GHSA-pj7v-xfvx-wmjq (moderate) SSRF allowlist bypass
-            #   GHSA-j9wq-vxxc-94wf (moderate) CR/LF injection in query param
-            #   GHSA-mp55-p8c9-rfw2 (low)      CRLF injection via domain/path
+            # Ignored advisories (with rationale) live in .mix_audit.ignore so
+            # local runs and CI share one source of truth. Run the same command
+            # locally: mix deps.audit --ignore-file .mix_audit.ignore
             sudo -u lightning mix deps.audit \
-              --ignore-advisory-ids GHSA-gp9c-pm5m-5cxr,GHSA-pj7v-xfvx-wmjq,GHSA-j9wq-vxxc-94wf,GHSA-mp55-p8c9-rfw2 \
+              --ignore-file .mix_audit.ignore \
               > /tmp/lint/deps_audit.log 2>&1 \
               || echo "deps.audit" >> /tmp/lint_failed
             cat /tmp/lint/deps_audit.log
