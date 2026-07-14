@@ -172,11 +172,16 @@ export function useAIWorkflowApplications({
     async (yaml: string, messageId: string) => {
       if (!aiMode) return;
       // Global messages carry a full workflow YAML and may be applied even
-      // while a job is open (job_code mode). Non-global workflow chat keeps
-      // the workflow_template-only guard so its Apply stays a no-op when a
-      // job is open.
-      const isGlobal = !!currentSession?.messages.find(m => m.id === messageId)
-        ?.from_global;
+      // while a job is open (job_code mode). Mid-stream applies
+      // ('__streaming__') have no session message to look up, but a workflow
+      // YAML streamed while a job is open can only come from the global
+      // assistant, so they are trusted the same way. Non-global workflow
+      // chat keeps the workflow_template-only guard so its Apply stays a
+      // no-op when a job is open.
+      const isGlobal =
+        messageId === '__streaming__' ||
+        !!currentSession?.messages.find(m => m.id === messageId)?.from_global;
+
       if (aiMode.page !== 'workflow_template' && !isGlobal) {
         console.error(
           '[AI Assistant] Cannot apply workflow - not in workflow mode',

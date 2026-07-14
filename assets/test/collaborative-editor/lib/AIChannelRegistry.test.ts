@@ -71,4 +71,47 @@ describe('AIChannelRegistry streaming', () => {
     expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
     expect(store.getSnapshot().streamingContent).toBe('Answer');
   });
+
+  it('preserves wire order of text and status segments in the streaming timeline', () => {
+    channel._test.emit('streaming_chunk', { content: 'First' });
+    channel._test.emit('streaming_segment', {
+      segment: { type: 'status', content: 'Added step' },
+    });
+    channel._test.emit('streaming_chunk', { content: 'Second' });
+
+    // The segment must not enter the timeline before the text preceding it
+    // on the wire has drained ("First" = 5 chars at 15ms each).
+    vi.advanceTimersByTime(4 * 15);
+    expect(store.getSnapshot().streamingSegments).toEqual([
+      { type: 'text', content: 'Firs' },
+    ]);
+
+    // Drain everything.
+    vi.advanceTimersByTime(1000);
+    expect(store.getSnapshot().streamingSegments).toEqual([
+      { type: 'text', content: 'First' },
+      { type: 'status', content: 'Added step' },
+      { type: 'text', content: 'Second' },
+    ]);
+    expect(store.getSnapshot().streamingContent).toBe('FirstSecond');
+  });
+
+  it('keeps thinking statuses out of the timeline and supersedes them with status segments', () => {
+    // Thinking events only touch the scalar, never the timeline.
+    channel._test.emit('streaming_status', { text: 'Reviewing workflow...' });
+    expect(store.getSnapshot().streamingStatus).toBe('Reviewing workflow...');
+    expect(store.getSnapshot().streamingSegments).toEqual([]);
+
+    // A persistent status segment clears the thinking scalar at arrival...
+    channel._test.emit('streaming_segment', {
+      segment: { type: 'status', content: 'Reviewed workflow' },
+    });
+    expect(store.getSnapshot().streamingStatus).toBeNull();
+
+    // ...and lands in the timeline via the drain.
+    vi.advanceTimersByTime(200);
+    expect(store.getSnapshot().streamingSegments).toEqual([
+      { type: 'status', content: 'Reviewed workflow' },
+    ]);
+  });
 });

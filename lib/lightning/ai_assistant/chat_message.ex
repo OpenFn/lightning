@@ -10,6 +10,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   * `content` - The text content of the message (required, 1-10,000 characters)
   * `code` - Optional code associated with the message (e.g., generated workflows)
+  * `response_segments` - Optional timeline of `%{"type" => "text" | "status", "content" => ...}`
+    segments for assistant messages (global chat); `nil` for flat messages
   * `role` - Who sent the message: `:user` or `:assistant`
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
@@ -32,6 +34,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           id: Ecto.UUID.t(),
           content: String.t() | nil,
           code: String.t() | nil,
+          response_segments: [map()] | nil,
           role: role(),
           status: status(),
           job_id: Ecto.UUID.t() | nil,
@@ -49,6 +52,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   schema "ai_chat_messages" do
     field :content, :string
     field :code, :string
+    field :response_segments, {:array, :map}
     field :role, Ecto.Enum, values: [:user, :assistant]
 
     field :status, Ecto.Enum,
@@ -79,6 +83,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   * `content` and `role` are required
   * `content` must be between 1 and 10,000 characters
+  * `response_segments`, when present, must be a list of maps shaped like
+    `%{"type" => "text" | "status", "content" => binary}`
   * User messages (role: `:user`) require an associated user
   * Status defaults based on role: `:pending` for users, `:success` for assistant
   * If status is explicitly provided, it takes precedence over role-based defaults
@@ -88,6 +94,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast(attrs, [
       :content,
       :code,
+      :response_segments,
       :role,
       :status,
       :is_deleted,
@@ -99,6 +106,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     ])
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
+    |> validate_response_segments()
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
@@ -129,6 +137,26 @@ defmodule Lightning.AiAssistant.ChatMessage do
     chat_message
     |> change(%{status: status})
   end
+
+  defp validate_response_segments(changeset) do
+    validate_change(changeset, :response_segments, fn :response_segments,
+                                                      segments ->
+      if Enum.all?(segments, &valid_segment?/1) do
+        []
+      else
+        [
+          response_segments:
+            "must be a list of %{\"type\" => \"text\" | \"status\", \"content\" => binary} entries"
+        ]
+      end
+    end)
+  end
+
+  defp valid_segment?(%{"type" => type, "content" => content})
+       when type in ["text", "status"] and is_binary(content),
+       do: true
+
+  defp valid_segment?(_), do: false
 
   defp maybe_put_user_assoc(changeset, user) when not is_nil(user) do
     put_assoc(changeset, :user, user)

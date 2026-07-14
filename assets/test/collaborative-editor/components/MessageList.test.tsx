@@ -932,6 +932,155 @@ describe('MessageList', () => {
     });
   });
 
+  describe('Response Segments Timeline', () => {
+    it('renders text blocks and settled status rows in segment order', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'Final answer',
+          response_segments: [
+            { type: 'text', content: 'Adding a step first.' },
+            { type: 'status', content: 'Adding step send-to-gmail...' },
+            { type: 'text', content: 'Final answer' },
+            { type: 'status', content: 'Validating workflow...' },
+          ],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const assistantMessage = screen.getByTestId('assistant-message');
+
+      // Statuses render settled: italic gray rows, no bouncing dots
+      const statusRows = screen.getAllByTestId('settled-status');
+      expect(statusRows).toHaveLength(2);
+      expect(statusRows[0]).toHaveTextContent('Adding step send-to-gmail...');
+      expect(statusRows[1]).toHaveTextContent('Validating workflow...');
+      statusRows.forEach(row => {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.italic')).toBeInTheDocument();
+      });
+
+      // Both text segments render (not the joined flat content once)
+      expect(screen.getByText('Adding a step first.')).toBeInTheDocument();
+      expect(screen.getByText('Final answer')).toBeInTheDocument();
+
+      // DOM order matches segment order: text, status, text, status
+      const textContent = assistantMessage.textContent ?? '';
+      expect(textContent.indexOf('Adding a step first.')).toBeLessThan(
+        textContent.indexOf('Adding step send-to-gmail...')
+      );
+      expect(textContent.indexOf('Adding step send-to-gmail...')).toBeLessThan(
+        textContent.indexOf('Final answer')
+      );
+      expect(textContent.indexOf('Final answer')).toBeLessThan(
+        textContent.indexOf('Validating workflow...')
+      );
+    });
+
+    it('renders flat content when response_segments is absent or empty', () => {
+      const messages = [
+        createMockAIMessage({
+          id: '1',
+          role: 'assistant',
+          content: 'Legacy flat message',
+        }),
+        createMockAIMessage({
+          id: '2',
+          role: 'assistant',
+          content: 'Empty segments message',
+          response_segments: [],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByText('Legacy flat message')).toBeInTheDocument();
+      expect(screen.getByText('Empty segments message')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+    });
+
+    it('settles timeline statuses with ticks and shows the thinking scalar with dots (global active)', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      const { rerender } = render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus="Writing the next step..."
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+            { type: 'status', content: 'Added step send-to-gmail' },
+          ]}
+        />
+      );
+
+      // Timeline statuses are completed actions: settled + tick, even the
+      // trailing one, even mid-stream.
+      const settled = screen.getAllByTestId('settled-status');
+      expect(settled).toHaveLength(2);
+      for (const row of settled) {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.hero-check-micro')).toBeInTheDocument();
+      }
+
+      // The transient thinking status renders below with dots.
+      const thinking = screen.getByTestId('streaming-status');
+      expect(thinking).toHaveTextContent('Writing the next step...');
+      expect(thinking.querySelectorAll('.animate-bounce')).toHaveLength(3);
+
+      // No thinking scalar → no dots row at all.
+      rerender(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+          ]}
+        />
+      );
+      expect(screen.queryByTestId('streaming-status')).not.toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
+    it('keeps flat streaming rendering when the global assistant is not active', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          streamingContent="Flat answer"
+          streamingStatus="Generating code..."
+          streamingSegments={[
+            { type: 'text', content: 'Flat answer' },
+            { type: 'status', content: 'Generating code...' },
+          ]}
+        />
+      );
+
+      // Flat content + single scalar status row, no woven timeline
+      expect(screen.getByText('Flat answer')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+      const status = screen.getByTestId('streaming-status');
+      expect(status).toHaveTextContent('Generating code...');
+      expect(status.querySelectorAll('.animate-bounce')).toHaveLength(3);
+    });
+  });
+
   describe('Props Handling', () => {
     it('should handle undefined messages prop', () => {
       render(<MessageList />);

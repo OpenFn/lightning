@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
-import type { Message } from '../types/ai-assistant';
+import type { Message, ResponseSegment } from '../types/ai-assistant';
 
 import { Tooltip } from '../../components/Tooltip';
 
@@ -24,6 +24,21 @@ const BouncingDots = () => (
     <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
     <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
   </>
+);
+
+/**
+ * A single persistent status row in the woven timeline: a completed action
+ * ("Edited workflow structure"), italic gray with a small check. Transient
+ * thinking updates render separately (dots) from the scalar streamingStatus.
+ */
+const StatusSegmentRow = ({ content }: { content: string }) => (
+  <div className="flex items-center gap-2" data-testid="settled-status">
+    <span
+      className="hero-check-micro h-3.5 w-3.5 shrink-0 text-gray-400"
+      aria-hidden="true"
+    />
+    <span className="text-xs text-gray-400 italic">{content}</span>
+  </div>
 );
 
 /**
@@ -158,6 +173,58 @@ const MarkdownContent = ({
     </div>
   );
 };
+
+/**
+ * Woven timeline of text and status segments (global assistant replies).
+ * Text segments render as markdown blocks; status segments as italic rows.
+ * Status segments are completed actions and always render settled (tick).
+ * The transient thinking indicator (dots) renders separately, from the
+ * scalar streamingStatus, below the timeline.
+ */
+const SegmentTimeline = ({
+  segments,
+  streaming = false,
+  showAddButtons = false,
+  isWriteDisabled = false,
+}: {
+  segments: ResponseSegment[];
+  streaming?: boolean;
+  showAddButtons?: boolean;
+  isWriteDisabled?: boolean;
+}) => (
+  <>
+    {segments.map((segment, index) => {
+      const isLast = index === segments.length - 1;
+
+      if (segment.type === 'status') {
+        // Statuses in the timeline are completed actions (Apollo's dedicated
+        // `status` event) — they settle with a tick immediately. In-progress
+        // "thinking" updates render separately from the scalar streamingStatus.
+        return (
+          <StatusSegmentRow
+            // Timeline is append-only, so index keys are stable
+            key={index}
+            content={segment.content}
+          />
+        );
+      }
+
+      return (
+        <MarkdownContent
+          key={index}
+          content={
+            streaming && isLast
+              ? segment.content.replace(/\n+$/, '')
+              : segment.content
+          }
+          showAddButtons={showAddButtons}
+          isWriteDisabled={isWriteDisabled}
+          className={PROSE_CLASSES}
+        />
+      );
+    })}
+  </>
+);
 
 /**
  * Copy text to clipboard using modern Clipboard API
@@ -408,6 +475,14 @@ interface MessageListProps {
   isWriteDisabled?: boolean;
   streamingContent?: string | null;
   streamingStatus?: string | null;
+  /** Woven text/status timeline built while a reply streams in */
+  streamingSegments?: ResponseSegment[] | null;
+  /**
+   * Whether the global assistant is active. Gates the woven streaming
+   * timeline — non-global streams keep the flat content + single scalar
+   * status row behavior.
+   */
+  isGlobalAssistantActive?: boolean;
 }
 
 export function MessageList({
@@ -426,6 +501,8 @@ export function MessageList({
   isWriteDisabled = false,
   streamingContent,
   streamingStatus,
+  streamingSegments,
+  isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -507,6 +584,20 @@ export function MessageList({
 
   const isStreaming = (message: Message) => message.id === STREAMING_MESSAGE_ID;
 
+  // Woven text/status timeline to render instead of flat content, or null.
+  // - Completed messages: persisted `response_segments` (global replies).
+  // - Streaming placeholder: live `streamingSegments`, gated on the global
+  //   assistant being active so non-global streams keep today's flat
+  //   content + single scalar status row.
+  const timelineSegments = (message: Message): ResponseSegment[] | null => {
+    if (isStreaming(message)) {
+      return isGlobalAssistantActive && streamingSegments?.length
+        ? streamingSegments
+        : null;
+    }
+    return message.response_segments?.length ? message.response_segments : null;
+  };
+
   if (messages.length === 0) {
     return (
       <div
@@ -551,22 +642,35 @@ export function MessageList({
                 }
               >
                 <div className="space-y-3">
-                  <MarkdownContent
-                    content={
-                      isStreaming(message)
-                        ? message.content.replace(/\n+$/, '')
-                        : message.content
-                    }
-                    showAddButtons={
-                      !isStreaming(message) && showAddButtons && !message.code
-                    }
-                    isWriteDisabled={isWriteDisabled}
-                    className={PROSE_CLASSES}
-                  />
+                  {timelineSegments(message) ? (
+                    <SegmentTimeline
+                      segments={timelineSegments(message)!}
+                      streaming={isStreaming(message)}
+                      showAddButtons={
+                        !isStreaming(message) && showAddButtons && !message.code
+                      }
+                      isWriteDisabled={isWriteDisabled}
+                    />
+                  ) : (
+                    <MarkdownContent
+                      content={
+                        isStreaming(message)
+                          ? message.content.replace(/\n+$/, '')
+                          : message.content
+                      }
+                      showAddButtons={
+                        !isStreaming(message) && showAddButtons && !message.code
+                      }
+                      isWriteDisabled={isWriteDisabled}
+                      className={PROSE_CLASSES}
+                    />
+                  )}
 
-                  {/* Status (e.g. "Generating code...") Apollo may stream
-                      after the text answer, while we wait for code. Same
-                      visual as the pre-text loading indicator. */}
+                  {/* Transient thinking status (e.g. "Reviewing the
+                      workflow...") — dots + italic, replaced by each new
+                      thinking event and cleared when text or a persistent
+                      status segment arrives. Renders below the woven
+                      timeline and in the flat path alike. */}
                   {isStreaming(message) && streamingStatus && (
                     <div
                       className="flex items-center gap-2"

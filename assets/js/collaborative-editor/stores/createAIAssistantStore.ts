@@ -61,6 +61,7 @@ import type {
   JobCodeContext,
   Message,
   MessageStatus,
+  ResponseSegment,
   Session,
   SessionListResponse,
   SessionSummary,
@@ -89,6 +90,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingContent: null,
       streamingStatus: null,
       streamingChanges: null,
+      streamingSegments: [],
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
@@ -162,6 +164,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
 
     notify('disconnect');
@@ -220,6 +223,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
 
     notify('clearSession');
@@ -427,6 +431,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingContent = null;
           draft.streamingStatus = null;
           draft.streamingChanges = null;
+          draft.streamingSegments = [];
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -456,6 +461,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         if (status === 'error') {
           draft.streamingContent = null;
           draft.streamingStatus = null;
+          draft.streamingSegments = [];
         }
         if (status === 'processing') {
           draft.isLoading = true;
@@ -577,8 +583,33 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _appendStreamingChunk = (content: string) => {
     state = produce(state, draft => {
       draft.streamingContent = (draft.streamingContent || '') + content;
+
+      // Mirror the char into the woven timeline: grow the trailing text
+      // segment, or open a new one after a status segment.
+      const lastSegment = draft.streamingSegments.at(-1);
+      if (lastSegment && lastSegment.type === 'text') {
+        lastSegment.content += content;
+      } else {
+        draft.streamingSegments.push({ type: 'text', content });
+      }
     });
     notify('_appendStreamingChunk');
+  };
+
+  /**
+   * Append a segment (in practice: a persistent completed-action status,
+   * from Apollo's dedicated `status` event) to the streaming timeline.
+   * Called by the channel registry's char drain so segments land in wire
+   * order relative to the text drained before them. Transient "thinking"
+   * updates never enter the timeline — they live in the scalar
+   * `streamingStatus` (setStreamingStatus), a separate mechanism.
+   * @internal
+   */
+  const _appendStreamingSegment = (segment: ResponseSegment) => {
+    state = produce(state, draft => {
+      draft.streamingSegments.push(segment);
+    });
+    notify('_appendStreamingSegment');
   };
 
   const setStreamingStatus = (text: string | null) => {
@@ -602,6 +633,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
     notify('_clearStreaming');
   };
@@ -680,6 +712,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _initializeContext,
     _setProcessingState,
     _appendStreamingChunk,
+    _appendStreamingSegment,
     setStreamingStatus,
     _setStreamingChanges,
     _clearStreaming,
