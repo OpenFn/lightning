@@ -74,10 +74,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: () => <div data-testid="inspector">Inspector</div>,
 }));
 
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
   () => ({

@@ -74,53 +74,27 @@ const logger = _logger.ns('UIStore').seal();
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
 export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
-  // Load initial panel states from URL params with mutual exclusivity
-  // AI Assistant panel and Create Workflow panel cannot both be open
+  // On /new the landing screen is the only valid entry point — ignore all URL
+  // params so ?chat=true can't bypass or corrupt it.
   const loadInitialPanelStates = (): {
     aiAssistantPanelOpen: boolean;
-    createWorkflowPanelCollapsed: boolean;
   } => {
-    // TODO-AI-FIRST (#4856): once the left-panel create flow is fully removed,
-    // delete the method/hasMethod branch below and simplify to just the chat param.
-
-    // On /new the landing screen is the only valid entry point — ignore all URL
-    // params so ?chat=true or ?method=... can't bypass or corrupt it.
     if (isNewWorkflow) {
-      return {
-        aiAssistantPanelOpen: false,
-        createWorkflowPanelCollapsed: true,
-      };
+      return { aiAssistantPanelOpen: false };
     }
 
     try {
       const params = new URLSearchParams(window.location.search);
       const chatOpen = params.get('chat') === 'true';
-      const method = params.get('method');
-      const hasMethod = !!method;
 
-      // AI Assistant takes priority when both are present
-      if (chatOpen) {
-        return {
-          aiAssistantPanelOpen: true,
-          createWorkflowPanelCollapsed: true, // Force collapsed when AI panel is open
-        };
-      }
-
-      return {
-        aiAssistantPanelOpen: false,
-        createWorkflowPanelCollapsed: !hasMethod, // Expanded if method param present
-      };
+      return { aiAssistantPanelOpen: chatOpen };
     } catch (error) {
       logger.warn('Failed to load panel states from URL', error);
-      return {
-        aiAssistantPanelOpen: false,
-        createWorkflowPanelCollapsed: true,
-      };
+      return { aiAssistantPanelOpen: false };
     }
   };
 
-  const { aiAssistantPanelOpen, createWorkflowPanelCollapsed } =
-    loadInitialPanelStates();
+  const { aiAssistantPanelOpen } = loadInitialPanelStates();
 
   let state: UIState = produce(
     {
@@ -129,17 +103,9 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       githubSyncModalOpen: false,
       aiAssistantPanelOpen,
       aiAssistantInitialMessage: null,
-      createWorkflowPanelCollapsed,
       showLandingScreen: true,
       showYAMLImportModal: false,
       showTemplateBrowserModal: false,
-      templatePanel: {
-        templates: [],
-        loading: false,
-        error: null,
-        searchQuery: '',
-        selectedTemplate: null,
-      },
       importPanel: {
         yamlContent: '',
         importState: 'initial',
@@ -233,80 +199,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('clearAIAssistantInitialMessage');
   };
 
-  const collapseCreateWorkflowPanel = () => {
-    state = produce(state, draft => {
-      draft.createWorkflowPanelCollapsed = true;
-    });
-    notify('collapseCreateWorkflowPanel');
-  };
-
-  const expandCreateWorkflowPanel = () => {
-    state = produce(state, draft => {
-      draft.createWorkflowPanelCollapsed = false;
-    });
-    notify('expandCreateWorkflowPanel');
-  };
-
-  const toggleCreateWorkflowPanel = () => {
-    const isCollapsed = !state.createWorkflowPanelCollapsed;
-    state = produce(state, draft => {
-      draft.createWorkflowPanelCollapsed = isCollapsed;
-    });
-    notify('toggleCreateWorkflowPanel');
-  };
-
-  const setTemplates = (templates: UIState['templatePanel']['templates']) => {
-    state = produce(state, draft => {
-      draft.templatePanel.templates = templates;
-      draft.templatePanel.loading = false;
-    });
-    notify('setTemplates');
-  };
-
-  const setTemplatesLoading = (loading: boolean) => {
-    state = produce(state, draft => {
-      draft.templatePanel.loading = loading;
-    });
-    notify('setTemplatesLoading');
-  };
-
-  const setTemplatesError = (error: string | null) => {
-    state = produce(state, draft => {
-      draft.templatePanel.error = error;
-      draft.templatePanel.loading = false;
-    });
-    notify('setTemplatesError');
-  };
-
-  const setTemplateSearchQuery = (query: string) => {
-    state = produce(state, draft => {
-      draft.templatePanel.searchQuery = query;
-    });
-    notify('setTemplateSearchQuery');
-  };
-
-  const selectTemplate = (
-    template: UIState['templatePanel']['selectedTemplate']
-  ) => {
-    state = produce(state, draft => {
-      draft.templatePanel.selectedTemplate = template;
-    });
-    notify('selectTemplate');
-  };
-
-  const clearTemplatePanel = () => {
-    state = produce(state, draft => {
-      draft.templatePanel = {
-        templates: [],
-        loading: false,
-        error: null,
-        searchQuery: '',
-        selectedTemplate: null,
-      };
-    });
-    notify('clearTemplatePanel');
-  };
-
   // ===========================================================================
   // IMPORT PANEL COMMANDS
   // ===========================================================================
@@ -394,15 +286,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
-    collapseCreateWorkflowPanel,
-    expandCreateWorkflowPanel,
-    toggleCreateWorkflowPanel,
-    setTemplates,
-    setTemplatesLoading,
-    setTemplatesError,
-    setTemplateSearchQuery,
-    selectTemplate,
-    clearTemplatePanel,
     setImportYamlContent,
     setImportState,
     clearImportPanel,

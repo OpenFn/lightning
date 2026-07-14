@@ -86,14 +86,6 @@ export const defaultUIState: UIState = {
   githubSyncModalOpen: false,
   aiAssistantPanelOpen: false,
   aiAssistantInitialMessage: null,
-  createWorkflowPanelCollapsed: true,
-  templatePanel: {
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  },
   importPanel: {
     yamlContent: '',
     importState: 'initial',
@@ -326,15 +318,6 @@ export function createMockUIStore(
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
     toggleAIAssistantPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    toggleCreateWorkflowPanel: vi.fn(),
-    setTemplates: vi.fn(),
-    setTemplatesLoading: vi.fn(),
-    setTemplatesError: vi.fn(),
-    setTemplateSearchQuery: vi.fn(),
-    selectTemplate: vi.fn(),
-    clearTemplatePanel: vi.fn(),
     // Import panel commands that track state
     setImportYamlContent: vi.fn((content: string) => {
       currentState = {

@@ -56,12 +56,6 @@ export const useUICommands = () => {
     closeAIAssistantPanel: uiStore.closeAIAssistantPanel,
     toggleAIAssistantPanel: uiStore.toggleAIAssistantPanel,
     clearAIAssistantInitialMessage: uiStore.clearAIAssistantInitialMessage,
-    collapseCreateWorkflowPanel: uiStore.collapseCreateWorkflowPanel,
-    expandCreateWorkflowPanel: uiStore.expandCreateWorkflowPanel,
-    toggleCreateWorkflowPanel: uiStore.toggleCreateWorkflowPanel,
-    // Template panel commands
-    selectTemplate: uiStore.selectTemplate,
-    setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
     dismissLandingScreen: uiStore.dismissLandingScreen,
     openYAMLImportModal: uiStore.openYAMLImportModal,
     closeYAMLImportModal: uiStore.closeYAMLImportModal,
@@ -126,20 +120,6 @@ export const useAIAssistantInitialMessage = (): string | null => {
 };
 
 /**
- * Hook to check if create workflow panel is collapsed
- * Convenience helper that returns boolean
- */
-export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
-  const uiStore = useUIStore();
-
-  const selectIsCollapsed = uiStore.withSelector(
-    state => state.createWorkflowPanelCollapsed
-  );
-
-  return useSyncExternalStore(uiStore.subscribe, selectIsCollapsed);
-};
-
-/**
  * Hook to check if the landing screen overlay is visible
  */
 export const useShowLandingScreen = (): boolean => {
@@ -178,20 +158,6 @@ export const useShowTemplateBrowserModal = (): boolean => {
     uiStore.subscribe,
     selectShowTemplateBrowserModal
   );
-};
-
-/**
- * Hook to get the entire template panel state
- * Returns properly typed state - no type assertions needed
- */
-export const useTemplatePanel = (): UIState['templatePanel'] => {
-  const uiStore = useUIStore();
-
-  const selectTemplatePanel = uiStore.withSelector(
-    state => state.templatePanel
-  );
-
-  return useSyncExternalStore(uiStore.subscribe, selectTemplatePanel);
 };
 
 /**

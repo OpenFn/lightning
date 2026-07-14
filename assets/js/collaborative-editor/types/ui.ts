@@ -5,8 +5,6 @@
  * and context for the collaborative editor.
  */
 
-import type { Template, WorkflowTemplate } from './template';
-
 // =============================================================================
 // TYPESCRIPT TYPES
 // =============================================================================
@@ -41,9 +39,6 @@ export interface UIState {
   /** Initial message to send when AI Assistant panel opens */
   aiAssistantInitialMessage: string | null;
 
-  /** Create workflow panel collapsed state */
-  createWorkflowPanelCollapsed: boolean;
-
   /** Whether the landing screen overlay is visible (only true at /new before a path is committed) */
   showLandingScreen: boolean;
 
@@ -52,15 +47,6 @@ export interface UIState {
 
   /** Whether the template browser modal is open */
   showTemplateBrowserModal: boolean;
-
-  /** Template panel state */
-  templatePanel: {
-    templates: WorkflowTemplate[];
-    loading: boolean;
-    error: string | null;
-    searchQuery: string;
-    selectedTemplate: Template | null;
-  };
 
   /** Import panel state */
   importPanel: {
@@ -100,15 +86,6 @@ export interface UICommands {
   /** Toggle AI Assistant panel */
   toggleAIAssistantPanel: () => void;
 
-  /** Collapse create workflow panel */
-  collapseCreateWorkflowPanel: () => void;
-
-  /** Expand create workflow panel */
-  expandCreateWorkflowPanel: () => void;
-
-  /** Toggle create workflow panel collapsed state */
-  toggleCreateWorkflowPanel: () => void;
-
   /** Dismiss the landing screen — called by downstream issues when a path is committed */
   dismissLandingScreen: () => void;
 
@@ -123,24 +100,6 @@ export interface UICommands {
 
   /** Close the template browser modal */
   closeTemplateBrowserModal: () => void;
-
-  /** Set templates list */
-  setTemplates: (templates: WorkflowTemplate[]) => void;
-
-  /** Set templates loading state */
-  setTemplatesLoading: (loading: boolean) => void;
-
-  /** Set templates error */
-  setTemplatesError: (error: string | null) => void;
-
-  /** Set template search query */
-  setTemplateSearchQuery: (query: string) => void;
-
-  /** Select a template */
-  selectTemplate: (template: Template | null) => void;
-
-  /** Clear template panel state */
-  clearTemplatePanel: () => void;
 
   /** Set import panel YAML content */
   setImportYamlContent: (content: string) => void;

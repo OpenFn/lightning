@@ -3,21 +3,16 @@ import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { Tooltip } from '../../components/Tooltip';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
-import { getCsrfToken } from '../lib/csrf';
 import { useActiveRun } from '../hooks/useHistory';
 import {
   useIsNewWorkflow,
   useLimits,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
-import {
-  useImportPanelState,
-  useIsCreateWorkflowPanelCollapsed,
-  useTemplatePanel,
-  useUICommands,
-} from '../hooks/useUI';
+import { useUICommands } from '../hooks/useUI';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import {
   useCanRun,
@@ -30,6 +25,7 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import { isFinalState } from '../types/history';
 
@@ -42,7 +38,6 @@ import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from '../../components/Tooltip';
 
 /**
  * Save button component - visible in React DevTools
@@ -222,9 +217,6 @@ export function Header({
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
   const isNewWorkflow = useIsNewWorkflow();
-  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
-  const importPanelState = useImportPanelState();
-  const { selectedTemplate } = useTemplatePanel();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
@@ -249,7 +241,6 @@ export function Header({
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
   const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
-  const currentMethod = params['method'] as 'template' | 'import' | 'ai' | null;
 
   // Check if viewing a pinned version via URL parameter
   // When ?v= is present, user is viewing a specific version (even if latest)
@@ -510,39 +501,12 @@ export function Header({
                 canSave={
                   canSave &&
                   !hasSettingsErrors &&
-                  // For new workflows, check based on creation method
-                  !(
-                    isNewWorkflow &&
-                    !isCreateWorkflowPanelCollapsed &&
-                    // Template method: need a selected template OR workflow on canvas
-                    ((currentMethod === 'template' &&
-                      !selectedTemplate &&
-                      isWorkflowEmpty) ||
-                      // Import method: need valid YAML
-                      (currentMethod === 'import' &&
-                        importPanelState !== 'valid'))
-                  ) &&
-                  // When panel is collapsed, just check workflow isn't empty
-                  !(
-                    isNewWorkflow &&
-                    isCreateWorkflowPanelCollapsed &&
-                    isWorkflowEmpty
-                  )
+                  !(isNewWorkflow && isWorkflowEmpty)
                 }
                 tooltipMessage={
-                  isNewWorkflow &&
-                  !isCreateWorkflowPanelCollapsed &&
-                  currentMethod === 'import' &&
-                  importPanelState === 'invalid'
-                    ? 'Fix validation errors to continue'
-                    : isNewWorkflow &&
-                        !isCreateWorkflowPanelCollapsed &&
-                        currentMethod === 'template' &&
-                        !selectedTemplate
-                      ? 'Select a template to continue'
-                      : isNewWorkflow && isWorkflowEmpty
-                        ? 'Cannot save an empty workflow'
-                        : tooltipMessage
+                  isNewWorkflow && isWorkflowEmpty
+                    ? 'Cannot save an empty workflow'
+                    : tooltipMessage
                 }
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}

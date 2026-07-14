@@ -95,7 +95,6 @@ export function AIAssistantPanelWrapper({
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
-    collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
   const currentVersion = params['v'];
@@ -125,10 +124,6 @@ export function AIAssistantPanelWrapper({
   useKeyboardShortcut(
     '$mod+k',
     () => {
-      // Close create workflow panel when opening AI Assistant
-      if (!isAIAssistantPanelOpen) {
-        collapseCreateWorkflowPanel();
-      }
       toggleAIAssistantPanel();
     },
     0,

@@ -83,11 +83,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: () => <div data-testid="inspector">Inspector</div>,
 }));
 
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 // Mock FullScreenIDE
 // Note: The real FullScreenIDE has Escape key handler that calls onClose
 // We need to import useKeyboardShortcut here to simulate that behavior
