@@ -942,14 +942,6 @@
     min-height: 4.5rem;
   }
 
-  .job-editor-panel.collapsed .close-button {
-    @apply pb-0;
-  }
-
-  .job-editor-panel.collapsed[data-editor-disabled='true'] .close-button {
-    min-height: 3.75rem;
-  }
-
   #output-logs.collapsed .close-button {
     margin-bottom: 5.5rem;
   }

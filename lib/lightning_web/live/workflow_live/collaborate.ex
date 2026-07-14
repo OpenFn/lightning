@@ -22,7 +22,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount({LightningWeb.Hooks, :check_limits})
-  on_mount({LightningWeb.Hooks, :check_legacy_preference})
 
   @impl true
   def mount(

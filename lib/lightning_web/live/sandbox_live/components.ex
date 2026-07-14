@@ -370,30 +370,38 @@ defmodule LightningWeb.SandboxLive.Components do
                 </span>
                 <span
                   :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                  id={"merge-wf-changed-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-green-700"
-                  title="This workflow has been modified in the sandbox"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow has been modified in the sandbox"
                 >
                   Changed
                 </span>
                 <span
                   :if={wf.is_diverged}
+                  id={"merge-wf-diverged-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-amber-700"
-                  title="This workflow was modified in the target project - this change will be lost"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow was modified in the target project - this change will be lost"
                 >
                   <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
                   Diverged
                 </span>
                 <span
                   :if={wf.is_new}
+                  id={"merge-wf-new-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-blue-700"
-                  title="This workflow doesn't exist in the target — it will be created"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow doesn't exist in the target — it will be created"
                 >
                   New
                 </span>
                 <span
                   :if={wf.is_deleted}
+                  id={"merge-wf-deleted-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-red-700"
-                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow was deleted in the sandbox. Selecting it removes it from the project too."
                 >
                   Deleted in sandbox
                 </span>
