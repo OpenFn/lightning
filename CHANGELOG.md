@@ -74,6 +74,16 @@ and this project adheres to
   than an application error.
   [#4947](https://github.com/OpenFn/lightning/issues/4947)
 
+### Security
+
+- Enabled Hex's dependency cooldown (`hex: [cooldown: "1w"]`), so newly-resolved
+  dependency versions must have existed for at least a week before Hex will pull
+  them in, mitigating supply-chain attacks that get caught and retired within
+  days. Normal builds against an intact `mix.lock` are unaffected.
+  `bin/bootstrap` now enforces Hex `>= 2.5.0`, which is required for the
+  cooldown to take effect.
+  [#4971](https://github.com/OpenFn/lightning/pull/4971)
+
 ## [2.16.8] - 2026-07-01
 
 ## [2.16.8-pre] - 2026-06-18
