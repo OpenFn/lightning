@@ -39,6 +39,10 @@ and this project adheres to
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
 - Bump worker to 1.27.0
+- The global chat now starts streaming Apollo's response earlier, so users wait
+  less before seeing output. Lightning handles the several streaming event types
+  Apollo sends, including status updates.
+  [#4969](https://github.com/OpenFn/lightning/pull/4969)
 
 ### Fixed
 
@@ -52,7 +56,7 @@ and this project adheres to
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
   indicator. Statuses are surfaced in whatever order Apollo sends them.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#4833](https://github.com/OpenFn/lightning/pull/4833)
 
 ### Changed
 
