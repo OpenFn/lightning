@@ -129,7 +129,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec dispatch_message_processing(
           AiAssistant.ChatSession.t(),
           ChatMessage.t()
-        ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+        ) ::
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp dispatch_message_processing(session, message) do
     if global_chat?(session) do
       process_global_message(session, message)
@@ -148,7 +150,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_global_message(session, message) do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
@@ -179,7 +182,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @spec handle_processing_result(
           ChatMessage.t(),
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp handle_processing_result(message, result) do
     case result do
@@ -188,6 +192,17 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           update_message_status(message, :success)
 
         {:ok, updated_session}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(message, :error)
+
+        Logger.error(
+          "[MessageProcessor] Failed to save assistant response for message " <>
+            "#{message.id}: invalid changeset: #{inspect(changeset.errors)}"
+        )
+
+        {:error, "Failed to save assistant response"}
 
       {:error, error_message} ->
         {:ok, _updated_session, _updated_message} =
@@ -199,7 +214,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
@@ -255,7 +271,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 

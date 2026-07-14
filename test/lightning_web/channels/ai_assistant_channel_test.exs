@@ -253,6 +253,56 @@ defmodule LightningWeb.AiAssistantChannelTest do
                %{from_global: false}
              ] = messages
     end
+
+    test "serializes segments timeline when present", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      segments = [
+        %{"type" => "text", "content" => "Adding a step..."},
+        %{"type" => "status", "content" => "Validating workflow..."},
+        %{"type" => "text", "content" => "Done!"}
+      ]
+
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Adding a step...\n\nDone!",
+              status: :success,
+              meta: %{"from_global" => true},
+              response_segments: segments
+            },
+            %{
+              role: :assistant,
+              content: "Flat response",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [
+               %{
+                 response_segments: ^segments,
+                 content: "Adding a step...\n\nDone!"
+               },
+               %{response_segments: nil, content: "Flat response"}
+             ] = messages
+    end
   end
 
   describe "workflow_template sessions" do
@@ -3056,6 +3106,21 @@ defmodule LightningWeb.AiAssistantChannelTest do
       )
 
       assert_broadcast "streaming_changes", %{changes: ^changes}
+    end
+
+    test "forwards streaming_segment to channel", %{
+      socket: socket,
+      session_id: session_id
+    } do
+      segment = %{"type" => "status", "content" => "Edited workflow structure"}
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :streaming_segment,
+         %{segment: segment, session_id: session_id}}
+      )
+
+      assert_broadcast "streaming_segment", %{segment: ^segment}
     end
 
     test "forwards streaming_error to channel", %{

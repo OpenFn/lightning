@@ -152,6 +152,60 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
       assert changeset.valid?
     end
 
+    test "accepts a valid segments timeline and nil segments" do
+      segments = [
+        %{"type" => "text", "content" => "Adding a step..."},
+        %{"type" => "status", "content" => "Validating workflow..."},
+        %{"type" => "text", "content" => "Done!"}
+      ]
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Adding a step...\n\nDone!",
+          role: :assistant,
+          response_segments: segments
+        })
+
+      assert changeset.valid?
+
+      assert Ecto.Changeset.fetch_field!(changeset, :response_segments) ==
+               segments
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Flat response",
+          role: :assistant,
+          response_segments: nil
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.fetch_field!(changeset, :response_segments) == nil
+    end
+
+    test "rejects segments with unknown types or non-binary content" do
+      invalid_segments = [
+        [%{"type" => "thinking", "content" => "hmm"}],
+        [%{"type" => "text", "content" => 123}],
+        [%{"content" => "no type"}],
+        [%{"type" => "text", "content" => "ok"}, %{"type" => "status"}]
+      ]
+
+      for segments <- invalid_segments do
+        changeset =
+          ChatMessage.changeset(%ChatMessage{}, %{
+            content: "Test message",
+            role: :assistant,
+            response_segments: segments
+          })
+
+        refute changeset.valid?, "expected #{inspect(segments)} to be invalid"
+
+        assert "must be a list of %{\"type\" => \"text\" | \"status\", \"content\" => binary} entries" in errors_on(
+                 changeset
+               ).response_segments
+      end
+    end
+
     test "sets pending status by default for user messages" do
       user = insert(:user)
 

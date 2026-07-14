@@ -28,6 +28,7 @@ import {
   useAIStore,
   useAIStreamingChanges,
   useAIStreamingContent,
+  useAIStreamingSegments,
   useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
@@ -142,6 +143,7 @@ export function AIAssistantPanelWrapper({
   const isLoading = useAIIsLoading();
   const streamingContent = useAIStreamingContent();
   const streamingStatus = useAIStreamingStatus();
+  const streamingSegments = useAIStreamingSegments();
   const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
@@ -632,19 +634,26 @@ export function AIAssistantPanelWrapper({
   const appliedViaStreamingRef = useRef(false);
   useEffect(() => {
     if (!streamingChanges || !canApplyChanges) return;
-    // Avoid re-applying the same streaming changes object
+    // Avoid re-applying the same streaming changes object. The ref is only
+    // set once a change is actually handled, so a change that couldn't apply
+    // stays eligible if the page switches mid-stream.
     if (appliedStreamingChangesRef.current === streamingChanges) return;
-    appliedStreamingChangesRef.current = streamingChanges;
 
-    if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
+    // Workflow YAML applies to the shared Y.Doc, so it is page-independent:
+    // global chat streams it from the job code view too, and the diagram
+    // must be up to date whenever the user navigates there.
+    if ('yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
       if (yaml) {
+        appliedStreamingChangesRef.current = streamingChanges;
         appliedViaStreamingRef.current = true;
         void handleApplyWorkflow(yaml, '__streaming__');
       }
     } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
+      // Job code previews open job-editor UI, so they stay page-gated.
       const code = streamingChanges['code'] as string;
       if (code) {
+        appliedStreamingChangesRef.current = streamingChanges;
         appliedViaStreamingRef.current = true;
         handlePreviewJobCode(code, '__streaming__');
       }
@@ -772,6 +781,8 @@ export function AIAssistantPanelWrapper({
                 isWriteDisabled={isWriteDisabled}
                 streamingContent={streamingContent}
                 streamingStatus={streamingStatus}
+                streamingSegments={streamingSegments}
+                isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>
           </div>

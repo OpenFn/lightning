@@ -1343,6 +1343,23 @@ defmodule Lightning.AiAssistant do
     acc
   end
 
+  # Bridge event: status — a persistent, completed-action status. The payload
+  # is byte-identical to a `response_segments` entry, so live and reloaded
+  # timelines render through one code path. Transient "thinking" updates
+  # arrive separately as Anthropic thinking events (see handle_stream_event/2).
+  defp handle_sse_event(session_id, %{event: "status", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"type" => "status", "content" => content} = segment}
+      when is_binary(content) ->
+        broadcast_streaming_segment(session_id, segment)
+
+      _ ->
+        :ok
+    end
+
+    acc
+  end
+
   # Bridge event: log — skip Python stdout
   defp handle_sse_event(_session_id, %{event: "log"}, acc), do: acc
 
@@ -1411,6 +1428,14 @@ defmodule Lightning.AiAssistant do
     )
   end
 
+  defp broadcast_streaming_segment(session_id, segment) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_segment,
+       %{segment: segment, session_id: session_id}}
+    )
+  end
+
   defp broadcast_streaming_error(session_id, error) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
@@ -1434,7 +1459,9 @@ defmodule Lightning.AiAssistant do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
-        error_message = body["message"]
+        error_message =
+          error_message_from_body(body) ||
+            "AI server returned an error (HTTP #{status})."
 
         Logger.error(
           "AI query failed for session #{session.id}: #{error_message}"
@@ -1458,6 +1485,13 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
+
+  # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
+  # body, so error responses can't be indexed like decoded JSON maps.
+  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
+    do: body["message"]
+
+  defp error_message_from_body(_body), do: nil
 
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
@@ -1493,12 +1527,34 @@ defmodule Lightning.AiAssistant do
     message_attrs = %{
       role: :assistant,
       content: body["response"],
+      response_segments: normalize_response_segments(body["response_segments"]),
       meta: %{"from_global" => true}
     }
 
     opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
   end
+
+  # `response_segments` is the display timeline of the streamed reply (text and status
+  # segments in stream order); `response` stays the flat answer that history
+  # is rebuilt from. Absent or invalid segments mean a flat legacy message.
+  defp normalize_response_segments(segments) when is_list(segments) do
+    segments
+    |> Enum.filter(fn
+      %{"type" => type, "content" => content}
+      when type in ["text", "status"] and is_binary(content) ->
+        true
+
+      _ ->
+        false
+    end)
+    |> case do
+      [] -> nil
+      normalized -> normalized
+    end
+  end
+
+  defp normalize_response_segments(_segments), do: nil
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

@@ -29,9 +29,22 @@ defmodule Lightning.AiAssistantHelpers do
   endpoints. For streaming URLs (containing "/stream"), returns an SSE
   `event: complete` response. For other URLs, returns a regular JSON body.
 
+  The body is encoded verbatim, so it can include the global chat planner
+  fields (`"response_segments"` timeline alongside the flat `"response"`).
+
   ## Examples
 
       stub_ai_response(%{"history" => [%{"role" => "assistant", "content" => "Hi"}]})
+
+      streaming_or_sync_response(%{
+        "response" => "Done!",
+        "response_segments" => [
+          %{"type" => "text", "content" => "Adding a step..."},
+          %{"type" => "status", "content" => "Validating workflow..."},
+          %{"type" => "text", "content" => "Done!"}
+        ],
+        "attachments" => [%{"type" => "workflow_yaml", "content" => "..."}]
+      })
 
   """
   def streaming_or_sync_response(body) do

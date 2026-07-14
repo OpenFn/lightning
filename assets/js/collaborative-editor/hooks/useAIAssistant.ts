@@ -116,6 +116,17 @@ export const useAIStreamingContent = () => {
 };
 
 /**
+ * Get the woven text/status streaming timeline (global assistant streams)
+ */
+export const useAIStreamingSegments = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingSegments)
+  );
+};
+
+/**
  * Get streaming changes (code edits or workflow YAML sent before text streams)
  */
 export const useAIStreamingChanges = () => {

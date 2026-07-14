@@ -329,6 +329,90 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
       assert assistant_msg != nil
       assert assistant_msg.content == "Global response"
+      # Flat-string responses have no timeline
+      assert assistant_msg.response_segments == nil
+    end
+
+    test "persists the segments timeline alongside the flat response",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "add a step to my workflow",
+            user: user,
+            code: "workflow:\n  name: test"
+          },
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Here's the final result.",
+          "response_segments" => [
+            %{"type" => "text", "content" => "I'm going to add a step."},
+            %{"type" => "status", "content" => "Adding step send-to-gmail..."},
+            %{"type" => "text", "content" => "Here's the final result."},
+            %{"type" => "unknown", "content" => "dropped during normalization"}
+          ],
+          "attachments" => [
+            %{"type" => "workflow_yaml", "content" => "workflow:\n  name: new"}
+          ],
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      # Content is the flat response verbatim; segments keep the full timeline
+      # (minus unrecognised entries); code comes from attachments.
+      assert %{
+               content: "Here's the final result.",
+               response_segments: [
+                 %{
+                   "type" => "text",
+                   "content" => "I'm going to add a step."
+                 },
+                 %{
+                   "type" => "status",
+                   "content" => "Adding step send-to-gmail..."
+                 },
+                 %{
+                   "type" => "text",
+                   "content" => "Here's the final result."
+                 }
+               ],
+               code: "workflow:\n  name: new",
+               meta: %{"from_global" => true}
+             } = assistant_msg
     end
 
     test "dispatches to workflow chat when use_global_assistant is not set", %{
@@ -384,6 +468,51 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
       assert assistant_msg != nil
       assert assistant_msg.content == "Workflow response"
+    end
+
+    test "marks the message as error when a streaming request returns non-2xx",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # Streaming requests carry a lazy Stream body even on error responses,
+      # so the error handler must not index it like a decoded JSON map.
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+
+        {:ok,
+         %Tesla.Env{
+           status: 500,
+           body: Stream.map(["upstream exploded"], & &1)
+         }}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assert Enum.find(reloaded.messages, &(&1.role == :user)).status == :error
+      refute Enum.find(reloaded.messages, &(&1.role == :assistant))
     end
   end
 end

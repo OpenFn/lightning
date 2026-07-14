@@ -115,6 +115,7 @@ interface ChannelEntry {
     messageStatusChanged: ChannelCallback;
     streamingChunk: ChannelCallback;
     streamingStatus: ChannelCallback;
+    streamingSegment: ChannelCallback;
     streamingChanges: ChannelCallback;
     streamingError: ChannelCallback;
   };
@@ -138,6 +139,11 @@ export class AIChannelRegistry {
   private streamingBuffer = '';
   private streamingDrainPos = 0;
   private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
+  // Status markers pinned to buffer positions. A status arriving over the
+  // wire is emitted into the store's streamingSegments timeline only once
+  // every character buffered before it has drained, preserving wire order
+  // (same guarantee drainThenRun provides for new_message).
+  private pendingStatusMarkers: Array<{ pos: number; text: string }> = [];
   // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
   private static readonly LETTER_INTERVAL_MS = 15;
   // Callback to run after the buffer finishes draining (e.g., finalize message)
@@ -164,10 +170,41 @@ export class AIChannelRegistry {
     this.startDraining();
   }
 
+  /**
+   * Enqueue a status marker at the current end of the streaming buffer so it
+   * enters the store's streamingSegments timeline only after the text that
+   * preceded it on the wire has drained.
+   */
+  private bufferStreamingStatusSegment(text: string): void {
+    this.pendingStatusMarkers.push({
+      pos: this.streamingBuffer.length,
+      text,
+    });
+    this.startDraining();
+  }
+
+  /**
+   * Emit any status markers whose buffer position has been reached by the
+   * char drain (i.e. all text before them has already been appended).
+   */
+  private flushDueStatusMarkers(): void {
+    let next = this.pendingStatusMarkers.at(0);
+    while (next && next.pos <= this.streamingDrainPos) {
+      this.pendingStatusMarkers.shift();
+      this.store._appendStreamingSegment({
+        type: 'status',
+        content: next.text,
+      });
+      next = this.pendingStatusMarkers.at(0);
+    }
+  }
+
   private startDraining(): void {
     if (this.streamingDrainTimer !== null) return;
 
     this.streamingDrainTimer = setInterval(() => {
+      this.flushDueStatusMarkers();
+
       if (this.streamingDrainPos >= this.streamingBuffer.length) {
         // Buffer fully drained — if a callback is waiting, run it now
         if (this.streamingDrainCallback) {
@@ -192,6 +229,7 @@ export class AIChannelRegistry {
     }
     this.streamingBuffer = '';
     this.streamingDrainPos = 0;
+    this.pendingStatusMarkers = [];
   }
 
   /**
@@ -200,7 +238,9 @@ export class AIChannelRegistry {
    */
   private drainThenRun(callback: () => void): void {
     if (this.streamingDrainPos >= this.streamingBuffer.length) {
-      // Nothing left to drain
+      // Nothing left to drain — emit any statuses already due before the
+      // stream finalizes, so the timeline matches wire order to the end.
+      this.flushDueStatusMarkers();
       this.stopDraining();
       callback();
     } else {
@@ -633,6 +673,7 @@ export class AIChannelRegistry {
       );
       entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
       entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+      entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
       entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
       entry.channel.off('streaming_error', entry.handlers.streamingError);
       entry.channel.leave();
@@ -699,9 +740,28 @@ export class AIChannelRegistry {
       this.bufferStreamingChunk(typedPayload.content);
     };
 
+    // Transient "thinking" updates: scalar only. They replace each other and
+    // are cleared by any subsequent event (text chunk or status segment).
+    // They never enter the persistent segments timeline.
     const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { text: string };
       this.store.setStreamingStatus(typedPayload.text);
+    };
+
+    // Persistent completed-action statuses (same shape as a
+    // response_segments entry): supersede any active thinking status at
+    // network arrival, and enter the woven timeline through the char drain
+    // so they land after the text that preceded them on the wire.
+    const streamingSegmentHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        segment: { type: string; content: string };
+      };
+      if (typedPayload.segment?.type !== 'status') return;
+
+      if (this.store.getSnapshot().streamingStatus) {
+        this.store.setStreamingStatus(null);
+      }
+      this.bufferStreamingStatusSegment(typedPayload.segment.content);
     };
 
     const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
@@ -723,6 +783,7 @@ export class AIChannelRegistry {
     channel.on('message_status_changed', messageStatusChangedHandler);
     channel.on('streaming_chunk', streamingChunkHandler);
     channel.on('streaming_status', streamingStatusHandler);
+    channel.on('streaming_segment', streamingSegmentHandler);
     channel.on('streaming_changes', streamingChangesHandler);
     channel.on('streaming_error', streamingErrorHandler);
 
@@ -734,6 +795,7 @@ export class AIChannelRegistry {
       messageStatusChanged: messageStatusChangedHandler,
       streamingChunk: streamingChunkHandler,
       streamingStatus: streamingStatusHandler,
+      streamingSegment: streamingSegmentHandler,
       streamingChanges: streamingChangesHandler,
       streamingError: streamingErrorHandler,
     };
@@ -850,6 +912,7 @@ export class AIChannelRegistry {
     );
     entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
     entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+    entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
     entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
 
     entry.channel.leave();
