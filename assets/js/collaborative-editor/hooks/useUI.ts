@@ -64,6 +64,10 @@ export const useUICommands = () => {
     // Import panel write commands
     setImportState: uiStore.setImportState,
     setImportYamlContent: uiStore.setImportYamlContent,
+    // Template panel write commands
+    setTemplates: uiStore.setTemplates,
+    setTemplatesLoading: uiStore.setTemplatesLoading,
+    setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
   };
 };
 
@@ -185,4 +189,17 @@ export const useImportYamlContent = (): string => {
   );
 
   return useSyncExternalStore(uiStore.subscribe, selectYamlContent);
+};
+
+/**
+ * Hook to get the template browser panel state
+ */
+export const useTemplatePanel = (): UIState['templatePanel'] => {
+  const uiStore = useUIStore();
+
+  const selectTemplatePanel = uiStore.withSelector(
+    state => state.templatePanel
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectTemplatePanel);
 };

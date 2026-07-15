@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { fetchTemplates } from '../api/templates';
 import { BASE_TEMPLATES } from '../constants/baseTemplates';
 import { useActionLock } from '../hooks/useActionLock';
 import { useSession } from '../hooks/useSession';
-import { useShowTemplateBrowserModal, useUICommands } from '../hooks/useUI';
+import {
+  useShowTemplateBrowserModal,
+  useTemplatePanel,
+  useUICommands,
+} from '../hooks/useUI';
 import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
@@ -15,14 +19,18 @@ import { TemplateBrowserModal } from './TemplateBrowserModal';
 
 export function TemplateBrowserModalWrapper() {
   const isOpen = useShowTemplateBrowserModal();
-  const { closeTemplateBrowserModal, dismissLandingScreen } = useUICommands();
+  const {
+    closeTemplateBrowserModal,
+    dismissLandingScreen,
+    setTemplates,
+    setTemplatesLoading,
+    setTemplateSearchQuery,
+  } = useUICommands();
   const provider = useSession(s => s.provider);
   const channel = provider?.channel;
   const { createWorkflowFrom } = useCreateWorkflowFlow();
 
-  const [templates, setTemplates] = useState<Template[]>(BASE_TEMPLATES);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { templates, loading, searchQuery } = useTemplatePanel();
 
   useKeyboardShortcut('Escape', closeTemplateBrowserModal, 100, {
     enabled: isOpen,
@@ -31,11 +39,11 @@ export function TemplateBrowserModalWrapper() {
   // Lazy fetch — only when modal opens, not on every /new load
   useEffect(() => {
     if (!isOpen) return;
-    setSearchQuery('');
+    setTemplateSearchQuery('');
     if (!channel) return;
 
     const load = async () => {
-      setLoading(true);
+      setTemplatesLoading(true);
       try {
         const userTemplates = await fetchTemplates(channel);
         setTemplates([...BASE_TEMPLATES, ...userTemplates]);
@@ -45,12 +53,18 @@ export function TemplateBrowserModalWrapper() {
           description: 'Please check your connection and try again.',
         });
       } finally {
-        setLoading(false);
+        setTemplatesLoading(false);
       }
     };
 
     void load();
-  }, [isOpen, channel]);
+  }, [
+    isOpen,
+    channel,
+    setTemplateSearchQuery,
+    setTemplatesLoading,
+    setTemplates,
+  ]);
 
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
@@ -73,7 +87,7 @@ export function TemplateBrowserModalWrapper() {
       isSaving={isSaving}
       onSelect={template => void handleSelect(template)}
       searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
+      onSearchChange={setTemplateSearchQuery}
     />
   );
 }

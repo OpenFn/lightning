@@ -5,6 +5,8 @@
  * and context for the collaborative editor.
  */
 
+import type { Template } from './template';
+
 // =============================================================================
 // TYPESCRIPT TYPES
 // =============================================================================
@@ -53,6 +55,13 @@ export interface UIState {
     yamlContent: string;
     /** Import state machine: initial -> parsing -> valid/invalid -> importing */
     importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
+  };
+
+  /** Template browser panel state */
+  templatePanel: {
+    templates: Template[];
+    loading: boolean;
+    searchQuery: string;
   };
 }
 
@@ -111,6 +120,15 @@ export interface UICommands {
 
   /** Clear import panel state */
   clearImportPanel: () => void;
+
+  /** Set the list of templates shown in the template browser */
+  setTemplates: (templates: Template[]) => void;
+
+  /** Set the template browser's loading state */
+  setTemplatesLoading: (loading: boolean) => void;
+
+  /** Set the template browser's search query */
+  setTemplateSearchQuery: (query: string) => void;
 }
 
 /**

@@ -63,6 +63,7 @@ import { produce } from 'immer';
 
 import _logger from '#/utils/logger';
 
+import { BASE_TEMPLATES } from '../constants/baseTemplates';
 import type { UICommands, UIState, UIStore } from '../types/ui';
 
 import { createWithSelector } from './common';
@@ -109,6 +110,11 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       importPanel: {
         yamlContent: '',
         importState: 'initial',
+      },
+      templatePanel: {
+        templates: BASE_TEMPLATES,
+        loading: false,
+        searchQuery: '',
       },
     } as UIState,
     draft => draft
@@ -265,6 +271,31 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('closeTemplateBrowserModal');
   };
 
+  // ===========================================================================
+  // TEMPLATE PANEL COMMANDS
+  // ===========================================================================
+
+  const setTemplates = (templates: UIState['templatePanel']['templates']) => {
+    state = produce(state, draft => {
+      draft.templatePanel.templates = templates;
+    });
+    notify('setTemplates');
+  };
+
+  const setTemplatesLoading = (loading: boolean) => {
+    state = produce(state, draft => {
+      draft.templatePanel.loading = loading;
+    });
+    notify('setTemplatesLoading');
+  };
+
+  const setTemplateSearchQuery = (query: string) => {
+    state = produce(state, draft => {
+      draft.templatePanel.searchQuery = query;
+    });
+    notify('setTemplateSearchQuery');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -294,6 +325,9 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     closeYAMLImportModal,
     openTemplateBrowserModal,
     closeTemplateBrowserModal,
+    setTemplates,
+    setTemplatesLoading,
+    setTemplateSearchQuery,
   };
 };
 
