@@ -22,6 +22,7 @@ import type {
 } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
+import { NOT_CONNECTED_ALERT } from './useWorkflow';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
 /**
@@ -244,10 +245,7 @@ export function useAIWorkflowApplications({
       // timeout. (Existing workflows are fine: offline imports are normal
       // unsaved collaborative edits that sync on reconnect.)
       if (isNewWorkflow && !isSessionConnected) {
-        notifications.alert({
-          title: 'Not connected',
-          description: 'Connection lost — please wait a moment and try again.',
-        });
+        notifications.alert(NOT_CONNECTED_ALERT);
         return;
       }
 

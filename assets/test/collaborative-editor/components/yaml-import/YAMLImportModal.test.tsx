@@ -11,10 +11,41 @@ const mockNotificationsAlert = vi.mocked(notifications.alert);
 const mockImportWorkflow = vi.fn().mockResolvedValue(undefined);
 const mockSaveWorkflow = vi.fn().mockResolvedValue({ ok: true });
 
+// `useCreateWorkflowFlow` is re-implemented here (mirroring the real gate/
+// import/save sequence in useWorkflow.tsx) rather than mocked-through, since
+// it lives in the same module as `useWorkflowActions` and a vi.mock override
+// of one export can't reach an internal same-module call to the other.
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({
     importWorkflow: mockImportWorkflow,
     saveWorkflow: mockSaveWorkflow,
+  }),
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: async (buildState: () => unknown) => {
+      if (!mockIsConnected) {
+        mockNotificationsAlert({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+        return false;
+      }
+      try {
+        const state = buildState();
+        await mockImportWorkflow(state);
+      } catch {
+        mockNotificationsAlert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await mockSaveWorkflow({ notify: 'error-only' });
+      } catch {
+        return false;
+      }
+      return true;
+    },
   }),
 }));
 
@@ -266,7 +297,7 @@ describe('YAMLImportModal', () => {
       await waitFor(() => {
         expect(mockNotificationsAlert).toHaveBeenCalledWith({
           title: 'Not connected',
-          description: 'Connection lost — please wait a moment and try again.',
+          description: 'Connect to the server before creating a workflow.',
         });
       });
       expect(mockImportWorkflow).not.toHaveBeenCalled();
