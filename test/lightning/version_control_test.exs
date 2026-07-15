@@ -510,6 +510,38 @@ defmodule Lightning.VersionControlTest do
       assert updated_user.github_oauth_token["access_token"] ==
                expected_access_token
     end
+
+    test "returns invalid_oauth_token error when the refresh token is rejected by GitHub" do
+      active_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(100)
+      }
+
+      # reload so that we can get the token as they are from the db
+      user =
+        insert(:user, github_oauth_token: active_token)
+        |> Lightning.Repo.reload!()
+
+      # GitHub returns a 200 with an error body when the refresh token is
+      # revoked or otherwise invalid
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             body: %{
+               "error" => "bad_refresh_token",
+               "error_description" =>
+                 "The refresh token passed is incorrect or expired."
+             }
+           }}
+      end)
+
+      assert {:error,
+              %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}} =
+               VersionControl.fetch_user_access_token(user)
+    end
   end
 
   describe "save_oauth_token/2" do

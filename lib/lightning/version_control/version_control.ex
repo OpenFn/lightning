@@ -384,9 +384,26 @@ defmodule Lightning.VersionControl do
     if DateTime.after?(access_token_expiry, now) do
       {:ok, token["access_token"]}
     else
-      with {:ok, refreshed_token} <- refresh_oauth_token(token["refresh_token"]),
-           {:ok, _user} <- save_oauth_token(user, refreshed_token, notify: false) do
-        {:ok, refreshed_token["access_token"]}
+      case refresh_oauth_token(token["refresh_token"]) do
+        {:ok, refreshed_token} ->
+          with {:ok, _user} <-
+                 save_oauth_token(user, refreshed_token, notify: false) do
+            {:ok, refreshed_token["access_token"]}
+          end
+
+        {:error, error} ->
+          # GitHub rejected the refresh token (revoked, expired or otherwise
+          # invalid). Surface this as an invalid_oauth_token error so the UI can
+          # prompt the user to reconnect their GitHub account rather than
+          # showing a generic API failure.
+          Logger.warning(
+            "Failed to refresh GitHub OAuth token: #{inspect(error)}"
+          )
+
+          {:error,
+           GithubError.invalid_oauth_token(
+             "user oauth token could not be refreshed"
+           )}
       end
     end
   end

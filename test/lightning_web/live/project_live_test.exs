@@ -4683,6 +4683,51 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "There was a problem connecting to GitHub"
     end
 
+    test "shows reconnect banner when GitHub rejects the OAuth refresh token", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+
+      # Access token has expired but the refresh token is still valid by its
+      # timestamp, so the component renders and attempts to refresh the token.
+      user
+      |> Ecto.Changeset.change(%{
+        github_oauth_token: %{
+          "access_token" => "expired-access-token",
+          "refresh_token" => "revoked-refresh-token",
+          "expires_at" => DateTime.utc_now() |> DateTime.add(-500),
+          "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(500)
+        }
+      })
+      |> Lightning.Repo.update!()
+
+      # GitHub rejects the refresh token (revoked/invalid) with a 200 + error body
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             body: %{
+               "error" => "bad_refresh_token",
+               "error_description" =>
+                 "The refresh token passed is incorrect or expired."
+             }
+           }}
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "Unable to load GitHub installations"
+      assert html =~ "Your GitHub authentication has expired or is invalid"
+      refute html =~ "There was a problem connecting to GitHub"
+    end
+
     test "branches list can be refreshed successfully", %{
       conn: conn
     } do
