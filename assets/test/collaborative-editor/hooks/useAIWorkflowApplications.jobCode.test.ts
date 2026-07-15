@@ -27,7 +27,7 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   },
 }));
 
-describe('useAIWorkflowApplications - Job Code', () => {
+describe('useAIWorkflowApplications - job code', () => {
   // Mock functions
   const mockImportWorkflow = vi.fn();
   const mockStartApplyingWorkflow = vi.fn(() => Promise.resolve(true));

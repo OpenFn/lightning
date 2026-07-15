@@ -1,12 +1,12 @@
 /**
- * useAIWorkflowApplications - Workflow Application Tests
+ * useAIWorkflowApplications - Auto-Save on New Workflow Tests
  *
- * Tests the workflow YAML application functionality:
- * - Parsing and applying workflow YAML
- * - ID validation
- * - Error handling
- * - Credential preservation
- * - Collaborative coordination
+ * Tests the auto-save behavior that follows a successful workflow
+ * apply for brand-new (unsaved) workflows, and how validation errors
+ * are routed differently depending on whether the workflow is new:
+ * - Auto-save after importWorkflow when isNewWorkflow is true
+ * - No auto-save for existing workflows
+ * - Validation error routing (onValidationError vs toast)
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
@@ -82,7 +82,7 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   },
 }));
 
-describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
+describe('useAIWorkflowApplications - auto-save on new workflow', () => {
   // Mock functions
   const mockImportWorkflow = vi.fn(() => Promise.resolve());
   const mockStartApplyingWorkflow = vi.fn(() => Promise.resolve(true));
@@ -96,6 +96,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
   const mockShowDiff = vi.fn();
 
   const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+  const mockOnValidationError = vi.fn();
 
   const mockStreamingApplyActions = {
     set: vi.fn(),
@@ -130,20 +131,11 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     storageKey: `ai-${mode}`,
   });
 
-  const createMockJob = (overrides: Partial<Job> = {}): Job => ({
-    id: 'job-1',
-    name: 'Test Job',
-    body: 'console.log("old code");',
-    adaptor: '@openfn/language-http@latest',
-    enabled: true,
-    ...overrides,
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('successfully parses and applies valid YAML', async () => {
+  it('auto-saves after importWorkflow when isNewWorkflow is true', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
@@ -151,15 +143,18 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: mockSaveWorkflow,
+        },
         monacoRef: createMockMonacoRef(),
-        jobs: [createMockJob()],
+        jobs: [],
         canApplyChanges: true,
         connectionState: 'connected' as ConnectionState,
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: false,
+        isNewWorkflow: true,
         isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
@@ -167,19 +162,19 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
       })
     );
 
-    const validYAML = 'name: Test Workflow\njobs:\n  job-1:\n    name: Job 1';
-
-    await result.current.handleApplyWorkflow(validYAML, 'msg-1');
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
 
     await waitFor(() => {
-      expect(mockStartApplyingWorkflow).toHaveBeenCalledWith('msg-1');
       expect(mockImportWorkflow).toHaveBeenCalled();
-      expect(mockDoneApplyingWorkflow).toHaveBeenCalledWith('msg-1');
-      expect(mockSetApplyingMessageId).toHaveBeenCalledWith(null);
+      expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
     });
+
+    const importOrder = mockImportWorkflow.mock.invocationCallOrder[0];
+    const saveOrder = mockSaveWorkflow.mock.invocationCallOrder[0];
+    expect(importOrder).toBeLessThan(saveOrder);
   });
 
-  it('validates ID formats and rejects object IDs', async () => {
+  it('does not auto-save when isNewWorkflow is false', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
@@ -187,123 +182,10 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         currentSession: null,
         currentUserId: 'user-123',
         aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
-        monacoRef: createMockMonacoRef(),
-        jobs: [createMockJob()],
-        canApplyChanges: true,
-        connectionState: 'connected' as ConnectionState,
-        setPreviewingMessageId: mockSetPreviewingMessageId,
-        previewingMessageId: null,
-        setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: false,
-        isSessionConnected: true,
-        appliedMessageIdsRef: { current: new Set() },
-        streamingApply: null,
-        streamingApplyActions: mockStreamingApplyActions,
-      })
-    );
-
-    const invalidYAML = 'object-id: true\njobs:\n  job-1:\n    name: Job 1';
-
-    await result.current.handleApplyWorkflow(invalidYAML, 'msg-1');
-
-    await waitFor(() => {
-      expect(notifications.alert).toHaveBeenCalledWith({
-        title: 'Failed to apply workflow',
-        description: expect.stringContaining('Invalid ID format') as string,
-      });
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
-    });
-  });
-
-  it('handles YAML parsing errors gracefully', async () => {
-    const { result } = renderHook(() =>
-      useAIWorkflowApplications({
-        sessionId: 'session-1',
-        page: 'workflow_template',
-        currentSession: null,
-        currentUserId: 'user-123',
-        aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
-        monacoRef: createMockMonacoRef(),
-        jobs: [createMockJob()],
-        canApplyChanges: true,
-        connectionState: 'connected' as ConnectionState,
-        setPreviewingMessageId: mockSetPreviewingMessageId,
-        previewingMessageId: null,
-        setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: false,
-        isSessionConnected: true,
-        appliedMessageIdsRef: { current: new Set() },
-        streamingApply: null,
-        streamingApplyActions: mockStreamingApplyActions,
-      })
-    );
-
-    const invalidYAML = 'invalid: yaml: syntax:';
-
-    await result.current.handleApplyWorkflow(invalidYAML, 'msg-1');
-
-    await waitFor(() => {
-      expect(notifications.alert).toHaveBeenCalledWith({
-        title: 'Failed to apply workflow',
-        description: expect.any(String) as string,
-      });
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
-    });
-  });
-
-  it('extracts and applies job credentials', async () => {
-    const jobWithCred = createMockJob({
-      id: 'job-1',
-      credential: 'cred-123',
-    });
-
-    const { result } = renderHook(() =>
-      useAIWorkflowApplications({
-        sessionId: 'session-1',
-        page: 'workflow_template',
-        currentSession: null,
-        currentUserId: 'user-123',
-        aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
-        monacoRef: createMockMonacoRef(),
-        jobs: [jobWithCred],
-        canApplyChanges: true,
-        connectionState: 'connected' as ConnectionState,
-        setPreviewingMessageId: mockSetPreviewingMessageId,
-        previewingMessageId: null,
-        setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: false,
-        isSessionConnected: true,
-        appliedMessageIdsRef: { current: new Set() },
-        streamingApply: null,
-        streamingApplyActions: mockStreamingApplyActions,
-      })
-    );
-
-    const validYAML = 'name: Test Workflow';
-
-    await result.current.handleApplyWorkflow(validYAML, 'msg-1');
-
-    await waitFor(() => {
-      expect(mockImportWorkflow).toHaveBeenCalledWith(
-        expect.objectContaining({
-          _credentialsApplied: true,
-        })
-      );
-    });
-  });
-
-  it('coordinates with collaborators', async () => {
-    const { result } = renderHook(() =>
-      useAIWorkflowApplications({
-        sessionId: 'session-1',
-        page: 'workflow_template',
-        currentSession: null,
-        currentUserId: 'user-123',
-        aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
+        workflowActions: {
+          ...mockWorkflowActions,
+          saveWorkflow: mockSaveWorkflow,
+        },
         monacoRef: createMockMonacoRef(),
         jobs: [],
         canApplyChanges: true,
@@ -322,12 +204,46 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     await result.current.handleApplyWorkflow('name: Test', 'msg-1');
 
     await waitFor(() => {
-      expect(mockStartApplyingWorkflow).toHaveBeenCalledWith('msg-1');
-      expect(mockDoneApplyingWorkflow).toHaveBeenCalledWith('msg-1');
+      expect(mockImportWorkflow).toHaveBeenCalled();
+    });
+
+    expect(mockSaveWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('routes validation error to onValidationError callback when isNewWorkflow is true', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: mockWorkflowActions,
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        isSessionConnected: true,
+        onValidationError: mockOnValidationError,
+        appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('invalid yaml', 'msg-1');
+
+    await waitFor(() => {
+      expect(mockOnValidationError).toHaveBeenCalledWith(expect.any(String));
+      expect(notifications.alert).not.toHaveBeenCalled();
     });
   });
 
-  it('shows error notification on failure', async () => {
+  it('falls back to toast for validation errors when isNewWorkflow is false', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
         sessionId: 'session-1',
@@ -351,46 +267,13 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
       })
     );
 
-    await result.current.handleApplyWorkflow('invalid', 'msg-1');
+    await result.current.handleApplyWorkflow('invalid yaml', 'msg-1');
 
     await waitFor(() => {
       expect(notifications.alert).toHaveBeenCalledWith({
         title: 'Failed to apply workflow',
         description: expect.any(String) as string,
       });
-    });
-  });
-
-  it('does not signal completion if coordination failed', async () => {
-    mockStartApplyingWorkflow.mockResolvedValueOnce(false);
-
-    const { result } = renderHook(() =>
-      useAIWorkflowApplications({
-        sessionId: 'session-1',
-        page: 'workflow_template',
-        currentSession: null,
-        currentUserId: 'user-123',
-        aiMode: createMockAIMode('workflow_template'),
-        workflowActions: mockWorkflowActions,
-        monacoRef: createMockMonacoRef(),
-        jobs: [],
-        canApplyChanges: true,
-        connectionState: 'connected' as ConnectionState,
-        setPreviewingMessageId: mockSetPreviewingMessageId,
-        previewingMessageId: null,
-        setApplyingMessageId: mockSetApplyingMessageId,
-        isNewWorkflow: false,
-        isSessionConnected: true,
-        appliedMessageIdsRef: { current: new Set() },
-        streamingApply: null,
-        streamingApplyActions: mockStreamingApplyActions,
-      })
-    );
-
-    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
-
-    await waitFor(() => {
-      expect(mockDoneApplyingWorkflow).not.toHaveBeenCalled();
     });
   });
 });
