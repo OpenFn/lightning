@@ -542,6 +542,28 @@ defmodule Lightning.VersionControlTest do
               %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}} =
                VersionControl.fetch_user_access_token(user)
     end
+
+    test "passes through transport errors without treating them as invalid tokens" do
+      active_token = %{
+        "access_token" => "access-token",
+        "refresh_token" => "refresh-token",
+        "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(100)
+      }
+
+      # reload so that we can get the token as they are from the db
+      user =
+        insert(:user, github_oauth_token: active_token)
+        |> Lightning.Repo.reload!()
+
+      # GitHub is unreachable / the request fails at the transport layer
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} = VersionControl.fetch_user_access_token(user)
+    end
   end
 
   describe "save_oauth_token/2" do

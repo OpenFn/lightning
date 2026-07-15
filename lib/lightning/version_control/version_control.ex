@@ -391,19 +391,29 @@ defmodule Lightning.VersionControl do
             {:ok, refreshed_token["access_token"]}
           end
 
-        {:error, error} ->
+        {:error, %{"error" => _} = error} ->
           # GitHub rejected the refresh token (revoked, expired or otherwise
-          # invalid). Surface this as an invalid_oauth_token error so the UI can
-          # prompt the user to reconnect their GitHub account rather than
-          # showing a generic API failure.
+          # invalid) and returned an OAuth error body. Surface this as an
+          # invalid_oauth_token error so the UI can prompt the user to reconnect
+          # their GitHub account rather than showing a generic API failure.
           Logger.warning(
-            "Failed to refresh GitHub OAuth token: #{inspect(error)}"
+            "GitHub rejected the OAuth refresh token: #{inspect(error)}"
           )
 
           {:error,
            GithubError.invalid_oauth_token(
              "user oauth token could not be refreshed"
            )}
+
+        {:error, error} ->
+          # Transport or other unexpected error (e.g. GitHub unreachable). Pass
+          # it through unchanged so the UI shows a generic API error instead of
+          # incorrectly telling the user their token is invalid.
+          Logger.warning(
+            "Failed to refresh GitHub OAuth token: #{inspect(error)}"
+          )
+
+          {:error, error}
       end
     end
   end
