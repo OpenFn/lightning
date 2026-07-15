@@ -6,7 +6,7 @@ import { BASE_TEMPLATES } from '../constants/baseTemplates';
 import { useActionLock } from '../hooks/useActionLock';
 import { useSession } from '../hooks/useSession';
 import { useShowTemplateBrowserModal, useUICommands } from '../hooks/useUI';
-import { useWorkflowActions } from '../hooks/useWorkflow';
+import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { Template } from '../types/template';
@@ -17,9 +17,8 @@ export function TemplateBrowserModalWrapper() {
   const isOpen = useShowTemplateBrowserModal();
   const { closeTemplateBrowserModal, dismissLandingScreen } = useUICommands();
   const provider = useSession(s => s.provider);
-  const isConnected = useSession(s => s.isConnected);
   const channel = provider?.channel;
-  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+  const { createWorkflowFrom } = useCreateWorkflowFlow();
 
   const [templates, setTemplates] = useState<Template[]>(BASE_TEMPLATES);
   const [loading, setLoading] = useState(false);
@@ -55,34 +54,13 @@ export function TemplateBrowserModalWrapper() {
 
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
-      if (!isConnected) {
-        notifications.alert({
-          title: 'Not connected',
-          description: 'Connection lost — please wait a moment and try again.',
-        });
-        return;
+      const created = await createWorkflowFrom(() =>
+        convertWorkflowSpecToState(parseWorkflowYAML(template.code))
+      );
+      if (created) {
+        closeTemplateBrowserModal();
+        dismissLandingScreen();
       }
-      try {
-        const spec = parseWorkflowYAML(template.code);
-        const state = convertWorkflowSpecToState(spec);
-        await importWorkflow(state);
-      } catch {
-        notifications.alert({
-          title: 'Failed to create workflow',
-          description: 'Please check your connection and try again.',
-        });
-        return;
-      }
-      try {
-        await saveWorkflow({ notify: 'error-only' });
-      } catch {
-        // Shared handler has shown a persistent Retry toast; a successful
-        // retry patches the URL and unmounts this modal via the
-        // isNewWorkflow gate.
-        return;
-      }
-      closeTemplateBrowserModal();
-      dismissLandingScreen();
     }
   );
 

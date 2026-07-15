@@ -163,7 +163,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
     await waitFor(() => {
       expect(notifications.alert).toHaveBeenCalledWith({
         title: 'Not connected',
-        description: 'Connection lost — please wait a moment and try again.',
+        description: 'Connect to the server before creating a workflow.',
       });
     });
     expect(mockImportWorkflow).not.toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
     await waitFor(() => {
       expect(notifications.alert).toHaveBeenCalledWith({
         title: 'Not connected',
-        description: 'Connection lost — please wait a moment and try again.',
+        description: 'Connect to the server before creating a workflow.',
       });
     });
     expect(mockImportWorkflow).not.toHaveBeenCalled();

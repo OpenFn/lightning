@@ -38,6 +38,7 @@ import React, {
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import flowEvents from '../components/diagram/react-flow-events';
 import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
@@ -49,7 +50,7 @@ import { notifications } from '../lib/notifications';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
-import { useSession } from './useSession';
+import { selectIsConnected, useSession } from './useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -710,6 +711,68 @@ export const useWorkflowActions = () => {
     doneApplyingJobCode: store.doneApplyingJobCode,
   };
 };
+
+/**
+ * Canonical "not connected" copy for the workflow-creation paths (landing/
+ * blank, template browser, YAML import, AI assistant). All four show this
+ * exact alert when attempting to create while offline — kept as one string
+ * so it can't drift into a "connection lost" framing, which would be
+ * factually wrong here (nothing was ever connected in a creation flow).
+ */
+export const NOT_CONNECTED_ALERT = {
+  title: 'Not connected',
+  description: 'Connect to the server before creating a workflow.',
+};
+
+/**
+ * Shared pre/post-save flow for workflow-creation paths that always import
+ * then save (landing/blank, template browser, YAML import). The AI assistant
+ * path has a different shape (collaborator coordination, optional creation)
+ * and reuses only `NOT_CONNECTED_ALERT`, not this hook.
+ *
+ * `createWorkflowFrom` returns a boolean rather than taking a success
+ * callback — every caller's post-success cleanup differs (close a modal,
+ * reset local form state, dismiss the landing screen), so `if (created) {
+ * ... }` at the call site is simpler than a shared callback shape.
+ *
+ * Takes a thunk rather than a pre-built state so that YAML parsing errors
+ * (e.g. a malformed template) are caught by the same "Failed to create
+ * workflow" handler as import errors, matching the original per-call-site
+ * behavior.
+ */
+export function useCreateWorkflowFlow() {
+  const isConnected = useSession(selectIsConnected);
+  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+
+  const createWorkflowFrom = useCallback(
+    async (buildState: () => YAMLWorkflowState): Promise<boolean> => {
+      if (!isConnected) {
+        notifications.alert(NOT_CONNECTED_ALERT);
+        return false;
+      }
+      try {
+        const state = buildState();
+        await importWorkflow(state);
+      } catch {
+        notifications.alert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await saveWorkflow({ notify: 'error-only' });
+      } catch {
+        // Shared handler has already shown a persistent Retry toast.
+        return false;
+      }
+      return true;
+    },
+    [isConnected, importWorkflow, saveWorkflow]
+  );
+
+  return { createWorkflowFrom, isConnected };
+}
 
 /**
  * Internal hook that computes workflow state conditions used by both

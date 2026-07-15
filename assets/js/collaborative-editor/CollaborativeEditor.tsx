@@ -26,7 +26,6 @@ import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
-import { useSession } from './hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -38,9 +37,8 @@ import {
   useUICommands,
 } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useWorkflowActions, useWorkflowState } from './hooks/useWorkflow';
+import { useCreateWorkflowFlow, useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
-import { notifications } from './lib/notifications';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -195,36 +193,15 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
-  const isConnected = useSession(s => s.isConnected);
-  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+  const { createWorkflowFrom } = useCreateWorkflowFlow();
   const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
     useActionLock(async () => {
-      if (!isConnected) {
-        notifications.alert({
-          title: 'Not connected',
-          description: 'Connect to the server before creating a workflow.',
-        });
-        return;
+      const created = await createWorkflowFrom(() =>
+        convertWorkflowSpecToState(parseWorkflowYAML(BLANK_WORKFLOW_YAML))
+      );
+      if (created) {
+        dismissLandingScreen();
       }
-      try {
-        const spec = parseWorkflowYAML(BLANK_WORKFLOW_YAML);
-        const state = convertWorkflowSpecToState(spec);
-        await importWorkflow(state);
-      } catch {
-        notifications.alert({
-          title: 'Failed to create workflow',
-          description: 'Please check your connection and try again.',
-        });
-        return;
-      }
-      try {
-        await saveWorkflow({ notify: 'error-only' });
-      } catch {
-        // Shared handler has shown a persistent Retry toast; a successful
-        // retry dismisses the landing screen via the isNewWorkflow gate.
-        return;
-      }
-      dismissLandingScreen();
     });
 
   if (!showLandingScreen) return null;

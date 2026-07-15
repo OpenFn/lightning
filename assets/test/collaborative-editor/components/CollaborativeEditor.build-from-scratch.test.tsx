@@ -187,11 +187,41 @@ const mockWorkflow: Workflow = {
 const mockImportWorkflow = vi.fn().mockResolvedValue(undefined);
 const mockSaveWorkflow = vi.fn().mockResolvedValue({ ok: true });
 
-// The build-from-scratch flow itself doesn't touch node selection or the
-// workflow store directly — these hooks are still mocked here only because
-// `Header`/`WorkflowEditor` (real, unstubbed components in this tree) call
-// them.
+// `useCreateWorkflowFlow` (used by `LandingScreenWrapper`) is re-implemented
+// here rather than mocked-through, since it lives in the same module as
+// `useWorkflowActions` below and a vi.mock override of one export can't
+// reach an internal same-module call to the other. This mirrors the real
+// hook's gate/import/save sequence exactly (see useWorkflow.tsx), driven by
+// the same mockIsConnected/mockImportWorkflow/mockSaveWorkflow the rest of
+// this suite already controls.
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: async (buildState: () => unknown) => {
+      if (!mockIsConnected) {
+        mockAlert({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+        return false;
+      }
+      try {
+        const state = buildState();
+        await mockImportWorkflow(state);
+      } catch {
+        mockAlert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await mockSaveWorkflow({ notify: 'error-only' });
+      } catch {
+        return false;
+      }
+      return true;
+    },
+  }),
   useNodeSelection: () => ({
     currentNode: { type: null, node: null },
     selectNode: vi.fn(),
