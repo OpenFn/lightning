@@ -43,7 +43,7 @@ import { useAISession } from '../hooks/useAISession';
 import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
-import { useSession } from '../hooks/useSession';
+import { selectIsConnected, useSession } from '../hooks/useSession';
 import {
   useExperimentalFeaturesEnabled,
   useIsNewWorkflow,
@@ -145,7 +145,7 @@ export function AIAssistantPanelWrapper({
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const isSessionConnected = useSession(s => s.isConnected);
+  const isSessionConnected = useSession(selectIsConnected);
   const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
   const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
   const workflowTemplateContext = useAIWorkflowTemplateContext();
