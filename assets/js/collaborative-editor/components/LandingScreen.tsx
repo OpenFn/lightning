@@ -170,7 +170,7 @@ function WorkflowOptionCard({
       <span className="w-fit inline-flex items-center justify-center rounded-lg bg-gray-100 p-2 mb-3">
         <span className={cn('h-5 w-5 text-gray-700', icon)} />
       </span>
-      <p className="text-sm font-semibold text-gray-900">{title}</p>
+      <p className="text-sm font-medium text-gray-900">{title}</p>
       <p className="mt-1 text-sm text-gray-600">{description}</p>
     </button>
   );

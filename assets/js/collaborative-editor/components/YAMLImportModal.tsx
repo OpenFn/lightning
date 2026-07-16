@@ -172,7 +172,7 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
     <div className="flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-5">
-        <h2 className="text-xl text-gray-900">Import a workflow</h2>
+        <h2 className="text-xl font-medium text-gray-900">Import a workflow</h2>
         <button
           type="button"
           onClick={() => setMode(mode === 'upload' ? 'paste' : 'upload')}
