@@ -24,6 +24,7 @@ import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
 import { useAppConfig } from '../hooks/useSessionContext';
 import { useCanRun } from '../hooks/useWorkflow';
+import type { SaveWorkflowOptions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
@@ -48,10 +49,9 @@ interface ManualRunPanelProps {
   /** Called when close button is clicked in embedded mode */
   onClosePanel?: () => void;
   renderMode?: RenderMode;
-  saveWorkflow: (options?: { silent?: boolean }) => Promise<{
-    saved_at?: string;
-    lock_version?: number;
-  } | null>;
+  saveWorkflow: (
+    options?: SaveWorkflowOptions
+  ) => Promise<{ saved_at?: string; lock_version?: number }>;
   onRunSubmitted?: (runId: string, dataclip?: Dataclip) => void;
   onTabChange?: (tab: TabValue) => void;
   onDataclipChange?: (dataclip: Dataclip | null) => void;

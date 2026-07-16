@@ -30,6 +30,12 @@ function defaultSelector(state: SessionState): SessionState {
   return state;
 }
 
+// Stable selector reference — passing a fresh arrow function on every render
+// defeats useSession's memoized-selector cache (see useSyncExternalStore call
+// below).
+export const selectIsConnected = (state: SessionState): boolean =>
+  state.isConnected;
+
 export function useSession(): SessionState;
 export function useSession<T>(
   selector: (state: SessionState) => T,

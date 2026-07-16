@@ -179,7 +179,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
   // Add spies for keyboard test assertions
   const saveWorkflowSpy = vi
     .spyOn(stores.workflowStore, 'saveWorkflow')
-    .mockResolvedValue(undefined);
+    .mockResolvedValue({ saved_at: new Date().toISOString(), lock_version: 1 });
   const openGitHubSyncModalSpy = vi.spyOn(
     stores.uiStore,
     'openGitHubSyncModal'
@@ -1073,7 +1073,10 @@ async function createRunSetup(
   }
   await new Promise(resolve => setTimeout(resolve, 150));
 
-  vi.spyOn(stores.workflowStore, 'saveWorkflow').mockResolvedValue(null);
+  vi.spyOn(stores.workflowStore, 'saveWorkflow').mockResolvedValue({
+    saved_at: new Date().toISOString(),
+    lock_version: 1,
+  });
 
   const mockLiveViewActions = {
     pushEvent: vi.fn(),

@@ -37,9 +37,8 @@ import {
   useUICommands,
 } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useWorkflowActions, useWorkflowState } from './hooks/useWorkflow';
+import { useCreateWorkflowFlow, useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
-import { notifications } from './lib/notifications';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -194,27 +193,14 @@ function LandingScreenWrapper({
     dismissLandingScreen,
     openAIAssistantPanel,
   } = useUICommands();
-  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+  const { createWorkflowFrom } = useCreateWorkflowFlow();
   const { run: runBuildFromScratch, isPending: isBuildingFromScratch } =
     useActionLock(async () => {
-      try {
-        const spec = parseWorkflowYAML(BLANK_WORKFLOW_YAML);
-        const state = convertWorkflowSpecToState(spec);
-        await importWorkflow(state);
-        const saved = await saveWorkflow({ silent: true });
-        if (!saved) {
-          notifications.alert({
-            title: 'Not connected',
-            description: 'Connect to the server before creating a workflow.',
-          });
-          return;
-        }
+      const created = await createWorkflowFrom(() =>
+        convertWorkflowSpecToState(parseWorkflowYAML(BLANK_WORKFLOW_YAML))
+      );
+      if (created) {
         dismissLandingScreen();
-      } catch {
-        notifications.alert({
-          title: 'Failed to create workflow',
-          description: 'Please check your connection and try again.',
-        });
       }
     });
 

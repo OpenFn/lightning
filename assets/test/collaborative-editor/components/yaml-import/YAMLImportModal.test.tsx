@@ -2,17 +2,65 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 
 import { YAMLImportModal } from '../../../../js/collaborative-editor/components/YAMLImportModal';
+import { notifications } from '../../../../js/collaborative-editor/lib/notifications';
+
+const mockNotificationsAlert = vi.mocked(notifications.alert);
 
 // --- Workflow mocks ---
 
 const mockImportWorkflow = vi.fn().mockResolvedValue(undefined);
 const mockSaveWorkflow = vi.fn().mockResolvedValue({ ok: true });
 
+// `useCreateWorkflowFlow` is re-implemented here (mirroring the real gate/
+// import/save sequence in useWorkflow.tsx) rather than mocked-through, since
+// it lives in the same module as `useWorkflowActions` and a vi.mock override
+// of one export can't reach an internal same-module call to the other.
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({
     importWorkflow: mockImportWorkflow,
     saveWorkflow: mockSaveWorkflow,
   }),
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: async (buildState: () => unknown) => {
+      if (!mockIsConnected) {
+        mockNotificationsAlert({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+        return false;
+      }
+      try {
+        const state = buildState();
+        await mockImportWorkflow(state);
+      } catch {
+        mockNotificationsAlert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await mockSaveWorkflow({ notify: 'error-only' });
+      } catch {
+        return false;
+      }
+      return true;
+    },
+  }),
+}));
+
+let mockIsConnected = true;
+vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: (selector: (s: { isConnected: boolean }) => unknown) =>
+    selector({ isConnected: mockIsConnected }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/lib/notifications', () => ({
+  notifications: {
+    alert: vi.fn(),
+    success: vi.fn(),
+    dismiss: vi.fn(),
+  },
 }));
 
 // --- UI mocks ---
@@ -90,6 +138,9 @@ describe('YAMLImportModal', () => {
     vi.clearAllMocks();
     mockShowYAMLImportModal.mockReturnValue(true);
     mockImportPanelState.mockReturnValue('initial');
+    mockIsConnected = true;
+    mockImportWorkflow.mockResolvedValue(undefined);
+    mockSaveWorkflow.mockResolvedValue({ ok: true });
   });
 
   describe('Modal visibility', () => {
@@ -197,7 +248,9 @@ describe('YAMLImportModal', () => {
 
       await waitFor(() => {
         expect(mockImportWorkflow).toHaveBeenCalledOnce();
-        expect(mockSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+        expect(mockSaveWorkflow).toHaveBeenCalledWith({
+          notify: 'error-only',
+        });
         expect(mockCloseYAMLImportModal).toHaveBeenCalledOnce();
         expect(mockDismissLandingScreen).toHaveBeenCalledOnce();
       });
@@ -223,6 +276,60 @@ describe('YAMLImportModal', () => {
         expect(mockCloseYAMLImportModal).not.toHaveBeenCalled();
         expect(mockDismissLandingScreen).not.toHaveBeenCalled();
       });
+    });
+
+    test('offline gate: shows Not connected and skips import', async () => {
+      mockIsConnected = false;
+      renderModal();
+      switchToPasteMode();
+      enterYAML(validYAML);
+
+      await waitFor(
+        () =>
+          expect(
+            screen.getByRole('button', { name: /Create/i })
+          ).not.toBeDisabled(),
+        { timeout: 500 }
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Create/i }));
+
+      await waitFor(() => {
+        expect(mockNotificationsAlert).toHaveBeenCalledWith({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+      });
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
+      expect(mockCloseYAMLImportModal).not.toHaveBeenCalled();
+    });
+
+    test('save failure: keeps modal open, re-enables Create, and shows no bespoke alert', async () => {
+      mockSaveWorkflow.mockRejectedValue(new Error('boom'));
+      renderModal();
+      switchToPasteMode();
+      enterYAML(validYAML);
+
+      await waitFor(
+        () =>
+          expect(
+            screen.getByRole('button', { name: /Create/i })
+          ).not.toBeDisabled(),
+        { timeout: 500 }
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Create/i }));
+
+      await waitFor(() => {
+        expect(mockSaveWorkflow).toHaveBeenCalledWith({
+          notify: 'error-only',
+        });
+      });
+      expect(mockDismissLandingScreen).not.toHaveBeenCalled();
+      expect(mockCloseYAMLImportModal).not.toHaveBeenCalled();
+      expect(mockNotificationsAlert).not.toHaveBeenCalled();
+      expect(mockSetImportState).toHaveBeenCalledWith('importing');
+      expect(mockSetImportState).toHaveBeenLastCalledWith('valid');
     });
   });
 });

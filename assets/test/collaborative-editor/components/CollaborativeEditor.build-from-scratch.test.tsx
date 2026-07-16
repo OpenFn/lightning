@@ -191,11 +191,41 @@ const mockWorkflow: Workflow = {
 const mockImportWorkflow = vi.fn().mockResolvedValue(undefined);
 const mockSaveWorkflow = vi.fn().mockResolvedValue({ ok: true });
 
-// The build-from-scratch flow itself doesn't touch node selection or the
-// workflow store directly — these hooks are still mocked here only because
-// `Header`/`WorkflowEditor` (real, unstubbed components in this tree) call
-// them.
+// `useCreateWorkflowFlow` (used by `LandingScreenWrapper`) is re-implemented
+// here rather than mocked-through, since it lives in the same module as
+// `useWorkflowActions` below and a vi.mock override of one export can't
+// reach an internal same-module call to the other. This mirrors the real
+// hook's gate/import/save sequence exactly (see useWorkflow.tsx), driven by
+// the same mockIsConnected/mockImportWorkflow/mockSaveWorkflow the rest of
+// this suite already controls.
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: async (buildState: () => unknown) => {
+      if (!mockIsConnected) {
+        mockAlert({
+          title: 'Not connected',
+          description: 'Connect to the server before creating a workflow.',
+        });
+        return false;
+      }
+      try {
+        const state = buildState();
+        await mockImportWorkflow(state);
+      } catch {
+        mockAlert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await mockSaveWorkflow({ notify: 'error-only' });
+      } catch {
+        return false;
+      }
+      return true;
+    },
+  }),
   useNodeSelection: () => ({
     currentNode: { type: null, node: null },
     selectNode: vi.fn(),
@@ -291,6 +321,22 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
+// --- Session (workflow-session socket connectivity) ---
+
+let mockIsConnected = true;
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: (selector?: (s: Record<string, unknown>) => unknown) => {
+    const state = {
+      provider: null,
+      ydoc: null,
+      awareness: null,
+      isConnected: mockIsConnected,
+      isSynced: false,
+    };
+    return typeof selector === 'function' ? selector(state) : state;
+  },
+}));
+
 function renderEditor() {
   return render(
     <CollaborativeEditor
@@ -314,6 +360,7 @@ describe('CollaborativeEditor - Build from scratch', () => {
     mockShowLandingScreen.mockReturnValue(true);
     mockImportWorkflow.mockResolvedValue(undefined);
     mockSaveWorkflow.mockResolvedValue({ ok: true });
+    mockIsConnected = true;
   });
 
   test('imports a webhook+job+edge blank workflow, saves it, and dismisses the landing screen', async () => {
@@ -333,7 +380,7 @@ describe('CollaborativeEditor - Build from scratch', () => {
     expect(importedState.jobs).toHaveLength(1);
     expect(importedState.edges).toHaveLength(1);
 
-    expect(mockSaveWorkflow).toHaveBeenCalledWith({ silent: true });
+    expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
 
     // Ordering: save → dismiss. Dismiss only fires once save has actually
     // succeeded.
@@ -342,8 +389,8 @@ describe('CollaborativeEditor - Build from scratch', () => {
     expect(saveOrder).toBeLessThan(dismissOrder);
   });
 
-  test('shows a "Not connected" alert and keeps the landing screen open when saveWorkflow returns falsy', async () => {
-    mockSaveWorkflow.mockResolvedValue(undefined);
+  test('offline gate: shows a "Not connected" alert and skips import when the session is disconnected', async () => {
+    mockIsConnected = false;
     renderEditor();
 
     await clickBuildFromScratch();
@@ -354,7 +401,25 @@ describe('CollaborativeEditor - Build from scratch', () => {
       )
     );
 
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
     expect(mockDismissLandingScreen).not.toHaveBeenCalled();
+  });
+
+  test('save failure: imports but does not dismiss the landing screen, and shows no bespoke alert', async () => {
+    mockSaveWorkflow.mockRejectedValue(new Error('boom'));
+    renderEditor();
+
+    await clickBuildFromScratch();
+
+    await waitFor(() => {
+      expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
+    });
+
+    expect(mockImportWorkflow).toHaveBeenCalledOnce();
+    expect(mockDismissLandingScreen).not.toHaveBeenCalled();
+    // The shared save handler (mocked out via useWorkflowActions) owns the
+    // Retry toast; this component shows no alert of its own for save failures.
+    expect(mockAlert).not.toHaveBeenCalled();
   });
 
   test('shows a "Failed to create workflow" alert and keeps the landing screen open when importWorkflow throws', async () => {

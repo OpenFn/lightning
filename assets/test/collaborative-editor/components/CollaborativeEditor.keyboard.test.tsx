@@ -309,6 +309,12 @@ const mockWorkflow: Workflow = {
 };
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  // Not exercised by this suite (landing-screen build-from-scratch flow is
+  // covered by CollaborativeEditor.build-from-scratch.test.tsx) — stubbed
+  // only because LandingScreenWrapper calls it unconditionally.
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: vi.fn().mockResolvedValue(true),
+  }),
   useNodeSelection: () => ({
     currentNode,
     selectNode: mockSelectNode,

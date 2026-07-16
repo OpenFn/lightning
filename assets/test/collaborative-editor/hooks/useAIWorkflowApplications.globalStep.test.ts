@@ -55,12 +55,6 @@ describe('useAIWorkflowApplications - global messages', () => {
     clear: vi.fn(),
   };
 
-  const mockStreamingApplyActions = {
-    set: vi.fn(),
-    setSaveFailed: vi.fn(),
-    clear: vi.fn(),
-  };
-
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,
@@ -149,6 +143,8 @@ describe('useAIWorkflowApplications - global messages', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,

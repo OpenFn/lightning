@@ -45,6 +45,11 @@ and this project adheres to
 
 ### Fixed
 
+- Creating a workflow from a template, YAML import, or AI could leave nodes on
+  the canvas with no saved workflow behind them when the save failed. Save
+  failures during creation now surface a persistent Retry prompt, and creation
+  is blocked with immediate feedback when the editor is offline.
+  [#4939](https://github.com/OpenFn/lightning/issues/4939)
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the

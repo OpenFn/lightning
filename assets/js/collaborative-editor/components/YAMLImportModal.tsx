@@ -12,9 +12,8 @@ import {
   useShowYAMLImportModal,
   useUICommands,
 } from '../hooks/useUI';
-import { useWorkflowActions } from '../hooks/useWorkflow';
+import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import { notifications } from '../lib/notifications';
 
 import { ValidationErrorDisplay } from './yaml-import/ValidationErrorDisplay';
 import { YAMLCodeEditor } from './yaml-import/YAMLCodeEditor';
@@ -63,7 +62,7 @@ interface YAMLImportContentProps {
 }
 
 function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
-  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+  const { createWorkflowFrom } = useCreateWorkflowFlow();
   const { setImportState, setImportYamlContent } = useUICommands();
 
   const storedYamlContent = useImportYamlContent();
@@ -132,32 +131,21 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
   }, [storedYamlContent, validateYAML]);
 
   const handleSave = async () => {
-    if (!validatedState) return;
+    const validated = validatedState;
+    if (!validated) return;
     setImportState('importing');
-    try {
-      await importWorkflow(validatedState);
-      // saveWorkflow returns null (not throws) when the WebSocket is disconnected
-      const saved = await saveWorkflow({ silent: true });
-      if (!saved) {
-        notifications.alert({
-          title: 'Not connected',
-          description: 'Connect to the server before importing a workflow.',
-        });
-        setImportState('valid');
-        return;
-      }
-      setYamlContent('');
-      setValidatedState(null);
-      onClose();
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to create workflow from YAML:', error);
-      notifications.alert({
-        title: 'Failed to create workflow',
-        description: 'Please check your connection and try again.',
-      });
+    const created = await createWorkflowFrom(() => validated);
+    if (!created) {
+      // createWorkflowFrom already showed the relevant alert (not
+      // connected / failed to create / persistent Retry toast); keep the
+      // modal usable either way.
       setImportState('valid');
+      return;
     }
+    setYamlContent('');
+    setValidatedState(null);
+    onClose();
+    onSuccess();
   };
 
   const isButtonDisabled =

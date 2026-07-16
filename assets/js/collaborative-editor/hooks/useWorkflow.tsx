@@ -38,6 +38,8 @@ import React, {
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import flowEvents from '../components/diagram/react-flow-events';
 import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
 import {
@@ -48,7 +50,7 @@ import { notifications } from '../lib/notifications';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
-import { useSession } from './useSession';
+import { selectIsConnected, useSession } from './useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -60,6 +62,19 @@ import {
 
 // import _logger from "#/utils/logger";
 // const logger = _logger.ns("useWorkflow").seal();
+
+export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
+
+export interface SaveWorkflowOptions {
+  /**
+   * Which toasts the shared save handler may show.
+   * - 'all' (default): success and failure toasts
+   * - 'error-only': failure toasts only (creation flows: the flow has its
+   *   own success transition, but failures must surface with Retry)
+   * - 'none': caller owns all outcome feedback (save-before-run flows)
+   */
+  notify?: SaveNotifyLevel;
+}
 
 /**
  * Hook to access the WorkflowStore context.
@@ -395,10 +410,8 @@ export const useWorkflowActions = () => {
     saveWorkflow: (() => {
       const handleSaveSuccess = (
         response: Awaited<ReturnType<typeof store.saveWorkflow>>,
-        silent = false
+        notify: SaveNotifyLevel
       ) => {
-        if (!response) return;
-
         // Update session context with new lock version if present
         if (response.lock_version !== undefined) {
           sessionContextStore.setLatestSnapshotLockVersion(
@@ -436,11 +449,16 @@ export const useWorkflowActions = () => {
 
             // Clear isNewWorkflow flag after successful save
             sessionContextStore.clearIsNewWorkflow();
+
+            // First save of a new workflow: the canvas was just populated
+            // (import or manual build); fit it as the editor transitions to
+            // the saved URL.
+            flowEvents.dispatch('fit-view');
           }
         }
 
-        // Show success notification unless silent mode
-        if (!silent) {
+        // Show success notification only when the caller wants all toasts
+        if (notify === 'all') {
           notifications.info({
             title: 'Workflow saved',
             description: response.saved_at
@@ -451,12 +469,27 @@ export const useWorkflowActions = () => {
       };
 
       // Helper: Handle save errors with appropriate notifications
+      //
+      // The Retry action below always calls wrappedSaveWorkflow with no
+      // options, so a successful retry runs with notify: 'all' regardless of
+      // the notify level the original (failed) call used. For creation flows
+      // (notify: 'error-only'), this means a successful retry does NOT run
+      // the flow's own success callback (dismissLandingScreen, closeModal,
+      // etc.) — those components must unmount themselves off the
+      // isNewWorkflow gate (cleared by handleSaveSuccess above) rather than
+      // relying on the original caller's promise resolving.
       const handleSaveError = (
         error: unknown,
         retrySaveWorkflow: () => Promise<unknown>,
-        silent?: boolean
+        notify: SaveNotifyLevel
       ) => {
-        if (silent) return;
+        if (notify === 'none') return;
+
+        // A failed save on a brand-new workflow leaves imported nodes with
+        // no DB record; the toast is the only recovery path, so it must not
+        // auto-dismiss.
+        const persistent = sessionContextStore.getSnapshot().isNewWorkflow;
+
         // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
           error.message = formatChannelErrorMessage({
@@ -471,6 +504,7 @@ export const useWorkflowActions = () => {
             notifications.alert({
               title: 'Permission Denied',
               description: error.message,
+              ...(persistent ? { duration: Infinity } : {}),
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
@@ -478,15 +512,19 @@ export const useWorkflowActions = () => {
               description: (
                 <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
               ),
+              ...(persistent ? { duration: Infinity } : {}),
             });
           } else {
             notifications.alert({
               title: 'Failed to save workflow',
               description: error.message,
+              ...(persistent ? { duration: Infinity } : {}),
               action: {
                 label: 'Retry',
                 onClick: () => {
-                  void retrySaveWorkflow();
+                  // Failure feedback is re-issued by handleSaveError on the
+                  // next pass.
+                  retrySaveWorkflow().catch(() => {});
                 },
               },
             });
@@ -499,10 +537,13 @@ export const useWorkflowActions = () => {
               error instanceof Error
                 ? error.message
                 : 'Please check your connection and try again',
+            ...(persistent ? { duration: Infinity } : {}),
             action: {
               label: 'Retry',
               onClick: () => {
-                void retrySaveWorkflow();
+                // Failure feedback is re-issued by handleSaveError on the
+                // next pass.
+                retrySaveWorkflow().catch(() => {});
               },
             },
           });
@@ -510,21 +551,16 @@ export const useWorkflowActions = () => {
       };
 
       // Main wrapped saveWorkflow function
-      const wrappedSaveWorkflow = async (options?: { silent?: boolean }) => {
+      const wrappedSaveWorkflow = async (options?: SaveWorkflowOptions) => {
+        const notify = options?.notify ?? 'all';
         try {
           const response = await store.saveWorkflow();
-
-          if (!response) {
-            // saveWorkflow returns null when not connected
-            // Connection status is already shown in UI, no toast needed
-            return null;
-          }
-
-          handleSaveSuccess(response, options?.silent);
+          handleSaveSuccess(response, notify);
           return response;
         } catch (error) {
-          handleSaveError(error, wrappedSaveWorkflow, options?.silent);
-          // Re-throw error for any upstream error handling
+          handleSaveError(error, wrappedSaveWorkflow, notify);
+          // Re-throw so callers can reset local state (button spinners,
+          // modal import state). Notification is already handled above.
           throw error;
         }
       };
@@ -685,6 +721,68 @@ export const useWorkflowActions = () => {
     doneApplyingJobCode: store.doneApplyingJobCode,
   };
 };
+
+/**
+ * Canonical "not connected" copy for the workflow-creation paths (landing/
+ * blank, template browser, YAML import, AI assistant). All four show this
+ * exact alert when attempting to create while offline — kept as one string
+ * so it can't drift into a "connection lost" framing, which would be
+ * factually wrong here (nothing was ever connected in a creation flow).
+ */
+export const NOT_CONNECTED_ALERT = {
+  title: 'Not connected',
+  description: 'Connect to the server before creating a workflow.',
+};
+
+/**
+ * Shared pre/post-save flow for workflow-creation paths that always import
+ * then save (landing/blank, template browser, YAML import). The AI assistant
+ * path has a different shape (collaborator coordination, optional creation)
+ * and reuses only `NOT_CONNECTED_ALERT`, not this hook.
+ *
+ * `createWorkflowFrom` returns a boolean rather than taking a success
+ * callback — every caller's post-success cleanup differs (close a modal,
+ * reset local form state, dismiss the landing screen), so `if (created) {
+ * ... }` at the call site is simpler than a shared callback shape.
+ *
+ * Takes a thunk rather than a pre-built state so that YAML parsing errors
+ * (e.g. a malformed template) are caught by the same "Failed to create
+ * workflow" handler as import errors, matching the original per-call-site
+ * behavior.
+ */
+export function useCreateWorkflowFlow() {
+  const isConnected = useSession(selectIsConnected);
+  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+
+  const createWorkflowFrom = useCallback(
+    async (buildState: () => YAMLWorkflowState): Promise<boolean> => {
+      if (!isConnected) {
+        notifications.alert(NOT_CONNECTED_ALERT);
+        return false;
+      }
+      try {
+        const state = buildState();
+        await importWorkflow(state);
+      } catch {
+        notifications.alert({
+          title: 'Failed to create workflow',
+          description: 'Please check your connection and try again.',
+        });
+        return false;
+      }
+      try {
+        await saveWorkflow({ notify: 'error-only' });
+      } catch {
+        // Shared handler has already shown a persistent Retry toast.
+        return false;
+      }
+      return true;
+    },
+    [isConnected, importWorkflow, saveWorkflow]
+  );
+
+  return { createWorkflowFrom, isConnected };
+}
 
 /**
  * Internal hook that computes workflow state conditions used by both
