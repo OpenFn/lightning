@@ -521,6 +521,42 @@ defmodule LightningWeb.WorkflowChannelTest do
       end
     end
 
+    test "handles a snapshot save failure as a generic internal error", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      # A snapshot is captured with the workflow's post-save lock_version
+      # (optimistic_lock bumps it by 1). Pre-occupying that lock_version with
+      # another snapshot forces the snapshot insert's own
+      # unique_constraint([:workflow_id, :lock_version]) to fail, driving the
+      # save down the {:error, :snapshot_failed} path (workflows.ex,
+      # session.ex, workflow_channel.ex) without any mocking.
+      insert(:snapshot,
+        workflow: workflow,
+        lock_version: workflow.lock_version + 1
+      )
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Snapshot Collision")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }
+
+      # The workflow itself was not persisted with the attempted change,
+      # since the transaction rolls back entirely on the snapshot failure.
+      refute Lightning.Workflows.get_workflow!(workflow.id).name ==
+               "Snapshot Collision"
+    end
+
     test "handles deleted workflow", %{socket: socket, workflow: workflow} do
       # Delete the workflow
       Lightning.Repo.update!(
