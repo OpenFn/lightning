@@ -3,10 +3,10 @@
  *
  * Tests the connection gate that blocks applying a brand-new workflow
  * while the collaboration session is disconnected, and the bookkeeping
- * that keeps a blocked auto-apply manually applicable after reconnect:
+ * that lets a blocked auto-apply retry automatically once reconnected:
  * - Gate blocks creation offline (new workflow, session disconnected)
  * - Gate does not block existing workflows when disconnected
- * - Blocked auto-apply is still manually applicable after reconnect
+ * - Blocked auto-apply retries automatically after reconnect
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
@@ -243,7 +243,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
     );
   });
 
-  it('blocked auto-apply is still manually applicable after reconnect', async () => {
+  it('blocked auto-apply retries automatically after reconnect', async () => {
     const appliedMessageIdsRef = { current: new Set<string>() };
 
     const userMessage = {
@@ -269,7 +269,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
       isSessionConnected: boolean;
     };
 
-    const { result, rerender } = renderHook(
+    const { rerender } = renderHook(
       ({ currentSession, isSessionConnected }: Props) =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
@@ -300,7 +300,8 @@ describe('useAIWorkflowApplications - offline gate', () => {
     );
 
     // Auto-apply effect fires for the new assistant message while offline:
-    // the ref marks it applied even though the gate blocks the apply.
+    // the gate blocks the apply and the message is left unmarked so a later
+    // run of this effect can retry it.
     rerender({
       currentSession: {
         messages: [userMessage, assistantMessage] as (typeof userMessage)[],
@@ -315,10 +316,11 @@ describe('useAIWorkflowApplications - offline gate', () => {
       });
     });
     expect(mockImportWorkflow).not.toHaveBeenCalled();
-    expect(appliedMessageIdsRef.current.has('msg-1')).toBe(true);
+    expect(appliedMessageIdsRef.current.has('msg-1')).toBe(false);
 
-    // Reconnect, then manually apply the same message: the ref bookkeeping
-    // must never make a blocked message permanently unappliable.
+    // Reconnect with the same messages: the effect re-runs (isSessionConnected
+    // changes handleApplyWorkflow's identity) and retries automatically,
+    // with no manual "Apply" click required.
     rerender({
       currentSession: {
         messages: [userMessage, assistantMessage] as (typeof userMessage)[],
@@ -326,10 +328,9 @@ describe('useAIWorkflowApplications - offline gate', () => {
       isSessionConnected: true,
     });
 
-    await result.current.handleApplyWorkflow(assistantMessage.code, 'msg-1');
-
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalled();
     });
+    expect(appliedMessageIdsRef.current.has('msg-1')).toBe(true);
   });
 });

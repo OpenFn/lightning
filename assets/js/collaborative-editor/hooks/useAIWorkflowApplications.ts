@@ -231,8 +231,11 @@ export function useAIWorkflowApplications({
    * to show "APPLYING..." state.
    */
   const handleApplyWorkflow = useCallback(
-    async (yaml: string, messageId: string) => {
-      if (!aiMode) return;
+    async (
+      yaml: string,
+      messageId: string
+    ): Promise<'applied' | 'gated' | 'failed'> => {
+      if (!aiMode) return 'failed';
       // Global messages carry a full workflow YAML and may be applied even
       // while a job is open (job_code mode). Non-global workflow chat keeps
       // the workflow_template-only guard so its Apply stays a no-op when a
@@ -246,18 +249,20 @@ export function useAIWorkflowApplications({
             aiMode,
           }
         );
-        return;
+        return 'failed';
       }
 
       // Creation flow: an import that can't be followed by a save would
       // orphan the canvas. Fail fast instead of waiting out a 10s push
       // timeout. (Existing workflows are fine: offline imports are normal
-      // unsaved collaborative edits that sync on reconnect.)
+      // unsaved collaborative edits that sync on reconnect.) Callers that
+      // track "have we handled this message" (the auto-apply effect below)
+      // should treat 'gated' as not-yet-resolved and retry once connected.
       if (isNewWorkflow && !isSessionConnected) {
         notifications.alert(
           isSessionConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
         );
-        return;
+        return 'gated';
       }
 
       // A global message applied while a step is open leaves an active diff in
@@ -343,6 +348,8 @@ export function useAIWorkflowApplications({
           }
         }
       }
+
+      return applySucceeded && saveSucceeded ? 'applied' : 'failed';
     },
     [
       aiMode,
@@ -633,19 +640,13 @@ export function useAIWorkflowApplications({
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
-      // Marked applied even if handleApplyWorkflow's offline gate below ends
-      // up blocking it (isNewWorkflow && !isSessionConnected) — this effect
-      // never retries a message once it's in the ref. The manual "Apply"
-      // button in MessageList is the only recovery path, since it calls
-      // handleApplyWorkflow directly rather than checking this ref.
-      appliedMessageIdsRef.current.add(latestMessage.id);
-
       // Streaming already imported this exact YAML to the canvas — skip the
       // re-import, which would only dirty the Y.Doc (unsaved red dot). If
       // the streaming apply's save is still owed, settle it now. When the
       // YAML differs (streaming apply failed, or the final response changed),
       // fall through and apply normally.
       if (streamingApply && streamingApply.yaml === latestMessage.code) {
+        appliedMessageIdsRef.current.add(latestMessage.id);
         streamingApplyActions.clear();
         if (streamingApply.saveFailed) {
           void saveNewWorkflow();
@@ -672,7 +673,21 @@ export function useAIWorkflowApplications({
         !precedingUserMessage?.user_id;
 
       if (isCurrentUserAuthor) {
-        void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+        const code = latestMessage.code;
+        const messageId = latestMessage.id;
+        // Only mark as handled once we know the outcome. A 'gated' result
+        // (offline) leaves the message unmarked so this effect's next run —
+        // triggered naturally when isSessionConnected flips and gives
+        // handleApplyWorkflow a new identity — retries it instead of
+        // silently dropping it.
+        void (async () => {
+          const outcome = await handleApplyWorkflow(code, messageId);
+          if (outcome !== 'gated') {
+            appliedMessageIdsRef.current.add(messageId);
+          }
+        })();
+      } else {
+        appliedMessageIdsRef.current.add(latestMessage.id);
       }
     }
   }, [
