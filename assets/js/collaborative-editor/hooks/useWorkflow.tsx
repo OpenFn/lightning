@@ -50,7 +50,11 @@ import { notifications } from '../lib/notifications';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
-import { selectIsConnected, useSession } from './useSession';
+import {
+  selectIsConnected,
+  selectIsConnecting,
+  useSession,
+} from './useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -751,6 +755,17 @@ export const NOT_CONNECTED_ALERT = {
 };
 
 /**
+ * Shown instead of `NOT_CONNECTED_ALERT` during the initial channel-join
+ * window, when the session isn't disconnected — it just hasn't finished
+ * connecting yet. Keeps the block (the action still can't proceed) but
+ * avoids telling the user something false.
+ */
+export const STILL_CONNECTING_ALERT = {
+  title: 'Still connecting',
+  description: 'Connecting to the server — try again in a moment.',
+};
+
+/**
  * Shared pre/post-save flow for workflow-creation paths that always import
  * then save (landing/blank, template browser, YAML import). The AI assistant
  * path has a different shape (collaborator coordination, optional creation)
@@ -768,6 +783,7 @@ export const NOT_CONNECTED_ALERT = {
  */
 export function useCreateWorkflowFlow() {
   const isConnected = useSession(selectIsConnected);
+  const isConnecting = useSession(selectIsConnecting);
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
   // Not a useCallback: importWorkflow/saveWorkflow come from
@@ -777,7 +793,9 @@ export function useCreateWorkflowFlow() {
     buildState: () => YAMLWorkflowState
   ): Promise<boolean> => {
     if (!isConnected) {
-      notifications.alert(NOT_CONNECTED_ALERT);
+      notifications.alert(
+        isConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
+      );
       return false;
     }
     try {

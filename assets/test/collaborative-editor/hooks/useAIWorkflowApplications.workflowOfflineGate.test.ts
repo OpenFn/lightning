@@ -170,6 +170,45 @@ describe('useAIWorkflowApplications - offline gate', () => {
     expect(mockStartApplyingWorkflow).not.toHaveBeenCalled();
   });
 
+  it('gate shows "still connecting" instead of "not connected" during the initial join window', async () => {
+    const { result } = renderHook(() =>
+      useAIWorkflowApplications({
+        sessionId: 'session-1',
+        page: 'workflow_template',
+        currentSession: null,
+        currentUserId: 'user-123',
+        aiMode: createMockAIMode('workflow_template'),
+        workflowActions: mockWorkflowActions,
+        monacoRef: createMockMonacoRef(),
+        jobs: [],
+        canApplyChanges: true,
+        connectionState: 'connected' as ConnectionState,
+        setPreviewingMessageId: mockSetPreviewingMessageId,
+        previewingMessageId: null,
+        setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: true,
+        isSessionConnected: false,
+        isSessionConnecting: true,
+        appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
+      })
+    );
+
+    await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+    await waitFor(() => {
+      expect(notifications.alert).toHaveBeenCalledWith({
+        title: 'Still connecting',
+        description: 'Connecting to the server — try again in a moment.',
+      });
+    });
+    expect(notifications.alert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Not connected' })
+    );
+    expect(mockImportWorkflow).not.toHaveBeenCalled();
+  });
+
   it('gate does not block existing workflows when session disconnected', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({

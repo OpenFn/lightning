@@ -22,7 +22,7 @@ import type {
 } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
-import { NOT_CONNECTED_ALERT } from './useWorkflow';
+import { NOT_CONNECTED_ALERT, STILL_CONNECTING_ALERT } from './useWorkflow';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
 /**
@@ -111,6 +111,7 @@ export function useAIWorkflowApplications({
   aiMode,
   isNewWorkflow,
   isSessionConnected,
+  isSessionConnecting = false,
   onValidationError,
   workflowActions,
   monacoRef,
@@ -138,6 +139,14 @@ export function useAIWorkflowApplications({
    * which tracks the separate assistant-conversation channel).
    */
   isSessionConnected: boolean;
+  /**
+   * True only during the initial workflow-session channel-join window —
+   * distinct from a genuine disconnect. Lets the offline gate tell the user
+   * "still connecting" instead of a misleading "not connected". Optional
+   * (defaults to false) so existing test fakes that only set
+   * `isSessionConnected` keep compiling.
+   */
+  isSessionConnecting?: boolean;
   onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
@@ -245,7 +254,9 @@ export function useAIWorkflowApplications({
       // timeout. (Existing workflows are fine: offline imports are normal
       // unsaved collaborative edits that sync on reconnect.)
       if (isNewWorkflow && !isSessionConnected) {
-        notifications.alert(NOT_CONNECTED_ALERT);
+        notifications.alert(
+          isSessionConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
+        );
         return;
       }
 
@@ -321,8 +332,13 @@ export function useAIWorkflowApplications({
           await doneApplyingWorkflow(messageId);
           // Only fit-view when the canvas was actually updated and persisted.
           // Skip when importWorkflow failed (applySucceeded false) or when
-          // save failed so we don't zoom in on an unpersisted workflow.
-          if (applySucceeded && saveSucceeded) {
+          // save failed so we don't zoom in on an unpersisted workflow. Also
+          // skip for new workflows: the shared save handler
+          // (useWorkflow.tsx's handleSaveSuccess) already dispatches
+          // fit-view when a brand-new workflow's first save succeeds, so
+          // dispatching again here would just re-trigger the same
+          // in-progress animation.
+          if (applySucceeded && saveSucceeded && !isNewWorkflow) {
             flowEvents.dispatch('fit-view');
           }
         }
@@ -338,6 +354,7 @@ export function useAIWorkflowApplications({
       setApplyingMessageId,
       isNewWorkflow,
       isSessionConnected,
+      isSessionConnecting,
       onValidationError,
       saveNewWorkflow,
       streamingApplyActions,
