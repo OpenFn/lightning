@@ -770,32 +770,34 @@ export function useCreateWorkflowFlow() {
   const isConnected = useSession(selectIsConnected);
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
-  const createWorkflowFrom = useCallback(
-    async (buildState: () => YAMLWorkflowState): Promise<boolean> => {
-      if (!isConnected) {
-        notifications.alert(NOT_CONNECTED_ALERT);
-        return false;
-      }
-      try {
-        const state = buildState();
-        await importWorkflow(state);
-      } catch {
-        notifications.alert({
-          title: 'Failed to create workflow',
-          description: 'Please check your connection and try again.',
-        });
-        return false;
-      }
-      try {
-        await saveWorkflow({ notify: 'error-only' });
-      } catch {
-        // Shared handler has already shown a persistent Retry toast.
-        return false;
-      }
-      return true;
-    },
-    [isConnected, importWorkflow, saveWorkflow]
-  );
+  // Not a useCallback: importWorkflow/saveWorkflow come from
+  // useWorkflowActions(), which rebuilds them every render, so memoizing
+  // this against them would never actually stabilize the reference anyway.
+  const createWorkflowFrom = async (
+    buildState: () => YAMLWorkflowState
+  ): Promise<boolean> => {
+    if (!isConnected) {
+      notifications.alert(NOT_CONNECTED_ALERT);
+      return false;
+    }
+    try {
+      const state = buildState();
+      await importWorkflow(state);
+    } catch {
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description: 'Please check your connection and try again.',
+      });
+      return false;
+    }
+    try {
+      await saveWorkflow({ notify: 'error-only' });
+    } catch {
+      // Shared handler has already shown a persistent Retry toast.
+      return false;
+    }
+    return true;
+  };
 
   return { createWorkflowFrom, isConnected };
 }
