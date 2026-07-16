@@ -13,6 +13,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import type { MonacoHandle } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
+import flowEvents from '../../../js/collaborative-editor/components/diagram/react-flow-events';
 import type { AIModeResult } from '../../../js/collaborative-editor/hooks/useAIMode';
 import { useAIWorkflowApplications } from '../../../js/collaborative-editor/hooks/useAIWorkflowApplications';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
@@ -81,6 +82,16 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
     dismiss: vi.fn(),
   },
 }));
+
+vi.mock(
+  '../../../js/collaborative-editor/components/diagram/react-flow-events',
+  () => ({
+    default: {
+      dispatch: vi.fn(),
+      register: vi.fn(() => () => {}),
+    },
+  })
+);
 
 describe('useAIWorkflowApplications - auto-save on new workflow', () => {
   // Mock functions
@@ -274,6 +285,78 @@ describe('useAIWorkflowApplications - auto-save on new workflow', () => {
         title: 'Failed to apply workflow',
         description: expect.any(String) as string,
       });
+    });
+  });
+
+  describe('fit-view dispatch', () => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vi.fn(), no `this` binding to lose
+    const mockDispatch = vi.mocked(flowEvents.dispatch);
+
+    it('does not dispatch fit-view itself when isNewWorkflow is true (the shared save handler already does)', async () => {
+      const { result } = renderHook(() =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession: null,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: {
+            ...mockWorkflowActions,
+            saveWorkflow: mockSaveWorkflow,
+          },
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: true,
+          isSessionConnected: true,
+          appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
+        })
+      );
+
+      await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+      await waitFor(() => {
+        expect(mockSaveWorkflow).toHaveBeenCalled();
+      });
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+
+    it('dispatches fit-view when isNewWorkflow is false (no shared save handler runs for this path)', async () => {
+      const { result } = renderHook(() =>
+        useAIWorkflowApplications({
+          sessionId: 'session-1',
+          page: 'workflow_template',
+          currentSession: null,
+          currentUserId: 'user-123',
+          aiMode: createMockAIMode('workflow_template'),
+          workflowActions: mockWorkflowActions,
+          monacoRef: createMockMonacoRef(),
+          jobs: [],
+          canApplyChanges: true,
+          connectionState: 'connected' as ConnectionState,
+          setPreviewingMessageId: mockSetPreviewingMessageId,
+          previewingMessageId: null,
+          setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
+        })
+      );
+
+      await result.current.handleApplyWorkflow('name: Test', 'msg-1');
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledWith('fit-view');
+      });
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
     });
   });
 });
