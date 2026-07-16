@@ -42,22 +42,33 @@ export function TemplateBrowserModalWrapper() {
     setTemplateSearchQuery('');
     if (!channel) return;
 
+    // Guards against a close-before-resolve-then-reopen race: without this,
+    // a stale fetch from a previous open can resolve after a newer one and
+    // overwrite its result.
+    let cancelled = false;
+
     const load = async () => {
       setTemplatesLoading(true);
       try {
         const userTemplates = await fetchTemplates(channel);
+        if (cancelled) return;
         setTemplates([...BASE_TEMPLATES, ...userTemplates]);
       } catch {
+        if (cancelled) return;
         notifications.alert({
           title: 'Failed to load templates',
           description: 'Please check your connection and try again.',
         });
       } finally {
-        setTemplatesLoading(false);
+        if (!cancelled) setTemplatesLoading(false);
       }
     };
 
     void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     isOpen,
     channel,
