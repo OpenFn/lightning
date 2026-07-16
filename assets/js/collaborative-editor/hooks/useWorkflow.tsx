@@ -817,7 +817,7 @@ export function useCreateWorkflowFlow() {
     return true;
   };
 
-  return { createWorkflowFrom, isConnected };
+  return { createWorkflowFrom };
 }
 
 /**
