@@ -107,10 +107,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
       showLandingScreen: true,
       showYAMLImportModal: false,
       showTemplateBrowserModal: false,
-      importPanel: {
-        yamlContent: '',
-        importState: 'initial',
-      },
       templatePanel: {
         templates: BASE_TEMPLATES,
         loading: false,
@@ -205,36 +201,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('clearAIAssistantInitialMessage');
   };
 
-  // ===========================================================================
-  // IMPORT PANEL COMMANDS
-  // ===========================================================================
-
-  const setImportYamlContent = (content: string) => {
-    state = produce(state, draft => {
-      draft.importPanel.yamlContent = content;
-    });
-    notify('setImportYamlContent');
-  };
-
-  const setImportState = (
-    importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
-  ) => {
-    state = produce(state, draft => {
-      draft.importPanel.importState = importState;
-    });
-    notify('setImportState');
-  };
-
-  const clearImportPanel = () => {
-    state = produce(state, draft => {
-      draft.importPanel = {
-        yamlContent: '',
-        importState: 'initial',
-      };
-    });
-    notify('clearImportPanel');
-  };
-
   const dismissLandingScreen = () => {
     state = produce(state, draft => {
       draft.showLandingScreen = false;
@@ -252,7 +218,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
   const closeYAMLImportModal = () => {
     state = produce(state, draft => {
       draft.showYAMLImportModal = false;
-      draft.importPanel = { yamlContent: '', importState: 'initial' };
     });
     notify('closeYAMLImportModal');
   };
@@ -317,9 +282,6 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
-    setImportYamlContent,
-    setImportState,
-    clearImportPanel,
     dismissLandingScreen,
     openYAMLImportModal,
     closeYAMLImportModal,

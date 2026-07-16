@@ -86,10 +86,6 @@ export const defaultUIState: UIState = {
   githubSyncModalOpen: false,
   aiAssistantPanelOpen: false,
   aiAssistantInitialMessage: null,
-  importPanel: {
-    yamlContent: '',
-    importState: 'initial',
-  },
   showLandingScreen: false,
   showYAMLImportModal: false,
 };
@@ -272,11 +268,6 @@ export function createMockHistoryStore(
  * All methods are vi.fn() mocks that can be inspected and configured.
  * State queries return sensible defaults that can be overridden.
  *
- * **State Tracking:**
- * By default, the mock tracks state changes made via setImportState,
- * setImportYamlContent, and clearImportPanel. This allows tests to
- * verify component behavior that depends on state updates.
- *
  * @param overrides - Partial UIStore to override defaults
  * @param initialState - Optional initial state to start with
  * @returns Complete UIStore mock
@@ -318,29 +309,6 @@ export function createMockUIStore(
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
     toggleAIAssistantPanel: vi.fn(),
-    // Import panel commands that track state
-    setImportYamlContent: vi.fn((content: string) => {
-      currentState = {
-        ...currentState,
-        importPanel: { ...currentState.importPanel, yamlContent: content },
-      };
-    }),
-    setImportState: vi.fn(
-      (
-        importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
-      ) => {
-        currentState = {
-          ...currentState,
-          importPanel: { ...currentState.importPanel, importState },
-        };
-      }
-    ),
-    clearImportPanel: vi.fn(() => {
-      currentState = {
-        ...currentState,
-        importPanel: { yamlContent: '', importState: 'initial' },
-      };
-    }),
     dismissLandingScreen: vi.fn(),
     openYAMLImportModal: vi.fn(),
     closeYAMLImportModal: vi.fn(),

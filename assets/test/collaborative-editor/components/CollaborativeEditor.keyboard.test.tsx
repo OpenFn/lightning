@@ -366,7 +366,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsGitHubSyncModalOpen: () => false,
   useIsCreateWorkflowPanelCollapsed: () => true,
   useShowLandingScreen: () => false,
-  useImportPanelState: () => 'initial',
   useUICommands: () => ({
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),

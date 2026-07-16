@@ -61,9 +61,6 @@ export const useUICommands = () => {
     closeYAMLImportModal: uiStore.closeYAMLImportModal,
     openTemplateBrowserModal: uiStore.openTemplateBrowserModal,
     closeTemplateBrowserModal: uiStore.closeTemplateBrowserModal,
-    // Import panel write commands
-    setImportState: uiStore.setImportState,
-    setImportYamlContent: uiStore.setImportYamlContent,
     // Template panel write commands
     setTemplates: uiStore.setTemplates,
     setTemplatesLoading: uiStore.setTemplatesLoading,
@@ -162,33 +159,6 @@ export const useShowTemplateBrowserModal = (): boolean => {
     uiStore.subscribe,
     selectShowTemplateBrowserModal
   );
-};
-
-/**
- * Hook to get the import panel state
- */
-export const useImportPanelState =
-  (): UIState['importPanel']['importState'] => {
-    const uiStore = useUIStore();
-
-    const selectImportState = uiStore.withSelector(
-      state => state.importPanel.importState
-    );
-
-    return useSyncExternalStore(uiStore.subscribe, selectImportState);
-  };
-
-/**
- * Hook to get the stored YAML content from the import panel
- */
-export const useImportYamlContent = (): string => {
-  const uiStore = useUIStore();
-
-  const selectYamlContent = uiStore.withSelector(
-    state => state.importPanel.yamlContent
-  );
-
-  return useSyncExternalStore(uiStore.subscribe, selectYamlContent);
 };
 
 /**
