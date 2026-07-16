@@ -495,7 +495,9 @@ export const useWorkflowActions = () => {
         // A failed save on a brand-new workflow leaves imported nodes with
         // no DB record; the toast is the only recovery path, so it must not
         // auto-dismiss.
-        const persistent = sessionContextStore.getSnapshot().isNewWorkflow;
+        const persistence = sessionContextStore.getSnapshot().isNewWorkflow
+          ? { duration: Infinity }
+          : {};
 
         // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
@@ -511,7 +513,7 @@ export const useWorkflowActions = () => {
             notifications.alert({
               title: 'Permission Denied',
               description: error.message,
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
@@ -519,14 +521,14 @@ export const useWorkflowActions = () => {
               description: (
                 <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
               ),
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
             });
           } else {
             notifications.alert({
               id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Failed to save workflow',
               description: error.message,
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
               action: {
                 label: 'Retry',
                 onClick: event => {
@@ -552,7 +554,7 @@ export const useWorkflowActions = () => {
               error instanceof Error
                 ? error.message
                 : 'Please check your connection and try again',
-            ...(persistent ? { duration: Infinity } : {}),
+            ...persistence,
             action: {
               label: 'Retry',
               onClick: event => {
