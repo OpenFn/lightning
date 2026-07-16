@@ -63,6 +63,12 @@ import {
 // import _logger from "#/utils/logger";
 // const logger = _logger.ns("useWorkflow").seal();
 
+// Stable id for the generic "Failed to save workflow" toast so a later
+// successful save can dismiss it even if it was shown with duration:
+// Infinity (new-workflow case). Also collapses repeated failures into one
+// updated toast instead of stacking a new permanent toast per attempt.
+const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
+
 export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
 
 export interface SaveWorkflowOptions {
@@ -448,6 +454,12 @@ export const useWorkflowActions = () => {
           }
         }
 
+        // Clear any stale "Failed to save workflow" toast from a prior
+        // failed attempt now that a save has gone through — regardless of
+        // notify level, since even a silent (notify: 'error-only') success
+        // should retire a previously-shown persistent failure toast.
+        notifications.dismiss(SAVE_WORKFLOW_ERROR_TOAST_ID);
+
         // Show success notification only when the caller wants all toasts
         if (notify === 'all') {
           notifications.info({
@@ -507,12 +519,19 @@ export const useWorkflowActions = () => {
             });
           } else {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Failed to save workflow',
               description: error.message,
               ...(persistent ? { duration: Infinity } : {}),
               action: {
                 label: 'Retry',
-                onClick: () => {
+                onClick: event => {
+                  // Sonner dismisses the toast on action click by default;
+                  // since retry failures reuse this toast's id, that default
+                  // dismissal races the next handleSaveError call and can
+                  // swallow it. Prevent it so the toast stays until
+                  // handleSaveSuccess explicitly dismisses it.
+                  event.preventDefault();
                   // Failure feedback is re-issued by handleSaveError on the
                   // next pass.
                   retrySaveWorkflow().catch(() => {});
@@ -523,6 +542,7 @@ export const useWorkflowActions = () => {
         } else {
           // Handle non-channel errors
           notifications.alert({
+            id: SAVE_WORKFLOW_ERROR_TOAST_ID,
             title: 'Failed to save workflow',
             description:
               error instanceof Error
@@ -531,7 +551,13 @@ export const useWorkflowActions = () => {
             ...(persistent ? { duration: Infinity } : {}),
             action: {
               label: 'Retry',
-              onClick: () => {
+              onClick: event => {
+                // Sonner dismisses the toast on action click by default;
+                // since retry failures reuse this toast's id, that default
+                // dismissal races the next handleSaveError call and can
+                // swallow it. Prevent it so the toast stays until
+                // handleSaveSuccess explicitly dismisses it.
+                event.preventDefault();
                 // Failure feedback is re-issued by handleSaveError on the
                 // next pass.
                 retrySaveWorkflow().catch(() => {});
