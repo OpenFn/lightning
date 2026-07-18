@@ -110,3 +110,19 @@ export function BreadcrumbLink({
     </button>
   );
 }
+export function BreadcrumbText({
+  icon,
+  children,
+}: {
+  icon?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="flex items-center">
+      {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
+      <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
+        {children}
+      </span>
+    </span>
+  );
+}
