@@ -51,4 +51,20 @@ defmodule LightningWeb.API.Helpers do
     }
     |> URI.to_string()
   end
+
+  @doc """
+  Validates that the given value is a well-formed UUID.
+
+  Returns `:ok` on success or `{:error, :bad_request}` when the value
+  cannot be parsed as a UUID. Use this in API controllers before passing
+  an ID to the database layer, which would raise `Ecto.Query.CastError`
+  for invalid values.
+  """
+  @spec validate_uuid(any()) :: :ok | {:error, :bad_request}
+  def validate_uuid(id) do
+    case Ecto.UUID.dump(to_string(id)) do
+      {:ok, _bin} -> :ok
+      :error -> {:error, :bad_request}
+    end
+  end
 end
