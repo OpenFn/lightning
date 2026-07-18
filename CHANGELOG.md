@@ -58,6 +58,10 @@ and this project adheres to
 
 ### Fixed
 
+- The workflows REST API now returns a 422 validation error instead of a 500
+  when a create request omits `edges`, `jobs`, or `triggers` from the body
+  rather than sending them as empty lists.
+  [#4982](https://github.com/OpenFn/lightning/issues/4982)
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
