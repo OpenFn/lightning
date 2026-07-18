@@ -170,11 +170,11 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
+    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
     handleTitleClick,
-    isNewWorkflow,
   ]);
 
   return (
