@@ -1,37 +1,35 @@
 /**
  * Breadcrumbs Component Tests
  *
- * Focuses on BreadcrumbText's dual rendering: a plain, non-interactive label by
- * default, and a clickable button when an onClick handler is provided (used to
- * make the workflow title navigate back to the root workflow editor view).
+ * Focuses on BreadcrumbLink's two rendering modes: an anchor for real
+ * navigation (href) and a button for actions (onClick only). The workflow
+ * title uses the button mode to return to the root workflow editor view.
  */
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
-import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
+import { BreadcrumbLink } from '../../../js/collaborative-editor/components/Breadcrumbs';
 
-describe('BreadcrumbText', () => {
-  test('renders as non-interactive text when no onClick is provided', () => {
-    render(<BreadcrumbText>My Workflow</BreadcrumbText>);
-
-    expect(screen.getByText('My Workflow')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  test('renders as a button and fires onClick when clicked', async () => {
+describe('BreadcrumbLink', () => {
+  test('renders a button (not a link) and fires onClick when no href is given', async () => {
     const handleClick = vi.fn();
-    render(
-      <BreadcrumbText onClick={handleClick} title="Back to workflow editor">
-        My Workflow
-      </BreadcrumbText>
-    );
+    render(<BreadcrumbLink onClick={handleClick}>My Workflow</BreadcrumbLink>);
 
     const button = screen.getByRole('button', { name: 'My Workflow' });
-    expect(button).toHaveAttribute('title', 'Back to workflow editor');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
 
     await userEvent.click(button);
     expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('renders an anchor with the given href for navigation', () => {
+    render(
+      <BreadcrumbLink href="/projects/123/w">Workflows</BreadcrumbLink>
+    );
+
+    const link = screen.getByRole('link', { name: 'Workflows' });
+    expect(link).toHaveAttribute('href', '/projects/123/w');
   });
 });

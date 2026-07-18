@@ -6,7 +6,7 @@ import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import { BreadcrumbLink } from './components/Breadcrumbs';
 import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
@@ -131,12 +131,9 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText
-          onClick={handleTitleClick}
-          title="Back to workflow editor"
-        >
+        <BreadcrumbLink onClick={handleTitleClick}>
           {currentWorkflowName}
-        </BreadcrumbText>
+        </BreadcrumbLink>
         <div className="flex items-center gap-1.5">
           {!isNewWorkflow && (
             <VersionDropdown
