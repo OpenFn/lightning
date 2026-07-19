@@ -1900,23 +1900,26 @@ defmodule Lightning.Projects do
   Lists a parent project's active sandboxes for the "Edit in sandbox" picker.
 
   Returns only the direct children of `parent_id` that are not scheduled for
-  deletion, sorted by `updated_at` descending as a "last edited" proxy (there is
-  no dedicated last-editor field). Each sandbox preloads its `project_users` (and
-  their users) for creator display, and resolves the clone of the workflow
-  named `workflow_name` so the caller can offer a direct "join" target. The
-  resolved workflow id is returned as `:joinable_workflow_id`, or `nil` when the
-  sandbox has no workflow with that name.
+  deletion, sorted by `inserted_at` descending to match the "Created {relative}"
+  label the picker renders for each sandbox. Each sandbox preloads only its
+  owner `project_user` (and their user) for owner display, and resolves the
+  clone of the workflow named `workflow_name` so the caller can offer a direct
+  "join" target. The resolved workflow id is returned as `:joinable_workflow_id`,
+  or `nil` when the sandbox has no workflow with that name.
   """
   @spec list_active_sandboxes_for_editing(Ecto.UUID.t(), String.t()) :: [
           {Project.t(), Ecto.UUID.t() | nil}
         ]
   def list_active_sandboxes_for_editing(parent_id, workflow_name)
       when is_binary(parent_id) and is_binary(workflow_name) do
+    owner_preload =
+      from(pu in ProjectUser, where: pu.role == :owner, preload: :user)
+
     sandboxes =
       from(p in Project,
         where: p.parent_id == ^parent_id and is_nil(p.scheduled_deletion),
-        order_by: [desc: p.updated_at],
-        preload: [project_users: :user]
+        order_by: [desc: p.inserted_at],
+        preload: [project_users: ^owner_preload]
       )
       |> Repo.all()
 

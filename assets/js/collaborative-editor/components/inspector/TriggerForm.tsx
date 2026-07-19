@@ -51,13 +51,13 @@ function hasResponseConfig(
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { isReadOnly, reason } = useWorkflowReadOnly();
 
-  // Copying the webhook URL is a read action, so it stays available when the
-  // workflow is merely locked for editing: a live workflow or one the viewer
-  // lacks edit permission on still has a current, stable endpoint. It is
-  // disabled only when there is no real endpoint to copy: a deleted or unsaved
-  // workflow.
-  const canCopyWebhookUrl =
-    !isReadOnly || reason === 'no_permission' || reason === 'live';
+  // Copying the webhook URL is a read action, so it stays available whenever
+  // there is a real, stable endpoint to copy. The endpoint (/i/{trigger.id}) is
+  // stable across snapshots, so it is valid on a pinned historical version, a
+  // live workflow, or one the viewer lacks edit permission on. It is disabled
+  // only when there is no real endpoint: a deleted workflow or an unsaved new
+  // trigger that has not been persisted yet.
+  const canCopyWebhookUrl = reason !== 'deleted' && reason !== 'unsaved_new';
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { copyText, copyToClipboard } = useCopyToClipboard();

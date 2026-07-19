@@ -214,12 +214,9 @@ export function EditInSandboxPicker({
   }, []);
 
   // A name is required to create. The server already returns only joinable
-  // sandboxes (each holding a clone of this workflow), so this filter is a
-  // defensive no-op guarding against a stray null workflow_id.
+  // sandboxes (each holding a clone of this workflow), so the list is rendered
+  // as-is.
   const canCreate = name.trim().length > 0;
-  const joinableSandboxes = sandboxes.filter(
-    sandbox => sandbox.workflow_id !== null
-  );
 
   return (
     <Dialog
@@ -322,9 +319,10 @@ export function EditInSandboxPicker({
               </div>
             </div>
 
-            {/* Join an existing sandbox. Only sandboxes that hold a clone of
-                this workflow are listed; hidden entirely when there are none. */}
-            {(isLoadingList || joinableSandboxes.length > 0) && (
+            {/* Join an existing sandbox. The server returns only sandboxes that
+                hold a clone of this workflow; hidden entirely when there are
+                none. */}
+            {(isLoadingList || sandboxes.length > 0) && (
               <div className="mt-5 border-t border-gray-100 pt-5">
                 <p
                   className="text-xs font-semibold uppercase tracking-wide
@@ -336,11 +334,18 @@ export function EditInSandboxPicker({
                 {isLoadingList ? (
                   <SandboxListSkeleton />
                 ) : (
+                  // Cap the list at roughly 5-6 rows so a user with many
+                  // sandboxes scrolls the list rather than the whole modal. The
+                  // scroll container carries the row's -mx-3 bleed itself
+                  // (-mx-3 px-3), so the rows fit exactly inside it: no
+                  // horizontal scrollbar, the hover bleed is kept, and the px-3
+                  // keeps the vertical scrollbar clear of the "Join" text.
                   <ul
-                    className="mt-3 space-y-1"
+                    className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
+                      overflow-x-hidden px-3"
                     data-testid="sandbox-list"
                   >
-                    {joinableSandboxes.map(sandbox => (
+                    {sandboxes.map(sandbox => (
                       <SandboxRow
                         key={sandbox.id}
                         sandbox={sandbox}

@@ -114,10 +114,60 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{workflow: %{state: :draft}}
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
+
+    test "update_trigger_auth_methods is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow, project: project} do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "live"
+
+      # The gate runs before any write, so no association is created.
+      assert Lightning.WebhookAuthMethods.list_for_trigger(trigger) == []
+    end
+
+    test "update_trigger_auth_methods is allowed once switched back to draft", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+    end
   end
 
   describe "list_sandboxes" do
-    test "returns joinable sandboxes sorted by last edited with owner",
+    test "returns joinable sandboxes sorted by created time with owner",
          %{socket: socket, project: project, workflow: workflow} do
       owner =
         insert(:user, first_name: "Ada", last_name: "Lovelace")
@@ -137,13 +187,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       newer = insert(:project, parent: project, color: "#222222")
       newer_workflow = insert(:workflow, project: newer, name: workflow.name)
 
-      # Bump newer's updated_at so it sorts first.
+      # Bump newer's inserted_at so it sorts first.
       Lightning.Repo.update!(
-        Ecto.Changeset.change(newer, updated_at: ~U[2030-01-01 00:00:00Z])
+        Ecto.Changeset.change(newer, inserted_at: ~U[2030-01-01 00:00:00Z])
       )
 
       Lightning.Repo.update!(
-        Ecto.Changeset.change(older, updated_at: ~U[2020-01-01 00:00:00Z])
+        Ecto.Changeset.change(older, inserted_at: ~U[2020-01-01 00:00:00Z])
       )
 
       ref = push(socket, "list_sandboxes", %{})

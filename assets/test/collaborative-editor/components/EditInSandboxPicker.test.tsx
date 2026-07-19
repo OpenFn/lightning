@@ -209,18 +209,10 @@ describe('EditInSandboxPicker', () => {
     ).toBeGreaterThan(0);
   });
 
-  test('hides the join section when no listed sandbox is joinable', async () => {
-    listSandboxes.mockResolvedValue([
-      {
-        id: 'sandbox-x',
-        name: 'X sandbox',
-        color: null,
-        inserted_at: CREATED_A,
-        updated_at: new Date().toISOString(),
-        owner: { id: 'u9', name: 'Nobody Here' },
-        workflow_id: null,
-      },
-    ]);
+  test('hides the join section when the server returns no sandboxes', async () => {
+    // The server only ever returns joinable sandboxes, so an empty list means
+    // there is nothing to join and the whole section stays hidden.
+    listSandboxes.mockResolvedValue([]);
 
     render(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
@@ -237,7 +229,9 @@ describe('EditInSandboxPicker', () => {
     expect(screen.queryByTestId('sandbox-list')).not.toBeInTheDocument();
   });
 
-  test('lists only joinable sandboxes, each with an enabled join button', async () => {
+  test('renders the server-returned sandboxes, each with an enabled join button', async () => {
+    // The server already filters to joinable sandboxes (each holds a clone), so
+    // the client renders exactly what it receives.
     listSandboxes.mockResolvedValue([
       {
         id: 'joinable',
@@ -248,15 +242,6 @@ describe('EditInSandboxPicker', () => {
         owner: { id: 'u1', name: 'Ada Lovelace' },
         workflow_id: 'wf-clone-a',
       },
-      {
-        id: 'no-clone',
-        name: 'No-clone sandbox',
-        color: null,
-        inserted_at: CREATED_B,
-        updated_at: new Date().toISOString(),
-        owner: { id: 'u2', email: 'grace@example.com' },
-        workflow_id: null,
-      },
     ]);
 
     render(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -265,11 +250,9 @@ describe('EditInSandboxPicker', () => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
     });
 
-    // The non-joinable sandbox (workflow_id null) is dropped entirely.
     const rows = screen.getAllByTestId('sandbox-row');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('Joinable sandbox');
-    expect(screen.queryByText('No-clone sandbox')).not.toBeInTheDocument();
 
     const joinButtons = screen.getAllByTestId('join-sandbox-button');
     expect(joinButtons).toHaveLength(1);

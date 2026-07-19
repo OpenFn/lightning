@@ -46,7 +46,11 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
+  permissions?: {
+    can_edit_workflow: boolean;
+    can_run_workflow: boolean;
+    can_provision_sandbox?: boolean;
+  };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -287,10 +291,16 @@ describe('useWorkflowReadOnly - Permissions', () => {
     });
   });
 
-  test('reports a live-specific reason and message when a live workflow is locked', async () => {
+  test('reports a live-specific reason and message when a live workflow is locked for an editor', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       // The server collapses a live workflow into can_edit_workflow: false.
-      permissions: { can_edit_workflow: false, can_run_workflow: true },
+      // can_provision_sandbox stays true for editor+ roles, so the actionable
+      // "switch to draft or edit in a sandbox" message is appropriate.
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: true,
+        can_provision_sandbox: true,
+      },
       workflowState: 'live',
     });
 
@@ -305,6 +315,34 @@ describe('useWorkflowReadOnly - Permissions', () => {
       expect(result.current.reason).toBe('live');
       expect(result.current.tooltipMessage).toBe(
         'This workflow is live. Switch to draft or edit in a sandbox to make changes.'
+      );
+    });
+  });
+
+  test('reports no_permission (not live) for a plain viewer on a live workflow', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      // A viewer lacks the edit capability entirely, so can_provision_sandbox is
+      // false. Pointing them at "switch to draft or edit in a sandbox" would
+      // suggest actions they cannot perform.
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: false,
+        can_provision_sandbox: false,
+      },
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+      expect(result.current.tooltipMessage).toBe(
+        'You do not have permission to edit this workflow'
       );
     });
   });

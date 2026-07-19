@@ -617,7 +617,7 @@ defmodule LightningWeb.WorkflowChannel do
       auth_method_ids: #{inspect(auth_method_ids)}
     """)
 
-    with :ok <- authorize_edit_workflow(socket),
+    with :ok <- authorize_content_edit(socket),
          trigger <- Lightning.Repo.get!(Lightning.Workflows.Trigger, trigger_id),
          :ok <- verify_trigger_in_workflow(trigger, socket.assigns.workflow_id),
          auth_methods <-
@@ -1254,6 +1254,9 @@ defmodule LightningWeb.WorkflowChannel do
         socket.assigns.workflow
 
       _ ->
+        # Deliberate fresh read on the save path: another client's
+        # go_live/switch_to_draft can make the socket's cached workflow assign
+        # stale, so gate on current DB state rather than caching it on the socket.
         Workflows.get_workflow(socket.assigns.workflow.id) ||
           socket.assigns.workflow
     end

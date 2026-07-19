@@ -908,10 +908,13 @@ export const useWorkflowReadOnly = (): {
     };
   }
   if (!hasPermission) {
-    // A live workflow is read-only for everyone on the main project. Distinguish
-    // it from a genuine permission gap so the owner sees an actionable message
-    // rather than "you do not have permission".
-    if (isLive) {
+    // A live workflow is read-only for everyone on the main project. Show the
+    // actionable "switch to draft or edit in a sandbox" message only to users
+    // who can actually take those actions (editor+, surfaced as
+    // can_provision_sandbox). A plain viewer, who has no edit capability at all,
+    // gets the generic permission message instead of being pointed at actions
+    // they cannot perform.
+    if (isLive && permissions.can_provision_sandbox) {
       return {
         isReadOnly: true,
         tooltipMessage:
