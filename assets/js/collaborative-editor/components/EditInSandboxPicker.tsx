@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Tooltip } from '../../components/Tooltip';
 import { useWorkflowActions } from '../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../keyboard';
 import {
   formatChannelErrorMessage,
   isChannelRequestError,
@@ -152,6 +153,18 @@ export function EditInSandboxPicker({
   onClose,
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
+
+  // High-priority Escape handler to prevent closing the parent IDE/inspector.
+  // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
+  // Headless UI's own Escape handling never fires while those intercept it.
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
 
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);

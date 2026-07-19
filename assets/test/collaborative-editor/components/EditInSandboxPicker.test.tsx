@@ -3,11 +3,18 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EditInSandboxPicker } from '../../../js/collaborative-editor/components/EditInSandboxPicker';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 import type { Sandbox } from '../../../js/collaborative-editor/types/workflow';
+
+// The picker registers a MODAL-priority Escape handler, so it must render inside
+// a KeyboardProvider (useKeyboardShortcut throws otherwise).
+const renderPicker = (ui: ReactElement) =>
+  render(ui, { wrapper: KeyboardProvider });
 
 const listSandboxes = vi.fn<() => Promise<Sandbox[]>>();
 const editInSandbox =
@@ -93,7 +100,7 @@ describe('EditInSandboxPicker', () => {
   test('renders the create option and fetches sandboxes on open', async () => {
     listSandboxes.mockResolvedValue([]);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     expect(screen.getByText('Create a new sandbox')).toBeInTheDocument();
     expect(screen.getByTestId('create-sandbox-button')).toBeInTheDocument();
@@ -112,14 +119,14 @@ describe('EditInSandboxPicker', () => {
   });
 
   test('does not fetch when closed', () => {
-    render(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
     expect(listSandboxes).not.toHaveBeenCalled();
   });
 
   test('lists active sandboxes in returned order', async () => {
     listSandboxes.mockResolvedValue(sandboxes);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
@@ -135,7 +142,7 @@ describe('EditInSandboxPicker', () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue(sandboxes);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
@@ -187,7 +194,7 @@ describe('EditInSandboxPicker', () => {
       },
     ]);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
@@ -214,7 +221,7 @@ describe('EditInSandboxPicker', () => {
     // there is nothing to join and the whole section stays hidden.
     listSandboxes.mockResolvedValue([]);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(listSandboxes).toHaveBeenCalledTimes(1);
@@ -244,7 +251,7 @@ describe('EditInSandboxPicker', () => {
       },
     ]);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
@@ -263,7 +270,7 @@ describe('EditInSandboxPicker', () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue([]);
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     const button = screen.getByTestId('create-sandbox-button');
     const input = screen.getByPlaceholderText('Sandbox name');
@@ -295,7 +302,7 @@ describe('EditInSandboxPicker', () => {
     const nav = stubNavigation();
 
     try {
-      render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
       await user.click(screen.getByTestId('create-sandbox-button'));
@@ -316,7 +323,7 @@ describe('EditInSandboxPicker', () => {
   test('surfaces a notification when the sandbox list fails to load', async () => {
     listSandboxes.mockRejectedValue(new Error('boom'));
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await waitFor(() => {
       expect(notifyAlert).toHaveBeenCalledWith(
@@ -336,7 +343,7 @@ describe('EditInSandboxPicker', () => {
       })
     );
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
@@ -364,7 +371,7 @@ describe('EditInSandboxPicker', () => {
     // Never-resolving promise keeps the create pending.
     editInSandbox.mockReturnValue(new Promise(() => {}));
 
-    render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
@@ -388,7 +395,7 @@ describe('EditInSandboxPicker', () => {
     const nav = stubNavigation();
 
     try {
-      render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
         screen.getByPlaceholderText('Sandbox name'),
@@ -410,7 +417,7 @@ describe('EditInSandboxPicker', () => {
     const nav = stubNavigation();
 
     try {
-      render(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
@@ -425,5 +432,21 @@ describe('EditInSandboxPicker', () => {
     } finally {
       nav.restore();
     }
+  });
+
+  test('pressing Escape closes the picker', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    listSandboxes.mockResolvedValue([]);
+
+    renderPicker(<EditInSandboxPicker isOpen onClose={onClose} />);
+
+    // The MODAL-priority handler runs ahead of the IDE/inspector handlers, so
+    // Escape reaches the picker even though it lives inside the editor. In
+    // isolation Headless UI's own default also fires (no IDE handler suppresses
+    // it here), so we assert the picker closed rather than a precise call count.
+    await user.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalled();
   });
 });
