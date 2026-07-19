@@ -1491,6 +1491,29 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // Promote a sandbox workflow back into its parent project's live workflow.
+  // The server merges the sandbox changes, keeps the parent live, and archives
+  // this sandbox. Navigation into the parent (a different Y.Doc session) is the
+  // caller's job, consistent with editInSandbox.
+  const promote = async (): Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+    archived: boolean;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        parent_project_id: string;
+        workflow_id: string | null;
+        archived: boolean;
+      }>(provider.channel, 'promote', {});
+    } catch (error) {
+      logger.error('Failed to promote workflow', error);
+      throw error;
+    }
+  };
+
   const saveAndSyncWorkflow = async (
     commitMessage: string
   ): Promise<{
@@ -1989,6 +2012,7 @@ export const createWorkflowStore = () => {
     switchToDraft,
     listSandboxes,
     editInSandbox,
+    promote,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

@@ -35,6 +35,10 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { getCsrfToken } from '../lib/csrf';
+import {
+  formatChannelErrorMessage,
+  isChannelRequestError,
+} from '../lib/errors';
 import { notifications } from '../lib/notifications';
 import { isFinalState } from '../types/history';
 
@@ -219,7 +223,8 @@ export function Header({
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-  const { saveWorkflow, goLive, switchToDraft } = useWorkflowActions();
+  const { saveWorkflow, goLive, switchToDraft, promote } =
+    useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const jobs = useWorkflowState(state => state.jobs);
@@ -245,6 +250,8 @@ export function Header({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -393,6 +400,51 @@ export function Header({
       console.error('Failed to switch to legacy editor:', error);
     }
   }, [provider, projectId, workflowId, isNewWorkflow]);
+
+  // Promote this sandbox back into its parent project's live workflow. On
+  // success we hard-navigate to the parent (a different Y.Doc session), matching
+  // the picker's post-create navigation. The parent workflow may be missing (a
+  // just-archived-with-no-live-target case), so fall back to the project's
+  // workflow index when the server returns a null workflow_id.
+  const handlePromote = useCallback(async () => {
+    setIsPromoting(true);
+    try {
+      const result = await promote();
+
+      if (result.archived) {
+        notifications.success({
+          title: 'Promoted to parent project',
+          description:
+            'This workflow was merged into the parent project. The sandbox has been archived.',
+        });
+      } else {
+        notifications.info({
+          title: 'Promoted to parent project',
+          description:
+            "Promoted. The sandbox couldn't be archived automatically.",
+        });
+      }
+
+      window.location.href = result.workflow_id
+        ? `/projects/${result.parent_project_id}/w/${result.workflow_id}`
+        : `/projects/${result.parent_project_id}/w`;
+    } catch (error) {
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : 'Please try again.';
+      notifications.alert({
+        title: 'Could not promote',
+        description,
+      });
+      setIsPromoting(false);
+    }
+  }, [promote]);
 
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
@@ -586,16 +638,17 @@ export function Header({
                 </button>
               )}
               {!isNewWorkflow && isSandbox && (
-                <Tooltip content="Coming soon" side="bottom">
-                  <button
-                    type="button"
-                    data-testid="promote-sandbox-button"
-                    disabled
-                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
-                  >
-                    Promote
-                  </button>
-                </Tooltip>
+                <button
+                  type="button"
+                  data-testid="promote-sandbox-button"
+                  disabled={isPromoting}
+                  onClick={() => {
+                    setShowPromoteDialog(true);
+                  }}
+                  className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                >
+                  Promote
+                </button>
               )}
               {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
                 <Tooltip
@@ -718,6 +771,21 @@ export function Header({
             description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
             confirmLabel="Switch to draft"
             variant="danger"
+          />
+
+          <AlertDialog
+            isOpen={showPromoteDialog}
+            onClose={() => {
+              setShowPromoteDialog(false);
+            }}
+            onConfirm={() => {
+              void handlePromote();
+            }}
+            title="Promote to parent project?"
+            description="This merges this workflow into the parent project's live workflow. The parent workflow stays live and starts processing data with these changes. This sandbox will be archived."
+            confirmLabel="Promote"
+            cancelLabel="Cancel"
+            variant="primary"
           />
 
           <EditInSandboxPicker

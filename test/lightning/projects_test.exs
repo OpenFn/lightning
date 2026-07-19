@@ -3799,6 +3799,142 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "promote_workflow/2" do
+    setup do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      alpha_trigger = insert(:trigger, workflow: alpha, type: :webhook)
+
+      alpha_job =
+        insert(:job, workflow: alpha, name: "A1", body: "console.log('alpha');")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: alpha_trigger,
+        target_job: alpha_job,
+        condition_type: :always
+      )
+
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+
+      beta_job =
+        insert(:job, workflow: beta, name: "B1", body: "console.log('beta');")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, live_beta} = Lightning.Workflows.go_live(beta, owner)
+
+      {:ok, sandbox} = Projects.provision_sandbox(parent, owner, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      %{
+        owner: owner,
+        parent: parent,
+        sandbox: sandbox,
+        sandbox_alpha: sandbox_alpha,
+        parent_alpha: alpha,
+        parent_beta: live_beta
+      }
+    end
+
+    test "merges only the given workflow, archives the sandbox, and leaves siblings live",
+         %{
+           owner: owner,
+           parent: parent,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent_alpha: parent_alpha,
+           parent_beta: parent_beta
+         } do
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      assert {:ok,
+              %{
+                parent_project_id: parent_project_id,
+                workflow_id: workflow_id,
+                archived: true
+              }} = Projects.promote_workflow(sandbox_alpha, owner)
+
+      assert parent_project_id == parent.id
+      assert workflow_id == parent_alpha.id
+
+      # The sandbox edit landed on the parent's alpha workflow.
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('promoted');")
+             )
+
+      # The sandbox was archived.
+      assert Repo.reload!(sandbox).scheduled_deletion != nil
+
+      # The passthrough sibling keeps its live/enabled trigger state and content.
+      reloaded_beta =
+        Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
+
+      assert reloaded_beta.state == :live
+      assert Enum.all?(reloaded_beta.triggers, & &1.enabled)
+      assert reloaded_beta.lock_version == parent_beta.lock_version
+    end
+
+    test "returns {:error, :not_a_sandbox} for a workflow in a root project" do
+      actor = insert(:user)
+      root = insert(:project, project_users: [%{user: actor, role: :owner}])
+      workflow = insert(:workflow, project: root, name: "root-wf")
+
+      assert {:error, :not_a_sandbox} =
+               Projects.promote_workflow(workflow, actor)
+    end
+
+    test "merges but does not archive when the actor cannot delete the sandbox",
+         %{
+           parent: parent,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent_alpha: parent_alpha
+         } do
+      editor = insert(:user)
+      insert(:project_user, project: parent, user: editor, role: :editor)
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('editor promoted');")
+
+      assert {:ok, %{parent_project_id: parent_project_id, archived: false}} =
+               Projects.promote_workflow(sandbox_alpha, editor)
+
+      assert parent_project_id == parent.id
+      assert Repo.reload!(sandbox).scheduled_deletion == nil
+
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('editor promoted');")
+             )
+    end
+
+    defp edit_single_job_body!(workflow_id, body) do
+      [job] =
+        Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]).jobs
+
+      Repo.update!(Ecto.Changeset.change(job, body: body))
+    end
+  end
+
   describe "descendant_of?/3" do
     test "returns true when child is direct descendant of parent" do
       parent = insert(:project, name: "parent")

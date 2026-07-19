@@ -439,6 +439,277 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "promote" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # Alpha is the workflow we edit in the sandbox and promote back.
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      alpha_trigger = insert(:trigger, workflow: alpha, type: :webhook)
+
+      alpha_job =
+        insert(:job, workflow: alpha, name: "A1", body: "console.log('alpha');")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: alpha_trigger,
+        target_job: alpha_job,
+        condition_type: :always
+      )
+
+      # Beta is a sibling that must pass through the merge untouched. It is made
+      # live with an enabled trigger so we can assert that state is preserved.
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+
+      beta_job =
+        insert(:job, workflow: beta, name: "B1", body: "console.log('beta');")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, live_beta} = Lightning.Workflows.go_live(beta, user)
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      {:ok, _, sandbox_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      %{
+        parent: parent,
+        sandbox: sandbox,
+        sandbox_socket: sandbox_socket,
+        sandbox_alpha: sandbox_alpha,
+        parent_alpha: alpha,
+        parent_beta: live_beta
+      }
+    end
+
+    test "promotes the edited workflow into the parent and archives the sandbox",
+         %{
+           sandbox_socket: socket,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent: parent,
+           parent_alpha: parent_alpha
+         } do
+      # A distinctive edit in the sandbox that must land on the parent.
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      ref = push(socket, "promote", %{})
+
+      assert_reply ref,
+                   :ok,
+                   %{
+                     parent_project_id: parent_project_id,
+                     workflow_id: workflow_id,
+                     archived: true
+                   }
+
+      assert parent_project_id == parent.id
+      assert workflow_id == parent_alpha.id
+
+      # The sandbox edit landed on the parent's alpha workflow.
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('promoted');")
+             )
+
+      # The sandbox was archived.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion != nil
+    end
+
+    test "promotes a workflow with a Kafka trigger", %{user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      kafka_wf = insert(:workflow, project: parent, name: "kafka")
+
+      kafka_trigger =
+        insert(:trigger,
+          workflow: kafka_wf,
+          type: :kafka,
+          enabled: true,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      kafka_job =
+        insert(:job, workflow: kafka_wf, name: "K1", body: "console.log('k');")
+
+      insert(:edge,
+        workflow: kafka_wf,
+        source_trigger: kafka_trigger,
+        target_job: kafka_job,
+        condition_type: :always
+      )
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "kafka-sb"})
+
+      sandbox_kafka =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "kafka")
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_kafka.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_kafka.id) end)
+
+      edit_single_job_body!(sandbox_kafka.id, "console.log('promoted-kafka');")
+
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :ok, %{archived: true}
+
+      parent_kafka =
+        Lightning.Workflows.get_workflow(kafka_wf.id,
+          include: [:jobs, :triggers]
+        )
+
+      assert Enum.any?(
+               parent_kafka.jobs,
+               &(&1.body == "console.log('promoted-kafka');")
+             )
+
+      assert Enum.any?(parent_kafka.triggers, &(&1.type == :kafka))
+    end
+
+    test "promotes only the current workflow, preserving sibling live workflows",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :ok, %{archived: true}
+
+      reloaded_beta =
+        Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
+
+      # Beta was never in the merge selection: its live/enabled trigger state and
+      # its content are untouched.
+      assert reloaded_beta.state == :live
+      assert Enum.all?(reloaded_beta.triggers, & &1.enabled)
+      assert reloaded_beta.lock_version == parent_beta.lock_version
+    end
+
+    test "merges but skips archiving when the actor cannot delete the sandbox",
+         %{
+           parent: parent,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent_alpha: parent_alpha
+         } do
+      # An editor on the parent can merge, but is not owner/admin on the
+      # sandbox (nor its root), so archiving is skipped.
+      editor = insert(:user)
+      insert(:project_user, project: parent, user: editor, role: :editor)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('editor promoted');")
+
+      {:ok, _, editor_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      ref = push(editor_socket, "promote", %{})
+
+      assert_reply ref,
+                   :ok,
+                   %{parent_project_id: parent_project_id, archived: false}
+
+      assert parent_project_id == parent.id
+
+      # Sandbox stays active.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
+
+      # Parent still received the merge.
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('editor promoted');")
+             )
+    end
+
+    test "rejects users without merge permission on the parent", %{
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: sandbox, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      ref = push(viewer_socket, "promote", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+
+    test "replies with an error instead of crashing when the merge fails", %{
+      sandbox_socket: socket,
+      sandbox_alpha: sandbox_alpha
+    } do
+      # Corrupt the sandbox job name so the parent import rejects it, forcing a
+      # :merge_failed from the merge without touching the merge internals.
+      [job] =
+        Lightning.Workflows.get_workflow(sandbox_alpha.id, include: [:jobs]).jobs
+
+      Lightning.Repo.update!(Ecto.Changeset.change(job, name: "bad!name"))
+
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :error, %{type: "merge_error"}
+    end
+
+    test "replies with an error instead of crashing when not in a sandbox", %{
+      socket: socket
+    } do
+      # The default socket is joined to a root-project workflow, which has no
+      # parent to promote into.
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :error, %{type: "invalid_state"}
+    end
+  end
+
   describe "join authorization" do
     test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)
@@ -3900,5 +4171,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref3, :ok, %{}
       assert_broadcast "job_code_applied", %{message_id: ^message_id}
     end
+  end
+
+  defp edit_single_job_body!(workflow_id, body) do
+    [job] =
+      Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]).jobs
+
+    Lightning.Repo.update!(Ecto.Changeset.change(job, body: body))
   end
 end

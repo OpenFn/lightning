@@ -444,6 +444,25 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("promote", _params, socket) do
+    sandbox = socket.assigns.project
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    # The parent is resolved server-side from the sandbox: the client cannot
+    # supply it. Authorization is checked here (mirroring Sandboxes.merge/4),
+    # while Projects.promote_workflow/2 performs the merge and archive.
+    with %_{} = parent <- fetch_parent_project(sandbox),
+         :ok <- authorize_merge_sandbox(user, parent),
+         {:ok, result} <- Projects.promote_workflow(workflow, user) do
+      {:reply, {:ok, result}, socket}
+    else
+      nil -> workflow_error_reply(socket, {:error, :not_a_sandbox})
+      error -> workflow_error_reply(socket, error)
+    end
+  end
+
+  @impl true
   def handle_in("save_and_sync", params, socket)
       when not is_map_key(params, "commit_message") do
     {:reply,
@@ -1108,6 +1127,26 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(socket, {:error, :merge_failed}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["Could not promote this workflow. Please try again."]},
+        type: "merge_error"
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :not_a_sandbox}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{
+          base: ["This workflow is not in a sandbox and can't be promoted."]
+        },
+        type: "invalid_state"
+      }}, socket}
+  end
+
   defp workflow_error_reply(
          socket,
          {:error, %Lightning.Extensions.Message{text: text}}
@@ -1297,6 +1336,23 @@ defmodule LightningWeb.WorkflowChannel do
        }}
     end
   end
+
+  defp authorize_merge_sandbox(user, parent) do
+    if Permissions.can?(:sandboxes, :merge_sandbox, user, parent) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to promote this workflow"
+       }}
+    end
+  end
+
+  defp fetch_parent_project(%{parent_id: nil}), do: nil
+
+  defp fetch_parent_project(%{parent_id: parent_id}),
+    do: Projects.get_project(parent_id)
 
   defp limit_new_sandbox(parent) do
     case ProjectLimiter.limit_new_sandbox(parent.id) do

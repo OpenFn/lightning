@@ -2156,6 +2156,83 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Promotes a workflow edited inside a sandbox back to the sandbox's parent
+  project by merging only that workflow, then best-effort archives the sandbox.
+
+  The merge reuses `Sandboxes.merge/4` scoped to the single source workflow via
+  `selected_workflow_ids`, so sibling workflows on the parent pass through
+  untouched (including their live/enabled trigger state). Authorization is the
+  caller's responsibility, mirroring `Sandboxes.merge/4`.
+
+  Archiving the sandbox afterwards is best-effort and non-atomic: a failure
+  there (for example the actor lacks admin/owner on the sandbox) is logged and
+  surfaced as `archived: false`, but never fails the promote.
+
+  ## Returns
+  * `{:ok, %{parent_project_id: id, workflow_id: id | nil, archived: boolean()}}`
+  * `{:error, :not_a_sandbox}` - the workflow's project has no parent
+  * `{:error, reason}` - the merge failed (`:merge_failed` or a usage-limit
+    `Lightning.Extensions.Message`)
+  """
+  @spec promote_workflow(Workflow.t(), User.t()) ::
+          {:ok,
+           %{
+             parent_project_id: Ecto.UUID.t(),
+             workflow_id: Ecto.UUID.t() | nil,
+             archived: boolean()
+           }}
+          | {:error, :not_a_sandbox | term()}
+  def promote_workflow(%Workflow{} = sandbox_workflow, %User{} = actor) do
+    sandbox = get_project(sandbox_workflow.project_id)
+
+    case sandbox && sandbox.parent_id do
+      nil ->
+        {:error, :not_a_sandbox}
+
+      parent_id ->
+        parent = get_project(parent_id)
+
+        with {:ok, _updated_parent} <-
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_workflow.id]
+               }) do
+          archived? = archive_promoted_sandbox(sandbox, actor)
+
+          parent_workflow_id =
+            case Lightning.Workflows.get_workflow_by_name(
+                   parent.id,
+                   sandbox_workflow.name
+                 ) do
+              %Workflow{id: id} -> id
+              nil -> nil
+            end
+
+          {:ok,
+           %{
+             parent_project_id: parent.id,
+             workflow_id: parent_workflow_id,
+             archived: archived?
+           }}
+        end
+    end
+  end
+
+  defp archive_promoted_sandbox(sandbox, actor) do
+    case Sandboxes.schedule_sandbox_deletion(sandbox, actor) do
+      {:ok, _scheduled} ->
+        true
+
+      {:error, reason} ->
+        Logger.warning(
+          "Promoted workflow but could not archive sandbox #{sandbox.id}; " <>
+            "it may linger and consume quota. reason: #{inspect(reason)}"
+        )
+
+        false
+    end
+  end
+
+  @doc """
   Updates a sandbox project's basic attributes (name, color, env).
 
   ## Parameters

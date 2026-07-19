@@ -677,6 +677,10 @@ export const useWorkflowActions = () => {
     listSandboxes: store.listSandboxes,
     editInSandbox: store.editInSandbox,
 
+    // Promote a sandbox back into its parent project's live workflow. A command;
+    // the calling component owns the post-promote navigation into the parent.
+    promote: store.promote,
+
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
 

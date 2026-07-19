@@ -17,6 +17,14 @@ let canProvisionSandbox = true;
 
 const goLive = vi.fn<() => Promise<unknown>>();
 const switchToDraft = vi.fn<() => Promise<unknown>>();
+const promote =
+  vi.fn<
+    () => Promise<{
+      parent_project_id: string;
+      workflow_id: string | null;
+      archived: boolean;
+    }>
+  >();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({ params: {}, updateSearchParams: vi.fn() }),
@@ -62,6 +70,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     switchToDraft,
     listSandboxes: vi.fn(),
     editInSandbox: vi.fn(),
+    promote,
   }),
   useWorkflowReadOnly: () => ({ isReadOnly: false }),
   useWorkflowSettingsErrors: () => ({ hasErrors: false }),
@@ -72,6 +81,47 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 vi.mock('../../../js/collaborative-editor/keyboard', () => ({
   useKeyboardShortcut: vi.fn(),
 }));
+
+const notifySuccess = vi.fn<(opts: unknown) => void>();
+const notifyInfo = vi.fn<(opts: unknown) => void>();
+const notifyAlert = vi.fn<(opts: unknown) => void>();
+vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
+  notifications: {
+    success: (opts: unknown) => {
+      notifySuccess(opts);
+    },
+    info: (opts: unknown) => {
+      notifyInfo(opts);
+    },
+    alert: (opts: unknown) => {
+      notifyAlert(opts);
+    },
+  },
+}));
+
+// Stub the hard-navigation Header performs after a successful promote.
+function stubNavigation() {
+  const originalLocation = window.location;
+  const hrefSetter = vi.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      set href(value: string) {
+        hrefSetter(value);
+      },
+    },
+  });
+  return {
+    hrefSetter,
+    restore: () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    },
+  };
+}
 
 // Header reads StoreContext via useContext with optional chaining, so leaving
 // it unprovided (undefined) is handled gracefully and avoids extra wiring.
@@ -182,6 +232,10 @@ describe('Header - lifecycle actions', () => {
     canProvisionSandbox = true;
     goLive.mockReset();
     switchToDraft.mockReset();
+    promote.mockReset();
+    notifySuccess.mockReset();
+    notifyInfo.mockReset();
+    notifyAlert.mockReset();
     goLive.mockResolvedValue(undefined);
     switchToDraft.mockResolvedValue(undefined);
   });
@@ -247,14 +301,14 @@ describe('Header - lifecycle actions', () => {
     expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
   });
 
-  test('inside a sandbox, shows a disabled Promote button and no lifecycle transitions', () => {
+  test('inside a sandbox, shows an enabled Promote button and no lifecycle transitions', () => {
     renderHeader({ isSandbox: true });
 
-    const promote = screen.getByTestId('promote-sandbox-button');
-    expect(promote).toBeDisabled();
-    expect(promote).toHaveTextContent('Promote');
-    // Wrapped in the shared Tooltip ("Coming soon"), so Radix marks it a trigger.
-    expect(promote).toHaveAttribute('data-state');
+    const promoteButton = screen.getByTestId('promote-sandbox-button');
+    expect(promoteButton).toBeEnabled();
+    expect(promoteButton).toHaveTextContent('Promote');
+    // No longer wrapped in the "Coming soon" Tooltip, so no Radix trigger marker.
+    expect(promoteButton).not.toHaveAttribute('data-state');
 
     // The main-project lifecycle actions are not offered inside a sandbox.
     expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
@@ -264,6 +318,69 @@ describe('Header - lifecycle actions', () => {
     expect(
       screen.queryByTestId('workflow-lifecycle-badge')
     ).not.toBeInTheDocument();
+  });
+
+  test('clicking Promote opens the confirm dialog without promoting yet', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText('Promote to parent project?')
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/merges this workflow into the parent project/i)
+    ).toBeInTheDocument();
+    // The action only fires once the user confirms.
+    expect(promote).not.toHaveBeenCalled();
+  });
+
+  test('confirming Promote calls promote and navigates to the parent workflow', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+      archived: true,
+    });
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('promote-sandbox-button'));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Promote',
+        })
+      );
+
+      await waitFor(() => {
+        expect(promote).toHaveBeenCalledTimes(1);
+      });
+      await waitFor(() => {
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/parent-1/w/wf-parent'
+        );
+      });
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('cancelling the Promote dialog closes it without promoting', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(promote).not.toHaveBeenCalled();
   });
 });
 
