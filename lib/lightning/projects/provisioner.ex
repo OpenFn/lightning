@@ -16,6 +16,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Channels.Audit, as: ChannelAudit
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collections.Collection
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -56,6 +57,13 @@ defmodule Lightning.Projects.Provisioner do
   ## Options
     * `:allow_stale` - If true, allows stale operations during import (useful for
       merge operations where concurrent modifications are expected). Defaults to false.
+    * `:reconcile_collaboration` - If true (the default), broadcasts a
+      collaboration reconcile request for each affected workflow AFTER the import
+      transaction commits, so any live collaborative document re-syncs from the
+      database. Callers that nest this import inside a larger transaction (e.g.
+      `Lightning.Projects.Sandboxes.merge/4`) pass `false` and broadcast
+      themselves after their own commit, since the subscriber reloads through a
+      separate database connection.
   """
   @spec import_document(
           Project.t() | nil,
@@ -75,50 +83,89 @@ defmodule Lightning.Projects.Provisioner do
 
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
+    reconcile_collaboration = Keyword.get(opts, :reconcile_collaboration, true)
 
-    Repo.transact(fn ->
-      with :ok <- maybe_limit_provisioning(project.id, user_or_repo_connection),
-           project_changeset <-
-             build_import_changeset(project, user_or_repo_connection, data),
-           edges_to_cleanup <-
-             edges_referencing_deleted_jobs(project_changeset),
-           {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-           :ok <-
-             disable_triggers_for_soft_deleted_workflows(project_changeset),
-           :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
-           :ok <- handle_collection_deletion(project_changeset),
-           updated_project <- preload_dependencies(project),
-           {:ok, _changes} <-
-             audit_workflows(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             audit_channels(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             update_workflows_version(
-               project_changeset,
-               updated_project.workflows
-             ),
-           {:ok, _changes} <-
-             create_snapshots(
-               project_changeset,
-               updated_project.workflows,
-               user_or_repo_connection
-             ) do
-        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+    result =
+      Repo.transact(fn ->
+        with :ok <-
+               maybe_limit_provisioning(project.id, user_or_repo_connection),
+             project_changeset <-
+               build_import_changeset(project, user_or_repo_connection, data),
+             edges_to_cleanup <-
+               edges_referencing_deleted_jobs(project_changeset),
+             {:ok, %{workflows: workflows} = project} <-
+               Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+             :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+             :ok <-
+               disable_triggers_for_soft_deleted_workflows(project_changeset),
+             :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
+             :ok <- handle_collection_deletion(project_changeset),
+             updated_project <- preload_dependencies(project),
+             {:ok, _changes} <-
+               audit_workflows(project_changeset, user_or_repo_connection),
+             {:ok, _changes} <-
+               audit_channels(project_changeset, user_or_repo_connection),
+             {:ok, _changes} <-
+               update_workflows_version(
+                 project_changeset,
+                 updated_project.workflows
+               ),
+             {:ok, _changes} <-
+               create_snapshots(
+                 project_changeset,
+                 updated_project.workflows,
+                 user_or_repo_connection
+               ) do
+          Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+          project_changeset
+          |> get_assoc(:workflows)
+          |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
-        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-          Lightning.Projects.Project.sandbox?(updated_project)
-        )
+          Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+            Lightning.Projects.Project.sandbox?(updated_project)
+          )
+
+          {:ok, updated_project}
+        end
+      end)
+
+    case result do
+      {:ok, updated_project} ->
+        if reconcile_collaboration do
+          data
+          |> reconcilable_workflow_ids()
+          |> WorkflowReconciler.request_reconciliation()
+        end
 
         {:ok, updated_project}
-      end
-    end)
+
+      error ->
+        error
+    end
   end
+
+  @doc """
+  Extracts the workflow ids carried by an import/merge document that a live
+  collaborative document should reconcile against, excluding workflows the
+  document marks for deletion. Only workflows present in the document are
+  returned, so sibling workflows on the target are never touched.
+  """
+  @spec reconcilable_workflow_ids(map()) :: [Ecto.UUID.t()]
+  def reconcilable_workflow_ids(data) when is_map(data) do
+    data
+    |> Map.get("workflows", [])
+    |> List.wrap()
+    |> Enum.reject(&workflow_entry_marked_deleted?/1)
+    |> Enum.map(fn entry -> entry["id"] end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp workflow_entry_marked_deleted?(entry) when is_map(entry) do
+    entry["delete"] == true or not is_nil(entry["deleted_at"])
+  end
+
+  defp workflow_entry_marked_deleted?(_entry), do: false
 
   defp build_import_changeset(project, user_or_repo_connection, data) do
     project
