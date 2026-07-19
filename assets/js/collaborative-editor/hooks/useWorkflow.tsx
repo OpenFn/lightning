@@ -851,9 +851,17 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * is fully supported - Y.Doc buffers transactions locally and syncs when
  * reconnected.
  */
+export type WorkflowReadOnlyReason =
+  | 'deleted'
+  | 'no_permission'
+  | 'pinned_version'
+  | 'unsaved_new'
+  | null;
+
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
+  reason: WorkflowReadOnlyReason;
 } => {
   // Get permissions and workflow state
   const permissions = usePermissions();
@@ -874,7 +882,7 @@ export const useWorkflowReadOnly = (): {
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
   if (permissions === null) {
-    return { isReadOnly: false, tooltipMessage: '' };
+    return { isReadOnly: false, tooltipMessage: '', reason: null };
   }
 
   // Compute read-only conditions
@@ -886,28 +894,32 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'This workflow has been deleted and cannot be edited',
+      reason: 'deleted',
     };
   }
   if (!hasPermission) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
+      reason: 'no_permission',
     };
   }
   if (isPinnedVersion) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
+      reason: 'pinned_version',
     };
   }
   if (isUnsavedNewWorkflow) {
     return {
       isReadOnly: true,
       tooltipMessage: 'Click "Create" to edit this workflow',
+      reason: 'unsaved_new',
     };
   }
 
-  return { isReadOnly: false, tooltipMessage: '' };
+  return { isReadOnly: false, tooltipMessage: '', reason: null };
 };
 
 /**

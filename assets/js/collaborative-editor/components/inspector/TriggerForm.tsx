@@ -49,7 +49,14 @@ function hasResponseConfig(
  * (webhook URL, cron expression, kafka config).
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, reason } = useWorkflowReadOnly();
+
+  // Copying the webhook URL is a read action, so it stays available when the
+  // workflow is merely locked for editing (live, or the viewer lacks edit
+  // permission). It is disabled only when the shown URL is not a current,
+  // valid endpoint: a deleted workflow, a pinned historical version, or an
+  // unsaved new workflow.
+  const canCopyWebhookUrl = !isReadOnly || reason === 'no_permission';
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { copyText, copyToClipboard } = useCopyToClipboard();
@@ -289,7 +296,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         <button
                           type="button"
                           onClick={() => void copyToClipboard(webhookUrl)}
-                          disabled={isReadOnly}
+                          disabled={!canCopyWebhookUrl}
                           className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {copyText || 'Copy URL'}
