@@ -52,11 +52,12 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const { isReadOnly, reason } = useWorkflowReadOnly();
 
   // Copying the webhook URL is a read action, so it stays available when the
-  // workflow is merely locked for editing (live, or the viewer lacks edit
-  // permission). It is disabled only when the shown URL is not a current,
-  // valid endpoint: a deleted workflow, a pinned historical version, or an
-  // unsaved new workflow.
-  const canCopyWebhookUrl = !isReadOnly || reason === 'no_permission';
+  // workflow is merely locked for editing: a live workflow or one the viewer
+  // lacks edit permission on still has a current, stable endpoint. It is
+  // disabled only when there is no real endpoint to copy: a deleted or unsaved
+  // workflow.
+  const canCopyWebhookUrl =
+    !isReadOnly || reason === 'no_permission' || reason === 'live';
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { copyText, copyToClipboard } = useCopyToClipboard();

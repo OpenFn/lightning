@@ -397,9 +397,15 @@ defmodule LightningWeb.WorkflowChannel do
     # (editor and up) may list them. Viewers get nothing.
     case authorize_provision_sandbox(user, project) do
       :ok ->
+        # The picker can only "join" a sandbox that already contains a clone of
+        # this workflow, so drop sandboxes with no joinable workflow id before
+        # serializing rather than sending rows the client can't act on.
         sandboxes =
           project.id
           |> Projects.list_active_sandboxes_for_editing(workflow.name)
+          |> Enum.reject(fn {_sandbox, joinable_workflow_id} ->
+            is_nil(joinable_workflow_id)
+          end)
           |> Enum.map(&render_editable_sandbox/1)
 
         {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
@@ -992,10 +998,19 @@ defmodule LightningWeb.WorkflowChannel do
         project_user
       )
 
+    can_provision_sandbox =
+      Permissions.can?(
+        :sandboxes,
+        :provision_sandbox,
+        user,
+        project
+      )
+
     %{
       can_edit_workflow: can_edit,
       can_run_workflow: can_run,
-      can_write_webhook_auth_method: can_write_webhook_auth
+      can_write_webhook_auth_method: can_write_webhook_auth,
+      can_provision_sandbox: can_provision_sandbox
     }
   end
 
@@ -1309,12 +1324,12 @@ defmodule LightningWeb.WorkflowChannel do
       color: sandbox.color,
       inserted_at: sandbox.inserted_at,
       updated_at: sandbox.updated_at,
-      creator: render_creator(sandbox.project_users),
+      owner: render_owner(sandbox.project_users),
       workflow_id: joinable_workflow_id
     }
   end
 
-  defp render_creator(project_users) do
+  defp render_owner(project_users) do
     case Enum.find(project_users, &(&1.role == :owner)) do
       %{user: user} ->
         %{

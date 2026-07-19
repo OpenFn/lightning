@@ -50,6 +50,7 @@ interface WrapperOptions {
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
+  workflowState?: 'draft' | 'live';
 }
 
 function createWrapper(options: WrapperOptions = {}): [
@@ -67,6 +68,7 @@ function createWrapper(options: WrapperOptions = {}): [
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
+    workflowState,
   } = options;
 
   // Create stores
@@ -117,6 +119,19 @@ function createWrapper(options: WrapperOptions = {}): [
       createSessionContext({
         permissions,
         latest_snapshot_lock_version: latestSnapshotLockVersion,
+        ...(workflowState
+          ? {
+              workflow: {
+                jobs: [],
+                triggers: [],
+                edges: [],
+                positions: {},
+                name: 'Test Workflow',
+                enable_job_logs: false,
+                state: workflowState,
+              },
+            }
+          : {}),
       })
     );
   };
@@ -269,6 +284,46 @@ describe('useWorkflowReadOnly - Permissions', () => {
       expect(result.current.tooltipMessage).toBe(
         'You do not have permission to edit this workflow'
       );
+    });
+  });
+
+  test('reports a live-specific reason and message when a live workflow is locked', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      // The server collapses a live workflow into can_edit_workflow: false.
+      permissions: { can_edit_workflow: false, can_run_workflow: true },
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('live');
+      expect(result.current.tooltipMessage).toBe(
+        'This workflow is live. Switch to draft or edit in a sandbox to make changes.'
+      );
+    });
+  });
+
+  test('keeps the no_permission reason for a draft workflow the user cannot edit', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+      workflowState: 'draft',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
     });
   });
 

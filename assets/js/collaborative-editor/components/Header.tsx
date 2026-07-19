@@ -13,6 +13,7 @@ import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLimits,
+  usePermissions,
   useProjectRepoConnection,
   useSessionWorkflow,
 } from '../hooks/useSessionContext';
@@ -239,6 +240,8 @@ export function Header({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const sessionWorkflow = useSessionWorkflow();
   const lifecycleState = sessionWorkflow?.state;
+  const permissions = usePermissions();
+  const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
@@ -526,16 +529,7 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {isSandbox && (
-                <span
-                  data-testid="workflow-sandbox-badge"
-                  className="inline-flex items-center gap-1 self-center rounded-md bg-primary-100 px-2 py-1 text-xs font-medium text-primary-800"
-                >
-                  <span className="hero-beaker h-3.5 w-3.5" />
-                  sandbox
-                </span>
-              )}
-              {lifecycleState && !isNewWorkflow && (
+              {lifecycleState && !isNewWorkflow && !isSandbox && (
                 <span
                   data-testid="workflow-lifecycle-badge"
                   className={
@@ -548,7 +542,7 @@ export function Header({
                   {lifecycleState === 'live' ? 'Live' : 'Draft'}
                 </span>
               )}
-              {!isNewWorkflow && lifecycleState === 'draft' && (
+              {!isNewWorkflow && !isSandbox && lifecycleState === 'draft' && (
                 <Tooltip
                   content={
                     isReadOnly ? 'You cannot go live on this version' : null
@@ -578,7 +572,7 @@ export function Header({
                   </button>
                 </Tooltip>
               )}
-              {!isNewWorkflow && lifecycleState === 'live' && (
+              {!isNewWorkflow && !isSandbox && lifecycleState === 'live' && (
                 <button
                   type="button"
                   data-testid="switch-to-draft-button"
@@ -591,18 +585,41 @@ export function Header({
                   Switch to draft
                 </button>
               )}
+              {!isNewWorkflow && isSandbox && (
+                <Tooltip content="Coming soon" side="bottom">
+                  <button
+                    type="button"
+                    data-testid="promote-sandbox-button"
+                    disabled
+                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                  >
+                    Promote
+                  </button>
+                </Tooltip>
+              )}
               {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
-                <button
-                  type="button"
-                  data-testid="edit-in-sandbox-button"
-                  onClick={() => {
-                    setShowEditInSandboxPicker(true);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                <Tooltip
+                  content={
+                    canProvisionSandbox
+                      ? null
+                      : 'You do not have permission to create a sandbox in this project.'
+                  }
+                  side="bottom"
                 >
-                  <span className="hero-beaker h-4 w-4" />
-                  Edit in sandbox
-                </button>
+                  <button
+                    type="button"
+                    data-testid="edit-in-sandbox-button"
+                    disabled={!canProvisionSandbox}
+                    onClick={() => {
+                      if (!canProvisionSandbox) return;
+                      setShowEditInSandboxPicker(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
+                  >
+                    <span className="hero-beaker h-4 w-4" />
+                    Edit in sandbox
+                  </button>
+                </Tooltip>
               )}
               {projectId &&
                 workflowId &&

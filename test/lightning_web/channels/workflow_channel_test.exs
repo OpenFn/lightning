@@ -117,25 +117,25 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "list_sandboxes" do
-    test "returns active sandboxes sorted by last edited with joinable workflow and creator",
+    test "returns joinable sandboxes sorted by last edited with owner",
          %{socket: socket, project: project, workflow: workflow} do
-      creator =
+      owner =
         insert(:user, first_name: "Ada", last_name: "Lovelace")
 
-      # Older sandbox with a matching workflow clone (joinable).
+      # Older sandbox with a matching workflow clone, owned by Ada.
       older =
         insert(:project,
           parent: project,
           color: "#111111",
-          project_users: [%{user: creator, role: :owner}]
+          project_users: [%{user: owner, role: :owner}]
         )
 
-      joinable =
+      older_workflow =
         insert(:workflow, project: older, name: workflow.name)
 
-      # Newer sandbox without a matching workflow name (not joinable).
+      # Newer owner-less sandbox, also with a matching workflow clone.
       newer = insert(:project, parent: project, color: "#222222")
-      insert(:workflow, project: newer, name: "something-else")
+      newer_workflow = insert(:workflow, project: newer, name: workflow.name)
 
       # Bump newer's updated_at so it sorts first.
       Lightning.Repo.update!(
@@ -151,57 +151,85 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert [first, second] = sandboxes
       assert first.id == newer.id
-      assert first.workflow_id == nil
+      assert first.workflow_id == newer_workflow.id
       assert second.id == older.id
-      assert second.workflow_id == joinable.id
+      assert second.workflow_id == older_workflow.id
 
-      # The owner-less newer sandbox has no creator to attribute.
-      assert first.creator == nil
+      # The owner-less newer sandbox has no owner to attribute.
+      assert first.owner == nil
 
       assert %{
-               creator: %{name: "Ada Lovelace", email: creator_email},
+               owner: %{name: "Ada Lovelace", email: owner_email},
                inserted_at: %DateTime{}
              } = second
 
-      assert creator_email == creator.email
+      assert owner_email == owner.email
     end
 
-    test "attributes the creator to the sandbox owner, not other members", %{
+    test "excludes sandboxes that don't contain this workflow", %{
       socket: socket,
-      project: project
+      project: project,
+      workflow: workflow
+    } do
+      joinable = insert(:project, parent: project)
+      insert(:workflow, project: joinable, name: workflow.name)
+
+      # Sandbox without a clone of this workflow: nothing to join, so omitted.
+      non_joinable = insert(:project, parent: project)
+      insert(:workflow, project: non_joinable, name: "something-else")
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      ids = Enum.map(sandboxes, & &1.id)
+      assert joinable.id in ids
+      refute non_joinable.id in ids
+    end
+
+    test "attributes the owner to the sandbox owner, not other members", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
     } do
       owner = insert(:user, first_name: "Grace", last_name: "Hopper")
       editor = insert(:user, first_name: "Someone", last_name: "Else")
 
-      insert(:project,
-        parent: project,
-        project_users: [
-          %{user: owner, role: :owner},
-          %{user: editor, role: :editor}
-        ]
-      )
+      sandbox =
+        insert(:project,
+          parent: project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      insert(:workflow, project: sandbox, name: workflow.name)
 
       ref = push(socket, "list_sandboxes", %{})
-      assert_reply ref, :ok, %{sandboxes: [sandbox]}
+      assert_reply ref, :ok, %{sandboxes: [sandbox_row]}
 
-      assert %{creator: %{id: creator_id, name: "Grace Hopper", email: email}} =
-               sandbox
+      assert %{owner: %{id: owner_id, name: "Grace Hopper", email: email}} =
+               sandbox_row
 
-      assert creator_id == owner.id
+      assert owner_id == owner.id
       assert email == owner.email
     end
 
     test "excludes sandboxes scheduled for deletion", %{
       socket: socket,
-      project: project
+      project: project,
+      workflow: workflow
     } do
       active = insert(:project, parent: project)
+      insert(:workflow, project: active, name: workflow.name)
 
       scheduled =
         insert(:project,
           parent: project,
           scheduled_deletion: ~U[2030-01-01 00:00:00Z]
         )
+
+      insert(:workflow, project: scheduled, name: workflow.name)
 
       ref = push(socket, "list_sandboxes", %{})
       assert_reply ref, :ok, %{sandboxes: sandboxes}
@@ -611,6 +639,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Permissions data
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == true
+      # Owner role can provision a sandbox.
+      assert permissions_data.can_provision_sandbox == true
 
       # Latest snapshot lock version
       assert %{latest_snapshot_lock_version: lock_version} = response
@@ -671,6 +701,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
+      # Viewer role cannot provision a sandbox either.
+      assert permissions_data.can_provision_sandbox == false
     end
 
     test "returns actual latest lock_version when viewing old snapshot", %{

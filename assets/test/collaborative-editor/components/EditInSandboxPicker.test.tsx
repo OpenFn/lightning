@@ -67,7 +67,7 @@ const sandboxes: Sandbox[] = [
     color: null,
     inserted_at: CREATED_A,
     updated_at: new Date().toISOString(),
-    creator: { id: 'u1', name: 'Ada Lovelace' },
+    owner: { id: 'u1', name: 'Ada Lovelace' },
     workflow_id: 'wf-clone-a',
   },
   {
@@ -76,7 +76,7 @@ const sandboxes: Sandbox[] = [
     color: '#ff0000',
     inserted_at: CREATED_B,
     updated_at: new Date().toISOString(),
-    creator: { id: 'u2', email: 'grace@example.com' },
+    owner: { id: 'u2', email: 'grace@example.com' },
     workflow_id: 'wf-clone-b',
   },
 ];
@@ -130,7 +130,7 @@ describe('EditInSandboxPicker', () => {
     expect(rows[1]).toHaveTextContent('Beta sandbox');
   });
 
-  test('shows the creator avatar, name and creation date on each row', async () => {
+  test('shows the owner avatar, name and creation date on each row', async () => {
     listSandboxes.mockResolvedValue(sandboxes);
 
     render(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -144,7 +144,7 @@ describe('EditInSandboxPicker', () => {
     expect(screen.getByText('AL')).toBeInTheDocument();
     expect(screen.getByText('grace@example.com')).toBeInTheDocument();
 
-    // Each row's metadata line carries the creation date and the creator name.
+    // Each row's metadata line carries the creation date and the owner name.
     expect(screen.getByText(createdLabel(CREATED_A))).toBeInTheDocument();
     expect(screen.getByText(createdLabel(CREATED_B))).toBeInTheDocument();
     const alphaRow = screen.getByText('Alpha sandbox').closest('li');
@@ -155,7 +155,7 @@ describe('EditInSandboxPicker', () => {
     expect(screen.queryByText(/edited/i)).not.toBeInTheDocument();
   });
 
-  test('renders the creation date but no avatar when the creator is unknown', async () => {
+  test('renders the creation date but no avatar when the owner is unknown', async () => {
     listSandboxes.mockResolvedValue([
       {
         id: 'sandbox-c',
@@ -163,7 +163,7 @@ describe('EditInSandboxPicker', () => {
         color: null,
         inserted_at: CREATED_A,
         updated_at: new Date().toISOString(),
-        creator: null,
+        owner: null,
         workflow_id: 'wf-clone-c',
       },
     ]);
@@ -175,7 +175,7 @@ describe('EditInSandboxPicker', () => {
     });
 
     expect(screen.getByText(createdLabel(CREATED_A))).toBeInTheDocument();
-    // No initials avatar is rendered for a null creator.
+    // No initials avatar is rendered for a null owner.
     expect(screen.queryByText('AL')).not.toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe('EditInSandboxPicker', () => {
         color: null,
         inserted_at: CREATED_A,
         updated_at: new Date().toISOString(),
-        creator: { id: 'u9', name: 'Nobody Here' },
+        owner: { id: 'u9', name: 'Nobody Here' },
         workflow_id: null,
       },
     ]);
@@ -215,7 +215,7 @@ describe('EditInSandboxPicker', () => {
         color: null,
         inserted_at: CREATED_A,
         updated_at: new Date().toISOString(),
-        creator: { id: 'u1', name: 'Ada Lovelace' },
+        owner: { id: 'u1', name: 'Ada Lovelace' },
         workflow_id: 'wf-clone-a',
       },
       {
@@ -224,7 +224,7 @@ describe('EditInSandboxPicker', () => {
         color: null,
         inserted_at: CREATED_B,
         updated_at: new Date().toISOString(),
-        creator: { id: 'u2', email: 'grace@example.com' },
+        owner: { id: 'u2', email: 'grace@example.com' },
         workflow_id: null,
       },
     ]);

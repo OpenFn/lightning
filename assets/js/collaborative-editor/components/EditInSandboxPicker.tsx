@@ -15,14 +15,26 @@ import {
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
-import type { Sandbox, SandboxCollaborator } from '../types/workflow';
+import type { Sandbox, SandboxOwner } from '../types/workflow';
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-function personInitials(person: SandboxCollaborator): string {
+// Turn an unknown error into a user-facing description. Channel replies carry
+// structured field/base errors we can format; anything else gets a generic
+// retry hint. Shared by the list-load and create handlers.
+function describeSandboxError(error: unknown): string {
+  return isChannelRequestError(error)
+    ? formatChannelErrorMessage({
+        errors: error.errors as { base?: string[] } & Record<string, string[]>,
+        type: error.type,
+      })
+    : 'Please try again.';
+}
+
+function personInitials(person: SandboxOwner): string {
   const source = person.name?.trim() || person.email?.trim() || '';
   if (!source) return '?';
 
@@ -33,10 +45,10 @@ function personInitials(person: SandboxCollaborator): string {
   return source.slice(0, 2).toUpperCase();
 }
 
-// A joinable sandbox row: creator avatar on the left, then the sandbox name over
-// a single muted metadata line ("Created {date}, {time} · {creator}"), and the
-// Join button on the right. The creator can be null (unknown), in which case the
-// avatar and the "· {creator}" suffix are omitted.
+// A joinable sandbox row: owner avatar on the left, then the sandbox name over
+// a single muted metadata line ("Created {date}, {time} · {owner}"), and the
+// Join button on the right. The owner can be null (unknown), in which case the
+// avatar and the "· {owner}" suffix are omitted.
 function SandboxRow({
   sandbox,
   onJoin,
@@ -44,8 +56,8 @@ function SandboxRow({
   sandbox: Sandbox;
   onJoin: (sandbox: Sandbox) => void;
 }) {
-  const { creator } = sandbox;
-  const creatorName = creator ? creator.name || creator.email || '' : '';
+  const { owner } = sandbox;
+  const ownerName = owner ? owner.name || owner.email || '' : '';
   const created = formatCreatedAt(sandbox.inserted_at);
 
   return (
@@ -54,29 +66,29 @@ function SandboxRow({
       data-testid="sandbox-row"
     >
       <div className="flex min-w-0 items-center gap-3">
-        {creator && (
+        {owner && (
           <span
-            title={creatorName || undefined}
+            title={ownerName || undefined}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center
               rounded-full bg-gray-200 text-xs font-medium text-gray-700"
           >
-            {personInitials(creator)}
+            {personInitials(owner)}
           </span>
         )}
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-gray-900">
             {sandbox.name}
           </p>
-          {/* The date never truncates; only the creator name gives way when
+          {/* The date never truncates; only the owner name gives way when
               space is tight. */}
           <p className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
             <span className="shrink-0 whitespace-nowrap">{created}</span>
-            {creator && creatorName && (
+            {owner && ownerName && (
               <>
                 <span aria-hidden="true" className="shrink-0">
                   ·
                 </span>
-                <span className="min-w-0 truncate">{creatorName}</span>
+                <span className="min-w-0 truncate">{ownerName}</span>
               </>
             )}
           </p>
@@ -132,18 +144,9 @@ export function EditInSandboxPicker({
         if (!cancelled) setSandboxes(result);
       } catch (error) {
         if (!cancelled) {
-          const description = isChannelRequestError(error)
-            ? formatChannelErrorMessage({
-                errors: error.errors as { base?: string[] } & Record<
-                  string,
-                  string[]
-                >,
-                type: error.type,
-              })
-            : 'Please try again.';
           notifications.alert({
             title: 'Could not load sandboxes',
-            description,
+            description: describeSandboxError(error),
           });
         }
       } finally {
@@ -167,18 +170,9 @@ export function EditInSandboxPicker({
         const { project_id, workflow_id } = await editInSandbox(trimmed);
         navigateToSandbox(project_id, workflow_id);
       } catch (error) {
-        const description = isChannelRequestError(error)
-          ? formatChannelErrorMessage({
-              errors: error.errors as { base?: string[] } & Record<
-                string,
-                string[]
-              >,
-              type: error.type,
-            })
-          : 'Please try again.';
         notifications.alert({
           title: 'Could not create a sandbox',
-          description,
+          description: describeSandboxError(error),
         });
         setIsCreating(false);
       }
@@ -192,8 +186,9 @@ export function EditInSandboxPicker({
     navigateToSandbox(sandbox.id, sandbox.workflow_id);
   }, []);
 
-  // A name is required to create. A sandbox is only worth listing when it
-  // contains a clone of this workflow; the rest can't edit it, so drop them.
+  // A name is required to create. The server already returns only joinable
+  // sandboxes (each holding a clone of this workflow), so this filter is a
+  // defensive no-op guarding against a stray null workflow_id.
   const canCreate = name.trim().length > 0;
   const joinableSandboxes = sandboxes.filter(
     sandbox => sandbox.workflow_id !== null

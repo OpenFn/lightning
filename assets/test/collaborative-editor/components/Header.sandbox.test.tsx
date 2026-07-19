@@ -13,6 +13,7 @@ import { Header } from '../../../js/collaborative-editor/components/Header';
 
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let isNewWorkflow = false;
+let canProvisionSandbox = true;
 
 const goLive = vi.fn<() => Promise<unknown>>();
 const switchToDraft = vi.fn<() => Promise<unknown>>();
@@ -32,6 +33,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => isNewWorkflow,
   useLimits: () => ({}),
+  usePermissions: () => ({ can_provision_sandbox: canProvisionSandbox }),
   useProjectRepoConnection: () => null,
   useSessionWorkflow: () => ({ state: lifecycleState }),
 }));
@@ -122,15 +124,31 @@ describe('Header - Edit in sandbox button gating', () => {
   beforeEach(() => {
     lifecycleState = 'live';
     isNewWorkflow = false;
+    canProvisionSandbox = true;
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  test('shows the button for a live, saved workflow on a non-sandbox project', () => {
+  test('shows an enabled button when the user can provision a sandbox', () => {
     renderHeader({ isSandbox: false });
-    expect(screen.getByTestId('edit-in-sandbox-button')).toBeInTheDocument();
+    const button = screen.getByTestId('edit-in-sandbox-button');
+    expect(button).toBeEnabled();
+    // No tooltip wrapper: the Tooltip renders bare children when content is null,
+    // so the Radix trigger attribute is absent when provisioning is allowed.
+    expect(button).not.toHaveAttribute('data-state');
+  });
+
+  test('renders the button disabled and tooltip-wrapped when provisioning is not allowed', () => {
+    canProvisionSandbox = false;
+    renderHeader({ isSandbox: false });
+
+    const button = screen.getByTestId('edit-in-sandbox-button');
+    expect(button).toBeDisabled();
+    // The disabled button is wrapped in the shared Tooltip, so Radix marks it as
+    // a trigger with a data-state attribute.
+    expect(button).toHaveAttribute('data-state');
   });
 
   test('hides the button when the workflow is in draft', () => {
@@ -157,35 +175,11 @@ describe('Header - Edit in sandbox button gating', () => {
   });
 });
 
-describe('Header - sandbox badge', () => {
-  beforeEach(() => {
-    lifecycleState = 'live';
-    isNewWorkflow = false;
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test('renders the sandbox badge when editing inside a sandbox', () => {
-    renderHeader({ isSandbox: true });
-    const badge = screen.getByTestId('workflow-sandbox-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('sandbox');
-  });
-
-  test('does not render the sandbox badge outside a sandbox', () => {
-    renderHeader({ isSandbox: false });
-    expect(
-      screen.queryByTestId('workflow-sandbox-badge')
-    ).not.toBeInTheDocument();
-  });
-});
-
 describe('Header - lifecycle actions', () => {
   beforeEach(() => {
     lifecycleState = 'live';
     isNewWorkflow = false;
+    canProvisionSandbox = true;
     goLive.mockReset();
     switchToDraft.mockReset();
     goLive.mockResolvedValue(undefined);
@@ -252,12 +246,32 @@ describe('Header - lifecycle actions', () => {
 
     expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
   });
+
+  test('inside a sandbox, shows a disabled Promote button and no lifecycle transitions', () => {
+    renderHeader({ isSandbox: true });
+
+    const promote = screen.getByTestId('promote-sandbox-button');
+    expect(promote).toBeDisabled();
+    expect(promote).toHaveTextContent('Promote');
+    // Wrapped in the shared Tooltip ("Coming soon"), so Radix marks it a trigger.
+    expect(promote).toHaveAttribute('data-state');
+
+    // The main-project lifecycle actions are not offered inside a sandbox.
+    expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('switch-to-draft-button')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('workflow-lifecycle-badge')
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe('Header - long workflow name', () => {
   beforeEach(() => {
     lifecycleState = 'live';
     isNewWorkflow = false;
+    canProvisionSandbox = true;
   });
 
   afterEach(() => {

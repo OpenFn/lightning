@@ -53,6 +53,7 @@ import {
   useLatestSnapshotLockVersion,
   useLimits,
   usePermissions,
+  useSessionWorkflow,
   useUser,
   useWorkflowTemplate,
 } from './useSessionContext';
@@ -843,9 +844,11 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  *
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
- * 2. User permissions (can_edit_workflow)
- * 3. Version pinning (any ?v parameter in URL)
- * 4. Template preview (new workflow with selected template)
+ * 2. Live workflow lock (state === 'live', which the server surfaces as
+ *    can_edit_workflow: false on the main project)
+ * 3. User permissions (can_edit_workflow)
+ * 4. Version pinning (any ?v parameter in URL)
+ * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
@@ -853,6 +856,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  */
 export type WorkflowReadOnlyReason =
   | 'deleted'
+  | 'live'
   | 'no_permission'
   | 'pinned_version'
   | 'unsaved_new'
@@ -869,6 +873,12 @@ export const useWorkflowReadOnly = (): {
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   const { params } = useURLState();
+
+  // The session-context workflow carries the lifecycle state. A live workflow
+  // on the main project is locked read-only, which the server expresses as
+  // can_edit_workflow: false; reading the state lets us explain *why*.
+  const sessionWorkflow = useSessionWorkflow();
+  const isLive = sessionWorkflow?.state === 'live';
 
   // Check if version is pinned via URL parameter
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
@@ -898,6 +908,17 @@ export const useWorkflowReadOnly = (): {
     };
   }
   if (!hasPermission) {
+    // A live workflow is read-only for everyone on the main project. Distinguish
+    // it from a genuine permission gap so the owner sees an actionable message
+    // rather than "you do not have permission".
+    if (isLive) {
+      return {
+        isReadOnly: true,
+        tooltipMessage:
+          'This workflow is live. Switch to draft or edit in a sandbox to make changes.',
+        reason: 'live',
+      };
+    }
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',

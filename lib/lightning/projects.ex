@@ -2128,7 +2128,18 @@ defmodule Lightning.Projects do
           {:ok, %{sandbox: sandbox, workflow: workflow}}
 
         {:error, reason} ->
-          _ = delete_project(sandbox)
+          case delete_project(sandbox) do
+            {:error, delete_reason} ->
+              Logger.warning(
+                "Failed to delete sandbox #{sandbox.id} after promotion " <>
+                  "failure; it may linger and consume quota. " <>
+                  "reason: #{inspect(delete_reason)}"
+              )
+
+            _ ->
+              :ok
+          end
+
           {:error, reason}
       end
     end
