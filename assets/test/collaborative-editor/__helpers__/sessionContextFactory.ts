@@ -65,6 +65,7 @@ export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
+  can_provision_sandbox: true,
 };
 
 /**
@@ -367,6 +368,7 @@ export function createSessionContext(
     can_edit_workflow: true,
     can_run_workflow: true,
     can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
     ...options.permissions,
   };
 

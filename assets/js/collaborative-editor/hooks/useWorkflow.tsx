@@ -53,6 +53,7 @@ import {
   useLatestSnapshotLockVersion,
   useLimits,
   usePermissions,
+  useSessionWorkflow,
   useUser,
   useWorkflowTemplate,
 } from './useSessionContext';
@@ -521,17 +522,13 @@ export const useWorkflowActions = () => {
     // permissions (a live workflow is read-only on main) are reflected.
     goLive: async () => {
       const response = await store.goLive();
-      if (response) {
-        await sessionContextStore.requestSessionContext();
-      }
+      await sessionContextStore.requestSessionContext();
       return response;
     },
 
     switchToDraft: async () => {
       const response = await store.switchToDraft();
-      if (response) {
-        await sessionContextStore.requestSessionContext();
-      }
+      await sessionContextStore.requestSessionContext();
       return response;
     },
 
@@ -673,6 +670,12 @@ export const useWorkflowActions = () => {
 
       return wrappedSaveAndSyncWorkflow();
     },
+
+    // Sandbox editing. listSandboxes is a query (fetch candidates) and
+    // editInSandbox is a command (provision + clone). Navigation lives in the
+    // calling component, consistent with the legacy-editor switch.
+    listSandboxes: store.listSandboxes,
+    editInSandbox: store.editInSandbox,
 
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
@@ -841,17 +844,28 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  *
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
- * 2. User permissions (can_edit_workflow)
- * 3. Version pinning (any ?v parameter in URL)
- * 4. Template preview (new workflow with selected template)
+ * 2. Live workflow lock (state === 'live', which the server surfaces as
+ *    can_edit_workflow: false on the main project)
+ * 3. User permissions (can_edit_workflow)
+ * 4. Version pinning (any ?v parameter in URL)
+ * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
  * reconnected.
  */
+export type WorkflowReadOnlyReason =
+  | 'deleted'
+  | 'live'
+  | 'no_permission'
+  | 'pinned_version'
+  | 'unsaved_new'
+  | null;
+
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
+  reason: WorkflowReadOnlyReason;
 } => {
   // Get permissions and workflow state
   const permissions = usePermissions();
@@ -859,6 +873,12 @@ export const useWorkflowReadOnly = (): {
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   const { params } = useURLState();
+
+  // The session-context workflow carries the lifecycle state. A live workflow
+  // on the main project is locked read-only, which the server expresses as
+  // can_edit_workflow: false; reading the state lets us explain *why*.
+  const sessionWorkflow = useSessionWorkflow();
+  const isLive = sessionWorkflow?.state === 'live';
 
   // Check if version is pinned via URL parameter
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
@@ -872,7 +892,7 @@ export const useWorkflowReadOnly = (): {
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
   if (permissions === null) {
-    return { isReadOnly: false, tooltipMessage: '' };
+    return { isReadOnly: false, tooltipMessage: '', reason: null };
   }
 
   // Compute read-only conditions
@@ -884,28 +904,46 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'This workflow has been deleted and cannot be edited',
+      reason: 'deleted',
     };
   }
   if (!hasPermission) {
+    // A live workflow is read-only for everyone on the main project. Show the
+    // actionable "switch to draft or edit in a sandbox" message only to users
+    // who can actually take those actions (editor+, surfaced as
+    // can_provision_sandbox). A plain viewer, who has no edit capability at all,
+    // gets the generic permission message instead of being pointed at actions
+    // they cannot perform.
+    if (isLive && permissions.can_provision_sandbox) {
+      return {
+        isReadOnly: true,
+        tooltipMessage:
+          'This workflow is live. Switch to draft or edit in a sandbox to make changes.',
+        reason: 'live',
+      };
+    }
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
+      reason: 'no_permission',
     };
   }
   if (isPinnedVersion) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
+      reason: 'pinned_version',
     };
   }
   if (isUnsavedNewWorkflow) {
     return {
       isReadOnly: true,
       tooltipMessage: 'Click "Create" to edit this workflow',
+      reason: 'unsaved_new',
     };
   }
 
-  return { isReadOnly: false, tooltipMessage: '' };
+  return { isReadOnly: false, tooltipMessage: '', reason: null };
 };
 
 /**

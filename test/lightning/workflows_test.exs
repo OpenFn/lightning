@@ -1843,6 +1843,29 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "get_workflow_by_name/2" do
+    test "finds the active workflow by name, scoped to the project" do
+      project = insert(:project)
+      other_project = insert(:project)
+
+      workflow = insert(:workflow, project: project, name: "payroll")
+      insert(:workflow, project: other_project, name: "payroll")
+
+      insert(:workflow,
+        project: project,
+        name: "archived",
+        deleted_at: DateTime.utc_now()
+      )
+
+      assert %{id: id} = Workflows.get_workflow_by_name(project.id, "payroll")
+      assert id == workflow.id
+
+      # A soft-deleted workflow and an unknown name both resolve to nil.
+      assert Workflows.get_workflow_by_name(project.id, "archived") == nil
+      assert Workflows.get_workflow_by_name(project.id, "missing") == nil
+    end
+  end
+
   defp create_workflow(opts \\ []) do
     enabled = Keyword.get(opts, :enabled, false)
     trigger = build(:trigger, type: :cron, enabled: enabled)

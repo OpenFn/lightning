@@ -282,7 +282,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   end
 
   defp initial_params(%{mode: :new}) do
-    %{"color" => get_random_color()}
+    %{"color" => Components.random_color()}
   end
 
   defp form_changeset(%Project{} = base, params, parent_id) do
@@ -318,10 +318,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       name: params["name"],
       color: params["color"]
     }
-  end
-
-  defp get_random_color do
-    Components.color_palette_hex_colors() |> Enum.random()
   end
 
   defp return_path(socket) do

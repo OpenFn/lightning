@@ -5,6 +5,8 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 
+import { useKeyboardShortcut } from '../keyboard';
+
 interface AlertDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +45,19 @@ export function AlertDialog({
   cancelLabel = 'Cancel',
   variant = 'primary',
 }: AlertDialogProps) {
+  // High-priority Escape handler to prevent closing the parent IDE/inspector.
+  // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
+  // Headless UI's own Escape handling never fires while those intercept it. Only
+  // cancels (onClose) the dialog, so it never triggers the confirm action.
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
+
   const confirmButtonClass =
     variant === 'danger'
       ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'

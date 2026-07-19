@@ -49,7 +49,15 @@ function hasResponseConfig(
  * (webhook URL, cron expression, kafka config).
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, reason } = useWorkflowReadOnly();
+
+  // Copying the webhook URL is a read action, so it stays available whenever
+  // there is a real, stable endpoint to copy. The endpoint (/i/{trigger.id}) is
+  // stable across snapshots, so it is valid on a pinned historical version, a
+  // live workflow, or one the viewer lacks edit permission on. It is disabled
+  // only when there is no real endpoint: a deleted workflow or an unsaved new
+  // trigger that has not been persisted yet.
+  const canCopyWebhookUrl = reason !== 'deleted' && reason !== 'unsaved_new';
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { copyText, copyToClipboard } = useCopyToClipboard();
@@ -289,7 +297,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         <button
                           type="button"
                           onClick={() => void copyToClipboard(webhookUrl)}
-                          disabled={isReadOnly}
+                          disabled={!canCopyWebhookUrl}
                           className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {copyText || 'Copy URL'}

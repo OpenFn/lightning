@@ -214,6 +214,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useVersionsError: () => null,
   useRequestVersions: () => vi.fn(),
   useLatestSnapshotLockVersion: () => 1,
+  usePermissions: () => ({
+    can_edit_workflow: true,
+    can_run_workflow: true,
+    can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
+  }),
   useUser: () => ({
     id: 'user-1',
     email: 'test@example.com',

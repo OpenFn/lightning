@@ -37,9 +37,15 @@ import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
  * Creates a Y.Doc with a webhook trigger including webhook_reply field
  */
 function createWebhookTriggerYDoc(
-  webhookReply: 'before_start' | 'after_completion' = 'before_start'
+  webhookReply: 'before_start' | 'after_completion' = 'before_start',
+  deletedAt: string | null = null
 ): Y.Doc {
   const ydoc = new Y.Doc();
+
+  const workflowMap = ydoc.getMap('workflow');
+  workflowMap.set('id', 'workflow-1');
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('deleted_at', deletedAt);
 
   const triggersArray = ydoc.getArray('triggers');
   const triggerMap = new Y.Map();
@@ -142,11 +148,15 @@ describe('TriggerForm - Response Mode Field', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         has_read_ai_disclaimer: true,
         latest_snapshot_lock_version: 1,
@@ -301,5 +311,127 @@ describe('TriggerForm - Response Mode Field', () => {
 
     // Response Mode should NOT be present for cron triggers
     expect(screen.queryByLabelText('Response Mode')).not.toBeInTheDocument();
+  });
+
+  test('keeps the webhook Copy URL button enabled on a read-only (live) workflow', async () => {
+    // Live/read-only lock: the workflow cannot be edited.
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
+        },
+        has_read_ai_disclaimer: true,
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+      });
+    });
+
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Copying the URL is a read action, so it stays available even when the
+    // workflow itself is locked for editing.
+    const copyButton = await screen.findByRole('button', {
+      name: /copy url/i,
+    });
+    expect(copyButton).toBeEnabled();
+  });
+
+  test('keeps the webhook Copy URL button enabled when the workflow is live', async () => {
+    // A live workflow is locked read-only (reason: 'live'), but its endpoint is
+    // current, so copying the URL stays available.
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
+        },
+        has_read_ai_disclaimer: true,
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        workflow: {
+          jobs: [],
+          triggers: [],
+          edges: [],
+          positions: {},
+          name: 'Live workflow',
+          enable_job_logs: false,
+          state: 'live',
+        },
+      });
+    });
+
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    const copyButton = await screen.findByRole('button', {
+      name: /copy url/i,
+    });
+    expect(copyButton).toBeEnabled();
+  });
+
+  test('disables the webhook Copy URL button for a deleted workflow', async () => {
+    // A deleted workflow has no live endpoint, so copying is not offered.
+    const deletedYdoc = createWebhookTriggerYDoc(
+      'before_start',
+      '2026-01-01T00:00:00Z'
+    );
+    const deletedWorkflowStore = createConnectedWorkflowStore(deletedYdoc);
+    const trigger = deletedWorkflowStore.getSnapshot()
+      .triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        deletedWorkflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    const copyButton = await screen.findByRole('button', {
+      name: /copy url/i,
+    });
+    expect(copyButton).toBeDisabled();
   });
 });

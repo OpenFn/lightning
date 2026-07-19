@@ -33,6 +33,7 @@ export interface ChannelError {
    * - validation_error: Ecto changeset validation failed
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
+   * - nesting_too_deep: Sandbox nesting depth limit exceeded
    */
   type:
     | 'unauthorized'
@@ -41,7 +42,8 @@ export interface ChannelError {
     | 'internal_error'
     | 'validation_error'
     | 'optimistic_lock_error'
-    | 'limit_error';
+    | 'limit_error'
+    | 'nesting_too_deep';
 }
 
 export async function channelRequest<T = unknown>(

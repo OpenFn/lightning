@@ -78,6 +78,367 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "content edits on a live workflow" do
+    setup %{socket: socket} do
+      # Take the workflow live so content edits should be refused server-side.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :live}}
+      :ok
+    end
+
+    test "save_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow} do
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        type: "unauthorized",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "live"
+      # The gate runs before any write, so the live workflow is untouched.
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+    end
+
+    test "reset_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket} do
+      ref = push(socket, "reset_workflow", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+
+    test "switch_to_draft is still allowed on a live workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "update_trigger_auth_methods is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow, project: project} do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "live"
+
+      # The gate runs before any write, so no association is created.
+      assert Lightning.WebhookAuthMethods.list_for_trigger(trigger) == []
+    end
+
+    test "update_trigger_auth_methods is allowed once switched back to draft", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+    end
+  end
+
+  describe "list_sandboxes" do
+    test "returns joinable sandboxes sorted by created time with owner",
+         %{socket: socket, project: project, workflow: workflow} do
+      owner =
+        insert(:user, first_name: "Ada", last_name: "Lovelace")
+
+      # Older sandbox with a matching workflow clone, owned by Ada.
+      older =
+        insert(:project,
+          parent: project,
+          color: "#111111",
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      older_workflow =
+        insert(:workflow, project: older, name: workflow.name)
+
+      # Newer owner-less sandbox, also with a matching workflow clone.
+      newer = insert(:project, parent: project, color: "#222222")
+      newer_workflow = insert(:workflow, project: newer, name: workflow.name)
+
+      # Bump newer's inserted_at so it sorts first.
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(newer, inserted_at: ~U[2030-01-01 00:00:00Z])
+      )
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(older, inserted_at: ~U[2020-01-01 00:00:00Z])
+      )
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      assert [first, second] = sandboxes
+      assert first.id == newer.id
+      assert first.workflow_id == newer_workflow.id
+      assert second.id == older.id
+      assert second.workflow_id == older_workflow.id
+
+      # The owner-less newer sandbox has no owner to attribute.
+      assert first.owner == nil
+
+      assert %{
+               owner: %{name: "Ada Lovelace", email: owner_email},
+               inserted_at: %DateTime{}
+             } = second
+
+      assert owner_email == owner.email
+    end
+
+    test "excludes sandboxes that don't contain this workflow", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      joinable = insert(:project, parent: project)
+      insert(:workflow, project: joinable, name: workflow.name)
+
+      # Sandbox without a clone of this workflow: nothing to join, so omitted.
+      non_joinable = insert(:project, parent: project)
+      insert(:workflow, project: non_joinable, name: "something-else")
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      ids = Enum.map(sandboxes, & &1.id)
+      assert joinable.id in ids
+      refute non_joinable.id in ids
+    end
+
+    test "attributes the owner to the sandbox owner, not other members", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      owner = insert(:user, first_name: "Grace", last_name: "Hopper")
+      editor = insert(:user, first_name: "Someone", last_name: "Else")
+
+      sandbox =
+        insert(:project,
+          parent: project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      insert(:workflow, project: sandbox, name: workflow.name)
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: [sandbox_row]}
+
+      assert %{owner: %{id: owner_id, name: "Grace Hopper", email: email}} =
+               sandbox_row
+
+      assert owner_id == owner.id
+      assert email == owner.email
+    end
+
+    test "excludes sandboxes scheduled for deletion", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      active = insert(:project, parent: project)
+      insert(:workflow, project: active, name: workflow.name)
+
+      scheduled =
+        insert(:project,
+          parent: project,
+          scheduled_deletion: ~U[2030-01-01 00:00:00Z]
+        )
+
+      insert(:workflow, project: scheduled, name: workflow.name)
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      ids = Enum.map(sandboxes, & &1.id)
+      assert active.id in ids
+      refute scheduled.id in ids
+    end
+
+    test "rejects users without provision permission", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(viewer_socket, "list_sandboxes", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+  end
+
+  describe "edit_in_sandbox" do
+    setup %{project: project, workflow: workflow} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      # Give the workflow a real trigger so the clone has something to enable.
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: true)
+
+      job = insert(:job, workflow: workflow)
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      # A second, unrelated workflow in the same project: its clone must stay
+      # a draft with disabled triggers.
+      other_workflow = insert(:workflow, project: project, name: "other-wf")
+      insert(:trigger, workflow: other_workflow, type: :webhook, enabled: true)
+
+      %{trigger: trigger, other_workflow: other_workflow}
+    end
+
+    test "provisions a sandbox, promotes the edited workflow, leaves others as drafts",
+         %{
+           socket: socket,
+           project: project,
+           workflow: workflow,
+           other_workflow: other_workflow
+         } do
+      ref = push(socket, "edit_in_sandbox", %{})
+      assert_reply ref, :ok, %{project_id: sandbox_id, workflow_id: cloned_id}
+
+      sandbox = Lightning.Projects.get_project!(sandbox_id)
+      assert sandbox.parent_id == project.id
+
+      # Edited clone is live with an enabled trigger.
+      cloned =
+        Lightning.Workflows.get_workflow!(cloned_id, include: [:triggers])
+
+      assert cloned.name == workflow.name
+      assert cloned.state == :live
+      assert Enum.all?(cloned.triggers, & &1.enabled)
+
+      # The other clone stays a draft with disabled triggers.
+      other_clone =
+        Lightning.Workflows.Workflow
+        |> Lightning.Repo.get_by(
+          project_id: sandbox_id,
+          name: other_workflow.name
+        )
+        |> Lightning.Repo.preload(:triggers)
+
+      assert other_clone.state == :draft
+      refute Enum.any?(other_clone.triggers, & &1.enabled)
+
+      # Parent workflow is untouched.
+      parent_workflow =
+        Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers])
+
+      assert parent_workflow.state == workflow.state
+    end
+
+    test "replies with an error instead of crashing when nesting is too deep",
+         %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      ref = push(socket, "edit_in_sandbox", %{})
+      assert_reply ref, :error, %{type: "nesting_too_deep"}
+    end
+
+    test "uses a provided name", %{socket: socket} do
+      ref = push(socket, "edit_in_sandbox", %{"name" => "My Custom Name"})
+      assert_reply ref, :ok, %{project_id: sandbox_id}
+
+      sandbox = Lightning.Projects.get_project!(sandbox_id)
+      assert sandbox.name == "my-custom-name"
+    end
+
+    test "respects the new-sandbox usage limit", %{socket: socket} do
+      message = %Lightning.Extensions.Message{text: "Sandbox limit reached"}
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox}, _ctx -> {:error, :too_many_sandboxes, message}
+          _action, _ctx -> :ok
+        end
+      )
+
+      ref = push(socket, "edit_in_sandbox", %{})
+
+      assert_reply ref, :error, %{
+        type: "limit_error",
+        errors: %{base: ["Sandbox limit reached"]}
+      }
+    end
+
+    test "rejects users without provision permission", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(viewer_socket, "edit_in_sandbox", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+  end
+
   describe "join authorization" do
     test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)
@@ -328,6 +689,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Permissions data
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == true
+      # Owner role can provision a sandbox.
+      assert permissions_data.can_provision_sandbox == true
 
       # Latest snapshot lock version
       assert %{latest_snapshot_lock_version: lock_version} = response
@@ -388,6 +751,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
+      # Viewer role cannot provision a sandbox either.
+      assert permissions_data.can_provision_sandbox == false
     end
 
     test "returns actual latest lock_version when viewing old snapshot", %{

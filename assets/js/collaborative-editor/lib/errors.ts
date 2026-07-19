@@ -13,7 +13,8 @@ export class ChannelRequestError extends Error {
     | 'workflow_deleted'
     | 'deserialization_error'
     | 'internal_error'
-    | 'optimistic_lock_error';
+    | 'optimistic_lock_error'
+    | 'nesting_too_deep';
   errors: Record<string, string[] | undefined>;
 
   constructor(

@@ -132,7 +132,6 @@ import { produce } from 'immer';
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';
-import { z } from 'zod';
 
 import _logger from '#/utils/logger';
 
@@ -144,7 +143,7 @@ import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
-import type { BaseWorkflow, Workflow } from '../types/workflow';
+import type { BaseWorkflow, Sandbox, Workflow } from '../types/workflow';
 import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
@@ -1435,7 +1434,7 @@ export const createWorkflowStore = () => {
   // reconciles the result back into this Y.Doc.
   const setLifecycleState = async (
     event: 'go_live' | 'switch_to_draft'
-  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow } | null> => {
+  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow }> => {
     const { provider } = ensureConnected();
 
     try {
@@ -1451,6 +1450,46 @@ export const createWorkflowStore = () => {
 
   const goLive = async () => setLifecycleState('go_live');
   const switchToDraft = async () => setLifecycleState('switch_to_draft');
+
+  // Sandbox editing. From a live workflow on a non-sandbox project, a user can
+  // either branch the current live version into a freshly provisioned sandbox
+  // or join an existing sandbox. The server owns provisioning and cloning; the
+  // client only lists candidates and requests creation, then hard-navigates
+  // into the resulting sandbox project (a new project = a new Y.Doc session).
+  const listSandboxes = async (): Promise<Sandbox[]> => {
+    const { provider } = ensureConnected();
+
+    try {
+      const response = await channelRequest<{ sandboxes: Sandbox[] }>(
+        provider.channel,
+        'list_sandboxes',
+        {}
+      );
+      return response.sandboxes;
+    } catch (error) {
+      logger.error('Failed to list sandboxes', error);
+      throw error;
+    }
+  };
+
+  const editInSandbox = async (
+    name?: string
+  ): Promise<{ project_id: string; workflow_id: string }> => {
+    const { provider } = ensureConnected();
+
+    const payload = name ? { name } : {};
+
+    try {
+      return await channelRequest<{ project_id: string; workflow_id: string }>(
+        provider.channel,
+        'edit_in_sandbox',
+        payload
+      );
+    } catch (error) {
+      logger.error('Failed to edit in sandbox', error);
+      throw error;
+    }
+  };
 
   const saveAndSyncWorkflow = async (
     commitMessage: string
@@ -1948,6 +1987,8 @@ export const createWorkflowStore = () => {
     saveWorkflow,
     goLive,
     switchToDraft,
+    listSandboxes,
+    editInSandbox,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

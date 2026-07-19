@@ -1,19 +1,19 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useContext, useState } from 'react';
-import { toast } from 'sonner';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { Tooltip } from '../../components/Tooltip';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { channelRequest } from '../hooks/useChannel';
-import { getCsrfToken } from '../lib/csrf';
 import { useActiveRun } from '../hooks/useHistory';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLimits,
+  usePermissions,
   useProjectRepoConnection,
   useSessionWorkflow,
 } from '../hooks/useSessionContext';
@@ -34,6 +34,7 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import { isFinalState } from '../types/history';
 
@@ -41,12 +42,12 @@ import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
+import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from '../../components/Tooltip';
 
 /**
  * Save button component - visible in React DevTools
@@ -202,6 +203,7 @@ export function Header({
   children,
   projectId,
   workflowId,
+  isSandbox = false,
   isRunPanelOpen = false,
   isIDEOpen = false,
   aiAssistantEnabled = false,
@@ -209,6 +211,7 @@ export function Header({
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
+  isSandbox?: boolean;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
   aiAssistantEnabled?: boolean;
@@ -237,8 +240,11 @@ export function Header({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const sessionWorkflow = useSessionWorkflow();
   const lifecycleState = sessionWorkflow?.state;
+  const permissions = usePermissions();
+  const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
+  const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -454,7 +460,9 @@ export function Header({
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
-          <Breadcrumbs>{children}</Breadcrumbs>
+          <div className="flex min-w-0 items-center">
+            <Breadcrumbs>{children}</Breadcrumbs>
+          </div>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <Tooltip
@@ -521,7 +529,7 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {lifecycleState && !isNewWorkflow && (
+              {lifecycleState && !isNewWorkflow && !isSandbox && (
                 <span
                   data-testid="workflow-lifecycle-badge"
                   className={
@@ -534,27 +542,37 @@ export function Header({
                   {lifecycleState === 'live' ? 'Live' : 'Draft'}
                 </span>
               )}
-              {!isNewWorkflow && lifecycleState === 'draft' && (
-                <button
-                  type="button"
-                  data-testid="go-live-button"
-                  disabled={isReadOnly || isTransitioning}
-                  onClick={() => {
-                    setIsTransitioning(true);
-                    void goLive()
-                      .catch(() =>
-                        toast.error('Could not go live. Please try again.')
-                      )
-                      .finally(() => {
-                        setIsTransitioning(false);
-                      });
-                  }}
-                  className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+              {!isNewWorkflow && !isSandbox && lifecycleState === 'draft' && (
+                <Tooltip
+                  content={
+                    isReadOnly ? 'You cannot go live on this version' : null
+                  }
+                  side="bottom"
                 >
-                  Go live
-                </button>
+                  <button
+                    type="button"
+                    data-testid="go-live-button"
+                    disabled={isReadOnly || isTransitioning}
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      void goLive()
+                        .catch(() =>
+                          notifications.alert({
+                            title: 'Could not go live',
+                            description: 'Please try again.',
+                          })
+                        )
+                        .finally(() => {
+                          setIsTransitioning(false);
+                        });
+                    }}
+                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                  >
+                    Go live
+                  </button>
+                </Tooltip>
               )}
-              {!isNewWorkflow && lifecycleState === 'live' && (
+              {!isNewWorkflow && !isSandbox && lifecycleState === 'live' && (
                 <button
                   type="button"
                   data-testid="switch-to-draft-button"
@@ -562,10 +580,46 @@ export function Header({
                   onClick={() => {
                     setShowSwitchToDraftDialog(true);
                   }}
-                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                 >
                   Switch to draft
                 </button>
+              )}
+              {!isNewWorkflow && isSandbox && (
+                <Tooltip content="Coming soon" side="bottom">
+                  <button
+                    type="button"
+                    data-testid="promote-sandbox-button"
+                    disabled
+                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                  >
+                    Promote
+                  </button>
+                </Tooltip>
+              )}
+              {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
+                <Tooltip
+                  content={
+                    canProvisionSandbox
+                      ? null
+                      : 'You do not have permission to create a sandbox in this project.'
+                  }
+                  side="bottom"
+                >
+                  <button
+                    type="button"
+                    data-testid="edit-in-sandbox-button"
+                    disabled={!canProvisionSandbox}
+                    onClick={() => {
+                      if (!canProvisionSandbox) return;
+                      setShowEditInSandboxPicker(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
+                  >
+                    <span className="hero-beaker h-4 w-4" />
+                    Edit in sandbox
+                  </button>
+                </Tooltip>
               )}
               {projectId &&
                 workflowId &&
@@ -651,16 +705,26 @@ export function Header({
               setIsTransitioning(true);
               void switchToDraft()
                 .catch(() =>
-                  toast.error('Could not switch to draft. Please try again.')
+                  notifications.alert({
+                    title: 'Could not switch to draft',
+                    description: 'Please try again.',
+                  })
                 )
                 .finally(() => {
                   setIsTransitioning(false);
                 });
             }}
             title="Switch to draft?"
-            description="This will stop the workflow from processing data."
+            description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
             confirmLabel="Switch to draft"
             variant="danger"
+          />
+
+          <EditInSandboxPicker
+            isOpen={showEditInSandboxPicker}
+            onClose={() => {
+              setShowEditInSandboxPicker(false);
+            }}
           />
         </div>
       </div>
