@@ -698,7 +698,7 @@ export function Header({
                 });
             }}
             title="Switch to draft?"
-            description="This will stop the workflow from processing data."
+            description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
             confirmLabel="Switch to draft"
             variant="danger"
           />
