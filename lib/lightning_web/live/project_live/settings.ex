@@ -128,6 +128,13 @@ defmodule LightningWeb.ProjectLive.Settings do
           current_user,
           project
         ),
+      can_edit_project_user_role:
+        Permissions.can?(
+          :project_users,
+          :edit_project_user_role,
+          current_user,
+          project
+        ),
       can_remove_project_user:
         Permissions.can?(
           :project_users,
@@ -630,6 +637,45 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event(
+        "set_role",
+        %{"project_user_id" => project_user_id, "role" => role},
+        %{assigns: assigns} = socket
+      ) do
+    project_user = Projects.get_project_user!(project_user_id)
+
+    cond do
+      project_user.project_id != assigns.project.id ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action")}
+
+      !role_editable?(
+        project_user,
+        assigns.current_user,
+        assigns.can_edit_project_user_role
+      ) ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action")}
+
+      true ->
+        changeset =
+          {%{role: project_user.role |> to_string()}, %{role: :string}}
+          |> Ecto.Changeset.cast(%{role: role}, [:role])
+          |> Ecto.Changeset.validate_inclusion(:role, ~w(viewer editor admin))
+
+        case Ecto.Changeset.get_change(changeset, :role) do
+          nil ->
+            {:noreply, socket}
+
+          role ->
+            Projects.update_project_user(project_user, %{role: role})
+            |> dispatch_flash(socket)
+        end
+    end
+  end
+
+  def handle_event(
         "remove_project_user",
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
@@ -854,6 +900,15 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp parent_admin?(project, %{user: %User{} = user}),
     do: Sandboxes.parent_admin?(project, user)
+
+  defp role_editable?(
+         project_user,
+         current_user,
+         can_edit_project_user_role
+       ) do
+    can_edit_project_user_role and project_user.role != :owner and
+      project_user.user_id != current_user.id
+  end
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)
