@@ -1,0 +1,45 @@
+import { useEffect, useRef } from 'react';
+
+import { notifications } from '../lib/notifications';
+
+/**
+ * PromotedNotice - one-shot success toast for a completed sandbox promote.
+ *
+ * Promoting a sandbox hard-navigates into the parent project's editor (a
+ * different Y.Doc session), so a toast fired before that navigation would be
+ * destroyed on reload. Instead, the promote handler hands the feedback off
+ * through the URL: `?promoted=1`, plus `&archived=0` when the sandbox could not
+ * be archived automatically. On load we read that marker, surface the toast, and
+ * immediately strip the params via replaceState so a refresh doesn't replay it.
+ *
+ * Renders nothing; it only exists to run the effect near the mounted Toaster.
+ */
+export function PromotedNotice() {
+  const shown = useRef(false);
+
+  useEffect(() => {
+    if (shown.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('promoted') !== '1') return;
+    shown.current = true;
+
+    const archived = params.get('archived') !== '0';
+    notifications.success({
+      title: 'Promoted to parent project',
+      description: archived
+        ? 'This workflow was merged into the parent project. The sandbox has been archived.'
+        : "Promoted. The sandbox couldn't be archived automatically.",
+    });
+
+    // Strip the one-shot markers without adding a history entry so a refresh
+    // doesn't re-show the toast.
+    params.delete('promoted');
+    params.delete('archived');
+    const search = params.toString();
+    const url = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', url);
+  }, []);
+
+  return null;
+}

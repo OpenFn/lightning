@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 
 // ---------------------------------------------------------------------------
 // Hook + child-component mocks
@@ -17,6 +18,8 @@ let canProvisionSandbox = true;
 
 const goLive = vi.fn<() => Promise<unknown>>();
 const switchToDraft = vi.fn<() => Promise<unknown>>();
+const saveWorkflow =
+  vi.fn<(options?: { silent?: boolean }) => Promise<unknown>>();
 const promote =
   vi.fn<
     () => Promise<{
@@ -65,7 +68,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useCanSave: () => ({ canSave: true, tooltipMessage: '' }),
   useNodeSelection: () => ({ selectNode: vi.fn() }),
   useWorkflowActions: () => ({
-    saveWorkflow: vi.fn(),
+    saveWorkflow,
     goLive,
     switchToDraft,
     listSandboxes: vi.fn(),
@@ -232,12 +235,14 @@ describe('Header - lifecycle actions', () => {
     canProvisionSandbox = true;
     goLive.mockReset();
     switchToDraft.mockReset();
+    saveWorkflow.mockReset();
     promote.mockReset();
     notifySuccess.mockReset();
     notifyInfo.mockReset();
     notifyAlert.mockReset();
     goLive.mockResolvedValue(undefined);
     switchToDraft.mockResolvedValue(undefined);
+    saveWorkflow.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -320,7 +325,7 @@ describe('Header - lifecycle actions', () => {
     ).not.toBeInTheDocument();
   });
 
-  test('clicking Promote opens the confirm dialog without promoting yet', async () => {
+  test('clicking Promote opens the save-and-promote confirm dialog without acting yet', async () => {
     const user = userEvent.setup();
     renderHeader({ isSandbox: true });
 
@@ -328,16 +333,17 @@ describe('Header - lifecycle actions', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(
-      within(dialog).getByText('Promote to parent project?')
+      within(dialog).getByText('Save and promote to parent project?')
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/merges this workflow into the parent project/i)
+      within(dialog).getByText(/current changes in this sandbox are saved/i)
     ).toBeInTheDocument();
-    // The action only fires once the user confirms.
+    // Neither the save nor the promote fires until the user confirms.
+    expect(saveWorkflow).not.toHaveBeenCalled();
     expect(promote).not.toHaveBeenCalled();
   });
 
-  test('confirming Promote calls promote and navigates to the parent workflow', async () => {
+  test('confirming saves before promoting, then navigates with the promoted marker', async () => {
     const user = userEvent.setup();
     promote.mockResolvedValue({
       parent_project_id: 'parent-1',
@@ -352,16 +358,54 @@ describe('Header - lifecycle actions', () => {
       await user.click(screen.getByTestId('promote-sandbox-button'));
       await user.click(
         within(screen.getByRole('dialog')).getByRole('button', {
-          name: 'Promote',
+          name: 'Save and promote',
         })
       );
 
       await waitFor(() => {
         expect(promote).toHaveBeenCalledTimes(1);
       });
+      // The current editor state is saved (silently) before the merge, and the
+      // save happens first.
+      expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+      expect(saveWorkflow.mock.invocationCallOrder[0]).toBeLessThan(
+        promote.mock.invocationCallOrder[0]
+      );
+      // The toast is handed off through the URL (it can't survive the reload),
+      // so the destination carries ?promoted=1 rather than firing here.
       await waitFor(() => {
         expect(nav.hrefSetter).toHaveBeenCalledWith(
-          '/projects/parent-1/w/wf-parent'
+          '/projects/parent-1/w/wf-parent?promoted=1'
+        );
+      });
+      expect(notifySuccess).not.toHaveBeenCalled();
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('a promote that could not archive the sandbox flags archived=0 in the URL', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+      archived: false,
+    });
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('promote-sandbox-button'));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Save and promote',
+        })
+      );
+
+      await waitFor(() => {
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/parent-1/w/wf-parent?promoted=1&archived=0'
         );
       });
     } finally {
@@ -369,7 +413,88 @@ describe('Header - lifecycle actions', () => {
     }
   });
 
-  test('cancelling the Promote dialog closes it without promoting', async () => {
+  test('the Promote button shows a loading state while the promote is in flight', async () => {
+    const user = userEvent.setup();
+    // Never-resolving promise keeps the promote pending so the loading label
+    // stays visible.
+    promote.mockReturnValue(new Promise(() => {}));
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('promote-sandbox-button'));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Save and promote',
+        })
+      );
+
+      const button = screen.getByTestId('promote-sandbox-button');
+      await waitFor(() => {
+        expect(button).toHaveTextContent('Promoting...');
+      });
+      expect(button).toBeDisabled();
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('a failed save aborts the promote, alerts, and re-enables the button', async () => {
+    const user = userEvent.setup();
+    saveWorkflow.mockRejectedValue(new Error('save blew up'));
+
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Save and promote',
+      })
+    );
+
+    await waitFor(() => {
+      expect(notifyAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Could not save before promoting' })
+      );
+    });
+    // The merge never runs when the save fails.
+    expect(promote).not.toHaveBeenCalled();
+    const button = screen.getByTestId('promote-sandbox-button');
+    expect(button).toBeEnabled();
+    expect(button).toHaveTextContent('Promote');
+  });
+
+  test('a failed promote surfaces an alert and re-enables the button', async () => {
+    const user = userEvent.setup();
+    promote.mockRejectedValue(
+      new ChannelRequestError('unauthorized', {
+        base: ['You are not allowed to promote this sandbox'],
+      })
+    );
+
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Save and promote',
+      })
+    );
+
+    await waitFor(() => {
+      expect(notifyAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Could not promote' })
+      );
+    });
+    // The save succeeded first; only the merge failed.
+    expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+    const button = screen.getByTestId('promote-sandbox-button');
+    expect(button).toBeEnabled();
+    expect(button).toHaveTextContent('Promote');
+  });
+
+  test('cancelling the Promote dialog closes it without saving or promoting', async () => {
     const user = userEvent.setup();
     renderHeader({ isSandbox: true });
 
@@ -380,6 +505,7 @@ describe('Header - lifecycle actions', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+    expect(saveWorkflow).not.toHaveBeenCalled();
     expect(promote).not.toHaveBeenCalled();
   });
 });

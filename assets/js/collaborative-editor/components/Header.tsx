@@ -401,33 +401,53 @@ export function Header({
     }
   }, [provider, projectId, workflowId, isNewWorkflow]);
 
-  // Promote this sandbox back into its parent project's live workflow. On
+  // Promote this sandbox back into its parent project's live workflow. Promote
+  // always reflects the current editor state, so we save first (silently) and
+  // only promote once that succeeds; a failed save aborts without promoting. On
   // success we hard-navigate to the parent (a different Y.Doc session), matching
   // the picker's post-create navigation. The parent workflow may be missing (a
   // just-archived-with-no-live-target case), so fall back to the project's
   // workflow index when the server returns a null workflow_id.
+  //
+  // The success toast is handed off through the URL (?promoted=1, plus
+  // &archived=0 when the sandbox couldn't be archived) rather than shown here:
+  // firing it before this hard navigation would destroy it on reload. The parent
+  // editor reads the marker on load (see PromotedNotice). Errors, which don't
+  // navigate, are surfaced inline.
   const handlePromote = useCallback(async () => {
     setIsPromoting(true);
+
+    try {
+      await saveWorkflow({ silent: true });
+    } catch (error) {
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : error instanceof Error
+          ? error.message
+          : 'Please try again.';
+      notifications.alert({
+        title: 'Could not save before promoting',
+        description,
+      });
+      setIsPromoting(false);
+      return;
+    }
+
     try {
       const result = await promote();
 
-      if (result.archived) {
-        notifications.success({
-          title: 'Promoted to parent project',
-          description:
-            'This workflow was merged into the parent project. The sandbox has been archived.',
-        });
-      } else {
-        notifications.info({
-          title: 'Promoted to parent project',
-          description:
-            "Promoted. The sandbox couldn't be archived automatically.",
-        });
-      }
-
-      window.location.href = result.workflow_id
+      const base = result.workflow_id
         ? `/projects/${result.parent_project_id}/w/${result.workflow_id}`
         : `/projects/${result.parent_project_id}/w`;
+      const query = result.archived ? '?promoted=1' : '?promoted=1&archived=0';
+
+      window.location.href = `${base}${query}`;
     } catch (error) {
       const description = isChannelRequestError(error)
         ? formatChannelErrorMessage({
@@ -444,7 +464,7 @@ export function Header({
       });
       setIsPromoting(false);
     }
-  }, [promote]);
+  }, [promote, saveWorkflow]);
 
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
@@ -645,9 +665,19 @@ export function Header({
                   onClick={() => {
                     setShowPromoteDialog(true);
                   }}
-                  className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                  className="inline-flex items-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
                 >
-                  Promote
+                  {isPromoting ? (
+                    <>
+                      <span
+                        className="hero-arrow-path h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Promoting...
+                    </>
+                  ) : (
+                    'Promote'
+                  )}
                 </button>
               )}
               {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
@@ -781,9 +811,9 @@ export function Header({
             onConfirm={() => {
               void handlePromote();
             }}
-            title="Promote to parent project?"
-            description="This merges this workflow into the parent project's live workflow. The parent workflow stays live and starts processing data with these changes. This sandbox will be archived."
-            confirmLabel="Promote"
+            title="Save and promote to parent project?"
+            description="Your current changes in this sandbox are saved, then merged into the parent project's live workflow. The parent stays live and starts processing data with these changes, and this sandbox is archived."
+            confirmLabel="Save and promote"
             cancelLabel="Cancel"
             variant="primary"
           />
