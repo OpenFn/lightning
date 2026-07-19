@@ -3752,6 +3752,53 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "provision_editing_sandbox/4" do
+    test "provisions a sandbox and promotes the named workflow to live" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      workflow = insert(:workflow, project: parent, name: "payroll")
+      insert(:trigger, workflow: workflow, type: :webhook, enabled: true)
+
+      assert {:ok, %{sandbox: sandbox, workflow: cloned}} =
+               Projects.provision_editing_sandbox(parent, owner, "payroll", %{
+                 name: "payroll-sandbox",
+                 env: "dev",
+                 color: "#111111"
+               })
+
+      assert sandbox.parent_id == parent.id
+      assert cloned.name == "payroll"
+      assert cloned.state == :live
+    end
+
+    test "deletes the half-built sandbox when the workflow cannot be promoted" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      insert(:workflow, project: parent, name: "payroll")
+
+      assert {:error, :internal_error} =
+               Projects.provision_editing_sandbox(
+                 parent,
+                 owner,
+                 "does-not-exist",
+                 %{name: "orphan-sandbox", env: "dev", color: "#111111"}
+               )
+
+      # The compensating delete leaves no orphaned sandbox behind to consume the
+      # parent's quota.
+      refute Repo.get_by(Project, name: "orphan-sandbox", parent_id: parent.id)
+
+      assert Projects.list_active_sandboxes_for_editing(parent.id, "payroll") ==
+               []
+    end
+  end
+
   describe "descendant_of?/3" do
     test "returns true when child is direct descendant of parent" do
       parent = insert(:project, name: "parent")

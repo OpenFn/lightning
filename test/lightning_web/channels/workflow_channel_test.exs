@@ -78,10 +78,48 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "content edits on a live workflow" do
+    setup %{socket: socket} do
+      # Take the workflow live so content edits should be refused server-side.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :live}}
+      :ok
+    end
+
+    test "save_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow} do
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        type: "unauthorized",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "live"
+      # The gate runs before any write, so the live workflow is untouched.
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+    end
+
+    test "reset_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket} do
+      ref = push(socket, "reset_workflow", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+
+    test "switch_to_draft is still allowed on a live workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+  end
+
   describe "list_sandboxes" do
-    test "returns active sandboxes sorted by last edited with joinable workflow and collaborators",
+    test "returns active sandboxes sorted by last edited with joinable workflow and creator",
          %{socket: socket, project: project, workflow: workflow} do
-      collaborator =
+      creator =
         insert(:user, first_name: "Ada", last_name: "Lovelace")
 
       # Older sandbox with a matching workflow clone (joinable).
@@ -89,7 +127,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         insert(:project,
           parent: project,
           color: "#111111",
-          project_users: [%{user: collaborator, role: :editor}]
+          project_users: [%{user: creator, role: :owner}]
         )
 
       joinable =
@@ -117,10 +155,40 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert second.id == older.id
       assert second.workflow_id == joinable.id
 
-      assert [%{name: "Ada Lovelace", email: collaborator_email}] =
-               second.collaborators
+      # The owner-less newer sandbox has no creator to attribute.
+      assert first.creator == nil
 
-      assert collaborator_email == collaborator.email
+      assert %{
+               creator: %{name: "Ada Lovelace", email: creator_email},
+               inserted_at: %DateTime{}
+             } = second
+
+      assert creator_email == creator.email
+    end
+
+    test "attributes the creator to the sandbox owner, not other members", %{
+      socket: socket,
+      project: project
+    } do
+      owner = insert(:user, first_name: "Grace", last_name: "Hopper")
+      editor = insert(:user, first_name: "Someone", last_name: "Else")
+
+      insert(:project,
+        parent: project,
+        project_users: [
+          %{user: owner, role: :owner},
+          %{user: editor, role: :editor}
+        ]
+      )
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: [sandbox]}
+
+      assert %{creator: %{id: creator_id, name: "Grace Hopper", email: email}} =
+               sandbox
+
+      assert creator_id == owner.id
+      assert email == owner.email
     end
 
     test "excludes sandboxes scheduled for deletion", %{
@@ -141,6 +209,28 @@ defmodule LightningWeb.WorkflowChannelTest do
       ids = Enum.map(sandboxes, & &1.id)
       assert active.id in ids
       refute scheduled.id in ids
+    end
+
+    test "rejects users without provision permission", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(viewer_socket, "list_sandboxes", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
     end
   end
 
@@ -210,6 +300,14 @@ defmodule LightningWeb.WorkflowChannelTest do
         Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers])
 
       assert parent_workflow.state == workflow.state
+    end
+
+    test "replies with an error instead of crashing when nesting is too deep",
+         %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      ref = push(socket, "edit_in_sandbox", %{})
+      assert_reply ref, :error, %{type: "nesting_too_deep"}
     end
 
     test "uses a provided name", %{socket: socket} do

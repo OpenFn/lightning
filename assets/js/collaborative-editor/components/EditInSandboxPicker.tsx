@@ -1,17 +1,4 @@
-/**
- * # Edit in sandbox picker
- *
- * Modal shown from a live workflow on a non-sandbox project. It offers two
- * ways to start editing in a sandbox:
- *
- * 1. Create a new sandbox branched from the current live version.
- * 2. Join an existing active sandbox.
- *
- * A sandbox is a separate project, so both paths hard-navigate to the sandbox
- * project's editor (a new project means a new Y.Doc session), consistent with
- * the legacy-editor switch. The list is fetched when the dialog opens and is
- * rendered in the order returned by the server (last-edited first).
- */
+// Modal from a live workflow: create a new sandbox or join an active one; both hard-navigate to the sandbox editor.
 
 import {
   Dialog,
@@ -19,13 +6,15 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
 
-import { cn } from '../../utils/cn';
 import { useWorkflowActions } from '../hooks/useWorkflow';
-import { ChannelRequestError } from '../lib/errors';
+import {
+  formatChannelErrorMessage,
+  isChannelRequestError,
+} from '../lib/errors';
+import { notifications } from '../lib/notifications';
 import type { Sandbox, SandboxCollaborator } from '../types/workflow';
 
 interface EditInSandboxPickerProps {
@@ -33,19 +22,8 @@ interface EditInSandboxPickerProps {
   onClose: () => void;
 }
 
-/**
- * The server returns a human-readable reason in `errors.base` (a usage-limit
- * upsell, a permission message, etc.). Surface it rather than a generic toast.
- */
-function serverMessage(error: unknown): string | null {
-  if (error instanceof ChannelRequestError) {
-    return error.errors['base']?.[0] ?? null;
-  }
-  return null;
-}
-
-function collaboratorInitials(collaborator: SandboxCollaborator): string {
-  const source = collaborator.name?.trim() || collaborator.email?.trim() || '';
+function personInitials(person: SandboxCollaborator): string {
+  const source = person.name?.trim() || person.email?.trim() || '';
   if (!source) return '?';
 
   const parts = source.split(/\s+/).filter(Boolean);
@@ -55,44 +33,75 @@ function collaboratorInitials(collaborator: SandboxCollaborator): string {
   return source.slice(0, 2).toUpperCase();
 }
 
-function CollaboratorAvatars({
-  collaborators,
+// A joinable sandbox row: creator avatar on the left, then the sandbox name over
+// a single muted metadata line ("Created {date}, {time} · {creator}"), and the
+// Join button on the right. The creator can be null (unknown), in which case the
+// avatar and the "· {creator}" suffix are omitted.
+function SandboxRow({
+  sandbox,
+  onJoin,
 }: {
-  collaborators: SandboxCollaborator[];
+  sandbox: Sandbox;
+  onJoin: (sandbox: Sandbox) => void;
 }) {
-  if (collaborators.length === 0) return null;
-
-  const visible = collaborators.slice(0, 4);
-  const overflow = collaborators.length - visible.length;
+  const { creator } = sandbox;
+  const creatorName = creator ? creator.name || creator.email || '' : '';
+  const created = formatCreatedAt(sandbox.inserted_at);
 
   return (
-    <div className="flex items-center -space-x-1.5">
-      {visible.map(collaborator => (
-        <span
-          key={collaborator.id}
-          title={collaborator.name || collaborator.email || undefined}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full
-            bg-gray-200 text-[10px] font-medium text-gray-700 ring-2 ring-white"
-        >
-          {collaboratorInitials(collaborator)}
-        </span>
-      ))}
-      {overflow > 0 && (
-        <span
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full
-            bg-gray-100 text-[10px] font-medium text-gray-500 ring-2 ring-white"
-        >
-          +{overflow}
-        </span>
-      )}
-    </div>
+    <li
+      className="flex items-center justify-between gap-4 px-4 py-3"
+      data-testid="sandbox-row"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        {creator && (
+          <span
+            title={creatorName || undefined}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center
+              rounded-full bg-gray-200 text-xs font-medium text-gray-700"
+          >
+            {personInitials(creator)}
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">
+            {sandbox.name}
+          </p>
+          {/* The date never truncates; only the creator name gives way when
+              space is tight. */}
+          <p className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
+            <span className="shrink-0 whitespace-nowrap">{created}</span>
+            {creator && creatorName && (
+              <>
+                <span aria-hidden="true" className="shrink-0">
+                  ·
+                </span>
+                <span className="min-w-0 truncate">{creatorName}</span>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        data-testid="join-sandbox-button"
+        onClick={() => {
+          onJoin(sandbox);
+        }}
+        className="inline-flex shrink-0 items-center rounded-md px-3 py-1.5
+          text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset
+          ring-gray-300 hover:bg-gray-50"
+      >
+        Join
+      </button>
+    </li>
   );
 }
 
-function formatUpdatedAt(updatedAt: string): string {
-  const date = new Date(updatedAt);
+function formatCreatedAt(insertedAt: string): string {
+  const date = new Date(insertedAt);
   if (Number.isNaN(date.getTime())) return '';
-  return `edited ${formatDistanceToNow(date, { addSuffix: true })}`;
+  return `Created ${format(date, 'd MMM yyyy, HH:mm')}`;
 }
 
 const navigateToSandbox = (projectId: string, workflowId: string) => {
@@ -123,10 +132,19 @@ export function EditInSandboxPicker({
         if (!cancelled) setSandboxes(result);
       } catch (error) {
         if (!cancelled) {
-          toast.error(
-            serverMessage(error) ??
-              'Could not load sandboxes. Please try again.'
-          );
+          const description = isChannelRequestError(error)
+            ? formatChannelErrorMessage({
+                errors: error.errors as { base?: string[] } & Record<
+                  string,
+                  string[]
+                >,
+                type: error.type,
+              })
+            : 'Please try again.';
+          notifications.alert({
+            title: 'Could not load sandboxes',
+            description,
+          });
         }
       } finally {
         if (!cancelled) setIsLoadingList(false);
@@ -146,15 +164,22 @@ export function EditInSandboxPicker({
 
     const create = async () => {
       try {
-        const { project_id, workflow_id } = await editInSandbox(
-          trimmed || undefined
-        );
+        const { project_id, workflow_id } = await editInSandbox(trimmed);
         navigateToSandbox(project_id, workflow_id);
       } catch (error) {
-        toast.error(
-          serverMessage(error) ??
-            'Could not create a sandbox. Please try again.'
-        );
+        const description = isChannelRequestError(error)
+          ? formatChannelErrorMessage({
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
+              type: error.type,
+            })
+          : 'Please try again.';
+        notifications.alert({
+          title: 'Could not create a sandbox',
+          description,
+        });
         setIsCreating(false);
       }
     };
@@ -166,6 +191,13 @@ export function EditInSandboxPicker({
     if (!sandbox.workflow_id) return;
     navigateToSandbox(sandbox.id, sandbox.workflow_id);
   }, []);
+
+  // A name is required to create. A sandbox is only worth listing when it
+  // contains a clone of this workflow; the rest can't edit it, so drop them.
+  const canCreate = name.trim().length > 0;
+  const joinableSandboxes = sandboxes.filter(
+    sandbox => sandbox.workflow_id !== null
+  );
 
   return (
     <Dialog
@@ -224,7 +256,7 @@ export function EditInSandboxPicker({
                   onChange={event => {
                     setName(event.target.value);
                   }}
-                  placeholder="Sandbox name (optional)"
+                  placeholder="Sandbox name"
                   disabled={isCreating}
                   className="block w-full rounded-md border-0 px-3 py-2 text-sm
                     text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300
@@ -236,7 +268,7 @@ export function EditInSandboxPicker({
                   type="button"
                   data-testid="create-sandbox-button"
                   onClick={handleCreate}
-                  disabled={isCreating}
+                  disabled={isCreating || !canCreate}
                   className="inline-flex shrink-0 items-center gap-1 rounded-md
                     bg-primary-600 px-3 py-2 text-sm font-semibold text-white
                     shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed
@@ -248,82 +280,38 @@ export function EditInSandboxPicker({
               </div>
             </div>
 
-            {/* Join an existing sandbox */}
-            <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-900">
-                Join an active sandbox
-              </h4>
+            {/* Join an existing sandbox. Only sandboxes that hold a clone of
+                this workflow are listed; hidden entirely when there are none. */}
+            {(isLoadingList || joinableSandboxes.length > 0) && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-900">
+                  Join an active sandbox
+                </h4>
 
-              {isLoadingList ? (
-                <p
-                  className="mt-2 text-sm text-gray-500"
-                  data-testid="sandbox-list-loading"
-                >
-                  Loading sandboxes...
-                </p>
-              ) : sandboxes.length === 0 ? (
-                <p
-                  className="mt-2 text-sm text-gray-500"
-                  data-testid="sandbox-list-empty"
-                >
-                  No active sandboxes yet.
-                </p>
-              ) : (
-                <ul
-                  className="mt-2 divide-y divide-gray-100 rounded-md border
-                    border-gray-200"
-                  data-testid="sandbox-list"
-                >
-                  {sandboxes.map(sandbox => {
-                    const canJoin = sandbox.workflow_id !== null;
-                    return (
-                      <li
+                {isLoadingList ? (
+                  <p
+                    className="mt-2 text-sm text-gray-500"
+                    data-testid="sandbox-list-loading"
+                  >
+                    Loading sandboxes...
+                  </p>
+                ) : (
+                  <ul
+                    className="mt-2 divide-y divide-gray-100 rounded-md border
+                      border-gray-200"
+                    data-testid="sandbox-list"
+                  >
+                    {joinableSandboxes.map(sandbox => (
+                      <SandboxRow
                         key={sandbox.id}
-                        className="flex items-center justify-between gap-3 px-3
-                          py-2.5"
-                        data-testid="sandbox-row"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900">
-                            {sandbox.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatUpdatedAt(sandbox.updated_at)}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-3">
-                          <CollaboratorAvatars
-                            collaborators={sandbox.collaborators}
-                          />
-                          <button
-                            type="button"
-                            data-testid="join-sandbox-button"
-                            onClick={() => {
-                              handleJoin(sandbox);
-                            }}
-                            disabled={!canJoin}
-                            title={
-                              canJoin
-                                ? undefined
-                                : "This workflow isn't in that sandbox"
-                            }
-                            className={cn(
-                              'inline-flex items-center rounded-md px-3 py-1.5',
-                              'text-sm font-semibold shadow-sm',
-                              canJoin
-                                ? 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
-                                : 'cursor-not-allowed bg-white text-gray-400 ring-1 ring-inset ring-gray-200'
-                            )}
-                          >
-                            Join
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                        sandbox={sandbox}
+                        onJoin={handleJoin}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div className="mt-5 flex justify-end">
               <button

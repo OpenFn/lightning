@@ -118,9 +118,14 @@ export function BreadcrumbText({
   children: React.ReactNode;
 }) {
   return (
-    <span className="flex items-center">
+    <span className="flex items-center min-w-0">
       {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
-      <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
+      <span
+        className={cn(
+          'block max-w-[16rem] truncate font-medium text-gray-500',
+          icon ? 'ml-2' : ''
+        )}
+      >
         {children}
       </span>
     </span>

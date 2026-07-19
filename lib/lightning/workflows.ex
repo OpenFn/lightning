@@ -142,6 +142,22 @@ defmodule Lightning.Workflows do
 
   def editable_state?(_workflow, _project), do: true
 
+  @doc """
+  Fetches the single active (non-deleted) workflow with `name` in a project, or
+  `nil`. Workflow names are unique per project, so at most one row matches.
+  """
+  @spec get_workflow_by_name(Ecto.UUID.t(), String.t()) :: Workflow.t() | nil
+  def get_workflow_by_name(project_id, name)
+      when is_binary(project_id) and is_binary(name) do
+    from(w in Workflow,
+      where:
+        w.project_id == ^project_id and w.name == ^name and
+          is_nil(w.deleted_at),
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   @spec save_workflow(
           Ecto.Changeset.t(Workflow.t()) | map(),
           struct(),

@@ -132,7 +132,6 @@ import { produce } from 'immer';
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';
-import { z } from 'zod';
 
 import _logger from '#/utils/logger';
 
@@ -1435,7 +1434,7 @@ export const createWorkflowStore = () => {
   // reconciles the result back into this Y.Doc.
   const setLifecycleState = async (
     event: 'go_live' | 'switch_to_draft'
-  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow } | null> => {
+  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow }> => {
     const { provider } = ensureConnected();
 
     try {

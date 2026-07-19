@@ -1,11 +1,9 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useContext, useState } from 'react';
-import { toast } from 'sonner';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
 import { Tooltip } from '../../components/Tooltip';
-import { cn } from '../../utils/cn';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
@@ -459,7 +457,9 @@ export function Header({
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
-          <Breadcrumbs>{children}</Breadcrumbs>
+          <div className="flex min-w-0 items-center">
+            <Breadcrumbs>{children}</Breadcrumbs>
+          </div>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <Tooltip
@@ -549,24 +549,34 @@ export function Header({
                 </span>
               )}
               {!isNewWorkflow && lifecycleState === 'draft' && (
-                <button
-                  type="button"
-                  data-testid="go-live-button"
-                  disabled={isReadOnly || isTransitioning}
-                  onClick={() => {
-                    setIsTransitioning(true);
-                    void goLive()
-                      .catch(() =>
-                        toast.error('Could not go live. Please try again.')
-                      )
-                      .finally(() => {
-                        setIsTransitioning(false);
-                      });
-                  }}
-                  className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                <Tooltip
+                  content={
+                    isReadOnly ? 'You cannot go live on this version' : null
+                  }
+                  side="bottom"
                 >
-                  Go live
-                </button>
+                  <button
+                    type="button"
+                    data-testid="go-live-button"
+                    disabled={isReadOnly || isTransitioning}
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      void goLive()
+                        .catch(() =>
+                          notifications.alert({
+                            title: 'Could not go live',
+                            description: 'Please try again.',
+                          })
+                        )
+                        .finally(() => {
+                          setIsTransitioning(false);
+                        });
+                    }}
+                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                  >
+                    Go live
+                  </button>
+                </Tooltip>
               )}
               {!isNewWorkflow && lifecycleState === 'live' && (
                 <button
@@ -576,7 +586,7 @@ export function Header({
                   onClick={() => {
                     setShowSwitchToDraftDialog(true);
                   }}
-                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                 >
                   Switch to draft
                 </button>
@@ -588,9 +598,7 @@ export function Header({
                   onClick={() => {
                     setShowEditInSandboxPicker(true);
                   }}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50'
-                  )}
+                  className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >
                   <span className="hero-beaker h-4 w-4" />
                   Edit in sandbox
@@ -680,7 +688,10 @@ export function Header({
               setIsTransitioning(true);
               void switchToDraft()
                 .catch(() =>
-                  toast.error('Could not switch to draft. Please try again.')
+                  notifications.alert({
+                    title: 'Could not switch to draft',
+                    description: 'Please try again.',
+                  })
                 )
                 .finally(() => {
                   setIsTransitioning(false);

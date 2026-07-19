@@ -1902,7 +1902,7 @@ defmodule Lightning.Projects do
   Returns only the direct children of `parent_id` that are not scheduled for
   deletion, sorted by `updated_at` descending as a "last edited" proxy (there is
   no dedicated last-editor field). Each sandbox preloads its `project_users` (and
-  their users) for collaborator display, and resolves the clone of the workflow
+  their users) for creator display, and resolves the clone of the workflow
   named `workflow_name` so the caller can offer a direct "join" target. The
   resolved workflow id is returned as `:joinable_workflow_id`, or `nil` when the
   sandbox has no workflow with that name.
@@ -1920,21 +1920,28 @@ defmodule Lightning.Projects do
       )
       |> Repo.all()
 
-    sandbox_ids = Enum.map(sandboxes, & &1.id)
-
-    joinable_workflow_ids =
-      from(w in Workflow,
-        where:
-          w.project_id in ^sandbox_ids and w.name == ^workflow_name and
-            is_nil(w.deleted_at),
-        select: {w.project_id, w.id}
-      )
-      |> Repo.all()
-      |> Map.new()
+    joinable_workflow_ids = joinable_workflow_ids(sandboxes, workflow_name)
 
     Enum.map(sandboxes, fn sandbox ->
       {sandbox, Map.get(joinable_workflow_ids, sandbox.id)}
     end)
+  end
+
+  # Maps each sandbox id to the id of its clone of `workflow_name`. Skips the
+  # query entirely when there are no sandboxes to look up.
+  defp joinable_workflow_ids([], _workflow_name), do: %{}
+
+  defp joinable_workflow_ids(sandboxes, workflow_name) do
+    sandbox_ids = Enum.map(sandboxes, & &1.id)
+
+    from(w in Workflow,
+      where:
+        w.project_id in ^sandbox_ids and w.name == ^workflow_name and
+          is_nil(w.deleted_at),
+      select: {w.project_id, w.id}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """
@@ -2099,6 +2106,40 @@ defmodule Lightning.Projects do
   defdelegate provision_sandbox(parent, actor, attrs),
     to: Sandboxes,
     as: :provision
+
+  @doc """
+  Provisions a sandbox from `parent` and promotes the clone of `workflow_name`
+  to `:live`, so the "Edit in sandbox" flow lands the user on an editable live
+  workflow. Both steps succeed together: if promotion fails, the just-created
+  sandbox is deleted so it cannot linger or consume the parent's sandbox quota.
+
+  Promotion runs after the provisioning transaction has committed (its
+  post-commit broadcasts must not fire inside a rollback-able transaction), so
+  atomicity is provided by the compensating delete rather than a shared
+  transaction.
+  """
+  @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
+          {:ok, %{sandbox: Project.t(), workflow: Workflow.t()}}
+          | {:error, term()}
+  def provision_editing_sandbox(parent, actor, workflow_name, attrs) do
+    with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do
+      case promote_named_workflow(sandbox, workflow_name, actor) do
+        {:ok, workflow} ->
+          {:ok, %{sandbox: sandbox, workflow: workflow}}
+
+        {:error, reason} ->
+          _ = delete_project(sandbox)
+          {:error, reason}
+      end
+    end
+  end
+
+  defp promote_named_workflow(sandbox, workflow_name, actor) do
+    case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
+      %Workflow{} = workflow -> Lightning.Workflows.go_live(workflow, actor)
+      nil -> {:error, :internal_error}
+    end
+  end
 
   @doc """
   Updates a sandbox project's basic attributes (name, color, env).

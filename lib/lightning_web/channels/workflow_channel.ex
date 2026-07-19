@@ -355,7 +355,7 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    with :ok <- authorize_edit_workflow(socket),
+    with :ok <- authorize_content_edit(socket),
          {:ok, workflow} <- Session.save_workflow(session_pid, user) do
       # Broadcast the new lock_version to all users in the channel
       # so they can update their latestSnapshotLockVersion in SessionContextStore
@@ -390,13 +390,23 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("list_sandboxes", _params, socket) do
     project = socket.assigns.project
     workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
 
-    sandboxes =
-      project.id
-      |> Projects.list_active_sandboxes_for_editing(workflow.name)
-      |> Enum.map(&render_editable_sandbox/1)
+    # Same gate as "edit_in_sandbox": the picker exposes sibling-sandbox
+    # collaborators, so only users who could actually create or join a sandbox
+    # (editor and up) may list them. Viewers get nothing.
+    case authorize_provision_sandbox(user, project) do
+      :ok ->
+        sandboxes =
+          project.id
+          |> Projects.list_active_sandboxes_for_editing(workflow.name)
+          |> Enum.map(&render_editable_sandbox/1)
 
-    {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
+        {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
+
+      error ->
+        workflow_error_reply(socket, error)
+    end
   end
 
   @impl true
@@ -405,18 +415,21 @@ defmodule LightningWeb.WorkflowChannel do
     workflow = socket.assigns.workflow
     user = socket.assigns.current_user
 
-    name = sandbox_name(params, workflow, parent)
+    attrs = %{
+      name: sandbox_name(params, workflow, parent),
+      env: "dev",
+      color: LightningWeb.SandboxLive.Components.random_color()
+    }
 
     with :ok <- authorize_provision_sandbox(user, parent),
          :ok <- limit_new_sandbox(parent),
-         {:ok, sandbox} <-
-           Projects.provision_sandbox(parent, user, %{
-             name: name,
-             env: "dev",
-             color: random_sandbox_color()
-           }),
-         {:ok, cloned_workflow} <-
-           promote_cloned_workflow(sandbox, workflow.name, user) do
+         {:ok, %{sandbox: sandbox, workflow: cloned_workflow}} <-
+           Projects.provision_editing_sandbox(
+             parent,
+             user,
+             workflow.name,
+             attrs
+           ) do
       {:reply, {:ok, %{project_id: sandbox.id, workflow_id: cloned_workflow.id}},
        socket}
     else
@@ -441,7 +454,7 @@ defmodule LightningWeb.WorkflowChannel do
     user = socket.assigns.current_user
     project = socket.assigns.project
 
-    with :ok <- authorize_edit_workflow(socket),
+    with :ok <- authorize_content_edit(socket),
          {:ok, workflow} <- Session.save_workflow(session_pid, user),
          repo_connection when not is_nil(repo_connection) <-
            VersionControl.get_repo_connection_for_project(project.id),
@@ -486,7 +499,7 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    with :ok <- authorize_edit_workflow(socket),
+    with :ok <- authorize_content_edit(socket),
          {:ok, workflow} <- Session.reset_workflow(session_pid, user) do
       {:reply,
        {:ok,
@@ -961,7 +974,7 @@ defmodule LightningWeb.WorkflowChannel do
         :edit_workflow,
         user,
         project_user
-      ) and Lightning.Workflows.editable_state?(workflow, project)
+      ) and Workflows.editable_state?(workflow, project)
 
     can_run =
       Permissions.can?(
@@ -1069,6 +1082,17 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(socket, {:error, :nesting_too_deep}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{
+          base: ["This project is nested too deeply to create another sandbox"]
+        },
+        type: "nesting_too_deep"
+      }}, socket}
+  end
+
   defp workflow_error_reply(
          socket,
          {:error, %Lightning.Extensions.Message{text: text}}
@@ -1087,6 +1111,19 @@ defmodule LightningWeb.WorkflowChannel do
       %{
         errors: format_changeset_errors(changeset),
         type: determine_error_type(changeset)
+      }}, socket}
+  end
+
+  # Last resort: never let an unexpected error reason crash the channel and drop
+  # the user's socket. Log it and reply with a generic internal error.
+  defp workflow_error_reply(socket, error) do
+    Logger.warning("Unhandled workflow channel error: #{inspect(error)}")
+
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
       }}, socket}
   end
 
@@ -1166,6 +1203,47 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
+  # Content edits (save, save-and-sync, reset) are gated on top of the role
+  # check: a live workflow is read-only outside a sandbox, and the client only
+  # disables the affected controls. Lifecycle transitions (go_live/switch_to_draft)
+  # legitimately act on a live workflow, so they keep the role-only gate.
+  defp authorize_content_edit(socket) do
+    case authorize_edit_workflow(socket) do
+      :ok -> ensure_editable_state(socket)
+      error -> error
+    end
+  end
+
+  defp ensure_editable_state(socket) do
+    if Workflows.editable_state?(
+         current_workflow(socket),
+         socket.assigns.project
+       ) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message:
+           "This workflow is live. Switch it to draft or edit it in a sandbox to make changes."
+       }}
+    end
+  end
+
+  # The lifecycle state can change mid-session (via go_live/switch_to_draft), so
+  # read it fresh rather than trusting the join-time socket assign. A brand-new
+  # workflow has no row yet and is always a draft.
+  defp current_workflow(socket) do
+    case socket.assigns.workflow_kind do
+      :new ->
+        socket.assigns.workflow
+
+      _ ->
+        Workflows.get_workflow(socket.assigns.workflow.id) ||
+          socket.assigns.workflow
+    end
+  end
+
   defp authorize_edit_workflow(socket) do
     user = socket.assigns.current_user
     project = socket.assigns.project
@@ -1209,25 +1287,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp promote_cloned_workflow(sandbox, workflow_name, user) do
-    cloned =
-      from(w in Lightning.Workflows.Workflow,
-        where:
-          w.project_id == ^sandbox.id and w.name == ^workflow_name and
-            is_nil(w.deleted_at),
-        limit: 1
-      )
-      |> Repo.one()
-
-    case cloned do
-      %Lightning.Workflows.Workflow{} = workflow ->
-        Workflows.go_live(workflow, user)
-
-      nil ->
-        {:error, :internal_error}
-    end
-  end
-
   defp sandbox_name(params, workflow, parent) do
     raw =
       case params do
@@ -1243,28 +1302,30 @@ defmodule LightningWeb.WorkflowChannel do
     "#{base}-sandbox"
   end
 
-  defp random_sandbox_color do
-    LightningWeb.SandboxLive.Components.color_palette_hex_colors()
-    |> Enum.random()
-  end
-
   defp render_editable_sandbox({sandbox, joinable_workflow_id}) do
     %{
       id: sandbox.id,
       name: sandbox.name,
       color: sandbox.color,
+      inserted_at: sandbox.inserted_at,
       updated_at: sandbox.updated_at,
-      collaborators: Enum.map(sandbox.project_users, &render_collaborator/1),
+      creator: render_creator(sandbox.project_users),
       workflow_id: joinable_workflow_id
     }
   end
 
-  defp render_collaborator(%{user: user}) do
-    %{
-      id: user.id,
-      name: collaborator_name(user),
-      email: user.email
-    }
+  defp render_creator(project_users) do
+    case Enum.find(project_users, &(&1.role == :owner)) do
+      %{user: user} ->
+        %{
+          id: user.id,
+          name: collaborator_name(user),
+          email: user.email
+        }
+
+      nil ->
+        nil
+    end
   end
 
   defp collaborator_name(user) do

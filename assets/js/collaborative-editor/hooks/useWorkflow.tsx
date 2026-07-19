@@ -521,17 +521,13 @@ export const useWorkflowActions = () => {
     // permissions (a live workflow is read-only on main) are reflected.
     goLive: async () => {
       const response = await store.goLive();
-      if (response) {
-        await sessionContextStore.requestSessionContext();
-      }
+      await sessionContextStore.requestSessionContext();
       return response;
     },
 
     switchToDraft: async () => {
       const response = await store.switchToDraft();
-      if (response) {
-        await sessionContextStore.requestSessionContext();
-      }
+      await sessionContextStore.requestSessionContext();
       return response;
     },
 

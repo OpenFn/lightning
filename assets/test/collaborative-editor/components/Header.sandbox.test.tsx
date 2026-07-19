@@ -1,19 +1,10 @@
-/**
- * Header sandbox-affordance tests
- *
- * Focused on the gating rules introduced for "Edit in sandbox":
- * - The "Edit in sandbox" button appears only when the workflow is live,
- *   the current project is not itself a sandbox, and the workflow is saved
- *   (not new).
- * - The sandbox badge appears when editing inside a sandbox.
- *
- * The Header pulls in many collaboration hooks and child components; those are
- * mocked to neutral defaults so each test exercises only the gating logic.
- */
+// Header sandbox-affordance tests: gating, lifecycle badge, and the go-live / switch-to-draft / edit-in-sandbox actions.
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
 import { Header } from '../../../js/collaborative-editor/components/Header';
 
 // ---------------------------------------------------------------------------
@@ -22,6 +13,9 @@ import { Header } from '../../../js/collaborative-editor/components/Header';
 
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let isNewWorkflow = false;
+
+const goLive = vi.fn<() => Promise<unknown>>();
+const switchToDraft = vi.fn<() => Promise<unknown>>();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({ params: {}, updateSearchParams: vi.fn() }),
@@ -62,8 +56,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({ selectNode: vi.fn() }),
   useWorkflowActions: () => ({
     saveWorkflow: vi.fn(),
-    goLive: vi.fn(),
-    switchToDraft: vi.fn(),
+    goLive,
+    switchToDraft,
     listSandboxes: vi.fn(),
     editInSandbox: vi.fn(),
   }),
@@ -106,7 +100,8 @@ vi.mock('../../../js/collaborative-editor/components/ReadOnlyWarning', () => ({
 vi.mock(
   '../../../js/collaborative-editor/components/EditInSandboxPicker',
   () => ({
-    EditInSandboxPicker: () => <div data-testid="edit-in-sandbox-picker" />,
+    EditInSandboxPicker: ({ isOpen }: { isOpen: boolean }) =>
+      isOpen ? <div data-testid="edit-in-sandbox-picker" /> : null,
   })
 );
 
@@ -184,5 +179,106 @@ describe('Header - sandbox badge', () => {
     expect(
       screen.queryByTestId('workflow-sandbox-badge')
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('Header - lifecycle actions', () => {
+  beforeEach(() => {
+    lifecycleState = 'live';
+    isNewWorkflow = false;
+    goLive.mockReset();
+    switchToDraft.mockReset();
+    goLive.mockResolvedValue(undefined);
+    switchToDraft.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('renders the lifecycle badge for the current state', () => {
+    renderHeader();
+    expect(screen.getByTestId('workflow-lifecycle-badge')).toHaveTextContent(
+      'Live'
+    );
+
+    lifecycleState = 'draft';
+    renderHeader();
+    const badges = screen.getAllByTestId('workflow-lifecycle-badge');
+    expect(badges.at(-1)).toHaveTextContent('Draft');
+  });
+
+  test('clicking go live triggers the go-live action', async () => {
+    const user = userEvent.setup();
+    lifecycleState = 'draft';
+    renderHeader();
+
+    await user.click(screen.getByTestId('go-live-button'));
+
+    await waitFor(() => {
+      expect(goLive).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('switch to draft requires confirmation before running', async () => {
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(screen.getByTestId('switch-to-draft-button'));
+
+    // The confirmation dialog opens; the action only fires once confirmed.
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Switch to draft?')).toBeInTheDocument();
+    expect(switchToDraft).not.toHaveBeenCalled();
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Switch to draft' })
+    );
+
+    await waitFor(() => {
+      expect(switchToDraft).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('clicking edit in sandbox opens the picker', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: false });
+
+    expect(
+      screen.queryByTestId('edit-in-sandbox-picker')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('edit-in-sandbox-button'));
+
+    expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
+  });
+});
+
+describe('Header - long workflow name', () => {
+  beforeEach(() => {
+    lifecycleState = 'live';
+    isNewWorkflow = false;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('truncates a long workflow name so the save action stays visible', () => {
+    const longName = 'Really-long-workflow-name-'.repeat(6);
+
+    render(
+      <Header projectId="p1" workflowId="w1">
+        {[<BreadcrumbText key="wf">{longName}</BreadcrumbText>]}
+      </Header>
+    );
+
+    // The name renders with an ellipsis cap rather than pushing the layout.
+    const nameEl = screen.getByText(longName);
+    expect(nameEl).toHaveClass('truncate');
+    expect(nameEl.className).toContain('max-w-');
+
+    // The primary action remains rendered alongside the long name.
+    expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
   });
 });
