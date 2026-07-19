@@ -55,10 +55,11 @@ function stubNavigation() {
 const CREATED_A = '2025-01-15T14:30:00Z';
 const CREATED_B = '2025-02-20T09:05:00Z';
 
-// The picker formats the creation timestamp with date-fns in the runner's local
-// timezone; derive the expected label the same way so the assertion is stable.
-const createdLabel = (iso: string) =>
-  `Created ${format(new Date(iso), 'd MMM yyyy, HH:mm')}`;
+// The picker shows a relative "Created … ago" label and reveals the exact
+// timestamp through the shared Tooltip on hover. Derive that exact label the
+// same way the component does so the assertion is stable across timezones.
+const exactTimestamp = (iso: string) =>
+  format(new Date(iso), 'd MMM yyyy, HH:mm');
 
 const sandboxes: Sandbox[] = [
   {
@@ -130,7 +131,8 @@ describe('EditInSandboxPicker', () => {
     expect(rows[1]).toHaveTextContent('Beta sandbox');
   });
 
-  test('shows the owner avatar, name and creation date on each row', async () => {
+  test('shows the owner name, colour stripe and creation date on each row', async () => {
+    const user = userEvent.setup();
     listSandboxes.mockResolvedValue(sandboxes);
 
     render(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -139,23 +141,40 @@ describe('EditInSandboxPicker', () => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
     });
 
-    // Creator name (or email) and initials avatar, not collaborator circles.
+    // Creator name (or email) anchors each row's metadata line.
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('AL')).toBeInTheDocument();
     expect(screen.getByText('grace@example.com')).toBeInTheDocument();
 
-    // Each row's metadata line carries the creation date and the owner name.
-    expect(screen.getByText(createdLabel(CREATED_A))).toBeInTheDocument();
-    expect(screen.getByText(createdLabel(CREATED_B))).toBeInTheDocument();
+    // Alpha (no colour) leads with the fallback grey stripe; the row shows a
+    // relative "Created … ago" label with the owner name.
     const alphaRow = screen.getByText('Alpha sandbox').closest('li');
-    expect(alphaRow).toHaveTextContent(createdLabel(CREATED_A));
+    expect(alphaRow).not.toBeNull();
+    expect(alphaRow).toHaveTextContent(/Created .+ ago/);
     expect(alphaRow).toHaveTextContent('Ada Lovelace');
+    expect(alphaRow!.querySelector('span[style]')).toHaveStyle({
+      backgroundColor: '#e5e7eb',
+    });
+
+    // Beta carries an explicit colour; its stripe paints that colour.
+    const betaRow = screen.getByText('Beta sandbox').closest('li');
+    expect(betaRow).not.toBeNull();
+    expect(betaRow!.querySelector('span[style]')).toHaveStyle({
+      backgroundColor: '#ff0000',
+    });
+
+    // The exact timestamp is not a native title anymore; it lives in the shared
+    // Tooltip, revealed by hovering the relative-time trigger.
+    await user.hover(alphaRow!.querySelector('[data-state]') as Element);
+    expect(
+      (await screen.findAllByText(exactTimestamp(CREATED_A))).length
+    ).toBeGreaterThan(0);
 
     // The "edited … ago" line is gone.
     expect(screen.queryByText(/edited/i)).not.toBeInTheDocument();
   });
 
-  test('renders the creation date but no avatar when the owner is unknown', async () => {
+  test('renders the colour stripe and creation date when the owner is unknown', async () => {
+    const user = userEvent.setup();
     listSandboxes.mockResolvedValue([
       {
         id: 'sandbox-c',
@@ -174,9 +193,20 @@ describe('EditInSandboxPicker', () => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(createdLabel(CREATED_A))).toBeInTheDocument();
-    // No initials avatar is rendered for a null owner.
-    expect(screen.queryByText('AL')).not.toBeInTheDocument();
+    const row = screen.getByText('Gamma sandbox').closest('li');
+    expect(row).not.toBeNull();
+    // Relative created label; the colour stripe still renders (fallback grey)
+    // even without an owner.
+    expect(row).toHaveTextContent(/Created .+ ago/);
+    expect(row!.querySelector('span[style]')).toHaveStyle({
+      backgroundColor: '#e5e7eb',
+    });
+
+    // Exact timestamp is available on hover via the shared Tooltip.
+    await user.hover(row!.querySelector('[data-state]') as Element);
+    expect(
+      (await screen.findAllByText(exactTimestamp(CREATED_A))).length
+    ).toBeGreaterThan(0);
   });
 
   test('hides the join section when no listed sandbox is joinable', async () => {

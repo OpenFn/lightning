@@ -6,16 +6,17 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 
+import { Tooltip } from '../../components/Tooltip';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import {
   formatChannelErrorMessage,
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
-import type { Sandbox, SandboxOwner } from '../types/workflow';
+import type { Sandbox } from '../types/workflow';
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;
@@ -34,21 +35,13 @@ function describeSandboxError(error: unknown): string {
     : 'Please try again.';
 }
 
-function personInitials(person: SandboxOwner): string {
-  const source = person.name?.trim() || person.email?.trim() || '';
-  if (!source) return '?';
-
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2 && parts[0] && parts[1]) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
-
-// A joinable sandbox row: owner avatar on the left, then the sandbox name over
-// a single muted metadata line ("Created {date}, {time} · {owner}"), and the
-// Join button on the right. The owner can be null (unknown), in which case the
-// avatar and the "· {owner}" suffix are omitted.
+// A joinable sandbox row: the whole row is the click target (joins the
+// sandbox). A colour stripe on the left, then the sandbox name over a single
+// muted metadata line ("Created {relative} · {owner}"), and a quiet "Join"
+// affordance on the right that fills in and reveals an arrow on hover. The
+// creation time shows as a relative label with the exact timestamp on hover.
+// The owner can be null (unknown), in which case the "· {owner}" suffix is
+// omitted.
 function SandboxRow({
   sandbox,
   onJoin,
@@ -58,62 +51,96 @@ function SandboxRow({
 }) {
   const { owner } = sandbox;
   const ownerName = owner ? owner.name || owner.email || '' : '';
-  const created = formatCreatedAt(sandbox.inserted_at);
 
+  const date = new Date(sandbox.inserted_at);
+  const validDate = !Number.isNaN(date.getTime());
+  const relative = validDate
+    ? formatDistanceToNow(date, { addSuffix: true })
+    : '';
+  const exact = validDate ? format(date, 'd MMM yyyy, HH:mm') : '';
+
+  // The whole row is the click target. Inner elements are phrasing spans (not
+  // <div>/<p>) so the DOM stays valid inside the <button>; the timestamp's
+  // Tooltip trigger is a Radix asChild <span>, which is valid nested here too.
   return (
-    <li
-      className="flex items-center justify-between gap-4 px-4 py-3"
-      data-testid="sandbox-row"
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        {owner && (
-          <span
-            title={ownerName || undefined}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center
-              rounded-full bg-gray-200 text-xs font-medium text-gray-700"
-          >
-            {personInitials(owner)}
-          </span>
-        )}
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">
-            {sandbox.name}
-          </p>
-          {/* The date never truncates; only the owner name gives way when
-              space is tight. */}
-          <p className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
-            <span className="shrink-0 whitespace-nowrap">{created}</span>
-            {owner && ownerName && (
-              <>
-                <span aria-hidden="true" className="shrink-0">
-                  ·
-                </span>
-                <span className="min-w-0 truncate">{ownerName}</span>
-              </>
-            )}
-          </p>
-        </div>
-      </div>
+    <li data-testid="sandbox-row">
       <button
         type="button"
         data-testid="join-sandbox-button"
+        aria-label={`Join ${sandbox.name}`}
         onClick={() => {
           onJoin(sandbox);
         }}
-        className="inline-flex shrink-0 items-center rounded-md px-3 py-1.5
-          text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset
-          ring-gray-300 hover:bg-gray-50"
+        className="group -mx-3 flex w-[calc(100%+1.5rem)] items-center
+          justify-between gap-4 rounded-lg px-3 py-3 text-left
+          transition-colors hover:bg-gray-50 focus-visible:outline-2
+          focus-visible:outline-offset-2 focus-visible:outline-primary-600"
       >
-        Join
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="h-8 w-1 shrink-0 rounded-full"
+            style={{ backgroundColor: sandbox.color ?? '#e5e7eb' }}
+          />
+          <span className="block min-w-0">
+            <span className="block truncate text-sm font-semibold text-gray-900">
+              {sandbox.name}
+            </span>
+            {/* The date never truncates; only the owner name gives way when
+                space is tight. Hovering the date reveals the exact timestamp. */}
+            <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
+              <Tooltip content={exact} side="top">
+                <span className="shrink-0 whitespace-nowrap">
+                  Created {relative}
+                </span>
+              </Tooltip>
+              {owner && ownerName && (
+                <>
+                  <span aria-hidden="true" className="shrink-0">
+                    ·
+                  </span>
+                  <span className="min-w-0 truncate">{ownerName}</span>
+                </>
+              )}
+            </span>
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="flex shrink-0 items-center gap-1 text-sm font-medium
+            text-gray-400 transition-colors group-hover:text-gray-900"
+        >
+          Join
+          <span
+            className="hero-arrow-right-micro h-4 w-4 -translate-x-1 opacity-0
+              transition-all group-hover:translate-x-0 group-hover:opacity-100"
+          />
+        </span>
       </button>
     </li>
   );
 }
 
-function formatCreatedAt(insertedAt: string): string {
-  const date = new Date(insertedAt);
-  if (Number.isNaN(date.getTime())) return '';
-  return `Created ${format(date, 'd MMM yyyy, HH:mm')}`;
+// Three placeholder rows shown while the sandbox list loads. Mirrors the shape
+// of a real row (colour tile + two text lines) so the layout doesn't jump.
+function SandboxListSkeleton() {
+  return (
+    <ul className="mt-3 space-y-1" data-testid="sandbox-list-loading">
+      {[0, 1, 2].map(index => (
+        <li
+          key={index}
+          className="-mx-3 flex items-center gap-2.5 px-3 py-3"
+          aria-hidden="true"
+        >
+          <div className="h-8 w-1 shrink-0 animate-pulse rounded-full bg-gray-200" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-3 w-1/3 animate-pulse rounded bg-gray-200" />
+            <div className="h-2.5 w-1/2 animate-pulse rounded bg-gray-200" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 const navigateToSandbox = (projectId: string, workflowId: string) => {
@@ -221,6 +248,22 @@ export function EditInSandboxPicker({
               data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
               sm:max-w-lg sm:p-6"
           >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-md
+                p-1 text-gray-400
+                transition-colors hover:text-gray-600 focus-visible:outline-2
+                focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
+              <span
+                className="hero-x-mark h-5 w-5"
+                aria-hidden="true"
+                role="img"
+              />
+            </button>
+
             <DialogTitle
               as="h3"
               className="text-base font-semibold text-gray-900"
@@ -233,17 +276,20 @@ export function EditInSandboxPicker({
             </p>
 
             {/* Create a new sandbox */}
-            <div className="mt-4 rounded-md border border-gray-200 p-4">
-              <label
-                htmlFor="sandbox-name"
-                className="block text-sm font-medium text-gray-900"
+            <div className="mt-6">
+              <p
+                className="text-xs font-semibold uppercase tracking-wide
+                  text-gray-500"
               >
                 Create a new sandbox
-              </label>
+              </p>
               <p className="mt-1 text-sm text-gray-600">
                 Branches from the current live version.
               </p>
               <div className="mt-3 flex gap-2">
+                <label htmlFor="sandbox-name" className="sr-only">
+                  Sandbox name
+                </label>
                 <input
                   id="sandbox-name"
                   type="text"
@@ -264,12 +310,13 @@ export function EditInSandboxPicker({
                   data-testid="create-sandbox-button"
                   onClick={handleCreate}
                   disabled={isCreating || !canCreate}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md
+                  className="inline-flex shrink-0 items-center rounded-md
                     bg-primary-600 px-3 py-2 text-sm font-semibold text-white
-                    shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed
-                    disabled:opacity-50"
+                    shadow-sm shadow-primary-600/20 hover:bg-primary-500
+                    focus-visible:outline-2 focus-visible:outline-offset-2
+                    focus-visible:outline-primary-600
+                    disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span className="hero-beaker h-4 w-4" />
                   {isCreating ? 'Creating...' : 'Create sandbox'}
                 </button>
               </div>
@@ -278,22 +325,19 @@ export function EditInSandboxPicker({
             {/* Join an existing sandbox. Only sandboxes that hold a clone of
                 this workflow are listed; hidden entirely when there are none. */}
             {(isLoadingList || joinableSandboxes.length > 0) && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-900">
+              <div className="mt-5 border-t border-gray-100 pt-5">
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide
+                    text-gray-500"
+                >
                   Join an active sandbox
-                </h4>
+                </p>
 
                 {isLoadingList ? (
-                  <p
-                    className="mt-2 text-sm text-gray-500"
-                    data-testid="sandbox-list-loading"
-                  >
-                    Loading sandboxes...
-                  </p>
+                  <SandboxListSkeleton />
                 ) : (
                   <ul
-                    className="mt-2 divide-y divide-gray-100 rounded-md border
-                      border-gray-200"
+                    className="mt-3 space-y-1"
                     data-testid="sandbox-list"
                   >
                     {joinableSandboxes.map(sandbox => (
@@ -307,20 +351,6 @@ export function EditInSandboxPicker({
                 )}
               </div>
             )}
-
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isCreating}
-                className="inline-flex justify-center rounded-md bg-white px-3
-                  py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1
-                  ring-inset ring-gray-300 hover:bg-gray-50
-                  disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
           </DialogPanel>
         </div>
       </div>
