@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Edit in sandbox: from a live (read-only) workflow, the editor header gains an
+  "Edit in sandbox" action that opens a picker to either branch a new sandbox
+  from the current live version or join an active one, landing you in the
+  sandbox editor with the workflow's trigger live and its own endpoint. The
+  parent project stays untouched until changes are promoted back.
+  [#4901](https://github.com/OpenFn/lightning/pull/4901)
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
