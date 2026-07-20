@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm test)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build *)",
+      "Bash(mix test)",
+      "Bash(mix test *)",
+      "Bash(mix compile)",
+      "Bash(mix compile *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc --noEmit *)"
+    ]
+  }
+}

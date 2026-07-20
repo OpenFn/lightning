@@ -55,6 +55,8 @@ and this project adheres to
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
 - Updated bundled worker to 1.27.1 and cli to 1.38.4
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
+- Bumped bundled CLI to version 1.38.5
+- Bumped bundled worker to version 1.38.4
 
 ### Fixed
 
