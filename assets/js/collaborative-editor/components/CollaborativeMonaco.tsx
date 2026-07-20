@@ -37,6 +37,11 @@ interface CollaborativeMonacoProps {
   ytext: Y.Text;
   awareness: Awareness;
   adaptor?: string;
+  /**
+   * Concrete versions available for the adaptor, used to resolve version
+   * ranges (e.g. "6.x") when fetching type definitions from jsDelivr.
+   */
+  adaptorVersions?: string[] | undefined;
   metadata?: object;
   disabled?: boolean;
   className?: string;
@@ -51,6 +56,7 @@ export const CollaborativeMonaco = forwardRef<
     ytext,
     awareness,
     adaptor = 'common',
+    adaptorVersions,
     metadata,
     disabled = false,
     className,
@@ -246,7 +252,7 @@ export const CollaborativeMonaco = forwardRef<
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadDTS(adaptor)
+      loadDTS(adaptor, adaptorVersions)
         .then(l => {
           setLib(l);
         })
@@ -254,7 +260,7 @@ export const CollaborativeMonaco = forwardRef<
           setLoading(false);
         });
     }
-  }, [adaptor]);
+  }, [adaptor, adaptorVersions]);
 
   // Set extra libs on Monaco when lib changes
   useEffect(() => {

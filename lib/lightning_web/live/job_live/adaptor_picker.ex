@@ -148,10 +148,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           Lightning.AdaptorRegistry.versions_for(module_name)
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
-          |> sort_versions_desc()
-          |> Enum.map(fn version ->
-            build_select_option(module_name, version)
-          end)
+          |> build_version_options(module_name)
 
         latest_option =
           if latest do
@@ -175,6 +172,66 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   defp build_select_option(module_name, version) do
     [key: version, value: "#{module_name}@#{version}"]
+  end
+
+  # Builds the version <select> options: concrete versions in descending
+  # semver order, with range options (`N.x`, `N.M.x`) interleaved directly
+  # above the versions they cover. Range options are only emitted when they
+  # cover at least one (non pre-release) known version, matching what
+  # `Lightning.AdaptorRegistry.resolve_adaptor/1` can resolve them to.
+  defp build_version_options(version_strings, module_name) do
+    {parseable, unparseable} =
+      version_strings
+      |> Enum.map(fn version -> {version, Version.parse(version)} end)
+      |> Enum.split_with(fn {_version, parsed} -> match?({:ok, _}, parsed) end)
+
+    grouped_options =
+      parseable
+      |> Enum.map(fn {version, {:ok, parsed}} -> {version, parsed} end)
+      |> Enum.sort_by(fn {_version, parsed} -> parsed end, {:desc, Version})
+      |> Enum.chunk_by(fn {_version, parsed} -> parsed.major end)
+      |> Enum.flat_map(&major_group_options(&1, module_name))
+
+    grouped_options ++
+      Enum.map(unparseable, fn {version, :error} ->
+        build_select_option(module_name, version)
+      end)
+  end
+
+  defp major_group_options(
+         [{_version, %{major: major}} | _] = group,
+         module_name
+       ) do
+    minor_options =
+      group
+      |> Enum.chunk_by(fn {_version, parsed} -> parsed.minor end)
+      |> Enum.flat_map(&minor_group_options(&1, module_name))
+
+    range_option(module_name, "#{major}.x", "latest v#{major}", group) ++
+      minor_options
+  end
+
+  defp minor_group_options(
+         [{_version, %{major: major, minor: minor}} | _] = group,
+         module_name
+       ) do
+    range_option(
+      module_name,
+      "#{major}.#{minor}.x",
+      "latest v#{major}.#{minor}",
+      group
+    ) ++
+      Enum.map(group, fn {version, _parsed} ->
+        build_select_option(module_name, version)
+      end)
+  end
+
+  defp range_option(module_name, range, label, covered) do
+    if Enum.any?(covered, fn {_version, parsed} -> parsed.pre == [] end) do
+      [[key: "#{range} (#{label})", value: "#{module_name}@#{range}"]]
+    else
+      []
+    end
   end
 
   @doc "Sort version strings in descending semver order."

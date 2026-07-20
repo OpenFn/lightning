@@ -357,10 +357,15 @@ defmodule Lightning.AdaptorRegistry do
   @doc """
   Destructures an NPM style package name into module name and version.
 
+  The version may also be a semver range token such as `2.x`, `2.1.x`,
+  `^2.1.0` or `~2.1.0`.
+
   **Example**
 
       iex> resolve_package_name("@openfn/language-salesforce@1.2.3")
       { "@openfn/language-salesforce", "1.2.3" }
+      iex> resolve_package_name("@openfn/language-salesforce@^1.2.3")
+      { "@openfn/language-salesforce", "^1.2.3" }
       iex> resolve_package_name("@openfn/language-salesforce")
       { "@openfn/language-salesforce", nil }
 
@@ -372,7 +377,7 @@ defmodule Lightning.AdaptorRegistry do
   @spec resolve_package_name(package_name :: String.t()) ::
           {binary | nil, binary | nil}
   def resolve_package_name(package_name) when is_binary(package_name) do
-    ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
+    ~r/(@?[\/\d\n\w-]+)(?:@([~^\d\.\w-]+))?$/
     |> Regex.run(package_name)
     |> case do
       [_, name, version] ->
@@ -413,6 +418,16 @@ defmodule Lightning.AdaptorRegistry do
     {package_name, version}
   end
 
+  @doc """
+  Resolves an adaptor string to a concrete `name@version` string.
+
+  - `name@latest` and `name@local` behave as before.
+  - Semver range versions (`2.x`, `2.1.x`, `^2.1.0`, `~2.1.0`, `~2.1`) are
+    resolved to the highest known version in the registry matching the range.
+  - Exact versions, unknown packages and ranges with no matching version are
+    returned unchanged.
+  """
+  @spec resolve_adaptor(String.t() | nil) :: String.t()
   def resolve_adaptor(adaptor) do
     case resolve_package_name(adaptor) do
       {nil, nil} ->
@@ -424,10 +439,107 @@ defmodule Lightning.AdaptorRegistry do
       {adaptor_name, "latest"} ->
         "#{adaptor_name}@#{latest_for(adaptor_name)}"
 
-      _ ->
-        adaptor
+      {adaptor_name, version} ->
+        if version_range?(version) do
+          resolve_adaptor_range(adaptor, adaptor_name, version)
+        else
+          adaptor
+        end
     end
   end
+
+  defp resolve_adaptor_range(adaptor, adaptor_name, range) do
+    known_versions =
+      adaptor_name
+      |> versions_for()
+      |> List.wrap()
+      |> Enum.map(&Map.get(&1, :version))
+
+    case resolve_version_range(range, known_versions) do
+      nil -> adaptor
+      resolved -> "#{adaptor_name}@#{resolved}"
+    end
+  end
+
+  @doc """
+  Returns true when the given version string is a supported semver range
+  token (`2.x`, `2.1.x`, `^2.1.0`, `~2.1.0` or `~2.1`).
+  """
+  @spec version_range?(String.t() | nil) :: boolean()
+  def version_range?(version) do
+    not is_nil(version_range_to_requirement(version))
+  end
+
+  @doc """
+  Resolves a semver range token against a list of known version strings,
+  returning the highest matching version.
+
+  Supported range tokens:
+
+  - `N.x` - highest version with major `N`
+  - `N.M.x` - highest version with major `N` and minor `M`
+  - `^N.M.P` - highest version `>= N.M.P` with major `N`
+  - `~N.M.P` - highest version `>= N.M.P` with major `N` and minor `M`
+  - `~N.M` - highest version with major `N` and minor `M`
+
+  Returns `nil` when the token is not a recognised range, or when no known
+  version matches. Version strings that do not parse as semver are ignored,
+  as are pre-release versions.
+  """
+  @spec resolve_version_range(String.t() | nil, [String.t()]) ::
+          String.t() | nil
+  def resolve_version_range(range, known_versions) do
+    with requirement when not is_nil(requirement) <-
+           version_range_to_requirement(range) do
+      known_versions
+      |> Enum.flat_map(fn version ->
+        case Version.parse(version) do
+          {:ok, parsed} -> [parsed]
+          :error -> []
+        end
+      end)
+      |> Enum.filter(&Version.match?(&1, requirement, allow_pre: false))
+      |> Enum.max(Version, fn -> nil end)
+      |> case do
+        nil -> nil
+        version -> to_string(version)
+      end
+    end
+  end
+
+  defp version_range_to_requirement(version) when is_binary(version) do
+    cond do
+      match = Regex.run(~r/^(\d+)\.x$/, version) ->
+        [_, major] = match
+        Version.parse_requirement!("~> #{major}.0")
+
+      match = Regex.run(~r/^(\d+)\.(\d+)\.x$/, version) ->
+        [_, major, minor] = match
+        Version.parse_requirement!("~> #{major}.#{minor}.0")
+
+      match = Regex.run(~r/^\^(\d+)\.(\d+)\.(\d+)$/, version) ->
+        [_, major, minor, patch] = match
+        next_major = String.to_integer(major) + 1
+
+        Version.parse_requirement!(
+          ">= #{major}.#{minor}.#{patch} and < #{next_major}.0.0"
+        )
+
+      match = Regex.run(~r/^~(\d+)\.(\d+)(?:\.(\d+))?$/, version) ->
+        case match do
+          [_, major, minor] ->
+            Version.parse_requirement!("~> #{major}.#{minor}.0")
+
+          [_, major, minor, patch] ->
+            Version.parse_requirement!("~> #{major}.#{minor}.#{patch}")
+        end
+
+      true ->
+        nil
+    end
+  end
+
+  defp version_range_to_requirement(_version), do: nil
 
   def local_adaptors_enabled? do
     case Lightning.Config.adaptor_registry()[:local_adaptors_repos] do

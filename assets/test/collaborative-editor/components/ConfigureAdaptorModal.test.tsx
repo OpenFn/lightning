@@ -364,7 +364,7 @@ describe('ConfigureAdaptorModal', () => {
       expect(versionSelect).toBeInTheDocument();
     });
 
-    it('displays all version options for selected adaptor', async () => {
+    it('displays all version options with range entries interleaved', async () => {
       const user = userEvent.setup();
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
 
@@ -376,12 +376,42 @@ describe('ConfigureAdaptorModal', () => {
       // Wait for options to appear
       const options = await screen.findAllByRole('option');
 
-      // Should have 4 versions: "latest" + 3 versions from mock data
-      expect(options.length).toBe(4);
-      expect(options[0]).toHaveTextContent('latest');
-      expect(options[1]).toHaveTextContent('2.1.0');
-      expect(options[2]).toHaveTextContent('2.0.0');
-      expect(options[3]).toHaveTextContent('1.9.0');
+      // "latest" first, then version ranges interleaved with the concrete
+      // versions they cover, in descending order
+      expect(options.map(o => o.textContent)).toEqual([
+        'latest',
+        '2.x',
+        '2.1.x',
+        '2.1.0',
+        '2.0.x',
+        '2.0.0',
+        '1.x',
+        '1.9.x',
+        '1.9.0',
+      ]);
+    });
+
+    it('calls onVersionChange with the range token when a range is selected', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+
+      const versionInput = screen.getByDisplayValue('2.1.0');
+      await user.click(versionInput);
+
+      const options = await screen.findAllByRole('option');
+      const rangeOption = options.find(opt => opt.textContent === '2.x');
+      expect(rangeOption).toBeDefined();
+      await user.click(rangeOption!);
+
+      expect(mockOnVersionChange).toHaveBeenCalledWith('2.x');
+    });
+
+    it('displays a range as the current version when the job is range-locked', () => {
+      renderWithProviders(
+        <ConfigureAdaptorModal {...defaultProps} currentVersion="2.x" />
+      );
+
+      expect(screen.getByDisplayValue('2.x')).toBeInTheDocument();
     });
 
     it('updates version when dropdown selection changes', async () => {
@@ -440,13 +470,25 @@ describe('ConfigureAdaptorModal', () => {
       // Wait for options to appear
       const options = await screen.findAllByRole('option');
 
-      // Should be sorted: "latest" first, then 10.0.0, 9.0.0, 2.0.0, 1.10.0, 1.9.0
-      expect(options[0]).toHaveTextContent('latest');
-      expect(options[1]).toHaveTextContent('10.0.0');
-      expect(options[2]).toHaveTextContent('9.0.0');
-      expect(options[3]).toHaveTextContent('2.0.0');
-      expect(options[4]).toHaveTextContent('1.10.0');
-      expect(options[5]).toHaveTextContent('1.9.0');
+      // Should be sorted semantically descending (10.0.0 before 9.0.0,
+      // 1.10.0 before 1.9.0), with range entries interleaved
+      expect(options.map(o => o.textContent)).toEqual([
+        'latest',
+        '10.x',
+        '10.0.x',
+        '10.0.0',
+        '9.x',
+        '9.0.x',
+        '9.0.0',
+        '2.x',
+        '2.0.x',
+        '2.0.0',
+        '1.x',
+        '1.10.x',
+        '1.10.0',
+        '1.9.x',
+        '1.9.0',
+      ]);
     });
   });
 

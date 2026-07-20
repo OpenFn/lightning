@@ -1,5 +1,10 @@
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 
+import {
+  extractPackageName,
+  isVersionRange,
+  resolveVersionRange,
+} from './adaptorUtils';
 import dts_es5 from './es5.min.dts';
 
 export type Lib = {
@@ -8,47 +13,79 @@ export type Lib = {
 };
 
 /**
+ * Resolves a specifier whose version is a semver range ("6.x", "6.4.x",
+ * "^6.4.2", "~6.4.2") to a concrete version, using the adaptor's known
+ * versions. jsDelivr does not support range syntax, so ranges must be
+ * resolved before fetching. Falls back to the original specifier when the
+ * range cannot be resolved (e.g. no versions list available).
+ */
+function resolveSpecifier(specifier: string, knownVersions?: string[]): string {
+  const name = extractPackageName(specifier);
+  const version =
+    specifier.length > name.length ? specifier.slice(name.length + 1) : '';
+
+  if (!version || !isVersionRange(version)) return specifier;
+
+  const concrete = resolveVersionRange(version, knownVersions ?? []);
+  if (!concrete) {
+    console.warn(
+      `Could not resolve version range in ${specifier}; fetching as-is.`
+    );
+    return specifier;
+  }
+  return `${name}@${concrete}`;
+}
+
+/**
  * Load TypeScript definition files for an adaptor from jsDelivr
  *
  * Fetches .d.ts files for the specified adaptor and @openfn/language-common,
  * then wraps them in appropriate module declarations for Monaco editor.
  *
- * @param specifier - Fully qualified adaptor name (e.g., "@openfn/language-http@5.0.0")
+ * @param specifier - Fully qualified adaptor name (e.g., "@openfn/language-http@5.0.0").
+ *   May use a version range (e.g. "@openfn/language-http@6.x") when
+ *   `knownVersions` is provided to resolve it against.
+ * @param knownVersions - Concrete versions available for this adaptor, used
+ *   to resolve version ranges (jsDelivr doesn't support range syntax).
  * @returns Array of lib objects containing TypeScript definitions
  *
  * @example
  * const libs = await loadDTS('@openfn/language-http@5.0.0');
  * monaco.languages.typescript.javascriptDefaults.setExtraLibs(libs);
  */
-export async function loadDTS(specifier: string): Promise<Lib[]> {
+export async function loadDTS(
+  specifier: string,
+  knownVersions?: string[]
+): Promise<Lib[]> {
+  const resolvedSpecifier = resolveSpecifier(specifier, knownVersions);
+
   // Work out the module name from the specifier
   // (this gets a bit tricky with @openfn/ module names)
-  const nameParts = specifier.split('@');
-  nameParts.pop(); // remove the version
-  const name = nameParts.join('@');
+  const name = extractPackageName(resolvedSpecifier);
 
   const results: Lib[] = [{ content: dts_es5 }];
 
   // Load common into its own module
   // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
-    const pkg = await fetchFile(`${specifier}/package.json`);
-    const commonVersion = (JSON.parse(pkg || '{}') as any).dependencies?.[
-      '@openfn/language-common'
-    ];
+    const pkg = await fetchFile(`${resolvedSpecifier}/package.json`);
+    const pkgJson = JSON.parse(pkg || '{}') as {
+      dependencies?: Record<string, string>;
+    };
+    const commonVersion = pkgJson.dependencies?.['@openfn/language-common'];
 
-    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
-    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
-    if (!commonVersionMatch) {
+    // jsDelivr doesn't support semver range syntax (^1.0.0, 1.x, ~1.1.0),
+    // so extract a concrete version from the dependency specifier.
+    const concreteCommonVersion = commonVersion?.match(/\d+\.\d+\.\d+/)?.[0];
+    if (!concreteCommonVersion) {
       console.warn(
         `@openfn/language-common@${commonVersion} contains semver range syntax.`
       );
     }
 
-    const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
-      '^',
-      ''
-    )}`;
+    const commonSpecifier = `@openfn/language-common@${
+      concreteCommonVersion ?? commonVersion
+    }`;
     for await (const filePath of fetchDTSListing(commonSpecifier)) {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
@@ -67,9 +104,9 @@ export async function loadDTS(specifier: string): Promise<Lib[]> {
   // This stores string content for our adaptor
   let adaptorDefs: string[] = [];
 
-  for await (const filePath of fetchDTSListing(specifier)) {
+  for await (const filePath of fetchDTSListing(resolvedSpecifier)) {
     if (!filePath.startsWith('node_modules')) {
-      let content = await fetchFile(`${specifier}${filePath}`);
+      let content = await fetchFile(`${resolvedSpecifier}${filePath}`);
       // Convert relative paths
       content = content
         .replace(/from '\.\//g, `from '${name}/`)

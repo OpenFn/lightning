@@ -278,6 +278,20 @@ defmodule Lightning.AdaptorRegistryTest do
                {nil, nil}
     end
 
+    test "it can split off semver range versions" do
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@2.x") ==
+               {"@openfn/language-foo", "2.x"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@2.1.x") ==
+               {"@openfn/language-foo", "2.1.x"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@^2.1.0") ==
+               {"@openfn/language-foo", "^2.1.0"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@~2.1") ==
+               {"@openfn/language-foo", "~2.1"}
+    end
+
     @tag :tmp_dir
     test "returns local as the version when local_adaptors_repos config is set",
          %{tmp_dir: tmp_dir} do
@@ -293,6 +307,103 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert AdaptorRegistry.resolve_package_name("") ==
                {nil, nil}
+    end
+  end
+
+  describe "resolve_adaptor/1" do
+    # The default (application-started) registry uses the test fixture cache,
+    # where @openfn/language-common has latest 1.6.2 and versions
+    # 1.1.0, 1.1.12, 1.2.3, 1.2.14, 1.2.22, 1.6.2, 1.10.3 and 2.14.0.
+    test "resolves @latest to the registry's latest version" do
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@latest") ==
+               "@openfn/language-common@1.6.2"
+    end
+
+    test "resolves semver ranges to the highest matching known version" do
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@1.x") ==
+               "@openfn/language-common@1.10.3"
+
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@1.2.x") ==
+               "@openfn/language-common@1.2.22"
+
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@^1.2.3") ==
+               "@openfn/language-common@1.10.3"
+
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@~1.2.14") ==
+               "@openfn/language-common@1.2.22"
+
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@~1.1") ==
+               "@openfn/language-common@1.1.12"
+
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@2.x") ==
+               "@openfn/language-common@2.14.0"
+    end
+
+    test "passes exact versions through unchanged" do
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@1.2.3") ==
+               "@openfn/language-common@1.2.3"
+
+      # even when the exact version is not in the registry
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@9.9.9") ==
+               "@openfn/language-common@9.9.9"
+    end
+
+    test "passes ranges through unchanged when nothing matches" do
+      # no known version in range
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-common@9.x") ==
+               "@openfn/language-common@9.x"
+
+      # unknown package
+      assert AdaptorRegistry.resolve_adaptor("@openfn/language-nope@1.x") ==
+               "@openfn/language-nope@1.x"
+    end
+  end
+
+  describe "resolve_version_range/2" do
+    test "resolves each supported range token to the highest match" do
+      versions = ["5.9.9", "6.0.1", "6.4.0", "6.4.2", "6.5.0", "7.0.0"]
+
+      assert AdaptorRegistry.resolve_version_range("6.x", versions) == "6.5.0"
+
+      assert AdaptorRegistry.resolve_version_range("6.4.x", versions) ==
+               "6.4.2"
+
+      assert AdaptorRegistry.resolve_version_range("^6.4.1", versions) ==
+               "6.5.0"
+
+      assert AdaptorRegistry.resolve_version_range("~6.4.1", versions) ==
+               "6.4.2"
+
+      assert AdaptorRegistry.resolve_version_range("~6.4", versions) == "6.4.2"
+    end
+
+    test "applies floor semantics for ^ and ~ ranges" do
+      versions = ["6.4.0", "6.4.1"]
+
+      # nothing >= the floor, despite matching major/minor
+      assert AdaptorRegistry.resolve_version_range("^6.4.2", versions) == nil
+      assert AdaptorRegistry.resolve_version_range("~6.4.2", versions) == nil
+    end
+
+    test "ignores unparseable and pre-release versions" do
+      versions = ["garbage", "6.1", "6.2.0-rc.1", "6.2.0", "6.3.0-beta"]
+
+      assert AdaptorRegistry.resolve_version_range("6.x", versions) == "6.2.0"
+
+      # a range covering only pre-releases resolves to nothing
+      assert AdaptorRegistry.resolve_version_range("6.3.x", versions) == nil
+    end
+
+    test "returns nil for non-range tokens and empty version lists" do
+      versions = ["1.2.3"]
+
+      assert AdaptorRegistry.resolve_version_range("1.2.3", versions) == nil
+      assert AdaptorRegistry.resolve_version_range("latest", versions) == nil
+      assert AdaptorRegistry.resolve_version_range("local", versions) == nil
+      assert AdaptorRegistry.resolve_version_range("x", versions) == nil
+      assert AdaptorRegistry.resolve_version_range("^1.2", versions) == nil
+      assert AdaptorRegistry.resolve_version_range(nil, versions) == nil
+      assert AdaptorRegistry.resolve_version_range("1.x", []) == nil
     end
   end
 end

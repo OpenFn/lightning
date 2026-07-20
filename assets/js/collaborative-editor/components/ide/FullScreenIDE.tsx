@@ -56,6 +56,7 @@ import {
   useWorkflowState,
 } from '../../hooks/useWorkflow';
 import { isFinalState } from '../../types/history';
+import { isVersionRange, resolveVersionRange } from '../../utils/adaptorUtils';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelector } from '../AdaptorSelector';
@@ -406,8 +407,19 @@ export function FullScreenIDE({
     onCredentialSaved,
   } = useCredentialModal();
 
-  // converting 'latest' on an adaptor string to the actual version number
-  // to be used by components that can't make use of 'latest'
+  // Concrete versions known for the current job's adaptor package.
+  // Used to resolve version ranges ("6.x") for jsDelivr-backed features
+  // (type definitions, docs) that can't use range syntax.
+  const currJobAdaptorVersions = useMemo(() => {
+    if (!currentJob?.adaptor) return undefined;
+    const { package: packageName } = resolveAdaptor(currentJob.adaptor);
+    const adaptor = allAdaptors.find(a => a.name === packageName);
+    return adaptor?.versions.map(v => v.version);
+  }, [allAdaptors, currentJob?.adaptor]);
+
+  // converting 'latest' or a version range ("6.x") on an adaptor string to
+  // the actual version number, to be used by components that can't make use
+  // of 'latest' or ranges
   const currJobAdaptor = useMemo(() => {
     if (!currentJob?.adaptor) {
       const latestCommon = projectAdaptors.find(
@@ -416,13 +428,24 @@ export function FullScreenIDE({
       return `@openfn/language-common@${latestCommon || 'latest'}`;
     }
     const resolved = resolveAdaptor(currentJob.adaptor);
-    if (resolved.version !== 'latest') return currentJob?.adaptor;
-    const latestVersion = projectAdaptors.find(a => a.name === resolved.package)
-      ?.versions?.[0]?.version;
-    // If version not found, return original adaptor string
-    if (!latestVersion) return currentJob.adaptor;
-    return `${resolved.package}@${latestVersion}`;
-  }, [projectAdaptors, currentJob?.adaptor]);
+    if (resolved.version === 'latest') {
+      const latestVersion = projectAdaptors.find(
+        a => a.name === resolved.package
+      )?.versions?.[0]?.version;
+      // If version not found, return original adaptor string
+      if (!latestVersion) return currentJob.adaptor;
+      return `${resolved.package}@${latestVersion}`;
+    }
+    if (resolved.version && isVersionRange(resolved.version)) {
+      const concrete = resolveVersionRange(
+        resolved.version,
+        currJobAdaptorVersions ?? []
+      );
+      // If range can't be resolved, return original adaptor string
+      if (concrete) return `${resolved.package}@${concrete}`;
+    }
+    return currentJob.adaptor;
+  }, [projectAdaptors, currJobAdaptorVersions, currentJob?.adaptor]);
 
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
@@ -998,6 +1021,7 @@ export function FullScreenIDE({
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
+                            adaptorVersions={currJobAdaptorVersions}
                             metadata={metadata}
                             disabled={!canSave}
                             className="h-full w-full"

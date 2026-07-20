@@ -18,6 +18,7 @@ import {
   extractAdaptorDisplayName,
   extractAdaptorName,
   extractPackageName,
+  interleaveVersionRanges,
 } from '#/collaborative-editor/utils/adaptorUtils';
 import { cn } from '#/utils/cn';
 
@@ -411,7 +412,9 @@ export function ConfigureAdaptorModal({
     return () => cancelAnimationFrame(frameId);
   }, [isOpen, currentCredentialId, showOtherCredentials]);
 
-  // Get version options for current adaptor
+  // Get version options for current adaptor. Range options ("6.x", "6.4.x")
+  // are interleaved in descending order so each range sits directly above
+  // the concrete versions it covers.
   const versionOptions = useMemo(() => {
     const packageName = extractPackageName(currentAdaptor);
     const adaptor = allAdaptors.find(a => a.name === packageName);
@@ -420,11 +423,10 @@ export function ConfigureAdaptorModal({
       return [];
     }
 
-    const sortedVersions = sortVersionsDescending(
-      adaptor.versions.map(v => v.version)
-    );
-
-    return ['latest', ...sortedVersions];
+    return [
+      'latest',
+      ...interleaveVersionRanges(adaptor.versions.map(v => v.version)),
+    ];
   }, [currentAdaptor, allAdaptors]);
 
   // Extract adaptor display name
