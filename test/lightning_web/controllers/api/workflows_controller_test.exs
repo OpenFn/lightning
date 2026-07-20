@@ -745,6 +745,25 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    test "returns 422 when edges, jobs and triggers are omitted", %{
+      conn: conn,
+      project: project
+    } do
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(%{name: "workflow without children"})
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => nil,
+               "errors" => %{
+                 "edges" => ["Missing edge with source_trigger_id."]
+               }
+             }
+    end
+
     test "returns 422 when edges has multiple source triggers", %{
       conn: conn,
       project: project

@@ -413,6 +413,14 @@ defmodule LightningWeb.API.WorkflowsController do
        ),
        do: validate_workflow(edges, jobs, triggers, ids_map)
 
+  defp validate_workflow(%{} = params, ids_map) do
+    edges = Map.get(params, "edges", [])
+    jobs = Map.get(params, "jobs", [])
+    triggers = Map.get(params, "triggers", [])
+
+    validate_workflow(edges, jobs, triggers, ids_map)
+  end
+
   defp validate_workflow(edges, jobs, triggers, ids_map) do
     # {:ok, _ids} <- validate_ids(edges),
     with {:ok, triggers_ids} <- validate_ids(triggers),
