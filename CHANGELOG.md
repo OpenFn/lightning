@@ -65,6 +65,9 @@ and this project adheres to
   project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- Return clean API errors when a workflow is deleted during save or its snapshot
+  cannot be saved, instead of allowing the workflows controller to crash.
+  [#4960](https://github.com/OpenFn/lightning/issues/4960)
 - Prevent AI Assistant channel joins from crashing when a chat references a
   deleted workflow or project. Missing records now fail authorization cleanly.
   [#4914](https://github.com/OpenFn/lightning/issues/4914)
