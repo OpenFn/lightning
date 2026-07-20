@@ -151,6 +151,30 @@ ensure_tool_versions() {
   fi
 }
 
+# Dependency cooldown (mix.exs `hex: [cooldown: ...]`) is silently ignored by
+# Hex older than 2.5.0, giving false confidence. Enforce the minimum here.
+ensure_hex_version() {
+  local required="2.5.0"
+  local have
+  have="$(mix hex.info 2>/dev/null | awk '/^Hex:/ {print $2}')"
+
+  if [[ -n "$have" ]] && printf '%s\n%s\n' "$required" "$have" | sort -V -C; then
+    echo "  Hex: $have (>= $required, dependency cooldown active)"
+    return
+  fi
+
+  echo "  Hex ${have:-<none>} is older than $required; upgrading for dependency cooldown support..."
+  mix local.hex --force
+
+  have="$(mix hex.info 2>/dev/null | awk '/^Hex:/ {print $2}')"
+  if [[ -z "$have" ]] || ! printf '%s\n%s\n' "$required" "$have" | sort -V -C; then
+    echo "Failed to obtain Hex >= $required (found ${have:-<none>})." >&2
+    echo "The dependency cooldown in mix.exs will be silently ignored without it." >&2
+    exit 1
+  fi
+  echo "  Hex upgraded to $have"
+}
+
 run_bootstrap() {
   echo "Gathering environment information..."
   echo "Platform: $OS $ARCH"
@@ -181,6 +205,7 @@ run_bootstrap() {
   echo "Setting up Elixir environment..."
   mix local.hex --if-missing --force
   mix local.rebar --if-missing --force
+  ensure_hex_version
 
   echo "Installing Elixir dependencies..."
   mix deps.get

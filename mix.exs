@@ -13,6 +13,7 @@ defmodule Lightning.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      hex: [cooldown: "1w"],
       dialyzer: [
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
