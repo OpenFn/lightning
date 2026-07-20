@@ -29,6 +29,7 @@ defmodule Lightning.MixProject do
         verify: :test
       ],
       compilers: Mix.compilers(),
+      hex: hex_audit(),
 
       # Docs
       name: "Lightning",
@@ -63,6 +64,37 @@ defmodule Lightning.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Advisories acknowledged for `mix hex.audit`. Each entry here has no
+  # reachable fix given our dependency graph; revisit whenever the noted
+  # blocker is lifted. IDs are matched against an advisory's primary ID or
+  # any alias, so the CVE form also silences the GHSA/EEF variants.
+  #
+  # hackney (fixed in 4.0.1): 4.x is a breaking API change and tzdata (all
+  #   releases, incl. 1.1.4) hard-pins hackney ~> 1.17. Unblock when tzdata
+  #   ships a hackney-4.x compatible release.
+  # cowlib: no patched release exists yet (latest is 2.18.0).
+  # req + swoosh: their fixes require mime ~> 2.0, but google_gax 0.4.1 (latest,
+  #   pulled by google_api_storage) hard-pins mime ~> 1.0. Unblock when the
+  #   Google API libraries support mime 2.x.
+  defp hex_audit do
+    [
+      ignore_advisories: [
+        # hackney
+        "CVE-2026-47071",
+        "CVE-2026-47075",
+        "CVE-2026-47076",
+        "CVE-2026-47069",
+        # cowlib
+        "CVE-2026-43966",
+        "CVE-2026-43969",
+        # req
+        "CVE-2026-49755",
+        # swoosh
+        "CVE-2026-54893"
+      ]
+    ]
+  end
 
   # Specifies your project dependencies.
   #

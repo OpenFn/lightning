@@ -1,0 +1,17 @@
+# Advisories intentionally ignored by `mix deps.audit`.
+# One advisory ID per line; `#` lines and blank lines are ignored.
+#
+# hackney: all four advisories are fixed in hackney 4.0.1, but we cannot
+# upgrade yet. hackney 4.x is a breaking API change, and our dependency graph
+# blocks it: tzdata (all releases, incl. latest 1.1.4) hard-pins
+# hackney ~> 1.17 and calls :hackney directly, and bumping to httpoison 3.0
+# (the release requiring hackney 4.x) is blocked by gcs_signed_url pinning
+# httpoison ~> 2.0. Revisit once tzdata ships a hackney-4.x compatible release.
+#   GHSA-gp9c-pm5m-5cxr (high)     ssl:connect post-handshake timeout
+#   GHSA-pj7v-xfvx-wmjq (moderate) SSRF allowlist bypass
+#   GHSA-j9wq-vxxc-94wf (moderate) CR/LF injection in query param
+#   GHSA-mp55-p8c9-rfw2 (low)      CRLF injection via domain/path
+GHSA-gp9c-pm5m-5cxr
+GHSA-pj7v-xfvx-wmjq
+GHSA-j9wq-vxxc-94wf
+GHSA-mp55-p8c9-rfw2
