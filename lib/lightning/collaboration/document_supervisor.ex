@@ -11,32 +11,65 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   Uses a transient restart strategy, only restarting if the supervisor
   itself crashes, not when child processes exit normally. Monitors both
   child processes and stops itself if either child crashes.
+
+  Optionally monitors an `:owner` pid (passed through the child spec). When that
+  owner goes `:DOWN`, the supervisor stops `:normal` — running `terminate/2`'s
+  flush, and not restarting (transient). This is the owner-monitored
+  self-cleanup seam from
+  `.claude/guidelines/testable-supervision-trees.md` §3: any caller gets
+  deterministic teardown by passing `owner: self()`. With no owner (the
+  production default) the document outlives its starter as before.
   """
   use GenServer
 
-  import Lightning.Collaboration.Registry, only: [via: 1]
-
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
+  alias Lightning.Collaboration.Registry
 
   require Logger
 
-  @pg_scope :workflow_collaboration
-
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
+  end
+
+  @doc """
+  Gracefully stops the DocumentSupervisor and its children.
+
+  Synchronous: returns only once `terminate/2` has run, which flushes the
+  PersistenceWriter (via the SharedDoc) and stops both children. Because the
+  child spec uses `restart: :transient`, a `:normal` stop is not restarted by
+  the DynamicSupervisor.
+  """
+  def stop(pid, timeout \\ 5_000) when is_pid(pid) do
+    GenServer.stop(pid, :normal, timeout)
   end
 
   @impl true
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
     document_name = Keyword.fetch!(opts, :document_name)
+    registry = Keyword.get(opts, :registry, Registry)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
+
+    # Whether the SharedDoc exits on its own once its last observer leaves.
+    # Defaults to `true` (production behaviour). Callers that drive the document
+    # lifecycle explicitly — e.g. tests that want teardown sequenced solely
+    # through `terminate/2` rather than racing an asynchronous self-exit — can
+    # pass `auto_exit: false`.
+    auto_exit = Keyword.get(opts, :auto_exit, true)
+
+    owner = Keyword.get(opts, :owner)
+
+    # Optionally monitor an owner pid; when it goes :DOWN we stop :normal so the
+    # document tree dies with its owner. nil (production default) → no monitor.
+    owner_ref = if is_pid(owner), do: Process.monitor(owner), else: nil
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
         document_name: document_name,
         workflow_id: workflow.id,
-        name: via({:persistence_writer, document_name})
+        registry: registry,
+        name: Registry.via(registry, {:persistence_writer, document_name})
       )
 
     persistence_writer_ref = Process.monitor(persistence_writer_pid)
@@ -45,25 +78,42 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       Yex.Sync.SharedDoc.start_link(
         [
           doc_name: document_name,
-          auto_exit: true,
+          auto_exit: auto_exit,
           persistence:
             {Persistence,
              %{
                workflow: workflow,
-               persistence_writer: persistence_writer_pid
+               persistence_writer: persistence_writer_pid,
+               registry: registry,
+               owner: owner
              }}
         ],
-        name: via({:shared_doc, document_name})
+        name: Registry.via(registry, {:shared_doc, document_name})
       )
 
     # Register with :pg using document_name so versioned rooms are isolated
-    :ok = register_shared_doc_with_pg(document_name, shared_doc_pid)
+    :ok = register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
+
+    # When started on behalf of an owner pid, grant that owner's process-scoped
+    # access (DB sandbox connection, mocks) to the two children, so they can
+    # reach the database and resolve mocks for the rest of their lives. The
+    # SharedDoc's *init-time* read is handled separately (the owner is threaded
+    # into its persistence state above, since `$callers` isn't propagated across
+    # `GenServer.start_link`); this grant covers everything after init. The
+    # callback defaults to a no-op, so production wiring is untouched; a real
+    # callback is only configured under the test environment.
+    if is_pid(owner) do
+      allow = grant_process_access_fun()
+      allow.(owner, persistence_writer_pid)
+      allow.(owner, shared_doc_pid)
+    end
 
     {:ok,
      %{
        workflow: workflow,
+       owner_ref: owner_ref,
        persistence_writer_pid: persistence_writer_pid,
        persistence_writer_ref: persistence_writer_ref,
        shared_doc_pid: shared_doc_pid,
@@ -91,6 +141,10 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   @impl true
   def terminate(_reason, state) do
+    # Drop the owner monitor if it's still live (e.g. stopped via stop/2 while
+    # the owner is alive) so no stray :DOWN is delivered after we're gone.
+    if state[:owner_ref], do: Process.demonitor(state.owner_ref, [:flush])
+
     # Specifically stop the SharedDoc first, which sends a flush_and_stop
     # message to the PersistenceWriter. So we usually don't need to stop the
     # PersistenceWriter if the SharedDoc is exiting normally, but just in case
@@ -124,6 +178,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   end
 
   @impl true
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{owner_ref: ref} = state
+      ) do
+    Logger.debug("Owner DOWN, stopping document. reason: #{inspect(reason)}")
+
+    Process.demonitor(ref, [:flush])
+
+    # Stop :normal so terminate/2 runs the flush; :transient => no restart.
+    {:stop, :normal, %{state | owner_ref: nil}}
+  end
+
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     key =
       [:persistence_writer_ref, :shared_doc_ref]
@@ -138,8 +204,15 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     {:stop, :normal, state |> Map.put(key, nil)}
   end
 
-  # Supervisor.start_link(children, strategy: :one_for_all)
-  defp register_shared_doc_with_pg(document_name, shared_doc_pid) do
-    :pg.join(@pg_scope, document_name, shared_doc_pid)
+  defp register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid) do
+    :pg.join(pg_scope, document_name, shared_doc_pid)
+  end
+
+  defp grant_process_access_fun do
+    Application.get_env(
+      :lightning,
+      :collaboration_process_allow,
+      fn _owner, _pid -> :ok end
+    )
   end
 end

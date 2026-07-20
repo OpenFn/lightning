@@ -38,6 +38,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   defstruct [
     :document_name,
+    :registry,
     :save_timer,
     :max_wait_timer,
     :last_save_at,
@@ -61,9 +62,13 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @doc """
   Adds a Yjs update to the pending batch for persistence.
+
+  The writer is located through `registry` (defaulting to the global
+  collaboration Registry), so an isolated instance finds its own writer.
   """
-  def add_update(document_name, update) when is_binary(update) do
-    if pid = Registry.whereis({:persistence_writer, document_name}) do
+  def add_update(registry \\ Registry, document_name, update)
+      when is_binary(update) do
+    if pid = Registry.whereis(registry, {:persistence_writer, document_name}) do
       GenServer.cast(pid, {:add_update, update})
       :ok
     else
@@ -77,8 +82,8 @@ defmodule Lightning.Collaboration.PersistenceWriter do
   This is called when the document is being unbound and ensures all
   updates are persisted before cleanup.
   """
-  def flush_and_stop(document_name) do
-    case Registry.lookup({:persistence_writer, document_name}) do
+  def flush_and_stop(registry \\ Registry, document_name) do
+    case Registry.lookup(registry, {:persistence_writer, document_name}) do
       [{pid, _}] ->
         GenServer.call(pid, :flush_and_stop, 10_000)
 
@@ -97,6 +102,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
     state = %__MODULE__{
       document_name: document_name,
+      registry: Keyword.get(opts, :registry, Registry),
       last_save_at: DateTime.utc_now()
     }
 
