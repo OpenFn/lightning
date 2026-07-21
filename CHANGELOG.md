@@ -15,11 +15,177 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-07-21
+
+This is a security release, and we strongly recommend upgrading promptly. It is
+the first remediation wave from an ongoing security review: it closes a broad
+set of issues, several of them high priority, but it is not a complete sweep and
+further fixes will follow in subsequent releases. A detailed security advisory
+will follow within 30 days of this release.
+
+### Upgrade notes
+
+- **Postgres TLS certificates are now verified.** Lightning previously performed
+  no certificate validation on SSL connections to Postgres and accepted any
+  server certificate; it now validates the server certificate by default. A
+  self-signed or otherwise unverifiable certificate will stop Lightning from
+  starting. If you use a private CA or a self-signed database certificate, make
+  sure the CA is trusted, or set `DISABLE_DB_SSL_CERT_VERIFY=true` to opt out.
+- **Take a database backup before upgrading.** Three of this release's
+  migrations delete data irreversibly: legacy-editor user preferences,
+  pre-existing credential transfers that can no longer be confirmed, and
+  orphaned AI chat sessions.
+- **One migration will abort the upgrade rather than guess.** The
+  `require_project_credentials_project_id` migration sets
+  `project_credentials.project_id` to `NOT NULL` and will raise if any rows have
+  a null `project_id`. Resolve those rows and re-run the migration.
+- **The legacy workflow editor has been removed, along with its route.** All
+  users are now served the collaborative editor.
+- **AI chat sessions now cascade-delete** with the job or workflow they belong
+  to, instead of being left orphaned.
+
+Migrations in this release, all in `priv/repo/migrations/`:
+
+- `20260629143825_clear_prefer_legacy_editor`
+- `20260701152255_remove_legacy_credential_transfers`
+- `20260703124106_require_project_credentials_project_id`
+- `20260707043053_cascade_delete_ai_chat_sessions_with_job_and_workflow`
+- `20260707060146_delete_orphaned_ai_chat_sessions`
+- `20260711013100_add_allow_unverified_email_to_auth_providers`
+
 ### Added
+
+- Add `bin/worktree`, a helper that creates a git worktree for a branch and runs
+  the per-worktree slice of `bin/bootstrap` (environment copy, dependencies,
+  assets, database create/migrate) so the worktree is immediately runnable.
 
 ### Changed
 
+- Replaced the legacy workflow editor with the collaborative editor for all
+  users.
+
+### Removed
+
+- Removed the legacy workflow editor and its route, together with dead code it
+  left behind and other unreferenced modules and functions surfaced while
+  auditing for the removal.
+
 ### Fixed
+
+- Fixed the work-order history export, which was broken for all users and never
+  produced a file.
+
+### Security
+
+- Enforce project scoping consistently across LiveViews, channels, controllers
+  and the worker/run APIs, so a client-supplied resource id can no longer reach
+  data in another project. A range of surfaces loaded a resource by its bare id
+  after checking only that the caller belonged to the project named in the
+  request, which let a member of one project read (and in some cases modify or
+  execute) another project's data. Affected surfaces included run detail views
+  and their logs and dataclips, the dataclip viewer, the workflow dashboard's
+  delete and enable/disable actions, run rerun on the history page and in the
+  editor, manual-run inputs, the project-settings webhook authentication methods
+  and collaborator settings, the provisioning snapshots export, worker
+  step-completion and worker-supplied dataclip and credential references, GitHub
+  App branch listing, and the credential API's project lists. Each now loads its
+  resource scoped to the authorised project and rejects anything outside it;
+  where an action mutates or executes, an appropriate permission is now required
+  as well.
+- Tighten credential ownership and scoping. A job or trigger could reference a
+  project or keychain credential owned by a different project, which would
+  resolve another tenant's secret at run time. Workflow saves, project
+  provisioning imports and sandbox merges now all reject a cross-project
+  credential reference through a single, fail-closed check, and sandbox merges
+  re-map keychain credentials onto the parent project rather than carrying a
+  sandbox-owned reference across. Credential-transfer confirmation is bound to
+  its signed token and to owner and pending-state checks, so a transfer can no
+  longer be redirected. Ownership and transfer-state fields can no longer be set
+  through the ordinary credential edit path, only at creation or through the
+  dedicated transfer flow. The credential deletion confirmation is validated
+  against the credential it was opened for, so a user can no longer delete
+  another user's credential.
+- Strengthen authorisation in the collaborative workflow editor. Client-supplied
+  ids were scoped too weakly, so a member of one project could read another
+  project's workflow snapshots, job code and configuration, run and work-order
+  metadata, dataclips, credentials and external-system metadata before scoping
+  was applied; the editor's channel and session layer now resolves each of these
+  within the caller's own project and returns an indistinguishable not-found for
+  anything outside it. Read-only enforcement previously lived only in the
+  browser, so a project viewer could still mutate the shared document; the
+  editor now drops edits from users without edit permission at the server and
+  guards its write paths there rather than relying on the client. Changing a
+  trigger's webhook authentication now requires owner or admin rather than
+  editor, so an editor can no longer strip authentication off a webhook trigger.
+- Authorise AI assistant sessions against their owning project. Session ids and
+  run references were treated as trusted before being checked, so a signed-in
+  user could read another project's AI chat history, and a session join could
+  seed or poison state under a project the user could not access. Joins now
+  authorise before mutating any session state and accept a follow-run reference
+  only from the session's own project; session loads from the editor are
+  rejected unless the session belongs to the current project; orphaned sessions
+  (whose job or workflow has been deleted) now default-deny and allow only their
+  creator instead of falling through to allow-all; the sessions listing no
+  longer exposes a matching session for an unsaved job to any signed-in user;
+  and step-dataclip fetches for the assistant are scoped to close a
+  cross-project data-disclosure and third-party model egress path.
+- Remove untrusted input from dangerous operations. An operating-system
+  command-injection sink in adaptor metadata fetching, reachable through a
+  credential body or adaptor name, has been removed. Adaptor installation and
+  metadata lookups are now restricted to packages listed in the adaptor
+  registry, with strict package-name validation on every path that writes a
+  job's adaptor, which also rejects names carrying shell metacharacters. The
+  dashboard sort parameters are now validated, so a crafted sort request can no
+  longer exhaust the runtime's atom table and crash the instance.
+- Bind sessions, socket tokens and personal access tokens to account state and
+  second-factor completion. Blocking an account, or scheduling it for deletion,
+  now takes effect at request time across session, socket and API-token
+  authentication, and deletion purges the account's tokens; previously a
+  disabled account's personal access tokens kept working on the collections API.
+  WebSocket tokens are now tied to the user's revocable database session and are
+  torn down on logout, password change or reset, and account disable, across
+  every device. Revoked personal access tokens are now rejected on the
+  collections API, to match the main API. Multi-factor (TOTP) completion is
+  enforced before a session is treated as authenticated on every request format
+  and on the user socket. Single sign-on logins now validate their CSRF state,
+  their identity token and a verified email, and apply the same disabled and
+  scheduled-for-deletion gate as password login. The token deletion confirmation
+  is validated against the token it was opened for, so a user can no longer
+  delete another user's tokens or sessions.
+- Harden the channel proxy against server-side request forgery and cross-tenant
+  access. Proxied requests no longer carry the caller's Lightning session
+  credentials to the destination, and sensitive values are redacted from channel
+  observations. Requests to internal, loopback, link-local and cloud-metadata
+  addresses are blocked by default, evaluated on the resolved address so that
+  DNS and address-encoding tricks do not bypass the guard; operators can adjust
+  the allowed and blocked ranges through configuration. The channel edit form
+  and its destination credentials are scoped to the channel's own project.
+- Harden the OAuth client against server-side request forgery and privilege
+  escalation. Server-side OAuth requests are routed through an egress guard that
+  rejects internal, link-local and cloud-metadata addresses on the resolved
+  address. The OAuth client's instance-wide flag can no longer be set by a
+  non-superuser, so a non-privileged user can no longer publish a client across
+  the whole instance.
+- Authorise collections operations by role rather than by bare project
+  membership. Every collections API verb previously reduced to a single
+  membership check, so a read-only member could modify or delete collection
+  data. Writes now require at least editor, destroying a collection requires
+  owner or admin, and reads remain open to any project member; workers keep full
+  access to collections within their own run's project, and a run can no longer
+  reach collections outside its project. Sandbox merges no longer delete the
+  target project's collections: that deletion is now gated on owner or admin, so
+  an editor-permitted merge leaves the target's collections intact.
+- Gate privileged actions and fields by role. Project-settings save and the
+  self-service project-creation flow no longer mass-assign privileged fields
+  (multi-factor requirement, scheduled deletion, retention, support access and
+  parent project) past their dedicated gates, so, among other things, a project
+  can no longer be attached under an arbitrary parent. Instance-admin views now
+  halt a non-admin at mount, so admin-only actions cannot be driven from a
+  non-admin session. Exporting work-order history now requires run-workflow
+  permission (editor or above) rather than being open to any viewer, and the
+  export scrubs raw dataclip bodies and stored HTTP headers before writing the
+  archive, so a downloaded export can no longer leak webhook authentication
+  headers or credential values.
 
 ## [2.16.8] - 2026-07-01
 
