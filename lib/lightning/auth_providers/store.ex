@@ -19,7 +19,7 @@ defmodule Lightning.AuthProviders.Store do
   end
 
   @spec get_handler(key :: String.t(), default :: finder()) ::
-          {:ok, Handler.t()} | {:error, :not_found}
+          {:ok, Handler.t()} | {:error, term()}
   def get_handler(name, finder \\ &default/1) do
     case Cachex.get(cache_name(), name) do
       {:ok, nil} ->
@@ -27,7 +27,9 @@ defmodule Lightning.AuthProviders.Store do
           {:ok, handler} ->
             put_handler(name, handler)
 
-          {:error, :not_found} = e ->
+          # A missing provider stays :not_found; a build failure (e.g. discovery
+          # fetch) surfaces its own error rather than crashing the caller.
+          {:error, _reason} = e ->
             e
         end
 

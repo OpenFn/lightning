@@ -52,6 +52,65 @@ defmodule Lightning.TokensTest do
 
       assert Tokens.get_subject(claims) == user |> Repo.reload!()
     end
+
+    test "rejects a disabled user's token at the verification boundary" do
+      user = insert(:user, disabled: true)
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:error, :user_blocked} = Tokens.verify(token)
+    end
+
+    test "rejects a token for a user scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:error, :user_blocked} = Tokens.verify(token)
+    end
+
+    test "get_subject resolves the user regardless of account state" do
+      user = insert(:user, disabled: true)
+
+      assert Tokens.get_subject(%{"sub" => "user:#{user.id}"}) ==
+               Repo.reload!(user)
+    end
+
+    test "rejects a PAT whose persisted token row has been deleted" do
+      user = insert(:user)
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:ok, %{"sub" => "user:" <> _}} = Tokens.verify(token)
+
+      user_token = Repo.get_by(Lightning.Accounts.UserToken, token: token)
+      {:ok, _} = Lightning.Accounts.delete_token(user_token)
+
+      assert {:error, :token_revoked} = Tokens.verify(token)
+    end
+
+    # A credential_transfer sub is neither "user:" nor "run:", so it falls
+    # through to the unsupported branch without touching the store.
+    test "an unsupported token type is rejected" do
+      {:ok, token, _claims} =
+        Tokens.PersonalAccessToken.generate_and_sign(
+          %{"sub" => "credential_transfer:#{Ecto.UUID.generate()}"},
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, "Unsupported token type"} = Tokens.verify(token)
+    end
+
+    test "deleting one user's token leaves another user's token valid" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+
+      token_a = Lightning.Accounts.generate_api_token(user_a)
+      token_b = Lightning.Accounts.generate_api_token(user_b)
+
+      user_token_a = Repo.get_by(Lightning.Accounts.UserToken, token: token_a)
+      {:ok, _} = Lightning.Accounts.delete_token(user_token_a)
+
+      assert {:error, _reason} = Tokens.verify(token_a)
+      assert {:ok, %{"sub" => "user:" <> _}} = Tokens.verify(token_b)
+    end
   end
 
   describe "RunToken" do

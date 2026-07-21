@@ -30,6 +30,20 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
+  The flash message shown when login is refused for a given
+  `Lightning.Accounts.login_blocked_reason/1` value. Shared by the password and
+  SSO login paths so their wording can't drift apart.
+
+  Only the two blocked reasons are valid inputs; gate with
+  `Lightning.Accounts.login_blocked?/1`.
+  """
+  @spec login_blocked_message(:disabled | :scheduled_deletion) :: String.t()
+  def login_blocked_message(:disabled), do: "This user account is disabled"
+
+  def login_blocked_message(:scheduled_deletion),
+    do: "This user account is scheduled for deletion"
+
+  @doc """
   Assigns the token to a new session.
 
   It renews the session ID and clears the whole session
@@ -105,6 +119,11 @@ defmodule LightningWeb.UserAuth do
     sudo_token && Accounts.delete_sudo_session_token(sudo_token)
     live_socket_id = get_session(conn, :live_socket_id)
 
+    # Only this session is torn down: deleting the session token refuses any
+    # socket reconnect, the live_socket_id broadcast drops this session's
+    # LiveView, and the redirect closes this device's user socket. We do not
+    # broadcast to the per-user topic here, which would disconnect the user's
+    # sockets on every other device they are still logged in on.
     live_socket_id &&
       LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
 
@@ -112,6 +131,21 @@ defmodule LightningWeb.UserAuth do
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
     |> redirect(to: "/users/log_in")
+  end
+
+  @doc """
+  Tears down every live WebSocket the user has open, on all devices.
+
+  Call this after an account-wide revocation (password change or reset, account
+  disable) has invalidated the user's sessions, so their collaborative editor,
+  AI assistant and run channels drop immediately instead of staying authorised
+  until the socket happens to reconnect.
+
+  Logout does not use this: `log_out_user/1` tears down only the session being
+  logged out of.
+  """
+  def disconnect_user_sockets(%User{id: id}) do
+    LightningWeb.Endpoint.broadcast("user_socket:#{id}", "disconnect", %{})
   end
 
   @doc """
@@ -177,6 +211,10 @@ defmodule LightningWeb.UserAuth do
 
   def authenticate_bearer(conn, _opts) do
     with {:ok, bearer_token} <- get_bearer(conn),
+         # A blocked user resolves to nil (get_user_by_api_token/1 drops them),
+         # so a blocked PAT fails to match and lands in the else clause,
+         # unauthenticated. Repo-connection tokens resolve separately and are
+         # never gated.
          %{__struct__: type} = resource <- get_current_resource(bearer_token) do
       if type == User do
         update_last_used(bearer_token)
@@ -224,15 +262,9 @@ defmodule LightningWeb.UserAuth do
   def require_authenticated_user(conn, _opts) do
     cond do
       is_nil(conn.assigns[:current_user]) ->
-        conn
-        |> get_format()
-        |> case do
+        case get_format(conn) do
           "json" ->
-            conn
-            |> put_status(:unauthorized)
-            |> put_view(LightningWeb.ErrorView)
-            |> render(:"401")
-            |> halt()
+            render_unauthorized(conn)
 
           _ ->
             conn
@@ -241,11 +273,16 @@ defmodule LightningWeb.UserAuth do
             |> halt()
         end
 
-      get_format(conn) == "html" && totp_pending?(conn) &&
-          conn.path_info != ["users", "two-factor"] ->
-        conn
-        |> redirect(to: Routes.user_totp_path(conn, :new))
-        |> halt()
+      totp_pending?(conn) && conn.path_info != ["users", "two-factor"] ->
+        case get_format(conn) do
+          "json" ->
+            render_unauthorized(conn)
+
+          _ ->
+            conn
+            |> redirect(to: Routes.user_totp_path(conn, :new))
+            |> halt()
+        end
 
       true ->
         # Assign the user socket token, so we can pick it up in our templates
@@ -261,19 +298,33 @@ defmodule LightningWeb.UserAuth do
   """
   def require_authenticated_api_resource(conn, _opts) do
     if is_nil(conn.assigns[:current_resource]) do
-      conn
-      |> put_status(:unauthorized)
-      |> put_view(LightningWeb.ErrorView)
-      |> render(:"401")
-      |> halt()
+      render_unauthorized(conn)
     else
       conn
     end
   end
 
+  defp render_unauthorized(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> put_view(LightningWeb.ErrorView)
+    |> render(:"401")
+    |> halt()
+  end
+
   defp put_user_token(conn, _ \\ nil) do
-    if current_user = conn.assigns[:current_user] do
-      token = Phoenix.Token.sign(conn, "user socket", current_user.id)
+    # Don't mint a user socket token before the second factor validates. The
+    # two-factor page is the only authenticated render reachable while pending,
+    # and a token there would let a pre-TOTP session open the socket and join
+    # channels as the full user.
+    session_token = get_session(conn, :user_token)
+
+    if conn.assigns[:current_user] && session_token && !totp_pending?(conn) do
+      # Encrypt the revocable DB session token into the socket token so the
+      # socket is bound to that session: deleting it (logout, password reset,
+      # account disable) invalidates the socket token too, rather than leaving
+      # a stateless 14-day token that nothing can revoke.
+      token = Phoenix.Token.encrypt(conn, "user socket", session_token)
       assign(conn, :user_token, token)
     else
       conn
