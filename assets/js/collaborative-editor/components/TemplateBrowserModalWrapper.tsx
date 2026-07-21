@@ -39,7 +39,13 @@ export function TemplateBrowserModalWrapper() {
   // Lazy fetch — only when modal opens, not on every /new load
   useEffect(() => {
     if (!isOpen) return;
+    // Reset to a clean baseline on each open: the panel state lives in the
+    // global store and no longer resets on unmount, so a stranded loading flag
+    // or a prior open's user templates would otherwise leak in. Before the
+    // `!channel` guard so a reopen with a null channel still clears loading.
     setTemplateSearchQuery('');
+    setTemplates(BASE_TEMPLATES);
+    setTemplatesLoading(false);
     if (!channel) return;
 
     // Guards against a close-before-resolve-then-reopen race: without this,
