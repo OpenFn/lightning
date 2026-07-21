@@ -39,35 +39,42 @@ platform_check_status() {
   local has_failures=false
 
   if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
-    echo "Missing system packages:"
-    for package in "${MISSING_PACKAGES[@]}"; do
-      echo "   - $package"
-    done
-    echo ""
-    echo "To install, run:"
-    echo "  sudo apt-get update && sudo apt-get install -y ${MISSING_PACKAGES[*]}"
+    {
+      err "Missing system packages:"
+      printf '   - %s\n' "${MISSING_PACKAGES[@]}"
+      printf '%s\n' \
+        "" \
+        "To install, run:" \
+        "  sudo apt-get update && sudo apt-get install -y ${MISSING_PACKAGES[*]}"
+    } >&2
     has_failures=true
   fi
 
   if [[ "$MISSING_RUST" == true ]]; then
-    [[ "$has_failures" == true ]] && echo ""
-    echo "Missing Rust toolchain (rambo has no precompiled binary for $(uname -m))"
-    echo ""
-    echo "Install via rustup (recommended):"
-    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    echo ""
-    echo "Or via apt:"
-    echo "  sudo apt-get install -y rustc cargo"
+    {
+      [[ "$has_failures" == true ]] && echo ""
+      err "Missing Rust toolchain (rambo has no precompiled binary for $(uname -m))"
+      printf '%s\n' \
+        "" \
+        "Install via rustup (recommended):" \
+        "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" \
+        "" \
+        "Or via apt:" \
+        "  sudo apt-get install -y rustc cargo"
+    } >&2
     has_failures=true
   fi
 
   if [[ "$has_failures" == true ]]; then
-    echo ""
-    echo "Then re-run ./bin/bootstrap"
+    {
+      printf '%s\n' \
+        "" \
+        "Then re-run ./bin/bootstrap"
+    } >&2
     exit 1
   fi
 
-  echo "All dependencies are satisfied"
+  ok "All dependencies are satisfied"
 }
 
 platform_install_dependencies() {

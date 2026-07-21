@@ -21,6 +21,25 @@ describe('formatChannelErrorMessage', () => {
     expect(result).toBe('Something went wrong');
   });
 
+  it('should return the named base error ahead of any field error', () => {
+    // Pins base-first precedence: a poisoned-legacy-data save surfaces the
+    // scoping violation as a base error, which must win over a co-present
+    // field error and reach the user verbatim.
+    const error: ChannelError = {
+      errors: {
+        base: [
+          'job "leaky": credential doesn\'t exist or isn\'t available in this project (project_credential_id)',
+        ],
+        field: [[{ name: ['Name is required'] }]],
+      },
+    };
+
+    const result = formatChannelErrorMessage(error);
+    expect(result).toBe(
+      'job "leaky": credential doesn\'t exist or isn\'t available in this project (project_credential_id)'
+    );
+  });
+
   it('should format simple field errors (from nested structure)', () => {
     // The function expects errors to be nested in arrays, then flattened
     const error: ChannelError = {
