@@ -912,7 +912,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "collection deletion during merge is gated on owner/admin" do
       # An editor merge must not prune target-only collections, an owner merge
-      # still does (OPENFN-2026-086).
+      # still does.
       assert "target-only" in merge_target_only_collection(:editor)
       refute "target-only" in merge_target_only_collection(:owner)
     end
