@@ -53,6 +53,8 @@ defmodule Lightning.Projects.Project do
     has_many :project_credentials, ProjectCredential
     has_many :credentials, through: [:project_credentials, :credential]
 
+    has_many :keychain_credentials, Lightning.Credentials.KeychainCredential
+
     has_many :collections, Lightning.Collections.Collection
 
     timestamps()

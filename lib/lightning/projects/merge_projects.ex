@@ -51,15 +51,15 @@ defmodule Lightning.Projects.MergeProjects do
         opts
       ) do
     source_project =
-      Repo.preload(source_project,
-        workflows: [:jobs, :triggers, :edges],
-        project_credentials: []
-      )
+      source_project
+      |> Repo.preload(project_credentials: [], keychain_credentials: [])
+      |> Map.put(:workflows, carried_source_workflows(source_project, opts))
 
     target_project =
       Repo.preload(target_project,
         workflows: [:jobs, :triggers, :edges],
-        project_credentials: []
+        project_credentials: [],
+        keychain_credentials: []
       )
 
     credential_map =
@@ -68,9 +68,15 @@ defmodule Lightning.Projects.MergeProjects do
         target_project.project_credentials
       )
 
+    keychain_map =
+      build_keychain_remap(
+        source_project.keychain_credentials,
+        target_project.keychain_credentials
+      )
+
     Map.from_struct(source_project)
     |> merge_project(Map.from_struct(target_project), opts)
-    |> remap_document_credentials(credential_map)
+    |> remap_document_credentials(credential_map, keychain_map)
   end
 
   def merge_project(source_project, target_project, opts) do
@@ -93,6 +99,30 @@ defmodule Lightning.Projects.MergeProjects do
       deleted_target_workflow_ids
     )
   end
+
+  @doc false
+  # The set of source workflows a merge carries: the live-only association
+  # (`has_many :workflows, where: [deleted_at: nil]`) narrowed to any selection.
+  # Both the merge document and the sandbox keychain attach derive from this one
+  # result, so they can't drift on what the merge actually carries.
+  #
+  # The preload is non-forced: the dedup that lets both call sites share a single
+  # query relies on the caller having done a fresh, non-forced preload of
+  # `:workflows`. A caller that hands in a stale loaded assoc would have that
+  # stale set used verbatim.
+  @spec carried_source_workflows(Project.t(), map()) :: [Workflow.t()]
+  def carried_source_workflows(%Project{} = source, opts) do
+    source
+    |> Repo.preload(workflows: [:jobs, :triggers, :edges])
+    |> Map.fetch!(:workflows)
+    |> filter_selected_workflows(Map.get(opts, :selected_workflow_ids))
+  end
+
+  defp filter_selected_workflows(workflows, nil), do: workflows
+
+  defp filter_selected_workflows(workflows, selected_ids)
+       when is_list(selected_ids),
+       do: Enum.filter(workflows, &(&1.id in selected_ids))
 
   @doc """
   Merges a sandbox workflow back onto its parent workflow using UUID mapping.
@@ -535,8 +565,6 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   defp build_merged_jobs(source_jobs, target_jobs, job_mappings, new_uuid_map) do
-    target_jobs_by_id = Map.new(target_jobs, &{&1.id, &1})
-
     # Process source jobs (matched and new)
     {new_mapping, merged_from_source} =
       Enum.reduce(
@@ -548,8 +576,6 @@ defmodule Lightning.Projects.MergeProjects do
               Map.get(new_uuid_map, source_job.id) ||
               Ecto.UUID.generate()
 
-          target_job = Map.get(target_jobs_by_id, mapped_id)
-
           merged_job =
             source_job
             |> Map.take([
@@ -559,17 +585,6 @@ defmodule Lightning.Projects.MergeProjects do
               :project_credential_id,
               :keychain_credential_id
             ])
-            |> then(fn job_attrs ->
-              if target_job do
-                job_attrs
-                |> Map.put(
-                  :keychain_credential_id,
-                  target_job.keychain_credential_id
-                )
-              else
-                job_attrs
-              end
-            end)
             |> Map.put(:id, mapped_id)
             |> stringify_keys()
 
@@ -605,35 +620,67 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  defp remap_document_credentials(document, credential_map)
-       when map_size(credential_map) == 0,
-       do: document
+  # Builds a map of `source_keychain_credential_id => target_keychain_credential_id`
+  # by matching on the shared `name` (unique per project). A source keychain with no
+  # same-named target keychain maps to `nil` rather than leaking the sandbox-owned id.
+  # Target keychain ids (carried by passthrough target workflows) are absent as keys
+  # and so fall through to the identity default in the remap, staying untouched.
+  defp build_keychain_remap(source_keychains, target_keychains) do
+    target_by_name = Map.new(target_keychains, &{&1.name, &1.id})
 
-  defp remap_document_credentials(document, credential_map) do
-    Map.update(document, "workflows", [], fn workflows ->
-      Enum.map(workflows, &remap_workflow_credentials(&1, credential_map))
+    Map.new(source_keychains, fn kc ->
+      {kc.id, Map.get(target_by_name, kc.name)}
     end)
   end
 
-  defp remap_workflow_credentials(%{"jobs" => jobs} = workflow, credential_map) do
+  defp remap_document_credentials(document, credential_map, keychain_map)
+       when map_size(credential_map) == 0 and map_size(keychain_map) == 0,
+       do: document
+
+  defp remap_document_credentials(document, credential_map, keychain_map) do
+    Map.update(document, "workflows", [], fn workflows ->
+      Enum.map(
+        workflows,
+        &remap_workflow_credentials(&1, credential_map, keychain_map)
+      )
+    end)
+  end
+
+  defp remap_workflow_credentials(
+         %{"jobs" => jobs} = workflow,
+         credential_map,
+         keychain_map
+       ) do
     Map.put(
       workflow,
       "jobs",
-      Enum.map(jobs, &remap_job_credential(&1, credential_map))
+      Enum.map(jobs, &remap_job_credential(&1, credential_map, keychain_map))
     )
   end
 
-  defp remap_workflow_credentials(workflow, _credential_map), do: workflow
+  defp remap_workflow_credentials(workflow, _credential_map, _keychain_map),
+    do: workflow
 
-  defp remap_job_credential(
-         %{"project_credential_id" => pc_id} = job,
-         credential_map
-       )
-       when not is_nil(pc_id) do
-    Map.put(job, "project_credential_id", Map.get(credential_map, pc_id, pc_id))
+  # Each reference is remapped within its own namespace; ids absent from the
+  # map (target-owned refs on passthrough workflows) keep their value via the
+  # identity default. Exclusivity between the two fields is not enforced here:
+  # source jobs carry at most one reference, and a document that somehow holds
+  # both fails import validation rather than having one silently dropped.
+  defp remap_job_credential(job, credential_map, keychain_map) do
+    job
+    |> remap_credential_field("project_credential_id", credential_map)
+    |> remap_credential_field("keychain_credential_id", keychain_map)
   end
 
-  defp remap_job_credential(job, _credential_map), do: job
+  defp remap_credential_field(job, field, id_map) do
+    case job do
+      %{^field => id} when not is_nil(id) ->
+        Map.put(job, field, Map.get(id_map, id, id))
+
+      _ ->
+        job
+    end
+  end
 
   defp build_merged_triggers(source_triggers, target_triggers, trigger_mappings) do
     # Process source triggers (matched and new)
@@ -788,11 +835,7 @@ defmodule Lightning.Projects.MergeProjects do
        ) do
     # Filter source workflows to selected ones if a selection is specified
     effective_source_workflows =
-      if selected_workflow_ids do
-        Enum.filter(source_workflows, &(&1.id in selected_workflow_ids))
-      else
-        source_workflows
-      end
+      filter_selected_workflows(source_workflows, selected_workflow_ids)
 
     # Process source workflows (matched and new)
     merged_from_source =

@@ -2,6 +2,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -121,6 +122,68 @@ defmodule Lightning.Projects.ProvisionerTest do
                      }
                    ]
                  }
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with a malformed adaptor" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(
+                  first_job,
+                  "adaptor",
+                  "@openfn/language-http@7.3.2; touch /tmp/x"
+                )
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["adaptor has invalid format"]} | _]}
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with an adaptor that is not in the registry" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["is not a recognised adaptor"]} | _]}
                ]
              } = flatten_errors(changeset)
     end
@@ -1572,6 +1635,42 @@ defmodule Lightning.Projects.ProvisionerTest do
              } = flatten_errors(changeset)
 
       assert msg =~ "isn't available in this project"
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a nonexistent destination_credential_id with the shared wording",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => Ecto.UUID.generate()
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)

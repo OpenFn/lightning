@@ -45,6 +45,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Credentials.Scoping
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
@@ -176,8 +177,15 @@ defmodule Lightning.Projects.Sandboxes do
   `:selected_credential_ids` (a list of the sandbox `project_credential` ids the
   caller chose to carry over) and each one is attached to the target before the
   document is imported, so the remap finds a match instead of dropping it.
-  Sandbox `project_credentials` left out of the list stay dropped. Only regular
-  `project_credentials` are handled here; keychain credentials are out of scope.
+  Sandbox `project_credentials` left out of the list stay dropped.
+
+  Keychain credentials are handled analogously: a keychain that lives only in the
+  sandbox and is used by a to-be-merged workflow is attached to the target (along
+  with its default credential) before the document is imported, so the keychain
+  remap name-matches it instead of dropping it. Attachment follows the same scope
+  as the merge, so a partial merge (via `:selected_workflow_ids`) only carries
+  over keychains used by the selected workflows. A keychain whose name already
+  exists in the target is left as the target's own.
 
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
@@ -200,25 +208,65 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
+    # `:merge_sandbox` allows editors, but deleting collections needs owner/admin.
+    # Gate only the destructive half so an editor can merge without pruning data.
+    allow_collection_deletions? =
+      Permissions.can?(:collections, :manage_collection, actor, target)
+
     Repo.transact(fn ->
+      # Preload once so both attach_sandbox_keychains and merge_project derive
+      # the carried-workflow set from the same in-memory assoc (their
+      # carried_source_workflows/2 calls use a non-forced preload and skip the query).
+      source = Repo.preload(source, workflows: [:jobs, :triggers, :edges])
+
       with :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
-           # Re-preload so the credential remap sees the just-attached
-           # associations; merge_project skips the preload if they're already loaded.
+           :ok <- attach_sandbox_keychains(source, target, opts),
+           # Re-preload so the credential and keychain remaps see the
+           # just-attached associations; merge_project skips the preload if
+           # they're already loaded.
            target =
-             Repo.preload(target, [project_credentials: []], force: true),
+             Repo.preload(
+               target,
+               [project_credentials: [], keychain_credentials: []],
+               force: true
+             ),
            merge_doc = MergeProjects.merge_project(source, target, opts),
            {:ok, updated_target} <-
              Provisioner.import_document(target, actor, merge_doc,
                allow_stale: true
              ),
-           {:ok, _} <- sync_collections(source, target) do
+           :ok <- reject_out_of_project_credentials(target),
+           {:ok, _} <-
+             sync_collections(source, target,
+               allow_deletions: allow_collection_deletions?
+             ) do
         {:ok, updated_target}
       end
     end)
     |> case do
       {:ok, _} = ok -> ok
       {:error, reason} -> {:error, classify_merge_error(reason)}
+    end
+  end
+
+  # Defence-in-depth backstop: after the document lands, re-read the target's
+  # persisted jobs and roll the whole merge back if any references a credential
+  # or keychain owned by a different project. On the live path
+  # Provisioner.import_document runs its own project-wide scoping guard (a strict
+  # superset of this scan, covering jobs and channels) and rolls back first, so
+  # this firing at all means an upstream guard regressed — most concretely the
+  # fail-open Map.get identity fallthrough in MergeProjects.merge_project/3's
+  # keychain remap, or a future change that stops the merge routing through the
+  # provisioner chokepoint. Scanning every target job is a safe superset:
+  # untouched, already-valid jobs scope clean.
+  defp reject_out_of_project_credentials(%Project{id: target_id}) do
+    case Scoping.out_of_project_references(
+           target_id,
+           Scoping.job_refs_for_project(target_id)
+         ) do
+      [] -> :ok
+      violations -> {:error, {:out_of_project_credentials, violations}}
     end
   end
 
@@ -274,6 +322,95 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
+  # Attaches any sandbox-only keychain used by a to-be-merged source job to the
+  # target so the keychain remap in merge_project/3 can name-match it. Derives
+  # the keychains from the same carried-workflow set the merge document is built
+  # from (MergeProjects.carried_source_workflows/2), so it shares the merge's
+  # live-only and `:selected_workflow_ids` scope: soft-deleted or unselected
+  # source workflows' keychains are never attached, matching what the document
+  # actually carries. A keychain whose name already exists in the target is left
+  # alone (the remap resolves it to the target's own keychain). For a genuinely
+  # sandbox-only keychain we also attach its default credential first, so the
+  # KeychainCredential changeset's validate_default_credential_belongs_to_project
+  # passes against the target. Returns `{:error, changeset}` on the first genuine
+  # insert failure so the merge transaction rolls back.
+  defp attach_sandbox_keychains(source, target, opts) do
+    target_keychain_names =
+      from(k in KeychainCredential,
+        where: k.project_id == ^target.id,
+        select: k.name
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    source
+    |> MergeProjects.carried_source_workflows(opts)
+    |> Enum.flat_map(& &1.jobs)
+    |> Enum.map(& &1.keychain_credential_id)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> load_source_keychains(source.id)
+    |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
+    |> Enum.reduce_while(:ok, fn keychain, :ok ->
+      case attach_keychain_to_target(keychain, target) do
+        {:ok, _} -> {:cont, :ok}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  # Only ever loads source-owned keychains: a job could, via changeset bypass,
+  # point at a foreign keychain, but we attach only ones the sandbox owns. The
+  # provisioner guard and backstop reject anything else.
+  defp load_source_keychains([], _source_id), do: []
+
+  defp load_source_keychains(ids, source_id) do
+    from(k in KeychainCredential,
+      where: k.id in ^ids and k.project_id == ^source_id
+    )
+    |> Repo.all()
+  end
+
+  defp attach_keychain_to_target(keychain, target) do
+    attach_keychain_default_credential(keychain, target)
+
+    # The project must be on the base struct so that
+    # validate_default_credential_belongs_to_project can see it when
+    # changeset/2 runs; put_assoc after the fact would skip the check.
+    %KeychainCredential{
+      project: target,
+      project_id: target.id,
+      created_by_id: keychain.created_by_id
+    }
+    |> KeychainCredential.changeset(%{
+      name: keychain.name,
+      path: keychain.path,
+      default_credential_id: keychain.default_credential_id
+    })
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:name, :project_id])
+  end
+
+  defp attach_keychain_default_credential(
+         %{default_credential_id: nil},
+         _target
+       ),
+       do: :ok
+
+  defp attach_keychain_default_credential(
+         %{default_credential_id: credential_id},
+         target
+       ) do
+    rows =
+      build_target_credential_rows([%{credential_id: credential_id}], target.id)
+
+    Repo.insert_all(ProjectCredential, rows,
+      on_conflict: :nothing,
+      conflict_target: [:project_id, :credential_id]
+    )
+
+    :ok
+  end
+
   # A failed merge is sensitive (it can block or lose a user's work), so every
   # failure is logged at :error to surface in Sentry. A usage-limit message is
   # an expected, user-actionable block, so it passes through unlogged.
@@ -287,6 +424,20 @@ defmodule Lightning.Projects.Sandboxes do
 
   defp classify_merge_error(%{text: _} = usage_limit_message),
     do: usage_limit_message
+
+  defp classify_merge_error({:out_of_project_credentials, violations}) do
+    details =
+      Enum.map_join(violations, "; ", fn %{key: job_id, field: field} ->
+        "job #{job_id} #{field}: #{Scoping.violation_message(field)}"
+      end)
+
+    Logger.error(
+      "Sandbox merge failed. Out-of-project credential references " <>
+        "survived the provisioner guard (backstop caught): #{details}"
+    )
+
+    :merge_failed
+  end
 
   defp classify_merge_error(reason) do
     Logger.error("Sandbox merge failed. #{inspect(reason)}")
@@ -712,14 +863,19 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp create_keychain_in_sandbox(original_keychain, sandbox, actor) do
-    %KeychainCredential{}
+    # The project must be on the base struct so that
+    # validate_default_credential_belongs_to_project can see it when
+    # changeset/2 runs; put_assoc after the fact would skip the check.
+    %KeychainCredential{
+      project: sandbox,
+      project_id: sandbox.id,
+      created_by_id: actor.id
+    }
     |> KeychainCredential.changeset(%{
       name: original_keychain.name,
       path: original_keychain.path,
       default_credential_id: original_keychain.default_credential_id
     })
-    |> Ecto.Changeset.put_assoc(:project, sandbox)
-    |> Ecto.Changeset.put_assoc(:created_by, actor)
     |> Repo.insert!()
   end
 
@@ -946,11 +1102,20 @@ defmodule Lightning.Projects.Sandboxes do
   `CollectionHook.handle_delete/2` for usage accounting.
 
   Runs inside a single transaction.
+
+  ## Options
+
+    * `:allow_deletions` - when `true`, target-only collections (and their items)
+      are deleted so the target matches the source. Defaults to `false`: callers
+      must opt in. The merge path opts in only when the actor holds
+      `:manage_collection`, so an editor merge never prunes target collections.
   """
-  @spec sync_collections(Project.t(), Project.t()) ::
+  @spec sync_collections(Project.t(), Project.t(), keyword()) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
           | {:error, term()}
-  def sync_collections(%Project{} = source, %Project{} = target) do
+  def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
+    allow_deletions? = Keyword.get(opts, :allow_deletions, false)
+
     source_names = source |> Collections.list_project_collections() |> names()
 
     target_collections = Collections.list_project_collections(target)
@@ -958,10 +1123,13 @@ defmodule Lightning.Projects.Sandboxes do
 
     to_create = MapSet.difference(source_names, target_names)
 
-    names_to_delete = MapSet.difference(target_names, source_names)
-
     collections_to_delete =
-      Enum.filter(target_collections, &(&1.name in names_to_delete))
+      if allow_deletions? do
+        names_to_delete = MapSet.difference(target_names, source_names)
+        Enum.filter(target_collections, &(&1.name in names_to_delete))
+      else
+        []
+      end
 
     to_delete_ids = Enum.map(collections_to_delete, & &1.id)
 

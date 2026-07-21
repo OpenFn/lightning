@@ -1,7 +1,6 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Accounts.UserToken
   alias Lightning.Auditing
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
@@ -258,21 +257,6 @@ defmodule Lightning.CredentialsTest do
       user = insert(:user)
       credential = insert(:credential, user_id: user.id)
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
-    end
-  end
-
-  describe "get_credential_by_project_credential/1" do
-    test "returns the credential with given project_credential id" do
-      refute Credentials.get_credential_by_project_credential(
-               Ecto.UUID.generate()
-             )
-
-      project_credential = insert(:project_credential)
-
-      credential =
-        Credentials.get_credential_by_project_credential(project_credential.id)
-
-      assert credential.id == project_credential.credential.id
     end
   end
 
@@ -746,6 +730,29 @@ defmodule Lightning.CredentialsTest do
 
       assert credential == Credentials.get_credential!(credential.id)
     end
+
+    test "ignores mass-assigned user_id and transfer_status" do
+      owner = insert(:user)
+      other_user = insert(:user)
+
+      credential =
+        insert(:credential, name: "some name", schema: "raw", user: owner)
+
+      assert {:ok, %Credential{} = updated} =
+               Credentials.update_credential(credential, %{
+                 name: "renamed",
+                 user_id: other_user.id,
+                 transfer_status: :completed
+               })
+
+      assert updated.name == "renamed"
+      assert updated.user_id == owner.id
+      assert is_nil(updated.transfer_status)
+
+      persisted = Repo.get!(Credential, credential.id)
+      assert persisted.user_id == owner.id
+      assert is_nil(persisted.transfer_status)
+    end
   end
 
   describe "has_activity_in_projects?/1" do
@@ -1028,7 +1035,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "credential transfers" do
-    test "confirm_transfer/4 transfers credential ownership" do
+    test "confirm_transfer/2 transfers credential ownership" do
       owner = insert(:user)
       receiver = insert(:user)
       credential = insert(:credential, user_id: owner.id)
@@ -1036,18 +1043,10 @@ defmodule Lightning.CredentialsTest do
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
         assert {:ok, updated_credential} =
-                 Credentials.confirm_transfer(
-                   credential.id,
-                   receiver.id,
-                   owner.id,
-                   token
-                 )
+                 Credentials.confirm_transfer(token, owner)
 
         assert updated_credential.user_id == receiver.id
 
@@ -1059,11 +1058,6 @@ defmodule Lightning.CredentialsTest do
         assert audit.changes.before["user_id"] == credential.user_id
         assert audit.changes.after["user_id"] == receiver.id
 
-        refute Repo.get_by(UserToken,
-                 context: "credential_transfer",
-                 user_id: owner.id
-               )
-
         assert_email_sent(
           to: Swoosh.Email.Recipient.format(receiver),
           subject: "A credential has been transferred to you."
@@ -1071,49 +1065,140 @@ defmodule Lightning.CredentialsTest do
       end)
     end
 
-    test "confirm_transfer/4 fails with non-existent entities" do
+    # H-4: credential-transfer confirmation must bind the token to the specific
+    # credential and receiver. These tests specify the reworked confirm flow that
+    # takes only the token + the confirming user, deriving credential and receiver
+    # from the verified token (never from caller/URL input).
+    defp extract_transfer_token(email) do
+      [token] =
+        Regex.run(~r{/transfer/([^\s\n/]+)}, email.text_body,
+          capture: :all_but_first
+        )
+
+      token
+    end
+
+    test "confirm_transfer/2 rejects a token whose owner does not own the target credential" do
+      # The core theft scenario. The credential id is carried INSIDE the signed
+      # JWT, so an honest `initiate` can only ever mint a token bound to the
+      # owner's own credential. To express the attack we forge a token that is
+      # cryptographically valid (signed with the real signer, owner = attacker)
+      # yet names the VICTIM's credential — the mismatch `initiate` would never
+      # produce. The ownership guard (credential.user_id == token owner) is the
+      # core fix and must reject it regardless of the valid signature.
+      attacker = insert(:user)
+      accomplice = insert(:user)
+      victim = insert(:user)
+
+      victim_credential = insert(:credential, user_id: victim.id)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{attacker.id}",
+            "credential_id" => victim_credential.id,
+            "receiver_id" => accomplice.id
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, :not_owner} =
+               Credentials.confirm_transfer(token, attacker)
+
+      refreshed = Repo.get!(Credential, victim_credential.id)
+      assert refreshed.user_id == victim.id
+    end
+
+    test "a transfer token cannot be used as an API bearer token" do
+      # The transfer JWT is signed with the shared token signer, so it must not
+      # authenticate as the owner via Tokens.verify/1. The `credential_transfer:`
+      # sub prefix keeps it out of the personal-access-token path.
+      owner = insert(:user)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => Ecto.UUID.generate(),
+            "receiver_id" => Ecto.UUID.generate()
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, "Unsupported token type"} = Lightning.Tokens.verify(token)
+    end
+
+    test "confirm_transfer/2 fails once the transfer has been revoked" do
+      # Covers both the not-pending guard and the "revoked link is dead" AC: the
+      # JWT may still be cryptographically valid, but a revoked transfer must not
+      # complete at confirm.
       owner = insert(:user)
       receiver = insert(:user)
-      credential = insert(:credential, user: owner)
+      credential = insert(:credential, user_id: owner.id)
 
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
-        assert {:error, :not_found} ==
-                 Credentials.confirm_transfer(
-                   Ecto.UUID.generate(),
-                   receiver.id,
-                   owner.id,
-                   token
-                 )
+        assert {:ok, _revoked} =
+                 Credentials.revoke_transfer(credential.id, owner)
 
-        assert {:error, :not_found} ==
-                 Credentials.confirm_transfer(
-                   credential.id,
-                   Ecto.UUID.generate(),
-                   owner.id,
-                   token
-                 )
+        assert {:error, :not_pending} =
+                 Credentials.confirm_transfer(token, owner)
+
+        refreshed = Repo.get!(Credential, credential.id)
+        assert refreshed.user_id == owner.id
       end)
     end
 
-    test "confirm_transfer/4 fails with invalid token" do
+    test "confirm_transfer/2 derives the receiver from the token, not caller input" do
+      # The receiver named at initiation is the only one who can end up owning the
+      # credential; there is no caller/URL receiver value to swap.
       owner = insert(:user)
       receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        token = extract_transfer_token(email)
+
+        assert {:ok, transferred} = Credentials.confirm_transfer(token, owner)
+
+        assert transferred.user_id == receiver.id
+
+        refreshed = Repo.get!(Credential, credential.id)
+        assert refreshed.user_id == receiver.id
+      end)
+    end
+
+    test "confirm_transfer/2 fails when the token names a missing credential" do
+      # A cryptographically-valid token whose credential no longer exists must
+      # not complete the transfer.
+      owner = insert(:user)
+      receiver = insert(:user)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => Ecto.UUID.generate(),
+            "receiver_id" => receiver.id
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, :not_found} =
+               Credentials.confirm_transfer(token, owner)
+    end
+
+    test "confirm_transfer/2 fails with invalid token" do
+      owner = insert(:user)
       credential = insert(:credential)
 
       assert {:error, :token_error} ==
-               Credentials.confirm_transfer(
-                 credential.id,
-                 receiver.id,
-                 owner.id,
-                 "invalid_token"
-               )
+               Credentials.confirm_transfer("invalid_token", owner)
 
       refreshed_credential = Repo.get!(Credential, credential.id)
       assert refreshed_credential.user_id == credential.user_id
@@ -1130,28 +1215,17 @@ defmodule Lightning.CredentialsTest do
       assert updated_credential.transfer_status == :pending
     end
 
-    test "confirm_transfer/4 updates transfer status from pending to completed" do
+    test "confirm_transfer/2 updates transfer status from pending to completed" do
       owner = insert(:user)
       receiver = insert(:user)
-
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :pending)
+      credential = insert(:credential, user_id: owner.id)
 
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
-        {:ok, updated_credential} =
-          Credentials.confirm_transfer(
-            credential.id,
-            receiver.id,
-            owner.id,
-            token
-          )
+        {:ok, updated_credential} = Credentials.confirm_transfer(token, owner)
 
         assert updated_credential.transfer_status == :completed
       end)
@@ -1169,27 +1243,42 @@ defmodule Lightning.CredentialsTest do
       assert is_nil(updated_credential.transfer_status)
     end
 
-    test "revoke_transfer/2 clears transfer status and deletes tokens" do
+    test "confirm_transfer/2 confirming one transfer does not invalidate another" do
+      # Regression: a stateless JWT keeps each transfer independent. An owner can
+      # have two pending transfers at once; confirming the first must not orphan
+      # the second (the old jti-row + delete_all approach wiped all of the
+      # owner's transfer tokens on the first confirm).
       owner = insert(:user)
+      receiver_x = insert(:user)
+      receiver_y = insert(:user)
+      credential_a = insert(:credential, user_id: owner.id)
+      credential_b = insert(:credential, user_id: owner.id)
 
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :pending)
+      :ok =
+        Credentials.initiate_credential_transfer(
+          owner,
+          receiver_x,
+          credential_a
+        )
 
-      # Create a transfer token that should be deleted
-      {_token_value, user_token} =
-        UserToken.build_email_token(owner, "credential_transfer", owner.email)
+      assert_received {:email, email_a}
+      token_a = extract_transfer_token(email_a)
 
-      {:ok, _token} = Repo.insert(user_token)
+      :ok =
+        Credentials.initiate_credential_transfer(
+          owner,
+          receiver_y,
+          credential_b
+        )
 
-      assert {:ok, updated_credential} =
-               Credentials.revoke_transfer(credential.id, owner)
+      assert_received {:email, email_b}
+      token_b = extract_transfer_token(email_b)
 
-      assert is_nil(updated_credential.transfer_status)
-      # Verify token was deleted
-      refute Repo.get_by(UserToken,
-               context: "credential_transfer",
-               user_id: owner.id
-             )
+      assert {:ok, transferred_a} = Credentials.confirm_transfer(token_a, owner)
+      assert transferred_a.user_id == receiver_x.id
+
+      assert {:ok, transferred_b} = Credentials.confirm_transfer(token_b, owner)
+      assert transferred_b.user_id == receiver_y.id
     end
 
     test "revoke_transfer/2 fails with non-existent credential" do
@@ -1227,20 +1316,44 @@ defmodule Lightning.CredentialsTest do
                Credentials.revoke_transfer(credential.id, owner)
     end
 
-    test "confirm_transfer/4 fails if credential is not pending" do
+    test "confirm_transfer/2 fails if credential is not pending" do
+      # A token bound to the owner's own credential that never entered a pending
+      # transfer must be rejected by the pending guard.
       owner = insert(:user)
       receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id, transfer_status: nil)
 
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :completed)
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => credential.id,
+            "receiver_id" => receiver.id
+          },
+          Lightning.Config.token_signer()
+        )
 
-      assert {:error, :token_error} =
-               Credentials.confirm_transfer(
-                 credential.id,
-                 receiver.id,
-                 owner.id,
-                 "valid_token"
-               )
+      assert {:error, :not_pending} =
+               Credentials.confirm_transfer(token, owner)
+    end
+
+    test "confirm_transfer/2 cannot be replayed after completing" do
+      # After a successful transfer the credential belongs to the receiver, so
+      # replaying the same link is rejected (ownership guard).
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        token = extract_transfer_token(email)
+
+        assert {:ok, _} = Credentials.confirm_transfer(token, owner)
+
+        assert {:error, :not_owner} =
+                 Credentials.confirm_transfer(token, owner)
+      end)
     end
 
     test "revoke_transfer/2 fails if transfer is already completed" do
