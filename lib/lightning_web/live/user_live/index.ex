@@ -4,28 +4,14 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
+  on_mount {LightningWeb.Hooks, :ensure_admin}
+
   alias Lightning.Accounts
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do
-    can_access_admin_space =
-      Users
-      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
-
-    if can_access_admin_space do
-      socket =
-        assign(socket,
-          active_menu_item: :users
-        )
-
-      {:ok, socket, layout: {LightningWeb.Layouts, :settings}}
-    else
-      {:ok,
-       put_flash(socket, :nav, :no_access)
-       |> push_navigate(to: "/projects")}
-    end
+    {:ok, assign(socket, active_menu_item: :users),
+     layout: {LightningWeb.Layouts, :settings}}
   end
 
   @impl true
