@@ -547,9 +547,23 @@ defmodule Lightning.WorkOrders do
   end
 
   def get_workorders_with_runs(workflow_id, run_id) do
-    # First, get workorder IDs we want
+    # A run_id ensures that run's work order is in the returned history (even if
+    # it's older than the recent window), but only when the run belongs to this
+    # workflow. A missing, malformed, foreign, or unknown run_id resolves to nil
+    # and is dropped, so history can never surface another workflow's work order
+    # (and a bad id can't crash). Results are still ordered by last_activity.
+    specific_wo_id =
+      if valid_uuid?(run_id) do
+        from(r in Run,
+          join: wo in assoc(r, :work_order),
+          where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
+          select: r.work_order_id
+        )
+        |> Repo.one()
+      end
+
     workorder_ids =
-      if is_nil(run_id) do
+      if is_nil(specific_wo_id) do
         # Just get top 20 workorders by last_activity
         from(wo in WorkOrder,
           join: r in assoc(wo, :runs),
@@ -561,15 +575,7 @@ defmodule Lightning.WorkOrders do
         )
         |> Repo.all()
       else
-        # Get the specific workorder for the run
-        specific_wo_id =
-          from(r in Run,
-            where: r.id == ^run_id,
-            select: r.work_order_id
-          )
-          |> Repo.one()
-
-        # Get top 20 workorders
+        # That run's workorder plus the next 19 recent ones for this workflow
         other_wo_ids =
           from(wo in WorkOrder,
             join: r in assoc(wo, :runs),
@@ -582,13 +588,13 @@ defmodule Lightning.WorkOrders do
           )
           |> Repo.all()
 
-        # Combine them
         [specific_wo_id | other_wo_ids] |> Enum.uniq()
       end
 
-    # Now fetch the full workorders with preloads
+    # Final fetch, re-scoped to the workflow so a stray id can never surface
+    # another workflow's work order.
     from(wo in WorkOrder,
-      where: wo.id in ^workorder_ids,
+      where: wo.id in ^workorder_ids and wo.workflow_id == ^workflow_id,
       order_by: [desc: wo.last_activity],
       preload: [:snapshot, runs: :snapshot]
     )

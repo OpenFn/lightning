@@ -215,9 +215,17 @@ defmodule Lightning.Workflows.Snapshot do
     |> Repo.all()
   end
 
-  def get_all_by_ids(ids) do
+  @doc """
+  Gets snapshots by id, scoped to a project via each snapshot's workflow.
+
+  Only snapshots whose workflow belongs to `project_id` are returned, so this
+  can't be used to read another project's snapshots.
+  """
+  @spec get_all_by_ids([Ecto.UUID.t()], Ecto.UUID.t()) :: [t()]
+  def get_all_by_ids(ids, project_id) do
     from(s in __MODULE__,
-      where: s.id in ^ids
+      join: w in assoc(s, :workflow),
+      where: s.id in ^ids and w.project_id == ^project_id
     )
     |> Repo.all()
   end

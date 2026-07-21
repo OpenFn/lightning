@@ -69,6 +69,47 @@ defmodule Lightning.RunsTest do
     end
   end
 
+  describe "get_for_project/2" do
+    setup do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      %{run: run, project: workflow.project}
+    end
+
+    test "returns the run when it belongs to the given project", %{
+      run: run,
+      project: project
+    } do
+      assert %Run{id: id} = Runs.get_for_project(run.id, project.id)
+      assert id == run.id
+    end
+
+    test "returns nil when the run belongs to a different project", %{run: run} do
+      other_project = insert(:project)
+
+      refute Runs.get_for_project(run.id, other_project.id)
+    end
+
+    test "returns nil when the run does not exist", %{project: project} do
+      refute Runs.get_for_project(Ecto.UUID.generate(), project.id)
+    end
+  end
+
   describe "claim/3" do
     setup do
       %{worker_name: "my.worker.name", queues: ["manual", "*"]}
@@ -267,10 +308,10 @@ defmodule Lightning.RunsTest do
 
   describe "start_step/1" do
     test "creates a new step for a run" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -319,10 +360,10 @@ defmodule Lightning.RunsTest do
     end
 
     test "should not allow referencing job that is not on the snapshot" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [old_job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run_1]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)

@@ -7,35 +7,62 @@ defmodule LightningWeb.RunLive.ShowTest do
 
   alias Lightning.WorkOrders
   alias LightningWeb.LiveHelpers
-  alias Phoenix.LiveView.AsyncResult
 
   import LiveHelpers, only: [display_short_uuid: 1]
 
   setup :stub_rate_limiter_ok
 
-  describe "handle_async/3" do
+  describe "cross-project access" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
-    test "with exit error", %{conn: conn, project: project} do
-      %{triggers: [%{id: webhook_trigger_id}]} =
-        insert(:simple_workflow, project: project) |> with_snapshot()
+    test "redirects to project history when the run belongs to another project",
+         %{conn: conn, project: project} do
+      run = run_in_project(insert(:project))
 
-      # Post to webhook
-      assert post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
-             |> json_response(200)
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(conn, ~p"/projects/#{project.id}/runs/#{run.id}")
 
-      # Try to fetch a run that doesn't exist
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/runs/#{Ecto.UUID.generate()}")
-
-      view |> render_async()
-
-      %{socket: socket} = :sys.get_state(view.pid)
-
-      assert %AsyncResult{ok?: false, failed: :not_found} =
-               socket.assigns.run
+      assert to == ~p"/projects/#{project.id}/history"
+      assert flash["error"] == "Run not found"
     end
+
+    test "redirects to project history when the run does not exist", %{
+      conn: conn,
+      project: project
+    } do
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/projects/#{project.id}/runs/#{Ecto.UUID.generate()}"
+               )
+
+      assert to == ~p"/projects/#{project.id}/history"
+      assert flash["error"] == "Run not found"
+    end
+  end
+
+  defp run_in_project(project) do
+    %{triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip)
+      )
+
+    insert(:run,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: insert(:dataclip)
+    )
+  end
+
+  describe "handle_async/3" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
 
     test "lifecycle of a run", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =

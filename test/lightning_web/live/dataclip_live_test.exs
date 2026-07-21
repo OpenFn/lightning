@@ -89,5 +89,27 @@ defmodule LightningWeb.DataclipLiveTest do
                {:error,
                 {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
+
+    test "cannot view a dataclip from another project via an accessible project",
+         %{conn: conn, project: project} do
+      other_project = insert(:project)
+
+      other_dataclip =
+        insert(:dataclip, body: %{secret: "from B"}, project: other_project)
+
+      assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+               live(
+                 conn,
+                 Routes.project_dataclip_show_path(
+                   conn,
+                   :show,
+                   project.id,
+                   other_dataclip.id
+                 )
+               )
+
+      assert to == "/projects/#{project.id}/history"
+      assert flash["error"] == "Dataclip not found"
+    end
   end
 end
