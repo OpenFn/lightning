@@ -1,21 +1,9 @@
 defmodule Lightning.CLITest do
   use ExUnit.Case, async: true
 
+  use Mimic
+
   alias Lightning.CLI
-
-  test "any command" do
-    CLI.execute("foo")
-
-    assert {"foo",
-            [
-              timeout: nil,
-              log: true,
-              env: %{
-                "NODE_PATH" => "./priv/openfn",
-                "PATH" => "./priv/openfn/bin:" <> _
-              }
-            ]} = expect_command()
-  end
 
   describe "metadata/2" do
     test "with incorrect state" do
@@ -36,7 +24,17 @@ defmodule Lightning.CLITest do
       res = CLI.metadata(state, adaptor_path)
 
       expected_command =
-        ~s(openfn metadata --log-json -S '{"foo":"bar"}' -a #{adaptor_path} --log debug)
+        [
+          "openfn",
+          "metadata",
+          "--log-json",
+          "-S",
+          "{\"foo\":\"bar\"}",
+          "-a",
+          adaptor_path,
+          "--log",
+          "debug"
+        ]
 
       {command, opts} = expect_command()
 
@@ -88,10 +86,48 @@ defmodule Lightning.CLITest do
       assert last ==
                "/tmp/openfn/repo/meta/b57c9a0c121b0a835b25436133e69221035602da3ff9981e1fcf2d6128aec622.json"
     end
+
+    @tag :tmp_dir
+    test "does not allow shell injection via the state", %{tmp_dir: dir} do
+      marker = Path.join(dir, "pwned-#{Ecto.UUID.generate()}")
+
+      state = %{"foo" => "'$(touch #{marker})'"}
+      adaptor_path = "/tmp/foo"
+
+      run_on_real_rambo()
+
+      CLI.metadata(state, adaptor_path)
+
+      refute File.exists?(marker)
+    end
+
+    @tag :tmp_dir
+    test "does not allow shell injection via the adaptor path", %{tmp_dir: dir} do
+      marker = Path.join(dir, "pwned-#{Ecto.UUID.generate()}")
+
+      state = %{"foo" => "barbar"}
+      adaptor_path = "; touch #{marker}; "
+
+      run_on_real_rambo()
+
+      _res = CLI.metadata(state, adaptor_path)
+
+      refute File.exists?(marker)
+    end
+  end
+
+  defp run_on_real_rambo do
+    Mimic.copy(FakeRambo)
+
+    FakeRambo
+    |> stub(:run, fn cmd, args, opts ->
+      opts = Keyword.put(opts, :log, false)
+      Rambo.run(cmd, args, opts)
+    end)
   end
 
   defp expect_command do
-    assert_received {"/usr/bin/env", ["sh", "-c", command], opts}
+    assert_received {"/usr/bin/env", command, opts}
 
     {command, opts}
   end

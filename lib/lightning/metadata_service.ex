@@ -151,7 +151,7 @@ defmodule Lightning.MetadataService do
       is_map(last_message) ->
         {:error, Error.new("no_metadata_result")}
 
-      Regex.match?(~r"^[/a-zA-z0-9\-_\.]+\.json$", last_message) ->
+      Regex.match?(~r"^\A[/A-Za-z0-9\-_\.]+\.json\z", last_message) ->
         path = last_message
         {:ok, path}
 
