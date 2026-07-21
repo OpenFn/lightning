@@ -23,6 +23,13 @@ and this project adheres to
   sandbox editor with the workflow's trigger live and its own endpoint. The
   parent project stays untouched until changes are promoted back.
   [#4901](https://github.com/OpenFn/lightning/pull/4901)
+- Promote from the editor: inside a sandbox, promote the workflow you are
+  editing back into the parent project's live workflow, then choose whether to
+  archive the sandbox or keep it to promote more related workflows first. A
+  non-live workflow can have a trigger turned on for testing behind a warning,
+  and live (read-only) workflows no longer show run or edit actions that cannot
+  be used there.
+  [#5005](https://github.com/OpenFn/lightning/pull/5005)
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
