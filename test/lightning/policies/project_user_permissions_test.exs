@@ -110,6 +110,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         edit_project
+        edit_project_user_role
         write_webhook_auth_method
         create_project_credential
         run_workflow
@@ -139,6 +140,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
          } do
       ~w(
           edit_project
+          edit_project_user_role
           write_webhook_auth_method
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
@@ -155,6 +157,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           delete_workflow
           edit_workflow
           edit_project
+          edit_project_user_role
           write_webhook_auth_method
           create_project_credential
           run_workflow
@@ -173,10 +176,20 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         edit_project
+        edit_project_user_role
         write_webhook_auth_method
         create_project_credential
         run_workflow
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
+    end
+  end
+
+  describe "Non-members cannot edit collaborator roles" do
+    test "cannot edit collaborator roles", %{
+      intruder: intruder,
+      project: project
+    } do
+      refute_can(ProjectUsers, :edit_project_user_role, intruder, project)
     end
   end
 

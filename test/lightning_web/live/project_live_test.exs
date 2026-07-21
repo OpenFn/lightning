@@ -4221,6 +4221,232 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "owner/admin sees editable role control for eligible collaborators", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      owner = insert(:user)
+      admin = insert(:user)
+      editor = insert(:user)
+      viewer = insert(:user)
+
+      owner_project_user =
+        insert(:project_user, project: project, user: owner, role: :owner)
+
+      admin_project_user =
+        insert(:project_user, project: project, user: admin, role: :admin)
+
+      editor_project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      viewer_project_user =
+        insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      for {role, user} <- [owner: owner, admin: admin] do
+        conn = log_in_user(conn, user)
+
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+        editable_ids =
+          case role do
+            :owner ->
+              [
+                admin_project_user.id,
+                editor_project_user.id,
+                viewer_project_user.id
+              ]
+
+            :admin ->
+              [editor_project_user.id, viewer_project_user.id]
+          end
+
+        Enum.each(editable_ids, fn project_user_id ->
+          assert has_element?(view, "form#role-#{project_user_id}")
+        end)
+
+        refute has_element?(view, "form#role-#{owner_project_user.id}")
+      end
+    end
+
+    test "viewer/editor does not see editable role control", %{conn: conn} do
+      project = insert(:project)
+
+      owner = insert(:user)
+      editor = insert(:user)
+      viewer = insert(:user)
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+      insert(:project_user, project: project, user: editor, role: :editor)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      for user <- [viewer, editor] do
+        conn = log_in_user(conn, user)
+
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+        refute has_element?(view, "form[id^='role-']")
+      end
+    end
+
+    test "owner row and self row remain non-editable", %{conn: conn} do
+      project = insert(:project)
+
+      owner = insert(:user)
+      admin = insert(:user)
+      editor = insert(:user)
+
+      owner_project_user =
+        insert(:project_user, project: project, user: owner, role: :owner)
+
+      admin_project_user =
+        insert(:project_user, project: project, user: admin, role: :admin)
+
+      editor_project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      owner_conn = log_in_user(conn, owner)
+
+      {:ok, owner_view, _html} =
+        live(owner_conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      refute has_element?(owner_view, "form#role-#{owner_project_user.id}")
+      assert has_element?(owner_view, "form#role-#{admin_project_user.id}")
+      assert has_element?(owner_view, "form#role-#{editor_project_user.id}")
+
+      admin_conn = log_in_user(conn, admin)
+
+      {:ok, admin_view, _html} =
+        live(admin_conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      refute has_element?(admin_view, "form#role-#{owner_project_user.id}")
+      refute has_element?(admin_view, "form#role-#{admin_project_user.id}")
+      assert has_element?(admin_view, "form#role-#{editor_project_user.id}")
+    end
+
+    test "valid role change persists and shows success flash", %{conn: conn} do
+      project = insert(:project)
+
+      owner = insert(:user)
+      viewer = insert(:user)
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      viewer_project_user =
+        insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        view
+        |> form(
+          "#role-#{viewer_project_user.id}",
+          %{"project_user_id" => viewer_project_user.id, "role" => "admin"}
+        )
+        |> render_change()
+
+      assert html =~ "Project user updated successfuly"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, viewer_project_user.id).role ==
+               :admin
+    end
+
+    test "unauthorized crafted event is rejected and DB remains unchanged", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      owner = insert(:user)
+      viewer = insert(:user)
+      target = insert(:user)
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      target_project_user =
+        insert(:project_user, project: project, user: target, role: :editor)
+
+      conn = log_in_user(conn, viewer)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_change(view, "set_role", %{
+          "project_user_id" => target_project_user.id,
+          "role" => "admin"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, target_project_user.id).role ==
+               :editor
+    end
+
+    test "invalid role payload is rejected and DB remains unchanged", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      owner = insert(:user)
+      viewer = insert(:user)
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      viewer_project_user =
+        insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_change(view, "set_role", %{
+          "project_user_id" => viewer_project_user.id,
+          "role" => "owner"
+        })
+
+      assert html =~ "Error when updating the project user"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, viewer_project_user.id).role ==
+               :viewer
+    end
+
+    test "cross-project project_user_id payload is rejected", %{conn: conn} do
+      project_a = insert(:project)
+      project_b = insert(:project)
+
+      owner = insert(:user)
+      target = insert(:user)
+
+      insert(:project_user, project: project_a, user: owner, role: :owner)
+
+      target_project_user =
+        insert(:project_user, project: project_b, user: target, role: :viewer)
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+
+      html =
+        render_change(view, "set_role", %{
+          "project_user_id" => target_project_user.id,
+          "role" => "admin"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, target_project_user.id).role ==
+               :viewer
+    end
+
     test "users cant see form to toggle failure alerts if limiter returns error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
