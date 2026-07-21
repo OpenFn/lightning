@@ -18,6 +18,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
+  alias Lightning.Collaboration.WorkflowReconciler
 
   require Logger
 
@@ -60,6 +61,14 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     :ok = register_shared_doc_with_pg(document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
+
+    # Only the live (unversioned) document tracks the database. Versioned rooms
+    # ("workflow:123:v22") are read-only historical snapshots and must never be
+    # reconciled. Subscribing here (rather than in the SharedDoc) keeps the
+    # reconcile running in a process we own, one per live document.
+    if document_name == "workflow:#{workflow.id}" do
+      WorkflowReconciler.subscribe(workflow.id)
+    end
 
     {:ok,
      %{
@@ -121,6 +130,18 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     end
 
     :ok
+  end
+
+  @impl true
+  def handle_info(
+        %WorkflowReconciler.ReconcileRequested{workflow_id: workflow_id},
+        state
+      ) do
+    # We own the SharedDoc, so reconciling here means the Y.Doc mutation is
+    # serialised through SharedDoc.update_doc/2 without holding a transaction
+    # across a process boundary.
+    WorkflowReconciler.reconcile_workflow_document(workflow_id)
+    {:noreply, state}
   end
 
   @impl true

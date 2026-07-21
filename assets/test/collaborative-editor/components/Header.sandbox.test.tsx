@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 
 // ---------------------------------------------------------------------------
 // Hook + child-component mocks
@@ -14,9 +15,29 @@ import { Header } from '../../../js/collaborative-editor/components/Header';
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let isNewWorkflow = false;
 let canProvisionSandbox = true;
+let canArchiveSandbox = true;
+let readOnly: {
+  isReadOnly: boolean;
+  reason:
+    | 'deleted'
+    | 'live'
+    | 'no_permission'
+    | 'pinned_version'
+    | 'unsaved_new'
+    | null;
+} = { isReadOnly: false, reason: null };
 
 const goLive = vi.fn<() => Promise<unknown>>();
 const switchToDraft = vi.fn<() => Promise<unknown>>();
+const saveWorkflow =
+  vi.fn<(options?: { silent?: boolean }) => Promise<unknown>>();
+const promote = vi.fn<
+  () => Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  }>
+>();
+const archiveSandbox = vi.fn<() => Promise<{ parent_project_id: string }>>();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({ params: {}, updateSearchParams: vi.fn() }),
@@ -33,7 +54,10 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => isNewWorkflow,
   useLimits: () => ({}),
-  usePermissions: () => ({ can_provision_sandbox: canProvisionSandbox }),
+  usePermissions: () => ({
+    can_provision_sandbox: canProvisionSandbox,
+    can_archive_sandbox: canArchiveSandbox,
+  }),
   useProjectRepoConnection: () => null,
   useSessionWorkflow: () => ({ state: lifecycleState }),
 }));
@@ -57,13 +81,15 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useCanSave: () => ({ canSave: true, tooltipMessage: '' }),
   useNodeSelection: () => ({ selectNode: vi.fn() }),
   useWorkflowActions: () => ({
-    saveWorkflow: vi.fn(),
+    saveWorkflow,
     goLive,
     switchToDraft,
     listSandboxes: vi.fn(),
     editInSandbox: vi.fn(),
+    promote,
+    archiveSandbox,
   }),
-  useWorkflowReadOnly: () => ({ isReadOnly: false }),
+  useWorkflowReadOnly: () => readOnly,
   useWorkflowSettingsErrors: () => ({ hasErrors: false }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
     selector({ triggers: [], jobs: [] }),
@@ -72,6 +98,47 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 vi.mock('../../../js/collaborative-editor/keyboard', () => ({
   useKeyboardShortcut: vi.fn(),
 }));
+
+const notifySuccess = vi.fn<(opts: unknown) => void>();
+const notifyInfo = vi.fn<(opts: unknown) => void>();
+const notifyAlert = vi.fn<(opts: unknown) => void>();
+vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
+  notifications: {
+    success: (opts: unknown) => {
+      notifySuccess(opts);
+    },
+    info: (opts: unknown) => {
+      notifyInfo(opts);
+    },
+    alert: (opts: unknown) => {
+      notifyAlert(opts);
+    },
+  },
+}));
+
+// Stub the hard-navigation Header performs after a successful promote.
+function stubNavigation() {
+  const originalLocation = window.location;
+  const hrefSetter = vi.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      set href(value: string) {
+        hrefSetter(value);
+      },
+    },
+  });
+  return {
+    hrefSetter,
+    restore: () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    },
+  };
+}
 
 // Header reads StoreContext via useContext with optional chaining, so leaving
 // it unprovided (undefined) is handled gracefully and avoids extra wiring.
@@ -125,6 +192,8 @@ describe('Header - Edit in sandbox button gating', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    canArchiveSandbox = true;
+    readOnly = { isReadOnly: false, reason: null };
   });
 
   afterEach(() => {
@@ -180,10 +249,19 @@ describe('Header - lifecycle actions', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    canArchiveSandbox = true;
+    readOnly = { isReadOnly: false, reason: null };
     goLive.mockReset();
     switchToDraft.mockReset();
+    saveWorkflow.mockReset();
+    promote.mockReset();
+    archiveSandbox.mockReset();
+    notifySuccess.mockReset();
+    notifyInfo.mockReset();
+    notifyAlert.mockReset();
     goLive.mockResolvedValue(undefined);
     switchToDraft.mockResolvedValue(undefined);
+    saveWorkflow.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -200,6 +278,18 @@ describe('Header - lifecycle actions', () => {
     renderHeader();
     const badges = screen.getAllByTestId('workflow-lifecycle-badge');
     expect(badges.at(-1)).toHaveTextContent('Draft');
+  });
+
+  test('suppresses the redundant Read-only badge on a live workflow but keeps it on a draft', () => {
+    // Live already implies read-only, so the "Read-only" pill is hidden.
+    renderHeader();
+    expect(screen.queryByTestId('read-only-warning')).not.toBeInTheDocument();
+
+    // A draft has no Live badge, so the "Read-only" pill is still rendered.
+    lifecycleState = 'draft';
+    renderHeader();
+    const warnings = screen.getAllByTestId('read-only-warning');
+    expect(warnings.at(-1)).toBeInTheDocument();
   });
 
   test('clicking go live triggers the go-live action', async () => {
@@ -222,7 +312,9 @@ describe('Header - lifecycle actions', () => {
 
     // The confirmation dialog opens; the action only fires once confirmed.
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Switch to draft?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/takes the workflow out of production/i)
+    ).toBeInTheDocument();
     expect(switchToDraft).not.toHaveBeenCalled();
 
     await user.click(
@@ -247,14 +339,14 @@ describe('Header - lifecycle actions', () => {
     expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
   });
 
-  test('inside a sandbox, shows a disabled Promote button and no lifecycle transitions', () => {
+  test('inside a sandbox, shows an enabled Promote button and no lifecycle transitions', () => {
     renderHeader({ isSandbox: true });
 
-    const promote = screen.getByTestId('promote-sandbox-button');
-    expect(promote).toBeDisabled();
-    expect(promote).toHaveTextContent('Promote');
-    // Wrapped in the shared Tooltip ("Coming soon"), so Radix marks it a trigger.
-    expect(promote).toHaveAttribute('data-state');
+    const promoteButton = screen.getByTestId('promote-sandbox-button');
+    expect(promoteButton).toBeEnabled();
+    expect(promoteButton).toHaveTextContent('Promote');
+    // No longer wrapped in the "Coming soon" Tooltip, so no Radix trigger marker.
+    expect(promoteButton).not.toHaveAttribute('data-state');
 
     // The main-project lifecycle actions are not offered inside a sandbox.
     expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
@@ -265,6 +357,372 @@ describe('Header - lifecycle actions', () => {
       screen.queryByTestId('workflow-lifecycle-badge')
     ).not.toBeInTheDocument();
   });
+
+  // Walk the dialog through phase one: open it and confirm the save-and-merge.
+  const confirmPromote = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Save and promote',
+      })
+    );
+  };
+
+  test('clicking Promote opens the save-and-promote confirm dialog without acting yet', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText('Save and promote to parent project')
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/current changes in this sandbox are saved/i)
+    ).toBeInTheDocument();
+    // Neither the save nor the promote fires until the user confirms.
+    expect(saveWorkflow).not.toHaveBeenCalled();
+    expect(promote).not.toHaveBeenCalled();
+  });
+
+  test('confirming saves before merging, then shows the success step without navigating', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await confirmPromote(user);
+
+      await waitFor(() => {
+        expect(promote).toHaveBeenCalledTimes(1);
+      });
+      // The current editor state is saved (silently) before the merge, and the
+      // save happens first.
+      expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+      expect(saveWorkflow.mock.invocationCallOrder[0]).toBeLessThan(
+        promote.mock.invocationCallOrder[0]
+      );
+
+      // Promote merges only: the dialog advances to its success step rather than
+      // hard-navigating away.
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => {
+        expect(
+          within(dialog).getByText('Changes promoted')
+        ).toBeInTheDocument();
+      });
+      expect(nav.hrefSetter).not.toHaveBeenCalled();
+      // No inline toast yet; the user chooses keep-or-archive first.
+      expect(notifySuccess).not.toHaveBeenCalled();
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('keeping the sandbox stays put with a toast and never archives', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await confirmPromote(user);
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => {
+        expect(
+          within(dialog).getByText('Changes promoted')
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Keep sandbox' })
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      // Staying in the sandbox: no archive push and no navigation.
+      expect(archiveSandbox).not.toHaveBeenCalled();
+      expect(nav.hrefSetter).not.toHaveBeenCalled();
+      // The success toast is shown inline since we don't reload.
+      expect(notifySuccess).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Workflow promoted' })
+      );
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('archiving the sandbox pushes archive_sandbox and navigates to the parent', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+    archiveSandbox.mockResolvedValue({ parent_project_id: 'parent-1' });
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await confirmPromote(user);
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => {
+        expect(
+          within(dialog).getByText('Changes promoted')
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Archive sandbox' })
+      );
+
+      await waitFor(() => {
+        expect(archiveSandbox).toHaveBeenCalledTimes(1);
+      });
+      // Navigation carries the promoted marker (the toast can't survive the
+      // reload) and targets the parent's freshly merged workflow.
+      await waitFor(() => {
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/parent-1/w/wf-parent?promoted=1'
+        );
+      });
+      expect(notifySuccess).not.toHaveBeenCalled();
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('hides the Archive action when the user cannot archive the sandbox', async () => {
+    const user = userEvent.setup();
+    canArchiveSandbox = false;
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+
+    renderHeader({ isSandbox: true });
+
+    await confirmPromote(user);
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => {
+      expect(within(dialog).getByText('Changes promoted')).toBeInTheDocument();
+    });
+
+    // No Archive/Keep pair; only a plain close, plus the admin hint.
+    expect(
+      within(dialog).queryByRole('button', { name: 'Archive sandbox' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Keep sandbox' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Done' })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/ask an admin to archive/i)
+    ).toBeInTheDocument();
+  });
+
+  test('the confirm button shows a loading state while the merge is in flight', async () => {
+    const user = userEvent.setup();
+    // Never-resolving promise keeps the merge pending so the loading label stays.
+    promote.mockReturnValue(new Promise(() => {}));
+
+    renderHeader({ isSandbox: true });
+
+    await confirmPromote(user);
+
+    const dialog = screen.getByRole('dialog');
+    const confirmButton = within(dialog).getByRole('button', {
+      name: /Promoting/,
+    });
+    await waitFor(() => {
+      expect(confirmButton).toBeDisabled();
+    });
+    // Still on phase one; the success step hasn't appeared.
+    expect(
+      within(dialog).queryByText('Changes promoted')
+    ).not.toBeInTheDocument();
+  });
+
+  test('a failed save aborts the promote and alerts without advancing', async () => {
+    const user = userEvent.setup();
+    saveWorkflow.mockRejectedValue(new Error('save blew up'));
+
+    renderHeader({ isSandbox: true });
+
+    await confirmPromote(user);
+
+    await waitFor(() => {
+      expect(notifyAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Could not save before promoting' })
+      );
+    });
+    // The merge never runs, and the dialog stays on its confirm step.
+    expect(promote).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText('Save and promote to parent project')
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText('Changes promoted')
+    ).not.toBeInTheDocument();
+  });
+
+  test('a failed promote surfaces an alert without advancing to the success step', async () => {
+    const user = userEvent.setup();
+    promote.mockRejectedValue(
+      new ChannelRequestError('unauthorized', {
+        base: ['You are not allowed to promote this sandbox'],
+      })
+    );
+
+    renderHeader({ isSandbox: true });
+
+    await confirmPromote(user);
+
+    await waitFor(() => {
+      expect(notifyAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Could not promote' })
+      );
+    });
+    // The save succeeded first; only the merge failed. Still on phase one.
+    expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).queryByText('Changes promoted')
+    ).not.toBeInTheDocument();
+  });
+
+  test('a failed archive alerts and leaves the success step open to retry', async () => {
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+    archiveSandbox.mockRejectedValue(
+      new ChannelRequestError('unauthorized', {
+        base: ['You are not allowed to archive this sandbox'],
+      })
+    );
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await confirmPromote(user);
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => {
+        expect(
+          within(dialog).getByText('Changes promoted')
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Archive sandbox' })
+      );
+
+      await waitFor(() => {
+        expect(notifyAlert).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Could not archive sandbox' })
+        );
+      });
+      // No navigation; the success step stays so the user can retry or keep.
+      expect(nav.hrefSetter).not.toHaveBeenCalled();
+      expect(
+        within(dialog).getByRole('button', { name: 'Archive sandbox' })
+      ).toBeInTheDocument();
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('cancelling the Promote dialog closes it without saving or promoting', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(saveWorkflow).not.toHaveBeenCalled();
+    expect(promote).not.toHaveBeenCalled();
+  });
+});
+
+describe('Header - read-only reason variations', () => {
+  beforeEach(() => {
+    lifecycleState = 'live';
+    isNewWorkflow = false;
+    canProvisionSandbox = true;
+    canArchiveSandbox = true;
+    readOnly = { isReadOnly: false, reason: null };
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('shows the Create button for a new workflow held read-only as unsaved_new', () => {
+    // A new workflow with canvas content is read-only with reason
+    // 'unsaved_new'. That is exactly when the header primary action must be
+    // shown so the user can create the workflow.
+    lifecycleState = undefined;
+    isNewWorkflow = true;
+    readOnly = { isReadOnly: true, reason: 'unsaved_new' };
+
+    renderHeader({ isSandbox: false });
+
+    const saveButton = screen.getByTestId('save-workflow-button');
+    expect(saveButton).toBeInTheDocument();
+    expect(saveButton).toHaveTextContent('Create');
+  });
+
+  test('hides the Save button on a live read-only workflow', () => {
+    // A true lock reason ('live') hides the primary action entirely.
+    readOnly = { isReadOnly: true, reason: 'live' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(
+      screen.queryByTestId('save-workflow-button')
+    ).not.toBeInTheDocument();
+  });
+
+  test('keeps the Read-only cue on a pinned old version of a live workflow', () => {
+    // On a pinned old version of a currently-live workflow, "Live" (the
+    // current state) doesn't explain why the view is read-only, so the
+    // Read-only cue must still show.
+    readOnly = { isReadOnly: true, reason: 'pinned_version' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.getByTestId('read-only-warning')).toBeInTheDocument();
+  });
+
+  test('suppresses the redundant Read-only cue on the current live version', () => {
+    // The Live badge already implies read-only for the current live version,
+    // so the redundant Read-only cue stays hidden.
+    readOnly = { isReadOnly: true, reason: 'live' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.queryByTestId('read-only-warning')).not.toBeInTheDocument();
+  });
 });
 
 describe('Header - long workflow name', () => {
@@ -272,6 +730,8 @@ describe('Header - long workflow name', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    canArchiveSandbox = true;
+    readOnly = { isReadOnly: false, reason: null };
   });
 
   afterEach(() => {

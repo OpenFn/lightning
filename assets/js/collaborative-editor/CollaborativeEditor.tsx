@@ -11,6 +11,7 @@ import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
+import { PromotedNotice } from './components/PromotedNotice';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
@@ -219,6 +220,7 @@ export const CollaborativeEditor: WithActionProps<
                   <MonacoRefProvider monacoRef={monacoRef}>
                     <VersionDebugLogger />
                     <Toaster />
+                    <PromotedNotice />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
                       <BreadcrumbContent
                         workflowId={workflowId}

@@ -8,9 +8,18 @@ defmodule Lightning.Projects.MergeProjects do
 
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkflowVersions
+
+  @trigger_fields [
+    :comment,
+    :custom_path,
+    :cron_expression,
+    :type,
+    :kafka_configuration
+  ]
 
   @doc """
   Merges a source project onto a target project using workflow name matching.
@@ -645,17 +654,7 @@ defmodule Lightning.Projects.MergeProjects do
           mapped_id =
             Map.get(trigger_mappings, source_trigger.id) || Ecto.UUID.generate()
 
-          merged_trigger =
-            source_trigger
-            |> Map.take([
-              :comment,
-              :custom_path,
-              :cron_expression,
-              :type,
-              :kafka_configuration
-            ])
-            |> Map.put(:id, mapped_id)
-            |> stringify_keys()
+          merged_trigger = build_trigger_attrs(source_trigger, mapped_id)
 
           {Map.put(new_mapping, source_trigger.id, mapped_id),
            [merged_trigger | merged_triggers]}
@@ -674,6 +673,35 @@ defmodule Lightning.Projects.MergeProjects do
 
     {new_mapping, merged_from_source ++ deleted_targets}
   end
+
+  defp build_trigger_attrs(trigger, id) do
+    trigger
+    |> Map.take(@trigger_fields)
+    |> Map.put(:id, id)
+    |> serialize_kafka_configuration()
+    |> stringify_keys()
+  end
+
+  # The provisioner parses a plain-map document, so the kafka_configuration
+  # embed must be a map rather than a %KafkaConfiguration{} struct. Credentials
+  # are omitted; they can only be changed through the dashboard.
+  defp serialize_kafka_configuration(
+         %{kafka_configuration: %KafkaConfiguration{} = config} = trigger
+       ) do
+    serialized =
+      config
+      |> Map.take([
+        :hosts,
+        :topics,
+        :initial_offset_reset_policy,
+        :connect_timeout
+      ])
+      |> stringify_keys()
+
+    %{trigger | kafka_configuration: serialized}
+  end
+
+  defp serialize_kafka_configuration(trigger), do: trigger
 
   defp build_merged_edges(
          source_edges,
@@ -855,16 +883,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     triggers =
       Enum.map(workflow.triggers, fn trigger ->
-        trigger
-        |> Map.take([
-          :comment,
-          :custom_path,
-          :cron_expression,
-          :type,
-          :kafka_configuration
-        ])
-        |> Map.put(:id, trigger.id)
-        |> stringify_keys()
+        build_trigger_attrs(trigger, trigger.id)
       end)
 
     edges =
@@ -926,16 +945,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     triggers =
       Enum.map(source_workflow.triggers, fn trigger ->
-        trigger
-        |> Map.take([
-          :comment,
-          :custom_path,
-          :cron_expression,
-          :type,
-          :kafka_configuration
-        ])
-        |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))
-        |> stringify_keys()
+        build_trigger_attrs(trigger, Map.fetch!(node_mappings, trigger.id))
       end)
 
     edges =

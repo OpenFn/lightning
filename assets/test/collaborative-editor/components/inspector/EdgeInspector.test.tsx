@@ -132,9 +132,12 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set workflow lock_version to match session context
+    // Set workflow lock_version and deleted_at to match session context.
+    // deleted_at must be an explicit null (as the server always sends it),
+    // otherwise the workflow reads as "deleted" and forces read-only.
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     credentialStore = createCredentialStore();
@@ -171,7 +174,7 @@ describe('EdgeInspector - Footer Button States', () => {
     });
   });
 
-  test('footer is rendered in read-only mode', () => {
+  test('footer is hidden in read-only mode', () => {
     // beforeEach already sets read-only permissions
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
@@ -186,13 +189,39 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // Footer should be rendered with toggle and delete button
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    // On a read-only workflow the footer collapses entirely: the enabled toggle
+    // and the delete-path button are edit actions and are hidden, so there is
+    // no empty bordered bar.
+    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /delete/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('inspector-footer')).not.toBeInTheDocument();
   });
 
-  test('toggle and delete button are disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions
+  test('toggle and delete button are shown and enabled in edit mode', () => {
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        has_read_ai_disclaimer: true,
+      });
+    });
+
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -209,8 +238,9 @@ describe('EdgeInspector - Footer Button States', () => {
     const toggle = screen.getByLabelText(/enabled/i);
     const deleteButton = screen.getByRole('button', { name: /delete/i });
 
-    expect(toggle).toBeDisabled();
-    expect(deleteButton).toBeDisabled();
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
+    expect(toggle).not.toBeDisabled();
+    expect(deleteButton).not.toBeDisabled();
   });
 
   test('footer is not rendered for trigger edges', () => {
@@ -241,9 +271,10 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set lock_version
+    // Set lock_version and deleted_at (explicit null, as the server sends it)
     const workflowMap = ydocWithTriggerEdge.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     const workflowStoreWithTriggerEdge =
       createConnectedWorkflowStore(ydocWithTriggerEdge);

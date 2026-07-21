@@ -110,34 +110,35 @@ export function JobInspector({
               </Button>
             </span>
           </Tooltip>
-          <Tooltip content={deleteTooltipMessage}>
-            <span className="inline-block">
-              <Button
-                aria-label="Delete"
-                variant="secondary"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={!canDelete || !canEdit || isDeleting}
-              >
-                {isDeleting ? (
-                  <span className="hero-arrow-path animate-spin"></span>
-                ) : (
-                  <span className="hero-trash"></span>
-                )}
-              </Button>
-            </span>
-          </Tooltip>
+          {!isReadOnly && (
+            <Tooltip content={deleteTooltipMessage}>
+              <span className="inline-block">
+                <Button
+                  aria-label="Delete"
+                  variant="secondary"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={!canDelete || !canEdit || isDeleting}
+                >
+                  {isDeleting ? (
+                    <span className="hero-arrow-path animate-spin"></span>
+                  ) : (
+                    <span className="hero-trash"></span>
+                  )}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
         </>
       }
       rightButtons={
-        <>
+        isReadOnly ? undefined : (
           <NewRunButton
             onClick={() => onOpenRunPanel({ jobId: job.id })}
             tooltipSide="top"
-            disabled={isReadOnly}
             text="Run From Here"
             variant={needsConnect ? 'secondary' : 'primary'}
           />
-        </>
+        )
       }
     />
   );

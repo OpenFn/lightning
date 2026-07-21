@@ -49,6 +49,44 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "set_trigger_enabled/4" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "enables and disables a trigger without changing the workflow state",
+         %{user: user} do
+      workflow = insert(:simple_workflow, state: :draft)
+      [trigger] = workflow.triggers
+
+      assert {:ok, disabled} =
+               Workflows.set_trigger_enabled(workflow, trigger.id, false, user)
+
+      assert disabled.state == :draft
+      assert %Trigger{enabled: false} = Repo.reload!(trigger)
+
+      assert {:ok, enabled} =
+               Workflows.set_trigger_enabled(disabled, trigger.id, true, user)
+
+      assert enabled.state == :draft
+      assert %Trigger{enabled: true} = Repo.reload!(trigger)
+    end
+
+    test "returns {:error, :trigger_not_found} for an unknown trigger", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow, state: :draft)
+
+      assert {:error, :trigger_not_found} =
+               Workflows.set_trigger_enabled(
+                 workflow,
+                 Ecto.UUID.generate(),
+                 true,
+                 user
+               )
+    end
+  end
+
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
       workflow = insert(:workflow)

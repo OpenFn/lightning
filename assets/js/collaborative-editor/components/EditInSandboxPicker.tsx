@@ -9,6 +9,8 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 
+import { cn } from '#/utils/cn';
+
 import { Tooltip } from '../../components/Tooltip';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
@@ -36,12 +38,35 @@ function describeSandboxError(error: unknown): string {
     : 'Please try again.';
 }
 
+// Pull a name-field validation message out of a channel error, if present.
+// Duplicate names (and other name validations) come back as a validation_error
+// keyed under `name`; those render inline under the input. Everything else
+// (system/unexpected errors) returns null and is surfaced as a toast instead.
+function extractNameFieldError(error: unknown): string | null {
+  if (!isChannelRequestError(error)) return null;
+  if (error.type !== 'validation_error') return null;
+
+  const nameErrors = error.errors['name'];
+  if (!Array.isArray(nameErrors) || !nameErrors[0]) return null;
+
+  const joined = nameErrors.join(', ');
+
+  // The duplicate-name case gets a friendly, product-specific message. Other
+  // name validations (blank, too long, invalid) keep their own server message
+  // so a different failure is never mislabelled as a duplicate.
+  if (/taken/i.test(joined)) {
+    return 'A sandbox with this name exists already.';
+  }
+
+  return joined;
+}
+
 // A joinable sandbox row: the whole row is the click target (joins the
 // sandbox). A colour stripe on the left, then the sandbox name over a single
-// muted metadata line ("Created {relative} · {owner}"), and a quiet "Join"
+// muted metadata line ("Created {relative} by {owner}"), and a quiet "Join"
 // affordance on the right that fills in and reveals an arrow on hover. The
 // creation time shows as a relative label with the exact timestamp on hover.
-// The owner can be null (unknown), in which case the "· {owner}" suffix is
+// The owner can be null (unknown), in which case the "by {owner}" suffix is
 // omitted.
 function SandboxRow({
   sandbox,
@@ -97,9 +122,7 @@ function SandboxRow({
               </Tooltip>
               {owner && ownerName && (
                 <>
-                  <span aria-hidden="true" className="shrink-0">
-                    ·
-                  </span>
+                  <span className="shrink-0">by</span>
                   <span className="min-w-0 truncate">{ownerName}</span>
                 </>
               )}
@@ -167,6 +190,7 @@ export function EditInSandboxPicker({
   );
 
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [sandboxes, setSandboxes] = useState<Sandbox[]>([]);
@@ -203,6 +227,7 @@ export function EditInSandboxPicker({
 
   const handleCreate = useCallback(() => {
     setIsCreating(true);
+    setNameError(null);
     const trimmed = name.trim();
 
     const create = async () => {
@@ -210,10 +235,17 @@ export function EditInSandboxPicker({
         const { project_id, workflow_id } = await editInSandbox(trimmed);
         navigateToSandbox(project_id, workflow_id);
       } catch (error) {
-        notifications.alert({
-          title: 'Could not create a sandbox',
-          description: describeSandboxError(error),
-        });
+        // A rejected name (duplicate, invalid) belongs under the input as an
+        // inline field error; only genuinely unexpected/system errors toast.
+        const fieldError = extractNameFieldError(error);
+        if (fieldError) {
+          setNameError(fieldError);
+        } else {
+          notifications.alert({
+            title: 'Could not create a sandbox',
+            description: describeSandboxError(error),
+          });
+        }
         setIsCreating(false);
       }
     };
@@ -285,7 +317,10 @@ export function EditInSandboxPicker({
               workflow.
             </p>
 
-            {/* Create a new sandbox */}
+            {/* Create a new sandbox. Eyebrow title + subtitle mirror the
+                "Join an active sandbox" section below so the two read as
+                visual siblings; the title/subtitle/placeholder identify the
+                field, so no separate visible label is needed. */}
             <div className="mt-6">
               <p
                 className="text-xs font-semibold uppercase tracking-wide
@@ -293,55 +328,96 @@ export function EditInSandboxPicker({
               >
                 Create a new sandbox
               </p>
-              <p className="mt-1 text-sm text-gray-600">
-                Branches from the current live version.
+              <p className="mt-1 text-xs text-gray-500">
+                Branch from the current live version to make changes safely.
               </p>
-              <div className="mt-3 flex gap-2">
-                <label htmlFor="sandbox-name" className="sr-only">
-                  Sandbox name
-                </label>
-                <input
-                  id="sandbox-name"
-                  type="text"
-                  value={name}
-                  onChange={event => {
-                    setName(event.target.value);
-                  }}
-                  placeholder="Sandbox name"
-                  disabled={isCreating}
-                  className="block w-full rounded-md border-0 px-3 py-2 text-sm
-                    text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300
-                    placeholder:text-gray-400 focus:ring-2 focus:ring-inset
-                    focus:ring-primary-600 disabled:cursor-not-allowed
-                    disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  data-testid="create-sandbox-button"
-                  onClick={handleCreate}
-                  disabled={isCreating || !canCreate}
-                  className="inline-flex shrink-0 items-center rounded-md
-                    bg-primary-600 px-3 py-2 text-sm font-semibold text-white
-                    shadow-sm shadow-primary-600/20 hover:bg-primary-500
-                    focus-visible:outline-2 focus-visible:outline-offset-2
-                    focus-visible:outline-primary-600
-                    disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isCreating ? 'Creating...' : 'Create sandbox'}
-                </button>
-              </div>
+              <form
+                className="mt-3"
+                onSubmit={event => {
+                  event.preventDefault();
+                  // Enter can submit even while the button is disabled; honour
+                  // the same guards (non-empty name, no create in flight).
+                  if (isCreating || !canCreate) return;
+                  handleCreate();
+                }}
+              >
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <label htmlFor="sandbox-name" className="sr-only">
+                      Sandbox name
+                    </label>
+                    <input
+                      id="sandbox-name"
+                      type="text"
+                      value={name}
+                      onChange={event => {
+                        setName(event.target.value);
+                        // Editing the name dismisses a stale field error.
+                        setNameError(null);
+                      }}
+                      placeholder="e.g. Test new changes"
+                      disabled={isCreating}
+                      aria-invalid={nameError ? true : undefined}
+                      aria-describedby={
+                        nameError ? 'sandbox-name-error' : undefined
+                      }
+                      className={cn(
+                        `block w-full rounded-md border-0 px-3 py-2 text-sm
+                          shadow-sm ring-1 ring-inset placeholder:text-gray-400
+                          focus:ring-2 focus:ring-inset
+                          disabled:cursor-not-allowed disabled:opacity-50`,
+                        nameError
+                          ? 'text-red-900 ring-red-300 focus:ring-red-500'
+                          : 'text-gray-900 ring-gray-300 focus:ring-primary-600'
+                      )}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    data-testid="create-sandbox-button"
+                    disabled={isCreating || !canCreate}
+                    className="inline-flex shrink-0 items-center self-start
+                      rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold
+                      text-white shadow-sm shadow-primary-600/20
+                      hover:bg-primary-500 focus-visible:outline-2
+                      focus-visible:outline-offset-2
+                      focus-visible:outline-primary-600
+                      disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isCreating ? 'Creating...' : 'Create sandbox'}
+                  </button>
+                </div>
+                {/* Always-rendered slot sized for one line of error text, so
+                    showing/hiding the message never shifts the OR divider or
+                    Join section below it. The message itself stays conditional
+                    so the field only exposes an error when there is one. */}
+                <div className="mt-1 min-h-[1rem]">
+                  {nameError && (
+                    <p
+                      id="sandbox-name-error"
+                      data-testid="sandbox-name-error"
+                      className="text-xs text-red-600"
+                    >
+                      {nameError}
+                    </p>
+                  )}
+                </div>
+              </form>
             </div>
 
             {/* Join an existing sandbox. The server returns only sandboxes that
                 hold a clone of this workflow; hidden entirely when there are
                 none. */}
             {(isLoadingList || sandboxes.length > 0) && (
-              <div className="mt-5 border-t border-gray-100 pt-5">
+              <div className="mt-6">
                 <p
                   className="text-xs font-semibold uppercase tracking-wide
                     text-gray-500"
                 >
                   Join an active sandbox
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Continue in a sandbox that's already active for this workflow.
                 </p>
 
                 {isLoadingList ? (

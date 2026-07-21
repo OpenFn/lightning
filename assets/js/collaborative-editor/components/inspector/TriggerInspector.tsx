@@ -4,6 +4,7 @@ import { NewRunButton } from '../NewRunButton';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
+import { TriggerEnabledControl } from './TriggerEnabledControl';
 import { TriggerForm } from './TriggerForm';
 
 interface TriggerInspectorProps {
@@ -43,14 +44,19 @@ export function TriggerInspector({
 }: TriggerInspectorProps) {
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // Build footer with run button
-  const footer = (
+  // On a read-only workflow (live on main, pinned, deleted, no-permission) the
+  // enable/disable toggle is an edit action and Run is a run-creation action,
+  // and neither is allowed. A live workflow is lifecycle-controlled, so runs
+  // happen from a sandbox, not here. With no controls left we pass an undefined
+  // footer so InspectorLayout collapses the bar entirely instead of leaving an
+  // empty bordered strip.
+  const footer = isReadOnly ? undefined : (
     <InspectorFooter
+      leftButtons={<TriggerEnabledControl trigger={trigger} />}
       rightButtons={
         <NewRunButton
           onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
           tooltipSide="top"
-          disabled={isReadOnly}
         />
       }
     />

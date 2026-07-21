@@ -2197,18 +2197,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert result_trigger["custom_path"] == source_trigger.custom_path
     end
 
-    test "preserves kafka trigger configuration" do
-      # Test that kafka trigger configuration is preserved from source
-      source_kafka_config = %{
-        "hosts" => ["localhost:9092"],
-        "topic" => "source_topic",
-        "partition" => 0
-      }
-
+    test "serializes kafka trigger configuration to a plain map from the source" do
       source_trigger =
         build(:trigger,
           type: :kafka,
-          kafka_configuration: source_kafka_config
+          kafka_configuration:
+            build(:triggers_kafka_configuration, topics: ["source_topic"])
         )
 
       source =
@@ -2216,16 +2210,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
         |> with_trigger(source_trigger)
         |> insert()
 
-      target_kafka_config = %{
-        "hosts" => ["different:9092"],
-        "topic" => "target_topic",
-        "partition" => 1
-      }
-
       target_trigger =
         build(:trigger,
           type: :kafka,
-          kafka_configuration: target_kafka_config
+          kafka_configuration:
+            build(:triggers_kafka_configuration, topics: ["target_topic"])
         )
 
       target =
@@ -2235,17 +2224,25 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       result = MergeProjects.merge_workflow(source, target)
 
-      result_trigger = hd(result["triggers"])
-      # Kafka configuration should contain the source values (as a struct)
-      kafka_config = result_trigger["kafka_configuration"]
+      kafka_config = hd(result["triggers"])["kafka_configuration"]
 
-      # The kafka_configuration appears to be a mix of struct fields and map values
-      # Check that the source values are preserved in the map part
-      assert Map.get(kafka_config, "hosts") == source_kafka_config["hosts"]
-      assert Map.get(kafka_config, "topic") == source_kafka_config["topic"]
+      # The provisioner consumes a plain-map document, so the embed must be a
+      # map (not a %KafkaConfiguration{} struct) and carry the source's values.
+      refute is_struct(kafka_config)
 
-      assert Map.get(kafka_config, "partition") ==
-               source_kafka_config["partition"]
+      assert %{
+               "hosts" => [
+                 ["localhost", "9096"],
+                 ["localhost", "9095"],
+                 ["localhost", "9094"]
+               ],
+               "topics" => ["source_topic"],
+               "initial_offset_reset_policy" => "earliest"
+             } = kafka_config
+
+      # Credentials are never round-tripped through the merge document.
+      refute Map.has_key?(kafka_config, "username")
+      refute Map.has_key?(kafka_config, "password")
     end
 
     test "preserves attributes with multiple triggers feeding same job" do

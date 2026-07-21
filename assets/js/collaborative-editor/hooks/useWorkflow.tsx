@@ -532,6 +532,22 @@ export const useWorkflowActions = () => {
       return response;
     },
 
+    // Enable/disable a single trigger on a non-live workflow. Unlike go live /
+    // switch to draft this does not change lifecycle state or permissions, so a
+    // full session-context refetch is unnecessary. The server bumps the lock
+    // version and returns the reconciled base workflow, so keep the session
+    // context's snapshot bookkeeping in sync just like a save.
+    setTriggerEnabled: async (triggerId: string, enabled: boolean) => {
+      const response = await store.setTriggerEnabled(triggerId, enabled);
+      if (response.lock_version !== undefined) {
+        sessionContextStore.setLatestSnapshotLockVersion(response.lock_version);
+      }
+      if (response.workflow) {
+        sessionContextStore.setBaseWorkflow(response.workflow);
+      }
+      return response;
+    },
+
     // GitHub save and sync action - wrapped to handle lock version updates and errors
     saveAndSyncWorkflow: (commitMessage: string) => {
       // Helper: Handle successful save and sync operations
@@ -677,6 +693,13 @@ export const useWorkflowActions = () => {
     listSandboxes: store.listSandboxes,
     editInSandbox: store.editInSandbox,
 
+    // Promote a sandbox back into its parent project's live workflow. A command;
+    // the calling component owns the post-promote navigation into the parent.
+    // Promote merges only; archiving the sandbox is the separate archiveSandbox
+    // command below, offered as an optional second step after a successful merge.
+    promote: store.promote,
+    archiveSandbox: store.archiveSandbox,
+
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
 
@@ -794,6 +817,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * 3. Version pinning (any ?v parameter in URL)
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
+ * 6. Read-only workflow (live on main, deleted, pinned, no edit permission,
+ *    unsaved new). A read-only workflow can neither be edited nor have runs
+ *    created against it: running a live workflow directly contradicts the
+ *    lifecycle model (test or run it from a sandbox instead). Viewing existing
+ *    runs and run history is unaffected because those paths do not consult
+ *    useCanRun.
  */
 export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   const {
@@ -807,6 +836,10 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   // Get run limits from session context (defaults to allowed if missing)
   const limits = useLimits();
   const runLimits = limits.runs ?? { allowed: true, message: null };
+
+  // A read-only workflow blocks run creation entirely (single source of truth
+  // shared with the read-only editing lock).
+  const { isReadOnly, tooltipMessage: readOnlyMessage } = useWorkflowReadOnly();
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -830,6 +863,9 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (!runLimits.allowed && runLimits.message) {
     canRun = false;
     tooltipMessage = runLimits.message;
+  } else if (isReadOnly) {
+    canRun = false;
+    tooltipMessage = readOnlyMessage || 'This workflow is read-only';
   }
 
   return { canRun, tooltipMessage };

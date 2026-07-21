@@ -1451,6 +1451,31 @@ export const createWorkflowStore = () => {
   const goLive = async () => setLifecycleState('go_live');
   const switchToDraft = async () => setLifecycleState('switch_to_draft');
 
+  // Enable or disable a single trigger on a non-live (draft or sandbox)
+  // workflow. Mirrors the lifecycle transitions: the server flips the trigger,
+  // saves a new snapshot, and reconciles the result back into this Y.Doc. The
+  // server refuses this on a live non-sandbox workflow. The reply carries the
+  // new lock version and base workflow, same shape as go_live/switch_to_draft.
+  const setTriggerEnabled = async (
+    triggerId: string,
+    enabled: boolean
+  ): Promise<{ lock_version: number; workflow: BaseWorkflow }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        lock_version: number;
+        workflow: BaseWorkflow;
+      }>(provider.channel, 'set_trigger_enabled', {
+        trigger_id: triggerId,
+        enabled,
+      });
+    } catch (error) {
+      logger.error('Failed to set trigger enabled', error);
+      throw error;
+    }
+  };
+
   // Sandbox editing. From a live workflow on a non-sandbox project, a user can
   // either branch the current live version into a freshly provisioned sandbox
   // or join an existing sandbox. The server owns provisioning and cloning; the
@@ -1487,6 +1512,52 @@ export const createWorkflowStore = () => {
       );
     } catch (error) {
       logger.error('Failed to edit in sandbox', error);
+      throw error;
+    }
+  };
+
+  // Promote a sandbox workflow back into its parent project's live workflow.
+  // The server merges the sandbox changes and keeps the parent live. Promote
+  // MERGES ONLY: it no longer archives the sandbox, so several workflows can be
+  // promoted from the same sandbox before it is retired. Archiving is a separate,
+  // explicit step (archiveSandbox). Navigation into the parent (a different Y.Doc
+  // session) is the caller's job, consistent with editInSandbox.
+  const promote = async (): Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        parent_project_id: string;
+        workflow_id: string | null;
+      }>(provider.channel, 'promote', {});
+    } catch (error) {
+      logger.error('Failed to promote workflow', error);
+      throw error;
+    }
+  };
+
+  // Archive this sandbox after promoting. Archiving turns off the sandbox's
+  // triggers and schedules it for deletion (reversible during a grace window);
+  // it is not an instant hard delete. Kept separate from promote so a user can
+  // merge several workflows first, then explicitly retire the sandbox ("merge,
+  // then optionally delete the branch"). The server replies with the parent
+  // project id; navigation into the parent is the caller's job, like promote.
+  const archiveSandbox = async (): Promise<{
+    parent_project_id: string;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ parent_project_id: string }>(
+        provider.channel,
+        'archive_sandbox',
+        {}
+      );
+    } catch (error) {
+      logger.error('Failed to archive sandbox', error);
       throw error;
     }
   };
@@ -1987,8 +2058,11 @@ export const createWorkflowStore = () => {
     saveWorkflow,
     goLive,
     switchToDraft,
+    setTriggerEnabled,
     listSandboxes,
     editInSandbox,
+    promote,
+    archiveSandbox,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

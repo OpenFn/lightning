@@ -66,6 +66,7 @@ export const mockPermissions: Permissions = {
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
   can_provision_sandbox: true,
+  can_archive_sandbox: true,
 };
 
 /**
@@ -128,6 +129,7 @@ export interface SessionContextResponse {
   webhook_auth_methods: WebhookAuthMethod[];
   workflow_template: any | null;
   has_read_ai_disclaimer: boolean;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Limits;
 }
 
@@ -145,6 +147,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   webhook_auth_methods: [],
   workflow_template: null,
   has_read_ai_disclaimer: true,
+  suppress_enable_trigger_warning: false,
 };
 
 /**
@@ -293,6 +296,7 @@ export interface CreateSessionContextOptions {
   webhook_auth_methods?: WebhookAuthMethod[];
   workflow_template?: WorkflowTemplate | null;
   has_read_ai_disclaimer?: boolean;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Partial<Limits>;
   workflow?: any | null;
 }
@@ -369,6 +373,7 @@ export function createSessionContext(
     can_run_workflow: true,
     can_write_webhook_auth_method: true,
     can_provision_sandbox: true,
+    can_archive_sandbox: true,
     ...options.permissions,
   };
 
@@ -405,6 +410,8 @@ export function createSessionContext(
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
     has_read_ai_disclaimer: options.has_read_ai_disclaimer ?? true,
+    suppress_enable_trigger_warning:
+      options.suppress_enable_trigger_warning ?? false,
     workflow: options.workflow,
   };
 

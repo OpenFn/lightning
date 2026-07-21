@@ -81,9 +81,14 @@ export function InspectorLayout({
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">{children}</div>
 
-        {/* Footer - only render if provided */}
+        {/* Footer - only render if provided. Inspectors pass an undefined
+            footer when a read-only workflow leaves no controls, so the bordered
+            bar collapses entirely rather than showing an empty strip. */}
         {footer && (
-          <div className="shrink-0 px-6 py-4 border-t border-gray-200">
+          <div
+            className="shrink-0 px-6 py-4 border-t border-gray-200"
+            data-testid="inspector-footer"
+          >
             {footer}
           </div>
         )}

@@ -204,10 +204,13 @@ async function createTestSetup(options: WrapperOptions = {}) {
   };
 }
 
-// Helper to render and wait for component to be ready
+// Helper to render and wait for component to be ready.
+// On a read-only workflow the save button is not rendered, so callers pass
+// `{ readOnly: true }` to wait for the "Read-only" indicator instead.
 async function renderAndWaitForReady(
   wrapper: React.ComponentType<{ children: React.ReactNode }>,
-  emitSessionContext: () => void
+  emitSessionContext: () => void,
+  { readOnly = false }: { readOnly?: boolean } = {}
 ) {
   const result = render(
     <Header projectId="project-1" workflowId="workflow-1">
@@ -222,8 +225,11 @@ async function renderAndWaitForReady(
   });
 
   await waitFor(() => {
-    const saveButton = screen.getByTestId('save-workflow-button');
-    expect(saveButton).toBeInTheDocument();
+    if (readOnly) {
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
+    } else {
+      expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+    }
   });
 
   return result;
@@ -301,7 +307,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -325,7 +332,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -401,7 +409,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -672,7 +681,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -697,7 +707,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -725,7 +736,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -931,7 +943,8 @@ describe('Header - Guard Condition Interactions', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     // Try Cmd+S
@@ -1071,7 +1084,11 @@ async function createRunSetup(
     </KeyboardProvider>
   );
 
-  async function renderAndWait() {
+  // On a read-only workflow neither the save nor the run button renders, so
+  // callers pass `{ readOnly: true }` to wait for the "Read-only" indicator.
+  async function renderAndWait({
+    readOnly = false,
+  }: { readOnly?: boolean } = {}) {
     const result = render(
       <Header
         projectId="project-1"
@@ -1090,7 +1107,11 @@ async function createRunSetup(
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+      if (readOnly) {
+        expect(screen.getByText('Read-only')).toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+      }
     });
 
     return result;
@@ -1163,7 +1184,7 @@ describe('Header - Submit Manual Run (Cmd+Enter / Ctrl+Enter)', () => {
       permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
-    const { unmount } = await renderAndWait();
+    const { unmount } = await renderAndWait({ readOnly: true });
 
     await user.keyboard('{Meta>}{Enter}{/Meta}');
 

@@ -42,6 +42,7 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
@@ -208,17 +209,29 @@ defmodule Lightning.Projects.Sandboxes do
            target =
              Repo.preload(target, [project_credentials: []], force: true),
            merge_doc = MergeProjects.merge_project(source, target, opts),
+           # Defer the collaboration reconcile: the import runs inside this outer
+           # transaction, so we broadcast below only once it has committed —
+           # otherwise the subscriber would reload pre-commit state on its own
+           # connection.
            {:ok, updated_target} <-
              Provisioner.import_document(target, actor, merge_doc,
-               allow_stale: true
+               allow_stale: true,
+               reconcile_collaboration: false
              ),
            {:ok, _} <- sync_collections(source, target) do
-        {:ok, updated_target}
+        {:ok, {updated_target, merge_doc}}
       end
     end)
     |> case do
-      {:ok, _} = ok -> ok
-      {:error, reason} -> {:error, classify_merge_error(reason)}
+      {:ok, {updated_target, merge_doc}} ->
+        merge_doc
+        |> Provisioner.reconcilable_workflow_ids()
+        |> WorkflowReconciler.request_reconciliation()
+
+        {:ok, updated_target}
+
+      {:error, reason} ->
+        {:error, classify_merge_error(reason)}
     end
   end
 

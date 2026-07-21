@@ -39,6 +39,11 @@ export const PermissionsSchema = z.object({
   can_run_workflow: z.boolean(),
   can_write_webhook_auth_method: z.boolean(),
   can_provision_sandbox: z.boolean(),
+  // Whether this user may archive (retire) this sandbox. Defaults to false so a
+  // payload that omits it degrades safely to "cannot archive" rather than
+  // offering an action the server would refuse, mirroring the other optional
+  // booleans in this schema.
+  can_archive_sandbox: z.boolean().optional().default(false),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;
@@ -105,6 +110,7 @@ export const SessionContextResponseSchema = z.object({
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
   has_read_ai_disclaimer: z.boolean(),
+  suppress_enable_trigger_warning: z.boolean().optional().default(false),
   experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
   workflow: BaseWorkflowSchema.optional(),
@@ -129,6 +135,7 @@ export interface SessionContextState {
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
   hasReadAIDisclaimer: boolean;
+  suppressEnableTriggerWarning: boolean;
   experimentalFeaturesEnabled: boolean;
   limits: Limits;
   isNewWorkflow: boolean;
@@ -149,6 +156,8 @@ interface SessionContextCommands {
   setBaseWorkflow: (workflow: BaseWorkflow) => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
   markAIDisclaimerRead: () => Promise<void>;
+  setSuppressEnableTriggerWarning: (suppress: boolean) => void;
+  markEnableTriggerWarningSuppressed: () => Promise<void>;
   getLimits: (
     actionType: 'new_run' | 'activate_workflow' | 'github_sync'
   ) => Promise<void>;

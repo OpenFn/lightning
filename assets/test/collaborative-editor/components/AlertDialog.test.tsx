@@ -16,7 +16,7 @@ const renderDialog = (ui: ReactElement) =>
 
 const baseProps = {
   isOpen: true,
-  title: 'Switch to draft?',
+  title: 'Switch to draft',
   description: 'This takes the workflow offline.',
   confirmLabel: 'Switch to draft',
 };
@@ -31,9 +31,7 @@ describe('AlertDialog', () => {
       <AlertDialog {...baseProps} onClose={onClose} onConfirm={onConfirm} />
     );
 
-    await user.click(
-      screen.getByRole('button', { name: 'Switch to draft' })
-    );
+    await user.click(screen.getByRole('button', { name: 'Switch to draft' }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);

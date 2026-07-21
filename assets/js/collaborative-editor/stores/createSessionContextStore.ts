@@ -122,6 +122,7 @@ export const createSessionContextStore = (
       versionsError: null,
       workflow_template: null,
       hasReadAIDisclaimer: false,
+      suppressEnableTriggerWarning: false,
       experimentalFeaturesEnabled: false,
       limits: {},
       isNewWorkflow,
@@ -190,6 +191,8 @@ export const createSessionContextStore = (
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
         draft.hasReadAIDisclaimer = sessionContext.has_read_ai_disclaimer;
+        draft.suppressEnableTriggerWarning =
+          sessionContext.suppress_enable_trigger_warning;
         draft.experimentalFeaturesEnabled =
           sessionContext.experimental_features_enabled;
         draft.limits = sessionContext.limits;
@@ -347,6 +350,43 @@ export const createSessionContextStore = (
       setHasReadAIDisclaimer(true);
     } catch (error) {
       logger.error('Failed to mark disclaimer read', error);
+    }
+  };
+
+  /**
+   * Set the "suppress enable-trigger warning" preference (local state only)
+   */
+  const setSuppressEnableTriggerWarning = (suppress: boolean) => {
+    state = produce(state, draft => {
+      draft.suppressEnableTriggerWarning = suppress;
+    });
+    notify('setSuppressEnableTriggerWarning');
+  };
+
+  /**
+   * Persist the "don't show the enable-trigger warning again" preference to the
+   * backend and optimistically flip the local flag so it sticks this session.
+   */
+  const markEnableTriggerWarningSuppressed = async (): Promise<void> => {
+    if (!_channelProvider?.channel) {
+      logger.warn(
+        'Cannot suppress enable-trigger warning - no channel connected'
+      );
+      return;
+    }
+
+    // Optimistically update so the warning is skipped immediately, even before
+    // the server acknowledges.
+    setSuppressEnableTriggerWarning(true);
+
+    try {
+      await channelRequest(
+        _channelProvider.channel,
+        'set_suppress_enable_trigger_warning',
+        { suppress: true }
+      );
+    } catch (error) {
+      logger.error('Failed to suppress enable-trigger warning', error);
     }
   };
 
@@ -645,6 +685,8 @@ export const createSessionContextStore = (
     clearIsNewWorkflow,
     setHasReadAIDisclaimer,
     markAIDisclaimerRead,
+    setSuppressEnableTriggerWarning,
+    markEnableTriggerWarningSuppressed,
     getLimits,
     setBaseWorkflow,
 

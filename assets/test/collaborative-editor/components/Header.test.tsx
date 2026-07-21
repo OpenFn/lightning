@@ -1244,7 +1244,7 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test('save button is disabled when user lacks permissions', async () => {
+  test('save button is hidden when user lacks permissions', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -1261,9 +1261,10 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Save button should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
+    // Save button should not render on a read-only workflow
+    expect(
+      screen.queryByRole('button', { name: /save/i })
+    ).not.toBeInTheDocument();
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {
@@ -1314,7 +1315,7 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(dropdownButton).not.toBeInTheDocument();
   });
 
-  test('split button dropdown is disabled when user lacks permissions', async () => {
+  test('save and sync buttons are hidden when user lacks permissions', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
       permissions: { can_edit_workflow: false },
@@ -1332,14 +1333,13 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Both save and dropdown buttons should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
-
-    const dropdownButton = screen.getByRole('button', {
-      name: /open sync options/i,
-    });
-    expect(dropdownButton).toBeDisabled();
+    // Neither the save button nor the sync dropdown render on a read-only workflow
+    expect(
+      screen.queryByRole('button', { name: /save/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /open sync options/i })
+    ).not.toBeInTheDocument();
   });
 
   test('Header renders correctly with all navigation elements', async () => {

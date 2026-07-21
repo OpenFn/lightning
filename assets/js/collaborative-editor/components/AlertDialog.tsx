@@ -4,8 +4,11 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
+import type React from 'react';
 
 import { useKeyboardShortcut } from '../keyboard';
+
+import { Button } from './Button';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -16,6 +19,11 @@ interface AlertDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'primary';
+  /**
+   * Optional extra content rendered below the description (e.g. a
+   * "don't show again" checkbox). Left-aligned so form controls read naturally.
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -44,6 +52,7 @@ export function AlertDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'primary',
+  children,
 }: AlertDialogProps) {
   // High-priority Escape handler to prevent closing the parent IDE/inspector.
   // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
@@ -58,11 +67,6 @@ export function AlertDialog({
     { enabled: isOpen }
   );
 
-  const confirmButtonClass =
-    variant === 'danger'
-      ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
-      : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
-
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-[60]">
       <DialogBackdrop
@@ -73,58 +77,41 @@ export function AlertDialog({
 
       <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
         <div
-          className="flex min-h-full items-end justify-center p-4
-        text-center sm:items-center sm:p-0"
+          className="flex min-h-full items-end justify-center p-4 text-center
+            sm:items-center sm:p-0"
         >
           <DialogPanel
             transition
-            className="relative transform overflow-hidden rounded-lg
-            bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all
-            data-closed:translate-y-4 data-closed:opacity-0
-            data-enter:duration-300 data-enter:ease-out
-            data-leave:duration-200 data-leave:ease-in
-            sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+            className="relative transform overflow-hidden rounded-lg bg-white
+              px-4 pb-4 pt-5 text-left shadow-xl transition-all
+              data-closed:translate-y-4 data-closed:opacity-0
+              data-enter:duration-300 data-enter:ease-out
+              data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
+              sm:max-w-md sm:p-6"
           >
-            <div>
-              <div className="mt-3 text-center sm:mt-5">
-                <DialogTitle
-                  as="h3"
-                  className="text-base font-semibold text-gray-900"
-                >
-                  {title}
-                </DialogTitle>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">{description}</p>
-                </div>
-              </div>
-            </div>
-            <div
-              className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense
-            sm:grid-cols-2 sm:gap-3"
+            <DialogTitle
+              as="h3"
+              className="text-base font-semibold text-gray-900"
             >
-              <button
-                type="button"
+              {title}
+            </DialogTitle>
+            <p className="mt-2 text-sm text-gray-600">{description}</p>
+
+            {children != null && <div className="mt-4">{children}</div>}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="secondary" onClick={onClose}>
+                {cancelLabel}
+              </Button>
+              <Button
+                variant={variant}
                 onClick={() => {
                   onConfirm();
                   onClose();
                 }}
-                className={`inline-flex w-full justify-center rounded-md
-                px-3 py-2 text-sm font-semibold text-white shadow-xs
-                focus-visible:outline-2 focus-visible:outline-offset-2
-                sm:col-start-2 ${confirmButtonClass}`}
               >
                 {confirmLabel}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-3 inline-flex w-full justify-center rounded-md
-                bg-white px-3 py-2 text-sm font-semibold text-gray-900
-                shadow-xs inset-ring inset-ring-gray-300
-                hover:inset-ring-gray-400 sm:col-start-1 sm:mt-0"
-              >
-                {cancelLabel}
-              </button>
+              </Button>
             </div>
           </DialogPanel>
         </div>

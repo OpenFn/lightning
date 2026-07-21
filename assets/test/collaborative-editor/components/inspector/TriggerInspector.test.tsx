@@ -13,6 +13,7 @@ import type * as Y from 'yjs';
 import { TriggerInspector } from '../../../../js/collaborative-editor/components/inspector/TriggerInspector';
 import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
@@ -99,13 +100,15 @@ function createWrapper(
   }
 
   return ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-      <LiveViewActionsProvider actions={mockLiveViewActions}>
-        <StoreContext.Provider value={mockStoreValue}>
-          {children}
-        </StoreContext.Provider>
-      </LiveViewActionsProvider>
-    </SessionContext.Provider>
+    <KeyboardProvider>
+      <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={mockStoreValue}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
+      </SessionContext.Provider>
+    </KeyboardProvider>
   );
 }
 
@@ -130,9 +133,12 @@ describe('TriggerInspector - Footer Button States', () => {
       },
     });
 
-    // Set workflow lock_version to match session context
+    // Set workflow lock_version and deleted_at to match session context.
+    // deleted_at must be an explicit null (as the server always sends it),
+    // otherwise the workflow reads as "deleted" and forces read-only.
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     credentialStore = createCredentialStore();
@@ -169,7 +175,7 @@ describe('TriggerInspector - Footer Button States', () => {
     });
   });
 
-  test('footer is rendered in read-only mode', () => {
+  test('run button is hidden in read-only mode', () => {
     // beforeEach already sets read-only permissions
     const trigger = workflowStore.getSnapshot().triggers[0];
     const mockOnClose = vi.fn();
@@ -192,14 +198,17 @@ describe('TriggerInspector - Footer Button States', () => {
       }
     );
 
-    // Footer should be rendered with the run button.
-    // The standalone enabled toggle was removed; trigger enabled is now
-    // owned by the workflow lifecycle (Go live / Switch to draft).
+    // On a read-only workflow the footer collapses entirely: run creation is
+    // unavailable (runs happen from a sandbox) and the enabled toggle is an
+    // edit action, so there is no empty bordered bar.
     expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /run/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('inspector-footer')).not.toBeInTheDocument();
   });
 
-  test('footer is rendered with all buttons visible', () => {
+  test('run button is shown in edit mode', () => {
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
@@ -243,8 +252,10 @@ describe('TriggerInspector - Footer Button States', () => {
       }
     );
 
-    // Only the run button should be present (no enabled toggle).
-    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
+    // In edit mode the footer is present with both the enabled toggle and the
+    // run button.
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
+    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
   });
 });

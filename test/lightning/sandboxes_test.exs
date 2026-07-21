@@ -950,6 +950,67 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "merge/4 workflows and credentials" do
+    test "merges a workflow with a Kafka trigger without crashing" do
+      actor = insert(:user)
+      parent = insert(:project, name: "kafka-merge-parent")
+      ensure_member!(parent, actor, :owner)
+
+      parent_wf = insert(:workflow, project: parent, name: "KafkaFlow")
+
+      parent_trigger =
+        insert(:trigger,
+          workflow: parent_wf,
+          type: :kafka,
+          enabled: true,
+          kafka_configuration:
+            build(:triggers_kafka_configuration, topics: ["parent_topic"])
+        )
+
+      parent_job =
+        insert(:job, workflow: parent_wf, name: "K1", body: "fn(s => s);")
+
+      insert(:edge,
+        workflow: parent_wf,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job.id,
+        condition_type: :always,
+        enabled: true
+      )
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "kafka-sandbox"})
+
+      # Change the sandbox's Kafka topics so the merge has to write them back.
+      sandbox_trigger =
+        sandbox
+        |> Repo.preload(workflows: :triggers)
+        |> Map.fetch!(:workflows)
+        |> List.first()
+        |> Map.fetch!(:triggers)
+        |> List.first()
+
+      sandbox_trigger
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:kafka_configuration, %{
+        hosts: [["localhost", "9096"]],
+        topics: ["sandbox_topic"],
+        initial_offset_reset_policy: "earliest",
+        connect_timeout: 30
+      })
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      merged_config =
+        parent_trigger
+        |> Repo.reload!()
+        |> Map.fetch!(:kafka_configuration)
+
+      assert %Lightning.Workflows.Triggers.KafkaConfiguration{
+               topics: ["sandbox_topic"]
+             } = merged_config
+    end
+
     test "merges a new workflow from a sandbox into the parent" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
 
