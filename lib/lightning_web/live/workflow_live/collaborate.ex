@@ -11,7 +11,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   alias Lightning.AiAssistant
+  alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Workflows
@@ -21,8 +23,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   alias LightningWeb.CredentialLive
 
   on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount({LightningWeb.Hooks, :ensure_workflow_belongs_to_project})
   on_mount({LightningWeb.Hooks, :check_limits})
-  on_mount({LightningWeb.Hooks, :check_legacy_preference})
 
   @impl true
   def mount(
@@ -69,7 +71,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   defp maybe_load_initial_run_data(socket, %{"run" => run_id})
        when is_binary(run_id) do
-    case Lightning.Runs.get(run_id, include: [:steps]) do
+    %{project: project} = socket.assigns
+
+    case Lightning.Runs.get_for_project(run_id, project.id, include: [:steps]) do
       nil -> socket
       run -> assign(socket, initial_run_data: build_run_data(run))
     end
@@ -110,17 +114,33 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         socket
       )
       when is_binary(credential_id) do
-    # Load the credential for editing with necessary associations
-    credential =
-      Lightning.Credentials.get_credential!(credential_id)
-      |> Lightning.Repo.preload([:oauth_client, :project_credentials])
+    # Only open the edit modal for a credential the user is authorized to edit
+    # (its owner), so a client-supplied id can't load another user's credential.
+    with true <- Lightning.Validators.valid_uuid?(credential_id),
+         %Credential{} = credential <-
+           Lightning.Credentials.get_credential(credential_id),
+         true <-
+           Permissions.can?(
+             Users,
+             :edit_credential,
+             socket.assigns.current_user,
+             credential
+           ) do
+      credential =
+        Lightning.Repo.preload(credential, [:oauth_client, :project_credentials])
 
-    {:noreply,
-     assign(socket,
-       show_credential_modal: true,
-       credential_schema: schema,
-       credential_to_edit: credential
-     )}
+      {:noreply,
+       assign(socket,
+         show_credential_modal: true,
+         credential_schema: schema,
+         credential_to_edit: credential
+       )}
+    else
+      # A malformed, unknown, or non-owned id doesn't open the modal. Tell the
+      # client the open failed (the React side optimistically opened it) so it
+      # resets its state instead of hanging open.
+      _ -> {:noreply, push_event(socket, "credential_modal_closed", %{})}
+    end
   end
 
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do

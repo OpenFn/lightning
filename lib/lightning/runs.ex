@@ -65,13 +65,20 @@ defmodule Lightning.Runs do
   Joins through `work_order -> workflow` to verify the run belongs to the
   given project. Returns `nil` if the run doesn't exist or belongs to a
   different project.
+
+  Accepts an `:include` option to preload associations, e.g.
+  `get_for_project(id, project_id, include: [:steps])`.
   """
-  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t()) :: Run.t() | nil
-  def get_for_project(id, project_id) do
+  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t(), keyword()) ::
+          Run.t() | nil
+  def get_for_project(id, project_id, opts \\ []) do
+    preloads = Keyword.get(opts, :include, [])
+
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
-      where: r.id == ^id and w.project_id == ^project_id
+      where: r.id == ^id and w.project_id == ^project_id,
+      preload: ^preloads
     )
     |> Repo.one()
   end

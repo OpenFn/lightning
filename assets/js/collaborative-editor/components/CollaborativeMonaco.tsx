@@ -20,7 +20,7 @@ import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
 
-import createCompletionProvider from '../../editor/magic-completion';
+import createCompletionProvider from '../utils/magic-completion';
 
 import { LoadingIndicator } from './common/LoadingIndicator';
 import { Cursors } from './Cursors';
@@ -182,6 +182,11 @@ export const CollaborativeMonaco = forwardRef<
 
   useEffect(() => {
     const handleInsertSnippet = (e: Event) => {
+      // When the editor is disabled the user has view-only access and must not
+      // change the job code. Monaco's `readOnly` option blocks typing but not
+      // programmatic edits like this snippet insertion, so skip it explicitly.
+      if (disabled) return;
+
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       if (!editor || !monaco) {
@@ -239,7 +244,7 @@ export const CollaborativeMonaco = forwardRef<
     return () => {
       document.removeEventListener('insert-snippet', handleInsertSnippet);
     };
-  }, []);
+  }, [disabled]);
 
   // Load type definitions when adaptor changes
   useEffect(() => {

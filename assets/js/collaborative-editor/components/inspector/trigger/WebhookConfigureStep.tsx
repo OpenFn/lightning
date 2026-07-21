@@ -78,6 +78,11 @@ export function WebhookConfigureStep({
   const { webhookAuthMethods } = useSessionContext();
   const { pushEvent } = useLiveViewActions();
   const { isReadOnly } = useWorkflowReadOnly();
+  // Default to no-write until permissions load. During the loading window we
+  // can't tell an owner/admin from an editor, so the control stays disabled
+  // rather than optimistically enabled: an editor changing auth mid-load would
+  // lose their other trigger edits when the server rejects the save on Finish.
+  // A brief disabled flash for owners is the acceptable cost.
   const canWriteAuth = Boolean(permissions?.can_write_webhook_auth_method);
 
   const [authExpanded, setAuthExpanded] = useState(
@@ -188,7 +193,7 @@ export function WebhookConfigureStep({
                 onChange={setDraftAuthMethodIds}
                 onCreateNew={() => pushEvent('open_webhook_auth_modal', {})}
                 canCreate={canWriteAuth}
-                disabled={isReadOnly}
+                disabled={isReadOnly || !canWriteAuth}
               />
             </div>
           )}

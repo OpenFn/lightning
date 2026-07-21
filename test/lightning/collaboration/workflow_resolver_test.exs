@@ -187,6 +187,37 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
                WorkflowResolver.resolve_version(Ecto.UUID.generate(), 0)
     end
 
+    test "returns {:error, :wrong_project} when the snapshot's workflow belongs to another project",
+         %{workflow: workflow, snapshot: snapshot} do
+      requesting_project = insert(:project)
+
+      assert {:error, :wrong_project} =
+               WorkflowResolver.resolve_version(
+                 workflow.id,
+                 snapshot.lock_version,
+                 project: requesting_project
+               )
+    end
+
+    test "returns {:error, :workflow_not_found} when the workflow row is gone",
+         %{project: project} do
+      assert {:error, :workflow_not_found} =
+               WorkflowResolver.resolve_version(Ecto.UUID.generate(), 0,
+                 project: project
+               )
+    end
+
+    test "does not enforce ownership when no :project opt is supplied", %{
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      assert {:ok, %Workflow{}, :version} =
+               WorkflowResolver.resolve_version(
+                 workflow.id,
+                 snapshot.lock_version
+               )
+    end
+
     test "hydrates a built struct matching the pre-refactor channel assembly",
          %{
            project: project,
@@ -241,23 +272,22 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
       assert resolved.__meta__.state == :built
     end
 
-    test "sets project_id from the project without an ownership check", %{
+    test "sets project_id from the supplied owning project", %{
+      project: project,
       workflow: workflow,
       snapshot: snapshot
     } do
-      # The version path sets project_id from the supplied project and performs
-      # no ownership check, unlike the :edit latest path: a foreign project
-      # still resolves.
-      other_project = insert(:project)
-
+      # The version path stamps project_id from the supplied project once the
+      # ownership check passes (foreign projects are rejected — see the
+      # :wrong_project case above).
       assert {:ok, %Workflow{project_id: project_id}, :version} =
                WorkflowResolver.resolve_version(
                  workflow.id,
                  snapshot.lock_version,
-                 project: other_project
+                 project: project
                )
 
-      assert project_id == other_project.id
+      assert project_id == project.id
     end
   end
 
