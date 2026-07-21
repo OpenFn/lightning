@@ -26,7 +26,6 @@ defmodule Lightning.Policies.ProjectUsers do
           | :write_webhook_auth_method
           | :write_github_connection
           | :initiate_github_sync
-          | :create_collection
           | :publish_template
           | :create_channel
           | :delete_channel
@@ -89,8 +88,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_data_retention,
              :add_project_user,
              :remove_project_user,
-             :edit_run_settings,
-             :create_collection
+             :edit_run_settings
            ],
       do: project_user.role in [:owner, :admin]
 
@@ -102,8 +100,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_data_retention,
              :add_project_user,
              :remove_project_user,
-             :edit_run_settings,
-             :create_collection
+             :edit_run_settings
            ],
       do: false
 
