@@ -1747,7 +1747,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         fn source, target, _opts ->
           assert source.id == child1.id
           assert target.id == root.id
-          "merged_yaml"
+          %{"workflows" => []}
         end
       )
 
@@ -1757,7 +1757,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         fn target, actor, yaml, opts ->
           assert target.id == root.id
           assert actor.id == user.id
-          assert yaml == "merged_yaml"
+          assert yaml == %{"workflows" => []}
           assert opts[:allow_stale] == true
           {:ok, target}
         end
@@ -1800,7 +1800,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Lightning.Projects.MergeProjects,
         :merge_project,
         fn _source, _target, _opts ->
-          "merged_yaml"
+          %{"workflows" => []}
         end
       )
 
@@ -1964,7 +1964,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
                                                                         _target,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
@@ -2011,7 +2011,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
                                                                         _target,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       # A validation failure with no recognised cause.
@@ -2056,7 +2056,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
                                                                         _target,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       # A name collision surfaces as an error on a nested workflow's :name.
@@ -2109,7 +2109,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
                                                                         _target,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
@@ -2146,7 +2146,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
                                                                         _target,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
@@ -2246,7 +2246,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _src,
                                                                         _tgt,
                                                                         _opts ->
-        "merged_yaml"
+        %{"workflows" => []}
       end)
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _tgt,
@@ -2530,7 +2530,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.MergeProjects,
         :merge_project,
-        fn _source, _target, _opts -> "merged_yaml" end
+        fn _source, _target, _opts -> %{"workflows" => []} end
       )
 
       Mimic.expect(

@@ -16,6 +16,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
@@ -246,6 +247,11 @@ defmodule LightningWeb.WorkflowChannel do
         workflow_template: render_workflow_template(workflow_template),
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
+        suppress_enable_trigger_warning:
+          Lightning.Accounts.get_preference(
+            user,
+            "suppress_enable_trigger_warning"
+          ) == true,
         experimental_features_enabled:
           Lightning.Accounts.experimental_features_enabled?(user),
         limits: render_limits(project.id),
@@ -386,6 +392,73 @@ defmodule LightningWeb.WorkflowChannel do
     transition_lifecycle_state(socket, :draft)
   end
 
+  # Enables or disables a single trigger on a NON-LIVE workflow, decoupled from
+  # the lifecycle state: a draft (or a sandbox clone) can carry an enabled
+  # trigger so users can test real connections against dev systems before going
+  # live. authorize_content_edit gates on the edit-workflow role AND a non-live
+  # state (draft or sandbox), so a live workflow outside a sandbox is refused
+  # here — its triggers stay lifecycle-managed via go_live/switch_to_draft.
+  @impl true
+  def handle_in(
+        "set_trigger_enabled",
+        %{"trigger_id" => trigger_id, "enabled" => enabled},
+        socket
+      )
+      when is_boolean(enabled) do
+    user = socket.assigns.current_user
+
+    # Load fresh rather than trusting the join-time assign: another client may
+    # have bumped lock_version (optimistic lock) or added the trigger since this
+    # socket joined. Preload jobs and edges alongside triggers so the workflow we
+    # save (and therefore reply/broadcast) is fully loaded: the reply and
+    # `workflow_saved` broadcast serialize the Workflow via Jason, and the schema
+    # derives Jason.Encoder over :jobs and :edges — an unloaded association has no
+    # encoder and would crash the channel. set_trigger_enabled only rewrites
+    # :triggers, so the saved struct it returns keeps these preloads.
+    with :ok <- authorize_content_edit(socket),
+         %_{} = current <-
+           Workflows.get_workflow(socket.assigns.workflow.id,
+             include: [:triggers, :jobs, :edges]
+           ),
+         {:ok, workflow} <-
+           Workflows.set_trigger_enabled(current, trigger_id, enabled, user) do
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
+      })
+
+      {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
+       socket}
+    else
+      result when result in [nil, {:error, :trigger_not_found}] ->
+        {:reply, {:error, %{reason: "trigger does not belong to this workflow"}},
+         socket}
+
+      error ->
+        workflow_error_reply(socket, error)
+    end
+  end
+
+  # Persists the per-user "don't show again" choice for the enable-trigger
+  # warning modal. Rides back to the editor in get_context as
+  # `suppress_enable_trigger_warning`.
+  @impl true
+  def handle_in(
+        "set_suppress_enable_trigger_warning",
+        %{"suppress" => suppress},
+        socket
+      )
+      when is_boolean(suppress) do
+    {:ok, _user} =
+      Lightning.Accounts.update_user_preference(
+        socket.assigns.current_user,
+        "suppress_enable_trigger_warning",
+        suppress
+      )
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
   @impl true
   def handle_in("list_sandboxes", _params, socket) do
     project = socket.assigns.project
@@ -451,11 +524,35 @@ defmodule LightningWeb.WorkflowChannel do
 
     # The parent is resolved server-side from the sandbox: the client cannot
     # supply it. Authorization is checked here (mirroring Sandboxes.merge/4),
-    # while Projects.promote_workflow/2 performs the merge and archive.
+    # while Projects.promote_workflow/2 performs the merge only. Archiving the
+    # sandbox is a separate, explicit step ("archive_sandbox") so several
+    # workflows can be promoted from the same sandbox before it is retired.
     with %_{} = parent <- fetch_parent_project(sandbox),
          :ok <- authorize_merge_sandbox(user, parent),
          {:ok, result} <- Projects.promote_workflow(workflow, user) do
       {:reply, {:ok, result}, socket}
+    else
+      nil -> workflow_error_reply(socket, {:error, :not_a_sandbox})
+      error -> workflow_error_reply(socket, error)
+    end
+  end
+
+  @impl true
+  def handle_in("archive_sandbox", _params, socket) do
+    sandbox = socket.assigns.project
+    user = socket.assigns.current_user
+
+    # Archiving retires the sandbox after its workflows have been promoted. Only
+    # a project with a parent is a sandbox; a root project has no parent and is
+    # refused. `Sandboxes.schedule_sandbox_deletion/2` is the same soft-delete
+    # the sandboxes management screen uses; it is gated on the `:delete_sandbox`
+    # policy (owner/admin on the sandbox or its root), which we check up front so
+    # the client gets a structured unauthorized reply. The parent id is returned
+    # so the client can navigate back to it.
+    with %_{} = parent <- fetch_parent_project(sandbox),
+         :ok <- authorize_delete_sandbox(user, sandbox),
+         {:ok, _scheduled} <- Sandboxes.schedule_sandbox_deletion(sandbox, user) do
+      {:reply, {:ok, %{parent_project_id: parent.id}}, socket}
     else
       nil -> workflow_error_reply(socket, {:error, :not_a_sandbox})
       error -> workflow_error_reply(socket, error)
@@ -1025,11 +1122,26 @@ defmodule LightningWeb.WorkflowChannel do
         project
       )
 
+    # Mirrors the "archive_sandbox" event's guard exactly: the project must be a
+    # sandbox (have a parent, which the event enforces via fetch_parent_project)
+    # AND the user must pass the same :delete_sandbox policy. The policy alone
+    # checks role only, so the sandbox check is what makes this false on a root
+    # project. The client only offers Archive when the server would allow it.
+    can_archive_sandbox =
+      not is_nil(project.parent_id) and
+        Permissions.can?(
+          :sandboxes,
+          :delete_sandbox,
+          user,
+          project
+        )
+
     %{
       can_edit_workflow: can_edit,
       can_run_workflow: can_run,
       can_write_webhook_auth_method: can_write_webhook_auth,
-      can_provision_sandbox: can_provision_sandbox
+      can_provision_sandbox: can_provision_sandbox,
+      can_archive_sandbox: can_archive_sandbox
     }
   end
 
@@ -1345,6 +1457,18 @@ defmodule LightningWeb.WorkflowChannel do
        %{
          type: "unauthorized",
          message: "You don't have permission to promote this workflow"
+       }}
+    end
+  end
+
+  defp authorize_delete_sandbox(user, sandbox) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, user, sandbox) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to archive this sandbox"
        }}
     end
   end

@@ -1030,23 +1030,26 @@ defmodule Lightning.Workflows do
   # The returned changeset will have triggers with `enabled: true`.
   ```
   """
+  def update_triggers_enabled_state(workflow_or_changeset, enabled?, opts \\ [])
+
   def update_triggers_enabled_state(
         %Ecto.Changeset{data: %Workflow{}} = changeset,
-        enabled?
+        enabled?,
+        opts
       ) do
     updated_triggers =
       changeset
       |> Ecto.Changeset.get_field(:triggers, [])
-      |> update_triggers(enabled?)
+      |> update_triggers(enabled?, opts)
 
     changeset
     |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
   end
 
-  def update_triggers_enabled_state(%Workflow{} = workflow, enabled?) do
+  def update_triggers_enabled_state(%Workflow{} = workflow, enabled?, opts) do
     updated_triggers =
       workflow.triggers
-      |> update_triggers(enabled?)
+      |> update_triggers(enabled?, opts)
 
     workflow
     |> change_workflow()
@@ -1081,7 +1084,58 @@ defmodule Lightning.Workflows do
     |> save_workflow(actor)
   end
 
-  defp update_triggers(triggers, enabled?) do
-    Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
+  @doc """
+  Sets a single trigger's `enabled` state on a workflow WITHOUT touching the
+  workflow's lifecycle `:state`.
+
+  This deliberately decouples trigger enablement from the live/draft lifecycle
+  so a non-live workflow (a draft, or a sandbox clone) can enable a trigger and
+  test real connections against dev systems while still being developed. The
+  lifecycle-managed enablement stays in `go_live/2` and `switch_to_draft/2`;
+  callers here are responsible for refusing this on a live workflow outside a
+  sandbox.
+
+  The change is persisted through `save_workflow/3`, so it captures a snapshot,
+  records a version, audits the enabled/disabled transition, and reconciles the
+  live collaborative document (the same targeted trigger update a normal save
+  pushes into the Y.Doc).
+
+  Triggers are preloaded if not already loaded. Returns
+  `{:error, :trigger_not_found}` when `trigger_id` is not a trigger of
+  `workflow`.
+  """
+  @spec set_trigger_enabled(Workflow.t(), Ecto.UUID.t(), boolean(), struct()) ::
+          {:ok, Workflow.t()}
+          | {:error, :trigger_not_found | Ecto.Changeset.t(Workflow.t())}
+  def set_trigger_enabled(%Workflow{} = workflow, trigger_id, enabled?, actor)
+      when is_boolean(enabled?) do
+    workflow = Repo.preload(workflow, :triggers)
+
+    if Enum.any?(workflow.triggers, &(&1.id == trigger_id)) do
+      workflow
+      |> update_triggers_enabled_state(enabled?, only: trigger_id)
+      |> save_workflow(actor)
+    else
+      {:error, :trigger_not_found}
+    end
+  end
+
+  # Builds trigger changesets flipping `enabled`. With `only: trigger_id` scoped,
+  # only that trigger is flipped and the rest are left as plain changes;
+  # otherwise every trigger is flipped.
+  defp update_triggers(triggers, enabled?, opts) do
+    case Keyword.get(opts, :only) do
+      nil ->
+        Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
+
+      trigger_id ->
+        Enum.map(triggers, fn trigger ->
+          if trigger.id == trigger_id do
+            Ecto.Changeset.change(trigger, %{enabled: enabled?})
+          else
+            Ecto.Changeset.change(trigger)
+          end
+        end)
+    end
   end
 end

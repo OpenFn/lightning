@@ -597,7 +597,8 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{user: insert(:user)}
     end
 
-    test "infers :live when a trigger is enabled", %{user: user} do
+    test "a brand-new workflow with an enabled trigger is inferred :live",
+         %{user: user} do
       %{body: body, project_id: project_id} = valid_document()
 
       {:ok, %{id: ^project_id, workflows: [workflow]}} =
@@ -606,27 +607,22 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert %{state: :live, triggers: [%{enabled: true}]} = workflow
     end
 
-    test "infers :draft when all triggers are disabled", %{user: user} do
-      %{body: %{"workflows" => [workflow]} = body} = valid_document()
+    test "a brand-new workflow with triggers disabled is inferred :draft",
+         %{user: user} do
+      %{body: body, project_id: project_id} = valid_document()
+      body = disable_triggers(body)
 
-      disabled_triggers =
-        Enum.map(workflow["triggers"], &Map.put(&1, "enabled", false))
-
-      body =
-        Map.put(body, "workflows", [
-          Map.put(workflow, "triggers", disabled_triggers)
-        ])
-
-      {:ok, %{workflows: [imported]}} =
+      {:ok, %{id: ^project_id, workflows: [workflow]}} =
         Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
 
-      assert %{state: :draft, triggers: [%{enabled: false}]} = imported
+      assert %{state: :draft, triggers: [%{enabled: false}]} = workflow
     end
 
-    test "explicit state in attrs wins over inference", %{user: user} do
+    test "explicit state in attrs wins", %{user: user} do
       %{body: %{"workflows" => [workflow]} = body} = valid_document()
 
-      # Triggers are enabled (would infer :live) but state is explicitly :draft.
+      # Trigger is enabled but state is explicitly :draft, so it stays :draft
+      # rather than being inferred :live.
       body =
         Map.put(body, "workflows", [Map.put(workflow, "state", "draft")])
 
@@ -634,6 +630,48 @@ defmodule Lightning.Projects.ProvisionerTest do
         Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
 
       assert %{state: :draft, triggers: [%{enabled: true}]} = imported
+    end
+
+    test "re-importing an existing :live workflow without a state keeps it :live",
+         %{user: user} do
+      %{body: body} = valid_document()
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      # First import (enabled trigger) inferred :live.
+      # Re-import the same document with the state key omitted.
+      {:ok, %{workflows: [reimported]}} =
+        Provisioner.import_document(project, user, body)
+
+      assert %{state: :live} = reimported
+    end
+
+    test "re-importing an existing :draft workflow without a state keeps it " <>
+           ":draft even when a trigger is enabled",
+         %{user: user} do
+      %{body: body} = valid_document()
+
+      # Seed a :draft workflow that carries an enabled trigger (an in-app
+      # enabled trigger on a draft), by importing with an explicit :draft state.
+      draft_body =
+        update_in(body, ["workflows"], fn [workflow] ->
+          [Map.put(workflow, "state", "draft")]
+        end)
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          draft_body
+        )
+
+      # Re-import with the state key omitted: the existing DB state must be kept.
+      # We must NOT infer :live from the enabled trigger on a round-trip.
+      {:ok, %{workflows: [reimported]}} =
+        Provisioner.import_document(project, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: true}]} = reimported
     end
   end
 
@@ -2403,6 +2441,16 @@ defmodule Lightning.Projects.ProvisionerTest do
       trigger_edge: trigger_edge,
       job_edge: job_edge
     }
+  end
+
+  defp disable_triggers(body) do
+    update_in(body, ["workflows"], fn workflows ->
+      Enum.map(workflows, fn workflow ->
+        update_in(workflow, ["triggers"], fn triggers ->
+          Enum.map(triggers, &Map.put(&1, "enabled", false))
+        end)
+      end)
+    end)
   end
 
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do

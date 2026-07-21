@@ -2111,65 +2111,66 @@ defmodule Lightning.Projects do
     as: :provision
 
   @doc """
-  Provisions a sandbox from `parent` and promotes the clone of `workflow_name`
-  to `:live`, so the "Edit in sandbox" flow lands the user on an editable live
-  workflow. Both steps succeed together: if promotion fails, the just-created
-  sandbox is deleted so it cannot linger or consume the parent's sandbox quota.
+  Provisions a sandbox from `parent` and returns the sandbox together with its
+  clone of `workflow_name`, so the "Edit in sandbox" flow lands the user on the
+  edited workflow.
 
-  Promotion runs after the provisioning transaction has committed (its
-  post-commit broadcasts must not fire inside a rollback-able transaction), so
-  atomicity is provided by the compensating delete rather than a shared
-  transaction.
+  The edited clone comes in disabled and `:draft`, exactly like every other
+  cloned workflow: the clone is deliberately NOT promoted to live. Users enable
+  its triggers explicitly (see `Workflows.set_trigger_enabled/4`) once they want
+  to test connections against dev systems.
   """
   @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
           {:ok, %{sandbox: Project.t(), workflow: Workflow.t()}}
           | {:error, term()}
   def provision_editing_sandbox(parent, actor, workflow_name, attrs) do
     with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do
-      case promote_named_workflow(sandbox, workflow_name, actor) do
-        {:ok, workflow} ->
+      case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
+        %Workflow{} = workflow ->
           {:ok, %{sandbox: sandbox, workflow: workflow}}
 
-        {:error, reason} ->
-          case delete_project(sandbox) do
-            {:error, delete_reason} ->
-              Logger.warning(
-                "Failed to delete sandbox #{sandbox.id} after promotion " <>
-                  "failure; it may linger and consume quota. " <>
-                  "reason: #{inspect(delete_reason)}"
-              )
+        nil ->
+          # The clone of `workflow_name` is expected to exist after a
+          # successful provision; its absence is an invariant violation. Delete
+          # the just-created sandbox so it cannot linger and consume the
+          # parent's sandbox quota.
+          Logger.error(
+            "Cloned workflow #{inspect(workflow_name)} not found in " <>
+              "provisioned sandbox ##{sandbox.id}; deleting the orphaned sandbox."
+          )
 
-            _ ->
+          case delete_project(sandbox) do
+            {:ok, _} ->
               :ok
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to delete orphaned sandbox ##{sandbox.id} after a " <>
+                  "missing cloned workflow; it may linger and consume the " <>
+                  "parent's sandbox quota: #{inspect(reason)}"
+              )
           end
 
-          {:error, reason}
+          {:error, :internal_error}
       end
-    end
-  end
-
-  defp promote_named_workflow(sandbox, workflow_name, actor) do
-    case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
-      %Workflow{} = workflow -> Lightning.Workflows.go_live(workflow, actor)
-      nil -> {:error, :internal_error}
     end
   end
 
   @doc """
   Promotes a workflow edited inside a sandbox back to the sandbox's parent
-  project by merging only that workflow, then best-effort archives the sandbox.
+  project by merging only that workflow.
 
   The merge reuses `Sandboxes.merge/4` scoped to the single source workflow via
   `selected_workflow_ids`, so sibling workflows on the parent pass through
   untouched (including their live/enabled trigger state). Authorization is the
   caller's responsibility, mirroring `Sandboxes.merge/4`.
 
-  Archiving the sandbox afterwards is best-effort and non-atomic: a failure
-  there (for example the actor lacks admin/owner on the sandbox) is logged and
-  surfaced as `archived: false`, but never fails the promote.
+  Promoting does not archive the sandbox: archiving is a separate, explicit
+  action so a user can promote several related workflows from the same sandbox
+  before retiring it. See `Lightning.Projects.Sandboxes.schedule_sandbox_deletion/2`.
 
   ## Returns
-  * `{:ok, %{parent_project_id: id, workflow_id: id | nil, archived: boolean()}}`
+  * `{:ok, %{parent_project_id: id, workflow_id: id | nil}}`
   * `{:error, :not_a_sandbox}` - the workflow's project has no parent
   * `{:error, reason}` - the merge failed (`:merge_failed` or a usage-limit
     `Lightning.Extensions.Message`)
@@ -2178,8 +2179,7 @@ defmodule Lightning.Projects do
           {:ok,
            %{
              parent_project_id: Ecto.UUID.t(),
-             workflow_id: Ecto.UUID.t() | nil,
-             archived: boolean()
+             workflow_id: Ecto.UUID.t() | nil
            }}
           | {:error, :not_a_sandbox | term()}
   def promote_workflow(%Workflow{} = sandbox_workflow, %User{} = actor) do
@@ -2196,8 +2196,6 @@ defmodule Lightning.Projects do
                Sandboxes.merge(sandbox, parent, actor, %{
                  selected_workflow_ids: [sandbox_workflow.id]
                }) do
-          archived? = archive_promoted_sandbox(sandbox, actor)
-
           parent_workflow_id =
             case Lightning.Workflows.get_workflow_by_name(
                    parent.id,
@@ -2210,25 +2208,9 @@ defmodule Lightning.Projects do
           {:ok,
            %{
              parent_project_id: parent.id,
-             workflow_id: parent_workflow_id,
-             archived: archived?
+             workflow_id: parent_workflow_id
            }}
         end
-    end
-  end
-
-  defp archive_promoted_sandbox(sandbox, actor) do
-    case Sandboxes.schedule_sandbox_deletion(sandbox, actor) do
-      {:ok, _scheduled} ->
-        true
-
-      {:error, reason} ->
-        Logger.warning(
-          "Promoted workflow but could not archive sandbox #{sandbox.id}; " <>
-            "it may linger and consume quota. reason: #{inspect(reason)}"
-        )
-
-        false
     end
   end
 

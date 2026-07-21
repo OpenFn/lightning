@@ -672,17 +672,27 @@ defmodule Lightning.Projects.Provisioner do
     |> Workflow.validate()
   end
 
+  # Decide the workflow `:state` on import:
+  #
+  #   1. Explicit `state` in the attrs wins.
+  #   2. An already-persisted workflow (`__meta__.state == :loaded`) keeps its
+  #      current DB state untouched. We deliberately do NOT infer here: a
+  #      round-trip must not silently flip a draft with an in-app-enabled
+  #      trigger to live.
+  #   3. A brand-new workflow (`:built`, no explicit state) is inferred from its
+  #      triggers: `:live` if any trigger is enabled, otherwise `:draft`.
   defp maybe_infer_workflow_state(changeset, attrs) do
-    if state_present_in_attrs?(attrs) do
-      changeset
-    else
-      inferred = if any_trigger_enabled?(changeset), do: :live, else: :draft
-      put_change(changeset, :state, inferred)
-    end
-  end
+    cond do
+      state_present_in_attrs?(attrs) ->
+        changeset
 
-  defp state_present_in_attrs?(attrs) do
-    Map.has_key?(attrs, "state") or Map.has_key?(attrs, :state)
+      changeset.data.__meta__.state == :loaded ->
+        changeset
+
+      true ->
+        inferred = if any_trigger_enabled?(changeset), do: :live, else: :draft
+        put_change(changeset, :state, inferred)
+    end
   end
 
   defp any_trigger_enabled?(changeset) do
@@ -692,6 +702,10 @@ defmodule Lightning.Projects.Provisioner do
     |> Enum.any?(fn trigger_changeset ->
       get_field(trigger_changeset, :enabled) == true
     end)
+  end
+
+  defp state_present_in_attrs?(attrs) do
+    Map.has_key?(attrs, "state") or Map.has_key?(attrs, :state)
   end
 
   defp job_changeset(job, attrs, valid_project_credentials) do

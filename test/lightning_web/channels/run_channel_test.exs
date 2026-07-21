@@ -2314,7 +2314,7 @@ defmodule LightningWeb.RunChannelTest do
     job =
       build(:job,
         body: ~s[fn(state => { return {...state, extra: "data"} })],
-        project_credential: %{credential: credential}
+        project_credential: %{credential: credential, project: project}
       )
 
     workflow =

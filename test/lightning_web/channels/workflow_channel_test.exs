@@ -78,6 +78,209 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "set_trigger_enabled" do
+    test "enables and disables a trigger on a draft workflow, leaving state unchanged" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # Build the workflow with its trigger before joining, so the live Y.Doc is
+      # seeded with the trigger and the save-path reconcile can find it.
+      workflow = insert(:workflow, project: project, state: :draft)
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: false)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => trigger.id,
+          "enabled" => true
+        })
+
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+      assert Lightning.Repo.reload!(trigger).enabled
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => trigger.id,
+          "enabled" => false
+        })
+
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+      refute Lightning.Repo.reload!(trigger).enabled
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "enables a trigger on a sandbox workflow" do
+      user = insert(:user)
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: sandbox, state: :live)
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: false)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => trigger.id,
+          "enabled" => true
+        })
+
+      # A sandbox clone is editable regardless of lifecycle state, and enabling
+      # the trigger does not flip the state.
+      assert_reply ref, :ok, %{workflow: %{state: :live}}
+      assert Lightning.Repo.reload!(trigger).enabled
+    end
+
+    test "is refused on a live workflow outside a sandbox", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: false)
+
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :live}}
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => trigger.id,
+          "enabled" => false
+        })
+
+      assert_reply ref, :error, %{
+        type: "unauthorized",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "live"
+    end
+
+    test "replies with a fully-loaded, JSON-serializable workflow" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # A complete DAG (trigger -> job via edge). If the reply/broadcast payload
+      # carried an unloaded :jobs or :edges association, Jason has no encoder for
+      # %Ecto.Association.NotLoaded{} and serializing the channel push would crash
+      # the channel process on every real toggle. Build it before joining so the
+      # live Y.Doc is seeded and the save-path reconcile can find everything.
+      workflow = insert(:workflow, project: project, state: :draft)
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: false)
+
+      job = insert(:job, workflow: workflow)
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => trigger.id,
+          "enabled" => true
+        })
+
+      assert_reply ref, :ok, %{workflow: replied_workflow}
+
+      # Associations are loaded (lists), not %Ecto.Association.NotLoaded{}.
+      assert is_list(replied_workflow.jobs)
+      assert is_list(replied_workflow.edges)
+      assert is_list(replied_workflow.triggers)
+
+      # The payload actually survives serialization onto the channel.
+      assert Jason.encode!(replied_workflow)
+
+      # The same fully-loaded workflow is broadcast to the other clients.
+      assert_broadcast "workflow_saved", %{workflow: broadcast_workflow}
+      assert Jason.encode!(broadcast_workflow)
+    end
+
+    test "rejects a trigger that does not belong to the workflow", %{
+      socket: socket
+    } do
+      other_workflow = insert(:workflow)
+
+      other_trigger =
+        insert(:trigger, workflow: other_workflow, type: :webhook)
+
+      ref =
+        push(socket, "set_trigger_enabled", %{
+          "trigger_id" => other_trigger.id,
+          "enabled" => true
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "does not belong"
+    end
+  end
+
+  describe "set_suppress_enable_trigger_warning" do
+    test "persists the preference and surfaces it in get_context", %{
+      socket: socket,
+      user: user
+    } do
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{suppress_enable_trigger_warning: false}
+
+      ref =
+        push(socket, "set_suppress_enable_trigger_warning", %{"suppress" => true})
+
+      assert_reply ref, :ok, %{}
+
+      assert Lightning.Accounts.get_preference(
+               user,
+               "suppress_enable_trigger_warning"
+             ) == true
+
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{suppress_enable_trigger_warning: true}
+    end
+  end
+
   describe "content edits on a live workflow" do
     setup %{socket: socket} do
       # Take the workflow live so content edits should be refused server-side.
@@ -319,7 +522,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         Lightning.Extensions.ProjectHook
       )
 
-      # Give the workflow a real trigger so the clone has something to enable.
+      # Give the workflow a real trigger so the clone carries one too.
       trigger =
         insert(:trigger, workflow: workflow, type: :webhook, enabled: true)
 
@@ -340,7 +543,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       %{trigger: trigger, other_workflow: other_workflow}
     end
 
-    test "provisions a sandbox, promotes the edited workflow, leaves others as drafts",
+    test "provisions a sandbox with the edited clone as a disabled draft, like the others",
          %{
            socket: socket,
            project: project,
@@ -353,13 +556,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       sandbox = Lightning.Projects.get_project!(sandbox_id)
       assert sandbox.parent_id == project.id
 
-      # Edited clone is live with an enabled trigger.
+      # Edited clone is NOT auto-enabled: it comes in as a disabled draft.
       cloned =
         Lightning.Workflows.get_workflow!(cloned_id, include: [:triggers])
 
       assert cloned.name == workflow.name
-      assert cloned.state == :live
-      assert Enum.all?(cloned.triggers, & &1.enabled)
+      assert cloned.state == :draft
+      refute Enum.any?(cloned.triggers, & &1.enabled)
 
       # The other clone stays a draft with disabled triggers.
       other_clone =
@@ -506,7 +709,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "promotes the edited workflow into the parent and archives the sandbox",
+    test "promotes the edited workflow into the parent and leaves the sandbox alive",
          %{
            sandbox_socket: socket,
            sandbox: sandbox,
@@ -523,10 +726,11 @@ defmodule LightningWeb.WorkflowChannelTest do
                    :ok,
                    %{
                      parent_project_id: parent_project_id,
-                     workflow_id: workflow_id,
-                     archived: true
-                   }
+                     workflow_id: workflow_id
+                   } = reply
 
+      # Promote merges only; archiving is a separate "archive_sandbox" step.
+      refute Map.has_key?(reply, :archived)
       assert parent_project_id == parent.id
       assert workflow_id == parent_alpha.id
 
@@ -539,8 +743,8 @@ defmodule LightningWeb.WorkflowChannelTest do
                &(&1.body == "console.log('promoted');")
              )
 
-      # The sandbox was archived.
-      assert Lightning.Repo.reload!(sandbox).scheduled_deletion != nil
+      # The sandbox stays alive: promote no longer archives it.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
     end
 
     test "promotes a workflow with a Kafka trigger", %{user: user} do
@@ -586,7 +790,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       edit_single_job_body!(sandbox_kafka.id, "console.log('promoted-kafka');")
 
       ref = push(socket, "promote", %{})
-      assert_reply ref, :ok, %{archived: true}
+      assert_reply ref, :ok, %{parent_project_id: _}
 
       parent_kafka =
         Lightning.Workflows.get_workflow(kafka_wf.id,
@@ -604,7 +808,7 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "promotes only the current workflow, preserving sibling live workflows",
          %{sandbox_socket: socket, parent_beta: parent_beta} do
       ref = push(socket, "promote", %{})
-      assert_reply ref, :ok, %{archived: true}
+      assert_reply ref, :ok, %{parent_project_id: _}
 
       reloaded_beta =
         Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
@@ -616,7 +820,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert reloaded_beta.lock_version == parent_beta.lock_version
     end
 
-    test "merges but skips archiving when the actor cannot delete the sandbox",
+    test "merges for an actor who can merge but cannot delete the sandbox",
          %{
            parent: parent,
            sandbox: sandbox,
@@ -624,7 +828,7 @@ defmodule LightningWeb.WorkflowChannelTest do
            parent_alpha: parent_alpha
          } do
       # An editor on the parent can merge, but is not owner/admin on the
-      # sandbox (nor its root), so archiving is skipped.
+      # sandbox (nor its root). Promote merges regardless and never archives.
       editor = insert(:user)
       insert(:project_user, project: parent, user: editor, role: :editor)
       insert(:project_user, project: sandbox, user: editor, role: :editor)
@@ -646,11 +850,12 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref,
                    :ok,
-                   %{parent_project_id: parent_project_id, archived: false}
+                   %{parent_project_id: parent_project_id} = reply
 
+      refute Map.has_key?(reply, :archived)
       assert parent_project_id == parent.id
 
-      # Sandbox stays active.
+      # Sandbox stays active: promote never archives.
       assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
 
       # Parent still received the merge.
@@ -707,6 +912,83 @@ defmodule LightningWeb.WorkflowChannelTest do
       # parent to promote into.
       ref = push(socket, "promote", %{})
       assert_reply ref, :error, %{type: "invalid_state"}
+    end
+  end
+
+  describe "archive_sandbox" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+      insert(:workflow, project: parent, name: "alpha")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      %{parent: parent, sandbox: sandbox, sandbox_alpha: sandbox_alpha}
+    end
+
+    defp join_sandbox_socket(user, sandbox, workflow) do
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      socket
+    end
+
+    test "archives the sandbox and returns the parent to navigate to", %{
+      user: user,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      socket = join_sandbox_socket(user, sandbox, sandbox_alpha)
+
+      ref = push(socket, "archive_sandbox", %{})
+
+      assert_reply ref, :ok, %{parent_project_id: parent_project_id}
+      assert parent_project_id == parent.id
+
+      # The sandbox was soft-deleted (scheduled for deletion).
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion != nil
+    end
+
+    test "refuses to archive a project that is not a sandbox", %{socket: socket} do
+      # The default socket is joined to a root-project workflow, which has no
+      # parent and so is not a sandbox.
+      ref = push(socket, "archive_sandbox", %{})
+      assert_reply ref, :error, %{type: "invalid_state"}
+    end
+
+    test "refuses an actor who cannot delete the sandbox", %{
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      # An editor can edit and even promote, but archiving requires
+      # :delete_sandbox (owner/admin), which an editor lacks.
+      editor = insert(:user)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      socket = join_sandbox_socket(editor, sandbox, sandbox_alpha)
+
+      ref = push(socket, "archive_sandbox", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+
+      # The sandbox stays alive.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
     end
   end
 
@@ -963,6 +1245,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Owner role can provision a sandbox.
       assert permissions_data.can_provision_sandbox == true
 
+      # A root project is not a sandbox, so it can't be archived even by an owner.
+      assert permissions_data.can_archive_sandbox == false
+
       # Latest snapshot lock version
       assert %{latest_snapshot_lock_version: lock_version} = response
       assert lock_version == workflow.lock_version
@@ -1024,6 +1309,57 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert permissions_data.can_edit_workflow == false
       # Viewer role cannot provision a sandbox either.
       assert permissions_data.can_provision_sandbox == false
+    end
+
+    test "reports can_archive_sandbox per :delete_sandbox on a sandbox", %{
+      user: owner,
+      project: parent
+    } do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      insert(:workflow, project: parent, name: "alpha")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, owner, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      # Owner of the sandbox can archive it.
+      {:ok, _, owner_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{owner.id}", %{current_user: owner})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{project_id: sandbox.id, action: "edit"}
+        )
+
+      ref = push(owner_socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: owner_permissions}
+      assert owner_permissions.can_archive_sandbox == true
+
+      # An editor on the sandbox cannot archive it.
+      editor = insert(:user)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      {:ok, _, editor_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{project_id: sandbox.id, action: "edit"}
+        )
+
+      ref = push(editor_socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: editor_permissions}
+      assert editor_permissions.can_archive_sandbox == false
     end
 
     test "returns actual latest lock_version when viewing old snapshot", %{
