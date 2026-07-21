@@ -120,6 +120,14 @@ const mockKeychainCredentials: KeychainCredential[] = [
   },
 ];
 
+// Credential rows and version tiers are both radio inputs; scope
+// credential assertions to the "credential" radio group.
+function getCredentialRadios() {
+  return screen
+    .getAllByRole('radio')
+    .filter(radio => radio.getAttribute('name') === 'credential');
+}
+
 // Helper to create credential query methods
 function createCredentialQueryMethods(credSnapshot: any) {
   return {
@@ -355,140 +363,139 @@ describe('ConfigureAdaptorModal', () => {
   });
 
   describe('Version Section', () => {
-    it('displays version dropdown with current version', () => {
+    // Default props: salesforce with versions 2.1.0 / 2.0.0 / 1.9.0 and an
+    // exact currentVersion of 2.1.0 (so the Advanced section starts open).
+
+    it('renders tier options derived from the current version with resolved hints', () => {
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
 
       expect(screen.getByText('Version')).toBeInTheDocument();
 
-      const versionSelect = screen.getByDisplayValue('2.1.0');
-      expect(versionSelect).toBeInTheDocument();
+      // Major and minor tiers anchored on 2.1.0
+      expect(screen.getByRole('radio', { name: 'v2' })).toBeInTheDocument();
+      expect(screen.getByText('Recommended')).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'v2.1' })).toBeInTheDocument();
+      expect(screen.getByText('Bugfixes only')).toBeInTheDocument();
+
+      // "Currently X" hints resolved against known versions (both tiers)
+      expect(screen.getAllByText(/Currently 2\.1\.0\./)).toHaveLength(2);
+
+      // Already on the newest major: no upsell
+      expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
     });
 
-    it('displays all version options with range entries interleaved', async () => {
+    it('maps tier radios to stored version tokens', async () => {
       const user = userEvent.setup();
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
 
-      const versionInput = screen.getByDisplayValue('2.1.0');
+      await user.click(screen.getByRole('radio', { name: 'v2' }));
+      expect(mockOnVersionChange).toHaveBeenCalledWith('2.x');
 
-      // Click to open the combobox options
-      await user.click(versionInput);
+      await user.click(screen.getByRole('radio', { name: 'v2.1' }));
+      expect(mockOnVersionChange).toHaveBeenCalledWith('2.1.x');
 
-      // Wait for options to appear
-      const options = await screen.findAllByRole('option');
-
-      // "latest" first, then version ranges interleaved with the concrete
-      // versions they cover, in descending order
-      expect(options.map(o => o.textContent)).toEqual([
-        'latest',
-        '2.x',
-        '2.1.x',
-        '2.1.0',
-        '2.0.x',
-        '2.0.0',
-        '1.x',
-        '1.9.x',
-        '1.9.0',
-      ]);
+      // Advanced is open (exact version stored), so latest is clickable
+      await user.click(
+        screen.getByRole('radio', { name: 'Always newest (latest)' })
+      );
+      expect(mockOnVersionChange).toHaveBeenCalledWith('latest');
     });
 
-    it('calls onVersionChange with the range token when a range is selected', async () => {
+    it.each([
+      { stored: '2.x', radio: 'v2', advancedOpen: false },
+      { stored: '2.1.x', radio: 'v2.1', advancedOpen: false },
+      { stored: '2.0.0', radio: 'Pin exact version', advancedOpen: true },
+      { stored: 'latest', radio: 'Always newest (latest)', advancedOpen: true },
+    ])(
+      'pre-selects "$radio" when the stored version is "$stored"',
+      ({ stored, radio, advancedOpen }) => {
+        renderWithProviders(
+          <ConfigureAdaptorModal {...defaultProps} currentVersion={stored} />
+        );
+
+        expect(screen.getByRole('radio', { name: radio })).toBeChecked();
+
+        // Advanced options only render expanded for exact/latest selections
+        const pinOption = screen.queryByRole('radio', {
+          name: 'Pin exact version',
+        });
+        if (advancedOpen) {
+          expect(pinOption).toBeInTheDocument();
+        } else {
+          expect(pinOption).not.toBeInTheDocument();
+        }
+      }
+    );
+
+    it('derives tiers from the current major and upsells the newer major', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+      renderWithProviders(
+        <ConfigureAdaptorModal {...defaultProps} currentVersion="1.9.0" />
+      );
 
-      const versionInput = screen.getByDisplayValue('2.1.0');
-      await user.click(versionInput);
+      // Tiers follow the job's major (v1), NOT the newest release (v2)
+      expect(screen.getByRole('radio', { name: 'v1' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'v1.9' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('radio', { name: 'v2' })
+      ).not.toBeInTheDocument();
+      // Both v1 and v1.9 currently resolve to 1.9.0
+      expect(screen.getAllByText(/Currently 1\.9\.0\./)).toHaveLength(2);
 
-      const options = await screen.findAllByRole('option');
-      const rangeOption = options.find(opt => opt.textContent === '2.x');
-      expect(rangeOption).toBeDefined();
-      await user.click(rangeOption!);
-
+      // Subtle upsell with an action that switches to the newer major lock
+      expect(screen.getByText(/v2 is available/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Switch to v2' }));
       expect(mockOnVersionChange).toHaveBeenCalledWith('2.x');
     });
 
-    it('displays a range as the current version when the job is range-locked', () => {
+    it('expands Advanced on demand and pins concrete versions via the picker', async () => {
+      const user = userEvent.setup();
       renderWithProviders(
         <ConfigureAdaptorModal {...defaultProps} currentVersion="2.x" />
       );
 
-      expect(screen.getByDisplayValue('2.x')).toBeInTheDocument();
-    });
+      // Range-locked selection: Advanced starts collapsed
+      expect(
+        screen.queryByRole('radio', { name: 'Pin exact version' })
+      ).not.toBeInTheDocument();
 
-    it('updates version when dropdown selection changes', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+      await user.click(screen.getByRole('button', { name: /advanced/i }));
 
-      const versionInput = screen.getByDisplayValue('2.1.0');
+      // The exact-pin picker shows what the current range resolves to
+      const versionInput = screen.getByRole('combobox', { name: /version/i });
+      expect(versionInput).toHaveValue('2.1.0');
 
-      // Click to open the combobox
+      // The picker lists concrete versions only (no ranges, no latest),
+      // sorted descending
       await user.click(versionInput);
-
-      // Wait for options and click on version 2.0.0
       const options = await screen.findAllByRole('option');
-      const option200 = options.find(opt => opt.textContent === '2.0.0');
-      expect(option200).toBeDefined();
-      await user.click(option200!);
+      expect(options.map(o => o.textContent)).toEqual([
+        '2.1.0',
+        '2.0.0',
+        '1.9.0',
+      ]);
 
-      // Wait for dropdown to close
+      // Choosing a concrete version stores it as an exact pin
+      await user.click(options.find(o => o.textContent === '2.0.0')!);
       await waitFor(() => {
         expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       });
-
-      // onVersionChange should have been called immediately
       expect(mockOnVersionChange).toHaveBeenCalledWith('2.0.0');
     });
 
-    it('sorts versions semantically (not alphabetically)', async () => {
+    it('stores the displayed concrete version when the pin radio is selected', async () => {
       const user = userEvent.setup();
-      // Create adaptor with versions that need semantic sorting
-      const adaptorWithManyVersions: Adaptor = {
-        name: '@openfn/language-test',
-        latest: '10.0.0',
-        versions: [
-          { version: '2.0.0' },
-          { version: '10.0.0' },
-          { version: '1.9.0' },
-          { version: '9.0.0' },
-          { version: '1.10.0' },
-        ],
-        repo: 'https://github.com/openfn/language-test',
-      };
-
       renderWithProviders(
-        <ConfigureAdaptorModal
-          {...defaultProps}
-          currentAdaptor="@openfn/language-test"
-          allAdaptors={[adaptorWithManyVersions]}
-        />
+        <ConfigureAdaptorModal {...defaultProps} currentVersion="2.x" />
       );
 
-      const versionInput = screen.getByRole('combobox', { name: /version/i });
+      await user.click(screen.getByRole('button', { name: /advanced/i }));
+      await user.click(
+        screen.getByRole('radio', { name: 'Pin exact version' })
+      );
 
-      // Click to open the combobox
-      await user.click(versionInput);
-
-      // Wait for options to appear
-      const options = await screen.findAllByRole('option');
-
-      // Should be sorted semantically descending (10.0.0 before 9.0.0,
-      // 1.10.0 before 1.9.0), with range entries interleaved
-      expect(options.map(o => o.textContent)).toEqual([
-        'latest',
-        '10.x',
-        '10.0.x',
-        '10.0.0',
-        '9.x',
-        '9.0.x',
-        '9.0.0',
-        '2.x',
-        '2.0.x',
-        '2.0.0',
-        '1.x',
-        '1.10.x',
-        '1.10.0',
-        '1.9.x',
-        '1.9.0',
-      ]);
+      // "2.x" currently resolves to 2.1.0
+      expect(mockOnVersionChange).toHaveBeenCalledWith('2.1.0');
     });
   });
 
@@ -543,8 +550,7 @@ describe('ConfigureAdaptorModal', () => {
       expect(screen.getByText('My Salesforce OAuth')).toBeInTheDocument();
 
       // Should show 3 radio buttons (2 schema-matched + 1 OAuth matched)
-      const radioButtons = screen.getAllByRole('radio');
-      expect(radioButtons.length).toBe(3);
+      expect(getCredentialRadios().length).toBe(3);
 
       // Should NOT show HTTP or keychain in main view
       expect(screen.queryByText('HTTP API Key')).not.toBeInTheDocument();
@@ -780,8 +786,7 @@ describe('ConfigureAdaptorModal', () => {
       expect(matches).toHaveLength(1);
 
       // Should show 3 radio buttons total (2 salesforce + 1 matched OAuth)
-      const radioButtons = screen.getAllByRole('radio');
-      expect(radioButtons.length).toBe(3);
+      expect(getCredentialRadios().length).toBe(3);
     });
 
     it("shows informative message for adaptors that don't need credentials", () => {
@@ -950,8 +955,7 @@ describe('ConfigureAdaptorModal', () => {
       expect(screen.getByText('My Salesforce OAuth')).toBeInTheDocument();
 
       // Both should be radio buttons in the main view (not in "Other credentials")
-      const radioButtons = screen.getAllByRole('radio');
-      expect(radioButtons.length).toBe(2); // HTTP + OAuth
+      expect(getCredentialRadios().length).toBe(2); // HTTP + OAuth
     });
 
     it('shows empty state when no credentials exist at all', () => {
@@ -1039,11 +1043,9 @@ describe('ConfigureAdaptorModal', () => {
     it('displays credentials as radio buttons', () => {
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
 
-      const radioButtons = screen.getAllByRole('radio');
-
       // 3 credentials shown: 2 schema-matched Salesforce + 1 OAuth with Salesforce client
       // (HTTP and keychain are in "Other credentials" view)
-      expect(radioButtons.length).toBe(3);
+      expect(getCredentialRadios().length).toBe(3);
     });
 
     it('displays credential metadata (owner)', () => {
@@ -1165,11 +1167,16 @@ describe('ConfigureAdaptorModal', () => {
       // Should show HTTP adaptor now
       expect(screen.getByText('Http')).toBeInTheDocument();
 
-      // Version should be set to the currentVersion prop (1.5.0)
+      // Version should be set to the currentVersion prop (1.5.0), shown in
+      // the exact-pin picker (exact selections render Advanced expanded)
       const versionInput = screen.getByRole('combobox', {
         name: /version/i,
       }) as HTMLInputElement;
       expect(versionInput.value).toBe('1.5.0');
+
+      // The adaptor change auto-selects the newest major's lock range
+      // (http's newest version is 1.5.0 → "1.x"), not a concrete version
+      expect(mockOnVersionChange).toHaveBeenCalledWith('1.x');
     });
   });
 

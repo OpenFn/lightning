@@ -338,8 +338,10 @@ describe('AdaptorSelectionModal', () => {
       const httpRow = httpRows[0].closest('button');
       fireEvent.click(httpRow!);
 
-      // Should immediately call onSelect with full adaptor spec and onClose
-      expect(onSelect).toHaveBeenCalledWith('@openfn/language-http@1.0.0');
+      // Should immediately call onSelect and onClose. New selections are
+      // locked to the newest major's range ("N.x"), not a concrete version,
+      // so the step receives non-breaking updates automatically.
+      expect(onSelect).toHaveBeenCalledWith('@openfn/language-http@1.x');
       expect(onClose).toHaveBeenCalled();
     });
 
@@ -358,10 +360,32 @@ describe('AdaptorSelectionModal', () => {
       const salesforceRow = salesforceRows[0].closest('button');
       fireEvent.click(salesforceRow!);
 
-      expect(onSelect).toHaveBeenCalledWith(
-        '@openfn/language-salesforce@2.1.0'
-      );
+      expect(onSelect).toHaveBeenCalledWith('@openfn/language-salesforce@2.x');
       expect(onClose).toHaveBeenCalled();
+    });
+
+    it('falls back to the concrete latest version when no version parses', () => {
+      const unparseableAdaptor: Adaptor = {
+        name: '@openfn/language-custom',
+        latest: 'latest',
+        versions: [],
+        repo: 'git+https://github.com/openfn/adaptors.git',
+      };
+
+      renderWithProviders(
+        <AdaptorSelectionModal
+          isOpen={true}
+          onClose={onClose}
+          onSelect={onSelect}
+          projectAdaptors={[unparseableAdaptor]}
+        />
+      );
+
+      const customRows = screen.getAllByText('Custom');
+      const customRow = customRows[0].closest('button');
+      fireEvent.click(customRow!);
+
+      expect(onSelect).toHaveBeenCalledWith('@openfn/language-custom@latest');
     });
   });
 });

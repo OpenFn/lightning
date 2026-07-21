@@ -5,7 +5,7 @@ import { useKeyboardShortcut } from '../keyboard';
 
 import { useAdaptors } from '../hooks/useAdaptors';
 import type { Adaptor } from '../types/adaptor';
-import { getAdaptorDisplayName } from '../utils/adaptorUtils';
+import { getAdaptorDisplayName, latestMajorRange } from '../utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
 import { ListRow, ListSection, SearchableList } from './SearchableList';
@@ -141,8 +141,15 @@ export function AdaptorSelectionModal({
   }, [filteredProjectAdaptors, filteredAllAdaptors]);
 
   const handleRowClick = (adaptor: AdaptorWithDisplayName) => {
-    // Construct full adaptor spec with semantic version
-    const adaptorSpec = `${adaptor.name}@${adaptor.latest}`;
+    // Lock new selections to the newest major's range ("N.x") so the step
+    // receives non-breaking updates automatically. Fall back to the
+    // concrete latest version when nothing parses.
+    const versionToken =
+      latestMajorRange([
+        adaptor.latest,
+        ...adaptor.versions.map(v => v.version),
+      ]) ?? adaptor.latest;
+    const adaptorSpec = `${adaptor.name}@${versionToken}`;
 
     // Immediately select and close (Figma design - no Continue button)
     onSelect(adaptorSpec);

@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  deriveVersionTiers,
   extractPackageName,
   extractAdaptorName,
   extractAdaptorDisplayName,
   interleaveVersionRanges,
   isVersionRange,
+  latestMajorRange,
   resolveVersionRange,
 } from '#/collaborative-editor/utils/adaptorUtils';
 
@@ -170,6 +172,97 @@ describe('adaptorUtils', () => {
       const messy = ['not-a-version', '6.1.0-beta.1', '6.1.0', '6.2.0'];
       expect(resolveVersionRange('6.x', messy)).toBe('6.2.0');
       expect(resolveVersionRange('6.x', ['beta', 'v6.1.0'])).toBeNull();
+    });
+  });
+
+  describe('deriveVersionTiers', () => {
+    const versions = ['6.4.2', '6.4.1', '6.3.0', '5.2.1', '5.1.0'];
+
+    it('anchors tiers on an exact current version and resolves hints', () => {
+      expect(deriveVersionTiers('6.4.1', versions)).toEqual({
+        major: { token: '6.x', resolved: '6.4.2' },
+        minor: { token: '6.4.x', resolved: '6.4.2' },
+        newerMajor: null,
+      });
+    });
+
+    it('anchors on the CURRENT major, not the newest, and offers an upsell', () => {
+      // Job sits on 5.2.1 while v6 exists: tiers stay in the 5.* family
+      expect(deriveVersionTiers('5.2.1', versions)).toEqual({
+        major: { token: '5.x', resolved: '5.2.1' },
+        minor: { token: '5.2.x', resolved: '5.2.1' },
+        newerMajor: { token: '6.x', resolved: '6.4.2' },
+      });
+    });
+
+    it('uses the latest known minor when current is a major range', () => {
+      expect(deriveVersionTiers('5.x', versions)).toEqual({
+        major: { token: '5.x', resolved: '5.2.1' },
+        minor: { token: '5.2.x', resolved: '5.2.1' },
+        newerMajor: { token: '6.x', resolved: '6.4.2' },
+      });
+    });
+
+    it('keeps the minor anchor from a minor range', () => {
+      expect(deriveVersionTiers('6.3.x', versions)).toEqual({
+        major: { token: '6.x', resolved: '6.4.2' },
+        minor: { token: '6.3.x', resolved: '6.3.0' },
+        newerMajor: null,
+      });
+    });
+
+    it('derives from the newest version when current is latest', () => {
+      expect(deriveVersionTiers('latest', versions)).toEqual({
+        major: { token: '6.x', resolved: '6.4.2' },
+        minor: { token: '6.4.x', resolved: '6.4.2' },
+        newerMajor: null,
+      });
+    });
+
+    it('treats caret like a major lock and tilde like a minor lock', () => {
+      expect(deriveVersionTiers('^5.1.0', versions).major).toEqual({
+        token: '5.x',
+        resolved: '5.2.1',
+      });
+      expect(deriveVersionTiers('~6.3.0', versions).minor).toEqual({
+        token: '6.3.x',
+        resolved: '6.3.0',
+      });
+    });
+
+    it('still derives tiers from an exact version absent from the list', () => {
+      expect(deriveVersionTiers('9.1.2', versions)).toEqual({
+        major: { token: '9.x', resolved: null },
+        minor: { token: '9.1.x', resolved: null },
+        newerMajor: null,
+      });
+    });
+
+    it('returns null tiers when no anchor can be determined', () => {
+      expect(deriveVersionTiers('latest', [])).toEqual({
+        major: null,
+        minor: null,
+        newerMajor: null,
+      });
+      expect(deriveVersionTiers('banana', versions)).toEqual({
+        // Unrecognized input falls back to the newest known version
+        major: { token: '6.x', resolved: '6.4.2' },
+        minor: { token: '6.4.x', resolved: '6.4.2' },
+        newerMajor: null,
+      });
+    });
+  });
+
+  describe('latestMajorRange', () => {
+    it('returns the major-lock range of the newest version', () => {
+      expect(latestMajorRange(['1.9.0', '2.1.0', '2.0.0'])).toBe('2.x');
+      expect(latestMajorRange(['10.0.0', '9.9.9'])).toBe('10.x');
+    });
+
+    it('ignores unparseable entries and returns null when nothing parses', () => {
+      expect(latestMajorRange(['latest', 'beta', '1.0.0'])).toBe('1.x');
+      expect(latestMajorRange([])).toBeNull();
+      expect(latestMajorRange(['latest', 'not-a-version'])).toBeNull();
     });
   });
 

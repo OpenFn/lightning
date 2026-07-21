@@ -235,6 +235,137 @@ export function resolveVersionRange(
   return best?.raw ?? null;
 }
 
+/** A selectable version tier: a stored token plus its current resolution. */
+export interface VersionTier {
+  /** Stored version token, e.g. "6.x" or "6.4.x" */
+  token: string;
+  /** Concrete version the token currently resolves to, or null if unknown */
+  resolved: string | null;
+}
+
+/**
+ * Version tiers derived from a job's current version selection.
+ * See {@link deriveVersionTiers}.
+ */
+export interface VersionTiers {
+  /** Major-lock tier ("N.x") anchored on the current selection's major */
+  major: VersionTier | null;
+  /** Minor-lock tier ("N.M.x") anchored on the current selection's minor */
+  minor: VersionTier | null;
+  /**
+   * Major-lock tier for the newest known major ABOVE the anchor, e.g. an
+   * available "7.x" while the job sits on 6.*. Null when the job is already
+   * on the newest major (or no newer major is known). Intended for a gentle
+   * upgrade hint, never an automatic switch.
+   */
+  newerMajor: VersionTier | null;
+}
+
+/**
+ * Derives version tiers ("N.x" / "N.M.x") anchored on the CURRENT selection,
+ * not blindly on the newest release, so we never push a breaking major jump:
+ *
+ * - Exact "5.2.1", "5.2.x" or "~5.2.1" → major "5.x", minor "5.2.x"
+ * - "5.x" or "^5.2.1" → major "5.x"; minor uses the newest known minor
+ *   within major 5
+ * - "latest" (or unrecognized input) → tiers derive from the newest known
+ *   version
+ *
+ * Each tier is resolved against `versions` for "currently 6.4.2"-style
+ * hints. Returns all-null tiers when no anchor can be determined (e.g.
+ * "latest" with an empty versions list).
+ */
+export function deriveVersionTiers(
+  currentVersion: string,
+  versions: string[]
+): VersionTiers {
+  let anchorMajor: number | null = null;
+  let anchorMinor: number | null = null;
+
+  const exact = parseVersion(currentVersion);
+  const minorLockMatch = currentVersion.match(/^(\d+)\.(\d+)\.x$/);
+  const tildeMatch = currentVersion.match(/^~(\d+)\.(\d+)\.\d+$/);
+  const majorLockMatch = currentVersion.match(/^(\d+)\.x$/);
+  const caretMatch = currentVersion.match(/^\^(\d+)\.\d+\.\d+$/);
+
+  if (exact) {
+    [anchorMajor, anchorMinor] = exact;
+  } else if (minorLockMatch || tildeMatch) {
+    const match = (minorLockMatch ?? tildeMatch) as RegExpMatchArray;
+    anchorMajor = Number(match[1]);
+    anchorMinor = Number(match[2]);
+  } else if (majorLockMatch || caretMatch) {
+    const match = (majorLockMatch ?? caretMatch) as RegExpMatchArray;
+    anchorMajor = Number(match[1]);
+    // Major is locked but no minor is implied: use the newest known minor
+    // within that major (may be unknown if the list has no match).
+    const resolved = resolveVersionRange(`${anchorMajor}.x`, versions);
+    const parsed = resolved ? parseVersion(resolved) : null;
+    anchorMinor = parsed ? parsed[1] : null;
+  } else {
+    // "latest" or unrecognized: anchor on the newest known version.
+    const resolved = resolveVersionRange('latest', versions);
+    const parsed = resolved ? parseVersion(resolved) : null;
+    if (parsed) {
+      [anchorMajor, anchorMinor] = parsed;
+    }
+  }
+
+  if (anchorMajor === null) {
+    return { major: null, minor: null, newerMajor: null };
+  }
+
+  const majorToken = `${anchorMajor}.x`;
+  const major: VersionTier = {
+    token: majorToken,
+    resolved: resolveVersionRange(majorToken, versions),
+  };
+
+  let minor: VersionTier | null = null;
+  if (anchorMinor !== null) {
+    const minorToken = `${anchorMajor}.${anchorMinor}.x`;
+    minor = {
+      token: minorToken,
+      resolved: resolveVersionRange(minorToken, versions),
+    };
+  }
+
+  let newestMajor = anchorMajor;
+  for (const raw of versions) {
+    const parsed = parseVersion(raw);
+    if (parsed && parsed[0] > newestMajor) {
+      newestMajor = parsed[0];
+    }
+  }
+
+  let newerMajor: VersionTier | null = null;
+  if (newestMajor > anchorMajor) {
+    const token = `${newestMajor}.x`;
+    newerMajor = { token, resolved: resolveVersionRange(token, versions) };
+  }
+
+  return { major, minor, newerMajor };
+}
+
+/**
+ * Returns the major-lock range ("N.x") of the newest parseable version in
+ * the list, or null when nothing parses. Used as the default version token
+ * for newly created steps so they receive non-breaking updates
+ * automatically.
+ *
+ * @example latestMajorRange(["2.1.0", "1.9.0"]) // "2.x"
+ */
+export function latestMajorRange(versions: string[]): string | null {
+  let best: ParsedVersion | null = null;
+  for (const raw of versions) {
+    const parsed = parseVersion(raw);
+    if (parsed && (!best || compareParsedVersions(parsed, best) > 0)) {
+      best = parsed;
+    }
+  }
+  return best ? `${best[0]}.x` : null;
+}
+
 /**
  * Builds a descending version option list with range entries interleaved so
  * that each range sits directly above the concrete versions it covers:

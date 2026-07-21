@@ -18,13 +18,13 @@ import {
   extractAdaptorDisplayName,
   extractAdaptorName,
   extractPackageName,
-  interleaveVersionRanges,
+  latestMajorRange,
 } from '#/collaborative-editor/utils/adaptorUtils';
 import { cn } from '#/utils/cn';
 
 import { AdaptorIcon } from './AdaptorIcon';
 import { Tooltip } from '../../components/Tooltip';
-import { VersionPicker } from './VersionPicker';
+import { VersionTierSelector } from './VersionTierSelector';
 
 /**
  * Sorts version strings semantically (newest first).
@@ -247,17 +247,23 @@ export function ConfigureAdaptorModal({
     const adaptorChanged = currentAdaptor !== prevAdaptorRef.current;
 
     if (adaptorChanged) {
-      // When adaptor changes, update to newest version automatically
+      // When adaptor changes, default to the newest major's lock range
+      // ("N.x") so the step receives non-breaking updates automatically.
+      // Fall back to the newest concrete version if nothing parses.
       const packageName = extractPackageName(currentAdaptor);
       const adaptor = allAdaptors.find(a => a.name === packageName);
 
       if (adaptor) {
-        const sortedVersions = sortVersionsDescending(
-          adaptor.versions.map(v => v.version)
-        );
+        const versionList = adaptor.versions.map(v => v.version);
+        const majorRange = latestMajorRange(versionList);
 
-        if (sortedVersions.length > 0 && sortedVersions[0]) {
-          onVersionChange(sortedVersions[0]);
+        if (majorRange) {
+          onVersionChange(majorRange);
+        } else {
+          const sortedVersions = sortVersionsDescending(versionList);
+          if (sortedVersions.length > 0 && sortedVersions[0]) {
+            onVersionChange(sortedVersions[0]);
+          }
         }
       }
 
@@ -412,10 +418,9 @@ export function ConfigureAdaptorModal({
     return () => cancelAnimationFrame(frameId);
   }, [isOpen, currentCredentialId, showOtherCredentials]);
 
-  // Get version options for current adaptor. Range options ("6.x", "6.4.x")
-  // are interleaved in descending order so each range sits directly above
-  // the concrete versions it covers.
-  const versionOptions = useMemo(() => {
+  // Concrete versions known for the current adaptor. VersionTierSelector
+  // derives the range tiers ("6.x", "6.4.x") and hints from this list.
+  const knownVersions = useMemo(() => {
     const packageName = extractPackageName(currentAdaptor);
     const adaptor = allAdaptors.find(a => a.name === packageName);
 
@@ -423,10 +428,7 @@ export function ConfigureAdaptorModal({
       return [];
     }
 
-    return [
-      'latest',
-      ...interleaveVersionRanges(adaptor.versions.map(v => v.version)),
-    ];
+    return adaptor.versions.map(v => v.version);
   }, [currentAdaptor, allAdaptors]);
 
   // Extract adaptor display name
@@ -520,10 +522,10 @@ export function ConfigureAdaptorModal({
 
               {/* Body */}
               <div className="px-6 py-6 space-y-6">
-                {/* Adaptor + Version Row */}
-                <div className="grid grid-cols-3 gap-4 items-end">
-                  {/* Adaptor Section - takes 2 columns */}
-                  <div className="col-span-2">
+                {/* Adaptor + Version */}
+                <div className="space-y-4">
+                  {/* Adaptor Section */}
+                  <div>
                     <span className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
                       Adaptor
                       <Tooltip
@@ -563,14 +565,14 @@ export function ConfigureAdaptorModal({
                     </div>
                   </div>
 
-                  {/* Version Section - takes 1 column */}
-                  <div className="col-span-1">
+                  {/* Version Section */}
+                  <div>
                     <span className="block text-sm font-medium text-gray-700 mb-2">
                       Version
                     </span>
-                    <VersionPicker
-                      versions={versionOptions}
-                      selectedVersion={currentVersion}
+                    <VersionTierSelector
+                      versions={knownVersions}
+                      currentVersion={currentVersion}
                       onVersionChange={onVersionChange}
                     />
                   </div>
