@@ -493,6 +493,53 @@ defmodule LightningWeb.ChannelLive.FormTest do
       assert length(destination_cams) == 1
       assert hd(destination_cams).project_credential_id == pc.id
     end
+
+    @tag role: :editor
+    test "redirects when editing a channel that belongs to another project", %{
+      conn: conn,
+      project: project
+    } do
+      other_project = insert(:project)
+
+      other_channel =
+        insert(:channel,
+          project: other_project,
+          name: "other-tenant-channel",
+          destination_url: "https://other.example.com"
+        )
+
+      assert {:error, {:live_redirect, %{to: redirect_to, flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/projects/#{project.id}/channels/#{other_channel.id}/edit"
+               )
+
+      assert redirect_to == ~p"/projects/#{project.id}/channels"
+      assert flash["error"] == "Channel not found"
+    end
+
+    @tag role: :editor
+    test "a client-side patch to another project's channel edit is rejected", %{
+      conn: conn,
+      project: project
+    } do
+      foreign_channel =
+        insert(:channel, project: insert(:project), name: "other-tenant")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      # Simulate a tampered browser pushing a live_patch straight to the
+      # foreign channel's edit action. Unlike the run/workflow views, the
+      # channel index re-scopes on every handle_params (apply_action/:edit
+      # loads via get_channel_for_project), so the patch is rejected.
+      assert {:error, {:live_redirect, %{to: to}}} =
+               render_patch(
+                 view,
+                 ~p"/projects/#{project.id}/channels/#{foreign_channel.id}/edit"
+               )
+
+      assert to == ~p"/projects/#{project.id}/channels"
+    end
   end
 
   describe "destination credential round-trips" do
@@ -717,6 +764,91 @@ defmodule LightningWeb.ChannelLive.FormTest do
         )
 
       assert dest_cams == []
+    end
+  end
+
+  describe "cross-project destination credential is rejected" do
+    @tag role: :editor
+    test "creating a channel with another project's credential is rejected",
+         %{conn: conn, project: project} do
+      # The dropdown only lists this project's credentials; a tampered browser
+      # can still POST an arbitrary project_credential UUID. It must be rejected
+      # at save so a foreign tenant's secret can't be attached and exfiltrated.
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # The malicious credential id is passed via render_submit's override map
+      # rather than through form/2 (the dropdown only offers in-project
+      # options, so form/2 would reject it) — this simulates a tampered
+      # browser POSTing a raw UUID.
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "exfil",
+          destination_url: "https://attacker.example.com"
+        }
+      )
+      |> render_submit(%{
+        channel: %{destination_credential_id: victim_credential.id}
+      })
+
+      # Stays on the form — no redirect to the index.
+      assert has_element?(view, "#channel-form-new")
+
+      # Nothing was persisted.
+      assert Channels.list_channels_for_project(project.id) == []
+    end
+
+    @tag role: :editor
+    test "swapping in another project's credential on edit is rejected",
+         %{conn: conn, project: project, user: user} do
+      credential = insert(:credential, project: project, user: user)
+
+      own_pc =
+        insert(:project_credential, project: project, credential: credential)
+
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: own_pc
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
+        )
+
+      # Foreign credential id supplied via the override map to bypass the
+      # dropdown's in-project options (see the create test above).
+      view
+      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
+      |> render_submit(%{
+        channel: %{destination_credential_id: victim_credential.id}
+      })
+
+      # Stays on the form — no redirect to the index.
+      assert has_element?(view, "#channel-form-#{channel.id}")
+
+      # The existing destination credential is untouched; the foreign one
+      # was never attached.
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert length(dest_cams) == 1
+      assert hd(dest_cams).project_credential_id == own_pc.id
     end
   end
 end
