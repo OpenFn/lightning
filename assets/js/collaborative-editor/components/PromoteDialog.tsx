@@ -119,11 +119,7 @@ export function PromoteDialog({
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={handleDismiss}
-      className="relative z-[60]"
-    >
+    <Dialog open={isOpen} onClose={handleDismiss} className="relative z-[60]">
       <DialogBackdrop
         transition
         className="modal-backdrop data-closed:opacity-0 data-enter:duration-300

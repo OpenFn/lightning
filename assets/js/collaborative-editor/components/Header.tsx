@@ -597,7 +597,7 @@ export function Header({
               content={
                 lifecycleState === 'live'
                   ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
-                  : "This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first."
+                  : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
               }
               side="bottom"
             >

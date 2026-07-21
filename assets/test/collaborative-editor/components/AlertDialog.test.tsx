@@ -31,9 +31,7 @@ describe('AlertDialog', () => {
       <AlertDialog {...baseProps} onClose={onClose} onConfirm={onConfirm} />
     );
 
-    await user.click(
-      screen.getByRole('button', { name: 'Switch to draft' })
-    );
+    await user.click(screen.getByRole('button', { name: 'Switch to draft' }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);

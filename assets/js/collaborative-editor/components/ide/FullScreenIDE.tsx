@@ -917,38 +917,38 @@ export function FullScreenIDE({
             {!isReadOnly &&
               (panelState === 'run-viewer' || panelState === 'create-run') && (
                 <RunRetryButton
-                isRetryable={isRetryable}
-                isDisabled={
-                  !(
-                    canRunSnapshot &&
-                    canRunFromHook &&
-                    !isSubmitting &&
-                    !runIsProcessing &&
-                    jobMatchesRun
-                  )
-                }
-                isSubmitting={isSubmitting || runIsProcessing}
-                onRun={() => {
-                  void handleRun();
-                }}
-                onRetry={() => {
-                  void handleRetry();
-                }}
-                buttonText={{
-                  run: 'Run',
-                  retry: 'Run (Retry)',
-                  processing: 'Processing',
-                }}
-                variant="primary"
-                dropdownPosition="down"
-                showKeyboardShortcuts={true}
-                disabledTooltip={
-                  !jobMatchesRun
-                    ? 'Selected job was not part of this run'
-                    : runTooltipMessage
-                }
-              />
-            )}
+                  isRetryable={isRetryable}
+                  isDisabled={
+                    !(
+                      canRunSnapshot &&
+                      canRunFromHook &&
+                      !isSubmitting &&
+                      !runIsProcessing &&
+                      jobMatchesRun
+                    )
+                  }
+                  isSubmitting={isSubmitting || runIsProcessing}
+                  onRun={() => {
+                    void handleRun();
+                  }}
+                  onRetry={() => {
+                    void handleRetry();
+                  }}
+                  buttonText={{
+                    run: 'Run',
+                    retry: 'Run (Retry)',
+                    processing: 'Processing',
+                  }}
+                  variant="primary"
+                  dropdownPosition="down"
+                  showKeyboardShortcuts={true}
+                  disabledTooltip={
+                    !jobMatchesRun
+                      ? 'Selected job was not part of this run'
+                      : runTooltipMessage
+                  }
+                />
+              )}
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">

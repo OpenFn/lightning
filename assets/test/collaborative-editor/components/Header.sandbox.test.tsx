@@ -31,15 +31,13 @@ const goLive = vi.fn<() => Promise<unknown>>();
 const switchToDraft = vi.fn<() => Promise<unknown>>();
 const saveWorkflow =
   vi.fn<(options?: { silent?: boolean }) => Promise<unknown>>();
-const promote =
-  vi.fn<
-    () => Promise<{
-      parent_project_id: string;
-      workflow_id: string | null;
-    }>
-  >();
-const archiveSandbox =
-  vi.fn<() => Promise<{ parent_project_id: string }>>();
+const promote = vi.fn<
+  () => Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  }>
+>();
+const archiveSandbox = vi.fn<() => Promise<{ parent_project_id: string }>>();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({ params: {}, updateSearchParams: vi.fn() }),
@@ -285,9 +283,7 @@ describe('Header - lifecycle actions', () => {
   test('suppresses the redundant Read-only badge on a live workflow but keeps it on a draft', () => {
     // Live already implies read-only, so the "Read-only" pill is hidden.
     renderHeader();
-    expect(
-      screen.queryByTestId('read-only-warning')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('read-only-warning')).not.toBeInTheDocument();
 
     // A draft has no Live badge, so the "Read-only" pill is still rendered.
     lifecycleState = 'draft';
@@ -725,9 +721,7 @@ describe('Header - read-only reason variations', () => {
 
     renderHeader({ isSandbox: false });
 
-    expect(
-      screen.queryByTestId('read-only-warning')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('read-only-warning')).not.toBeInTheDocument();
   });
 });
 

@@ -26,7 +26,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
 }));
 
-const notifyAlert = vi.fn<(opts: { title: string; description?: unknown }) => void>();
+const notifyAlert =
+  vi.fn<(opts: { title: string; description?: unknown }) => void>();
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     alert: (opts: { title: string; description?: unknown }) => {
@@ -118,7 +119,9 @@ describe('EditInSandboxPicker', () => {
         screen.queryByTestId('sandbox-list-loading')
       ).not.toBeInTheDocument();
     });
-    expect(screen.queryByText('Join an active sandbox')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Join an active sandbox')
+    ).not.toBeInTheDocument();
   });
 
   test('does not fetch when closed', () => {
@@ -237,7 +240,9 @@ describe('EditInSandboxPicker', () => {
         screen.queryByTestId('sandbox-list-loading')
       ).not.toBeInTheDocument();
     });
-    expect(screen.queryByText('Join an active sandbox')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Join an active sandbox')
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId('sandbox-list')).not.toBeInTheDocument();
   });
 
@@ -309,7 +314,10 @@ describe('EditInSandboxPicker', () => {
     try {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      await user.type(screen.getByPlaceholderText('e.g. Test new changes'), 'My SB');
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
       await user.click(screen.getByTestId('create-sandbox-button'));
 
       await waitFor(() => {
@@ -467,7 +475,10 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    await user.type(screen.getByPlaceholderText('e.g. Test new changes'), 'My SB');
+    await user.type(
+      screen.getByPlaceholderText('e.g. Test new changes'),
+      'My SB'
+    );
     await user.click(screen.getByTestId('create-sandbox-button'));
 
     const button = screen.getByTestId('create-sandbox-button');

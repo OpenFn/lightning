@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { PromotedNotice } from '../../../js/collaborative-editor/components/PromotedNotice';
 
-const notifySuccess = vi.fn<(opts: { title: string; description?: string }) => void>();
+const notifySuccess =
+  vi.fn<(opts: { title: string; description?: string }) => void>();
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     success: (opts: { title: string; description?: string }) => {

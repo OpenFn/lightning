@@ -1086,7 +1086,9 @@ async function createRunSetup(
 
   // On a read-only workflow neither the save nor the run button renders, so
   // callers pass `{ readOnly: true }` to wait for the "Read-only" indicator.
-  async function renderAndWait({ readOnly = false }: { readOnly?: boolean } = {}) {
+  async function renderAndWait({
+    readOnly = false,
+  }: { readOnly?: boolean } = {}) {
     const result = render(
       <Header
         projectId="project-1"
