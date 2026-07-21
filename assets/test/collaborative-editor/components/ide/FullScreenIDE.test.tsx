@@ -235,18 +235,22 @@ const mockWorkflow: Workflow = {
 const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
+// Mutable read-only state so individual tests can flip the workflow to
+// read-only (e.g. live on main) and assert that run-creation affordances hide.
+const mockReadOnlyState = { isReadOnly: false, tooltipMessage: '' };
+
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: 'Save workflow',
   }),
   useCanRun: () => ({
-    canRun: true,
+    canRun: !mockReadOnlyState.isReadOnly,
     tooltipMessage: 'Run workflow',
   }),
   useWorkflowReadOnly: () => ({
-    isReadOnly: false,
-    tooltipMessage: '',
+    isReadOnly: mockReadOnlyState.isReadOnly,
+    tooltipMessage: mockReadOnlyState.tooltipMessage,
   }),
   useWorkflowSettingsErrors: () => ({
     hasErrors: false,
@@ -455,6 +459,10 @@ describe('FullScreenIDE', () => {
     // Reset search params to default state
     Object.keys(mockParams).forEach(key => delete mockParams[key]);
     mockParams.job = 'job-1';
+
+    // Default to an editable workflow; read-only tests opt in explicitly.
+    mockReadOnlyState.isReadOnly = false;
+    mockReadOnlyState.tooltipMessage = '';
   });
 
   describe('Initial State', () => {
@@ -467,6 +475,20 @@ describe('FullScreenIDE', () => {
         expect(screen.getByText('History')).toBeInTheDocument();
         expect(screen.getByText('Run')).toBeInTheDocument();
       });
+    });
+
+    test('hides the New Run button on a read-only workflow but keeps History', async () => {
+      mockReadOnlyState.isReadOnly = true;
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      // History (viewing past runs) stays available on a read-only workflow;
+      // only run creation is removed.
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Run')).not.toBeInTheDocument();
     });
 
     test('right panel is not shown initially', async () => {

@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -50,6 +50,7 @@ import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { NewRunButton } from './NewRunButton';
+import { PromoteDialog } from './PromoteDialog';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 
@@ -223,7 +224,7 @@ export function Header({
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-  const { saveWorkflow, goLive, switchToDraft, promote } =
+  const { saveWorkflow, goLive, switchToDraft, promote, archiveSandbox } =
     useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
@@ -238,7 +239,7 @@ export function Header({
   const { selectedTemplate } = useTemplatePanel();
   const { provider } = useSession();
   const limits = useLimits();
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, reason: readOnlyReason } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
@@ -247,11 +248,17 @@ export function Header({
   const lifecycleState = sessionWorkflow?.state;
   const permissions = usePermissions();
   const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
+  const canArchiveSandbox = permissions?.can_archive_sandbox ?? false;
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
-  const [isPromoting, setIsPromoting] = useState(false);
+  // Retains the parent project + workflow ids from a successful merge so the
+  // optional archive step can navigate into the parent afterwards.
+  const promoteResultRef = useRef<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  } | null>(null);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -401,22 +408,15 @@ export function Header({
     }
   }, [provider, projectId, workflowId, isNewWorkflow]);
 
-  // Promote this sandbox back into its parent project's live workflow. Promote
-  // always reflects the current editor state, so we save first (silently) and
-  // only promote once that succeeds; a failed save aborts without promoting. On
-  // success we hard-navigate to the parent (a different Y.Doc session), matching
-  // the picker's post-create navigation. The parent workflow may be missing (a
-  // just-archived-with-no-live-target case), so fall back to the project's
-  // workflow index when the server returns a null workflow_id.
-  //
-  // The success toast is handed off through the URL (?promoted=1, plus
-  // &archived=0 when the sandbox couldn't be archived) rather than shown here:
-  // firing it before this hard navigation would destroy it on reload. The parent
-  // editor reads the marker on load (see PromotedNotice). Errors, which don't
-  // navigate, are surfaced inline.
-  const handlePromote = useCallback(async () => {
-    setIsPromoting(true);
-
+  // Phase one of the promote flow. Promote always reflects the current editor
+  // state, so we save first (silently) and only merge once that succeeds; a
+  // failed save aborts without promoting. Promote now MERGES ONLY: it does not
+  // archive the sandbox, so on success we do NOT navigate. Instead we stash the
+  // parent + workflow ids and resolve true, letting the dialog advance to its
+  // success step where archiving is offered as an optional second action.
+  // Failures (save or merge) are surfaced inline and resolve false so the dialog
+  // stays on its confirm step.
+  const handleConfirmPromote = useCallback(async (): Promise<boolean> => {
     try {
       await saveWorkflow({ silent: true });
     } catch (error) {
@@ -435,19 +435,12 @@ export function Header({
         title: 'Could not save before promoting',
         description,
       });
-      setIsPromoting(false);
-      return;
+      return false;
     }
 
     try {
-      const result = await promote();
-
-      const base = result.workflow_id
-        ? `/projects/${result.parent_project_id}/w/${result.workflow_id}`
-        : `/projects/${result.parent_project_id}/w`;
-      const query = result.archived ? '?promoted=1' : '?promoted=1&archived=0';
-
-      window.location.href = `${base}${query}`;
+      promoteResultRef.current = await promote();
+      return true;
     } catch (error) {
       const description = isChannelRequestError(error)
         ? formatChannelErrorMessage({
@@ -462,9 +455,61 @@ export function Header({
         title: 'Could not promote',
         description,
       });
-      setIsPromoting(false);
+      return false;
     }
   }, [promote, saveWorkflow]);
+
+  // Phase two, archive path. Retires the sandbox, then hard-navigates into the
+  // parent (a different Y.Doc session), matching the picker's post-create
+  // navigation. The success toast is handed off through the URL (?promoted=1)
+  // rather than shown here: firing it before the reload would destroy it. The
+  // parent editor reads the marker on load (see PromotedNotice). The parent
+  // workflow may be missing, so fall back to the project's workflow index when
+  // promote returned a null workflow_id. Errors, which don't navigate, are
+  // surfaced inline and resolve false so the dialog stays on its success step.
+  const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
+    try {
+      const { parent_project_id } = await archiveSandbox();
+      const workflowId = promoteResultRef.current?.workflow_id;
+      const base = workflowId
+        ? `/projects/${parent_project_id}/w/${workflowId}`
+        : `/projects/${parent_project_id}/w`;
+
+      window.location.href = `${base}?promoted=1`;
+      return true;
+    } catch (error) {
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : 'Please try again.';
+      notifications.alert({
+        title: 'Could not archive sandbox',
+        description,
+      });
+      return false;
+    }
+  }, [archiveSandbox]);
+
+  // Phase two, keep path. Close the dialog and stay in the sandbox (no
+  // navigation) so the user can switch to another workflow and promote it too.
+  // The toast is shown inline here since we are not reloading.
+  const handleKeepSandbox = useCallback(() => {
+    setShowPromoteDialog(false);
+    notifications.success({
+      title: 'Workflow promoted',
+      description:
+        'You can keep editing or promote another workflow from this sandbox.',
+    });
+  }, []);
+
+  const handleCancelPromote = useCallback(() => {
+    setShowPromoteDialog(false);
+  }, []);
 
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
@@ -535,7 +580,40 @@ export function Header({
           <div className="flex min-w-0 items-center">
             <Breadcrumbs>{children}</Breadcrumbs>
           </div>
-          <ReadOnlyWarning className="ml-3" />
+          {/* The Live badge already implies read-only, so suppress the
+              redundant "Read-only" pill whenever the Live badge is shown for
+              the current live version. Still show it for a pinned/deleted
+              read-only view, where "Live" (the current state) doesn't explain
+              why this view is read-only. */}
+          {!(
+            lifecycleState === 'live' &&
+            !isNewWorkflow &&
+            !isSandbox &&
+            readOnlyReason !== 'pinned_version' &&
+            readOnlyReason !== 'deleted'
+          ) && <ReadOnlyWarning className="ml-3" />}
+          {lifecycleState && !isNewWorkflow && !isSandbox && (
+            <Tooltip
+              content={
+                lifecycleState === 'live'
+                  ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
+                  : "This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first."
+              }
+              side="bottom"
+            >
+              <span
+                data-testid="workflow-lifecycle-badge"
+                className={
+                  'self-center rounded-md px-2 py-1 text-xs font-medium ' +
+                  (lifecycleState === 'live'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-700')
+                }
+              >
+                {lifecycleState === 'live' ? 'Live' : 'Draft'}
+              </span>
+            </Tooltip>
+          )}
           {projectId && workflowId && (
             <Tooltip
               content={
@@ -601,19 +679,6 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {lifecycleState && !isNewWorkflow && !isSandbox && (
-                <span
-                  data-testid="workflow-lifecycle-badge"
-                  className={
-                    'self-center rounded-md px-2 py-1 text-xs font-medium ' +
-                    (lifecycleState === 'live'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-700')
-                  }
-                >
-                  {lifecycleState === 'live' ? 'Live' : 'Draft'}
-                </span>
-              )}
               {!isNewWorkflow && !isSandbox && lifecycleState === 'draft' && (
                 <Tooltip
                   content={
@@ -661,23 +726,12 @@ export function Header({
                 <button
                   type="button"
                   data-testid="promote-sandbox-button"
-                  disabled={isPromoting}
                   onClick={() => {
                     setShowPromoteDialog(true);
                   }}
                   className="inline-flex items-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
                 >
-                  {isPromoting ? (
-                    <>
-                      <span
-                        className="hero-arrow-path h-4 w-4 animate-spin"
-                        aria-hidden="true"
-                      />
-                      Promoting...
-                    </>
-                  ) : (
-                    'Promote'
-                  )}
+                  Promote
                 </button>
               )}
               {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
@@ -697,9 +751,8 @@ export function Header({
                       if (!canProvisionSandbox) return;
                       setShowEditInSandboxPicker(true);
                     }}
-                    className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
+                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                   >
-                    <span className="hero-beaker h-4 w-4" />
                     Edit in sandbox
                   </button>
                 </Tooltip>
@@ -721,52 +774,54 @@ export function Header({
                     text={isRetryable ? 'Run (Retry)' : 'Run'}
                   />
                 )}
-              <SaveButton
-                canSave={
-                  canSave &&
-                  !hasSettingsErrors &&
-                  // For new workflows, check based on creation method
-                  !(
+              {(!isReadOnly || readOnlyReason === 'unsaved_new') && (
+                <SaveButton
+                  canSave={
+                    canSave &&
+                    !hasSettingsErrors &&
+                    // For new workflows, check based on creation method
+                    !(
+                      isNewWorkflow &&
+                      !isCreateWorkflowPanelCollapsed &&
+                      // Template method: need a selected template OR workflow on canvas
+                      ((currentMethod === 'template' &&
+                        !selectedTemplate &&
+                        isWorkflowEmpty) ||
+                        // Import method: need valid YAML
+                        (currentMethod === 'import' &&
+                          importPanelState !== 'valid'))
+                    ) &&
+                    // When panel is collapsed, just check workflow isn't empty
+                    !(
+                      isNewWorkflow &&
+                      isCreateWorkflowPanelCollapsed &&
+                      isWorkflowEmpty
+                    )
+                  }
+                  tooltipMessage={
                     isNewWorkflow &&
                     !isCreateWorkflowPanelCollapsed &&
-                    // Template method: need a selected template OR workflow on canvas
-                    ((currentMethod === 'template' &&
-                      !selectedTemplate &&
-                      isWorkflowEmpty) ||
-                      // Import method: need valid YAML
-                      (currentMethod === 'import' &&
-                        importPanelState !== 'valid'))
-                  ) &&
-                  // When panel is collapsed, just check workflow isn't empty
-                  !(
-                    isNewWorkflow &&
-                    isCreateWorkflowPanelCollapsed &&
-                    isWorkflowEmpty
-                  )
-                }
-                tooltipMessage={
-                  isNewWorkflow &&
-                  !isCreateWorkflowPanelCollapsed &&
-                  currentMethod === 'import' &&
-                  importPanelState === 'invalid'
-                    ? 'Fix validation errors to continue'
-                    : isNewWorkflow &&
-                        !isCreateWorkflowPanelCollapsed &&
-                        currentMethod === 'template' &&
-                        !selectedTemplate
-                      ? 'Select a template to continue'
-                      : isNewWorkflow && isWorkflowEmpty
-                        ? 'Cannot save an empty workflow'
-                        : tooltipMessage
-                }
-                onClick={() => void saveWorkflow()}
-                repoConnection={repoConnection}
-                onSyncClick={openGitHubSyncModal}
-                label={isNewWorkflow ? 'Create' : 'Save'}
-                canSync={githubSyncLimit.allowed}
-                syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={showChangeIndicator}
-              />
+                    currentMethod === 'import' &&
+                    importPanelState === 'invalid'
+                      ? 'Fix validation errors to continue'
+                      : isNewWorkflow &&
+                          !isCreateWorkflowPanelCollapsed &&
+                          currentMethod === 'template' &&
+                          !selectedTemplate
+                        ? 'Select a template to continue'
+                        : isNewWorkflow && isWorkflowEmpty
+                          ? 'Cannot save an empty workflow'
+                          : tooltipMessage
+                  }
+                  onClick={() => void saveWorkflow()}
+                  repoConnection={repoConnection}
+                  onSyncClick={openGitHubSyncModal}
+                  label={isNewWorkflow ? 'Create' : 'Save'}
+                  canSync={githubSyncLimit.allowed}
+                  syncTooltipMessage={githubSyncLimit.message}
+                  hasChanges={showChangeIndicator}
+                />
+              )}
             </div>
           </div>
 
@@ -797,25 +852,19 @@ export function Header({
                   setIsTransitioning(false);
                 });
             }}
-            title="Switch to draft?"
+            title="Switch to draft"
             description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
             confirmLabel="Switch to draft"
-            variant="danger"
+            variant="primary"
           />
 
-          <AlertDialog
+          <PromoteDialog
             isOpen={showPromoteDialog}
-            onClose={() => {
-              setShowPromoteDialog(false);
-            }}
-            onConfirm={() => {
-              void handlePromote();
-            }}
-            title="Save and promote to parent project?"
-            description="Your current changes in this sandbox are saved, then merged into the parent project's live workflow. The parent stays live and starts processing data with these changes, and this sandbox is archived."
-            confirmLabel="Save and promote"
-            cancelLabel="Cancel"
-            variant="primary"
+            canArchiveSandbox={canArchiveSandbox}
+            onConfirmPromote={handleConfirmPromote}
+            onArchive={handleArchiveSandbox}
+            onKeep={handleKeepSandbox}
+            onCancel={handleCancelPromote}
           />
 
           <EditInSandboxPicker

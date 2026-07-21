@@ -24,7 +24,7 @@ interface EdgeInspectorProps {
  */
 export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
   const { removeEdge, clearSelection, updateEdge } = useWorkflowActions();
-  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const { isReadOnly } = useWorkflowReadOnly();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(() => {
@@ -52,43 +52,41 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     [edge.id, updateEdge]
   );
 
-  // Determine tooltip messages for disabled states
-  const toggleTooltip = isReadOnly
-    ? tooltipMessage
-    : 'Enable or disable this path';
-  const deleteTooltip = isReadOnly ? tooltipMessage : 'Delete this path';
-
-  // Only show footer for job edges (not trigger edges)
-  const footer = !edge.source_trigger_id ? (
-    <InspectorFooter
-      leftButtons={
-        <Tooltip content={toggleTooltip} side="top">
-          <span className="inline-block">
-            <Toggle
-              id={`edge-enabled-${edge.id}`}
-              checked={edge.enabled ?? true}
-              onChange={handleEnabledChange}
-              label="Enabled"
-              disabled={isReadOnly}
-            />
-          </span>
-        </Tooltip>
-      }
-      rightButtons={
-        <Tooltip content={deleteTooltip} side="top">
-          <span className="inline-block">
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-              disabled={isDeleting || isReadOnly}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </span>
-        </Tooltip>
-      }
-    />
-  ) : undefined;
+  // The footer holds edit-only actions (enable/disable and delete path). On a
+  // read-only workflow both are hidden, matching the canvas and other
+  // inspectors, so the footer collapses entirely. Trigger edges never show a
+  // footer. The edge's config fields (label, condition, JS expression) stay
+  // visible-but-disabled in EdgeForm so a live workflow can still be read.
+  const footer =
+    !edge.source_trigger_id && !isReadOnly ? (
+      <InspectorFooter
+        leftButtons={
+          <Tooltip content="Enable or disable this path" side="top">
+            <span className="inline-block">
+              <Toggle
+                id={`edge-enabled-${edge.id}`}
+                checked={edge.enabled ?? true}
+                onChange={handleEnabledChange}
+                label="Enabled"
+              />
+            </span>
+          </Tooltip>
+        }
+        rightButtons={
+          <Tooltip content="Delete this path" side="top">
+            <span className="inline-block">
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </span>
+          </Tooltip>
+        }
+      />
+    ) : undefined;
 
   return (
     <InspectorLayout title="Path" onClose={onClose} footer={footer}>

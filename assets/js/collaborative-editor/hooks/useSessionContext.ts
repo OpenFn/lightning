@@ -321,6 +321,31 @@ export const useHasReadAIDisclaimer = (): boolean => {
 };
 
 /**
+ * Hook to check if the user has suppressed the "enable trigger" warning.
+ * Returns false until session context loads, then reflects the stored preference.
+ */
+export const useSuppressEnableTriggerWarning = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSuppress = sessionContextStore.withSelector(
+    state => state.suppressEnableTriggerWarning
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectSuppress);
+};
+
+/**
+ * Hook to get markEnableTriggerWarningSuppressed action.
+ * Returns a function that persists the "don't show again" preference and
+ * optimistically flips the local flag.
+ */
+export const useMarkEnableTriggerWarningSuppressed = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.markEnableTriggerWarningSuppressed;
+};
+
+/**
  * Hook to check if the user has experimental features enabled
  */
 export const useExperimentalFeaturesEnabled = (): boolean => {

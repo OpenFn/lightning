@@ -16,7 +16,7 @@ const renderDialog = (ui: ReactElement) =>
 
 const baseProps = {
   isOpen: true,
-  title: 'Switch to draft?',
+  title: 'Switch to draft',
   description: 'This takes the workflow offline.',
   confirmLabel: 'Switch to draft',
 };

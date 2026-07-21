@@ -1,6 +1,6 @@
 // Tests for the sandbox picker modal: create/list/join affordances, in-flight and error handling.
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
 import type { ReactElement } from 'react';
@@ -103,6 +103,9 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     expect(screen.getByText('Create a new sandbox')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('e.g. Test new changes')
+    ).toBeInTheDocument();
     expect(screen.getByTestId('create-sandbox-button')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -153,10 +156,12 @@ describe('EditInSandboxPicker', () => {
     expect(screen.getByText('grace@example.com')).toBeInTheDocument();
 
     // Alpha (no colour) leads with the fallback grey stripe; the row shows a
-    // relative "Created … ago" label with the owner name.
+    // relative "Created … ago" label, then "by", then the owner name (each a
+    // separate span spaced by the flex gap).
     const alphaRow = screen.getByText('Alpha sandbox').closest('li');
     expect(alphaRow).not.toBeNull();
     expect(alphaRow).toHaveTextContent(/Created .+ ago/);
+    expect(within(alphaRow!).getByText('by')).toBeInTheDocument();
     expect(alphaRow).toHaveTextContent('Ada Lovelace');
     expect(alphaRow!.querySelector('span[style]')).toHaveStyle({
       backgroundColor: '#e5e7eb',
@@ -273,7 +278,7 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     const button = screen.getByTestId('create-sandbox-button');
-    const input = screen.getByPlaceholderText('Sandbox name');
+    const input = screen.getByPlaceholderText('e.g. Test new changes');
 
     // Blank -> disabled.
     expect(button).toBeDisabled();
@@ -304,7 +309,7 @@ describe('EditInSandboxPicker', () => {
     try {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
+      await user.type(screen.getByPlaceholderText('e.g. Test new changes'), 'My SB');
       await user.click(screen.getByTestId('create-sandbox-button'));
 
       await waitFor(() => {
@@ -332,11 +337,11 @@ describe('EditInSandboxPicker', () => {
     });
   });
 
-  test('create failure re-enables the button and surfaces the field error', async () => {
+  test('renders a duplicate-name error inline under the input, not as a toast', async () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue([]);
-    // A duplicate name is keyed under `name`, not `base`; the formatter must
-    // still surface it rather than falling back to the generic message.
+    // A duplicate name comes back as a validation_error keyed under `name`;
+    // this belongs inline under the input, never as a toast.
     editInSandbox.mockRejectedValue(
       new ChannelRequestError('validation_error', {
         name: ['has already been taken'],
@@ -345,12 +350,28 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
+    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    await user.type(input, 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
     await waitFor(() => {
       expect(editInSandbox).toHaveBeenCalledTimes(1);
     });
+
+    // The duplicate-name case renders a friendly, product-specific message
+    // inline beneath the input rather than the raw server string.
+    const fieldError = await screen.findByTestId('sandbox-name-error');
+    expect(fieldError).toHaveTextContent(
+      'A sandbox with this name exists already'
+    );
+    expect(fieldError).not.toHaveTextContent('has already been taken');
+
+    // The input is put into an error state and points at the error text.
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveClass('ring-red-300');
+
+    // A duplicate name never toasts.
+    expect(notifyAlert).not.toHaveBeenCalled();
 
     // Button returns from the pending label to enabled.
     const button = screen.getByTestId('create-sandbox-button');
@@ -359,10 +380,83 @@ describe('EditInSandboxPicker', () => {
     });
     expect(button).toBeEnabled();
 
-    // The field-keyed message reaches the toast via formatChannelErrorMessage.
-    const lastCall = notifyAlert.mock.calls.at(-1);
-    expect(lastCall?.[0].title).toBe('Could not create a sandbox');
-    expect(lastCall?.[0].description).toContain('has already been taken');
+    // Editing the name clears the inline error and the error styling.
+    await user.type(input, '2');
+    expect(screen.queryByTestId('sandbox-name-error')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
+    expect(input).not.toHaveClass('ring-red-300');
+  });
+
+  test('routes an unexpected create error to a toast, not the inline field', async () => {
+    const user = userEvent.setup();
+    listSandboxes.mockResolvedValue([]);
+    // A non-validation (system) error is not a name problem; it must surface as
+    // a toast and leave the input in its normal state.
+    editInSandbox.mockRejectedValue(
+      new ChannelRequestError('internal_error', {
+        base: ['something went wrong'],
+      })
+    );
+
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    await user.type(input, 'My SB');
+    await user.click(screen.getByTestId('create-sandbox-button'));
+
+    await waitFor(() => {
+      expect(notifyAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Could not create a sandbox' })
+      );
+    });
+
+    expect(screen.queryByTestId('sandbox-name-error')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
+  });
+
+  test('pressing Enter in the name input submits the create action', async () => {
+    const user = userEvent.setup();
+    listSandboxes.mockResolvedValue([]);
+    editInSandbox.mockResolvedValue({
+      project_id: 'new-project',
+      workflow_id: 'new-workflow',
+    });
+
+    const nav = stubNavigation();
+
+    try {
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      // Focus the input and press Enter; no click on "Create sandbox".
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB{Enter}'
+      );
+
+      await waitFor(() => {
+        expect(editInSandbox).toHaveBeenCalledWith('My SB');
+      });
+      await waitFor(() => {
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/new-project/w/new-workflow'
+        );
+      });
+    } finally {
+      nav.restore();
+    }
+  });
+
+  test('pressing Enter with an empty name does not submit', async () => {
+    const user = userEvent.setup();
+    listSandboxes.mockResolvedValue([]);
+
+    renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    input.focus();
+    await user.keyboard('{Enter}');
+
+    expect(editInSandbox).not.toHaveBeenCalled();
   });
 
   test('disables the input and button while a create is in flight', async () => {
@@ -373,7 +467,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    await user.type(screen.getByPlaceholderText('Sandbox name'), 'My SB');
+    await user.type(screen.getByPlaceholderText('e.g. Test new changes'), 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
     const button = screen.getByTestId('create-sandbox-button');
@@ -381,7 +475,7 @@ describe('EditInSandboxPicker', () => {
       expect(button).toHaveTextContent('Creating...');
     });
     expect(button).toBeDisabled();
-    expect(screen.getByPlaceholderText('Sandbox name')).toBeDisabled();
+    expect(screen.getByPlaceholderText('e.g. Test new changes')).toBeDisabled();
   });
 
   test('forwards the trimmed name to the create action', async () => {
@@ -398,7 +492,7 @@ describe('EditInSandboxPicker', () => {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
-        screen.getByPlaceholderText('Sandbox name'),
+        screen.getByPlaceholderText('e.g. Test new changes'),
         '  My SB  '
       );
       await user.click(screen.getByTestId('create-sandbox-button'));

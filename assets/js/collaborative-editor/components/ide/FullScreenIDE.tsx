@@ -903,14 +903,20 @@ export function FullScreenIDE({
               </button>
             </Tooltip>
 
-            {/* New Run button - shown when no panel or viewing history */}
-            {(panelState === undefined || panelState === 'history') && (
-              <NewRunButton onClick={handleNavigateToCreateRun} />
-            )}
+            {/* New Run button - shown when no panel or viewing history.
+                Hidden on a read-only workflow: run creation is unavailable,
+                but history, the run viewer, job switching and navigation stay. */}
+            {!isReadOnly &&
+              (panelState === undefined || panelState === 'history') && (
+                <NewRunButton onClick={handleNavigateToCreateRun} />
+              )}
 
-            {/* Run/Retry button - shown when creating new run or viewing existing run */}
-            {(panelState === 'run-viewer' || panelState === 'create-run') && (
-              <RunRetryButton
+            {/* Run/Retry button - shown when creating a new run or viewing an
+                existing run. Hidden on a read-only workflow (both Run and Retry
+                create runs); the run viewer itself remains available. */}
+            {!isReadOnly &&
+              (panelState === 'run-viewer' || panelState === 'create-run') && (
+                <RunRetryButton
                 isRetryable={isRetryable}
                 isDisabled={
                   !(

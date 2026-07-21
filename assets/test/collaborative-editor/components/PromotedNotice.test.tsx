@@ -45,16 +45,6 @@ describe('PromotedNotice', () => {
     expect(window.location.search).toBe('');
   });
 
-  test('shows the softer message when the sandbox could not be archived', () => {
-    setUrl('/projects/p1/w/wf1?promoted=1&archived=0');
-
-    render(<PromotedNotice />);
-
-    const opts = notifySuccess.mock.calls[0]?.[0];
-    expect(opts?.description).toContain("couldn't be archived");
-    expect(window.location.search).toBe('');
-  });
-
   test('preserves unrelated query params while dropping the promote markers', () => {
     setUrl('/projects/p1/w/wf1?promoted=1&job=abc');
 
