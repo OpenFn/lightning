@@ -42,6 +42,22 @@ and this project adheres to
   persistent disclaimer footer shown in the chat input and landing screen.
   [#4911](https://github.com/OpenFn/lightning/issues/4911)
 - Bump worker to 1.27.0
+- The credential revoke-access dialog now sorts the affected workflows
+  alphabetically. The order was previously left to the database and not
+  guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
+- Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
+  implicitly introduces a limit of 100 concurrent channels per Websocket
+  connection (transport). If worker instances are set with a concurrency higher
+  than 100, this will result in failures.
+- Replaced the legacy editor with the collaborative editor for all users
+  [#4402](https://github.com/OpenFn/lightning/issues/4402)
+- Made dev and test database names configurable via `DEV_DATABASE_NAME` and
+  `TEST_DATABASE_NAME` environment variables
+  [#4963](https://github.com/OpenFn/lightning/pull/4963)
+- Updated nodejs version to 24.18.0
+  [#4962](https://github.com/OpenFn/lightning/pull/4962)
+- Updated bundled worker to 1.27.1 and cli to 1.38.4
+  [#4962](https://github.com/OpenFn/lightning/pull/4962)
 
 ### Fixed
 

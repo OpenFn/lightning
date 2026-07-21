@@ -6,9 +6,15 @@
  * proper integration within the Header component.
  */
 
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup as reactCleanup,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
@@ -42,6 +48,15 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
   default: () => ({}),
 }));
+
+let storeCleanup: (() => void) | null = null;
+
+afterEach(() => {
+  storeCleanup?.();
+  storeCleanup = null;
+  reactCleanup();
+  urlState.reset();
+});
 
 // =============================================================================
 // TEST HELPERS
@@ -136,6 +151,8 @@ async function createTestSetup(options: WrapperOptions = {}) {
       emitSessionContext: true,
     }
   );
+
+  storeCleanup = cleanup;
 
   if (options.triggerSync) {
     // Trigger provider sync to enable save functionality
@@ -1395,9 +1412,8 @@ describe('Header - Keyboard Shortcuts', () => {
 // =============================================================================
 
 describe('Header - AI Assistant Button', () => {
-  beforeEach(() => {
-    urlState.reset();
-  });
+  // urlState is reset by the top-level `afterEach` above, so no
+  // block-local `beforeEach` is needed here.
 
   test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup();
