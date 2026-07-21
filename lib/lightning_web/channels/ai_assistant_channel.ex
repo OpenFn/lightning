@@ -17,6 +17,7 @@ defmodule LightningWeb.AiAssistantChannel do
   alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Runs
   alias Lightning.Workflows
   alias LightningWeb.Channels.AiAssistantJSON
 
@@ -36,6 +37,9 @@ defmodule LightningWeb.AiAssistantChannel do
            {:session, load_or_create_session(session_id, params, user)},
          :ok <- validate_session_type(session, session_type),
          :ok <- authorize_session_access(session, user) do
+      # Deferred until after authorization so a denied join never writes.
+      session = finalize_session_load(session, session_id, params)
+
       Lightning.subscribe("ai_session:#{session.id}")
 
       # Broadcast new session creation to workflow channel so other users see it
@@ -225,33 +229,42 @@ defmodule LightningWeb.AiAssistantChannel do
 
   defp update_workflow_template_context(session, params, socket) do
     workflow_id = params["workflow_id"]
+    user = socket.assigns.current_user
 
-    if workflow_id do
-      updated_meta =
-        (session.meta || %{})
-        |> Map.delete("unsaved_workflow")
+    cond do
+      is_nil(workflow_id) ->
+        {:reply, {:ok, %{success: true}}, socket}
 
-      session
-      |> Ecto.Changeset.change(%{
-        workflow_id: workflow_id,
-        meta: updated_meta
-      })
-      |> Lightning.Repo.update()
-      |> case do
-        {:ok, updated_session} ->
-          {:reply, {:ok, %{success: true}},
-           assign(socket, session: updated_session)}
+      check_workflow_access_by_id(workflow_id, user, :access_write) != :ok ->
+        {:reply, {:error, %{reason: "unauthorized"}}, socket}
 
-        {:error, changeset} ->
-          Logger.error(
-            "[AiAssistantChannel] Failed to update workflow context: #{inspect(changeset.errors)}"
-          )
+      true ->
+        persist_workflow_template_context(session, workflow_id, socket)
+    end
+  end
 
-          {:reply, {:error, %{reason: "Failed to persist context update"}},
-           socket}
-      end
-    else
-      {:reply, {:ok, %{success: true}}, socket}
+  defp persist_workflow_template_context(session, workflow_id, socket) do
+    updated_meta =
+      (session.meta || %{})
+      |> Map.delete("unsaved_workflow")
+
+    session
+    |> Ecto.Changeset.change(%{
+      workflow_id: workflow_id,
+      meta: updated_meta
+    })
+    |> Lightning.Repo.update()
+    |> case do
+      {:ok, updated_session} ->
+        {:reply, {:ok, %{success: true}},
+         assign(socket, session: updated_session)}
+
+      {:error, changeset} ->
+        Logger.error(
+          "[AiAssistantChannel] Failed to update workflow context: #{inspect(changeset.errors)}"
+        )
+
+        {:reply, {:error, %{reason: "Failed to persist context update"}}, socket}
     end
   end
 
@@ -399,7 +412,7 @@ defmodule LightningWeb.AiAssistantChannel do
        when not is_nil(job_id) do
     case session_id do
       "new" -> create_new_job_session(params, user)
-      _existing_id -> load_existing_job_session(session_id, params)
+      _existing_id -> load_existing_job_session(session_id)
     end
   end
 
@@ -411,7 +424,13 @@ defmodule LightningWeb.AiAssistantChannel do
              {:project, project} when not is_nil(project) <-
                {:project, Projects.get_project(project_id)},
              {:content, content} when not is_nil(content) <-
-               {:content, params["content"]} do
+               {:content, params["content"]},
+             {:authorized, :ok} <-
+               {:authorized,
+                check_project_access(project.id, user, :access_write)},
+             {:authorized, :ok} <-
+               {:authorized,
+                authorize_bound_workflow(params["workflow_id"], user)} do
           workflow =
             if params["workflow_id"],
               do: Workflows.get_workflow(params["workflow_id"]),
@@ -449,6 +468,7 @@ defmodule LightningWeb.AiAssistantChannel do
           {:project_id, nil} -> {:error, "project_id required"}
           {:project, nil} -> {:error, "project not found"}
           {:content, nil} -> {:error, "initial content required"}
+          {:authorized, {:error, :unauthorized}} -> {:error, "unauthorized"}
         end
 
       _existing_id ->
@@ -475,16 +495,27 @@ defmodule LightningWeb.AiAssistantChannel do
 
       case Jobs.get_job(job_id) do
         {:ok, job} ->
-          opts = extract_session_options("job_code", params)
+          with :ok <- check_project_access(project.id, user, :access_write),
+               :ok <-
+                 check_workflow_access_by_id(job.workflow_id, user, :access_read),
+               :ok <- authorize_bound_workflow(params["workflow_id"], user) do
+            opts =
+              extract_session_options(
+                "job_code",
+                sanitize_follow_run_id(params, project.id)
+              )
 
-          AiAssistant.create_workflow_session(
-            project,
-            job,
-            workflow,
-            user,
-            content,
-            opts
-          )
+            AiAssistant.create_workflow_session(
+              project,
+              job,
+              workflow,
+              user,
+              content,
+              opts
+            )
+          else
+            {:error, :unauthorized} -> {:error, "unauthorized"}
+          end
 
         {:error, :not_found} ->
           create_session_with_unsaved_job(params, user, content)
@@ -497,29 +528,65 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp load_existing_job_session(session_id, params) do
+  defp load_existing_job_session(session_id) do
     case AiAssistant.get_session(session_id) do
-      {:ok, session} ->
-        session = maybe_update_follow_run_id(session, params)
-        enriched_session = AiAssistant.enrich_session_with_job_context(session)
-        {:ok, enriched_session}
-
-      {:error, :not_found} ->
-        {:error, "session not found"}
+      {:ok, session} -> {:ok, session}
+      {:error, :not_found} -> {:error, "session not found"}
     end
   end
 
+  defp finalize_session_load(session, session_id, %{"job_id" => job_id} = params)
+       when session_id != "new" and not is_nil(job_id) do
+    session
+    |> maybe_update_follow_run_id(params)
+    |> AiAssistant.enrich_session_with_job_context()
+  end
+
+  defp finalize_session_load(session, _session_id, _params), do: session
+
   defp maybe_update_follow_run_id(session, %{"follow_run_id" => follow_run_id})
        when not is_nil(follow_run_id) do
-    updated_meta =
-      Map.put(session.meta || %{}, "follow_run_id", follow_run_id)
+    case validated_follow_run_id(session, follow_run_id) do
+      nil ->
+        session
 
-    session
-    |> Ecto.Changeset.change(%{meta: updated_meta})
-    |> Lightning.Repo.update!()
+      run_id ->
+        updated_meta = Map.put(session.meta || %{}, "follow_run_id", run_id)
+
+        session
+        |> Ecto.Changeset.change(%{meta: updated_meta})
+        |> Lightning.Repo.update!()
+    end
   end
 
   defp maybe_update_follow_run_id(session, _params), do: session
+
+  defp validated_follow_run_id(session, run_id) do
+    run_in_project(get_project_id_from_session(session), run_id)
+  end
+
+  # Keep a follow_run_id only when it names a run in the given project.
+  defp run_in_project(project_id, run_id)
+       when is_binary(project_id) and is_binary(run_id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(run_id),
+         %Lightning.Run{} <- Runs.get_for_project(uuid, project_id) do
+      run_id
+    else
+      _ -> nil
+    end
+  end
+
+  defp run_in_project(_project_id, _run_id), do: nil
+
+  defp sanitize_follow_run_id(%{"follow_run_id" => run_id} = params, project_id)
+       when not is_nil(run_id) do
+    case run_in_project(project_id, run_id) do
+      nil -> Map.delete(params, "follow_run_id")
+      valid -> Map.put(params, "follow_run_id", valid)
+    end
+  end
+
+  defp sanitize_follow_run_id(params, _project_id), do: params
 
   defp create_session_with_unsaved_job(params, user, content) do
     job_id = params["job_id"]
@@ -528,27 +595,37 @@ defmodule LightningWeb.AiAssistantChannel do
     job_adaptor = params["job_adaptor"] || "@openfn/language-common@latest"
     workflow_id = params["workflow_id"]
 
-    if is_nil(job_name) or is_nil(workflow_id) do
-      {:error, "Please save the workflow before using AI Assistant for this job"}
-    else
-      unsaved_job_data = %{
-        "id" => job_id,
-        "name" => job_name,
-        "body" => job_body,
-        "adaptor" => job_adaptor,
-        "workflow_id" => workflow_id
-      }
+    cond do
+      is_nil(job_name) or is_nil(workflow_id) ->
+        {:error,
+         "Please save the workflow before using AI Assistant for this job"}
 
-      base_meta =
-        extract_session_options("job_code", params) |> Keyword.get(:meta, %{})
+      check_workflow_access_by_id(workflow_id, user, :access_read) != :ok ->
+        {:error, "unauthorized"}
 
-      meta = Map.merge(base_meta, %{"unsaved_job" => unsaved_job_data})
+      true ->
+        unsaved_job_data = %{
+          "id" => job_id,
+          "name" => job_name,
+          "body" => job_body,
+          "adaptor" => job_adaptor,
+          "workflow_id" => workflow_id
+        }
 
-      AiAssistant.create_session_for_unsaved_job(
-        user,
-        content,
-        meta
-      )
+        base_meta =
+          "job_code"
+          |> extract_session_options(
+            sanitize_follow_run_id(params, workflow_project_id(workflow_id))
+          )
+          |> Keyword.get(:meta, %{})
+
+        meta = Map.merge(base_meta, %{"unsaved_job" => unsaved_job_data})
+
+        AiAssistant.create_session_for_unsaved_job(
+          user,
+          content,
+          meta
+        )
     end
   end
 
@@ -575,10 +652,13 @@ defmodule LightningWeb.AiAssistantChannel do
         )
 
       session.job_id ->
-        authorize_saved_job_session(session.job_id, user)
+        authorize_saved_job_session(session, user)
+
+      session.user_id == user.id ->
+        :ok
 
       true ->
-        :ok
+        {:error, :unauthorized}
     end
   end
 
@@ -592,30 +672,48 @@ defmodule LightningWeb.AiAssistantChannel do
       session.project_id ->
         check_project_access(session.project_id, user, :access_write)
 
-      true ->
+      session.user_id == user.id ->
         :ok
+
+      true ->
+        {:error, :unauthorized}
     end
   end
 
-  defp authorize_saved_job_session(job_id, user) do
-    case Jobs.get_job(job_id) do
+  defp authorize_saved_job_session(session, user) do
+    case Jobs.get_job(session.job_id) do
       {:ok, job} ->
         check_workflow_access_by_id(job.workflow_id, user, :access_read)
 
       {:error, :not_found} ->
-        :ok
+        if session.user_id == user.id, do: :ok, else: {:error, :unauthorized}
     end
   end
 
   defp check_workflow_access_by_id(workflow_id, user, permission) do
-    workflow = Workflows.get_workflow(workflow_id)
-    project = Projects.get_project(workflow.project_id)
-    Permissions.can(:workflows, permission, user, project)
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, :unauthorized}
+
+      workflow ->
+        project = Projects.get_project(workflow.project_id)
+        Permissions.can(:workflows, permission, user, project)
+    end
   end
 
   defp check_project_access(project_id, user, permission) do
     project = Projects.get_project(project_id)
     Permissions.can(:workflows, permission, user, project)
+  end
+
+  # A not-yet-saved workflow (no row) is allowed; an existing one must be writable.
+  defp authorize_bound_workflow(nil, _user), do: :ok
+
+  defp authorize_bound_workflow(workflow_id, user) do
+    case Workflows.get_workflow(workflow_id) do
+      nil -> :ok
+      workflow -> check_project_access(workflow.project_id, user, :access_write)
+    end
   end
 
   defp extract_session_options("job_code", params) do
@@ -695,13 +793,23 @@ defmodule LightningWeb.AiAssistantChannel do
     []
   end
 
-  defp maybe_put_follow_run_id_in_meta(attrs, %{"follow_run_id" => run_id})
+  defp maybe_put_follow_run_id_in_meta(
+         attrs,
+         %{"follow_run_id" => run_id},
+         project_id
+       )
        when not is_nil(run_id) do
-    existing_meta = Map.get(attrs, :meta, %{})
-    Map.put(attrs, :meta, Map.put(existing_meta, "follow_run_id", run_id))
+    case run_in_project(project_id, run_id) do
+      nil ->
+        attrs
+
+      valid ->
+        existing_meta = Map.get(attrs, :meta, %{})
+        Map.put(attrs, :meta, Map.put(existing_meta, "follow_run_id", valid))
+    end
   end
 
-  defp maybe_put_follow_run_id_in_meta(attrs, _params), do: attrs
+  defp maybe_put_follow_run_id_in_meta(attrs, _params, _project_id), do: attrs
 
   defp build_message_options(params) do
     %{
@@ -882,8 +990,7 @@ defmodule LightningWeb.AiAssistantChannel do
       session.job_id ->
         case Jobs.get_job(session.job_id) do
           {:ok, job} ->
-            workflow = Workflows.get_workflow(job.workflow_id)
-            workflow.project_id
+            workflow_project_id(job.workflow_id)
 
           {:error, :not_found} ->
             get_project_id_from_unsaved_job(session)
@@ -896,11 +1003,19 @@ defmodule LightningWeb.AiAssistantChannel do
 
   defp get_project_id_from_unsaved_job(session) do
     if session.meta["unsaved_job"] do
-      workflow_id = session.meta["unsaved_job"]["workflow_id"]
-      workflow = Workflows.get_workflow(workflow_id)
-      workflow.project_id
+      workflow_project_id(session.meta["unsaved_job"]["workflow_id"])
     else
       nil
+    end
+  end
+
+  # Workflows.get_workflow/1 raises on a nil id, so guard it here.
+  defp workflow_project_id(nil), do: nil
+
+  defp workflow_project_id(workflow_id) do
+    case Workflows.get_workflow(workflow_id) do
+      nil -> nil
+      workflow -> workflow.project_id
     end
   end
 
@@ -914,11 +1029,14 @@ defmodule LightningWeb.AiAssistantChannel do
          params,
          socket
        ) do
-    case may_get_job(params["job_id"]) do
+    case may_get_job(params["job_id"], user) do
       {:ok, job} ->
         message_attrs =
           build_message_attrs(user, job, content, limit_result)
-          |> maybe_put_follow_run_id_in_meta(params)
+          |> maybe_put_follow_run_id_in_meta(
+            params,
+            get_project_id_from_session(session)
+          )
 
         opts = extract_message_options(params)
 
@@ -960,6 +1078,28 @@ defmodule LightningWeb.AiAssistantChannel do
          params,
          socket
        ) do
+    if authorize_bound_workflow(params["workflow_id"], user) != :ok do
+      reply_unauthorized_error("unauthorized", socket)
+    else
+      persist_unsaved_job_message(
+        session,
+        user,
+        content,
+        limit_result,
+        params,
+        socket
+      )
+    end
+  end
+
+  defp persist_unsaved_job_message(
+         session,
+         user,
+         content,
+         limit_result,
+         params,
+         socket
+       ) do
     job_id = params["job_id"]
     job_name = params["job_name"]
     job_body = params["job_body"]
@@ -977,7 +1117,10 @@ defmodule LightningWeb.AiAssistantChannel do
     message_attrs =
       build_message_attrs(user, nil, content, limit_result)
       |> Map.put(:meta, %{"unsaved_job" => unsaved_job_data})
-      |> maybe_put_follow_run_id_in_meta(params)
+      |> maybe_put_follow_run_id_in_meta(
+        params,
+        get_project_id_from_session(session)
+      )
 
     opts = extract_message_options(params)
 
@@ -998,17 +1141,18 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp may_get_job(job_id) when not is_nil(job_id) do
-    case Jobs.get_job(job_id) do
-      {:ok, job} ->
-        {:ok, job}
-
-      {:error, _} ->
-        {:error, :job_not_found}
+  # An inaccessible or missing job is treated as not-found so no cross-tenant
+  # job is attached to the message.
+  defp may_get_job(job_id, user) when not is_nil(job_id) do
+    with {:ok, job} <- Jobs.get_job(job_id),
+         :ok <- check_workflow_access_by_id(job.workflow_id, user, :access_read) do
+      {:ok, job}
+    else
+      _ -> {:error, :job_not_found}
     end
   end
 
-  defp may_get_job(_jobid), do: {:ok, nil}
+  defp may_get_job(_jobid, _user), do: {:ok, nil}
 
   defp build_message_attrs(user, job, content, limit_result) do
     base_attrs = %{role: :user, content: content, user: user, job: job}

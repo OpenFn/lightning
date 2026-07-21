@@ -21,43 +21,6 @@ defmodule Lightning.AiAssistantTest do
 
   @moduletag :capture_log
 
-  describe "endpoint_available?" do
-    test "availability" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-          :streaming_timeout -> 120_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 200}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == true
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 404}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 301}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:error, "socket closed"}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
-    end
-  end
-
   describe "query/3" do
     test "queries and saves the response", %{
       user: user,
@@ -1892,26 +1855,6 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "associate_workflow/2" do
-    test "associates workflow with session", %{
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      assert {:ok, updated_session} =
-               AiAssistant.associate_workflow(session, workflow)
-
-      assert updated_session.workflow_id == workflow.id
-    end
-  end
-
   describe "cleanup_unsaved_job_sessions/1" do
     test "updates sessions with unsaved job data to use real job_id", %{
       user: user,
@@ -2597,134 +2540,6 @@ defmodule Lightning.AiAssistantTest do
 
       assert length(result.sessions) == 1
       assert hd(result.sessions).job_id == job.id
-    end
-  end
-
-  describe "has_more_sessions?/2" do
-    test "returns true when more sessions exist beyond current_count", %{
-      user: user,
-      project: project
-    } do
-      for _i <- 1..3 do
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-      end
-
-      # has_more_sessions? logic:
-      # - calls list_sessions(offset: current_count, limit: 1)
-      # - if session found at offset, length(sessions) = 1
-      # - PaginationMeta.new(current_count + 1, 1, total_count)
-      # - has_next_page = (current_count + 1) < total_count
-
-      # current_count = 0: (0 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 0) == true
-
-      # current_count = 1: (1 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 1) == true
-
-      # current_count = 2: (2 + 1) < 3 = false
-      assert AiAssistant.has_more_sessions?(project, 2) == false
-
-      # current_count = 3: no session at offset 3, length(sessions) = 0
-      # PaginationMeta.new(3 + 0, 1, 3) => (3 < 3) = false
-      assert AiAssistant.has_more_sessions?(project, 3) == false
-    end
-
-    test "returns false when no sessions exist", %{user: _user, project: project} do
-      # No sessions created - total_count = 0
-
-      # current_count = 0: no sessions at offset 0, length(sessions) = 0
-      # PaginationMeta.new(0 + 0, 1, 0) => (0 < 0) = false
-      assert AiAssistant.has_more_sessions?(project, 0) == false
-      assert AiAssistant.has_more_sessions?(project, 1) == false
-    end
-
-    test "works with job sessions", %{user: user, workflow: %{jobs: [job | _]}} do
-      # Create 2 job sessions
-      for _i <- 1..2 do
-        insert(:chat_session, user: user, job: job)
-      end
-
-      # total_count = 2
-      # current_count = 0: (0 + 1) < 2 = true
-      assert AiAssistant.has_more_sessions?(job, 0) == true
-
-      # current_count = 1: (1 + 1) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 1) == false
-
-      # current_count = 2: no session at offset 2, (2 + 0) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 2) == false
-    end
-  end
-
-  describe "find_pending_user_messages/1" do
-    test "returns pending user messages only", %{
-      user: user,
-      workflow: %{jobs: [job | _]}
-    } do
-      pending_msg =
-        insert(:chat_message,
-          role: :user,
-          user: user,
-          status: :pending,
-          content: "Pending"
-        )
-
-      success_msg =
-        insert(:chat_message,
-          role: :user,
-          user: user,
-          status: :success,
-          content: "Success"
-        )
-
-      assistant_pending =
-        insert(:chat_message,
-          role: :assistant,
-          status: :pending,
-          content: "AI Pending"
-        )
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job,
-          messages: [pending_msg, success_msg, assistant_pending]
-        )
-
-      pending_messages = AiAssistant.find_pending_user_messages(session)
-
-      assert length(pending_messages) == 1
-      assert hd(pending_messages).content == "Pending"
-    end
-
-    test "returns empty list when no pending user messages", %{
-      user: user,
-      workflow: %{jobs: [job | _]}
-    } do
-      success_msg =
-        insert(:chat_message, role: :user, user: user, status: :success)
-
-      assistant_msg = insert(:chat_message, role: :assistant, status: :pending)
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job,
-          messages: [success_msg, assistant_msg]
-        )
-
-      pending_messages = AiAssistant.find_pending_user_messages(session)
-      assert pending_messages == []
-    end
-  end
-
-  describe "title_max_length/0" do
-    test "returns the configured maximum title length" do
-      assert AiAssistant.title_max_length() == 40
     end
   end
 

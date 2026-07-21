@@ -36,12 +36,6 @@ defmodule Lightning.AiAssistant do
   @type opts :: keyword()
 
   @doc """
-  Returns the maximum allowed length for chat session titles.
-  """
-  @spec title_max_length() :: non_neg_integer()
-  def title_max_length, do: @title_max_length
-
-  @doc """
   Checks if the AI assistant feature is enabled via application configuration.
 
   Verifies that both the Apollo endpoint URL and API key are properly configured,
@@ -56,21 +50,6 @@ defmodule Lightning.AiAssistant do
     endpoint = Lightning.Config.apollo(:endpoint)
     api_key = Lightning.Config.apollo(:ai_assistant_api_key)
     is_binary(endpoint) && is_binary(api_key)
-  end
-
-  @doc """
-  Checks if the Apollo AI service endpoint is reachable and responding.
-
-  Performs a connectivity test to ensure the external AI service is available
-  before attempting to make actual queries.
-
-  ## Returns
-
-  `true` if the Apollo endpoint responds successfully, `false` otherwise.
-  """
-  @spec endpoint_available?() :: boolean()
-  def endpoint_available? do
-    ApolloClient.test() == :ok
   end
 
   @doc """
@@ -161,6 +140,7 @@ defmodule Lightning.AiAssistant do
 
     session_attrs = %{
       job_id: job.id,
+      project_id: project_id_for_job(job),
       user_id: user.id,
       title: create_title(content),
       session_type: "job_code",
@@ -180,6 +160,15 @@ defmodule Lightning.AiAssistant do
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  defp project_id_for_job(%Job{workflow_id: nil}), do: nil
+
+  defp project_id_for_job(%Job{workflow_id: workflow_id}) do
+    Workflow
+    |> where([w], w.id == ^workflow_id)
+    |> select([w], w.project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -569,29 +558,6 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Checks if additional sessions are available beyond the current count.
-
-  This is a convenience function to determine if there are more sessions
-  to load without fetching the actual data. Useful for "Load More" UI patterns.
-
-  ## Parameters
-
-  - `resource` - A `%Project{}` or `%Job{}` struct
-  - `current_count` - Number of sessions already loaded
-
-  ## Returns
-
-  `true` if more sessions exist, `false` otherwise.
-  """
-  @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
-  def has_more_sessions?(resource, current_count) do
-    %{pagination: pagination} =
-      list_sessions(resource, :desc, offset: current_count, limit: 1)
-
-    pagination.has_next_page
-  end
-
-  @doc """
   Adds job-specific context to a chat session for enhanced AI assistance.
 
   Enriches a session with the job's expression code and adaptor information,
@@ -699,30 +665,6 @@ defmodule Lightning.AiAssistant do
   end
 
   defp maybe_add_run_logs(session, _job_id), do: session
-
-  @doc """
-  Associates a workflow with a chat session.
-
-  Links a generated workflow to the session that created it, enabling tracking
-  and future modifications through the same conversation context.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` that generated the workflow
-  - `workflow` - The `%Workflow{}` struct to associate
-
-  ## Returns
-
-  - `{:ok, session}` - Successfully linked workflow to session
-  - `{:error, changeset}` - Association failed with validation errors
-  """
-  @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def associate_workflow(session, workflow) do
-    session
-    |> ChatSession.changeset(%{workflow_id: workflow.id})
-    |> Repo.update()
-  end
 
   @doc """
   Saves a message to an existing chat session.
@@ -866,26 +808,6 @@ defmodule Lightning.AiAssistant do
       {:error, changeset} ->
         {:error, changeset}
     end
-  end
-
-  @doc """
-  Finds all pending user messages in a chat session.
-
-  Retrieves messages that have been sent by users but are still waiting
-  for processing or AI responses. Useful for identifying stuck or failed requests.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` to search
-
-  ## Returns
-
-  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
-  """
-  @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
-  def find_pending_user_messages(session) do
-    messages = session.messages || []
-    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
   end
 
   @doc """

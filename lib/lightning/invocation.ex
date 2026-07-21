@@ -176,6 +176,24 @@ defmodule Lightning.Invocation do
   def get_dataclip!(id), do: Repo.get!(Dataclip, id)
 
   @doc """
+  Returns whether a dataclip with the given id belongs to the given project.
+
+  `false` for a malformed id or a dataclip in another project.
+  """
+  @spec dataclip_in_project?(Ecto.UUID.t(), Ecto.UUID.t()) :: boolean()
+  def dataclip_in_project?(id, project_id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} ->
+        Repo.exists?(
+          from(d in Dataclip, where: d.id == ^id and d.project_id == ^project_id)
+        )
+
+      :error ->
+        false
+    end
+  end
+
+  @doc """
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
@@ -445,14 +463,19 @@ defmodule Lightning.Invocation do
   Note: Dataclip body fields have `load_in_query: false` for performance,
   so we use a custom preload query to explicitly select the body field.
   """
-  @spec get_step_with_dataclips(Ecto.UUID.t()) :: Step.t() | nil
-  def get_step_with_dataclips(step_id) do
+  @spec get_step_with_dataclips(Ecto.UUID.t(), Ecto.UUID.t() | nil) ::
+          Step.t() | nil
+  def get_step_with_dataclips(_step_id, nil), do: nil
+
+  def get_step_with_dataclips(step_id, project_id) do
     # Dataclip.body has load_in_query: false, so we need to explicitly select it
     dataclip_with_body_query =
       from(d in Dataclip, select: %{d | body: d.body})
 
     Step
-    |> where([s], s.id == ^step_id)
+    |> join(:inner, [s], j in assoc(s, :job))
+    |> join(:inner, [s, j], p in assoc(j, :project))
+    |> where([s, j, p], s.id == ^step_id and p.id == ^project_id)
     |> preload(input_dataclip: ^dataclip_with_body_query)
     |> preload(output_dataclip: ^dataclip_with_body_query)
     |> Repo.one()
