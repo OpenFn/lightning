@@ -3,7 +3,7 @@ import jp from 'jsonpath';
 import { languages, editor } from 'monaco-editor';
 import type ts from 'typescript';
 
-import type { ModelNode } from '../metadata-explorer/Model';
+import type { ModelNode } from '#/metadata-explorer/Model';
 
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 

@@ -119,8 +119,8 @@ defmodule Lightning.Collaboration.Session do
         SharedDoc.observe(shared_doc_pid)
         Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
+        # We track the user presence here so editors can see when someone else
+        # is editing the workflow.
         # Note: Presence tracking uses workflow.id, not document_name, because
         # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
