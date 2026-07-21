@@ -510,6 +510,28 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
+    # Escape hatch for self-hosted deployments whose OAuth provider lives on an
+    # internal network: allowlist those hosts so the pinned egress adapter lets
+    # them through. Only applied when set, so the secure default (block all
+    # internal ranges) and the dev allowlist stay intact otherwise.
+    if oauth_allowed_hosts = env!("OAUTH_PROVIDER_ALLOWED_HOSTS", :string, nil) do
+      config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+        allowed_hosts: String.split(oauth_allowed_hosts, ",", trim: true)
+    end
+
+    # Egress policy for the channel reverse proxy (consumed only by Philter).
+    # Blocking private/reserved ranges is the secure default; operators fronting
+    # internal upstreams can relax it, or allowlist specific hosts as an escape
+    # hatch that survives even when the block is on.
+    config :philter,
+      block_private_networks:
+        env!("CHANNEL_BLOCK_PRIVATE_NETWORKS", &Utils.ensure_boolean/1, true)
+
+    if channel_allowed_hosts = env!("CHANNEL_ALLOWED_HOSTS", :string, nil) do
+      config :philter,
+        allowed_hosts: Utils.parse_host_list(channel_allowed_hosts)
+    end
+
     if config_env() == :prod do
       unless database_url do
         raise """
@@ -532,9 +554,18 @@ defmodule Lightning.Config.Bootstrap do
       if disable_db_ssl do
         config :lightning, Lightning.Repo, ssl: false
       else
-        ssl_opts = [verify: :verify_none]
+        disable_cert_check =
+          env!("DISABLE_DB_SSL_CERT_VERIFY", &Utils.ensure_boolean/1, false)
 
-        config :lightning, Lightning.Repo, ssl_opts: ssl_opts, ssl: true
+        ssl_opts =
+          if disable_cert_check do
+            [verify: :verify_none]
+          else
+            %{host: db_host} = URI.parse(database_url)
+            :tls_certificate_check.options(db_host)
+          end
+
+        config :lightning, Lightning.Repo, ssl: ssl_opts
       end
 
       # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -776,9 +807,6 @@ defmodule Lightning.Config.Bootstrap do
       number_of_messages_per_second:
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
-
-    config :lightning, :ui_metrics_tracking,
-      enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
 
     config :lightning,
            :broadcast_work_available,
