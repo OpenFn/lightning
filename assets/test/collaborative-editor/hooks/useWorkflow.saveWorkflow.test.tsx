@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { useWorkflowActions } from '../../../js/collaborative-editor/hooks/useWorkflow';
+import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContext } from '../__helpers__/sessionContextFactory';
@@ -266,5 +267,52 @@ describe('useWorkflowActions().saveWorkflow', () => {
       expect(clearIsNewWorkflowSpy).toHaveBeenCalled();
       cleanup();
     });
+  });
+
+  describe('stale failure toast dismissed on next success', () => {
+    // handleSaveSuccess dismisses one shared toast id regardless of which
+    // failure branch showed it. On a new, unsaved workflow that toast has
+    // duration: Infinity, so a branch without the shared id would never be
+    // dismissed and would persist forever even after a later save succeeds.
+    test.each([
+      {
+        label: 'generic/non-channel error',
+        error: new Error('network error'),
+      },
+      {
+        label: 'unauthorized channel error',
+        error: new ChannelRequestError('unauthorized', {
+          base: ['You do not have permission to edit this workflow'],
+        }),
+      },
+      {
+        label: 'validation_error channel error',
+        error: new ChannelRequestError('validation_error', {
+          base: ['Workflow is invalid'],
+        }),
+      },
+    ])(
+      '$label: alert reuses the shared toast id, dismissed by a later success',
+      async ({ error }) => {
+        const { result, saveWorkflowSpy, cleanup } =
+          await createTestSetup(true);
+        saveWorkflowSpy.mockRejectedValueOnce(error);
+
+        await expect(result.current.saveWorkflow()).rejects.toThrow();
+
+        const failureCall = vi.mocked(notifications.alert).mock
+          .calls[0]?.[0] as { id?: string };
+        expect(failureCall.id).toBeDefined();
+
+        saveWorkflowSpy.mockResolvedValue({
+          saved_at: '2024-01-01T00:00:00Z',
+          lock_version: 2,
+        });
+        await result.current.saveWorkflow();
+
+        expect(notifications.dismiss).toHaveBeenCalledWith(failureCall.id);
+        cleanup();
+      }
+    );
   });
 });

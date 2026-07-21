@@ -511,12 +511,14 @@ export const useWorkflowActions = () => {
 
           if (error.type === 'unauthorized') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Permission Denied',
               description: error.message,
               ...persistence,
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Save failed: invalid workflow',
               description: (
                 <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
