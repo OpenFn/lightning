@@ -341,9 +341,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useTemplatePanel: () => ({
     templates: [],
     loading: false,
-    error: null,
     searchQuery: '',
-    selectedTemplate: null,
   }),
 }));
 

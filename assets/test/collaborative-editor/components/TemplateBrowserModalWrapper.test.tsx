@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { TemplateBrowserModalWrapper } from '../../../js/collaborative-editor/components/TemplateBrowserModalWrapper';
+import { BASE_TEMPLATES } from '../../../js/collaborative-editor/constants/baseTemplates';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 
 const mockAlert = vi.mocked(notifications.alert);
@@ -74,12 +75,23 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 
 const mockCloseTemplateBrowserModal = vi.fn();
 const mockDismissLandingScreen = vi.fn();
+const mockSetTemplates = vi.fn();
+const mockSetTemplatesLoading = vi.fn();
+const mockSetTemplateSearchQuery = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useShowTemplateBrowserModal: () => true,
+  useTemplatePanel: () => ({
+    templates: BASE_TEMPLATES,
+    loading: false,
+    searchQuery: '',
+  }),
   useUICommands: () => ({
     closeTemplateBrowserModal: mockCloseTemplateBrowserModal,
     dismissLandingScreen: mockDismissLandingScreen,
+    setTemplates: mockSetTemplates,
+    setTemplatesLoading: mockSetTemplatesLoading,
+    setTemplateSearchQuery: mockSetTemplateSearchQuery,
   }),
 }));
 

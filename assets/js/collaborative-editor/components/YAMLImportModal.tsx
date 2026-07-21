@@ -1,17 +1,12 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import pDebounce from 'p-debounce';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 import { Tooltip } from '../../components/Tooltip';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { WorkflowError } from '../../yaml/workflow-errors';
-import {
-  useImportPanelState,
-  useImportYamlContent,
-  useShowYAMLImportModal,
-  useUICommands,
-} from '../hooks/useUI';
+import { useShowYAMLImportModal, useUICommands } from '../hooks/useUI';
 import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 
@@ -63,12 +58,11 @@ interface YAMLImportContentProps {
 
 function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
   const { createWorkflowFrom } = useCreateWorkflowFlow();
-  const { setImportState, setImportYamlContent } = useUICommands();
 
-  const storedYamlContent = useImportYamlContent();
-  const importState = useImportPanelState();
-
-  const [yamlContent, setYamlContent] = useState(storedYamlContent);
+  const [importState, setImportState] = useState<
+    'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
+  >('initial');
+  const [yamlContent, setYamlContent] = useState('');
   const [errors, setErrors] = useState<WorkflowError[]>([]);
   const [validatedState, setValidatedState] =
     useState<YAMLWorkflowState | null>(null);
@@ -109,26 +103,14 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
 
   const handleYAMLChange = (content: string) => {
     setYamlContent(content);
-    setImportYamlContent(content);
     void validateYAML(content);
   };
 
   const handleFileUpload = (content: string) => {
     setMode('paste');
     setYamlContent(content);
-    setImportYamlContent(content);
     void validateYAML(content);
   };
-
-  const hasRestoredRef = useRef(false);
-  useEffect(() => {
-    if (hasRestoredRef.current) return;
-    hasRestoredRef.current = true;
-
-    if (storedYamlContent) {
-      void validateYAML(storedYamlContent);
-    }
-  }, [storedYamlContent, validateYAML]);
 
   const handleSave = async () => {
     const validated = validatedState;
@@ -172,7 +154,7 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
     <div className="flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-5">
-        <h2 className="text-xl text-gray-900">Import a workflow</h2>
+        <h2 className="text-xl font-medium text-gray-900">Import a workflow</h2>
         <button
           type="button"
           onClick={() => setMode(mode === 'upload' ? 'paste' : 'upload')}

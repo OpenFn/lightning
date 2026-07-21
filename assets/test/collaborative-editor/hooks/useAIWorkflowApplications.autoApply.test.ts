@@ -66,7 +66,7 @@ vi.mock('../../../js/yaml/util', () => ({
   ),
 }));
 
-describe('useAIWorkflowApplications - Auto-Application', () => {
+describe('useAIWorkflowApplications - auto-application', () => {
   // Mock functions
   const mockImportWorkflow = vi.fn(() => Promise.resolve());
   const mockStartApplyingWorkflow = vi.fn(() => Promise.resolve(true));

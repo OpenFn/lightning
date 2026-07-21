@@ -43,7 +43,11 @@ import { useAISession } from '../hooks/useAISession';
 import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
-import { useSession } from '../hooks/useSession';
+import {
+  selectIsConnected,
+  selectIsConnecting,
+  useSession,
+} from '../hooks/useSession';
 import {
   useExperimentalFeaturesEnabled,
   useIsNewWorkflow,
@@ -95,7 +99,6 @@ export function AIAssistantPanelWrapper({
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
-    collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
   const currentVersion = params['v'];
@@ -125,10 +128,6 @@ export function AIAssistantPanelWrapper({
   useKeyboardShortcut(
     '$mod+k',
     () => {
-      // Close create workflow panel when opening AI Assistant
-      if (!isAIAssistantPanelOpen) {
-        collapseCreateWorkflowPanel();
-      }
       toggleAIAssistantPanel();
     },
     0,
@@ -150,7 +149,8 @@ export function AIAssistantPanelWrapper({
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const isSessionConnected = useSession(s => s.isConnected);
+  const isSessionConnected = useSession(selectIsConnected);
+  const isSessionConnecting = useSession(selectIsConnecting);
   const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
   const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
   const workflowTemplateContext = useAIWorkflowTemplateContext();
@@ -582,6 +582,7 @@ export function AIAssistantPanelWrapper({
   // Hook to handle workflow/job code application logic
   const {
     handleApplyWorkflow,
+    launchApply,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
@@ -599,6 +600,7 @@ export function AIAssistantPanelWrapper({
     aiMode,
     isNewWorkflow,
     isSessionConnected,
+    isSessionConnecting,
     onValidationError,
     workflowActions: {
       importWorkflow,
@@ -738,7 +740,11 @@ export function AIAssistantPanelWrapper({
                     messages.some(m => m.from_global && m.code)) &&
                   !isApplyingWorkflow
                     ? (yaml, messageId) => {
-                        void handleApplyWorkflow(yaml, messageId);
+                        // Route through the hook's guarded launcher (not
+                        // handleApplyWorkflow raw) so a manual apply marks the
+                        // message and the auto-apply effect can't later re-fire
+                        // a duplicate import/save for it.
+                        launchApply(messageId, yaml);
                       }
                     : undefined
                 }

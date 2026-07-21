@@ -11,16 +11,12 @@ export const GITHUB_BASE_URL = 'https://github.com';
  * Higher numbers appear above lower numbers.
  */
 export const Z_INDEX = {
-  /** Template details card overlay on canvas */
-  TEMPLATE_DETAILS_CARD: 5,
   /** Inspector panel on the right side */
   INSPECTOR: 10,
   /** Manual run panel */
   RUN_PANEL: 20,
   /** Side panels (Create Workflow, AI Assistant) */
   SIDE_PANEL: 30,
-  /** Toggle button for collapsed side panels */
-  SIDE_PANEL_TOGGLE: 31,
 } as const;
 
 /**

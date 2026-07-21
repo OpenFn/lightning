@@ -103,7 +103,7 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
           'relative flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg transition-colors',
           isDragging
             ? 'border-indigo-500 bg-indigo-50'
-            : 'border-gray-300 hover:border-gray-400'
+            : 'border-gray-200 hover:border-gray-300'
         )}
         role="presentation"
       >

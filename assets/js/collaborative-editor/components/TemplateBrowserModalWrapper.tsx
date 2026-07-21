@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { fetchTemplates } from '../api/templates';
 import { BASE_TEMPLATES } from '../constants/baseTemplates';
 import { useActionLock } from '../hooks/useActionLock';
 import { useSession } from '../hooks/useSession';
-import { useShowTemplateBrowserModal, useUICommands } from '../hooks/useUI';
+import {
+  useShowTemplateBrowserModal,
+  useTemplatePanel,
+  useUICommands,
+} from '../hooks/useUI';
 import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
@@ -15,14 +19,18 @@ import { TemplateBrowserModal } from './TemplateBrowserModal';
 
 export function TemplateBrowserModalWrapper() {
   const isOpen = useShowTemplateBrowserModal();
-  const { closeTemplateBrowserModal, dismissLandingScreen } = useUICommands();
+  const {
+    closeTemplateBrowserModal,
+    dismissLandingScreen,
+    setTemplates,
+    setTemplatesLoading,
+    setTemplateSearchQuery,
+  } = useUICommands();
   const provider = useSession(s => s.provider);
   const channel = provider?.channel;
   const { createWorkflowFrom } = useCreateWorkflowFlow();
 
-  const [templates, setTemplates] = useState<Template[]>(BASE_TEMPLATES);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { templates, loading, searchQuery } = useTemplatePanel();
 
   useKeyboardShortcut('Escape', closeTemplateBrowserModal, 100, {
     enabled: isOpen,
@@ -31,26 +39,49 @@ export function TemplateBrowserModalWrapper() {
   // Lazy fetch — only when modal opens, not on every /new load
   useEffect(() => {
     if (!isOpen) return;
-    setSearchQuery('');
+    // Reset to a clean baseline on each open: the panel state lives in the
+    // global store and no longer resets on unmount, so a stranded loading flag
+    // or a prior open's user templates would otherwise leak in. Before the
+    // `!channel` guard so a reopen with a null channel still clears loading.
+    setTemplateSearchQuery('');
+    setTemplates(BASE_TEMPLATES);
+    setTemplatesLoading(false);
     if (!channel) return;
 
+    // Guards against a close-before-resolve-then-reopen race: without this,
+    // a stale fetch from a previous open can resolve after a newer one and
+    // overwrite its result.
+    let cancelled = false;
+
     const load = async () => {
-      setLoading(true);
+      setTemplatesLoading(true);
       try {
         const userTemplates = await fetchTemplates(channel);
+        if (cancelled) return;
         setTemplates([...BASE_TEMPLATES, ...userTemplates]);
       } catch {
+        if (cancelled) return;
         notifications.alert({
           title: 'Failed to load templates',
           description: 'Please check your connection and try again.',
         });
       } finally {
-        setLoading(false);
+        if (!cancelled) setTemplatesLoading(false);
       }
     };
 
     void load();
-  }, [isOpen, channel]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isOpen,
+    channel,
+    setTemplateSearchQuery,
+    setTemplatesLoading,
+    setTemplates,
+  ]);
 
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
@@ -73,7 +104,7 @@ export function TemplateBrowserModalWrapper() {
       isSaving={isSaving}
       onSelect={template => void handleSelect(template)}
       searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
+      onSearchChange={setTemplateSearchQuery}
     />
   );
 }

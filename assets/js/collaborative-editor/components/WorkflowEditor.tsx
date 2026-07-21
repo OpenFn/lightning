@@ -5,15 +5,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
-import { cn } from '#/utils/cn';
 
-import { Tooltip } from '../../components/Tooltip';
-import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
-  useTemplatePanel,
   useUICommands,
   useIsAIAssistantPanelOpen,
   useShowLandingScreen,
@@ -30,10 +26,8 @@ import { Z_INDEX } from '../utils/constants';
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
 import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
-import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
-import { TemplateDetailsCard } from './TemplateDetailsCard';
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -53,25 +47,8 @@ export function WorkflowEditor({
 
   const isRunPanelOpen = useIsRunPanelOpen();
   const runPanelContext = useRunPanelContext();
-  const {
-    closeRunPanel,
-    openRunPanel,
-    openAIAssistantPanel,
-    closeAIAssistantPanel,
-    collapseCreateWorkflowPanel,
-    expandCreateWorkflowPanel,
-    setTemplateSearchQuery,
-    openYAMLImportModal,
-  } = useUICommands();
-  // TODO-AI-FIRST: remove in #4856
-  const isCreateWorkflowPanelCollapsed = true;
+  const { closeRunPanel, openRunPanel, openYAMLImportModal } = useUICommands();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
-
-  // Get selected template from UI store (for template details card)
-  const { selectedTemplate } = useTemplatePanel();
-
-  // Check if viewing a pinned version (not latest) to disable AI Assistant
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -231,16 +208,6 @@ export function WorkflowEditor({
   const workflowState = useWorkflowState(state => state.workflow!);
   const workflowId = workflowState.id;
 
-  const {
-    width: leftPanelWidth,
-    isResizing: isResizingLeft,
-    handleMouseDown: handleMouseDownLeft,
-  } = useResizablePanel({
-    storageKey: 'left-panel-width',
-    defaultWidth: 400,
-    direction: 'right',
-  });
-
   const workflow = useWorkflowState(state => ({
     ...state.workflow!,
     jobs: state.jobs,
@@ -248,41 +215,6 @@ export function WorkflowEditor({
     edges: state.edges,
     positions: state.positions,
   }));
-
-  const currentMethod = (params['method'] ?? null) as
-    | 'template'
-    | 'import'
-    | 'ai'
-    | null;
-
-  const leftPanelMethod = currentMethod || 'template';
-
-  // Clear template URL params when panel collapses
-  const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
-  useEffect(() => {
-    const wasExpanded = !prevPanelCollapsedRef.current;
-    const isNowCollapsed = isCreateWorkflowPanelCollapsed;
-
-    if (wasExpanded && isNowCollapsed) {
-      // Panel just collapsed - clear template URL params
-      updateSearchParams({ template: null, search: null });
-    }
-
-    prevPanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
-  }, [isCreateWorkflowPanelCollapsed, updateSearchParams]);
-
-  // Clear template params when in import/ai mode (handles page refresh)
-  useEffect(() => {
-    const templateParam = params['template'];
-    const searchParam = params['search'];
-
-    if (
-      (leftPanelMethod === 'import' || leftPanelMethod === 'ai') &&
-      (templateParam || searchParam)
-    ) {
-      updateSearchParams({ template: null, search: null });
-    }
-  }, [leftPanelMethod, params, updateSearchParams]);
 
   // Helper function to clear workflow from canvas
   const clearCanvas = useCallback(() => {
@@ -306,20 +238,9 @@ export function WorkflowEditor({
     }
   }, [workflow.jobs, workflow.triggers, workflow.edges, workflowStore]);
 
-  /**
-   * Consolidated canvas clearing effect for new workflows.
-   *
-   * Clears the canvas when:
-   * 1. AI Assistant panel opens (to prepare for AI-generated workflow)
-   * 2. User switches between template/import methods while panel is open
-   * 3. Both panels transition to closed (user collapses the last open panel)
-   *
-   * Note: Uses refs to track previous state and only clear on actual transitions,
-   * not on initial mount or when both panels are already closed.
-   */
+  // Clear canvas when the AI Assistant panel opens for a new workflow, to
+  // prepare for an AI-generated workflow.
   const prevAIPanelOpenRef = useRef(isAIAssistantPanelOpen);
-  const prevMethodRef = useRef(leftPanelMethod);
-  const prevCreatePanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -327,64 +248,24 @@ export function WorkflowEditor({
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
       prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
-      prevMethodRef.current = leftPanelMethod;
-      prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
       return;
     }
 
     if (!isNewWorkflow) {
-      // Update refs but don't clear for existing workflows
+      // Update ref but don't clear for existing workflows
       prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
-      prevMethodRef.current = leftPanelMethod;
-      prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
       return;
     }
 
     const aiPanelJustOpened =
       !prevAIPanelOpenRef.current && isAIAssistantPanelOpen;
-    const methodChanged =
-      !isCreateWorkflowPanelCollapsed &&
-      prevMethodRef.current !== leftPanelMethod;
 
-    // Only clear when TRANSITIONING to both-closed state, not when already closed
-    const wasAnyPanelOpen =
-      prevAIPanelOpenRef.current || !prevCreatePanelCollapsedRef.current;
-    const bothNowClosed =
-      isCreateWorkflowPanelCollapsed && !isAIAssistantPanelOpen;
-    const bothPanelsJustClosed = wasAnyPanelOpen && bothNowClosed;
-
-    // Clear canvas on any of these transitions
-    if (aiPanelJustOpened || methodChanged || bothPanelsJustClosed) {
+    if (aiPanelJustOpened) {
       clearCanvas();
     }
 
-    // Update refs for next comparison
     prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
-    prevMethodRef.current = leftPanelMethod;
-    prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
-  }, [
-    isAIAssistantPanelOpen,
-    isNewWorkflow,
-    leftPanelMethod,
-    isCreateWorkflowPanelCollapsed,
-    clearCanvas,
-  ]);
-
-  // TODO-AI-FIRST (#4856): remove this entire method URL sync once the left-panel
-  // create flow (template/import/ai) is deleted — ?method= will no longer exist.
-  // Sync method to URL (similar to AI panel's chat param sync)
-  const isSyncingMethodRef = useRef(false);
-  useEffect(() => {
-    if (isSyncingMethodRef.current) return;
-
-    isSyncingMethodRef.current = true;
-    updateSearchParams({
-      method: isCreateWorkflowPanelCollapsed ? null : leftPanelMethod,
-    });
-    setTimeout(() => {
-      isSyncingMethodRef.current = false;
-    }, 0);
-  }, [isCreateWorkflowPanelCollapsed, leftPanelMethod, updateSearchParams]);
+  }, [isAIAssistantPanelOpen, isNewWorkflow, clearCanvas]);
 
   const isIDEOpen = !isNewWorkflow && params['panel'] === 'editor';
   const selectedJobId = params['job'] ?? null;
@@ -406,50 +287,16 @@ export function WorkflowEditor({
       params['panel'] === 'publish-template' ||
       Boolean(currentNode.node));
 
-  const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
-    // Always clear template URL params when switching methods - start fresh each time
-    updateSearchParams({ method, template: null, search: null });
-  };
-
   /**
-   * Keyboard shortcuts for new workflow creation panels.
+   * Keyboard shortcut for the YAML import modal.
    *
-   * These shortcuts only work when creating a new workflow (isNewWorkflow=true):
-   * - Cmd/Ctrl + / : Toggle template panel (template browsing mode)
-   * - Cmd/Ctrl + \ : Toggle import panel (YAML import mode)
+   * Only works when creating a new workflow (isNewWorkflow=true):
+   * - Cmd/Ctrl + \ : Open the YAML import modal (from the landing screen)
    * - Cmd/Ctrl + K : Toggle AI Assistant (handled in AIAssistantPanelWrapper)
    *
    * Note: Using comma-separated combos for cross-platform support.
-   * "Control+/" handles Windows/Linux, "Meta+/" handles macOS.
    * The tinykeys library parses these and binds to the appropriate key.
    */
-  useKeyboardShortcut(
-    'Control+/, Meta+/',
-    () => {
-      if (!isNewWorkflow) return;
-
-      if (leftPanelMethod === 'template' && !isCreateWorkflowPanelCollapsed) {
-        // Already open in template mode - collapse it
-        collapseCreateWorkflowPanel();
-      } else {
-        // Close AI Assistant panel when expanding create panel
-        if (isAIAssistantPanelOpen) {
-          closeAIAssistantPanel();
-        }
-        // Open in template mode
-        handleMethodChange('template');
-        if (isCreateWorkflowPanelCollapsed) {
-          expandCreateWorkflowPanel();
-        }
-      }
-    },
-    0,
-    {
-      enabled: isNewWorkflow,
-    }
-  );
-
-  // Cmd/Ctrl+\ to open YAML import modal when on landing screen (see JSDoc above for full shortcut docs)
   useKeyboardShortcut(
     'Control+\\, Meta+\\',
     () => {
@@ -475,213 +322,8 @@ export function WorkflowEditor({
 
   return (
     <div className="flex h-full w-full">
-      {/* Create Workflow Panel - Always rendered for smooth animations */}
-      {isNewWorkflow && (
-        <div
-          className="flex h-full flex-shrink-0"
-          style={{
-            zIndex: Z_INDEX.SIDE_PANEL,
-            width: !isCreateWorkflowPanelCollapsed
-              ? `${leftPanelWidth}px`
-              : '0px',
-            overflow: 'hidden',
-            transition: isResizingLeft
-              ? 'none'
-              : 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          {!isCreateWorkflowPanelCollapsed && (
-            <>
-              <div className="flex-1 overflow-hidden">
-                <LeftPanel
-                  method={leftPanelMethod}
-                  onMethodChange={handleMethodChange}
-                />
-              </div>
-              <button
-                type="button"
-                className="w-1 bg-gray-200 hover:bg-primary-500 transition-colors cursor-col-resize flex-shrink-0"
-                onMouseDown={handleMouseDownLeft}
-                aria-label="Resize left panel"
-              />
-            </>
-          )}
-        </div>
-      )}
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
-
-        {/* TODO-AI-FIRST (#4856): delete this entire placeholder block once the left-panel
-            create flow is removed — the landing screen always covers the new-workflow state
-            and this fallback UI (with its old Browse/AI/scratch buttons) should never appear */}
-        {/* Show placeholder when workflow is empty and landing screen is not covering it */}
-        {isNewWorkflow &&
-          !showLandingScreen &&
-          !isAIAssistantPanelOpen &&
-          workflow.jobs.length === 0 &&
-          workflow.triggers.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center max-w-3xl px-6 pointer-events-auto">
-                <div className="inline-flex items-center justify-center mb-6">
-                  <img
-                    src="/images/logo.svg"
-                    alt="OpenFn"
-                    className="w-20 h-20 opacity-20"
-                  />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Create your workflow
-                </h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Choose how you'd like to get started with your new workflow
-                </p>
-
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Toggle create panel in template mode
-                      if (
-                        leftPanelMethod === 'template' &&
-                        !isCreateWorkflowPanelCollapsed
-                      ) {
-                        // Already open in template mode - collapse it
-                        collapseCreateWorkflowPanel();
-                      } else {
-                        // Close AI if open
-                        if (isAIAssistantPanelOpen) {
-                          closeAIAssistantPanel();
-                        }
-                        // Open in template mode
-                        handleMethodChange('template');
-                        // Clear search
-                        setTemplateSearchQuery('');
-                        updateSearchParams({ search: null });
-                        if (isCreateWorkflowPanelCollapsed) {
-                          expandCreateWorkflowPanel();
-                        }
-                      }
-                    }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
-                      leftPanelMethod === 'template' &&
-                      !isCreateWorkflowPanelCollapsed
-                        ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
-                        : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 group-hover:bg-primary-100 mb-4 transition-colors">
-                      <span className="hero-document-text h-6 w-6 text-primary-600" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">
-                      Browse templates
-                    </h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      Start from published templates
-                    </p>
-                  </button>
-
-                  <Tooltip
-                    content={
-                      isPinnedVersion
-                        ? 'Switch to the latest version of this workflow to use the AI Assistant.'
-                        : isAIAssistantPanelOpen
-                          ? 'Close AI Assistant'
-                          : 'Generate with AI'
-                    }
-                    side="top"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Toggle AI Assistant panel
-                        if (isAIAssistantPanelOpen) {
-                          closeAIAssistantPanel();
-                        } else {
-                          // Close create panel if open
-                          if (!isCreateWorkflowPanelCollapsed) {
-                            collapseCreateWorkflowPanel();
-                          }
-                          openAIAssistantPanel();
-                        }
-                      }}
-                      disabled={isPinnedVersion}
-                      className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 ${
-                        isPinnedVersion
-                          ? 'cursor-not-allowed opacity-50'
-                          : `cursor-pointer ${
-                              isAIAssistantPanelOpen
-                                ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
-                                : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
-                            }`
-                      }`}
-                    >
-                      <div
-                        className={cn(
-                          'inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 mb-4 transition-colors',
-                          !isPinnedVersion && 'group-hover:bg-primary-100'
-                        )}
-                      >
-                        <span className="hero-sparkles h-6 w-6 text-primary-600" />
-                      </div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">
-                        Generate with AI
-                      </h4>
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        Build custom workflows with AI
-                      </p>
-                    </button>
-                  </Tooltip>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Toggle create panel in import mode
-                      if (
-                        leftPanelMethod === 'import' &&
-                        !isCreateWorkflowPanelCollapsed
-                      ) {
-                        // Already open in import mode - collapse it
-                        collapseCreateWorkflowPanel();
-                      } else {
-                        // Close AI if open
-                        if (isAIAssistantPanelOpen) {
-                          closeAIAssistantPanel();
-                        }
-                        // Open in import mode
-                        handleMethodChange('import');
-                        if (isCreateWorkflowPanelCollapsed) {
-                          expandCreateWorkflowPanel();
-                        }
-                      }
-                    }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
-                      leftPanelMethod === 'import' &&
-                      !isCreateWorkflowPanelCollapsed
-                        ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
-                        : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 group-hover:bg-primary-100 mb-4 transition-colors">
-                      <span className="hero-document-arrow-up h-6 w-6 text-primary-600" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">
-                      Import workflow
-                    </h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      Upload or paste workflow code
-                    </p>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-        {/* Show template details card when a template is selected */}
-        {!isCreateWorkflowPanelCollapsed &&
-          leftPanelMethod === 'template' &&
-          selectedTemplate && (
-            <TemplateDetailsCard template={selectedTemplate} />
-          )}
 
         {!isRunPanelOpen && (
           <div

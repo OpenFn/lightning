@@ -68,24 +68,13 @@ vi.mock('../../../../js/collaborative-editor/lib/notifications', () => ({
 const mockCloseYAMLImportModal = vi.fn();
 const mockDismissLandingScreen = vi.fn();
 const mockShowYAMLImportModal = vi.fn();
-const mockImportPanelState = vi.fn();
-
-// Wired so that calling setImportState updates what useImportPanelState returns,
-// matching how the real store works (write → read reflects the change on re-render).
-const mockSetImportState = vi.fn((state: string) => {
-  mockImportPanelState.mockReturnValue(state);
-});
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     closeYAMLImportModal: mockCloseYAMLImportModal,
     dismissLandingScreen: mockDismissLandingScreen,
-    setImportState: mockSetImportState,
-    setImportYamlContent: vi.fn(),
   }),
   useShowYAMLImportModal: () => mockShowYAMLImportModal(),
-  useImportPanelState: () => mockImportPanelState(),
-  useImportYamlContent: () => '',
 }));
 
 vi.mock('../../../../js/collaborative-editor/keyboard', () => ({
@@ -137,7 +126,6 @@ describe('YAMLImportModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockShowYAMLImportModal.mockReturnValue(true);
-    mockImportPanelState.mockReturnValue('initial');
     mockIsConnected = true;
     mockImportWorkflow.mockResolvedValue(undefined);
     mockSaveWorkflow.mockResolvedValue({ ok: true });
@@ -328,8 +316,12 @@ describe('YAMLImportModal', () => {
       expect(mockDismissLandingScreen).not.toHaveBeenCalled();
       expect(mockCloseYAMLImportModal).not.toHaveBeenCalled();
       expect(mockNotificationsAlert).not.toHaveBeenCalled();
-      expect(mockSetImportState).toHaveBeenCalledWith('importing');
-      expect(mockSetImportState).toHaveBeenLastCalledWith('valid');
+      // Save failure resets import state back to 'valid': Create is
+      // re-enabled (not stuck disabled on 'importing') and doesn't fall
+      // back to 'invalid' either.
+      expect(
+        screen.getByRole('button', { name: /Create/i })
+      ).not.toBeDisabled();
     });
   });
 });

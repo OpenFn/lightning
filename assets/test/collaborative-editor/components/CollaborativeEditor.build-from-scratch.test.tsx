@@ -74,10 +74,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: () => <div data-testid="inspector">Inspector</div>,
 }));
 
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
   () => ({
@@ -274,7 +270,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsGitHubSyncModalOpen: () => false,
   useIsCreateWorkflowPanelCollapsed: () => true,
   useShowLandingScreen: () => mockShowLandingScreen(),
-  useImportPanelState: () => 'initial',
   useUICommands: () => ({
     openYAMLImportModal: mockOpenYAMLImportModal,
     openTemplateBrowserModal: mockOpenTemplateBrowserModal,
@@ -295,9 +290,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useTemplatePanel: () => ({
     templates: [],
     loading: false,
-    error: null,
     searchQuery: '',
-    selectedTemplate: null,
   }),
 }));
 

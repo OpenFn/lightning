@@ -50,7 +50,11 @@ import { notifications } from '../lib/notifications';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
-import { selectIsConnected, useSession } from './useSession';
+import {
+  selectIsConnected,
+  selectIsConnecting,
+  useSession,
+} from './useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -62,6 +66,12 @@ import {
 
 // import _logger from "#/utils/logger";
 // const logger = _logger.ns("useWorkflow").seal();
+
+// Stable id for the generic "Failed to save workflow" toast so a later
+// successful save can dismiss it even if it was shown with duration:
+// Infinity (new-workflow case). Also collapses repeated failures into one
+// updated toast instead of stacking a new permanent toast per attempt.
+const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
 
 export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
 
@@ -374,7 +384,6 @@ export const useWorkflowActions = () => {
   }
 
   const sessionContextStore = context.sessionContextStore;
-  const uiStore = context.uiStore;
 
   return {
     updateJob: store.updateJob,
@@ -432,20 +441,12 @@ export const useWorkflowActions = () => {
           const projectId = currentState.project?.id;
 
           if (workflowId && projectId) {
-            // Update URL to include project_id and remove template-related params
+            // Update URL to include project_id
             const url = new URL(window.location.href);
             const searchParams = new URLSearchParams(url.search);
-            searchParams.delete('method'); // Close left panel
-            searchParams.delete('template'); // Clear template selection
-            searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
             navigate(newUrl, { replace: true });
-
-            // Clear template state in UI store
-            uiStore.selectTemplate(null);
-            uiStore.setTemplateSearchQuery('');
-            uiStore.collapseCreateWorkflowPanel();
 
             // Clear isNewWorkflow flag after successful save
             sessionContextStore.clearIsNewWorkflow();
@@ -456,6 +457,12 @@ export const useWorkflowActions = () => {
             flowEvents.dispatch('fit-view');
           }
         }
+
+        // Clear any stale "Failed to save workflow" toast from a prior
+        // failed attempt now that a save has gone through — regardless of
+        // notify level, since even a silent (notify: 'error-only') success
+        // should retire a previously-shown persistent failure toast.
+        notifications.dismiss(SAVE_WORKFLOW_ERROR_TOAST_ID);
 
         // Show success notification only when the caller wants all toasts
         if (notify === 'all') {
@@ -488,7 +495,9 @@ export const useWorkflowActions = () => {
         // A failed save on a brand-new workflow leaves imported nodes with
         // no DB record; the toast is the only recovery path, so it must not
         // auto-dismiss.
-        const persistent = sessionContextStore.getSnapshot().isNewWorkflow;
+        const persistence = sessionContextStore.getSnapshot().isNewWorkflow
+          ? { duration: Infinity }
+          : {};
 
         // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
@@ -502,26 +511,35 @@ export const useWorkflowActions = () => {
 
           if (error.type === 'unauthorized') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Permission Denied',
               description: error.message,
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Save failed: invalid workflow',
               description: (
                 <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
               ),
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
             });
           } else {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Failed to save workflow',
               description: error.message,
-              ...(persistent ? { duration: Infinity } : {}),
+              ...persistence,
               action: {
                 label: 'Retry',
-                onClick: () => {
+                onClick: event => {
+                  // Sonner dismisses the toast on action click by default;
+                  // since retry failures reuse this toast's id, that default
+                  // dismissal races the next handleSaveError call and can
+                  // swallow it. Prevent it so the toast stays until
+                  // handleSaveSuccess explicitly dismisses it.
+                  event.preventDefault();
                   // Failure feedback is re-issued by handleSaveError on the
                   // next pass.
                   retrySaveWorkflow().catch(() => {});
@@ -532,15 +550,22 @@ export const useWorkflowActions = () => {
         } else {
           // Handle non-channel errors
           notifications.alert({
+            id: SAVE_WORKFLOW_ERROR_TOAST_ID,
             title: 'Failed to save workflow',
             description:
               error instanceof Error
                 ? error.message
                 : 'Please check your connection and try again',
-            ...(persistent ? { duration: Infinity } : {}),
+            ...persistence,
             action: {
               label: 'Retry',
-              onClick: () => {
+              onClick: event => {
+                // Sonner dismisses the toast on action click by default;
+                // since retry failures reuse this toast's id, that default
+                // dismissal races the next handleSaveError call and can
+                // swallow it. Prevent it so the toast stays until
+                // handleSaveSuccess explicitly dismisses it.
+                event.preventDefault();
                 // Failure feedback is re-issued by handleSaveError on the
                 // next pass.
                 retrySaveWorkflow().catch(() => {});
@@ -596,10 +621,9 @@ export const useWorkflowActions = () => {
           const projectId = currentState.project?.id;
 
           if (workflowId && projectId) {
-            // Update URL to include project_id and remove method param (closes left panel)
+            // Update URL to include project_id
             const url = new URL(window.location.href);
             const searchParams = new URLSearchParams(url.search);
-            searchParams.delete('method'); // Close left panel
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
             window.history.pushState({}, '', newUrl);
@@ -735,6 +759,17 @@ export const NOT_CONNECTED_ALERT = {
 };
 
 /**
+ * Shown instead of `NOT_CONNECTED_ALERT` during the initial channel-join
+ * window, when the session isn't disconnected — it just hasn't finished
+ * connecting yet. Keeps the block (the action still can't proceed) but
+ * avoids telling the user something false.
+ */
+export const STILL_CONNECTING_ALERT = {
+  title: 'Still connecting',
+  description: 'Connecting to the server — try again in a moment.',
+};
+
+/**
  * Shared pre/post-save flow for workflow-creation paths that always import
  * then save (landing/blank, template browser, YAML import). The AI assistant
  * path has a different shape (collaborator coordination, optional creation)
@@ -752,36 +787,41 @@ export const NOT_CONNECTED_ALERT = {
  */
 export function useCreateWorkflowFlow() {
   const isConnected = useSession(selectIsConnected);
+  const isConnecting = useSession(selectIsConnecting);
   const { importWorkflow, saveWorkflow } = useWorkflowActions();
 
-  const createWorkflowFrom = useCallback(
-    async (buildState: () => YAMLWorkflowState): Promise<boolean> => {
-      if (!isConnected) {
-        notifications.alert(NOT_CONNECTED_ALERT);
-        return false;
-      }
-      try {
-        const state = buildState();
-        await importWorkflow(state);
-      } catch {
-        notifications.alert({
-          title: 'Failed to create workflow',
-          description: 'Please check your connection and try again.',
-        });
-        return false;
-      }
-      try {
-        await saveWorkflow({ notify: 'error-only' });
-      } catch {
-        // Shared handler has already shown a persistent Retry toast.
-        return false;
-      }
-      return true;
-    },
-    [isConnected, importWorkflow, saveWorkflow]
-  );
+  // Not a useCallback: importWorkflow/saveWorkflow come from
+  // useWorkflowActions(), which rebuilds them every render, so memoizing
+  // this against them would never actually stabilize the reference anyway.
+  const createWorkflowFrom = async (
+    buildState: () => YAMLWorkflowState
+  ): Promise<boolean> => {
+    if (!isConnected) {
+      notifications.alert(
+        isConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
+      );
+      return false;
+    }
+    try {
+      const state = buildState();
+      await importWorkflow(state);
+    } catch {
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description: 'Please check your connection and try again.',
+      });
+      return false;
+    }
+    try {
+      await saveWorkflow({ notify: 'error-only' });
+    } catch {
+      // Shared handler has already shown a persistent Retry toast.
+      return false;
+    }
+    return true;
+  };
 
-  return { createWorkflowFrom, isConnected };
+  return { createWorkflowFrom };
 }
 
 /**

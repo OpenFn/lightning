@@ -51,11 +51,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   ),
 }));
 
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 // Mock FullScreenIDE
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
@@ -197,22 +192,10 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
-    toggleCreateWorkflowPanel: vi.fn(),
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    selectTemplate: vi.fn(),
-    setTemplateSearchQuery: vi.fn(),
+    openYAMLImportModal: vi.fn(),
   }),
-  useTemplatePanel: () => ({
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  }),
-  useIsCreateWorkflowPanelCollapsed: () => true,
   useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
   useShowLandingScreen: () => mockShowLandingScreen(),
 }));
@@ -476,38 +459,6 @@ describe('WorkflowEditor', () => {
       const inspector = screen.queryByTestId('inspector');
       // We can't easily test CSS classes with JSDOM, so we just verify the structure exists
       expect(inspector).toBeInTheDocument();
-    });
-  });
-
-  describe('Empty workflow placeholder', () => {
-    test('shows placeholder when isNewWorkflow, panel closed, and canvas is empty', async () => {
-      mockIsNewWorkflow.mockReturnValue(true);
-      mockShowLandingScreen.mockReturnValue(false);
-      mockIsAIAssistantPanelOpen.mockReturnValue(false);
-      mockWorkflowStateOverride = { jobs: [], triggers: [], edges: [] };
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByText('Create your workflow')).toBeInTheDocument();
-      });
-    });
-
-    test('suppresses placeholder when AI assistant panel is open', async () => {
-      mockIsNewWorkflow.mockReturnValue(true);
-      mockShowLandingScreen.mockReturnValue(false);
-      mockIsAIAssistantPanelOpen.mockReturnValue(true);
-      mockWorkflowStateOverride = { jobs: [], triggers: [], edges: [] };
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      expect(
-        screen.queryByText('Create your workflow')
-      ).not.toBeInTheDocument();
     });
   });
 });
