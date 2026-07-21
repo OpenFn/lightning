@@ -19,9 +19,8 @@ and this project adheres to
 
 This is a security release, and we strongly recommend upgrading promptly. It is
 the first remediation wave from an ongoing security review: it closes a broad
-set of issues, several of them high priority, but it is not a complete sweep and
-further fixes will follow in subsequent releases. A detailed security advisory
-will follow within 30 days of this release.
+set of issues, several of them high priority. A detailed security advisory will
+follow within 30 days of this release.
 
 ### Upgrade notes
 
@@ -31,6 +30,13 @@ will follow within 30 days of this release.
   self-signed or otherwise unverifiable certificate will stop Lightning from
   starting. If you use a private CA or a self-signed database certificate, make
   sure the CA is trusted, or set `DISABLE_DB_SSL_CERT_VERIFY=true` to opt out.
+- **Server-side outbound requests are now guarded by default.** The Channel
+  reverse proxy feature and OAuth provider requests block loopback and
+  private-network destinations to prevent SSRF. This can break local
+  development, or a legitimately-internal destination reached over a private IP.
+  Adjust the Channel policies with `CHANNEL_BLOCK_PRIVATE_NETWORKS` and
+  `CHANNEL_ALLOWED_HOSTS`; see the egress sections of `DEPLOYMENT.md`
+  (`OAuth Provider Egress` and `Channel Egress`) for the full configuration.
 - **Take a database backup before upgrading.** Three of this release's
   migrations delete data irreversibly: legacy-editor user preferences,
   pre-existing credential transfers that can no longer be confirmed, and
