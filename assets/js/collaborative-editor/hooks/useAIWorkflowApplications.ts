@@ -196,9 +196,34 @@ export function useAIWorkflowApplications({
    */
   const hasLoadedSessionRef = useRef(false);
 
-  // Reset hasLoadedSessionRef when session changes
+  /**
+   * Message ids whose auto-apply is currently running. Added SYNCHRONOUSLY
+   * before the async apply starts and removed when it settles. This is the
+   * re-entrancy guard: the auto-apply effect below re-runs on nearly every
+   * render (handleApplyWorkflow's identity changes each render because
+   * saveWorkflow from useWorkflowActions is rebuilt every render), so without
+   * a synchronous marker a re-run during an in-flight apply would launch a
+   * second concurrent apply of the same message.
+   */
+  const inFlightApplyRef = useRef<Set<string>>(new Set());
+
+  /**
+   * A single message that was blocked while offline (handleApplyWorkflow
+   * returned 'gated') and should be retried once the session reconnects.
+   * The auto-apply effect deliberately ignores this message on its normal
+   * re-runs; only the reconnect effect below replays it. That keeps a blocked
+   * apply from re-alerting on every render while still offline, yet still
+   * recovers automatically on reconnect.
+   */
+  const pendingReconnectApplyRef = useRef<{ id: string; code: string } | null>(
+    null
+  );
+
+  // Reset per-session bookkeeping when the session changes
   useEffect(() => {
     hasLoadedSessionRef.current = false;
+    inFlightApplyRef.current.clear();
+    pendingReconnectApplyRef.current = null;
   }, [sessionId]);
 
   /**
@@ -369,6 +394,50 @@ export function useAIWorkflowApplications({
       previewingMessageId,
       setPreviewingMessageId,
     ]
+  );
+
+  /**
+   * Launch an apply for a message with a synchronous re-entrancy guard.
+   *
+   * This is the single entry point for BOTH the auto-apply effect and the
+   * manual "Apply" button (via the returned `launchApply`). Routing the manual
+   * path through here — instead of calling `handleApplyWorkflow` raw — means a
+   * manual apply also marks the message, so the auto-apply effect won't later
+   * re-fire a duplicate import/save for a message the user already applied by
+   * hand (e.g. applied manually while the assistant channel was briefly
+   * disconnected, then reconnects).
+   *
+   * The guard (inFlightApplyRef) is set before the first `await`, so a re-run
+   * of the auto-apply effect while this apply is still in flight is a no-op
+   * instead of a second concurrent apply. On settle:
+   * - 'gated' (blocked offline): park the message for a reconnect retry.
+   * - otherwise ('applied' or 'failed'): record it as terminally handled. A
+   *   'failed' import is intentionally not retried automatically (avoids a
+   *   re-apply loop); the user can re-apply via the still-enabled manual button
+   *   and save failures recover via the shared Retry toast.
+   *
+   * The '__streaming__' pseudo-message is deliberately NOT routed through here
+   * (it calls handleApplyWorkflow directly) so it never lands in
+   * appliedMessageIdsRef and can be superseded by the final new_message.
+   */
+  const launchApply = useCallback(
+    (messageId: string, code: string) => {
+      if (inFlightApplyRef.current.has(messageId)) return;
+      inFlightApplyRef.current.add(messageId);
+      void (async () => {
+        try {
+          const outcome = await handleApplyWorkflow(code, messageId);
+          if (outcome === 'gated') {
+            pendingReconnectApplyRef.current = { id: messageId, code };
+          } else {
+            appliedMessageIdsRef.current.add(messageId);
+          }
+        } finally {
+          inFlightApplyRef.current.delete(messageId);
+        }
+      })();
+    },
+    [handleApplyWorkflow, appliedMessageIdsRef]
   );
 
   /**
@@ -638,7 +707,9 @@ export function useAIWorkflowApplications({
 
     if (
       latestMessage?.code &&
-      !appliedMessageIdsRef.current.has(latestMessage.id)
+      !appliedMessageIdsRef.current.has(latestMessage.id) &&
+      !inFlightApplyRef.current.has(latestMessage.id) &&
+      pendingReconnectApplyRef.current?.id !== latestMessage.id
     ) {
       // Streaming already imported this exact YAML to the canvas — skip the
       // re-import, which would only dirty the Y.Doc (unsaved red dot). If
@@ -673,19 +744,11 @@ export function useAIWorkflowApplications({
         !precedingUserMessage?.user_id;
 
       if (isCurrentUserAuthor) {
-        const code = latestMessage.code;
-        const messageId = latestMessage.id;
-        // Only mark as handled once we know the outcome. A 'gated' result
-        // (offline) leaves the message unmarked so this effect's next run —
-        // triggered naturally when isSessionConnected flips and gives
-        // handleApplyWorkflow a new identity — retries it instead of
-        // silently dropping it.
-        void (async () => {
-          const outcome = await handleApplyWorkflow(code, messageId);
-          if (outcome !== 'gated') {
-            appliedMessageIdsRef.current.add(messageId);
-          }
-        })();
+        // Guarded launch: the synchronous inFlightApplyRef marker prevents a
+        // re-run of this effect from starting a second concurrent apply. A
+        // 'gated' (offline) result parks the message for the reconnect effect
+        // rather than dropping it.
+        launchApply(latestMessage.id, latestMessage.code);
       } else {
         appliedMessageIdsRef.current.add(latestMessage.id);
       }
@@ -695,7 +758,7 @@ export function useAIWorkflowApplications({
     page,
     sessionId,
     connectionState,
-    handleApplyWorkflow,
+    launchApply,
     canApplyChanges,
     currentUserId,
     appliedMessageIdsRef,
@@ -704,8 +767,30 @@ export function useAIWorkflowApplications({
     saveNewWorkflow,
   ]);
 
+  // Retry a message that was blocked offline, once the session reconnects.
+  // This is the ONLY retry path for a gated apply — the auto-apply effect
+  // ignores the parked message so it doesn't re-attempt (and re-alert) on
+  // every render while still offline.
+  useEffect(() => {
+    if (!isSessionConnected) return;
+    const pending = pendingReconnectApplyRef.current;
+    if (!pending) return;
+    // Clear before launching so a concurrent effect run can't replay it twice.
+    pendingReconnectApplyRef.current = null;
+    launchApply(pending.id, pending.code);
+  }, [isSessionConnected, launchApply]);
+
   return {
     handleApplyWorkflow,
+    /**
+     * Guarded workflow-apply launcher for the manual "Apply" button. Prefer
+     * this over `handleApplyWorkflow` for user-message applies: it marks the
+     * message (in-flight + applied/parked) so the auto-apply effect can't later
+     * re-fire a duplicate apply for a manually-applied message. Signature is
+     * (messageId, yaml) — note the argument order differs from
+     * handleApplyWorkflow's (yaml, messageId).
+     */
+    launchApply,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,

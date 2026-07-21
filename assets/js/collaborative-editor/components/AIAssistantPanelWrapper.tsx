@@ -582,6 +582,7 @@ export function AIAssistantPanelWrapper({
   // Hook to handle workflow/job code application logic
   const {
     handleApplyWorkflow,
+    launchApply,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
@@ -739,7 +740,11 @@ export function AIAssistantPanelWrapper({
                     messages.some(m => m.from_global && m.code)) &&
                   !isApplyingWorkflow
                     ? (yaml, messageId) => {
-                        void handleApplyWorkflow(yaml, messageId);
+                        // Route through the hook's guarded launcher (not
+                        // handleApplyWorkflow raw) so a manual apply marks the
+                        // message and the auto-apply effect can't later re-fire
+                        // a duplicate import/save for it.
+                        launchApply(messageId, yaml);
                       }
                     : undefined
                 }
