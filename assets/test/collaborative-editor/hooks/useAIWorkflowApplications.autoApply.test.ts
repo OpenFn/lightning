@@ -8,7 +8,7 @@
  * - Connection state checking
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import type { MonacoHandle } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
@@ -328,89 +328,127 @@ describe('useAIWorkflowApplications - auto-application', () => {
     });
 
     it('does not auto-apply when readonly', async () => {
-      const session = createMockSession(
-        [
-          createMockMessage({
-            role: 'user',
-            user_id: 'user-123',
-          }),
-          createMockMessage({
-            code: 'name: Workflow',
-          }),
-        ],
-        'workflow_template'
-      );
-
-      renderHook(() =>
-        useAIWorkflowApplications({
-          sessionId: 'session-1',
-          page: 'workflow_template',
-          currentSession: session,
-          currentUserId: 'user-123',
-          aiMode: createMockAIMode('workflow_template'),
-          workflowActions: mockWorkflowActions,
-          monacoRef: createMockMonacoRef(),
-          jobs: [],
-          canApplyChanges: false, // Readonly
-          connectionState: 'connected' as ConnectionState,
-          setPreviewingMessageId: mockSetPreviewingMessageId,
-          previewingMessageId: null,
-          setApplyingMessageId: mockSetApplyingMessageId,
-          isNewWorkflow: false,
-          isSessionConnected: true,
-          isSessionConnecting: false,
-          appliedMessageIdsRef: { current: new Set() },
-          streamingApply: null,
-          streamingApplyActions: mockStreamingApplyActions,
-        })
-      );
-
-      await waitFor(() => {
-        expect(mockImportWorkflow).not.toHaveBeenCalled();
+      const userMessage = createMockMessage({
+        id: 'user-msg',
+        role: 'user',
+        user_id: 'user-123',
       });
+      const assistantMessage = createMockMessage({
+        id: 'assistant-msg',
+        code: 'name: Workflow',
+      });
+
+      // The assistant message has to ARRIVE, not just be present at mount:
+      // the first render with any session consumes the session-load guard,
+      // which marks existing messages as applied without importing them. A
+      // test that mounts with both messages therefore never reaches the
+      // readonly check and would pass whatever canApplyChanges said.
+      const { rerender } = renderHook(
+        ({ currentSession }: { currentSession: Session }) =>
+          useAIWorkflowApplications({
+            sessionId: 'session-1',
+            page: 'workflow_template',
+            currentSession,
+            currentUserId: 'user-123',
+            aiMode: createMockAIMode('workflow_template'),
+            workflowActions: mockWorkflowActions,
+            monacoRef: createMockMonacoRef(),
+            jobs: [],
+            canApplyChanges: false, // Readonly
+            connectionState: 'connected' as ConnectionState,
+            setPreviewingMessageId: mockSetPreviewingMessageId,
+            previewingMessageId: null,
+            setApplyingMessageId: mockSetApplyingMessageId,
+            isNewWorkflow: false,
+            isSessionConnected: true,
+            isSessionConnecting: false,
+            appliedMessageIdsRef: { current: new Set() },
+            streamingApply: null,
+            streamingApplyActions: mockStreamingApplyActions,
+          }),
+        {
+          initialProps: {
+            currentSession: createMockSession(
+              [userMessage],
+              'workflow_template'
+            ),
+          },
+        }
+      );
+
+      rerender({
+        currentSession: createMockSession(
+          [userMessage, assistantMessage],
+          'workflow_template'
+        ),
+      });
+
+      // Flush pending effects before asserting. waitFor is no use for a
+      // negative assertion - it resolves on the first synchronous pass, so it
+      // would report success before the auto-apply effect had a chance to run.
+      await act(async () => {});
+
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
     });
 
     it('does not auto-apply when connection is not established', async () => {
-      const session = createMockSession(
-        [
-          createMockMessage({
-            role: 'user',
-            user_id: 'user-123',
-          }),
-          createMockMessage({
-            code: 'name: Workflow',
-          }),
-        ],
-        'workflow_template'
-      );
-
-      renderHook(() =>
-        useAIWorkflowApplications({
-          sessionId: 'session-1',
-          page: 'workflow_template',
-          currentSession: session,
-          currentUserId: 'user-123',
-          aiMode: createMockAIMode('workflow_template'),
-          workflowActions: mockWorkflowActions,
-          monacoRef: createMockMonacoRef(),
-          jobs: [],
-          canApplyChanges: true,
-          connectionState: 'connecting' as ConnectionState, // Not connected
-          setPreviewingMessageId: mockSetPreviewingMessageId,
-          previewingMessageId: null,
-          setApplyingMessageId: mockSetApplyingMessageId,
-          isNewWorkflow: false,
-          isSessionConnected: true,
-          isSessionConnecting: false,
-          appliedMessageIdsRef: { current: new Set() },
-          streamingApply: null,
-          streamingApplyActions: mockStreamingApplyActions,
-        })
-      );
-
-      await waitFor(() => {
-        expect(mockImportWorkflow).not.toHaveBeenCalled();
+      const userMessage = createMockMessage({
+        id: 'user-msg',
+        role: 'user',
+        user_id: 'user-123',
       });
+      const assistantMessage = createMockMessage({
+        id: 'assistant-msg',
+        code: 'name: Workflow',
+      });
+
+      // As above: the assistant message has to arrive after mount so that
+      // auto-apply is genuinely reachable and the connection guard is what
+      // stops it.
+      const { rerender } = renderHook(
+        ({ currentSession }: { currentSession: Session }) =>
+          useAIWorkflowApplications({
+            sessionId: 'session-1',
+            page: 'workflow_template',
+            currentSession,
+            currentUserId: 'user-123',
+            aiMode: createMockAIMode('workflow_template'),
+            workflowActions: mockWorkflowActions,
+            monacoRef: createMockMonacoRef(),
+            jobs: [],
+            canApplyChanges: true,
+            connectionState: 'connecting' as ConnectionState, // Not connected
+            setPreviewingMessageId: mockSetPreviewingMessageId,
+            previewingMessageId: null,
+            setApplyingMessageId: mockSetApplyingMessageId,
+            isNewWorkflow: false,
+            isSessionConnected: true,
+            isSessionConnecting: false,
+            appliedMessageIdsRef: { current: new Set() },
+            streamingApply: null,
+            streamingApplyActions: mockStreamingApplyActions,
+          }),
+        {
+          initialProps: {
+            currentSession: createMockSession(
+              [userMessage],
+              'workflow_template'
+            ),
+          },
+        }
+      );
+
+      rerender({
+        currentSession: createMockSession(
+          [userMessage, assistantMessage],
+          'workflow_template'
+        ),
+      });
+
+      // See above: flush effects rather than waitFor for a negative assertion.
+      await act(async () => {});
+
+      expect(mockImportWorkflow).not.toHaveBeenCalled();
     });
 
     it('only applies latest message with code', async () => {
