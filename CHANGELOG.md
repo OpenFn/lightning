@@ -25,6 +25,9 @@ and this project adheres to
 - Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
   external identity provider and link or unlink providers from their profile
   settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
+- Creating a workflow now starts from a screen offering four ways in: describe
+  it to the AI assistant, build from scratch, pick a template, or import YAML.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or
@@ -38,6 +41,11 @@ and this project adheres to
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
+- New workflows are now written to the database as soon as you choose how to
+  start, rather than being previewed on the canvas until you pressed Create. The
+  Create button and the preview state it belonged to are gone, and the editor
+  header appears once the workflow exists.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
 - Replaced the full-screen AI disclaimer gate in the AI assistant with a
   persistent disclaimer footer shown in the chat input and landing screen.
   [#4911](https://github.com/OpenFn/lightning/issues/4911)
@@ -61,6 +69,12 @@ and this project adheres to
 
 ### Fixed
 
+- The workflow version dropdown stayed empty after creating and saving a new
+  workflow, until the page was refreshed.
+  [#4973](https://github.com/OpenFn/lightning/issues/4973)
+- Users without permission to create workflows are now redirected away from the
+  new-workflow page. They were previously shown creation options that silently
+  did nothing. [#4848](https://github.com/OpenFn/lightning/issues/4848)
 - Creating a workflow from a template, YAML import, or AI could leave nodes on
   the canvas with no saved workflow behind them when the save failed. Save
   failures during creation now surface a persistent Retry prompt, and creation
