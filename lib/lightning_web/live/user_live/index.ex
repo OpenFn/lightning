@@ -5,6 +5,7 @@ defmodule LightningWeb.UserLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
 
@@ -30,7 +31,12 @@ defmodule LightningWeb.UserLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    socket =
+      socket
+      |> assign(:table_params, normalize_table_params(params))
+      |> apply_action(socket.assigns.live_action, params)
+
+    {:noreply, socket}
   end
 
   defp apply_action(socket, :index, _params) do
@@ -63,5 +69,9 @@ defmodule LightningWeb.UserLive.Index do
          socket
          |> put_flash(:error, "Cancel user deletion failed")}
     end
+  end
+
+  defp normalize_table_params(params) do
+    AdminSearchParams.to_uri_params(params)
   end
 end

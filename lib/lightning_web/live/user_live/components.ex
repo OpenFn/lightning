@@ -2,7 +2,8 @@ defmodule LightningWeb.UserLive.Components do
   use LightningWeb, :component
 
   attr :socket, :map, required: true
-  attr :users, :list, required: true
+  attr :page, :map, required: true
+  attr :pagination_path, :any, required: true
   attr :live_action, :atom, required: true
   attr :sort_key, :string, default: "email"
   attr :sort_direction, :string, default: "asc"
@@ -32,7 +33,7 @@ defmodule LightningWeb.UserLive.Components do
       target={@target}
     />
 
-    <.table>
+    <.table page={@page} url={@pagination_path}>
       <:header>
         <.tr>
           <.th
@@ -102,7 +103,7 @@ defmodule LightningWeb.UserLive.Components do
         </.tr>
       </:header>
       <:body>
-        <%= for user <- @users do %>
+        <%= for user <- @page.entries do %>
           <.tr id={"user-#{user.id}"}>
             <.td class="max-w-40 wrap-break-word" title={user.first_name}>
               {user.first_name}
