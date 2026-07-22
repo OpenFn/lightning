@@ -7,25 +7,7 @@ import type {
   Template,
   WorkflowTemplate,
 } from '../types/template';
-
-function matchesQuery(
-  t: { name: string; description: string | null; tags: string[] },
-  q: string
-): boolean {
-  return (
-    t.name.toLowerCase().includes(q) ||
-    (t.description?.toLowerCase().includes(q) ?? false) ||
-    t.tags.some(tag => tag.toLowerCase().includes(q))
-  );
-}
-
-export function filterTemplates(
-  templates: WorkflowTemplate[],
-  q: string
-): WorkflowTemplate[] {
-  if (!q) return templates;
-  return templates.filter(t => matchesQuery(t, q));
-}
+import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
 
 export interface TemplateBrowserModalProps {
   isOpen: boolean;

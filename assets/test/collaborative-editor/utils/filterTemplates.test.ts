@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterTemplates } from '#/collaborative-editor/components/TemplateBrowserModal';
 import type { WorkflowTemplate } from '#/collaborative-editor/types/template';
+import { filterTemplates } from '#/collaborative-editor/utils/filterTemplates';
 
 const make = (overrides: Partial<WorkflowTemplate> = {}): WorkflowTemplate => ({
   id: 'template-1',
