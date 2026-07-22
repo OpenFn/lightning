@@ -431,6 +431,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       # For unsaved workflows, latest_snapshot_lock_version should be nil
       assert %{latest_snapshot_lock_version: nil} = response
     end
+
+    test "returns latest_snapshot_lock_version after the first save of a " <>
+           "from-scratch workflow without a rejoin",
+         %{
+           user: user,
+           project: project
+         } do
+      # Companion to the request_versions regression below: get_context reads
+      # the same workflow_kind assign, so a channel left frozen at :new after
+      # its first save starves the header of the latest version too.
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "seed_name", fn ->
+        Yex.Map.set(workflow_map, "name", "From Scratch Workflow")
+      end)
+
+      push_to_array(session_pid, "triggers", %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "webhook",
+        "enabled" => true
+      })
+
+      save_ref = push(socket, "save_workflow", %{})
+      assert_reply save_ref, :ok, %{lock_version: lock_version}
+
+      # Same socket, no rejoin: the context must now report the saved version.
+      context_ref = push(socket, "get_context", %{})
+      assert_reply context_ref, :ok, response
+
+      assert %{latest_snapshot_lock_version: ^lock_version} = response
+    end
   end
 
   describe "save_workflow" do
@@ -3118,6 +3166,62 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{versions: versions}
 
       assert versions == []
+    end
+
+    test "returns versions after the first save of a from-scratch workflow " <>
+           "without a rejoin",
+         %{
+           user: user,
+           project: project
+         } do
+      # A from-scratch workflow joins with action="new" (kind :new) and never
+      # rejoins after its first save, so the channel must self-promote out of
+      # :new on save. Before the fix, request_versions on the same socket kept
+      # short-circuiting to [] until a full page refresh.
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      # Sanity check: the channel starts out believing this is a brand-new
+      # workflow, which is exactly the state that used to wedge request_versions.
+      assert socket.assigns.workflow_kind == :new
+
+      # Seed a minimal, valid, saveable workflow into the Y.Doc: a name plus a
+      # valid webhook trigger.
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "seed_name", fn ->
+        Yex.Map.set(workflow_map, "name", "From Scratch Workflow")
+      end)
+
+      push_to_array(session_pid, "triggers", %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "webhook",
+        "enabled" => true
+      })
+
+      save_ref = push(socket, "save_workflow", %{})
+      assert_reply save_ref, :ok, %{lock_version: lv}
+
+      # Same socket, no rejoin: the first save produces exactly one version,
+      # and it is the latest.
+      versions_ref = push(socket, "request_versions", %{})
+      assert_reply versions_ref, :ok, %{versions: versions}
+
+      assert [%{lock_version: ^lv, is_latest: true}] = versions
     end
 
     test "does not short-circuit for a version-view socket", %{

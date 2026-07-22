@@ -88,7 +88,7 @@ export interface UICommands {
   /** Toggle AI Assistant panel */
   toggleAIAssistantPanel: () => void;
 
-  /** Dismiss the landing screen — called by downstream issues when a path is committed */
+  /** Dismiss the landing screen — called when a workflow-creation path is committed */
   dismissLandingScreen: () => void;
 
   /** Open the YAML import modal */

@@ -70,6 +70,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: true,
         isSessionConnected: false,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -145,6 +146,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         isSessionConnected: false,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
@@ -185,10 +187,11 @@ describe('useAIWorkflowApplications - offline gate', () => {
     type Props = {
       currentSession: { messages: (typeof userMessage)[] } | null;
       isSessionConnected: boolean;
+      isSessionConnecting: boolean;
     };
 
     const { rerender } = renderHook(
-      ({ currentSession, isSessionConnected }: Props) =>
+      ({ currentSession, isSessionConnected, isSessionConnecting }: Props) =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
           page: 'workflow_template',
@@ -205,6 +208,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: true,
           isSessionConnected,
+          isSessionConnecting,
           appliedMessageIdsRef,
           streamingApply: null,
           streamingApplyActions: mockStreamingApplyActions,
@@ -213,6 +217,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
         initialProps: {
           currentSession: { messages: [userMessage] },
           isSessionConnected: false,
+          isSessionConnecting: false,
         },
       }
     );
@@ -225,6 +230,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
         messages: [userMessage, assistantMessage] as (typeof userMessage)[],
       },
       isSessionConnected: false,
+      isSessionConnecting: false,
     });
 
     await waitFor(() => {
@@ -244,6 +250,7 @@ describe('useAIWorkflowApplications - offline gate', () => {
         messages: [userMessage, assistantMessage] as (typeof userMessage)[],
       },
       isSessionConnected: true,
+      isSessionConnecting: false,
     });
 
     await waitFor(() => {

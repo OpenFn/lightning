@@ -613,24 +613,10 @@ export const useWorkflowActions = () => {
           sessionContextStore.setBaseWorkflow(response.workflow);
         }
 
-        // Check if this is a new workflow and update URL
-        const currentState = sessionContextStore.getSnapshot();
-        if (currentState.isNewWorkflow) {
-          const workflowState = store.getSnapshot();
-          const workflowId = workflowState.workflow?.id;
-          const projectId = currentState.project?.id;
-
-          if (workflowId && projectId) {
-            // Update URL to include project_id
-            const url = new URL(window.location.href);
-            const searchParams = new URLSearchParams(url.search);
-            const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.history.pushState({}, '', newUrl);
-            // Mark workflow as no longer new after first save
-            sessionContextStore.clearIsNewWorkflow();
-          }
-        }
+        // No first-save handling here: Save & Sync is unavailable while the
+        // workflow is still new (the header that hosts it is unmounted), so a
+        // sync is always a save of an already-persisted workflow. The
+        // first-save transition lives in the plain save_workflow path.
 
         // Show success toast
         const successOptions: {
@@ -773,7 +759,8 @@ export const STILL_CONNECTING_ALERT = {
  * Shared pre/post-save flow for workflow-creation paths that always import
  * then save (landing/blank, template browser, YAML import). The AI assistant
  * path has a different shape (collaborator coordination, optional creation)
- * and reuses only `NOT_CONNECTED_ALERT`, not this hook.
+ * and reuses the `NOT_CONNECTED_ALERT`/`STILL_CONNECTING_ALERT` constants for
+ * its own offline gate, but not this hook.
  *
  * `createWorkflowFrom` returns a boolean rather than taking a success
  * callback — every caller's post-success cleanup differs (close a modal,

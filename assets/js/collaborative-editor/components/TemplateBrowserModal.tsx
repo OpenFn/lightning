@@ -7,25 +7,7 @@ import type {
   Template,
   WorkflowTemplate,
 } from '../types/template';
-
-function matchesQuery(
-  t: { name: string; description: string | null; tags: string[] },
-  q: string
-): boolean {
-  return (
-    t.name.toLowerCase().includes(q) ||
-    (t.description?.toLowerCase().includes(q) ?? false) ||
-    t.tags.some(tag => tag.toLowerCase().includes(q))
-  );
-}
-
-export function filterTemplates(
-  templates: WorkflowTemplate[],
-  q: string
-): WorkflowTemplate[] {
-  if (!q) return templates;
-  return templates.filter(t => matchesQuery(t, q));
-}
+import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
 
 export interface TemplateBrowserModalProps {
   isOpen: boolean;
@@ -54,7 +36,7 @@ export function TemplateBrowserModal({
   const userTemplates = templates.filter(
     (t): t is WorkflowTemplate => (t as BaseTemplate).isBase !== true
   );
-  const q = searchQuery.trim().toLowerCase();
+  const q = searchQuery.trim();
   const filteredUserTemplates = filterTemplates(userTemplates, q);
   const anyBaseTemplateMatches =
     q.length > 0 && baseTemplates.some(t => matchesQuery(t, q));
