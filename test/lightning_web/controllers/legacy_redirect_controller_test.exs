@@ -16,6 +16,22 @@ defmodule LightningWeb.LegacyRedirectControllerTest do
       assert redirected_to(conn) == "/projects/#{project.id}/w/new"
     end
 
+    test "preserves the query string on the /w/new redirect", %{
+      conn: conn,
+      project: project
+    } do
+      # new/2 forwards its query string like edit/2 does. The param used here
+      # is arbitrary: `?method=` was the original reason this mattered and has
+      # since been retired, but the forwarding behaviour outlived it and is
+      # otherwise uncovered.
+      conn = get(conn, "/projects/#{project.id}/w/new/legacy?foo=bar")
+
+      target = URI.parse(redirected_to(conn))
+
+      assert target.path == "/projects/#{project.id}/w/new"
+      assert URI.decode_query(target.query) == %{"foo" => "bar"}
+    end
+
     test "redirects /w/:id/legacy to the collaborative editor", %{
       conn: conn,
       project: project
