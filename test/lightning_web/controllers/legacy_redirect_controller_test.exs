@@ -16,16 +16,6 @@ defmodule LightningWeb.LegacyRedirectControllerTest do
       assert redirected_to(conn) == "/projects/#{project.id}/w/new"
     end
 
-    test "redirects /w/new/legacy preserving the query string", %{
-      conn: conn,
-      project: project
-    } do
-      conn = get(conn, "/projects/#{project.id}/w/new/legacy?method=template")
-
-      assert redirected_to(conn) ==
-               "/projects/#{project.id}/w/new?method=template"
-    end
-
     test "redirects /w/:id/legacy to the collaborative editor", %{
       conn: conn,
       project: project

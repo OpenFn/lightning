@@ -773,7 +773,8 @@ export const STILL_CONNECTING_ALERT = {
  * Shared pre/post-save flow for workflow-creation paths that always import
  * then save (landing/blank, template browser, YAML import). The AI assistant
  * path has a different shape (collaborator coordination, optional creation)
- * and reuses only `NOT_CONNECTED_ALERT`, not this hook.
+ * and reuses the `NOT_CONNECTED_ALERT`/`STILL_CONNECTING_ALERT` constants for
+ * its own offline gate, but not this hook.
  *
  * `createWorkflowFrom` returns a boolean rather than taking a success
  * callback — every caller's post-success cleanup differs (close a modal,

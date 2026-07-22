@@ -15,7 +15,7 @@ export const Z_INDEX = {
   INSPECTOR: 10,
   /** Manual run panel */
   RUN_PANEL: 20,
-  /** Side panels (Create Workflow, AI Assistant) */
+  /** Side panels (AI Assistant) */
   SIDE_PANEL: 30,
 } as const;
 
