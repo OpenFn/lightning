@@ -103,6 +103,15 @@ defmodule Lightning.Config.Bootstrap do
              Application.fetch_env!(:lightning, :is_resettable_demo)
            )
 
+    config :lightning, Lightning.Bootstrap,
+      enabled:
+        env!(
+          "ALLOW_BOOTSTRAP",
+          &Utils.ensure_boolean/1,
+          Application.get_env(:lightning, Lightning.Bootstrap, [])[:enabled] ||
+            false
+        )
+
     config :lightning,
            :default_retention_period,
            env!(

@@ -166,3 +166,6 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+# Allow declarative bootstrapping (Lightning.Bootstrap) in the test suite.
+config :lightning, Lightning.Bootstrap, enabled: true

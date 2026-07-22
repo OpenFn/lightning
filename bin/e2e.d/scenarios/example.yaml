@@ -1,0 +1,44 @@
+# Example bootstrap scenario.
+#
+# Boot Lightning into this exact state with:
+#
+#   bin/e2e start --scenario example
+#
+# (or `--scenario /abs/path/to/this.yaml`). Every key not marked "required"
+# has a sensible default — see scenarios/README.md for the full reference.
+
+users:
+  - email: owner@openfn.org
+    first_name: Olivia
+    last_name: Owner
+    # password defaults to "welcome12345"
+  - email: editor@openfn.org
+    first_name: Esther
+    last_name: Editor
+  - email: super@openfn.org
+    first_name: Sizwe
+    last_name: Super
+    superuser: true
+
+projects:
+  - name: example-project
+    members:
+      - { email: owner@openfn.org, role: owner }
+      - { email: editor@openfn.org, role: editor }
+    workflows:
+      - name: Example Workflow
+        trigger:
+          type: webhook
+        jobs:
+          - name: Transform data
+            adaptor: "@openfn/language-common@latest"
+            body: |
+              fn(state => {
+                console.log('transforming');
+                return state;
+              });
+          - name: Upload result
+            adaptor: "@openfn/language-common@latest"
+        edges:
+          - { from: trigger, to: Transform data, condition: always }
+          - { from: Transform data, to: Upload result, condition: on_job_success }
