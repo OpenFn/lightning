@@ -83,11 +83,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: () => <div data-testid="inspector">Inspector</div>,
 }));
 
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 // Mock FullScreenIDE
 // Note: The real FullScreenIDE has Escape key handler that calls onClose
 // We need to import useKeyboardShortcut here to simulate that behavior
@@ -309,6 +304,12 @@ const mockWorkflow: Workflow = {
 };
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  // Not exercised by this suite (landing-screen build-from-scratch flow is
+  // covered by CollaborativeEditor.build-from-scratch.test.tsx) — stubbed
+  // only because LandingScreenWrapper calls it unconditionally.
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: vi.fn().mockResolvedValue(true),
+  }),
   useNodeSelection: () => ({
     currentNode,
     selectNode: mockSelectNode,
@@ -364,7 +365,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useAIAssistantInitialMessage: () => null,
   useIsGitHubSyncModalOpen: () => false,
   useIsCreateWorkflowPanelCollapsed: () => true,
-  useImportPanelState: () => 'initial',
+  useShowLandingScreen: () => false,
   useUICommands: () => ({
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),
@@ -382,9 +383,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useTemplatePanel: () => ({
     templates: [],
     loading: false,
-    error: null,
     searchQuery: '',
-    selectedTemplate: null,
   }),
 }));
 
@@ -399,7 +398,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistant', () => ({
   useAISessionId: () => null,
   useAISessionType: () => null,
   useAIConnectionState: () => 'disconnected',
-  useAIHasReadDisclaimer: () => true,
   useAIWorkflowTemplateContext: () => null,
 }));
 
@@ -416,7 +414,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistantChannel', () => ({
     loadSessions: vi.fn(),
     updateContext: vi.fn(),
     retryMessage: vi.fn(),
-    markDisclaimerRead: vi.fn(),
   }),
 }));
 

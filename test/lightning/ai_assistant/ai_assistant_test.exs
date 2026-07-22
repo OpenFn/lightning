@@ -2,7 +2,6 @@ defmodule Lightning.AiAssistantTest do
   use Lightning.DataCase, async: true
   import Mox
 
-  alias Lightning.Accounts
   alias Lightning.AiAssistant
 
   setup :verify_on_exit!
@@ -1670,86 +1669,6 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert AiAssistant.enabled?() == false
-    end
-  end
-
-  describe "user_has_read_disclaimer?/1" do
-    test "returns true when user has read disclaimer within 24 hours", %{
-      user: user
-    } do
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == true
-    end
-
-    test "returns false when user has not read disclaimer", %{user: user} do
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-
-    test "returns false when disclaimer was read more than 24 hours ago", %{
-      user: user
-    } do
-      old_timestamp =
-        DateTime.utc_now() |> DateTime.add(-25, :hour) |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(old_timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-
-    test "handles integer timestamps", %{user: user} do
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          timestamp
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == true
-    end
-
-    test "returns false when disclaimer was read exactly 24 hours ago", %{
-      user: user
-    } do
-      old_timestamp =
-        DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(old_timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-  end
-
-  describe "mark_disclaimer_read/1" do
-    test "updates user preference with current timestamp", %{user: user} do
-      assert {:ok, updated_user} = AiAssistant.mark_disclaimer_read(user)
-
-      preference =
-        Accounts.get_preference(updated_user, "ai_assistant.disclaimer_read_at")
-
-      timestamp = String.to_integer(preference)
-      now = DateTime.utc_now() |> DateTime.to_unix()
-
-      assert abs(timestamp - now) < 2
     end
   end
 

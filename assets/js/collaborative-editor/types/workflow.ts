@@ -160,38 +160,6 @@ export namespace Workflow {
     applyingJobUser: { id: string; name: string } | null;
     applyingJobCodeMessageId: string | null;
   }
-
-  export interface Actions {
-    // Pattern 1: Y.Doc update → observer → immer update
-    updateJob: (id: string, updates: Partial<Session.Job>) => void;
-    updateJobName: (id: string, name: string) => void;
-    updateJobBody: (id: string, body: string) => void;
-    addJob: (job: Partial<Session.Job>) => void;
-    removeJob: (id: string) => void;
-    updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
-    setEnabled: (enabled: boolean) => void;
-
-    // Pattern 3: Direct immer update only (local UI state)
-    selectJob: (id: string | null) => void;
-    selectTrigger: (id: string | null) => void;
-    selectEdge: (id: string | null) => void;
-    clearSelection: () => void;
-
-    // Pattern 2: Y.Doc + immediate immer update (rare)
-    removeJobAndClearSelection: (id: string) => void;
-
-    // Y.js specific operations
-    getJobBodyYText: (id: string) => Y.Text | null;
-
-    // Workflow save operation
-    saveWorkflow: () => Promise<{
-      saved_at?: string;
-      lock_version?: number;
-    } | null>;
-
-    // Workflow reset operation
-    resetWorkflow: () => Promise<void>;
-  }
 }
 
 /* eslint-enable @typescript-eslint/no-namespace */

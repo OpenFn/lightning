@@ -18,6 +18,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
@@ -171,11 +172,22 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   }
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   // Create wrapper (still needed for React context)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );
@@ -1056,35 +1068,6 @@ describe('Header - Unsaved Changes Indicator', () => {
     });
 
     // No changes should mean no red dot
-    expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
-  });
-
-  test('does not show red dot for new workflows', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
-      isNewWorkflow: true,
-      triggerSync: true,
-    });
-
-    const { container } = render(
-      <Header projectId="project-1" workflowId="workflow-1">
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    await act(async () => {
-      emitSessionContext();
-      await new Promise(resolve => setTimeout(resolve, 150));
-    });
-
-    // Make changes to workflow
-    await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
-      workflowMap.set('name', 'New Workflow');
-    });
-
-    // Should not show red dot for new workflows
-    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
   });
 

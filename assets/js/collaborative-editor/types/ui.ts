@@ -5,7 +5,7 @@
  * and context for the collaborative editor.
  */
 
-import type { Template, WorkflowTemplate } from './template';
+import type { Template } from './template';
 
 // =============================================================================
 // TYPESCRIPT TYPES
@@ -41,23 +41,20 @@ export interface UIState {
   /** Initial message to send when AI Assistant panel opens */
   aiAssistantInitialMessage: string | null;
 
-  /** Create workflow panel collapsed state */
-  createWorkflowPanelCollapsed: boolean;
+  /** Whether the landing screen overlay is visible (only true at /new before a path is committed) */
+  showLandingScreen: boolean;
 
-  /** Template panel state */
+  /** Whether the YAML import modal is open */
+  showYAMLImportModal: boolean;
+
+  /** Whether the template browser modal is open */
+  showTemplateBrowserModal: boolean;
+
+  /** Template browser panel state */
   templatePanel: {
-    templates: WorkflowTemplate[];
+    templates: Template[];
     loading: boolean;
-    error: string | null;
     searchQuery: string;
-    selectedTemplate: Template | null;
-  };
-
-  /** Import panel state */
-  importPanel: {
-    yamlContent: string;
-    /** Import state machine: initial -> parsing -> valid/invalid -> importing */
-    importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
   };
 }
 
@@ -91,43 +88,29 @@ export interface UICommands {
   /** Toggle AI Assistant panel */
   toggleAIAssistantPanel: () => void;
 
-  /** Collapse create workflow panel */
-  collapseCreateWorkflowPanel: () => void;
+  /** Dismiss the landing screen — called when a workflow-creation path is committed */
+  dismissLandingScreen: () => void;
 
-  /** Expand create workflow panel */
-  expandCreateWorkflowPanel: () => void;
+  /** Open the YAML import modal */
+  openYAMLImportModal: () => void;
 
-  /** Toggle create workflow panel collapsed state */
-  toggleCreateWorkflowPanel: () => void;
+  /** Close the YAML import modal and reset import panel content */
+  closeYAMLImportModal: () => void;
 
-  /** Set templates list */
-  setTemplates: (templates: WorkflowTemplate[]) => void;
+  /** Open the template browser modal */
+  openTemplateBrowserModal: () => void;
 
-  /** Set templates loading state */
+  /** Close the template browser modal */
+  closeTemplateBrowserModal: () => void;
+
+  /** Set the list of templates shown in the template browser */
+  setTemplates: (templates: Template[]) => void;
+
+  /** Set the template browser's loading state */
   setTemplatesLoading: (loading: boolean) => void;
 
-  /** Set templates error */
-  setTemplatesError: (error: string | null) => void;
-
-  /** Set template search query */
+  /** Set the template browser's search query */
   setTemplateSearchQuery: (query: string) => void;
-
-  /** Select a template */
-  selectTemplate: (template: Template | null) => void;
-
-  /** Clear template panel state */
-  clearTemplatePanel: () => void;
-
-  /** Set import panel YAML content */
-  setImportYamlContent: (content: string) => void;
-
-  /** Set import panel state */
-  setImportState: (
-    state: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
-  ) => void;
-
-  /** Clear import panel state */
-  clearImportPanel: () => void;
 }
 
 /**

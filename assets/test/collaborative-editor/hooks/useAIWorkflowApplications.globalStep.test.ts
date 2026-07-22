@@ -47,6 +47,13 @@ describe('useAIWorkflowApplications - global messages', () => {
   const mockSetApplyingMessageId = vi.fn();
   const mockClearDiff = vi.fn();
   const mockShowDiff = vi.fn();
+  const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
 
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
@@ -55,6 +62,7 @@ describe('useAIWorkflowApplications - global messages', () => {
     startApplyingJobCode: mockStartApplyingJobCode,
     doneApplyingJobCode: mockDoneApplyingJobCode,
     updateJob: mockUpdateJob,
+    saveWorkflow: mockSaveWorkflow,
   };
 
   const createMockMonacoRef = () => ({
@@ -135,7 +143,12 @@ describe('useAIWorkflowApplications - global messages', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
         ...overrides,
       })
     );

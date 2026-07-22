@@ -69,7 +69,6 @@ export const defaultSessionContextState: SessionContextState = {
   versionsLoading: false,
   versionsError: null,
   workflow_template: null,
-  hasReadAIDisclaimer: false,
   limits: {},
   isNewWorkflow: false,
   isLoading: false,
@@ -87,18 +86,8 @@ export const defaultUIState: UIState = {
   githubSyncModalOpen: false,
   aiAssistantPanelOpen: false,
   aiAssistantInitialMessage: null,
-  createWorkflowPanelCollapsed: true,
-  templatePanel: {
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  },
-  importPanel: {
-    yamlContent: '',
-    importState: 'initial',
-  },
+  showLandingScreen: false,
+  showYAMLImportModal: false,
 };
 
 // =============================================================================
@@ -158,7 +147,6 @@ export function createMockSessionContextStore(
     clearError: vi.fn(),
     setLatestSnapshotLockVersion: vi.fn(),
     clearIsNewWorkflow: vi.fn(),
-    setHasReadAIDisclaimer: vi.fn(),
     getLimits: vi.fn().mockResolvedValue(undefined),
 
     // Internals
@@ -280,11 +268,6 @@ export function createMockHistoryStore(
  * All methods are vi.fn() mocks that can be inspected and configured.
  * State queries return sensible defaults that can be overridden.
  *
- * **State Tracking:**
- * By default, the mock tracks state changes made via setImportState,
- * setImportYamlContent, and clearImportPanel. This allows tests to
- * verify component behavior that depends on state updates.
- *
  * @param overrides - Partial UIStore to override defaults
  * @param initialState - Optional initial state to start with
  * @returns Complete UIStore mock
@@ -326,38 +309,9 @@ export function createMockUIStore(
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
     toggleAIAssistantPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    toggleCreateWorkflowPanel: vi.fn(),
-    setTemplates: vi.fn(),
-    setTemplatesLoading: vi.fn(),
-    setTemplatesError: vi.fn(),
-    setTemplateSearchQuery: vi.fn(),
-    selectTemplate: vi.fn(),
-    clearTemplatePanel: vi.fn(),
-    // Import panel commands that track state
-    setImportYamlContent: vi.fn((content: string) => {
-      currentState = {
-        ...currentState,
-        importPanel: { ...currentState.importPanel, yamlContent: content },
-      };
-    }),
-    setImportState: vi.fn(
-      (
-        importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
-      ) => {
-        currentState = {
-          ...currentState,
-          importPanel: { ...currentState.importPanel, importState },
-        };
-      }
-    ),
-    clearImportPanel: vi.fn(() => {
-      currentState = {
-        ...currentState,
-        importPanel: { yamlContent: '', importState: 'initial' },
-      };
-    }),
+    dismissLandingScreen: vi.fn(),
+    openYAMLImportModal: vi.fn(),
+    closeYAMLImportModal: vi.fn(),
   };
 
   return {

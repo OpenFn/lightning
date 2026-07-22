@@ -236,8 +236,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     [
       query_param("m"),
       query_param("s"),
-      query_param("a"),
-      query_param("method")
+      query_param("a")
     ] ++ chat_params()
   end
 
@@ -249,8 +248,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       query_param("m"),
       query_param("s"),
       query_param("a"),
-      query_param("v"),
-      query_param("method")
+      query_param("v")
     ] ++ chat_params()
   end
 
@@ -260,8 +258,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   def orthogonal_params do
     [
       query_param("a"),
-      query_param("v"),
-      query_param("method")
+      query_param("v")
     ] ++ chat_params()
   end
 

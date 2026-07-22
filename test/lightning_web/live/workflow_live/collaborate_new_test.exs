@@ -27,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateNewTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox.id}/w/new?method=template"
+          ~p"/projects/#{sandbox.id}/w/new"
         )
 
       assert html =~ "data-root-project-id=\"#{parent_project.id}\""
@@ -51,7 +51,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateNewTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox.id}/w/new?method=template"
+          ~p"/projects/#{sandbox.id}/w/new"
         )
 
       refute html =~ parent_project.name
@@ -153,6 +153,56 @@ defmodule LightningWeb.WorkflowLive.CollaborateNewTest do
 
       assert html =~
                "data-project-display-name=\"#{sandbox_a.name}/#{sandbox_b.name}\""
+    end
+  end
+
+  describe "create_workflow authorization" do
+    setup %{conn: conn} do
+      user = insert(:user)
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "redirects a viewer away from /w/new with an error flash", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :viewer}])
+
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(conn, ~p"/projects/#{project.id}/w/new")
+
+      assert to == ~p"/projects/#{project.id}/w"
+      assert flash["error"] == "You are not authorized to perform this action."
+    end
+
+    test "lets a role that can create workflows through to the editor", %{
+      conn: conn,
+      user: user
+    } do
+      for role <- [:owner, :admin, :editor] do
+        project =
+          insert(:project, project_users: [%{user_id: user.id, role: role}])
+
+        assert {:ok, _view, _html} =
+                 live(conn, ~p"/projects/#{project.id}/w/new"),
+               "expected #{role} to reach the new workflow editor"
+      end
+    end
+
+    test "does not block a viewer from opening an existing workflow", %{
+      conn: conn,
+      user: user
+    } do
+      # The gate is on creation only - viewers keep their read-only access to
+      # workflows that already exist.
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :viewer}])
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:ok, _view, _html} =
+               live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
     end
   end
 end

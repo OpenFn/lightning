@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { RunDetail } from '../../../js/collaborative-editor/types/history';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
@@ -178,17 +179,28 @@ async function createTestSetup(options: WrapperOptions = {}) {
   // Add spies for keyboard test assertions
   const saveWorkflowSpy = vi
     .spyOn(stores.workflowStore, 'saveWorkflow')
-    .mockResolvedValue(undefined);
+    .mockResolvedValue({ saved_at: new Date().toISOString(), lock_version: 1 });
   const openGitHubSyncModalSpy = vi.spyOn(
     stores.uiStore,
     'openGitHubSyncModal'
   );
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   // Wrapper with KeyboardProvider (keyboard-specific)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );
@@ -1061,12 +1073,26 @@ async function createRunSetup(
   }
   await new Promise(resolve => setTimeout(resolve, 150));
 
-  vi.spyOn(stores.workflowStore, 'saveWorkflow').mockResolvedValue(null);
+  vi.spyOn(stores.workflowStore, 'saveWorkflow').mockResolvedValue({
+    saved_at: new Date().toISOString(),
+    lock_version: 1,
+  });
+
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );

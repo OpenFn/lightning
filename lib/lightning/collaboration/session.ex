@@ -215,6 +215,7 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Workflow saved but its snapshot failed
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -229,6 +230,7 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
              | Ecto.Changeset.t()}
@@ -375,6 +377,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =

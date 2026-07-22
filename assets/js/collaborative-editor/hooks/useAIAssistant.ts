@@ -31,7 +31,6 @@ export const useAICommands = () => {
     disconnect: store.disconnect,
     setMessageSending: store.setMessageSending,
     retryMessage: store.retryMessage,
-    markDisclaimerRead: store.markDisclaimerRead,
     clearSession: store.clearSession,
   };
 };
@@ -127,6 +126,18 @@ export const useAIStreamingChanges = () => {
 };
 
 /**
+ * Get the pending streaming apply record (YAML already imported to the
+ * canvas during streaming, awaiting the final new_message)
+ */
+export const useAIStreamingApply = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingApply)
+  );
+};
+
+/**
  * Get streaming status
  */
 export const useAIStreamingStatus = () => {
@@ -145,17 +156,6 @@ export const useAIIsSending = () => {
   return useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.isSending)
-  );
-};
-
-/**
- * Get disclaimer read state
- */
-export const useAIHasReadDisclaimer = () => {
-  const store = useAIStore();
-  return useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.hasReadDisclaimer)
   );
 };
 

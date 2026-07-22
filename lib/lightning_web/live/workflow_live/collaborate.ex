@@ -29,6 +29,35 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         _session,
         %{assigns: %{project: project, access_root: access_root}} = socket
       ) do
+    if creating_new_workflow?(params) and
+         not Permissions.can?(
+           :project_users,
+           :create_workflow,
+           socket.assigns.current_user,
+           project
+         ) do
+      unauthorized_to_create(socket, project)
+    else
+      mount_editor(params, project, access_root, socket)
+    end
+  end
+
+  # The dashboard already disables the create button for users without
+  # :create_workflow, so landing here means a typed URL, a stale bookmark or a
+  # shared link. Bounce rather than render: the collaboration channel refuses
+  # the join for these users, but that rejection never reaches the browser (the
+  # provider only registers an "ok" receiver), so every card on the landing
+  # screen would look clickable and do nothing.
+  defp unauthorized_to_create(socket, project) do
+    {:ok,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")
+     |> redirect(to: ~p"/projects/#{project.id}/w")}
+  end
+
+  defp creating_new_workflow?(params), do: not is_map_key(params, "id")
+
+  defp mount_editor(params, project, access_root, socket) do
     is_sandbox? = Project.sandbox?(project)
 
     {:ok,
