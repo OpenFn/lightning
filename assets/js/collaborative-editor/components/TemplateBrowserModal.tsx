@@ -36,7 +36,7 @@ export function TemplateBrowserModal({
   const userTemplates = templates.filter(
     (t): t is WorkflowTemplate => (t as BaseTemplate).isBase !== true
   );
-  const q = searchQuery.trim().toLowerCase();
+  const q = searchQuery.trim();
   const filteredUserTemplates = filterTemplates(userTemplates, q);
   const anyBaseTemplateMatches =
     q.length > 0 && baseTemplates.some(t => matchesQuery(t, q));

@@ -41,10 +41,22 @@ describe('filterTemplates', () => {
     expect(filterTemplates([match, noMatch], 'kobo')).toEqual([match]);
   });
 
-  it('matches case-insensitively (caller normalizes to lowercase)', () => {
+  it('matches case-insensitively', () => {
     const template = make({ name: 'OpenMRS Integration' });
     expect(filterTemplates([template], 'openmrs')).toEqual([template]);
     expect(filterTemplates([template], 'openm')).toEqual([template]);
+  });
+
+  it('lowercases the query itself, so callers need not normalize it', () => {
+    const template = make({
+      name: 'DHIS2 to Postgres',
+      description: 'Syncs from OpenMRS',
+      tags: ['Webhook'],
+    });
+
+    expect(filterTemplates([template], 'DHIS2')).toEqual([template]);
+    expect(filterTemplates([template], 'OpenMRS')).toEqual([template]);
+    expect(filterTemplates([template], 'WEBHOOK')).toEqual([template]);
   });
 
   it('returns empty array when nothing matches', () => {

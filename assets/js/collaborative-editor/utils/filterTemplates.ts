@@ -2,16 +2,18 @@ import type { WorkflowTemplate } from '../types/template';
 
 /**
  * Case-insensitive substring match against a template's name, description,
- * or tags. Callers are expected to pass a pre-lowercased query `q`.
+ * or tags. The query is lowercased here, so callers may pass it raw.
  */
 export function matchesQuery(
   t: { name: string; description: string | null; tags: string[] },
   q: string
 ): boolean {
+  const needle = q.toLowerCase();
+
   return (
-    t.name.toLowerCase().includes(q) ||
-    (t.description?.toLowerCase().includes(q) ?? false) ||
-    t.tags.some(tag => tag.toLowerCase().includes(q))
+    t.name.toLowerCase().includes(needle) ||
+    (t.description?.toLowerCase().includes(needle) ?? false) ||
+    t.tags.some(tag => tag.toLowerCase().includes(needle))
   );
 }
 
