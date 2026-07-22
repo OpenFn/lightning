@@ -171,3 +171,6 @@ config :git_hooks,
     #   ]
     # ]
   ]
+
+# Allow declarative bootstrapping (Lightning.Bootstrap) in local development.
+config :lightning, Lightning.Bootstrap, enabled: true

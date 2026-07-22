@@ -172,6 +172,11 @@ config :philter, finch_name: Lightning.Finch
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
+
+# Declarative bootstrapping (Lightning.Bootstrap) is disabled by default. It is
+# enabled in dev/test config, and can be opted into for a release by setting the
+# ALLOW_BOOTSTRAP=true environment variable (wired in Lightning.Config.Bootstrap).
+config :lightning, Lightning.Bootstrap, enabled: false
 config :lightning, :claim_work_mem, nil
 
 config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10
