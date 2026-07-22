@@ -436,8 +436,9 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("validate_workflow_name", %{"workflow" => params}, socket) do
     project = socket.assigns.project
+    workflow_id = socket.assigns.workflow_id
 
-    validated_params = ensure_unique_name(params, project)
+    validated_params = ensure_unique_name(params, project, workflow_id)
 
     {:reply, {:ok, %{workflow: validated_params}}, socket}
   end
@@ -1122,7 +1123,7 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp ensure_unique_name(params, project) do
+  defp ensure_unique_name(params, project, workflow_id) do
     workflow_name =
       params["name"]
       |> to_string()
@@ -1132,7 +1133,12 @@ defmodule LightningWeb.WorkflowChannel do
         name -> name
       end
 
-    existing_workflows = Lightning.Projects.list_workflows(project)
+    # Exclude the workflow being edited so its own name isn't a clash.
+    existing_workflows =
+      project
+      |> Lightning.Projects.list_workflows()
+      |> Enum.reject(&(&1.id == workflow_id))
+
     unique_name = generate_unique_name(workflow_name, existing_workflows)
 
     Map.put(params, "name", unique_name)
