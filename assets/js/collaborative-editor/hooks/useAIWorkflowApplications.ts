@@ -111,7 +111,7 @@ export function useAIWorkflowApplications({
   aiMode,
   isNewWorkflow,
   isSessionConnected,
-  isSessionConnecting = false,
+  isSessionConnecting,
   onValidationError,
   workflowActions,
   monacoRef,
@@ -142,11 +142,9 @@ export function useAIWorkflowApplications({
   /**
    * True only during the initial workflow-session channel-join window —
    * distinct from a genuine disconnect. Lets the offline gate tell the user
-   * "still connecting" instead of a misleading "not connected". Optional
-   * (defaults to false) so existing test fakes that only set
-   * `isSessionConnected` keep compiling.
+   * "still connecting" instead of a misleading "not connected".
    */
-  isSessionConnecting?: boolean;
+  isSessionConnecting: boolean;
   onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;

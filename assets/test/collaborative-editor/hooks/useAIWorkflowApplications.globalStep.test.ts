@@ -145,6 +145,7 @@ describe('useAIWorkflowApplications - global messages', () => {
         setApplyingMessageId: mockSetApplyingMessageId,
         isNewWorkflow: false,
         isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,

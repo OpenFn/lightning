@@ -179,6 +179,7 @@ describe('useAIWorkflowApplications - auto-application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             isSessionConnected: true,
+            isSessionConnecting: false,
             appliedMessageIdsRef,
             streamingApply: null,
             streamingApplyActions: mockStreamingApplyActions,
@@ -236,6 +237,8 @@ describe('useAIWorkflowApplications - auto-application', () => {
         'workflow_template'
       );
 
+      const appliedMessageIdsRef = { current: new Set<string>() };
+
       renderHook(() =>
         useAIWorkflowApplications({
           sessionId: 'session-1',
@@ -253,16 +256,18 @@ describe('useAIWorkflowApplications - auto-application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           isSessionConnected: true,
-          appliedMessageIdsRef: { current: new Set() },
+          isSessionConnecting: false,
+          appliedMessageIdsRef,
           streamingApply: null,
           streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
-      // Wait to ensure effect runs
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Should not auto-apply existing messages
+      // On mount the effect marks existing messages as already-applied
+      // (so they're never re-imported) without importing them.
+      await waitFor(() => {
+        expect(appliedMessageIdsRef.current.has('assistant-msg')).toBe(true);
+      });
       expect(mockImportWorkflow).not.toHaveBeenCalled();
     });
 
@@ -305,6 +310,7 @@ describe('useAIWorkflowApplications - auto-application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             isSessionConnected: true,
+            isSessionConnecting: false,
             appliedMessageIdsRef,
             streamingApply: null,
             streamingApplyActions: mockStreamingApplyActions,
@@ -314,11 +320,10 @@ describe('useAIWorkflowApplications - auto-application', () => {
 
       rerender({ currentSession: session });
 
-      // Wait for effects
-      await new Promise(resolve => setTimeout(resolve, 10));
-
       // Should mark as applied but NOT import (different user)
-      expect(appliedMessageIdsRef.current.has('assistant-msg')).toBe(true);
+      await waitFor(() => {
+        expect(appliedMessageIdsRef.current.has('assistant-msg')).toBe(true);
+      });
       expect(mockImportWorkflow).not.toHaveBeenCalled();
     });
 
@@ -353,15 +358,16 @@ describe('useAIWorkflowApplications - auto-application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
           streamingApply: null,
           streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockImportWorkflow).not.toHaveBeenCalled();
+      });
     });
 
     it('does not auto-apply when connection is not established', async () => {
@@ -395,15 +401,16 @@ describe('useAIWorkflowApplications - auto-application', () => {
           setApplyingMessageId: mockSetApplyingMessageId,
           isNewWorkflow: false,
           isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
           streamingApply: null,
           streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      expect(mockImportWorkflow).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockImportWorkflow).not.toHaveBeenCalled();
+      });
     });
 
     it('only applies latest message with code', async () => {
@@ -454,6 +461,7 @@ describe('useAIWorkflowApplications - auto-application', () => {
             setApplyingMessageId: mockSetApplyingMessageId,
             isNewWorkflow: false,
             isSessionConnected: true,
+            isSessionConnecting: false,
             appliedMessageIdsRef,
             streamingApply: null,
             streamingApplyActions: mockStreamingApplyActions,
