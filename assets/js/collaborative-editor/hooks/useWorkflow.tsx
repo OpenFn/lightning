@@ -613,24 +613,10 @@ export const useWorkflowActions = () => {
           sessionContextStore.setBaseWorkflow(response.workflow);
         }
 
-        // Check if this is a new workflow and update URL
-        const currentState = sessionContextStore.getSnapshot();
-        if (currentState.isNewWorkflow) {
-          const workflowState = store.getSnapshot();
-          const workflowId = workflowState.workflow?.id;
-          const projectId = currentState.project?.id;
-
-          if (workflowId && projectId) {
-            // Update URL to include project_id
-            const url = new URL(window.location.href);
-            const searchParams = new URLSearchParams(url.search);
-            const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.history.pushState({}, '', newUrl);
-            // Mark workflow as no longer new after first save
-            sessionContextStore.clearIsNewWorkflow();
-          }
-        }
+        // No first-save handling here: Save & Sync is unavailable while the
+        // workflow is still new (the header that hosts it is unmounted), so a
+        // sync is always a save of an already-persisted workflow. The
+        // first-save transition lives in the plain save_workflow path.
 
         // Show success toast
         const successOptions: {
