@@ -336,6 +336,13 @@ defmodule LightningWeb.WorkflowChannel do
         workflow: workflow
       })
 
+      # The workflow now has a DB row, so this channel is no longer editing a
+      # brand-new (:new) workflow. No client rejoin happens after a first save,
+      # so we must self-promote the cached kind + struct here; otherwise
+      # request_versions / get_context keep short-circuiting to empty for the
+      # rest of this session (until a full page refresh re-joins as :existing).
+      socket = assign(socket, workflow: workflow, workflow_kind: :existing)
+
       {:reply,
        {:ok,
         %{
