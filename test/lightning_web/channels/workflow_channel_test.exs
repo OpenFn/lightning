@@ -438,7 +438,7 @@ defmodule LightningWeb.WorkflowChannelTest do
            user: user,
            project: project
          } do
-      # Companion to the request_versions regression (#4876): get_context reads
+      # Companion to the request_versions regression below: get_context reads
       # the same workflow_kind assign, so a channel left frozen at :new after
       # its first save starves the header of the latest version too.
       workflow_id = Ecto.UUID.generate()
@@ -3174,10 +3174,10 @@ defmodule LightningWeb.WorkflowChannelTest do
            user: user,
            project: project
          } do
-      # Regression (#4876): a from-scratch workflow joins with action="new"
-      # (kind :new) and never rejoins after its first save, so the channel must
-      # self-promote out of :new on save. Before the fix, request_versions on the
-      # same socket kept short-circuiting to [] until a full page refresh.
+      # A from-scratch workflow joins with action="new" (kind :new) and never
+      # rejoins after its first save, so the channel must self-promote out of
+      # :new on save. Before the fix, request_versions on the same socket kept
+      # short-circuiting to [] until a full page refresh.
       workflow_id = Ecto.UUID.generate()
 
       {:ok, _, socket} =
@@ -3216,15 +3216,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       save_ref = push(socket, "save_workflow", %{})
       assert_reply save_ref, :ok, %{lock_version: lv}
 
-      # Same socket, no rejoin: versions must now come back non-empty and the
-      # just-saved lock_version must be the latest.
+      # Same socket, no rejoin: the first save produces exactly one version,
+      # and it is the latest.
       versions_ref = push(socket, "request_versions", %{})
       assert_reply versions_ref, :ok, %{versions: versions}
 
-      assert versions != []
-
-      saved_version = Enum.find(versions, &(&1.lock_version == lv))
-      assert %{is_latest: true} = saved_version
+      assert [%{lock_version: ^lv, is_latest: true}] = versions
     end
 
     test "does not short-circuit for a version-view socket", %{
