@@ -9,7 +9,7 @@ Lightning's collaborative editor uses **three layers of state management**, dist
 1. **Y.Doc-backed (collaborative)** — Real-time multi-user data via Yjs CRDTs
    - WorkflowStore (workflow structure), AwarenessStore (user presence)
 2. **Phoenix Channel-backed (server-authoritative)** — Data pushed/pulled via the workflow channel
-   - SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
+   - SessionContextStore, AdaptorStore, CredentialStore, MetadataStore, HistoryStore, AIAssistantStore
 3. **Local-only (no network)** — Client-side UI state
    - UIStore, EditorPreferencesStore
 
@@ -17,13 +17,13 @@ All stores share the same foundation: closure-based factory (`createXxxStore()`)
 
 ## Initialization Order
 
-All 10 stores are created as peers in `StoreProvider.tsx`'s `useState` initializer. Three `useEffect` hooks wire them to the network in dependency order:
+All 11 stores are created as peers in `StoreProvider.tsx`'s `useState` initializer. Three `useEffect` hooks wire them to the network in dependency order:
 
 ```
 1. SessionStore.initializeSession(socket, room, userData)
       │
       ├─ when isConnected ──→ _connectChannel() on:
-      │     SessionContextStore, AdaptorStore, CredentialStore,
+      │     SessionContextStore, AdaptorStore, CredentialStore, MetadataStore,
       │     HistoryStore, AIAssistantStore
       │
       ├─ when isSynced ────→ WorkflowStore.connect(ydoc, provider)
@@ -148,6 +148,25 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 ---
 
+### MetadataStore
+**File:** `stores/createMetadataStore.ts`
+
+**Intent:** Provide adaptor-introspected metadata (e.g. describe-schema output) for job configuration, keyed per-job so multiple inspectors can request independently. Follows the same Channel → Zod → Immer pattern as AdaptorStore/CredentialStore.
+
+**Key State:** `jobs` (`Map<jobId, JobMetadataState>`, each with `metadata`, `error`, `isLoading`, `lastFetched`, `cacheKey`)
+
+**Key behavior:**
+- `requestMetadata(jobId, adaptor, credentialId)` is request/reply via `channelRequest` (`request_metadata` push), not a broadcast-listened event — there is no `metadata_updated` channel event today
+- Per-job cache key is `${adaptor}:${credentialId}`; a matching cache key with existing metadata short-circuits the request instead of re-fetching
+- Skips redundant requests while a job's metadata is already loading
+
+**Commands:** `requestMetadata`, `clearMetadata`, `clearAllMetadata`
+**Queries:** `getMetadataForJob`, `isLoadingForJob`, `getErrorForJob`
+
+**Don't use for:** The adaptor/credential catalogs themselves (see AdaptorStore/CredentialStore) — this store only holds per-job introspection results.
+
+---
+
 ### HistoryStore
 **File:** `stores/createHistoryStore.ts`
 
@@ -240,6 +259,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 | Who am I, what project, what permissions? | **SessionContextStore** |
 | Adaptor catalog for job config? | **AdaptorStore** |
 | Credential catalog for job config? | **CredentialStore** |
+| Per-job adaptor-introspected metadata (describe-schema)? | **MetadataStore** |
 | Execution history, run inspection? | **HistoryStore** |
 | AI assistant chat sessions? | **AIAssistantStore** |
 | Panel/modal visibility, template browsing? | **UIStore** |
@@ -258,14 +278,21 @@ User edits → Y.Doc transaction → observeDeep fires → produce(state, draft 
 ```
 
 ### Pattern 2: Command → Y.Doc + Immediate Immer
-**Used by:** WorkflowStore (selections + Y.Doc writes), AwarenessStore (local cursor)
+**Used by:** WorkflowStore (`removeJobAndClearSelection` — Y.Doc write + immediate local UI update), AwarenessStore (local cursor)
 ```
 Command → write to Y.Doc/Awareness → produce() for immediate UI → notify()
 (Observer also fires but state already matches = idempotent)
 ```
+**Note:** this is a hybrid pattern and should be used sparingly — evaluate whether
+Pattern 1 or Pattern 4 alone is sufficient first. Plain collaborative-field
+updates like `updateJob`/`updateWorkflow` are pure Pattern 1 (Y.Doc write only,
+Immer state comes from the observer); selection-only commands like `selectJob`
+are pure Pattern 4 (no Y.Doc write at all). Pattern 2 is reserved for operations
+that must touch both in the same command, such as clearing a selection when the
+selected item is deleted.
 
 ### Pattern 3: Channel → Zod → Immer → Notify
-**Used by:** SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
+**Used by:** SessionContextStore, AdaptorStore, CredentialStore, MetadataStore, HistoryStore, AIAssistantStore
 ```
 Channel event/reply → Zod schema validation → produce(state, draft => ...) → notify()
 ```
