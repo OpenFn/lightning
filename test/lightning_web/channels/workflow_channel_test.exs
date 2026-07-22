@@ -431,6 +431,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       # For unsaved workflows, latest_snapshot_lock_version should be nil
       assert %{latest_snapshot_lock_version: nil} = response
     end
+
+    test "returns latest_snapshot_lock_version after the first save of a " <>
+           "from-scratch workflow without a rejoin",
+         %{
+           user: user,
+           project: project
+         } do
+      # Companion to the request_versions regression (#4876): get_context reads
+      # the same workflow_kind assign, so a channel left frozen at :new after
+      # its first save starves the header of the latest version too.
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "seed_name", fn ->
+        Yex.Map.set(workflow_map, "name", "From Scratch Workflow")
+      end)
+
+      push_to_array(session_pid, "triggers", %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "webhook",
+        "enabled" => true
+      })
+
+      save_ref = push(socket, "save_workflow", %{})
+      assert_reply save_ref, :ok, %{lock_version: lock_version}
+
+      # Same socket, no rejoin: the context must now report the saved version.
+      context_ref = push(socket, "get_context", %{})
+      assert_reply context_ref, :ok, response
+
+      assert %{latest_snapshot_lock_version: ^lock_version} = response
+    end
   end
 
   describe "save_workflow" do
