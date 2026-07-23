@@ -176,6 +176,38 @@ defmodule LightningWeb.WorkflowLive.CollaborateNewTest do
       assert flash["error"] == "You are not authorized to perform this action."
     end
 
+    test "redirects a viewer away from /w/new even with an ?id= query param", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :viewer}])
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(conn, ~p"/projects/#{project.id}/w/new?id=#{workflow.id}")
+
+      assert to == ~p"/projects/#{project.id}/w"
+      assert flash["error"] == "You are not authorized to perform this action."
+    end
+
+    test "ignores ?id= on /w/new and still mounts a brand new workflow", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      workflow = insert(:workflow, project: project, name: "Existing workflow")
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new?id=#{workflow.id}")
+
+      refute html =~ "Existing workflow"
+      assert page_title(view) =~ "New Workflow"
+    end
+
     test "lets a role that can create workflows through to the editor", %{
       conn: conn,
       user: user
