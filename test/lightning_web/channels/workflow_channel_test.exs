@@ -1505,6 +1505,32 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert validated["other_field"] == "value"
     end
 
+    test "returns the workflow's own name unchanged when editing it", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => workflow.name}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == workflow.name
+    end
+
+    test "still suffixes when the name clashes with a different workflow", %{
+      socket: socket
+    } do
+      # "Test Workflow" belongs to a different workflow, so it still suffixes.
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Test Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Test Workflow 1"
+    end
+
     test "sequential numbering skips gaps", %{socket: socket} do
       # Create workflows with gaps: "Gap Test", "Gap Test 1", "Gap Test 3"
       insert(:workflow,

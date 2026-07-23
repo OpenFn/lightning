@@ -58,6 +58,10 @@ and this project adheres to
 
 ### Fixed
 
+- The AI assistant no longer appends " 1" to a workflow's name each time it
+  edits an already-saved workflow. Name-uniqueness validation now excludes the
+  workflow being edited, so its own name isn't treated as a clash.
+  [#5009](https://github.com/OpenFn/lightning/pull/5009)
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
