@@ -82,12 +82,59 @@ defmodule Lightning.AuthProvidersTest do
               "client_id" => "the client id",
               "redirect_uri" => endpoint_url <> "/redirect_here",
               "response_type" => "code",
-              "scope" => "openid email profile"
+              "scope" => "openid email profile",
+              "state" => "the-state",
+              "nonce" => "the-nonce"
             })
         })
         |> URI.to_string()
 
-      assert Handler.authorize_url(handler) == auth_url
+      assert Handler.authorize_url(handler,
+               state: "the-state",
+               nonce: "the-nonce"
+             ) ==
+               auth_url
+    end
+
+    test "from_model carries the allow_unverified_email flag", %{
+      bypass: bypass,
+      endpoint_url: endpoint_url,
+      handler_name: handler_name
+    } do
+      Bypass.expect_once(bypass, "GET", "auth/.well-known", fn conn ->
+        Plug.Conn.resp(
+          conn,
+          200,
+          %{
+            "authorization_endpoint" => "#{endpoint_url}/auth_endpoint",
+            "token_endpoint" => "#{endpoint_url}/token_endpoint"
+          }
+          |> Jason.encode!()
+        )
+      end)
+
+      model = %Lightning.AuthProviders.AuthConfig{
+        name: handler_name,
+        discovery_url: endpoint_url <> "/auth/.well-known",
+        client_id: "id",
+        client_secret: "secret",
+        redirect_uri: endpoint_url <> "/redirect",
+        allow_unverified_email: true
+      }
+
+      assert {:ok, handler} = Handler.from_model(model)
+      assert handler.allow_unverified_email == true
+    end
+  end
+
+  describe "Store.get_handler/2" do
+    test "surfaces a build error instead of crashing" do
+      name = "missing-#{System.unique_integer([:positive])}"
+
+      assert {:error, :discovery_unreachable} =
+               Lightning.AuthProviders.Store.get_handler(name, fn _ ->
+                 {:error, :discovery_unreachable}
+               end)
     end
   end
 end

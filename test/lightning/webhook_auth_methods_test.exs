@@ -386,19 +386,33 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "find_by_id!/1" do
-    test "retrieves the auth method by id" do
-      auth_method = insert(:webhook_auth_method)
+  describe "find_for_project/3" do
+    test "retrieves the auth method when it belongs to the project" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
 
-      assert WebhookAuthMethods.find_by_id!(auth_method.id) ==
-               auth_method
-               |> unload_relation(:project)
+      assert WebhookAuthMethods.find_for_project(project, auth_method.id).id ==
+               auth_method.id
     end
 
-    test "raises an error if there is no matching auth method" do
-      assert_raise Ecto.NoResultsError, fn ->
-        WebhookAuthMethods.find_by_id!(Ecto.UUID.generate())
-      end
+    test "returns nil for an auth method in another project" do
+      auth_method = insert(:webhook_auth_method, project: insert(:project))
+
+      assert WebhookAuthMethods.find_for_project(
+               insert(:project),
+               auth_method.id
+             ) == nil
+    end
+
+    test "returns nil for a missing or malformed id" do
+      project = insert(:project)
+
+      assert WebhookAuthMethods.find_for_project(
+               project,
+               Ecto.UUID.generate()
+             ) == nil
+
+      assert WebhookAuthMethods.find_for_project(project, "not-a-uuid") == nil
     end
   end
 

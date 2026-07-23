@@ -54,6 +54,8 @@ defmodule Lightning.AdaptorService do
   """
   use Agent
 
+  alias Lightning.AdaptorRegistry
+
   require Logger
 
   defmodule Adaptor do
@@ -144,24 +146,20 @@ defmodule Lightning.AdaptorService do
 
     def install(adaptors, dir) when is_list(adaptors) do
       System.cmd(
-        "/usr/bin/env",
+        "npm",
         [
-          "sh",
-          "-c",
-          """
-          npm install \
-            --no-save \
-            --ignore-scripts \
-            --no-fund \
-            --no-audit \
-            --no-package-lock \
-            --global \
-            --prefix #{dir} \
-            #{Enum.join(adaptors, " ")}
-          """
+          "install",
+          "--no-save",
+          "--ignore-scripts",
+          "--no-fund",
+          "--no-audit",
+          "--no-package-lock",
+          "--global",
+          "--prefix",
+          dir | adaptors
         ],
-        stderr_to_stdout: true,
-        env: []
+        env: [],
+        stderr_to_stdout: true
       )
     end
 
@@ -197,11 +195,18 @@ defmodule Lightning.AdaptorService do
             name: GenServer.server(),
             adaptors: [Adaptor.t()],
             adaptors_path: binary(),
-            repo: module()
+            repo: module(),
+            adaptor_registry: GenServer.server()
           }
 
     @enforce_keys [:adaptors_path]
-    defstruct @enforce_keys ++ [:name, adaptors: [], repo: Repo]
+    defstruct @enforce_keys ++
+                [
+                  :name,
+                  adaptors: [],
+                  repo: Repo,
+                  adaptor_registry: Lightning.AdaptorRegistry
+                ]
 
     def find_adaptor(%{adaptors: adaptors}, fun) when is_function(fun) do
       Enum.find(adaptors, fun)
@@ -280,6 +285,7 @@ defmodule Lightning.AdaptorService do
 
   @spec install(Agent.agent(), binary()) ::
           {:ok, Adaptor.t()}
+          | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, package) when is_binary(package) do
     install(agent, resolve_package_name(package))
@@ -287,20 +293,31 @@ defmodule Lightning.AdaptorService do
 
   @spec install(Agent.agent(), package_spec()) ::
           {:ok, Adaptor.t()}
+          | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
-  def install(agent, package_spec) do
-    agent
-    |> find_adaptor(package_spec)
-    |> case do
-      nil -> install!(agent, package_spec)
-      existing -> {:ok, existing}
+  def install(agent, {package_name, _version} = package_spec) do
+    registry = Agent.get(agent, fn state -> state.adaptor_registry end)
+
+    if AdaptorRegistry.exists?(registry, package_name) do
+      agent
+      |> find_adaptor(package_spec)
+      |> case do
+        nil -> install!(agent, package_spec)
+        existing -> {:ok, existing}
+      end
+    else
+      Logger.warning(
+        "Refusing to install non-permitted adaptor: #{inspect(package_name)}"
+      )
+
+      {:error, :adaptor_not_permitted}
     end
   end
 
   @spec install!(Agent.agent(), package_spec()) ::
           {:ok, Adaptor.t()}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
-  def install!(agent, {package_name, version} = package_spec) do
+  defp install!(agent, {package_name, version} = package_spec) do
     new_adaptor = %Adaptor{
       name: package_name,
       version: version,
@@ -334,18 +351,12 @@ defmodule Lightning.AdaptorService do
   end
 
   def resolve_package_name(package_name) when is_binary(package_name) do
-    ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
+    AdaptorRegistry.adaptor_format()
     |> Regex.run(package_name)
     |> case do
-      [_, name, version] ->
-        {name, version}
-
-      [_, _name] ->
-        {package_name, nil}
-
-      _ ->
-        raise ArgumentError,
-              "Only npm style package names are currently supported"
+      [_, name, version] -> {name, version}
+      [_, name] -> {name, nil}
+      _ -> {nil, nil}
     end
   end
 

@@ -34,6 +34,7 @@ defmodule Lightning.AdaptorRegistry do
   """
 
   use GenServer
+
   require Logger
 
   @excluded_adaptors [
@@ -43,6 +44,14 @@ defmodule Lightning.AdaptorRegistry do
     "@openfn/language-collections"
   ]
   @timeout 30_000
+
+  # Captures the package name and optional version. Anchored with \A…\z (NOT
+  # ^…$, since $ matches before a trailing \n). Accepts scoped (@scope/name) and
+  # unscoped names with an optional @version (semver, prerelease, or the tokens
+  # `latest` / `local`); excludes newlines and shell metacharacters. Used to
+  # validate the :adaptor field (via `adaptor_format/0`, where the capture groups
+  # are ignored) and to split a package string in `resolve_package_name/1`.
+  @adaptor_format ~r{\A(@?[\w.-]+(?:/[\w.-]+)?)(?:@([\w.-]+))?\z}
 
   defmodule Npm do
     @moduledoc """
@@ -204,6 +213,12 @@ defmodule Lightning.AdaptorRegistry do
     {:reply, latest, state}
   end
 
+  @impl GenServer
+  def handle_call({:exists?, module_name}, _from, state) do
+    {:reply, Enum.any?(state, fn %{name: name} -> name == module_name end),
+     state}
+  end
+
   @doc """
   Get the current in-process list of adaptors.
   This call will wait behind the `:continue` message when the process starts
@@ -231,6 +246,20 @@ defmodule Lightning.AdaptorRegistry do
           list() | nil
   def latest_for(server \\ __MODULE__, module_name) do
     GenServer.call(server, {:latest_for, module_name}, @timeout)
+  end
+
+  @doc """
+  Returns true if the given package name is present in the registry.
+
+  Name-only membership check (version is ignored).
+  """
+  @spec exists?(server :: GenServer.server(), module_name :: String.t() | nil) ::
+          boolean()
+  def exists?(server \\ __MODULE__, module_name)
+  def exists?(_server, nil), do: false
+
+  def exists?(server, module_name) when is_binary(module_name) do
+    GenServer.call(server, {:exists?, module_name}, @timeout)
   end
 
   @doc """
@@ -355,6 +384,17 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @doc """
+  The regular expression describing a valid adaptor package string: an npm
+  package name (scoped or unscoped) with an optional `@version`.
+
+  The single definition of a valid adaptor name — used here to split a package
+  string, by `Lightning.AdaptorService` when resolving an install, and by
+  `Lightning.Workflows.Job` to validate the `:adaptor` field.
+  """
+  @spec adaptor_format() :: Regex.t()
+  def adaptor_format, do: @adaptor_format
+
+  @doc """
   Destructures an NPM style package name into module name and version.
 
   **Example**
@@ -372,14 +412,14 @@ defmodule Lightning.AdaptorRegistry do
   @spec resolve_package_name(package_name :: String.t()) ::
           {binary | nil, binary | nil}
   def resolve_package_name(package_name) when is_binary(package_name) do
-    ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
+    @adaptor_format
     |> Regex.run(package_name)
     |> case do
       [_, name, version] ->
         {name, version}
 
-      [_, _name] ->
-        {package_name, nil}
+      [_, name] ->
+        {name, nil}
 
       _ ->
         {nil, nil}

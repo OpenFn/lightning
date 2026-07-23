@@ -22,6 +22,27 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              |> element("#workflows-#{project.id}", "No workflows yet")
     end
 
+    test "does not intern arbitrary sort params as atoms", %{
+      conn: conn,
+      project: project
+    } do
+      # Unknown sort/dir values must not be turned into atoms, otherwise a
+      # crafted URL could exhaust the BEAM atom table. Unique so no earlier test
+      # could have interned them.
+      bogus_key = "bogus_sort_#{System.unique_integer([:positive])}"
+      bogus_dir = "bogus_dir_#{System.unique_integer([:positive])}"
+
+      {:ok, _view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w?sort=#{bogus_key}&dir=#{bogus_dir}"
+        )
+
+      # The page loaded (defaulting to name/asc) without interning either value.
+      assert_raise ArgumentError, fn -> String.to_existing_atom(bogus_key) end
+      assert_raise ArgumentError, fn -> String.to_existing_atom(bogus_dir) end
+    end
+
     test "renders a component when run limit has been reached", %{
       conn: conn,
       project: %{id: project_id}
@@ -315,6 +336,71 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert view |> has_element?("#new-workflow-button[type=button]")
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
+
+    @tag role: :editor
+    test "does not toggle a workflow outside the project", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow with an enabled trigger, in a project the user isn't in.
+      other_project = insert(:project)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+      job = build(:job)
+
+      foreign_workflow =
+        build(:workflow, project: other_project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # A foreign id, and a malformed one, are both refused without acting.
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "false",
+               "value_key" => foreign_workflow.id
+             }) =~ "Workflow not found."
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "false",
+               "value_key" => "not-a-uuid"
+             }) =~ "Workflow not found."
+
+      # The foreign workflow's trigger stays enabled.
+      assert Lightning.Workflows.get_workflow!(foreign_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.all?(& &1.enabled)
+    end
+
+    @tag role: :viewer
+    test "viewers cannot toggle a workflow's state", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow with a disabled trigger in the viewer's own project. The
+      # toggle control renders for viewers too, so they can click it.
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      view |> element("#toggle-control-#{workflow.id}") |> render_click()
+
+      # The click has no effect; the trigger stays disabled.
+      refute Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers]).triggers
+             |> Enum.any?(& &1.enabled)
+    end
   end
 
   describe "creating workflows" do
@@ -431,6 +517,30 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                item_id: ^workflow_id,
                actor_id: ^user_id
              } = audit
+    end
+
+    @tag role: :editor
+    test "does not delete a workflow outside the project", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow in a project the user isn't in, even though they can delete
+      # in their own project.
+      other_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: other_project)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # A foreign id, and a malformed one, are both refused without acting.
+      assert view
+             |> render_click("delete_workflow", %{"id" => foreign_workflow.id}) =~
+               "Workflow not found."
+
+      assert view |> render_click("delete_workflow", %{"id" => "not-a-uuid"}) =~
+               "Workflow not found."
+
+      # The foreign workflow is not marked for deletion.
+      assert Lightning.Repo.reload(foreign_workflow).deleted_at == nil
     end
   end
 

@@ -3,18 +3,26 @@ defmodule LightningWeb.CredentialTransferControllerTest do
 
   import Lightning.Factories
 
-  alias Lightning.Accounts.UserToken
-  alias Lightning.Repo
-
   setup do
     owner = insert(:user)
     receiver = insert(:user)
     credential = insert(:credential, user: owner)
 
-    {token, user_token} =
-      UserToken.build_email_token(owner, "credential_transfer", owner.email)
+    :ok =
+      Lightning.Credentials.initiate_credential_transfer(
+        owner,
+        receiver,
+        credential
+      )
 
-    {:ok, _token} = Repo.insert(user_token)
+    # Pull the signed JWT out of the confirmation email delivered by
+    # initiate_credential_transfer/3 (single-segment /transfer/:token route).
+    assert_received {:email, email}
+
+    [token] =
+      Regex.run(~r{/transfer/([^\s\n/]+)}, email.text_body,
+        capture: :all_but_first
+      )
 
     %{
       owner: owner,
@@ -24,18 +32,9 @@ defmodule LightningWeb.CredentialTransferControllerTest do
     }
   end
 
-  describe "GET /credentials/transfer/:credential_id/:receiver_id/:token" do
-    test "requires user authentication", %{
-      conn: conn,
-      receiver: %{id: receiver_id},
-      credential: %{id: credential_id},
-      token: token
-    } do
-      conn =
-        get(
-          conn,
-          ~p"/credentials/transfer/#{credential_id}/#{receiver_id}/#{token}"
-        )
+  describe "GET /credentials/transfer/:token" do
+    test "requires user authentication", %{conn: conn, token: token} do
+      conn = get(conn, ~p"/credentials/transfer/#{token}")
 
       assert redirected_to(conn) == ~p"/users/log_in"
     end
@@ -50,9 +49,7 @@ defmodule LightningWeb.CredentialTransferControllerTest do
       conn =
         conn
         |> log_in_user(owner)
-        |> get(
-          ~p"/credentials/transfer/#{credential_id}/#{receiver_id}/#{token}"
-        )
+        |> get(~p"/credentials/transfer/#{token}")
 
       assert redirected_to(conn) == ~p"/projects"
 
@@ -74,9 +71,7 @@ defmodule LightningWeb.CredentialTransferControllerTest do
       conn =
         conn
         |> log_in_user(non_owner)
-        |> get(
-          ~p"/credentials/transfer/#{credential_id}/#{receiver_id}/#{token}"
-        )
+        |> get(~p"/credentials/transfer/#{token}")
 
       assert redirected_to(conn) == ~p"/projects"
       assert Phoenix.Flash.get(conn.assigns.flash, :nav) == :no_access_no_back
@@ -94,9 +89,7 @@ defmodule LightningWeb.CredentialTransferControllerTest do
       conn =
         conn
         |> log_in_user(owner)
-        |> get(
-          ~p"/credentials/transfer/#{credential_id}/#{receiver_id}/invalid-token"
-        )
+        |> get(~p"/credentials/transfer/invalid-token")
 
       assert redirected_to(conn) == ~p"/projects"
 
@@ -107,49 +100,28 @@ defmodule LightningWeb.CredentialTransferControllerTest do
       refute updated_credential.user_id == receiver_id
     end
 
-    test "returns error with non-existent credential", %{
+    test "returns error once the transfer has been revoked", %{
       conn: conn,
       owner: owner,
       receiver: %{id: receiver_id},
+      credential: credential,
       token: token
     } do
-      non_existent_credential_id = Ecto.UUID.generate()
+      assert {:ok, _} =
+               Lightning.Credentials.revoke_transfer(credential.id, owner)
 
       conn =
         conn
         |> log_in_user(owner)
-        |> get(
-          ~p"/credentials/transfer/#{non_existent_credential_id}/#{receiver_id}/#{token}"
-        )
-
-      assert redirected_to(conn) == ~p"/projects"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-               "Credential transfer couldn't be confirmed."
-    end
-
-    test "returns error with non-existent receiver", %{
-      conn: conn,
-      owner: owner,
-      credential: %{id: credential_id},
-      token: token
-    } do
-      non_existent_receiver_id = Ecto.UUID.generate()
-
-      conn =
-        conn
-        |> log_in_user(owner)
-        |> get(
-          ~p"/credentials/transfer/#{credential_id}/#{non_existent_receiver_id}/#{token}"
-        )
+        |> get(~p"/credentials/transfer/#{token}")
 
       assert redirected_to(conn) == ~p"/projects"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "Credential transfer couldn't be confirmed."
 
-      updated_credential = Lightning.Credentials.get_credential!(credential_id)
-      refute updated_credential.user_id == non_existent_receiver_id
+      updated_credential = Lightning.Credentials.get_credential!(credential.id)
+      refute updated_credential.user_id == receiver_id
     end
   end
 end

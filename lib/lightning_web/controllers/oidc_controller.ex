@@ -58,8 +58,8 @@ defmodule LightningWeb.OidcController do
   """
   def new(conn, %{"provider" => provider, "code" => code, "state" => state}) do
     case verify_oauth_state(conn, provider, state) do
-      {:ok, intent, conn} ->
-        complete_sso_callback(conn, provider, code, intent)
+      {:ok, intent, nonce, conn} ->
+        complete_sso_callback(conn, provider, code, intent, nonce)
 
       {:error, conn} ->
         conn
@@ -164,19 +164,17 @@ defmodule LightningWeb.OidcController do
     delete_session(conn, @pending_signup_session_key)
   end
 
-  defp complete_sso_callback(conn, provider, code, intent) do
+  defp complete_sso_callback(conn, provider, code, intent, nonce) do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
-         {:ok, token} <- Handler.get_token(handler, code),
-         {:ok, userinfo} <- Handler.get_userinfo(handler, token),
-         {:ok, uid} <- fetch_uid(userinfo) do
-      case intent do
-        :link ->
-          handle_sso_link(conn, conn.assigns.current_user, provider, uid)
-
-        :login ->
-          if legacy_provider?(provider),
-            do: handle_legacy_login(conn, userinfo),
-            else: handle_sso_login(conn, provider, uid, userinfo)
+         {:ok, token} <- Handler.get_token(handler, code) do
+      if intent == :login and legacy_provider?(provider) do
+        # The admin-configured (AuthConfig) provider is a real OIDC provider:
+        # verify the signed id_token before trusting any identity claim. This is
+        # the flow v2.17.0's security release hardened; the env-based social
+        # providers (GitHub/Google) keep main's userinfo-based path.
+        verified_legacy_login(conn, handler, token, nonce)
+      else
+        social_callback(conn, handler, provider, token, intent)
       end
     else
       {:error, _reason} ->
@@ -186,9 +184,33 @@ defmodule LightningWeb.OidcController do
     end
   end
 
-  # simple account email matching
-  defp handle_legacy_login(conn, userinfo) do
-    with {:ok, email} <- get_provider_email(userinfo, conn) do
+  # main's original userinfo-based flow, used for the env-based social providers
+  # (GitHub/Google) and for the SSO link flow.
+  defp social_callback(conn, handler, provider, token, intent) do
+    with {:ok, userinfo} <- Handler.get_userinfo(handler, token),
+         {:ok, uid} <- fetch_uid(userinfo) do
+      case intent do
+        :link ->
+          handle_sso_link(conn, conn.assigns.current_user, provider, uid)
+
+        :login ->
+          handle_sso_login(conn, provider, uid, userinfo)
+      end
+    else
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: failure_redirect(conn, intent))
+    end
+  end
+
+  # Verify the id_token from the admin-configured (AuthConfig) provider, then log
+  # in the account matching its verified email. Ported from the v2.17.0 security
+  # release (lightning-security #149); scoped to this provider because only the
+  # discovery-configured provider publishes the JWKS the verification needs.
+  defp verified_legacy_login(conn, handler, token, nonce) do
+    with {:ok, claims} <- Handler.verify_id_token(handler, token, nonce),
+         {:ok, email} <- verified_email(handler, token, claims) do
       case Accounts.get_user_by_email(email) do
         %User{} = user ->
           do_log_in(conn, user)
@@ -198,8 +220,95 @@ defmodule LightningWeb.OidcController do
           |> put_flash(:error, "Could not find user account")
           |> redirect(to: Routes.user_session_path(conn, :new))
       end
+    else
+      {:error, reason} when reason in [:email_not_verified, :missing_email] ->
+        conn
+        |> put_flash(
+          :error,
+          "Your email address has not been verified. Please verify it with your provider and try signing in again."
+        )
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: Routes.user_session_path(conn, :new))
     end
   end
+
+  # The email must come from the verified id_token; userinfo (bound to the same
+  # subject) only fills a claim the id_token omitted.
+  defp verified_email(handler, token, claims) do
+    cond do
+      is_binary(claims["email"]) and not is_nil(claims["email_verified"]) ->
+        accept_email(handler, claims["email"], claims["email_verified"])
+
+      is_binary(claims["email"]) and handler.allow_unverified_email ->
+        {:ok, claims["email"]}
+
+      true ->
+        from_userinfo(handler, token, claims)
+    end
+  end
+
+  defp from_userinfo(handler, token, claims) do
+    userinfo = bound_userinfo(handler, token, claims["sub"])
+
+    cond do
+      is_binary(claims["email"]) ->
+        verified =
+          if same_email?(userinfo["email"], claims["email"]),
+            do: userinfo["email_verified"]
+
+        accept_email(handler, claims["email"], verified)
+
+      is_binary(userinfo["email"]) ->
+        accept_email(handler, userinfo["email"], userinfo["email_verified"])
+
+      true ->
+        {:error, :missing_email}
+    end
+  end
+
+  defp accept_email(handler, email, verified) do
+    cond do
+      not is_binary(email) -> {:error, :missing_email}
+      email_trusted?(handler, verified) -> {:ok, email}
+      true -> {:error, :email_not_verified}
+    end
+  end
+
+  # Fetch userinfo only when it's bound to the authenticated id_token subject; a
+  # missing/mismatched/failed response yields no claims, so the caller falls
+  # through to a verification failure rather than trusting an unbound email.
+  defp bound_userinfo(handler, token, sub) do
+    case Handler.get_userinfo(handler, token) do
+      {:ok, userinfo} when is_binary(sub) ->
+        if userinfo["sub"] == sub, do: userinfo, else: %{}
+
+      _ ->
+        %{}
+    end
+  rescue
+    _ -> %{}
+  end
+
+  # userinfo's email_verified only vouches for the id_token email when userinfo
+  # isn't naming a different address. An absent userinfo email (it carried only
+  # the flag) is fine; a present one must match, case-insensitively.
+  defp same_email?(nil, _id_token_email), do: true
+
+  defp same_email?(userinfo_email, id_token_email)
+       when is_binary(userinfo_email) and is_binary(id_token_email),
+       do: String.downcase(userinfo_email) == String.downcase(id_token_email)
+
+  defp same_email?(_userinfo_email, _id_token_email), do: false
+
+  # Require the provider to assert email_verified (absent/false is rejected),
+  # unless the operator has marked this AuthConfig provider trusted for
+  # unverified emails.
+  defp email_trusted?(%{allow_unverified_email: true}, _verified), do: true
+  defp email_trusted?(_handler, verified), do: verified in [true, "true"]
 
   defp legacy_provider?(provider) do
     not is_nil(AuthProviders.get_existing(provider))
@@ -394,7 +503,10 @@ defmodule LightningWeb.OidcController do
 
     conn = put_session(conn, @oauth_state_session_key, nonce)
 
-    {conn, Handler.authorize_url(handler, state: state)}
+    # The same nonce is sent to the provider as the OIDC `nonce`, so it comes
+    # back bound into the signed id_token and can be checked in verify_id_token —
+    # this is what ties the token to the browser that started the flow.
+    {conn, Handler.authorize_url(handler, state: state, nonce: nonce)}
   end
 
   # Verifies the callback `state` against the nonce stashed in the session. The
@@ -409,7 +521,7 @@ defmodule LightningWeb.OidcController do
          true <- Plug.Crypto.secure_compare(nonce, session_nonce),
          true <- state_provider == provider,
          {:ok, intent} <- authorize_intent(conn, intent, user_id) do
-      {:ok, intent, conn}
+      {:ok, intent, nonce, conn}
     else
       _ -> {:error, conn}
     end

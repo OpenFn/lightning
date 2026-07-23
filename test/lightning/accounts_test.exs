@@ -120,6 +120,52 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "login_blocked?/1" do
+    test "false for an active user" do
+      refute Accounts.login_blocked?(insert(:user))
+    end
+
+    test "true for a disabled user" do
+      assert Accounts.login_blocked?(insert(:user, disabled: true))
+    end
+
+    test "true for a user scheduled for deletion" do
+      assert Accounts.login_blocked?(
+               insert(:user, scheduled_deletion: DateTime.utc_now())
+             )
+    end
+
+    test "any non-nil scheduled_deletion blocks (not only a %DateTime{})" do
+      assert Accounts.login_blocked?(%User{
+               scheduled_deletion: ~N[2024-01-01 00:00:00]
+             })
+    end
+  end
+
+  describe "login_blocked_reason/1" do
+    test ":disabled for a disabled user" do
+      assert Accounts.login_blocked_reason(insert(:user, disabled: true)) ==
+               :disabled
+    end
+
+    test ":scheduled_deletion for a user scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+      assert Accounts.login_blocked_reason(user) == :scheduled_deletion
+    end
+
+    test "any non-nil scheduled_deletion blocks (not only a %DateTime{})" do
+      user = %User{scheduled_deletion: ~N[2024-01-01 00:00:00]}
+      assert Accounts.login_blocked_reason(user) == :scheduled_deletion
+    end
+
+    test "disabled takes precedence over scheduled deletion" do
+      user =
+        insert(:user, disabled: true, scheduled_deletion: DateTime.utc_now())
+
+      assert Accounts.login_blocked_reason(user) == :disabled
+    end
+  end
+
   describe "get_user_by_email_and_password/2" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email_and_password(
@@ -1239,6 +1285,53 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "update_user_details/2" do
+    test "disabling a user revokes sessions but keeps their api tokens" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      api_token = Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, user} = Accounts.update_user_details(user, %{"disabled" => true})
+
+      assert user.disabled
+      refute Accounts.get_user_by_session_token(session_token)
+      # A disable is reversible, so the PAT stays (the request-time gate blocks
+      # it while disabled); only the session is dropped.
+      assert Repo.get_by(UserToken, token: api_token, context: "api")
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "scheduling a user for deletion revokes all of their tokens" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} =
+        Accounts.update_user_details(user, %{
+          "scheduled_deletion" =>
+            DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+
+      refute Accounts.get_user_by_session_token(session_token)
+      assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "editing other fields leaves the user's sessions untouched" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} =
+        Accounts.update_user_details(user, %{"first_name" => "Renamed"})
+
+      assert Accounts.get_user_by_session_token(session_token)
+      refute_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+  end
+
   describe "update_user_password/3" do
     setup do
       %{user: insert(:user)}
@@ -1297,6 +1390,17 @@ defmodule Lightning.AccountsTest do
         })
 
       refute Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "disconnects the user's websockets", %{user: user} do
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _} =
+        Accounts.update_user_password(user, valid_user_password(), %{
+          password: "new valid password"
+        })
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
   end
 
@@ -1409,6 +1513,28 @@ defmodule Lightning.AccountsTest do
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_api_token("oops")
     end
+
+    # Set the field directly, not via update_user_details/2: that helper also
+    # deletes the PAT row, which would pass the test for the wrong reason. We
+    # want the token to survive so this proves the resolver drops the blocked
+    # user.
+    test "does not return a disabled user", %{user: user, token: token} do
+      Repo.update!(Ecto.Changeset.change(user, disabled: true))
+      refute Accounts.get_user_by_api_token(token)
+    end
+
+    test "does not return a user scheduled for deletion", %{
+      user: user,
+      token: token
+    } do
+      Repo.update!(
+        Ecto.Changeset.change(user,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      refute Accounts.get_user_by_api_token(token)
+    end
   end
 
   describe "delete_token/1" do
@@ -1474,6 +1600,25 @@ defmodule Lightning.AccountsTest do
     test "does not return user for expired token", %{token: token} do
       {1, nil} =
         Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
+
+      refute Accounts.get_user_by_session_token(token)
+    end
+
+    test "does not return a disabled user", %{user: user, token: token} do
+      Repo.update!(Ecto.Changeset.change(user, disabled: true))
+
+      refute Accounts.get_user_by_session_token(token)
+    end
+
+    test "does not return a user scheduled for deletion", %{
+      user: user,
+      token: token
+    } do
+      Repo.update!(
+        Ecto.Changeset.change(user,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
 
       refute Accounts.get_user_by_session_token(token)
     end
@@ -1675,6 +1820,15 @@ defmodule Lightning.AccountsTest do
 
       refute Repo.get_by(UserToken, user_id: user.id)
     end
+
+    test "disconnects the user's websockets", %{user: user} do
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _} =
+        Accounts.reset_user_password(user, %{password: "new valid password"})
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
   end
 
   describe "delete_user/1" do
@@ -1724,6 +1878,21 @@ defmodule Lightning.AccountsTest do
       assert user.scheduled_deletion != nil
       assert Timex.diff(user.scheduled_deletion, now, :days) == days
       assert user.disabled
+    end
+
+    test "revokes all tokens and disconnects sockets so access cannot resume" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} = Accounts.schedule_user_deletion(user, user.email)
+
+      # Every token is gone (the account is leaving), so nothing can reconnect...
+      refute Accounts.get_user_by_session_token(session_token)
+      assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
+      # ...and any live socket is torn down immediately.
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
   end
 

@@ -615,7 +615,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "sync_collections/2" do
+  describe "sync_collections/3" do
     test "creates collections in target that exist in source but not target" do
       source = insert(:project)
       target = insert(:project)
@@ -651,7 +651,7 @@ defmodule Lightning.Projects.SandboxesTest do
         )
 
       assert {:ok, %{created: 0, deleted: 1}} =
-               Sandboxes.sync_collections(source, target)
+               Sandboxes.sync_collections(source, target, allow_deletions: true)
 
       refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
 
@@ -700,7 +700,7 @@ defmodule Lightning.Projects.SandboxesTest do
       )
 
       assert {:ok, %{created: 0, deleted: 2}} =
-               Sandboxes.sync_collections(source, target)
+               Sandboxes.sync_collections(source, target, allow_deletions: true)
     end
 
     test "does not copy collection data across" do
@@ -735,7 +735,7 @@ defmodule Lightning.Projects.SandboxesTest do
       result =
         Lightning.Repo.transaction(fn ->
           {:ok, _summary} =
-            Sandboxes.sync_collections(source, target)
+            Sandboxes.sync_collections(source, target, allow_deletions: true)
 
           Lightning.Repo.rollback(:simulated_failure)
         end)
@@ -749,6 +749,84 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert target_names == ["to-delete"]
     end
+
+    test "leaves target-only collections intact by default (fail-safe)" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      kept =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert {:ok, %{created: 0, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
+
+      assert Lightning.Repo.all(
+               from i in Lightning.Collections.Item,
+                 where: i.collection_id == ^kept.id
+             ) != []
+    end
+
+    test "creates source-only collections but leaves target-only intact when :allow_deletions is false" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "new-in-source")
+
+      insert(:collection,
+        project: target,
+        name: "keep-me",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target, allow_deletions: false)
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "new-in-source" in target_names
+      assert "keep-me" in target_names
+    end
+  end
+
+  defp merge_target_only_collection(actor_role) do
+    actor = insert(:user)
+    parent = insert(:project)
+    ensure_member!(parent, actor, actor_role)
+
+    insert(:simple_workflow, project: parent)
+
+    # Exists only on the target, so a merge would otherwise delete it.
+    insert(:collection,
+      project: parent,
+      name: "target-only",
+      items: [%{key: "k", value: "v"}]
+    )
+
+    sandbox =
+      insert(:project,
+        parent: parent,
+        project_users: [%{user: actor, role: :owner}]
+      )
+
+    insert(:simple_workflow, project: sandbox)
+
+    assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+    parent
+    |> Lightning.Collections.list_project_collections()
+    |> Enum.map(& &1.name)
   end
 
   describe "merge/4" do
@@ -830,6 +908,13 @@ defmodule Lightning.Projects.SandboxesTest do
       end
 
       refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
+    end
+
+    test "collection deletion during merge is gated on owner/admin" do
+      # An editor merge must not prune target-only collections, an owner merge
+      # still does.
+      assert "target-only" in merge_target_only_collection(:editor)
+      refute "target-only" in merge_target_only_collection(:owner)
     end
   end
 

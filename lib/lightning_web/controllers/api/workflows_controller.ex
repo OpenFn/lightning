@@ -532,11 +532,11 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp authorize_write(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_write)
+    authorize_for_project(conn, project_id, :edit_workflow)
   end
 
   defp authorize_read(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_read)
+    authorize_for_project(conn, project_id, :access_project)
   end
 
   defp authorize_read_workflow(conn, %Workflow{project_id: project_id}) do
@@ -547,7 +547,7 @@ defmodule LightningWeb.API.WorkflowsController do
     project = Repo.get(Project, project_id)
 
     Permissions.can(
-      Lightning.Policies.Workflows,
+      Lightning.Policies.ProjectUsers,
       access,
       conn.assigns.current_resource,
       project

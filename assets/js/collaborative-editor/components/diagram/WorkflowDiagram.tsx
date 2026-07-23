@@ -139,7 +139,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges: state.edges,
   }));
 
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, tooltipMessage: readOnlyTooltip } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(() => {
     // Entities already have errors denormalized from store
@@ -919,7 +919,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         onNodesChange={onNodesChange}
         onNodeDragStart={flowhandlers.ondragstart()}
         onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
-        nodesDraggable={isManualLayout}
+        nodesDraggable={isManualLayout && !isReadOnly}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
@@ -946,10 +946,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
             <ControlButton
               onClick={() => switchLayout()}
+              disabled={isReadOnly}
               data-tooltip={
-                isManualLayout
-                  ? 'Switch to auto layout mode'
-                  : 'Switch to manual layout mode'
+                isReadOnly
+                  ? readOnlyTooltip
+                  : isManualLayout
+                    ? 'Switch to auto layout mode'
+                    : 'Switch to manual layout mode'
               }
             >
               {isManualLayout ? (

@@ -1,0 +1,395 @@
+#!/usr/bin/env bash
+#
+# Create a git worktree for a branch and set it up so it's immediately runnable.
+#
+# Usage:
+#   ./bin/worktree [--no-clean] <branch> [path]
+#   ./bin/worktree [--no-clean] --pr <number> [path]
+#
+#   <branch>   Branch to check out in the new worktree. Created (with -b) if it
+#              doesn't exist yet; reused if it does.
+#   --pr <n>   Resolve the head branch of GitHub pull request <n> (via the gh
+#              CLI), fetch it, and use its real branch name for the worktree —
+#              so `--pr 250` yields e.g. .../204-collections-disable-gate. Fork
+#              PRs work too; the head is fetched via pull/<n>/head. Mutually
+#              exclusive with <branch>.
+#   [path]     Base directory to create the worktree under, for this run only.
+#              Overrides the saved default without changing it.
+#   --no-clean Keep the worktree on setup failure instead of removing it.
+#
+# What it does:
+#   1. Resolves a base directory for worktrees. First run prompts for one
+#      (default: .claude/worktrees/) and saves it to .worktree-path at the
+#      primary worktree root; later runs reuse it. A non-interactive shell takes
+#      the default silently.
+#   2. Creates <base>/<branch> via `git worktree add`.
+#   3. Copies .env, .dev.env and .dev.override.env from the CURRENT worktree
+#      (so a sub-branch inherits the env you're working in), skipping absent ones.
+#   4. Runs the per-worktree slice of ./bin/bootstrap: fetch/compile deps, install
+#      node modules, build assets, install runtime/schemas/icons, create + migrate
+#      the database. The DB follows whatever DATABASE_URL the copied env resolves
+#      to (shared lightning_dev unless the env overrides it).
+#
+# On failure after the worktree exists, it's removed by default (along with the
+# branch if this script created it). Pass --no-clean to keep it for debugging.
+# Re-running for a branch that already has a worktree just prints its path.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source the reusable project setup functions.
+source "$SCRIPT_DIR/bootstrap.d/common.sh"
+
+DEFAULT_BASE=".claude/worktrees/"
+
+# Options and state shared between the steps and the EXIT trap.
+NO_CLEAN=0
+PR_NUMBER=""
+BRANCH=""
+EXPLICIT_BASE=""
+SOURCE_ROOT=""
+MAIN_ROOT=""
+TARGET=""
+CREATED_BRANCH=0
+WORKTREE_CREATED=0
+SETUP_OK=0
+CURRENT_STEP="worktree creation"
+
+usage() {
+  echo "Usage: ./bin/worktree [--no-clean] <branch> [path]" >&2
+  echo "       ./bin/worktree [--no-clean] --pr <number> [path]" >&2
+}
+
+print_help() {
+  # Unquoted heredoc so the colour vars interpolate. The prose deliberately
+  # contains no other $, backtick or backslash, so nothing else expands.
+  cat <<EOF
+${BOLD}worktree${RESET} - create a ready-to-run git worktree for a branch or a PR.
+
+Creates a new worktree, copies your env files into it, and runs the
+per-worktree slice of ./bin/bootstrap so it's immediately runnable
+(deps, assets, runtime/schemas/icons, and a migrated database).
+
+${BOLD}Usage:${RESET}
+  ./bin/worktree [--no-clean] <branch> [path]
+  ./bin/worktree [--no-clean] --pr <number> [path]
+
+${BOLD}Arguments:${RESET}
+  ${CYAN}<branch>${RESET}    Branch to check out. Created (with -b) if it doesn't exist
+              yet; reused if it does.
+  ${CYAN}[path]${RESET}      Base directory to create the worktree under, for this run
+              only. Overrides the saved default without changing it.
+
+${BOLD}Options:${RESET}
+  ${CYAN}--pr <n>${RESET}    Resolve the head branch of GitHub PR <n> (via the gh CLI),
+              fetch it, and use its real branch name for the worktree.
+              Fork PRs work too. Mutually exclusive with <branch>.
+  ${CYAN}--no-clean${RESET}  Keep the worktree on setup failure instead of removing it,
+              so you can inspect or fix it and re-run ./bin/bootstrap.
+  ${CYAN}-h, --help${RESET}  Show this help and exit.
+
+${BOLD}Examples:${RESET}
+  ./bin/worktree my-feature-branch
+  ./bin/worktree --pr 250
+  ./bin/worktree --no-clean --pr 250
+  ./bin/worktree my-feature-branch ~/worktrees
+
+${BOLD}Notes:${RESET}
+  - The base directory is remembered after the first run (saved to
+    .worktree-path at the primary worktree root); the first interactive
+    run prompts for it, defaulting to .claude/worktrees/.
+  - Env files (.env, .dev.env, .dev.override.env) are copied from the
+    CURRENT worktree, so a sub-branch inherits the env you're working in.
+  - Re-running for a branch that already has a worktree just prints its
+    path.
+EOF
+}
+
+die() {
+  err "$*"
+  exit 1
+}
+
+usage_error() {
+  [[ $# -eq 0 ]] || echo "$*" >&2
+  usage
+  exit 1
+}
+
+parse_args() {
+  local positional=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+      print_help
+      exit 0
+      ;;
+    --no-clean)
+      NO_CLEAN=1
+      shift
+      ;;
+    --pr)
+      [[ $# -ge 2 ]] || usage_error "--pr requires a pull request number"
+      PR_NUMBER="$2"
+      shift 2
+      ;;
+    --pr=*)
+      PR_NUMBER="${1#--pr=}"
+      [[ -n "$PR_NUMBER" ]] || usage_error "--pr requires a pull request number"
+      shift
+      ;;
+    --)
+      shift
+      positional+=("$@")
+      break
+      ;;
+    -*)
+      usage_error "Unknown option: $1"
+      ;;
+    *)
+      positional+=("$1")
+      shift
+      ;;
+    esac
+  done
+
+  if [[ -n "$PR_NUMBER" ]]; then
+    # With --pr the branch comes from GitHub, so only an optional path is allowed.
+    [[ ${#positional[@]} -le 1 ]] || usage_error
+    EXPLICIT_BASE="${positional[0]:-}"
+  else
+    [[ ${#positional[@]} -ge 1 && ${#positional[@]} -le 2 ]] || usage_error
+    BRANCH="${positional[0]}"
+    EXPLICIT_BASE="${positional[1]:-}"
+  fi
+}
+
+resolve_source_root() {
+  SOURCE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [[ -n "$SOURCE_ROOT" ]] || die "Not inside a git worktree of the project"
+}
+
+# Resolve a --pr number to its head branch and make that branch exist locally,
+# then fall through to the normal branch-based flow.
+resolve_pr_branch() {
+  local origin_url repo_slug
+
+  [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || die "Invalid pull request number: $PR_NUMBER"
+  if ! command -v gh &>/dev/null; then
+    echo "The gh CLI is required for --pr but was not found on PATH." >&2
+    die "Install it from https://cli.github.com/ or check out the branch by name."
+  fi
+
+  # Derive OWNER/REPO from origin so gh targets the right repo regardless of cwd.
+  origin_url="$(git -C "$SOURCE_ROOT" remote get-url origin 2>/dev/null || true)"
+  repo_slug="$(sed -E 's#^git@[^:]+:##; s#^[a-z]+://[^/]+/##; s#\.git$##' <<<"$origin_url")"
+  [[ -n "$repo_slug" ]] || die "Could not determine the GitHub OWNER/REPO from the origin remote."
+
+  echo "Resolving head branch for PR #$PR_NUMBER..."
+  if ! BRANCH="$(gh pr view "$PR_NUMBER" --repo "$repo_slug" \
+    --json headRefName --jq .headRefName 2>/dev/null)" || [[ -z "$BRANCH" ]]; then
+    die "Could not resolve PR #$PR_NUMBER (is gh authenticated, and does the PR exist?)"
+  fi
+  echo "PR #$PR_NUMBER -> $BRANCH"
+
+  # Fetch the PR head into a local branch of the same name if we don't already
+  # have it. pull/<n>/head works for same-repo and fork PRs alike. An existing
+  # local branch is reused as-is rather than force-updated.
+  if branch_exists "$BRANCH"; then
+    echo "Local branch '$BRANCH' already exists; reusing it (not fetching PR head)."
+  else
+    git -C "$SOURCE_ROOT" fetch origin "pull/$PR_NUMBER/head:$BRANCH"
+  fi
+}
+
+branch_exists() {
+  git -C "$SOURCE_ROOT" show-ref --verify --quiet "refs/heads/$1"
+}
+
+resolve_main_root() {
+  # The first porcelain entry is the primary worktree and is always absolute.
+  MAIN_ROOT="$(git -C "$SOURCE_ROOT" worktree list --porcelain |
+    sed -n '/^worktree / { s/^worktree //; p; q; }')"
+  [[ -n "$MAIN_ROOT" ]] || die "Could not determine the primary git worktree"
+}
+
+# Print the path of the worktree that has $1 checked out; fail if none does.
+find_worktree_for_branch() {
+  local branch="$1"
+  local candidate=""
+  local line
+
+  while IFS= read -r line; do
+    if [[ "$line" == "worktree "* ]]; then
+      candidate="${line#worktree }"
+    elif [[ "$line" == "branch refs/heads/$branch" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    elif [[ -z "$line" ]]; then
+      candidate=""
+    fi
+  done < <(git -C "$SOURCE_ROOT" worktree list --porcelain)
+
+  return 1
+}
+
+# Resolve the base directory (explicit arg > saved config > prompt/default)
+# and set TARGET. A prompted base is only persisted once it has proved usable.
+resolve_target() {
+  local path_config="$MAIN_ROOT/.worktree-path"
+  local base_path persist_base=0 reply base_directory
+
+  if [[ -n "$EXPLICIT_BASE" ]]; then
+    base_path="$EXPLICIT_BASE"
+  elif [[ -f "$path_config" ]]; then
+    base_path=""
+    IFS= read -r base_path <"$path_config" || true
+    base_path="${base_path%$'\r'}" # tolerate a CRLF-saved config
+    [[ -n "$base_path" ]] || base_path="$DEFAULT_BASE"
+  else
+    base_path="$DEFAULT_BASE"
+    if [[ -t 0 ]]; then
+      reply=""
+      read -r -p "Base path for worktrees [$DEFAULT_BASE]: " reply || true
+      [[ -z "$reply" ]] || base_path="$reply"
+    fi
+    persist_base=1
+  fi
+
+  # A leading ~/ isn't expanded from a quoted var or a config file; do it here.
+  # shellcheck disable=SC2088  # the '~/' is a literal to detect, not to expand
+  if [[ "${base_path:0:2}" == '~/' ]]; then
+    base_path="$HOME/${base_path:2}"
+  fi
+
+  if [[ "$base_path" == /* ]]; then
+    base_directory="$base_path"
+  else
+    base_directory="$MAIN_ROOT/$base_path"
+  fi
+
+  mkdir -p "$base_directory"
+  base_directory="$(cd "$base_directory" && pwd -P)"
+  TARGET="${base_directory%/}/$BRANCH"
+
+  if [[ $persist_base -eq 1 ]]; then
+    printf '%s\n' "$base_path" >"$path_config"
+  fi
+}
+
+on_exit() {
+  local status=$?
+  # errexit is still active inside the trap; disable it so a single failing
+  # cleanup command can't abort the rest of the teardown or clobber $status.
+  set +e
+
+  # Only act on a failure that happened after the worktree was created.
+  if [[ $status -eq 0 || $WORKTREE_CREATED -eq 0 || $SETUP_OK -eq 1 ]]; then
+    return
+  fi
+
+  if [[ $NO_CLEAN -eq 1 ]]; then
+    echo "Setup failed during $CURRENT_STEP (exit $status)." >&2
+    echo "The worktree was left in place (--no-clean) so you can inspect or fix it:" >&2
+    echo "    $TARGET" >&2
+    echo "Fix the issue and run ./bin/bootstrap from inside it, or remove it with:" >&2
+    echo "    git worktree remove --force \"$TARGET\"" >&2
+    if [[ $CREATED_BRANCH -eq 1 ]]; then
+      echo "    git branch -D \"$BRANCH\"   # only if you also want the branch gone" >&2
+    fi
+  else
+    echo "Setup failed during $CURRENT_STEP (exit $status) — removing worktree: $TARGET" >&2
+    # cwd may be inside the worktree about to be removed.
+    cd "$SOURCE_ROOT" 2>/dev/null || cd /
+    git -C "$SOURCE_ROOT" worktree remove --force "$TARGET"
+    if [[ $CREATED_BRANCH -eq 1 ]]; then
+      echo "Removing branch created for the failed setup: $BRANCH" >&2
+      git -C "$SOURCE_ROOT" branch -D -- "$BRANCH"
+    fi
+  fi
+}
+
+create_worktree() {
+  if branch_exists "$BRANCH"; then
+    git -C "$SOURCE_ROOT" worktree add -- "$TARGET" "$BRANCH"
+  else
+    CREATED_BRANCH=1
+    git -C "$SOURCE_ROOT" worktree add -b "$BRANCH" -- "$TARGET"
+  fi
+  WORKTREE_CREATED=1
+}
+
+copy_env_files() {
+  local env_file
+  for env_file in .env .dev.env .dev.override.env; do
+    if [[ -f "$SOURCE_ROOT/$env_file" ]]; then
+      cp -p "$SOURCE_ROOT/$env_file" "$TARGET/$env_file"
+      echo "Copied $env_file"
+    fi
+  done
+}
+
+# Run the per-worktree slice of ./bin/bootstrap from inside the new worktree.
+run_setup() {
+  cd "$TARGET"
+
+  CURRENT_STEP="platform environment setup"
+  detect_and_source_platform
+  platform_setup_environment
+
+  CURRENT_STEP="project directory setup"
+  setup_project_directory
+
+  CURRENT_STEP="database setup"
+  setup_project_database
+}
+
+main() {
+  local existing_target
+
+  parse_args "$@"
+  resolve_source_root
+
+  if [[ -n "$PR_NUMBER" ]]; then
+    resolve_pr_branch
+  fi
+
+  git -C "$SOURCE_ROOT" check-ref-format --branch "$BRANCH" &>/dev/null ||
+    die "Invalid branch name: $BRANCH"
+
+  # Drop entries for worktrees whose directory was deleted by hand, so the
+  # idempotency check below can't match a stale one and report a phantom path.
+  git -C "$SOURCE_ROOT" worktree prune
+
+  resolve_main_root
+
+  if existing_target="$(find_worktree_for_branch "$BRANCH")"; then
+    echo "Branch '$BRANCH' already has a worktree:"
+    echo "    $existing_target"
+    exit 0
+  fi
+
+  resolve_target
+
+  trap on_exit EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  create_worktree
+
+  CURRENT_STEP="environment file copy"
+  copy_env_files
+
+  run_setup
+
+  SETUP_OK=1
+  ok "Worktree is ready:"
+  echo "    $TARGET"
+  echo "Change into it with:"
+  echo "    cd \"$TARGET\""
+}
+
+main "$@"

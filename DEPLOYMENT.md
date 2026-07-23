@@ -189,6 +189,7 @@ For SMTP, the following environment variables are required:
 | `ALLOW_SIGNUP`                                    | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `true`.                                                                                 |
 | `CORS_ORIGIN`                                     | A list of acceptable hosts for browser/cors requests (',' separated)                                                                                                                                                                                            |
 | `DISABLE_DB_SSL`                                  | In production, the use of an SSL connection to Postgres is required by default.<br>Setting this to `"true"` allows unencrypted connections to the database. This is strongly discouraged in a real production environment.                                      |
+| `DISABLE_DB_SSL_CERT_VERIFY`                      | When a SSL connection is used to connect to Postgres, the server's certificate will be verified by default.<br> Setting this to `"true"` disables certificate verification. This is strongly discouraged in a real production environment.                      |
 | `EMAIL_ADMIN`                                     | This is used as the sender email address for system emails. It is also displayed in the menu as the support email.                                                                                                                                              |
 | `EMAIL_SENDER_NAME`                               | This is displayed in the email client as the sender name for emails sent by the application.                                                                                                                                                                    |
 | `ERLANG_NODE_DISCOVERY_VIA_POSTGRES_CHANNEL_NAME` | The name of the Postgresql channel that is used when Erlang node discovery via Postgres is enabled. Defaults to `lightning-cluster` if not set.                                                                                                                 |
@@ -414,6 +415,66 @@ are entered in that form.
 > unrelated to the [Single Sign-On (SSO)](#single-sign-on-sso) `SSO_`-prefixed
 > variables above, which configure user **sign-in** rather than credential
 > connections.
+
+### OAuth Provider Egress
+
+When a user configures an OAuth client, they supply the provider's endpoint URLs
+(authorization, token, userinfo, revocation, introspection). Lightning makes
+server-side requests to those URLs during credential setup and automatic token
+refresh, which makes them a Server-Side Request Forgery (SSRF) sink: a
+low-privilege user could point an endpoint at an internal service or a cloud
+metadata address (`169.254.169.254`) and use the server as a proxy.
+
+To prevent this, all outbound OAuth requests are routed through an egress guard
+that resolves the endpoint hostname, rejects any address in an internal or
+reserved range, and pins the connection to the validated IP (so DNS cannot swap
+in an internal address after the check). This is **on by default** and requires
+no configuration; internal endpoints are blocked and the request fails with a
+generic network error.
+
+| **Variable**                   | **Description**                                                                                                                                         | **Default** |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------: |
+| `OAUTH_PROVIDER_ALLOWED_HOSTS` | Comma-separated list of hostnames that bypass the internal-range block. Only set this if your OAuth provider legitimately lives on an internal network. |   _(empty)_ |
+
+Only add a host here if you are self-hosting an OAuth provider (or a proxy to
+one) on an address the guard would otherwise block, and you trust it. Matching
+is by **hostname string**, case-insensitive — e.g.
+`OAUTH_PROVIDER_ALLOWED_HOSTS=idp.internal.example,localhost`. An allow-listed
+host is still resolved, but its resolved IP is not checked against the block
+list, so keep the list as small as possible.
+
+### Channel Egress
+
+Lightning can proxy requests through to a channel's configured upstream via the
+`/channels/:id/...` reverse proxy (powered by the `philter` dependency). Because
+the upstream URL is operator-supplied, that proxy is a Server-Side Request
+Forgery (SSRF) sink: a request could be pointed at an internal service or a
+cloud metadata address (`169.254.169.254`) and use the server as a proxy.
+
+To prevent this, the channel proxy runs an egress guard that resolves the
+upstream hostname and rejects any address in a private, loopback, link-local, or
+otherwise reserved range. This is **on by default** and requires no
+configuration; with neither variable set, blocking is on and nothing is
+allow-listed.
+
+| **Variable**                     | **Description**                                                                                                                                          | **Default** |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------: |
+| `CHANNEL_BLOCK_PRIVATE_NETWORKS` | Whether to reject channel upstreams that resolve to private/loopback/link-local/reserved IP ranges (`true`/`false`/`yes`/`no`). Set false to allow them. |      `true` |
+| `CHANNEL_ALLOWED_HOSTS`          | Comma-separated list of hostnames that bypass the block entirely — the escape hatch.                                                                     |   _(empty)_ |
+
+The allow-list is checked **first**. A host in `CHANNEL_ALLOWED_HOSTS` is
+allowed even if it resolves to a private IP, and even while
+`CHANNEL_BLOCK_PRIVATE_NETWORKS=true`. So the common safe setup is to leave
+blocking on (the default) and allow-list just the specific internal host you
+need. With `CHANNEL_BLOCK_PRIVATE_NETWORKS=false` the allow-list is moot —
+everything is allowed.
+
+Matching is by **exact hostname only**, case-insensitive, with a single trailing
+dot ignored. There is **no CIDR range and no wildcard support**; a literal IP
+entry matches only if the channel URL uses that exact IP string. Entries are
+bare hostnames — an entry containing a URL scheme (`://`), a path (`/`),
+internal whitespace, or `@` is rejected at boot with a clear error naming the
+bad entry. For example: `CHANNEL_ALLOWED_HOSTS=api.internal.example,localhost`.
 
 ### Webhook Retry Configuration
 

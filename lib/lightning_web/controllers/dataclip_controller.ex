@@ -6,6 +6,7 @@ defmodule LightningWeb.DataclipController do
   alias Lightning.Policies.Dataclips
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Runs
   alias LightningWeb.WorkflowLive.NewManualRun
 
   action_fallback LightningWeb.FallbackController
@@ -120,56 +121,63 @@ defmodule LightningWeb.DataclipController do
              conn.assigns.current_user,
              project
            ) do
-      case parse_limit(params["limit"]) do
-        {:ok, limit} ->
-          # Build query string from params
-          query_params =
-            %{
-              "query" => params["query"],
-              "type" => params["type"],
-              "before" => params["before"],
-              "after" => params["after"],
-              "named_only" => params["named_only"]
-            }
-            |> Enum.reject(fn {_, v} -> is_nil(v) end)
-            |> Enum.into(%{})
+      if valid_uuid?(job_id) do
+        case parse_limit(params["limit"]) do
+          {:ok, limit} ->
+            # Build query string from params
+            query_params =
+              %{
+                "query" => params["query"],
+                "type" => params["type"],
+                "before" => params["before"],
+                "after" => params["after"],
+                "named_only" => params["named_only"]
+              }
+              |> Enum.reject(fn {_, v} -> is_nil(v) end)
+              |> Enum.into(%{})
 
-          query_string = URI.encode_query(query_params)
+            query_string = URI.encode_query(query_params)
 
-          case NewManualRun.search_selectable_dataclips(
-                 job_id,
-                 query_string,
-                 limit,
-                 0
-               ) do
-            {:ok,
-             %{
-               dataclips: dataclips,
-               next_cron_run_dataclip_id: next_cron_run_dataclip_id
-             }} ->
-              # Check if user can edit dataclips
-              can_edit_dataclip =
-                Permissions.can?(
-                  :project_users,
-                  :edit_workflow,
-                  conn.assigns.current_user,
-                  project
-                )
+            case NewManualRun.search_selectable_dataclips(
+                   job_id,
+                   project,
+                   query_string,
+                   limit,
+                   0
+                 ) do
+              {:ok,
+               %{
+                 dataclips: dataclips,
+                 next_cron_run_dataclip_id: next_cron_run_dataclip_id
+               }} ->
+                # Check if user can edit dataclips
+                can_edit_dataclip =
+                  Permissions.can?(
+                    :project_users,
+                    :edit_workflow,
+                    conn.assigns.current_user,
+                    project
+                  )
 
-              json(conn, %{
-                data: dataclips,
-                next_cron_run_dataclip_id: next_cron_run_dataclip_id,
-                can_edit_dataclip: can_edit_dataclip
-              })
+                json(conn, %{
+                  data: dataclips,
+                  next_cron_run_dataclip_id: next_cron_run_dataclip_id,
+                  can_edit_dataclip: can_edit_dataclip
+                })
 
-            {:error, changeset} ->
-              {:error, changeset}
-          end
+              {:error, changeset} ->
+                {:error, changeset}
+            end
 
-        :error ->
-          conn
-          |> put_status(400)
-          |> json(%{error: "limit must be a positive integer"})
+          :error ->
+            conn
+            |> put_status(400)
+            |> json(%{error: "limit must be a positive integer"})
+        end
+      else
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "job_id must be a UUID"})
       end
     end
   end
@@ -209,15 +217,29 @@ defmodule LightningWeb.DataclipController do
              conn.assigns.current_user,
              project
            ) do
-      dataclip = Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
-      run_step = Invocation.get_first_step_for_run_and_job(run_id, job_id)
+      cond do
+        not valid_uuid?(run_id) ->
+          conn
+          |> put_status(:bad_request)
+          |> json(%{error: "run_id must be a UUID"})
 
-      json(conn, %{
-        dataclip: dataclip,
-        run_step: run_step
-      })
+        # A run outside the caller's project (or purged) yields a null payload,
+        # never another project's dataclip body.
+        Runs.get_for_project(run_id, project.id) == nil ->
+          json(conn, %{dataclip: nil, run_step: nil})
+
+        true ->
+          dataclip =
+            Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
+
+          run_step = Invocation.get_first_step_for_run_and_job(run_id, job_id)
+
+          json(conn, %{dataclip: dataclip, run_step: run_step})
+      end
     end
   end
+
+  defp valid_uuid?(id), do: match?({:ok, _}, Ecto.UUID.cast(id))
 
   @doc """
   Update dataclip name.

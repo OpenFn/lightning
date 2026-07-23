@@ -169,6 +169,117 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_in(endpoint, [:http, :port]) == 8080
       assert get_in(endpoint, [:url, :port]) == 443
     end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL not set, `DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
   end
 
   describe "endpoint URL configuration (dev)" do
@@ -738,6 +849,62 @@ defmodule Lightning.Config.BootstrapTest do
       Dotenvy.source([%{"WEBHOOK_RETRY_JITTER" => "true"}])
       Bootstrap.configure()
       assert get_env(:lightning, :webhook_retry) == [jitter: true]
+    end
+  end
+
+  describe "channel proxy egress (philter) configuration" do
+    test "defaults to blocking private networks and does not override allowed_hosts" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :block_private_networks) == true
+      # allowed_hosts left untouched so base/dev/test defaults survive
+      assert get_env(:philter, :allowed_hosts) == nil
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS toggles the flag" do
+      for {value, expected} <- [
+            {"false", false},
+            {"no", false},
+            {"true", true},
+            {"yes", true}
+          ] do
+        Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => value}])
+        Bootstrap.configure()
+        assert get_env(:philter, :block_private_networks) == expected
+      end
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS rejects garbage input" do
+      Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => "nope"}])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS sets a single normalised host" do
+      Dotenvy.source([%{"CHANNEL_ALLOWED_HOSTS" => "Internal.Svc."}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) == ["internal.svc"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS parses a comma-separated list" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc, api.example.org"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) ==
+               ["internal.svc", "api.example.org"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS rejects a malformed entry" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc,https://bad.one"}
+      ])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
     end
   end
 

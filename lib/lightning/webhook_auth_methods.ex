@@ -583,44 +583,26 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   @doc """
-  Retrieves a `WebhookAuthMethod` by its ID, raising an exception if not found.
+  Fetches a `WebhookAuthMethod` by id, scoped to the given project.
 
-  This function is intended for situations where the `WebhookAuthMethod` is expected to exist, and not finding one is an exceptional case that should halt normal flow with an error.
-
-  ## Parameter
-
-    - `id`: The ID of the `WebhookAuthMethod` to retrieve.
-
-  ## Returns
-
-    - Returns the `WebhookAuthMethod` struct if found.
-
-  ## Errors
-
-    - Raises `Ecto.NoResultsError` if there is no `WebhookAuthMethod` with the given ID.
-
-  ## Examples
-
-    - When a `WebhookAuthMethod` with the given ID exists:
-
-      ```elixir
-      iex> Lightning.Workflows.find_by_id!("existing_id")
-      %WebhookAuthMethod{}
-      ```
-
-    - When there is no `WebhookAuthMethod` with the given ID:
-
-      ```elixir
-      iex> Lightning.Workflows.find_by_id!("non_existing_id")
-      ** (Ecto.NoResultsError)
-      ```
-
+  Returns `nil` when the id is malformed or names an auth method that does not
+  belong to the project, so a client-supplied id can't reach another project's
+  auth methods.
   """
-  @spec find_by_id!(binary(), opts :: Keyword.t()) ::
-          WebhookAuthMethod.t() | no_return()
-  def find_by_id!(id, opts \\ []) do
-    preloads = opts |> Keyword.get(:include, [])
-    Repo.get_by!(WebhookAuthMethod, id: id) |> Repo.preload(preloads)
+  @spec find_for_project(Project.t(), binary(), opts :: Keyword.t()) ::
+          WebhookAuthMethod.t() | nil
+  def find_for_project(%Project{id: project_id}, id, opts \\ []) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} ->
+        preloads = Keyword.get(opts, :include, [])
+
+        WebhookAuthMethod
+        |> Repo.get_by(id: id, project_id: project_id)
+        |> Repo.preload(preloads)
+
+      :error ->
+        nil
+    end
   end
 
   @doc """

@@ -38,6 +38,20 @@ defmodule Lightning.Jobs do
   end
 
   @doc """
+  Returns true when the job belongs to the given project (via its workflow).
+
+  A non-UUID `job_id` returns false rather than raising, so malformed, missing
+  and cross-project ids are all handled uniformly.
+  """
+  @spec job_in_project?(Ecto.UUID.t(), Project.t()) :: boolean()
+  def job_in_project?(job_id, %Project{} = project) do
+    match?({:ok, _}, Ecto.UUID.cast(job_id)) and
+      Repo.exists?(
+        from(j in jobs_for_project_query(project), where: j.id == ^job_id)
+      )
+  end
+
+  @doc """
   Returns the list of jobs excluding the one given.
   """
   @spec get_upstream_jobs_for(Job.t()) :: [Job.t()]
@@ -137,8 +151,15 @@ defmodule Lightning.Jobs do
     end
   end
 
-  def get_job_with_credential(id) do
-    Repo.get(Job, id)
+  @doc """
+  Gets a job by id, scoped to a workflow, with its credential preloaded.
+
+  Returns `nil` when the job does not exist or belongs to another workflow, so a
+  caller cannot read a job (and resolve its credential) outside the workflow it
+  supplies.
+  """
+  def get_job_with_credential(id, workflow_id) do
+    Repo.get_by(Job, id: id, workflow_id: workflow_id)
     |> Repo.preload(:credential)
   end
 

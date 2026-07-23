@@ -54,7 +54,7 @@ defmodule Lightning.AuthProviders do
   end
 
   @spec get_handler(name :: String.t()) ::
-          {:ok, Handler.t()} | {:error, :not_found}
+          {:ok, Handler.t()} | {:error, term()}
   def get_handler(name) do
     store_impl().get_handler(name, &find_and_build/1)
   end

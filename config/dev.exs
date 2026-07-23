@@ -127,7 +127,20 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :lightning, :is_resettable_demo, true
 
+config :lightning, :auth_providers_allow_insecure_loopback, true
+
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
+
+# Philter's egress guard blocks private/loopback ranges by default; allow
+# localhost so channel proxies can reach services running on the dev machine.
+# Matching is on the literal host string in the URL, so "localhost" only allows
+# http://localhost; http://127.0.0.1 stays blocked unless you add "127.0.0.1" too.
+config :philter, allowed_hosts: ["localhost"]
+
+# Mirror the philter allowlist for the pinned OAuth egress adapter so local dev
+# OAuth against localhost works; other private ranges stay blocked.
+config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+  allowed_hosts: ["localhost"]
 
 config :git_hooks,
   # In local dev (with a real .git repo) we auto-install hooks.

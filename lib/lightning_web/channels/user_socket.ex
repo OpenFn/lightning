@@ -28,14 +28,19 @@ defmodule LightningWeb.UserSocket do
   # performing token verification on connect.
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do
-    # max_age: 1209600 is equivalent to two weeks in seconds
-    case Phoenix.Token.verify(socket, "user socket", token, max_age: 1_209_600) do
-      {:ok, user_id} ->
-        {:ok,
-         assign(socket, :current_user, Lightning.Accounts.get_user(user_id))}
-
-      {:error, _reason} ->
-        :error
+    # max_age: 1209600 is equivalent to two weeks in seconds. The token wraps the
+    # user's DB session token, so a deleted session (logout, password reset,
+    # disabled account) makes get_user_by_session_token return nil and the
+    # connection is refused.
+    with {:ok, session_token} <-
+           Phoenix.Token.decrypt(socket, "user socket", token,
+             max_age: 1_209_600
+           ),
+         %Lightning.Accounts.User{} = user <-
+           Lightning.Accounts.get_user_by_session_token(session_token) do
+      {:ok, assign(socket, :current_user, user)}
+    else
+      _ -> :error
     end
   end
 

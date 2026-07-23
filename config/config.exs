@@ -104,7 +104,6 @@ config :esbuild,
          js/app.js
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
-         js/manual-run-panel/ManualRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
@@ -168,7 +167,21 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 
 config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 
-config :philter, finch_name: Lightning.Finch
+# Route server-side OAuth provider requests through the rebinding-proof egress
+# adapter, which pins the connection to a validated IP address.
+config :tesla, Lightning.AuthProviders.OauthHTTPClient,
+  adapter: {Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter, []}
+
+config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+  block_private_networks: true,
+  allowed_hosts: []
+
+# Egress guard for the channel reverse proxy. Secure by default: block all
+# private/reserved ranges and allowlist nothing. Overridable at runtime via
+# CHANNEL_BLOCK_PRIVATE_NETWORKS and CHANNEL_ALLOWED_HOSTS (see config/bootstrap).
+config :philter,
+  block_private_networks: true,
+  allowed_hosts: []
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil

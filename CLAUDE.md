@@ -67,13 +67,6 @@ mix ecto.gen.migration short_descriptive_name # Generate migration
 
 ## Architecture Overview
 
-### Directory Structure
-
-- **`lib/lightning/`** - Core business logic, contexts, schemas
-- **`lib/lightning_web/`** - LiveViews, controllers, API, channels
-- **`assets/js/`** - React components, TypeScript
-- **`test/`** - Mirrors source structure
-
 ### Key Contexts (lib/lightning/)
 
 - **Workflows** - DAGs with jobs, triggers, edges (`lib/lightning/workflows.ex`)
@@ -155,17 +148,6 @@ External Node.js workers (@openfn/ws-worker) execute JavaScript jobs:
 - Generate keys: `mix lightning.gen_worker_keys`
 - Required ENVs: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
   `WORKER_LIGHTNING_PUBLIC_KEY`
-
-## Key Dependencies
-
-### Backend
-- Phoenix 1.7 + LiveView, Ecto 3.13+, Oban (background jobs)
-- Bodyguard (authorization), Cloak (encryption), Y_ex (Yjs bindings)
-
-### Frontend
-- React 18, @xyflow/react (DAG visualization), Monaco Editor
-- Yjs + y-phoenix-channel (collaboration), Zustand + Immer (state)
-- Tailwind CSS, Vitest, Playwright
 
 ## Custom Mix Tasks
 

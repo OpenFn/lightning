@@ -119,6 +119,8 @@ config :logger, level: :warning
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :logger, true
 
+config :philter, allowed_hosts: ["localhost"]
+
 config :junit_formatter,
   report_file: "elixir_test_report.xml",
   report_dir: "./test/reports",
@@ -166,3 +168,7 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+# The OIDC test suite serves discovery/JWKS/userinfo/token over http on
+# localhost via Bypass; allow those loopback endpoints to skip TLS verification.
+config :lightning, :auth_providers_allow_insecure_loopback, true

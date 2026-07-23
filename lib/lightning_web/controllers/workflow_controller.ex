@@ -65,28 +65,30 @@ defmodule LightningWeb.WorkflowController do
     end
   end
 
-  defp check_permissions(conn, project, _workflow) do
+  defp check_permissions(conn, project, workflow) do
     current_user = conn.assigns.current_user
 
-    cond do
-      not Permissions.can?(
+    can_edit_workflow =
+      Permissions.can?(
         :project_users,
         :edit_workflow,
         current_user,
         project
-      ) ->
-        {:error, :forbidden}
+      )
 
-      not Permissions.can?(
+    can_run_workflow =
+      Permissions.can?(
         :project_users,
         :run_workflow,
         current_user,
         project
-      ) ->
-        {:error, :forbidden}
+      )
 
-      true ->
-        :ok
+    if project.id == workflow.project_id and can_edit_workflow and
+         can_run_workflow do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 

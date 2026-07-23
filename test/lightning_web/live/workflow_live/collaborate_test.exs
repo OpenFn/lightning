@@ -167,6 +167,74 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
     end
   end
 
+  describe "cross-project access" do
+    test "redirects to the project workflows when the workflow belongs to another project",
+         %{conn: conn} do
+      user = insert(:user)
+
+      user_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      other_project = insert(:project)
+      other_workflow = workflow_fixture(project_id: other_project.id)
+
+      conn = log_in_user(conn, user)
+
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/projects/#{user_project.id}/w/#{other_workflow.id}"
+               )
+
+      assert to == ~p"/projects/#{user_project.id}/w"
+      assert flash["error"] == "Workflow not found"
+    end
+
+    test "the ?run= param loads a run scoped to the mounted project", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      user_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      own_workflow = workflow_fixture(project_id: user_project.id)
+      foreign_run = run_in_project(insert(:project))
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{user_project.id}/w/#{own_workflow.id}")
+
+      render_patch(
+        view,
+        ~p"/projects/#{user_project.id}/w/#{own_workflow.id}?run=#{foreign_run.id}"
+      )
+
+      %{socket: socket} = :sys.get_state(view.pid)
+
+      assert socket.assigns[:initial_run_data] == nil
+    end
+  end
+
+  defp run_in_project(project) do
+    %{triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip)
+      )
+
+    insert(:run,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: insert(:dataclip)
+    )
+  end
+
   describe "credential creation and broadcasting" do
     test "broadcasts credential update when project credential is saved", %{
       conn: conn
@@ -897,6 +965,65 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert assigns.selected_oauth_client.id == oauth_client.id
       refute view |> has_element?("h3", "OAuth client not found")
+    end
+
+    test "does not open the edit modal for a credential owned by another user",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # a credential owned by a DIFFERENT user, shared into the project
+      foreign_credential =
+        insert(:credential,
+          name: "Victim Secret",
+          schema: "raw",
+          user: insert(:user)
+        )
+
+      insert(:project_credential,
+        project: project,
+        credential: foreign_credential
+      )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_credential_modal", %{
+          "schema" => "raw",
+          "credential_id" => foreign_credential.id
+        })
+
+      # rejected: the edit modal is not opened, and the foreign credential's
+      # name/data is not disclosed
+      refute html =~ "Victim Secret"
+      refute view |> has_element?("#new-credential-modal")
+
+      # and the client is told the open failed, so its optimistically-opened
+      # modal state is reset rather than left hanging
+      assert_push_event(view, "credential_modal_closed", %{})
+
+      # a valid-but-unknown id and a malformed id are also rejected the same
+      # way (guards the nil and non-UUID branches, no crash, no stuck modal)
+      for bad_id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_credential_modal", %{
+          "schema" => "raw",
+          "credential_id" => bad_id
+        })
+
+        refute view |> has_element?("#new-credential-modal")
+        assert_push_event(view, "credential_modal_closed", %{})
+      end
     end
   end
 

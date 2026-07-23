@@ -11,6 +11,7 @@ Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
 Mimic.copy(Lightning.FailureEmail)
+Mimic.copy(Lightning.Projects.Provisioner)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
 # Other ExUnit configuration can be found in `config/runtime.exs`,

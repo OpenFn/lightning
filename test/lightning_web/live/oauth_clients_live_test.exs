@@ -282,6 +282,25 @@ defmodule LightningWeb.OauthClientsLiveTest do
                  |> Enum.all?()
         end)
     end
+
+    test "a non-superuser cannot create a global client via crafted params", %{
+      conn: conn,
+      valid_client_attrs: valid_attrs
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view |> element("#new-oauth-client-option-menu-item") |> render_click()
+
+      # The superuser-only checkbox is hidden for this user, so inject the flag
+      # directly to simulate a crafted submission.
+      view
+      |> form("#oauth-client-form-new", oauth_client: valid_attrs)
+      |> render_submit(%{"oauth_client" => %{"global" => "true"}})
+      |> follow_redirect(conn, ~p"/credentials")
+
+      client = Lightning.Repo.get_by!(OauthClient, name: valid_attrs.name)
+      refute client.global
+    end
   end
 
   describe "Edit" do

@@ -4,6 +4,7 @@ defmodule LightningWeb.UserAuthTest do
   alias Lightning.Accounts
   alias LightningWeb.UserAuth
   import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   @remember_me_cookie "_lightning_web_user_remember_me"
 
@@ -19,6 +20,75 @@ defmodule LightningWeb.UserAuthTest do
       |> Phoenix.Controller.accepts(["html", "json"])
 
     %{user: user_fixture(), conn: conn}
+  end
+
+  describe "authenticate_bearer/2" do
+    test "assigns the user resource for a valid api token", %{
+      conn: conn,
+      user: user
+    } do
+      token = Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer " <> token)
+        |> UserAuth.authenticate_bearer([])
+
+      assert conn.assigns.current_resource.id == user.id
+    end
+
+    test "does not assign a disabled user's resource", %{
+      conn: conn,
+      user: user
+    } do
+      token = Accounts.generate_api_token(user)
+      Lightning.Repo.update!(Ecto.Changeset.change(user, disabled: true))
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer " <> token)
+        |> UserAuth.authenticate_bearer([])
+
+      refute conn.assigns[:current_resource]
+    end
+
+    test "does not assign a resource for a user scheduled for deletion", %{
+      conn: conn,
+      user: user
+    } do
+      token = Accounts.generate_api_token(user)
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(user,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer " <> token)
+        |> UserAuth.authenticate_bearer([])
+
+      refute conn.assigns[:current_resource]
+    end
+
+    # Repo-connection tokens are not user credentials and must never be gated
+    # by the blocked-user check that get_user_by_api_token/1 applies to PATs.
+    test "assigns a repo connection for a valid repo-connection token", %{
+      conn: conn
+    } do
+      repo_connection = insert(:project_repo_connection)
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header(
+          "authorization",
+          "Bearer " <> repo_connection.access_token
+        )
+        |> UserAuth.authenticate_bearer([])
+
+      assert conn.assigns.current_resource.id == repo_connection.id
+    end
   end
 
   describe "log_in_user/2" do
@@ -125,11 +195,46 @@ defmodule LightningWeb.UserAuthTest do
       }
     end
 
+    test "does not disconnect the user's other devices", %{
+      conn: conn,
+      user: user
+    } do
+      # Logout tears down only this session (via live_socket_id and the
+      # redirect). It must not broadcast to the per-user topic, which would
+      # disconnect the user's sockets on every other device.
+      user_token = Accounts.generate_user_session_token(user)
+      topic = "user_socket:#{user.id}"
+      LightningWeb.Endpoint.subscribe(topic)
+
+      conn
+      |> put_session(:user_token, user_token)
+      |> UserAuth.log_out_user()
+
+      refute_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^topic
+      }
+    end
+
     test "works even if user is already logged out", %{conn: conn} do
       conn = conn |> fetch_cookies() |> UserAuth.log_out_user()
       refute get_session(conn, :user_token)
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
       assert redirected_to(conn) == "/users/log_in"
+    end
+  end
+
+  describe "disconnect_user_sockets/1" do
+    test "broadcasts disconnect to the user's socket topic", %{user: user} do
+      topic = "user_socket:#{user.id}"
+      LightningWeb.Endpoint.subscribe(topic)
+
+      UserAuth.disconnect_user_sockets(user)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^topic
+      }
     end
   end
 
@@ -242,13 +347,29 @@ defmodule LightningWeb.UserAuthTest do
     end
 
     test "does not redirect if user is authenticated", %{conn: conn, user: user} do
+      user_token = Accounts.generate_user_session_token(user)
+
       conn =
         conn
+        |> put_session(:user_token, user_token)
         |> assign(:current_user, user)
         |> UserAuth.require_authenticated_user([])
 
       refute conn.halted
       refute conn.status
+      assert conn.assigns[:user_token]
+    end
+
+    test "does not mint a user socket token on the two-factor page while pending",
+         %{conn: conn, user: user} do
+      conn =
+        %{conn | path_info: ["users", "two-factor"]}
+        |> assign(:current_user, user)
+        |> UserAuth.mark_totp_pending()
+        |> UserAuth.require_authenticated_user([])
+
+      refute conn.halted
+      refute conn.assigns[:user_token]
     end
 
     test "redirects if user is authenticated but pending totp", %{
@@ -263,6 +384,22 @@ defmodule LightningWeb.UserAuthTest do
 
       assert conn.halted
       assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
+    end
+
+    test "returns a 401 on json requests if user is pending totp", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        conn
+        |> Phoenix.Controller.put_format("json")
+        |> assign(:current_user, user)
+        |> UserAuth.mark_totp_pending()
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert conn.resp_body |> Jason.decode!() == %{"error" => "Unauthorized"}
     end
   end
 

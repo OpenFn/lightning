@@ -25,8 +25,19 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    credential = Credentials.get_credential!(id)
+    credential = socket.assigns.credential
 
+    if id == credential.id do
+      delete_or_schedule(credential, socket)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You can't perform this action")
+       |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp delete_or_schedule(credential, socket) do
     cond do
       not socket.assigns.delete_now? ->
         case Credentials.schedule_credential_deletion(credential) do
