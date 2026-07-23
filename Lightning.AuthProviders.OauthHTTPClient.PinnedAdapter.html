@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Name — Lightning v2.16.8</title>
+    <title>Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.Name</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <span translate="no">Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/name.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,72 +111,23 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Generates a random names.</p>
+<p>A Tesla adapter for outbound OAuth requests that defends against SSRF and DNS
+rebinding.</p><p>User-controlled endpoint URLs (token, userinfo, revocation, introspection)
+are SSRF sinks. Before any socket is opened, the request host is resolved and
+validated with <a href="https://hexdocs.pm/philter/0.4.0/Philter.Egress.html"><code class="inline">Philter.Egress</code></a>, which fails closed and blocks internal or
+reserved addresses. The connection is then pinned to a validated IP address
+(never re-resolving the hostname), so DNS cannot swap in an internal address
+between validation and connect.</p><p>For HTTPS, TLS peer verification is always forced on: SNI and certificate
+hostname verification run against the original hostname via Mint's <code class="inline">:hostname</code>
+option, and any caller-supplied <code class="inline">:verify</code>/<code class="inline">:verify_fun</code> is dropped so
+verification cannot be weakened. Redirects are never followed.</p><p>The error surfaced to callers is deliberately generic (<code class="inline">:egress_blocked</code>); the
+specific egress reason is logged server-side only and never leaked, so the
+adapter cannot be used as an internal-network oracle.</p><h2 id="module-configuration" class="section-heading"><a href="#module-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>Policy is read from <code class="inline">Application.get_env(:lightning, __MODULE__, [])</code> and
+merged with per-request adapter options:</p><ul><li><code class="inline">:block_private_networks</code> - block internal ranges. Default <code class="inline">true</code>.</li><li><code class="inline">:allowed_hosts</code> - host strings that bypass the block. Default <code class="inline">[]</code>.</li><li><code class="inline">:connect_timeout</code> - overall connect budget in ms. Default <code class="inline">5_000</code>.</li><li><code class="inline">:receive_timeout</code> - per-recv timeout in ms. Default <code class="inline">15_000</code>.</li><li><code class="inline">:resolver</code> - a 2-arity resolver, as <a href="https://hexdocs.pm/philter/0.4.0/Philter.Egress.html"><code class="inline">Philter.Egress</code></a> documents.</li><li><code class="inline">:transport_opts</code> - extra TLS options (private CA, client cert).</li></ul>
     </section>
 
 </div>
 
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Summary</span>
-    </h1>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#generate/1" data-no-tooltip="" translate="no">generate(max_id \\ 9999)</a>
-
-      </div>
-
-    </div>
-
-</div>
-
-  </section>
-
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-
-    <div class="functions-list">
-<section class="detail" id="generate/1">
-
-    <span id="generate/0"></span>
-
-  <div class="detail-header">
-    <a href="#generate/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">generate(max_id \\ 9999)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/name.ex#L28" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
     <footer class="footer">
 

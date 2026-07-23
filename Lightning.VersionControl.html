@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.VersionControl — Lightning v2.16.8</title>
+    <title>Lightning.VersionControl — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.VersionControl</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -172,9 +172,11 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_repo_branches/2" data-no-tooltip="" translate="no">fetch_repo_branches(installation_id, repo_name)</a>
+        <a href="#fetch_repo_branches/3" data-no-tooltip="" translate="no">fetch_repo_branches(user, installation_id, repo_name)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Fetches a repository's branches for <code class="inline">user</code>.</p></div>
 
     </div>
 
@@ -351,7 +353,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">delete_github_oauth_grant(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L398" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L429" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -380,7 +382,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">exchange_code_for_oauth_token(code)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L267" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L298" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -422,17 +424,17 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
   </section>
 </section>
-<section class="detail" id="fetch_repo_branches/2">
+<section class="detail" id="fetch_repo_branches/3">
 
   <div class="detail-header">
-    <a href="#fetch_repo_branches/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#fetch_repo_branches/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">fetch_repo_branches(installation_id, repo_name)</h1>
+      <h1 class="signature" translate="no">fetch_repo_branches(user, installation_id, repo_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L249" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L260" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -441,7 +443,13 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
   <section class="docstring">
 
-
+<p>Fetches a repository's branches for <code class="inline">user</code>.</p><p>The GitHub App private key can mint an installation token for <strong>any</strong>
+installation of the shared App, so this verifies (using the user's own GitHub
+OAuth grant, via <code class="inline">/user/installations</code>) that <code class="inline">installation_id</code> is one the user
+can access before using the app credential. Without this check a user could
+read branch names from a private repository in another tenant's installation
+(a confused-deputy). GitHub's installation token then scopes repository access
+to that installation.</p>
   </section>
 </section>
 <section class="detail" id="fetch_user_access_token/1">
@@ -454,7 +462,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">fetch_user_access_token(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L349" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L380" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -550,7 +558,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">github_enabled?()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L470" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L501" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -603,7 +611,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">oauth_token_valid?(token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L327" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L358" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -666,7 +674,7 @@ This function simply checks if the token has a <code class="inline">refresh_toke
       <h1 class="signature" translate="no">refresh_oauth_token(refresh_token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L296" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L327" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -720,7 +728,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">save_oauth_token(user, token, opts \\ [notify: true])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L429" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L460" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

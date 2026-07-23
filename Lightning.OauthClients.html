@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.OauthClients — Lightning v2.16.8</title>
+    <title>Lightning.OauthClients — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.OauthClients</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -132,7 +132,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_client/2" data-no-tooltip="" translate="no">change_client(client, attrs \\ %{})</a>
+        <a href="#change_client/3" data-no-tooltip="" translate="no">change_client(client, attrs \\ %{}, opts \\ [])</a>
 
       </div>
 
@@ -142,7 +142,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_client/1" data-no-tooltip="" translate="no">create_client(attrs \\ %{})</a>
+        <a href="#create_client/2" data-no-tooltip="" translate="no">create_client(attrs \\ %{}, opts \\ [])</a>
 
       </div>
 
@@ -182,7 +182,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_client/2" data-no-tooltip="" translate="no">update_client(client, attrs)</a>
+        <a href="#update_client/3" data-no-tooltip="" translate="no">update_client(client, attrs, opts \\ [])</a>
 
       </div>
 
@@ -204,16 +204,18 @@ their associations with projects and handling audit trails for changes.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="change_client/2">
+<section class="detail" id="change_client/3">
 
     <span id="change_client/1"></span>
 
+    <span id="change_client/2"></span>
+
   <div class="detail-header">
-    <a href="#change_client/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#change_client/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">change_client(client, attrs \\ %{})</h1>
+      <h1 class="signature" translate="no">change_client(client, attrs \\ %{}, opts \\ [])</h1>
 
 
         <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oauth_clients.ex#L35" class="icon-action" rel="help" aria-label="View Source">
@@ -225,20 +227,22 @@ their associations with projects and handling audit trails for changes.</p>
 
   <section class="docstring">
 
-<p>Prepares a changeset for creating or updating an OAuth client.</p><h2 id="change_client/2-parameters" class="section-heading"><a href="#change_client/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The OAuth client struct.</li><li>attrs: Attributes to update in the client.</li></ul><h2 id="change_client/2-returns" class="section-heading"><a href="#change_client/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>An Ecto.Changeset struct for the OAuth client.</li></ul><h2 id="change_client/2-examples" class="section-heading"><a href="#change_client/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="5359102393-1">(</span><span class="p" data-group-id="5359102393-2">%</span><span class="nc" data-group-id="5359102393-2">OauthClient</span><span class="p" data-group-id="5359102393-2">{</span><span class="p" data-group-id="5359102393-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5359102393-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="5359102393-3">}</span><span class="p" data-group-id="5359102393-1">)</span><span class="w">
-</span><span class="p" data-group-id="5359102393-4">%</span><span class="nc" data-group-id="5359102393-4">Ecto.Changeset</span><span class="p" data-group-id="5359102393-4">{</span><span class="n">...</span><span class="p" data-group-id="5359102393-4">}</span></code></pre>
+<p>Prepares a changeset for creating or updating an OAuth client.</p><h2 id="change_client/3-parameters" class="section-heading"><a href="#change_client/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The OAuth client struct.</li><li>attrs: Attributes to update in the client.</li></ul><h2 id="change_client/3-returns" class="section-heading"><a href="#change_client/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>An Ecto.Changeset struct for the OAuth client.</li></ul><h2 id="change_client/3-examples" class="section-heading"><a href="#change_client/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="4727431954-1">(</span><span class="p" data-group-id="4727431954-2">%</span><span class="nc" data-group-id="4727431954-2">OauthClient</span><span class="p" data-group-id="4727431954-2">{</span><span class="p" data-group-id="4727431954-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4727431954-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="4727431954-3">}</span><span class="p" data-group-id="4727431954-1">)</span><span class="w">
+</span><span class="p" data-group-id="4727431954-4">%</span><span class="nc" data-group-id="4727431954-4">Ecto.Changeset</span><span class="p" data-group-id="4727431954-4">{</span><span class="n">...</span><span class="p" data-group-id="4727431954-4">}</span></code></pre>
   </section>
 </section>
-<section class="detail" id="create_client/1">
+<section class="detail" id="create_client/2">
 
     <span id="create_client/0"></span>
 
+    <span id="create_client/1"></span>
+
   <div class="detail-header">
-    <a href="#create_client/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#create_client/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">create_client(attrs \\ %{})</h1>
+      <h1 class="signature" translate="no">create_client(attrs \\ %{}, opts \\ [])</h1>
 
 
         <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oauth_clients.ex#L134" class="icon-action" rel="help" aria-label="View Source">
@@ -250,8 +254,8 @@ their associations with projects and handling audit trails for changes.</p>
 
   <section class="docstring">
 
-<p>Creates a new OAuth client with the specified attributes.</p><h2 id="create_client/1-parameters" class="section-heading"><a href="#create_client/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>attrs: Map containing attributes for the new OAuth client.
-Required fields: <code class="inline">name</code>, <code class="inline">authorization_endpoint</code>, <code class="inline">token_endpoint</code>, <code class="inline">revocation_endpoint</code>, <code class="inline">client_id</code>, <code class="inline">client_secret</code>.</li></ul><h2 id="create_client/1-returns" class="section-heading"><a href="#create_client/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, oauth_client}</code> if the client is created successfully.</li><li><code class="inline">{:error, changeset}</code> if there is an error during creation due to validation failures or database issues.</li></ul><h2 id="create_client/1-examples" class="section-heading"><a href="#create_client/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  iex&gt; create_client(%{name: &quot;New Client&quot;})
+<p>Creates a new OAuth client with the specified attributes.</p><h2 id="create_client/2-parameters" class="section-heading"><a href="#create_client/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>attrs: Map containing attributes for the new OAuth client.
+Required fields: <code class="inline">name</code>, <code class="inline">authorization_endpoint</code>, <code class="inline">token_endpoint</code>, <code class="inline">revocation_endpoint</code>, <code class="inline">client_id</code>, <code class="inline">client_secret</code>.</li></ul><h2 id="create_client/2-returns" class="section-heading"><a href="#create_client/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, oauth_client}</code> if the client is created successfully.</li><li><code class="inline">{:error, changeset}</code> if there is an error during creation due to validation failures or database issues.</li></ul><h2 id="create_client/2-examples" class="section-heading"><a href="#create_client/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  iex&gt; create_client(%{name: &quot;New Client&quot;})
   {:ok, %OauthClient{}}</p><p>  iex&gt; create_client(%{name: nil})
   {:error, %Ecto.Changeset{}}</p>
   </section>
@@ -275,11 +279,11 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
 
   <section class="docstring">
 
-<p>Deletes an OAuth client and all associated data.</p><h2 id="delete_client/1-parameters" class="section-heading"><a href="#delete_client/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The OauthClient to delete.</li></ul><h2 id="delete_client/1-returns" class="section-heading"><a href="#delete_client/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A tuple {:ok, oauth_client} if deletion is successful.</li><li>A tuple {:error, changeset} if deletion fails.</li></ul><h2 id="delete_client/1-examples" class="section-heading"><a href="#delete_client/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="2026317402-1">(</span><span class="n">client</span><span class="p" data-group-id="2026317402-1">)</span><span class="w">
-</span><span class="p" data-group-id="2026317402-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2026317402-3">%</span><span class="nc" data-group-id="2026317402-3">OauthClient</span><span class="p" data-group-id="2026317402-3">{</span><span class="p" data-group-id="2026317402-3">}</span><span class="p" data-group-id="2026317402-2">}</span><span class="w">
+<p>Deletes an OAuth client and all associated data.</p><h2 id="delete_client/1-parameters" class="section-heading"><a href="#delete_client/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The OauthClient to delete.</li></ul><h2 id="delete_client/1-returns" class="section-heading"><a href="#delete_client/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A tuple {:ok, oauth_client} if deletion is successful.</li><li>A tuple {:error, changeset} if deletion fails.</li></ul><h2 id="delete_client/1-examples" class="section-heading"><a href="#delete_client/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="1783684260-1">(</span><span class="n">client</span><span class="p" data-group-id="1783684260-1">)</span><span class="w">
+</span><span class="p" data-group-id="1783684260-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1783684260-3">%</span><span class="nc" data-group-id="1783684260-3">OauthClient</span><span class="p" data-group-id="1783684260-3">{</span><span class="p" data-group-id="1783684260-3">}</span><span class="p" data-group-id="1783684260-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="2026317402-4">(</span><span class="n">client</span><span class="p" data-group-id="2026317402-4">)</span><span class="w">
-</span><span class="p" data-group-id="2026317402-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2026317402-6">%</span><span class="nc" data-group-id="2026317402-6">Ecto.Changeset</span><span class="p" data-group-id="2026317402-6">{</span><span class="p" data-group-id="2026317402-6">}</span><span class="p" data-group-id="2026317402-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="1783684260-4">(</span><span class="n">client</span><span class="p" data-group-id="1783684260-4">)</span><span class="w">
+</span><span class="p" data-group-id="1783684260-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1783684260-6">%</span><span class="nc" data-group-id="1783684260-6">Ecto.Changeset</span><span class="p" data-group-id="1783684260-6">{</span><span class="p" data-group-id="1783684260-6">}</span><span class="p" data-group-id="1783684260-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_client!/1">
@@ -301,10 +305,10 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
 
   <section class="docstring">
 
-<p>Retrieves a single OAuth client by its ID, raising an error if not found.</p><h2 id="get_client!/1-parameters" class="section-heading"><a href="#get_client!/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>id: The ID of the OAuth client to retrieve.</li></ul><h2 id="get_client!/1-returns" class="section-heading"><a href="#get_client!/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>The OAuth client struct.</li></ul><h2 id="get_client!/1-raises" class="section-heading"><a href="#get_client!/1-raises" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Raises</span></h2><ul><li>Ecto.NoResultsError if the OAuth client does not exist.</li></ul><h2 id="get_client!/1-examples" class="section-heading"><a href="#get_client!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="8717948004-1">(</span><span class="mi">123</span><span class="p" data-group-id="8717948004-1">)</span><span class="w">
-</span><span class="p" data-group-id="8717948004-2">%</span><span class="nc" data-group-id="8717948004-2">OauthClient</span><span class="p" data-group-id="8717948004-2">{</span><span class="p" data-group-id="8717948004-2">}</span><span class="w">
+<p>Retrieves a single OAuth client by its ID, raising an error if not found.</p><h2 id="get_client!/1-parameters" class="section-heading"><a href="#get_client!/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>id: The ID of the OAuth client to retrieve.</li></ul><h2 id="get_client!/1-returns" class="section-heading"><a href="#get_client!/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>The OAuth client struct.</li></ul><h2 id="get_client!/1-raises" class="section-heading"><a href="#get_client!/1-raises" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Raises</span></h2><ul><li>Ecto.NoResultsError if the OAuth client does not exist.</li></ul><h2 id="get_client!/1-examples" class="section-heading"><a href="#get_client!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="6503790367-1">(</span><span class="mi">123</span><span class="p" data-group-id="6503790367-1">)</span><span class="w">
+</span><span class="p" data-group-id="6503790367-2">%</span><span class="nc" data-group-id="6503790367-2">OauthClient</span><span class="p" data-group-id="6503790367-2">{</span><span class="p" data-group-id="6503790367-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="8717948004-3">(</span><span class="mi">456</span><span class="p" data-group-id="8717948004-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="6503790367-3">(</span><span class="mi">456</span><span class="p" data-group-id="6503790367-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -327,19 +331,21 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
 
   <section class="docstring">
 
-<p>Retrieves all OAuth clients based on the given context, either a Project or a User.</p><h2 id="list_clients/1-parameters" class="section-heading"><a href="#list_clients/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>context: The Project or User struct to retrieve OAuth clients for.</li></ul><h2 id="list_clients/1-returns" class="section-heading"><a href="#list_clients/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A list of OAuth clients associated with the given Project or created by the given User.</li></ul><h2 id="list_clients/1-examples" class="section-heading"><a href="#list_clients/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="1059294777-1">(</span><span class="p" data-group-id="1059294777-2">%</span><span class="nc" data-group-id="1059294777-2">Project</span><span class="p" data-group-id="1059294777-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1059294777-2">}</span><span class="p" data-group-id="1059294777-1">)</span><span class="w">
-</span><span class="p" data-group-id="1059294777-3">[</span><span class="p" data-group-id="1059294777-4">%</span><span class="nc" data-group-id="1059294777-4">OauthClient</span><span class="p" data-group-id="1059294777-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1059294777-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1059294777-5">%</span><span class="nc" data-group-id="1059294777-5">OauthClient</span><span class="p" data-group-id="1059294777-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1059294777-5">}</span><span class="p" data-group-id="1059294777-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="6285104098-1">(</span><span class="p" data-group-id="6285104098-2">%</span><span class="nc" data-group-id="6285104098-2">User</span><span class="p" data-group-id="6285104098-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6285104098-2">}</span><span class="p" data-group-id="6285104098-1">)</span><span class="w">
-</span><span class="p" data-group-id="6285104098-3">[</span><span class="p" data-group-id="6285104098-4">%</span><span class="nc" data-group-id="6285104098-4">OauthClient</span><span class="p" data-group-id="6285104098-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6285104098-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6285104098-5">%</span><span class="nc" data-group-id="6285104098-5">OauthClient</span><span class="p" data-group-id="6285104098-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6285104098-5">}</span><span class="p" data-group-id="6285104098-3">]</span></code></pre>
+<p>Retrieves all OAuth clients based on the given context, either a Project or a User.</p><h2 id="list_clients/1-parameters" class="section-heading"><a href="#list_clients/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>context: The Project or User struct to retrieve OAuth clients for.</li></ul><h2 id="list_clients/1-returns" class="section-heading"><a href="#list_clients/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A list of OAuth clients associated with the given Project or created by the given User.</li></ul><h2 id="list_clients/1-examples" class="section-heading"><a href="#list_clients/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="1674815170-1">(</span><span class="p" data-group-id="1674815170-2">%</span><span class="nc" data-group-id="1674815170-2">Project</span><span class="p" data-group-id="1674815170-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1674815170-2">}</span><span class="p" data-group-id="1674815170-1">)</span><span class="w">
+</span><span class="p" data-group-id="1674815170-3">[</span><span class="p" data-group-id="1674815170-4">%</span><span class="nc" data-group-id="1674815170-4">OauthClient</span><span class="p" data-group-id="1674815170-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1674815170-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1674815170-5">%</span><span class="nc" data-group-id="1674815170-5">OauthClient</span><span class="p" data-group-id="1674815170-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1674815170-5">}</span><span class="p" data-group-id="1674815170-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="3029189382-1">(</span><span class="p" data-group-id="3029189382-2">%</span><span class="nc" data-group-id="3029189382-2">User</span><span class="p" data-group-id="3029189382-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="3029189382-2">}</span><span class="p" data-group-id="3029189382-1">)</span><span class="w">
+</span><span class="p" data-group-id="3029189382-3">[</span><span class="p" data-group-id="3029189382-4">%</span><span class="nc" data-group-id="3029189382-4">OauthClient</span><span class="p" data-group-id="3029189382-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="3029189382-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3029189382-5">%</span><span class="nc" data-group-id="3029189382-5">OauthClient</span><span class="p" data-group-id="3029189382-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="3029189382-5">}</span><span class="p" data-group-id="3029189382-3">]</span></code></pre>
   </section>
 </section>
-<section class="detail" id="update_client/2">
+<section class="detail" id="update_client/3">
+
+    <span id="update_client/2"></span>
 
   <div class="detail-header">
-    <a href="#update_client/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#update_client/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">update_client(client, attrs)</h1>
+      <h1 class="signature" translate="no">update_client(client, attrs, opts \\ [])</h1>
 
 
         <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oauth_clients.ex#L162" class="icon-action" rel="help" aria-label="View Source">
@@ -351,11 +357,11 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
 
   <section class="docstring">
 
-<p>Updates an existing OAuth client with the specified attributes.</p><h2 id="update_client/2-parameters" class="section-heading"><a href="#update_client/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The existing OauthClient to update.</li><li>attrs: A map of attributes to update.</li></ul><h2 id="update_client/2-returns" class="section-heading"><a href="#update_client/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A tuple {:ok, oauth_client} if update is successful.</li><li>A tuple {:error, changeset} if update fails.</li></ul><h2 id="update_client/2-examples" class="section-heading"><a href="#update_client/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1246345491-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1246345491-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1246345491-2">}</span><span class="p" data-group-id="1246345491-1">)</span><span class="w">
-</span><span class="p" data-group-id="1246345491-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1246345491-4">%</span><span class="nc" data-group-id="1246345491-4">OauthClient</span><span class="p" data-group-id="1246345491-4">{</span><span class="p" data-group-id="1246345491-4">}</span><span class="p" data-group-id="1246345491-3">}</span><span class="w">
+<p>Updates an existing OAuth client with the specified attributes.</p><h2 id="update_client/3-parameters" class="section-heading"><a href="#update_client/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li>client: The existing OauthClient to update.</li><li>attrs: A map of attributes to update.</li></ul><h2 id="update_client/3-returns" class="section-heading"><a href="#update_client/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A tuple {:ok, oauth_client} if update is successful.</li><li>A tuple {:error, changeset} if update fails.</li></ul><h2 id="update_client/3-examples" class="section-heading"><a href="#update_client/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="5362107629-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5362107629-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5362107629-2">}</span><span class="p" data-group-id="5362107629-1">)</span><span class="w">
+</span><span class="p" data-group-id="5362107629-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5362107629-4">%</span><span class="nc" data-group-id="5362107629-4">OauthClient</span><span class="p" data-group-id="5362107629-4">{</span><span class="p" data-group-id="5362107629-4">}</span><span class="p" data-group-id="5362107629-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1246345491-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1246345491-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1246345491-6">}</span><span class="p" data-group-id="1246345491-5">)</span><span class="w">
-</span><span class="p" data-group-id="1246345491-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1246345491-8">%</span><span class="nc" data-group-id="1246345491-8">Ecto.Changeset</span><span class="p" data-group-id="1246345491-8">{</span><span class="p" data-group-id="1246345491-8">}</span><span class="p" data-group-id="1246345491-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="5362107629-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5362107629-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5362107629-6">}</span><span class="p" data-group-id="5362107629-5">)</span><span class="w">
+</span><span class="p" data-group-id="5362107629-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5362107629-8">%</span><span class="nc" data-group-id="5362107629-8">Ecto.Changeset</span><span class="p" data-group-id="5362107629-8">{</span><span class="p" data-group-id="5362107629-8">}</span><span class="p" data-group-id="5362107629-7">}</span></code></pre>
   </section>
 </section>
 

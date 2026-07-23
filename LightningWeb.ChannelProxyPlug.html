@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>LightningWeb.ChannelProxyPlug — Lightning v2.16.8</title>
+    <title>LightningWeb.ChannelProxyPlug — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.ChannelProxyPlug</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -113,10 +113,10 @@ Lightning
     <section id="moduledoc">
 <p>Reverse proxy plug for channels.</p><p>Authenticates the inbound request against the channel's client auth
 methods, resolves destination credentials, and streams the request upstream
-via <a href="https://hexdocs.pm/philter/0.3.0/Philter.html#proxy/2"><code class="inline">Philter.proxy/2</code></a>. Request and response events are recorded as
+via <a href="https://hexdocs.pm/philter/0.4.0/Philter.html#proxy/2"><code class="inline">Philter.proxy/2</code></a>. Request and response events are recorded as
 <code class="inline">ChannelRequest</code> / <code class="inline">ChannelEvent</code> records for auditing.</p><h2 id="module-request-id" class="section-heading"><a href="#module-request-id" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Request ID</span></h2><p>An <code class="inline">x-request-id</code> header is forwarded to the destination for end-to-end
 tracing. If the caller provides one it will be used, but
-<a href="https://hexdocs.pm/plug/1.20.2/Plug.RequestId.html"><code class="inline">Plug.RequestId</code></a> requires it to be between 20 and 200 characters —
+<a href="https://hexdocs.pm/plug/1.20.3/Plug.RequestId.html"><code class="inline">Plug.RequestId</code></a> requires it to be between 20 and 200 characters —
 shorter or longer values are discarded and a new ID is generated
 automatically.</p>
     </section>

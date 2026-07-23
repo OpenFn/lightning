@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>LightningWeb.WorkflowLive.NewManualRun — Lightning v2.16.8</title>
+    <title>LightningWeb.WorkflowLive.NewManualRun — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.WorkflowLive.NewManualRun</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -139,7 +139,7 @@ It implements the backend API for the React frontend.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#search_selectable_dataclips/4" data-no-tooltip="" translate="no">search_selectable_dataclips(job_id, search_text, limit, offset)</a>
+        <a href="#search_selectable_dataclips/5" data-no-tooltip="" translate="no">search_selectable_dataclips(job_id, project, search_text, limit, offset)</a>
 
       </div>
 
@@ -169,7 +169,7 @@ It implements the backend API for the React frontend.</p>
       <h1 class="signature" translate="no">get_dataclips_filters(query_string)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L42" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L52" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -187,17 +187,17 @@ It implements the backend API for the React frontend.</p>
 
   </section>
 </section>
-<section class="detail" id="search_selectable_dataclips/4">
+<section class="detail" id="search_selectable_dataclips/5">
 
   <div class="detail-header">
-    <a href="#search_selectable_dataclips/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#search_selectable_dataclips/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">search_selectable_dataclips(job_id, search_text, limit, offset)</h1>
+      <h1 class="signature" translate="no">search_selectable_dataclips(job_id, project, search_text, limit, offset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L25" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -210,6 +210,7 @@ It implements the backend API for the React frontend.</p>
 
           <pre translate="no"><span class="attribute">@spec</span> search_selectable_dataclips(
   job_id :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  project :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
   search_text :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   limit :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
   offset :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()

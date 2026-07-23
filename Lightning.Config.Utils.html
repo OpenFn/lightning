@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Config.Utils — Lightning v2.16.8</title>
+    <title>Lightning.Config.Utils — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Config.Utils</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -151,6 +151,16 @@ Lightning
         <a href="#get_env/4" data-no-tooltip="" translate="no">get_env(app, key, path, default \\ nil)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#parse_host_list/1" data-no-tooltip="" translate="no">parse_host_list(value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Parse a comma-separated list of hostnames into a normalised list.</p></div>
 
     </div>
 
@@ -242,6 +252,39 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="parse_host_list/1">
+
+  <div class="detail-header">
+    <a href="#parse_host_list/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">parse_host_list(value)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config/utils.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> parse_host_list(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: [<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()]</pre>
+
+      </div>
+
+<p>Parse a comma-separated list of hostnames into a normalised list.</p><p>Each entry is trimmed, downcased and has a single trailing dot stripped, so
+operators get the same normalisation the egress guard applies at match time.
+Empty or whitespace-only input returns <code class="inline">[]</code>.</p><p>Raises <a href="https://hexdocs.pm/elixir/ArgumentError.html"><code class="inline">ArgumentError</code></a>, naming every offending entry, when any entry is empty
+or looks like something other than a bare hostname: a scheme (<code class="inline">://</code>), a path
+(<code class="inline">/</code>), an <code class="inline">@</code>, or internal whitespace. Bad entries are never silently dropped.</p><p>Colon-bearing forms (host:port, bracketed IPv6 literals) are passed through
+untouched.</p>
   </section>
 </section>
 

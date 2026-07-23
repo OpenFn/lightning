@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Tokens — Lightning v2.16.8</title>
+    <title>Lightning.Tokens — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Tokens</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -174,7 +174,7 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
       <h1 class="signature" translate="no">get_subject(map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L123" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -185,7 +185,8 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
 
 <p>Get the subject of a token.
 Currently support RunTokens and PersonalAccessTokens,
-which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</code></a>s and <a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>s respectively.</p>
+which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</code></a>s and <a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>s respectively.</p><p>This is pure resolution and performs no authorization, so callers must go
+through <a href="#verify/1"><code class="inline">verify/1</code></a> first.</p>
   </section>
 </section>
 <section class="detail" id="verify/1">
@@ -198,7 +199,7 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
       <h1 class="signature" translate="no">verify(token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L35" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L85" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -214,7 +215,9 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
       </div>
 
 <p>Verify a token and return the claims if successful.</p><p>This serves as a central point to verify and validate different types
-of tokens.</p>
+of tokens. For user (personal access) tokens it also rejects unusable
+credentials: a deleted token row yields <code class="inline">{:error, :token_revoked}</code> and a
+blocked account yields <code class="inline">{:error, :user_blocked}</code>.</p>
   </section>
 </section>
 

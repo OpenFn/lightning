@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Workflows.Snapshot — Lightning v2.16.8</title>
+    <title>Lightning.Workflows.Snapshot — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Snapshot</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -160,9 +160,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_all_by_ids/1" data-no-tooltip="" translate="no">get_all_by_ids(ids)</a>
+        <a href="#get_all_by_ids/2" data-no-tooltip="" translate="no">get_all_by_ids(ids, project_id)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Gets snapshots by id, scoped to a project via each snapshot's workflow.</p></div>
 
     </div>
 
@@ -377,17 +379,17 @@ Lightning
 
   </section>
 </section>
-<section class="detail" id="get_all_by_ids/1">
+<section class="detail" id="get_all_by_ids/2">
 
   <div class="detail-header">
-    <a href="#get_all_by_ids/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#get_all_by_ids/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_all_by_ids(ids)</h1>
+      <h1 class="signature" translate="no">get_all_by_ids(ids, project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L218" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L225" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -396,7 +398,14 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> get_all_by_ids([<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()], <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: [<a href="#t:t/0">t</a>()]</pre>
+
+      </div>
+
+<p>Gets snapshots by id, scoped to a project via each snapshot's workflow.</p><p>Only snapshots whose workflow belongs to <code class="inline">project_id</code> are returned, so this
+can't be used to read another project's snapshots.</p>
   </section>
 </section>
 <section class="detail" id="get_all_for/1">
@@ -437,7 +446,7 @@ Lightning
       <h1 class="signature" translate="no">get_by_version(workflow_id, version)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L246" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L254" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -459,7 +468,7 @@ Lightning
       <h1 class="signature" translate="no">get_current_for(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L232" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L240" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -490,7 +499,7 @@ workflow passed in.</p>
       <h1 class="signature" translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L257" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L265" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

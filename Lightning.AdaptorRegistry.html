@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.AdaptorRegistry — Lightning v2.16.8</title>
+    <title>Lightning.AdaptorRegistry — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.AdaptorRegistry</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -114,9 +114,9 @@ Lightning
 <p>Registry process to query and maintain a list of adaptors available for
 writing jobs.</p><p>Currently it queries NPM for all modules in the <code class="inline">@openfn</code> organization and
 filters out modules that are known not to be adaptors.</p><p><strong>Usage</strong></p><pre><code class="makeup elixir" translate="no"><span class="c1"># Starting the process</span><span class="w">
-</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="3157274183-1">(</span><span class="p" data-group-id="3157274183-1">)</span><span class="w">
+</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="0116951719-1">(</span><span class="p" data-group-id="0116951719-1">)</span><span class="w">
 </span><span class="c1"># Getting a list of all adaptors</span><span class="w">
-</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="3157274183-2">(</span><span class="p" data-group-id="3157274183-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
+</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="0116951719-2">(</span><span class="p" data-group-id="0116951719-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
 This does mean that the first call to the process will be delayed until
 the <code class="inline">handle_continue/2</code> has finished.</p><p><strong>Timeouts</strong></p><p>There is a 'general' timeout of 30s, this is used for GenServer calls like
 <a href="#all/1"><code class="inline">all/1</code></a> and also internally when the modules are being queried. NPM can
@@ -140,6 +140,17 @@ can take a couple of seconds if not cached.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#adaptor_format/0" data-no-tooltip="" translate="no">adaptor_format()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The regular expression describing a valid adaptor package string: an npm
+package name (scoped or unscoped) with an optional <code class="inline">@version</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#all/1" data-no-tooltip="" translate="no">all(server \\ __MODULE__)</a>
 
       </div>
@@ -158,6 +169,16 @@ been fetched yet).</p></div>
       </div>
 
         <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#exists?/2" data-no-tooltip="" translate="no">exists?(server \\ __MODULE__, module_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns true if the given package name is present in the registry.</p></div>
 
     </div>
 
@@ -252,6 +273,37 @@ name cannot be matched.</p></div>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="adaptor_format/0">
+
+  <div class="detail-header">
+    <a href="#adaptor_format/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">adaptor_format()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L395" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> adaptor_format() :: <a href="https://hexdocs.pm/elixir/Regex.html#t:t/0">Regex.t</a>()</pre>
+
+      </div>
+
+<p>The regular expression describing a valid adaptor package string: an npm
+package name (scoped or unscoped) with an optional <code class="inline">@version</code>.</p><p>The single definition of a valid adaptor name — used here to split a package
+string, by <a href="Lightning.AdaptorService.html"><code class="inline">Lightning.AdaptorService</code></a> when resolving an install, and by
+<a href="Lightning.Workflows.Job.html"><code class="inline">Lightning.Workflows.Job</code></a> to validate the <code class="inline">:adaptor</code> field.</p>
+  </section>
+</section>
 <section class="detail" id="all/1">
 
     <span id="all/0"></span>
@@ -264,7 +316,7 @@ name cannot be matched.</p></div>
       <h1 class="signature" translate="no">all(server \\ __MODULE__)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L214" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L229" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -307,6 +359,37 @@ been fetched yet).</p>
 <p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
   </section>
 </section>
+<section class="detail" id="exists?/2">
+
+    <span id="exists?/1"></span>
+
+  <div class="detail-header">
+    <a href="#exists?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">exists?(server \\ __MODULE__, module_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L258" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> exists?(server :: <a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>(), module_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) ::
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Returns true if the given package name is present in the registry.</p><p>Name-only membership check (version is ignored).</p>
+  </section>
+</section>
 <section class="detail" id="fetch/0">
 
   <div class="detail-header">
@@ -317,7 +400,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">fetch()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L240" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L269" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -347,7 +430,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">latest_for(server \\ __MODULE__, module_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L232" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L247" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -376,7 +459,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">local_adaptors_enabled?()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L432" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L472" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -398,7 +481,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">resolve_adaptor(adaptor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L416" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L456" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -420,7 +503,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L369" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L409" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -438,10 +521,10 @@ been fetched yet).</p>
 
       </div>
 
-<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="4025285934-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="4025285934-1">)</span><span class="w">
-</span><span class="p" data-group-id="4025285934-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="4025285934-2">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="4025285934-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="4025285934-3">)</span><span class="w">
-</span><span class="p" data-group-id="4025285934-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="4025285934-4">}</span></code></pre>
+<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="5774621424-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="5774621424-1">)</span><span class="w">
+</span><span class="p" data-group-id="5774621424-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="5774621424-2">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="5774621424-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="5774621424-3">)</span><span class="w">
+</span><span class="p" data-group-id="5774621424-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="5774621424-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="resolve_package_name!/1">
@@ -454,7 +537,7 @@ been fetched yet).</p>
       <h1 class="signature" translate="no">resolve_package_name!(package_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L406" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L446" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -485,7 +568,7 @@ name cannot be matched.</p>
       <h1 class="signature" translate="no">start_link(opts \\ [use_cache: true])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L170" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L179" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -529,7 +612,7 @@ for testing and/or running multiple versions of the registry</li></ul>
       <h1 class="signature" translate="no">versions_for(server \\ __MODULE__, module_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L223" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L238" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Collaboration.WorkflowResolver — Lightning v2.16.8</title>
+    <title>Lightning.Collaboration.WorkflowResolver — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Collaboration.WorkflowResolver</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -368,7 +368,7 @@ kind <code class="inline">:existing</code>.</li><li><code class="inline">action:
       <h1 class="signature" translate="no">resolve_version(workflow_id, version, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_resolver.ex#L161" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -385,7 +385,7 @@ kind <code class="inline">:existing</code>.</li><li><code class="inline">action:
   opts :: <a href="#t:resolve_opts/0">resolve_opts</a>()
 ) ::
   {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="#t:kind/0">kind</a>()}
-  | {:error, :snapshot_not_found}</pre>
+  | {:error, :snapshot_not_found | :wrong_project | :workflow_not_found}</pre>
 
       </div>
 
@@ -394,10 +394,14 @@ also be called directly. The <code class="inline">version</code> is a <code clas
 by the caller — the resolver never parses version strings.</p><p>Returns a <code class="inline">%Workflow{}</code> in Ecto state <code class="inline">:built</code> carrying the snapshot's
 <code class="inline">lock_version</code> and tagged with kind <code class="inline">:version</code>. A version-view is a read-only
 point-in-time view that is never saved through this path; the <code class="inline">:version</code> kind
-lets callers distinguish it from a genuinely-new workflow.</p><p>Sets <code class="inline">project_id</code> from the supplied project and performs <strong>no</strong> ownership
-check, unlike the <code class="inline">:edit</code> latest path. Performs <strong>no</strong> authorization (auth
+lets callers distinguish it from a genuinely-new workflow.</p><p>Sets <code class="inline">project_id</code> from the supplied project. Enforces the same
+project-ownership invariant as the <code class="inline">:edit</code> latest path: when a <code class="inline">:project</code> opt
+is supplied the snapshot's workflow must belong to it, otherwise
+<code class="inline">{:error, :wrong_project}</code> — so a snapshot version cannot be read across
+projects. With no <code class="inline">:project</code> opt (the internal point-in-time use) ownership is
+not checked, matching <code class="inline">check_ownership/2</code>. Performs <strong>no</strong> authorization (auth
 stays at the channel).</p><p>Returns <code class="inline">{:error, :snapshot_not_found}</code> when no snapshot exists for the
-version.</p>
+version, and <code class="inline">{:error, :workflow_not_found}</code> when the workflow row is gone.</p>
   </section>
 </section>
 

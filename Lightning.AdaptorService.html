@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.AdaptorService — Lightning v2.16.8</title>
+    <title>Lightning.AdaptorService — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.AdaptorService</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -202,14 +202,6 @@ matching versions.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#install!/2" data-no-tooltip="" translate="no">install!(agent, package_spec)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#installed?/2" data-no-tooltip="" translate="no">installed?(agent, package_spec)</a>
 
       </div>
@@ -256,7 +248,7 @@ matching versions.</p>
       <h1 class="signature" translate="no">package_spec()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L190" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L188" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -297,7 +289,7 @@ matching versions.</p>
       <h1 class="signature" translate="no">build_aliased_name(arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L366" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L377" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -343,7 +335,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">find_adaptor(agent, package)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L234" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L239" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -375,7 +367,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">get_adaptors(agent)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L229" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L234" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -397,7 +389,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">install(agent, package)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L284" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L290" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -410,40 +402,12 @@ to suit your particular naming strategy.</p>
 
           <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) ::
   {:ok, Lightning.AdaptorService.Adaptor.t()}
+  | {:error, :adaptor_not_permitted}
   | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
 
           <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
   {:ok, Lightning.AdaptorService.Adaptor.t()}
-  | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="install!/2">
-
-  <div class="detail-header">
-    <a href="#install!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">install!(agent, package_spec)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L303" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> install!(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
-  {:ok, Lightning.AdaptorService.Adaptor.t()}
+  | {:error, :adaptor_not_permitted}
   | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
 
       </div>
@@ -461,7 +425,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">installed?(agent, package_spec)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L277" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L282" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -483,7 +447,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L336" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L353" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -505,7 +469,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">start_link(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L223" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L228" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

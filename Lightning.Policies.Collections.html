@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.Policies.Collections — Lightning v2.16.8</title>
+    <title>Lightning.Policies.Collections — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.Collections</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -111,8 +111,16 @@ Lightning
 
 
     <section id="moduledoc">
-<p>The Bodyguard Policy module for Collections.</p><p>Access to collections is controlled by the project the collection belongs to.</p><p>The <code class="inline">access_collection</code> action is allowed if the user has access to the
-project, or if a run belongs to the project (via it's workflow).</p>
+<p>The Bodyguard Policy module for Collections.</p><p>Access to collections is controlled by the project the collection belongs to.</p><p>Read access (<code class="inline">:access_collection</code>) is allowed for any project member, or for a
+run that belongs to the project (via its workflow).</p><p>Access is gated on the caller's project role, mirroring the read/write
+asymmetry used elsewhere in the app:</p><ul><li><code class="inline">:access_collection</code> (read: get, stream, download) is allowed for any
+project member, or for a run that belongs to the project.</li><li><code class="inline">:put_collection_item</code> / <code class="inline">:delete_collection_item</code> (put, put_all and
+single-key delete) require at least the <code class="inline">:editor</code> role.</li><li><code class="inline">:delete_all_collection_items</code> (wiping/matching-delete of a collection's
+items) requires <code class="inline">:owner</code> or <code class="inline">:admin</code>.</li><li><code class="inline">:manage_collection</code> (creating, renaming or deleting the collection
+itself) requires <code class="inline">:owner</code> or <code class="inline">:admin</code>. Creation is authorized against the
+<code class="inline">%Project{}</code>, since no collection exists yet.</li></ul><p>The <code class="inline">*_collection_item(s)</code> actions target the key-value entries exposed by the
+Collections API; <code class="inline">:manage_collection</code> targets the collection record itself.</p><p>Runs retain full access to collections within their own project, since jobs
+need to read and mutate collection data while executing.</p>
     </section>
 
 </div>
@@ -145,7 +153,7 @@ project, or if a run belongs to the project (via it's workflow).</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(atom, user, collection)</a>
+        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(action, user, collection)</a>
 
       </div>
 
@@ -177,7 +185,7 @@ project, or if a run belongs to the project (via it's workflow).</p>
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/collections.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/collections.ex#L38" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -188,7 +196,12 @@ project, or if a run belongs to the project (via it's workflow).</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :access_collection</pre>
+          <pre translate="no"><span class="attribute">@type</span> actions() ::
+  :access_collection
+  | :put_collection_item
+  | :delete_collection_item
+  | :delete_all_collection_items
+  | :manage_collection</pre>
 
       </div>
 
@@ -215,10 +228,10 @@ project, or if a run belongs to the project (via it's workflow).</p>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">authorize(atom, user, collection)</h1>
+      <h1 class="signature" translate="no">authorize(action, user, collection)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/collections.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/collections.ex#L53" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -231,10 +244,9 @@ project, or if a run belongs to the project (via it's workflow).</p>
 
           <pre translate="no"><span class="attribute">@spec</span> authorize(
   <a href="#t:actions/0">actions</a>(),
-  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
-  <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()
-) ::
-  :ok | {:error, :unauthorized}</pre>
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>() | <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>(),
+  <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>() | <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+) :: :ok | {:error, :unauthorized} | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
       </div>
 

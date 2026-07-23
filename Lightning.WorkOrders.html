@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.WorkOrders — Lightning v2.16.8</title>
+    <title>Lightning.WorkOrders — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.WorkOrders</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -552,7 +552,7 @@ may be large.</p>
 
       </div>
 
-<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="3336518092-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="3336518092-1">)</span></code></pre>
+<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="3833422221-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="3833422221-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enqueue_many_for_retry/3">
@@ -567,7 +567,7 @@ may be large.</p>
       <h1 class="signature" translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id, queue \\ &quot;default&quot;)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L644" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L650" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -591,7 +591,7 @@ may be large.</p>
       <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L728" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L734" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -607,8 +607,8 @@ may be large.</p>
       </div>
 
 <p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list to <code class="inline">:include</code>.
-Supports nested preloads.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="1567242006-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1567242006-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="1567242006-2">]</span><span class="p" data-group-id="1567242006-1">)</span><span class="w">
-</span><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="1567242006-3">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1567242006-4">[</span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">runs</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1567242006-5">[</span><span class="p" data-group-id="1567242006-5">]</span><span class="p" data-group-id="1567242006-4">]</span><span class="p" data-group-id="1567242006-3">)</span></code></pre>
+Supports nested preloads.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6110880430-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6110880430-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="6110880430-2">]</span><span class="p" data-group-id="6110880430-1">)</span><span class="w">
+</span><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6110880430-3">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6110880430-4">[</span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">runs</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6110880430-5">[</span><span class="p" data-group-id="6110880430-5">]</span><span class="p" data-group-id="6110880430-4">]</span><span class="p" data-group-id="6110880430-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_last_runs_steps_with_dataclips/2">
@@ -621,7 +621,7 @@ Supports nested preloads.</p><pre><code class="makeup elixir" translate="no"><sp
       <h1 class="signature" translate="no">get_last_runs_steps_with_dataclips(workorders, jobs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L598" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L604" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -845,7 +845,7 @@ this new run, but not executed again.</p>
       <h1 class="signature" translate="no">update_state(run)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L707" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L713" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -874,7 +874,7 @@ Run passed in as the latest run.</p><p>See <a href="Lightning.WorkOrders.Query.h
       <h1 class="signature" translate="no">work_orders_for_project_query(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L743" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L749" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

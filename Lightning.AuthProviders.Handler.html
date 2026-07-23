@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.AuthProviders.Handler — Lightning v2.16.8</title>
+    <title>Lightning.AuthProviders.Handler — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.AuthProviders.Handler</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -198,6 +198,16 @@ any OIDC compliant provider.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#verify_id_token/3" data-no-tooltip="" translate="no">verify_id_token(handler, token, nonce)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Verifies the <code class="inline">id_token</code> returned by the token endpoint and returns its claims.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -222,7 +232,7 @@ any OIDC compliant provider.</p>
       <h1 class="signature" translate="no">opts()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L27" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -238,7 +248,8 @@ any OIDC compliant provider.</p>
   client_secret: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   redirect_uri: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   wellknown: <a href="Lightning.AuthProviders.WellKnown.html#t:t/0">Lightning.AuthProviders.WellKnown.t</a>(),
-  scope: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+  scope: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  allow_unverified_email: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
 ]</pre>
 
       </div>
@@ -256,7 +267,7 @@ any OIDC compliant provider.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L19" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -268,6 +279,7 @@ any OIDC compliant provider.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.AuthProviders.Handler{
+  allow_unverified_email: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   client: <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.Client.html#t:t/0">OAuth2.Client.t</a>(),
   name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   scope: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
@@ -304,7 +316,7 @@ any OIDC compliant provider.</p>
       <h1 class="signature" translate="no">authorize_url(handler, params \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L132" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -334,7 +346,7 @@ configured <code class="inline">scope</code> is always included. Callers should 
       <h1 class="signature" translate="no">from_model(model)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L100" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -363,7 +375,7 @@ configured <code class="inline">scope</code> is always included. Callers should 
       <h1 class="signature" translate="no">get_token(handler, code)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L107" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L141" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -375,7 +387,7 @@ configured <code class="inline">scope</code> is always included. Callers should 
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_token(handler :: <a href="#t:t/0">t</a>(), code :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.AccessToken.html#t:t/0">OAuth2.AccessToken.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()}</pre>
+  {:ok, <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.AccessToken.html#t:t/0">OAuth2.AccessToken.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()}</pre>
 
       </div>
 
@@ -392,7 +404,7 @@ configured <code class="inline">scope</code> is always included. Callers should 
       <h1 class="signature" translate="no">get_userinfo(handler, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L119" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L154" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -421,7 +433,7 @@ configured <code class="inline">scope</code> is always included. Callers should 
       <h1 class="signature" translate="no">new(name, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L39" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L56" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -439,6 +451,42 @@ configured <code class="inline">scope</code> is always included. Callers should 
 <p>Create a new Provider struct, expects a name and opts:</p><ul><li><code class="inline">:client_id</code> - The providers issued id</li><li><code class="inline">:client_secret</code> - Secret for the client</li><li><code class="inline">:redirect_uri</code> - The URI for redirecting after authentication,
 usually the callback url in the router.</li><li><code class="inline">:wellknown</code> - A AuthProviders.WellKnown struct with the providers
 <code class="inline">.well-known/openid-configuration</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="verify_id_token/3">
+
+  <div class="detail-header">
+    <a href="#verify_id_token/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">verify_id_token(handler, token, nonce)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/handler.ex#L241" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> verify_id_token(
+  handler :: <a href="#t:t/0">t</a>(),
+  token :: <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.AccessToken.html#t:t/0">OAuth2.AccessToken.t</a>(),
+  nonce :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Verifies the <code class="inline">id_token</code> returned by the token endpoint and returns its claims.</p><p>Checks the JWT signature against the provider's JWKS (asymmetric algs only),
+then that <code class="inline">iss</code> matches the discovered issuer, <code class="inline">aud</code> contains our client id,
+the token is not expired, and <code class="inline">nonce</code> matches the value we sent. This is what
+lets the caller trust the token's identity claims (<code class="inline">email</code>, <code class="inline">email_verified</code>,
+<code class="inline">sub</code>) rather than an unauthenticated userinfo response.</p>
   </section>
 </section>
 

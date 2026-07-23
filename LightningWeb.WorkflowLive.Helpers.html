@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>LightningWeb.WorkflowLive.Helpers — Lightning v2.16.8</title>
+    <title>LightningWeb.WorkflowLive.Helpers — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.WorkflowLive.Helpers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -130,84 +130,6 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#broadcast_updated_params/2" data-no-tooltip="" translate="no">broadcast_updated_params(socket, params)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#build_url/2" data-no-tooltip="" translate="no">build_url(assigns, params)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Builds a URL with query parameters based on parameter definitions.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#chat_params/0" data-no-tooltip="" translate="no">chat_params()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates chat-related parameters</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#code_view_params/0" data-no-tooltip="" translate="no">code_view_params()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates code view parameters</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#orthogonal_params/0" data-no-tooltip="" translate="no">orthogonal_params()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates orthogonal parameters (excludes mode and selection)</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#param/3" data-no-tooltip="" translate="no">param(name, value, opts \\ [])</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates a parameter definition with common defaults.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#params_without_mode_selection/0" data-no-tooltip="" translate="no">params_without_mode_selection()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates parameters excluding mode and selection</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#query_param/1" data-no-tooltip="" translate="no">query_param(name)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates a parameter that pulls from query_params</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#run_workflow/3" data-no-tooltip="" translate="no">run_workflow(workflow_or_changeset, params, opts)</a>
 
       </div>
@@ -224,60 +146,12 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#standard_params/0" data-no-tooltip="" translate="no">standard_params()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates standard URL parameters (all common params)</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#subscribe_to_params_update/1" data-no-tooltip="" translate="no">subscribe_to_params_update(socket_id)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#to_latest_params/0" data-no-tooltip="" translate="no">to_latest_params()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates URL parameters ignoring v (all common params except version tag)</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#with_params/1" data-no-tooltip="" translate="no">with_params(overrides \\ [])</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates parameters with custom overrides</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#workflow_enabled?/1" data-no-tooltip="" translate="no">workflow_enabled?(workflow)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Determines if a workflow is enabled based on its triggers.
 Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#workflow_input_params/1" data-no-tooltip="" translate="no">workflow_input_params(selection_id)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates workflow input run parameters</p></div>
 
     </div>
 
@@ -306,184 +180,6 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="broadcast_updated_params/2">
-
-  <div class="detail-header">
-    <a href="#broadcast_updated_params/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">broadcast_updated_params(socket, params)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L19" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="build_url/2">
-
-  <div class="detail-header">
-    <a href="#build_url/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">build_url(assigns, params)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L146" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Builds a URL with query parameters based on parameter definitions.</p><h2 id="build_url/2-parameters" class="section-heading"><a href="#build_url/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - The assigns from the LiveView</li><li><code class="inline">params</code> - List of parameter definitions. Each definition is a keyword list with:<ul><li><code class="inline">:name</code> - The parameter name in the URL (required)</li><li><code class="inline">:value</code> - The value or a function that receives (assigns, params) (required)</li><li><code class="inline">:when</code> - Condition as boolean or function that receives (assigns, params) (default: true)</li><li><code class="inline">:transform</code> - Optional transformation function applied to the value</li></ul></li></ul>
-  </section>
-</section>
-<section class="detail" id="chat_params/0">
-
-  <div class="detail-header">
-    <a href="#chat_params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">chat_params()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L225" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates chat-related parameters</p>
-  </section>
-</section>
-<section class="detail" id="code_view_params/0">
-
-  <div class="detail-header">
-    <a href="#code_view_params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">code_view_params()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L281" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates code view parameters</p>
-  </section>
-</section>
-<section class="detail" id="orthogonal_params/0">
-
-  <div class="detail-header">
-    <a href="#orthogonal_params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">orthogonal_params()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L260" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates orthogonal parameters (excludes mode and selection)</p>
-  </section>
-</section>
-<section class="detail" id="param/3">
-
-    <span id="param/2"></span>
-
-  <div class="detail-header">
-    <a href="#param/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">param(name, value, opts \\ [])</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L213" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates a parameter definition with common defaults.</p>
-  </section>
-</section>
-<section class="detail" id="params_without_mode_selection/0">
-
-  <div class="detail-header">
-    <a href="#params_without_mode_selection/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">params_without_mode_selection()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L288" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates parameters excluding mode and selection</p>
-  </section>
-</section>
-<section class="detail" id="query_param/1">
-
-  <div class="detail-header">
-    <a href="#query_param/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">query_param(name)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L220" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates a parameter that pulls from query_params</p>
-  </section>
-</section>
 <section class="detail" id="run_workflow/3">
 
   <div class="detail-header">
@@ -494,7 +190,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">run_workflow(workflow_or_changeset, params, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L54" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L46" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -539,7 +235,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">save_workflow(changeset, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L19" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -565,96 +261,6 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
 
   </section>
 </section>
-<section class="detail" id="standard_params/0">
-
-  <div class="detail-header">
-    <a href="#standard_params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">standard_params()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L247" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates standard URL parameters (all common params)</p>
-  </section>
-</section>
-<section class="detail" id="subscribe_to_params_update/1">
-
-  <div class="detail-header">
-    <a href="#subscribe_to_params_update/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">subscribe_to_params_update(socket_id)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L15" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="to_latest_params/0">
-
-  <div class="detail-header">
-    <a href="#to_latest_params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">to_latest_params()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L235" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates URL parameters ignoring v (all common params except version tag)</p>
-  </section>
-</section>
-<section class="detail" id="with_params/1">
-
-    <span id="with_params/0"></span>
-
-  <div class="detail-header">
-    <a href="#with_params/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">with_params(overrides \\ [])</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L295" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates parameters with custom overrides</p>
-  </section>
-</section>
 <section class="detail" id="workflow_enabled?/1">
 
   <div class="detail-header">
@@ -665,7 +271,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">workflow_enabled?(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L97" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L89" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -678,28 +284,6 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
 Accepts either a Workflow struct or an Ecto.Changeset.</p>
   </section>
 </section>
-<section class="detail" id="workflow_input_params/1">
-
-  <div class="detail-header">
-    <a href="#workflow_input_params/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">workflow_input_params(selection_id)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L271" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates workflow input run parameters</p>
-  </section>
-</section>
 <section class="detail" id="workflow_state_tooltip/1">
 
   <div class="detail-header">
@@ -710,7 +294,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p>
       <h1 class="signature" translate="no">workflow_state_tooltip(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L102" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

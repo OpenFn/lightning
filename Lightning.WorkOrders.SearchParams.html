@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>Lightning.WorkOrders.SearchParams — Lightning v2.16.8</title>
+    <title>Lightning.WorkOrders.SearchParams — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.WorkOrders.SearchParams</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
@@ -207,7 +207,7 @@ a query to the database.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L35" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L43" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -221,15 +221,15 @@ a query to the database.</p>
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.WorkOrders.SearchParams{
   date_after: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
   date_before: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
-  search_fields: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()],
+  search_fields: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()],
   search_term: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   sort_by: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   sort_direction: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  status: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()],
+  status: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()],
   wo_date_after: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
   wo_date_before: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
   workflow_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  workorder_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+  workorder_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
 }</pre>
 
       </div>
@@ -282,7 +282,7 @@ a query to the database.</p>
       <h1 class="signature" translate="no">from_map(map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L152" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L156" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -304,7 +304,7 @@ a query to the database.</p>
       <h1 class="signature" translate="no">new(params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L63" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L81" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -328,7 +328,7 @@ a query to the database.</p>
         <span class="note">(macro)</span>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/search_params.ex#L37" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>LightningWeb.JobLive.CredentialPicker — Lightning v2.16.8</title>
+    <title>Lightning.AuthProviders.TLS — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">LightningWeb.JobLive.CredentialPicker</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.16.8)</small>
+      <span translate="no">Lightning.AuthProviders.TLS</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.17.0)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/credential_picker.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/tls.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,8 +111,9 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Component allowing selecting a credential or creating a new one via a
-modal.</p>
+<p>Shared TLS settings for the OIDC login fetches (discovery, JWKS, userinfo).</p><p>These endpoints supply or carry the material used to authenticate an SSO
+login, so they must be fetched over verified HTTPS: a MITM on any of them
+would let an attacker substitute keys/claims and forge a login.</p>
     </section>
 
 </div>
@@ -131,11 +132,21 @@ modal.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#render/1" data-no-tooltip="" translate="no">render(assigns)</a>
+        <a href="#secure_url?/1" data-no-tooltip="" translate="no">secure_url?(url)</a>
 
       </div>
 
-        <div class="summary-synopsis"></div>
+        <div class="summary-synopsis"><p>True when the URL is https, so <a href="#verify_opts/0"><code class="inline">verify_opts/0</code></a> actually applies.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#verify_opts/0" data-no-tooltip="" translate="no">verify_opts()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>HTTPoison <code class="inline">:ssl</code> options that verify the server's certificate chain.</p></div>
 
     </div>
 
@@ -153,17 +164,17 @@ modal.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="render/1">
+<section class="detail" id="secure_url?/1">
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#secure_url?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">render(assigns)</h1>
+      <h1 class="signature" translate="no">secure_url?(url)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/credential_picker.ex#L16" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/tls.ex#L29" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -172,7 +183,32 @@ modal.</p>
 
   <section class="docstring">
 
-<h2 id="render/1-attributes" class="section-heading"><a href="#render/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">credentials</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">keychain_credentials</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">on_change</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+<p>True when the URL is https, so <a href="#verify_opts/0"><code class="inline">verify_opts/0</code></a> actually applies.</p><p>Plaintext http over a loopback host is accepted only when
+<code class="inline">:auth_providers_allow_insecure_loopback</code> is set (the test suite serves these
+endpoints over http on localhost); in production it is refused, so a
+misconfigured plaintext endpoint can't silently skip chain verification.</p>
+  </section>
+</section>
+<section class="detail" id="verify_opts/0">
+
+  <div class="detail-header">
+    <a href="#verify_opts/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">verify_opts()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/tls.ex#L11" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>HTTPoison <code class="inline">:ssl</code> options that verify the server's certificate chain.</p>
   </section>
 </section>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.16.8">
+    <meta name="project" content="Lightning v2.17.0">
 
 
-    <title>API Reference — Lightning v2.16.8</title>
+    <title>API Reference — Lightning v2.17.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ECBB467C.js"></script>
+    <script defer src="dist/sidebar_items-2001EE11.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.16.8
+          v2.17.0
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ Lightning
 
 <div id="top-content">
   <div class="heading-with-actions top-heading">
-    <h1>API Reference <small class="app-vsn">Lightning v#2.16.8</small></h1>
+    <h1>API Reference <small class="app-vsn">Lightning v#2.17.0</small></h1>
 
       <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -375,11 +375,30 @@ requests configured with middleware appropriate for OAuth specific tasks.</p></d
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter.html" translate="no">Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A Tesla adapter for outbound OAuth requests that defends against SSRF and DNS
+rebinding.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.AuthProviders.Store.html" translate="no">Lightning.AuthProviders.Store</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Store module for caching Handlers.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.AuthProviders.TLS.html" translate="no">Lightning.AuthProviders.TLS</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Shared TLS settings for the OIDC login fetches (discovery, JWKS, userinfo).</p></div>
 
 </div>
 <div class="summary-row">
@@ -836,6 +855,15 @@ changesets for a given schema.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Credentials.Scoping.html" translate="no">Lightning.Credentials.Scoping</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Verifies that credential references belong to the project that owns them.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Credentials.SensitiveValues.html" translate="no">Lightning.Credentials.SensitiveValues</a>
 
   </div>
@@ -1255,15 +1283,6 @@ a Kafka cluster, for the purpose of deduplication.</p></div>
     <a href="Lightning.MetadataService.Error.html" translate="no">Lightning.MetadataService.Error</a>
 
   </div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Name.html" translate="no">Lightning.Name</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Generates a random names.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1929,6 +1948,15 @@ URL-safe strings.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Tokens.CredentialTransferToken.html" translate="no">Lightning.Tokens.CredentialTransferToken</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A short-lived, ownership-bound token for confirming a credential transfer.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.UnixDateTime.html" translate="no">Lightning.UnixDateTime</a>
 
   </div>
@@ -2356,27 +2384,6 @@ a query to the database.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Ecto model for Jobs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Workflows.Node.html" translate="no">Lightning.Workflows.Node</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Represents a node in a workflow graph.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Workflows.ParamsComparator.html" translate="no">Lightning.Workflows.ParamsComparator</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Functions for comparing workflow structures and detecting changes.
-This module provides functionality to compare workflows semantically (ignoring IDs and
-metadata by default) or exactly (comparing all fields). It's useful for detecting
-structural changes, generating checksums for caching, and workflow versioning.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3071,15 +3078,6 @@ of projects associations to credentials and / or oauth clients.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="LightningWeb.DataclipLive.FormComponent.html" translate="no">LightningWeb.DataclipLive.FormComponent</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Form Component for working with a single dataclip</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="LightningWeb.DataclipLive.Show.html" translate="no">LightningWeb.DataclipLive.Show</a>
 
   </div>
@@ -3125,7 +3123,7 @@ of projects associations to credentials and / or oauth clients.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Translates controller action results into valid <a href="https://hexdocs.pm/plug/1.20.2/Plug.Conn.html"><code class="inline">Plug.Conn</code></a> responses.</p></div>
+    <div class="summary-synopsis"><p>Translates controller action results into valid <a href="https://hexdocs.pm/plug/1.20.3/Plug.Conn.html"><code class="inline">Plug.Conn</code></a> responses.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3178,41 +3176,6 @@ of projects associations to credentials and / or oauth clients.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Ensures common <code class="inline">assigns</code> are applied to all LiveViews attaching this hook.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.JobLive.AdaptorPicker.html" translate="no">LightningWeb.JobLive.AdaptorPicker</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Component allowing selecting an adaptor and it's version</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.JobLive.CredentialPicker.html" translate="no">LightningWeb.JobLive.CredentialPicker</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Component allowing selecting a credential or creating a new one via a
-modal.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.JobLive.CronSetupComponent.html" translate="no">LightningWeb.JobLive.CronSetupComponent</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>A live component for managing cron setup in a form.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.JobLive.KafkaSetupComponent.html" translate="no">LightningWeb.JobLive.KafkaSetupComponent</a>
-
-  </div>
 
 </div>
 <div class="summary-row">
@@ -3292,13 +3255,6 @@ back to a LiveView component.</p></div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="LightningWeb.OidcController.html" translate="no">LightningWeb.OidcController</a>
-
-  </div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.PageView.html" translate="no">LightningWeb.PageView</a>
 
   </div>
 
@@ -3595,13 +3551,6 @@ It is mirroring the <code class="inline">Project -&gt; ProjectUser</code> relati
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="LightningWeb.RunLive.RunViewerLive.html" translate="no">LightningWeb.RunLive.RunViewerLive</a>
-
-  </div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="LightningWeb.RunLive.Show.html" translate="no">LightningWeb.RunLive.Show</a>
 
   </div>
@@ -3854,15 +3803,6 @@ for common functionality.</p></div>
 
     <div class="summary-synopsis"><p>This module helps with the rewrite of the Workflow editor.
 It implements the backend API for the React frontend.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.WorkflowNewLive.WorkflowParams.html" translate="no">LightningWeb.WorkflowNewLive.WorkflowParams</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Various function for reconciling changes to a workflow params map.</p></div>
 
 </div>
 <div class="summary-row">
