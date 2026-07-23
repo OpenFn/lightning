@@ -1,13 +1,13 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
-import { PickerButton } from '../picker/PickerButton';
+import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -90,8 +90,24 @@ function BreadcrumbContent({
 
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
+
+  // Clicking the workflow title returns to the root workflow editor view: it
+  // closes the full IDE (and any other panel), deselects the current node, and
+  // drops any run-viewing context, landing on the bare canvas. This clears more
+  // than the IDE's close ("x") button, which only closes the panel.
+  const handleTitleClick = useCallback(() => {
+    updateSearchParams({
+      panel: null,
+      job: null,
+      trigger: null,
+      edge: null,
+      run: null,
+      step: null,
+      runMode: null,
+    });
+  }, [updateSearchParams]);
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -119,7 +135,9 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
+        <BreadcrumbLink onClick={handleTitleClick}>
+          {currentWorkflowName}
+        </BreadcrumbLink>
         <div className="flex items-center gap-1.5">
           {!isNewWorkflow && (
             <VersionDropdown
@@ -152,10 +170,11 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
-    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
+    handleTitleClick,
     handleVersionSelect,
+    isNewWorkflow,
   ]);
 
   return (
