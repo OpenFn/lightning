@@ -124,6 +124,32 @@ defmodule Lightning.Credentials do
     |> Repo.all()
   end
 
+  @spec list_credentials(Project.t(), map()) :: Scrivener.Page.t()
+  def list_credentials(%Project{} = project, page_params) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.project_id == ^project.id,
+        preload: [
+          :user,
+          :project_credentials,
+          :projects,
+          :credential_bodies,
+          :oauth_client
+        ],
+        order_by: [asc: fragment("lower(?)", c.name)],
+        group_by: c.id
+
+    Repo.paginate(query, page_params)
+  end
+
+  @spec list_credentials(User.t(), map()) :: Scrivener.Page.t()
+  def list_credentials(%User{id: user_id}, page_params) do
+    list_credentials_query(user_id)
+    |> order_by([c], asc: fragment("lower(?)", c.name))
+    |> Repo.paginate(page_params)
+  end
+
   defp list_credentials_query(user_id) do
     from(c in Credential,
       where: c.user_id == ^user_id,
@@ -1791,6 +1817,18 @@ defmodule Lightning.Credentials do
       preload: [:project, :created_by, :default_credential]
     )
     |> Repo.all()
+  end
+
+  def list_keychain_credentials_for_project(
+        %Project{id: project_id},
+        page_params
+      ) do
+    from(kc in KeychainCredential,
+      where: kc.project_id == ^project_id,
+      order_by: [asc: fragment("lower(?)", kc.name)],
+      preload: [:project, :created_by, :default_credential]
+    )
+    |> Repo.paginate(page_params)
   end
 
   @doc """
