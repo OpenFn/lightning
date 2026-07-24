@@ -18,6 +18,8 @@ import { LandingScreen } from '../../../js/collaborative-editor/components/Landi
 
 function renderLandingScreen(props: {
   aiAssistantEnabled?: boolean;
+  aiLimitReached?: boolean;
+  aiLimitMessage?: string | null;
   onBuildWithAI?: (prompt: string) => void;
   onBuildFromScratch?: () => void;
   isBuildingFromScratch?: boolean;
@@ -206,5 +208,42 @@ describe('LandingScreen - Card click handlers', () => {
 
     await user.click(card);
     expect(onBuildFromScratch).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// AI LIMIT REACHED
+// =============================================================================
+
+describe('LandingScreen - AI limit reached', () => {
+  test('disables the input and Build button and does not submit', async () => {
+    const user = userEvent.setup();
+    const onBuildWithAI = vi.fn();
+    renderLandingScreen({ aiLimitReached: true, onBuildWithAI });
+
+    expect(screen.getByTestId('build-with-ai-input')).toBeDisabled();
+    expect(screen.getByTestId('build-with-ai-button')).toBeDisabled();
+
+    await user.type(screen.getByTestId('build-with-ai-input'), 'hello{Enter}');
+    expect(onBuildWithAI).not.toHaveBeenCalled();
+  });
+
+  test('surfaces the server limit message as the tooltip', async () => {
+    const user = userEvent.setup();
+    renderLandingScreen({
+      aiLimitReached: true,
+      aiLimitMessage: 'Too many queries',
+    });
+
+    await user.hover(screen.getByTestId('build-with-ai-input'));
+    // Radix renders the tooltip content plus an accessibility copy, so match
+    // one-or-more rather than exactly one.
+    const messages = await screen.findAllByText('Too many queries');
+    expect(messages.length).toBeGreaterThan(0);
+  });
+
+  test('leaves the input enabled when the limit is not reached', () => {
+    renderLandingScreen({ aiLimitReached: false });
+    expect(screen.getByTestId('build-with-ai-input')).not.toBeDisabled();
   });
 });

@@ -29,6 +29,7 @@ import { useActionLock } from './hooks/useActionLock';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
+  useLimits,
   useProject,
 } from './hooks/useSessionContext';
 import {
@@ -187,6 +188,8 @@ function LandingScreenWrapper({
   aiAssistantEnabled: boolean;
 }) {
   const showLandingScreen = useShowLandingScreen();
+  const aiLimit = useLimits().ai_assistant;
+  const aiLimitReached = aiLimit != null && !aiLimit.allowed;
   const {
     openYAMLImportModal,
     openTemplateBrowserModal,
@@ -210,6 +213,8 @@ function LandingScreenWrapper({
     <>
       <LandingScreen
         aiAssistantEnabled={aiAssistantEnabled}
+        aiLimitReached={aiLimitReached}
+        aiLimitMessage={aiLimit?.message}
         onBuildWithAI={(prompt: string) => {
           dismissLandingScreen();
           openAIAssistantPanel(prompt);

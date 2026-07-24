@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from '../../components/Tooltip';
+
 import { AIDisclaimerFooter } from './AIDisclaimerFooter';
 
 interface WorkflowOptionCardProps {
@@ -15,6 +17,8 @@ interface WorkflowOptionCardProps {
 
 interface LandingScreenProps {
   aiAssistantEnabled: boolean;
+  aiLimitReached?: boolean;
+  aiLimitMessage?: string | null;
   onBuildWithAI: (prompt: string) => void;
   onBuildFromScratch: () => void;
   isBuildingFromScratch: boolean;
@@ -24,6 +28,8 @@ interface LandingScreenProps {
 
 export function LandingScreen({
   aiAssistantEnabled,
+  aiLimitReached = false,
+  aiLimitMessage,
   onBuildWithAI,
   onBuildFromScratch,
   isBuildingFromScratch,
@@ -31,7 +37,11 @@ export function LandingScreen({
   onImportYAML,
 }: LandingScreenProps) {
   const [prompt, setPrompt] = useState('');
-  const isValid = prompt.trim().length > 0;
+
+  const disabledMessage =
+    aiLimitReached && aiLimitMessage ? aiLimitMessage : undefined;
+
+  const isValid = prompt.trim().length > 0 && !aiLimitReached;
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -77,43 +87,51 @@ export function LandingScreen({
                 <span>Recommended</span>
               </span>
             </div>
-            <div className="rounded-lg border border-border-subtle bg-white focus-within:shadow-card transition-shadow">
-              <textarea
-                // eslint-disable-next-line jsx-a11y/no-autofocus
-                autoFocus
-                id="build-with-ai-input"
-                data-testid="build-with-ai-input"
-                aria-describedby="build-with-ai-hint"
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                placeholder="e.g. Sync new KoboToolbox submissions into Postgres"
-                rows={4}
-                className="w-full rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent"
-              />
-              <span id="build-with-ai-hint" className="sr-only">
-                Press Enter to submit. Use Shift+Enter or Alt+Enter for a new
-                line.
-              </span>
-              <div className="flex items-center justify-between px-3 py-2">
-                <AIDisclaimerFooter muted />
-                <button
-                  data-testid="build-with-ai-button"
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!isValid}
-                  className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:hover:text-black disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring focus-visible:ring-gray-300 rounded"
-                >
-                  Build it
-                  <span className="hero-arrow-right h-4 w-4 stroke-4"></span>
-                </button>
+            <Tooltip content={disabledMessage} side="top">
+              <div
+                className={cn(
+                  'rounded-lg border border-border-subtle bg-white focus-within:shadow-card transition-shadow',
+                  aiLimitReached && 'opacity-60'
+                )}
+              >
+                <textarea
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                  id="build-with-ai-input"
+                  data-testid="build-with-ai-input"
+                  aria-describedby="build-with-ai-hint"
+                  disabled={aiLimitReached}
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                  placeholder="e.g. Sync new KoboToolbox submissions into Postgres"
+                  rows={4}
+                  className="w-full rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent disabled:cursor-not-allowed"
+                />
+                <span id="build-with-ai-hint" className="sr-only">
+                  Press Enter to submit. Use Shift+Enter or Alt+Enter for a new
+                  line.
+                </span>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <AIDisclaimerFooter muted />
+                  <button
+                    data-testid="build-with-ai-button"
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={!isValid}
+                    className="text-sm flex items-center gap-2 text-black hover:text-gray-700 disabled:hover:text-black disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring focus-visible:ring-gray-300 rounded"
+                  >
+                    Build it
+                    <span className="hero-arrow-right h-4 w-4 stroke-4"></span>
+                  </button>
+                </div>
               </div>
-            </div>
+            </Tooltip>
           </div>
         )}
 
