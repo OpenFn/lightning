@@ -42,10 +42,7 @@ import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import flowEvents from '../components/diagram/react-flow-events';
 import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
-import {
-  formatChannelErrorMessage,
-  isChannelRequestError,
-} from '../lib/errors';
+import { isChannelRequestError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
@@ -499,16 +496,7 @@ export const useWorkflowActions = () => {
           ? { duration: Infinity }
           : {};
 
-        // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
-          error.message = formatChannelErrorMessage({
-            errors: error.errors as { base?: string[] } & Record<
-              string,
-              string[]
-            >,
-            type: error.type,
-          });
-
           if (error.type === 'unauthorized') {
             notifications.alert({
               id: SAVE_WORKFLOW_ERROR_TOAST_ID,
@@ -652,16 +640,7 @@ export const useWorkflowActions = () => {
         error: unknown,
         retrySaveAndSync: () => Promise<unknown>
       ) => {
-        // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
-          error.message = formatChannelErrorMessage({
-            errors: error.errors as { base?: string[] } & Record<
-              string,
-              string[]
-            >,
-            type: error.type,
-          });
-
           if (error.type === 'unauthorized') {
             notifications.alert({
               title: 'Permission denied',

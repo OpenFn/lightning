@@ -177,6 +177,25 @@ describe('useWorkflowActions().saveWorkflow', () => {
       expect(notifications.alert).not.toHaveBeenCalled();
       cleanup();
     });
+
+    // notify only suppresses the toast. Callers that pass 'none' (the Run and
+    // Retry buttons) surface the error themselves, so the rethrown error has
+    // to carry the server's message rather than a placeholder.
+    test('notify "none": rethrows a channel error with the formatted message', async () => {
+      const { result, saveWorkflowSpy, cleanup } = await createTestSetup(false);
+      saveWorkflowSpy.mockRejectedValue(
+        new ChannelRequestError('optimistic_lock_error', {
+          base: ['This workflow has been changed by someone else'],
+        })
+      );
+
+      await expect(
+        result.current.saveWorkflow({ notify: 'none' })
+      ).rejects.toThrow('This workflow has been changed by someone else');
+
+      expect(notifications.alert).not.toHaveBeenCalled();
+      cleanup();
+    });
   });
 
   describe('persistent Retry toast for new workflows', () => {

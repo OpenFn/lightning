@@ -4,7 +4,11 @@ import type { ChannelError } from '../hooks/useChannel';
 
 /**
  * Custom error thrown by channelRequest when backend returns an error.
- * Does not include a formatted message - formatting happens at higher levels.
+ *
+ * The message is formatted from the server's error payload at construction, so
+ * every consumer gets a readable message without having to format it itself.
+ * Callers that suppress a toast still hand a useful message to whoever catches
+ * the rethrow.
  */
 export class ChannelRequestError extends Error {
   type:
@@ -20,7 +24,12 @@ export class ChannelRequestError extends Error {
     type: ChannelRequestError['type'],
     errors: Record<string, string[] | undefined>
   ) {
-    super('Channel request failed');
+    super(
+      formatChannelErrorMessage({
+        type,
+        errors: errors as { base?: string[] } & Record<string, string[]>,
+      })
+    );
     this.name = 'ChannelRequestError';
     this.type = type;
     this.errors = errors;
