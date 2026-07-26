@@ -71,7 +71,7 @@ interface BreadcrumbContentProps {
   aiAssistantEnabled: boolean;
 }
 
-function BreadcrumbContent({
+export function BreadcrumbContent({
   workflowId,
   workflowName,
   projectIdFallback,
