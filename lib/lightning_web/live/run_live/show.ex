@@ -8,6 +8,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Runs
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias LightningWeb.RunLive.CancelHelper
@@ -312,40 +313,48 @@ defmodule LightningWeb.RunLive.Show do
     %{current_user: user, project_user: project_user, project: project} =
       socket.assigns
 
-    can_run_workflow =
-      ProjectUsers
-      |> Permissions.can?(
-        :run_workflow,
-        user,
-        project
-      )
+    case Runs.get_for_project(id, project.id) do
+      nil ->
+        {:ok, redirect(socket, to: "/projects")}
 
-    {:ok,
-     socket
-     |> assign(
-       active_menu_item: :runs,
-       page_title: "Run",
-       id: id,
-       selected_step_id: nil,
-       steps: []
-     )
-     |> assign(:input_dataclip, nil)
-     |> assign(:output_dataclip, nil)
-     |> assign(:run, AsyncResult.loading())
-     |> assign(:log_lines, AsyncResult.loading())
-     |> assign(:log_lines_empty?, true)
-     |> assign(
-       can_edit_data_retention:
-         Permissions.can?(
-           ProjectUsers,
-           :edit_data_retention,
-           user,
-           project_user
+      _run ->
+        can_run_workflow =
+          ProjectUsers
+          |> Permissions.can?(
+            :run_workflow,
+            user,
+            project
+          )
+
+        {:ok,
+         socket
+         |> assign(
+           active_menu_item: :runs,
+           page_title: "Run",
+           id: id,
+           selected_step_id: nil,
+           steps: []
          )
-     )
-     |> assign(can_run_workflow: can_run_workflow)
-     |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
-     |> get_run_async(id, project.id)}
+         |> assign(:input_dataclip, nil)
+         |> assign(:output_dataclip, nil)
+         |> assign(:run, AsyncResult.loading())
+         |> assign(:log_lines, AsyncResult.loading())
+         |> assign(:log_lines_empty?, true)
+         |> assign(
+           can_edit_data_retention:
+             Permissions.can?(
+               ProjectUsers,
+               :edit_data_retention,
+               user,
+               project_user
+             )
+         )
+         |> assign(can_run_workflow: can_run_workflow)
+         |> assign(
+           admin_contacts: Projects.list_project_admin_emails(project.id)
+         )
+         |> get_run_async(id, project.id)}
+    end
   end
 
   def handle_steps_change(socket) do
