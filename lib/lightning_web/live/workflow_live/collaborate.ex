@@ -407,7 +407,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   defp workflow_assigns(params, project) do
     case params do
       %{"id" => workflow_id} ->
-        case Workflows.get_workflow_for_project(workflow_id, project.id) do
+        case Workflows.get_workflow_for_project(project, workflow_id) do
           nil ->
             :not_found
 

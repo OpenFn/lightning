@@ -128,13 +128,15 @@ defmodule Lightning.Workflows do
 
   Returns `nil` if the workflow does not exist or is not in the project.
   """
-  def get_workflow_for_project(id, project_id, opts \\ []) do
-    include = Keyword.get(opts, :include, [])
+  def get_workflow_for_project(project, id, opts \\ [])
 
-    Workflow
-    |> where([w], w.id == ^id and w.project_id == ^project_id)
-    |> preload(^include)
-    |> Repo.one()
+  def get_workflow_for_project(%Project{} = project, id, opts) do
+    if Lightning.Validators.valid_uuid?(id) do
+      id
+      |> get_workflow_query(opts)
+      |> where([w], w.project_id == ^project.id)
+      |> Repo.one()
+    end
   end
 
   defp get_workflow_query(id, opts) do
@@ -143,21 +145,6 @@ defmodule Lightning.Workflows do
     Workflow
     |> where(id: ^id)
     |> preload(^include)
-  end
-
-  @doc """
-  Gets a workflow by id, scoped to the given project.
-
-  Returns `nil` when the id is malformed, missing, or belongs to another
-  project, so it can't be used to read or mutate a workflow across projects.
-  """
-  def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
-    if Lightning.Validators.valid_uuid?(id) do
-      id
-      |> get_workflow_query(opts)
-      |> where([w], w.project_id == ^project.id)
-      |> Repo.one()
-    end
   end
 
   @spec save_workflow(
