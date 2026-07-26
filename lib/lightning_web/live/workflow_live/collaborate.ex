@@ -33,27 +33,34 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         %{assigns: %{project: project, access_root: access_root}} = socket
       ) do
     is_sandbox? = Project.sandbox?(project)
+    workflow_assigns = workflow_assigns(params, project)
 
-    {:ok,
-     socket
-     |> assign(workflow_assigns(params, project))
-     |> assign(
-       active_menu_item: :overview,
-       project: project,
-       project_display_name:
-         Projects.display_name_within_access_root(project, access_root),
-       project_is_sandbox: is_sandbox?,
-       root_project_id: if(is_sandbox?, do: access_root.id),
-       root_project_name: if(is_sandbox?, do: access_root.name),
-       show_credential_modal: false,
-       credential_schema: nil,
-       credential_to_edit: nil,
-       new_credential_project_credentials:
-         CredentialLive.Helpers.default_project_credentials(project),
-       show_webhook_auth_modal: false,
-       webhook_auth_method: nil,
-       ai_assistant_enabled: AiAssistant.enabled?()
-     )}
+    case workflow_assigns do
+      :not_found ->
+        {:ok, redirect(socket, to: "/projects")}
+
+      workflow_assigns ->
+        {:ok,
+         socket
+         |> assign(workflow_assigns)
+         |> assign(
+           active_menu_item: :overview,
+           project: project,
+           project_display_name:
+             Projects.display_name_within_access_root(project, access_root),
+           project_is_sandbox: is_sandbox?,
+           root_project_id: if(is_sandbox?, do: access_root.id),
+           root_project_name: if(is_sandbox?, do: access_root.name),
+           show_credential_modal: false,
+           credential_schema: nil,
+           credential_to_edit: nil,
+           new_credential_project_credentials:
+             CredentialLive.Helpers.default_project_credentials(project),
+           show_webhook_auth_modal: false,
+           webhook_auth_method: nil,
+           ai_assistant_enabled: AiAssistant.enabled?()
+         )}
+    end
   end
 
   @impl true
@@ -391,14 +398,18 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   defp workflow_assigns(params, project) do
     case params do
       %{"id" => workflow_id} ->
-        workflow = Workflows.get_workflow!(workflow_id)
+        case Workflows.get_workflow_for_project(workflow_id, project.id) do
+          nil ->
+            :not_found
 
-        %{
-          workflow: workflow,
-          workflow_id: workflow_id,
-          is_new_workflow: false,
-          page_title: "Collaborate on #{workflow.name}"
-        }
+          workflow ->
+            %{
+              workflow: workflow,
+              workflow_id: workflow_id,
+              is_new_workflow: false,
+              page_title: "Collaborate on #{workflow.name}"
+            }
+        end
 
       _other ->
         workflow_id = Ecto.UUID.generate()

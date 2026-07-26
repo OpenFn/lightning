@@ -123,6 +123,20 @@ defmodule Lightning.Workflows do
     get_workflow_query(id, opts) |> Repo.one()
   end
 
+  @doc """
+  Gets a single workflow scoped to a project with optional preloads.
+
+  Returns `nil` if the workflow does not exist or is not in the project.
+  """
+  def get_workflow_for_project(id, project_id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    Workflow
+    |> where([w], w.id == ^id and w.project_id == ^project_id)
+    |> preload(^include)
+    |> Repo.one()
+  end
+
   defp get_workflow_query(id, opts) do
     include = Keyword.get(opts, :include, [])
 

@@ -175,7 +175,6 @@ defmodule LightningWeb.RunLive.Streaming do
            run: AsyncResult.ok(run, updated_run),
            # set the initial set of steps
            steps: updated_run.steps |> sort_steps(),
-           project: updated_run.workflow.project,
            workflow: updated_run.workflow
          )
          |> assign_async(
