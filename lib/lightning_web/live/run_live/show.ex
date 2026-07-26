@@ -315,7 +315,10 @@ defmodule LightningWeb.RunLive.Show do
 
     case Runs.get_for_project(id, project.id) do
       nil ->
-        {:ok, redirect(socket, to: "/projects")}
+        {:ok,
+         socket
+         |> put_flash(:error, "#{project.name} has no run with ID #{id}.")
+         |> redirect(to: "/projects")}
 
       _run ->
         can_run_workflow =
