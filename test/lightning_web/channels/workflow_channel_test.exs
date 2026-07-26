@@ -2042,6 +2042,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "request_run_steps", %{"run_id" => run.id})
       assert_reply ref, :error, %{reason: "unauthorized"}
     end
+
+    test "returns error for run from different workflow in same project", %{
+      socket: socket,
+      project: project
+    } do
+      other_workflow = insert(:workflow, project: project)
+      other_workflow = with_snapshot(other_workflow)
+      job = insert(:job, workflow: other_workflow)
+      dataclip = insert(:dataclip, project: project)
+      work_order = insert(:workorder, workflow: other_workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job,
+          dataclip: dataclip
+        )
+
+      ref = push(socket, "request_run_steps", %{"run_id" => run.id})
+      assert_reply ref, :error, %{reason: "unauthorized"}
+    end
   end
 
   describe "real-time history updates" do

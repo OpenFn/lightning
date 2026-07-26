@@ -78,11 +78,20 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   defp maybe_load_initial_run_data(socket, %{"run" => run_id})
        when is_binary(run_id) do
-    %{project: project} = socket.assigns
+    %{project: project, workflow_id: workflow_id} = socket.assigns
 
-    case Lightning.Runs.get_for_project(run_id, project.id, include: [:steps]) do
-      nil -> socket
-      run -> assign(socket, initial_run_data: build_run_data(run))
+    case Lightning.Runs.get_for_project(run_id, project.id,
+           include: [:steps, :work_order]
+         ) do
+      %{work_order: %{workflow_id: ^workflow_id}} = run ->
+        assign(socket, initial_run_data: build_run_data(run))
+
+      _ ->
+        put_flash(
+          socket,
+          :error,
+          "#{project.name} has no run with ID #{run_id} for this workflow."
+        )
     end
   end
 

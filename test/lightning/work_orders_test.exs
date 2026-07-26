@@ -2996,6 +2996,59 @@ defmodule Lightning.WorkOrdersTest do
       # 1 from specific query + up to 20 from main query
       assert length(results) <= 21
     end
+
+    test "does not include run workorder when run_id belongs to a different workflow",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           snapshot: snapshot
+         } do
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      other_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      other_run =
+        insert(:run,
+          work_order: other_workorder,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          snapshot: other_snapshot
+        )
+
+      own_dataclip = insert(:dataclip)
+
+      own_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: own_dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: own_dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, other_run.id)
+      result_ids = Enum.map(results, & &1.id)
+
+      assert own_workorder.id in result_ids
+      refute other_workorder.id in result_ids
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
   end
 
   describe "cancel_many/2" do

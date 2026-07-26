@@ -322,7 +322,7 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in(
         "request_run_steps",
         %{"run_id" => run_id},
-        %{assigns: %{project: project}} = socket
+        %{assigns: %{project: project, workflow: workflow}} = socket
       ) do
     async_task(socket, "request_run_steps", fn ->
       case Lightning.Invocation.get_run_with_steps(run_id) do
@@ -330,8 +330,9 @@ defmodule LightningWeb.WorkflowChannel do
           {:error, %{reason: "run_not_found"}}
 
         run ->
-          # Verify run belongs to this project's workflows
-          if run.work_order.workflow.project_id == project.id do
+          # Verify run belongs to this project and currently loaded workflow.
+          if run.work_order.workflow.project_id == project.id &&
+               run.work_order.workflow_id == workflow.id do
             {:ok, format_run_steps_for_client(run)}
           else
             {:error, %{reason: "unauthorized"}}
