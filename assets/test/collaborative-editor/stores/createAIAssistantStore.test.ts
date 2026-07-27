@@ -336,6 +336,34 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Status', () => {
+    it('should not clear the status when content is appended', () => {
+      // Clearing on new text is the channel buffer's job (at network
+      // arrival), not the drain — so the store must leave status alone.
+      store.setStreamingStatus('Writing code...');
+      store._appendStreamingChunk('Here is the answer');
+
+      expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
+      expect(store.getSnapshot().streamingContent).toBe('Here is the answer');
+    });
+
+    it('should clear the status when set to null', () => {
+      store.setStreamingStatus('Thinking...');
+      store.setStreamingStatus(null);
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+
+    it('should clear the status once changes arrive', () => {
+      store._appendStreamingChunk('Answer');
+      store.setStreamingStatus('Writing code...');
+
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();

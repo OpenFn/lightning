@@ -21,6 +21,7 @@ defmodule LightningWeb.RunWithOptions do
   def render(%Run{} = run) do
     %{
       "id" => run.id,
+      "project_id" => run.snapshot.workflow.project_id,
       "triggers" => run.snapshot.triggers |> Enum.map(&render/1),
       "jobs" => run.snapshot.jobs |> Enum.map(&render/1),
       "edges" => run.snapshot.edges |> Enum.map(&render/1),

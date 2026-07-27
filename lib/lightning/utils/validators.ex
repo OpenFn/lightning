@@ -5,6 +5,28 @@ defmodule Lightning.Validators do
 
   import Ecto.Changeset
 
+  # Matches z.regexes.email from Zod v4 (v4.0.17) — keeps validation consistent
+  # with the marketing site. Update if the Zod dependency is upgraded.
+  @email_format_regex ~r/^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/
+
+  @doc """
+  Validates that an email field contains a properly formatted email address.
+
+  Applies: required check, format regex, max 160 chars, lowercases the value.
+  This is a pure format check — no database lookup. Use `User.validate_email/1`
+  when you also need to verify the email is unique in the users table.
+  """
+  @spec validate_email_format(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
+  def validate_email_format(changeset, field \\ :email) do
+    changeset
+    |> validate_required(field, message: "can't be blank")
+    |> validate_format(field, @email_format_regex,
+      message: "must be a valid email address"
+    )
+    |> validate_length(field, max: 160)
+    |> update_change(field, &String.downcase/1)
+  end
+
   @doc """
   Validate that only one of the fields is set at a time.
 
@@ -78,6 +100,54 @@ defmodule Lightning.Validators do
       _any ->
         changeset
     end
+  end
+
+  @doc """
+  Returns `true` when `value` is a well-formed UUID that will dump cleanly to a
+  `:binary_id` on insert/update.
+
+  Uses `Ecto.UUID.dump/1` (not `cast/1`): `dump` rejects raw 16-byte binaries and
+  unsubstituted import placeholders that `cast` would accept, matching what the
+  database actually enforces. `nil` is not a valid UUID.
+
+  This is the single source of truth for the "dumpable UUID" check — both
+  `validate_uuid/2` and schema-level guards (e.g. `Workflows.Job`) build on it so
+  they cannot drift apart.
+  """
+  @spec valid_uuid?(term()) :: boolean()
+  def valid_uuid?(value), do: match?({:ok, _}, Ecto.UUID.dump(value))
+
+  @doc """
+  Validates that the given field(s) contain a well-formed UUID.
+
+  `:binary_id` fields are not format-checked by `cast/3` — a malformed value
+  (e.g. an unsubstituted import placeholder) passes casting and only raises
+  `Ecto.ChangeError` when dumped on insert/update. This converts that into a
+  changeset error instead.
+
+  Only runs when a non-nil change is present for the field, so optional
+  foreign keys left unset are unaffected.
+
+  > **Narrowing:** uses `Ecto.UUID.dump/1`, not `cast/1`. `dump` additionally
+  > rejects raw 16-byte binaries and unsubstituted placeholders that `cast`
+  > accepted. Confirmed no live caller relied on the laxer behaviour (uppercase
+  > canonical UUIDs still pass).
+
+  ```
+  changeset
+  |> validate_uuid([:id, :workflow_id])
+  ```
+  """
+  @spec validate_uuid(Ecto.Changeset.t(), atom() | [atom()]) ::
+          Ecto.Changeset.t()
+  def validate_uuid(changeset, fields) when is_list(fields) do
+    Enum.reduce(fields, changeset, &validate_uuid(&2, &1))
+  end
+
+  def validate_uuid(changeset, field) when is_atom(field) do
+    validate_change(changeset, field, fn _, value ->
+      if valid_uuid?(value), do: [], else: [{field, "is not a valid UUID"}]
+    end)
   end
 
   @doc """

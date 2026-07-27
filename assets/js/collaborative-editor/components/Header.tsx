@@ -1,11 +1,12 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback } from 'react';
+import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
-import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
-import { channelRequest } from '../hooks/useChannel';
-import { useSession } from '../hooks/useSession';
+import * as dataclipApi from '../api/dataclips';
+import { StoreContext } from '../contexts/StoreProvider';
+import { getCsrfToken } from '../lib/csrf';
+import { useActiveRun } from '../hooks/useHistory';
 import {
   useIsNewWorkflow,
   useLimits,
@@ -29,6 +30,8 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { notifications } from '../lib/notifications';
+import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
@@ -39,7 +42,7 @@ import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 /**
  * Save button component - visible in React DevTools
@@ -222,10 +225,20 @@ export function Header({
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
   const { selectedTemplate } = useTemplatePanel();
-  const { provider } = useSession();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
+  const storeContext = useContext(StoreContext);
+  const getLimits = storeContext?.sessionContextStore.getLimits;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const activeRun = useActiveRun();
+  const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
+  const followedRunId = params.run ?? null;
+  const isRetryable =
+    !!followedRunId &&
+    !!activeRun &&
+    isFinalState(activeRun.state) &&
+    !!activeRun.steps?.length;
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -251,37 +264,144 @@ export function Header({
 
   const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
 
-  const handleRunClick = useCallback(() => {
-    if (firstTriggerId) {
-      // select the first trigger
-      selectNode(firstTriggerId);
-      // switch panel to run
-      updateSearchParams({
-        panel: 'run',
+  const handleRunClick = useCallback(async () => {
+    if (!firstTriggerId || !projectId || !workflowId) return;
+
+    setIsSubmitting(true);
+    try {
+      await saveWorkflow({ silent: true });
+      const response = await dataclipApi.submitManualRun({
+        workflowId,
+        projectId,
+        triggerId: firstTriggerId,
       });
-      // Canvas context: open run panel with first trigger
-      openRunPanel({ triggerId: firstTriggerId });
+      notifications.success({
+        title: 'Run started',
+        description: 'Saved latest changes and created new work order',
+      });
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({ run: response.data.run_id });
+    } catch (error) {
+      notifications.alert({
+        title: 'Failed to submit run',
+        description:
+          error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    firstTriggerId,
+    projectId,
+    workflowId,
+    saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  const handleRetryClick = useCallback(async () => {
+    if (!followedRunId || !activeRun?.steps?.length || !projectId) return;
+
+    setIsSubmitting(true);
+    try {
+      await saveWorkflow({ silent: true });
+
+      const firstStep = activeRun.steps[0];
+      const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
+      const csrfToken = getCsrfToken();
+      const response = await fetch(retryUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+        },
+        body: JSON.stringify({ step_id: firstStep.id }),
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || 'Failed to retry run');
+      }
+
+      const result = (await response.json()) as { data: { run_id: string } };
+
+      notifications.success({
+        title: 'Retry started',
+        description: 'Saved latest changes and re-running with previous input',
+      });
+
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({ run: result.data.run_id });
+    } catch (error) {
+      notifications.alert({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    followedRunId,
+    activeRun,
+    projectId,
+    saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  const handleRunWithCustomInputClick = useCallback(() => {
+    if (firstTriggerId) {
+      selectNode(firstTriggerId);
+      updateSearchParams({ panel: 'run' });
+      openRunPanel({
+        triggerId: firstTriggerId,
+        entryPoint: 'custom-input',
+      });
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
-  const handleSwitchToLegacyEditor = useCallback(async () => {
-    if (!provider?.channel || !projectId || !workflowId) return;
-
-    try {
-      await channelRequest(provider.channel, 'switch_to_legacy_editor', {});
-
-      // Build legacy editor URL and navigate
-      const legacyUrl = buildClassicalEditorUrl({
-        projectId,
-        workflowId,
-        searchParams: new URLSearchParams(window.location.search),
-        isNewWorkflow,
-      });
-      window.location.href = legacyUrl;
-    } catch (error) {
-      console.error('Failed to switch to legacy editor:', error);
+  useKeyboardShortcut(
+    'Control+Enter, Meta+Enter',
+    () => {
+      if (isRetryable) {
+        void handleRetryClick();
+      } else {
+        void handleRunClick();
+      }
+    },
+    0,
+    {
+      enabled:
+        canRun &&
+        !isRunPanelOpen &&
+        !isIDEOpen &&
+        !isNewWorkflow &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        !!projectId &&
+        !!workflowId &&
+        (isRetryable || !!firstTriggerId),
     }
-  }, [provider, projectId, workflowId, isNewWorkflow]);
+  );
+
+  useKeyboardShortcut(
+    'Control+Shift+Enter, Meta+Shift+Enter',
+    () => {
+      handleRunWithCustomInputClick();
+    },
+    0,
+    {
+      enabled:
+        canRun &&
+        !isRunPanelOpen &&
+        !isIDEOpen &&
+        !isNewWorkflow &&
+        !!projectId &&
+        !!workflowId &&
+        !!firstTriggerId,
+    }
+  );
 
   useKeyboardShortcut(
     'Control+s, Meta+s',
@@ -309,26 +429,6 @@ export function Header({
         <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
-          {projectId && workflowId && (
-            <Tooltip
-              content={
-                <span>
-                  Looking for the old version of the workflow builder? You can
-                  switch back for a few more days by clicking this icon. (But it
-                  will soon be retired!)
-                </span>
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={() => void handleSwitchToLegacyEditor()}
-                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-              >
-                <span className="hero-question-mark-circle"></span>
-              </button>
-            </Tooltip>
-          )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
@@ -397,8 +497,13 @@ export function Header({
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
                 <NewRunButton
-                  onClick={handleRunClick}
+                  onClick={() => {
+                    void (isRetryable ? handleRetryClick() : handleRunClick());
+                  }}
+                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
                   disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  isRunning={isSubmitting || runIsProcessing}
+                  text={isRetryable ? 'Run (Retry)' : 'Run'}
                 />
               )}
               <SaveButton

@@ -160,7 +160,7 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the email contains whitespace", %{attrs: attrs} do
@@ -169,19 +169,19 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the length of the email exceeds 160 characters", %{
       attrs: attrs
     } do
-      attrs = Map.put(attrs, :email, String.duplicate("@", 160))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 155) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 
       assert changeset.valid?
 
-      attrs = Map.put(attrs, :email, String.duplicate("@", 161))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 156) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 
@@ -481,6 +481,36 @@ defmodule Lightning.Accounts.UserTest do
       assert User.superuser_registration_changeset(%{})
              |> Ecto.Changeset.get_change(:role) ==
                :superuser
+    end
+  end
+
+  describe "core_contributor?/1" do
+    test "true for @openfn.org email" do
+      assert User.core_contributor?(%User{email: "alice@openfn.org"})
+    end
+
+    test "case-insensitive" do
+      assert User.core_contributor?(%User{email: "Bob@OpenFN.ORG"})
+    end
+
+    test "false for other domains" do
+      refute User.core_contributor?(%User{email: "alice@example.com"})
+    end
+
+    test "false for nil/empty email" do
+      refute User.core_contributor?(%User{email: nil})
+      refute User.core_contributor?(%User{email: ""})
+    end
+  end
+
+  describe "langfuse_persona/1" do
+    test "core-contributor for @openfn user" do
+      assert User.langfuse_persona(%User{email: "x@openfn.org"}) ==
+               "core-contributor"
+    end
+
+    test "user for everyone else" do
+      assert User.langfuse_persona(%User{email: "x@example.com"}) == "user"
     end
   end
 end

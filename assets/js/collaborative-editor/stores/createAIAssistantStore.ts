@@ -577,17 +577,15 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _appendStreamingChunk = (content: string) => {
     state = produce(state, draft => {
       draft.streamingContent = (draft.streamingContent || '') + content;
-      // Clear status (e.g. "Thinking...") once actual content starts arriving
-      draft.streamingStatus = null;
     });
     notify('_appendStreamingChunk');
   };
 
-  const _setStreamingStatus = (text: string) => {
+  const setStreamingStatus = (text: string | null) => {
     state = produce(state, draft => {
       draft.streamingStatus = text;
     });
-    notify('_setStreamingStatus');
+    notify('setStreamingStatus');
   };
 
   const _setStreamingChanges = (changes: Record<string, unknown>) => {
@@ -682,7 +680,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _initializeContext,
     _setProcessingState,
     _appendStreamingChunk,
-    _setStreamingStatus,
+    setStreamingStatus,
     _setStreamingChanges,
     _clearStreaming,
     _connectChannel,

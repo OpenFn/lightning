@@ -8,7 +8,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   setup_all do
     Mimic.copy(Lightning.Projects)
     Mimic.copy(Lightning.Projects.Sandboxes)
-    Mimic.copy(LightningWeb.Live.Helpers.ProjectTheme)
     :ok
   end
 
@@ -275,7 +274,13 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   describe "edit modal" do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
-      sb = insert(:sandbox, parent: parent, name: "sb-1")
+
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-1",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       Mimic.stub(
         Lightning.Projects,
@@ -356,9 +361,16 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
     test "color input displays existing sandbox color", %{
       conn: conn,
-      parent: parent
+      parent: parent,
+      user: user
     } do
-      sb = insert(:sandbox, parent: parent, name: "sb-colored", color: "#ff0000")
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-colored",
+          color: "#ff0000",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
@@ -416,56 +428,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       # Should NOT show validation error
       refute html =~ "Sandbox name already exists"
-    end
-  end
-
-  describe "theme preview edge cases" do
-    setup %{user: user} do
-      parent = insert(:project, project_users: [%{user: user, role: :owner}])
-
-      Mimic.stub(
-        LightningWeb.Live.Helpers.ProjectTheme,
-        :inline_primary_scale,
-        fn _project ->
-          nil
-        end
-      )
-
-      {:ok, parent: parent}
-    end
-
-    test "generate_theme_preview returns nil when inline_primary_scale returns nil",
-         %{
-           conn: conn,
-           parent: parent
-         } do
-      Mimic.allow(
-        LightningWeb.Live.Helpers.ProjectTheme,
-        self(),
-        spawn(fn -> :ok end)
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{"project" => %{"color" => "#ff0000"}})
-
-      html = render(view)
-
-      assert html =~ "Create a new sandbox"
-
-      assert html =~ ~s(#ff0000)
-
-      assert html =~ ~s(name="project[color]")
-      assert html =~ ~s(Selected: #ff0000)
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{"project" => %{"color" => "#00ff00"}})
-
-      updated_html = render(view)
-      assert updated_html =~ ~s(#00ff00)
     end
   end
 

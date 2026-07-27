@@ -30,7 +30,47 @@ defmodule Lightning.Workflows.Scheduler do
   def enqueue_cronjobs(date_time) do
     date_time
     |> Workflows.get_edges_for_cron_execution()
-    |> Enum.each(&invoke_cronjob/1)
+    |> Enum.each(&safe_invoke_cronjob/1)
+  end
+
+  # Wraps invoke_cronjob/1 so a failure on a single edge does not abort the
+  # rest of the tick. Errors are logged and forwarded to Sentry; the loop
+  # continues with the next edge.
+  #
+  # Why `rescue` only:
+  #   - `rescue` covers all database and changeset exceptions.
+  #   - `Repo.rollback/1` uses `throw`, but it's consumed by the surrounding
+  #     `Repo.transaction(multi)` in `Runs.enqueue/1` — it never reaches here.
+  #   - `:exit` signals (DB pool death, supervisor restart) should propagate
+  #     to Oban's failure surface, not get swallowed here with N Sentry copies.
+  #   - `:throw` from outside Ecto's rollback flow is a control-flow bug
+  #     we want visible, not swallowed.
+  @spec safe_invoke_cronjob(Edge.t()) :: {:ok, map()} | {:error, term()}
+  defp safe_invoke_cronjob(%Edge{} = edge) do
+    invoke_cronjob(edge)
+  rescue
+    e ->
+      stacktrace = __STACKTRACE__
+
+      Logger.error(
+        "Scheduler failed to invoke cronjob for edge #{edge.id}:\n" <>
+          Exception.format(:error, e, stacktrace)
+      )
+
+      Lightning.Sentry.capture_exception(e,
+        stacktrace: stacktrace,
+        extra: %{
+          edge_id: edge.id,
+          trigger_id: edge.source_trigger && edge.source_trigger.id,
+          job_id: edge.target_job && edge.target_job.id,
+          workflow_id:
+            edge.target_job && edge.target_job.workflow &&
+              edge.target_job.workflow.id
+        },
+        tags: %{type: "scheduler"}
+      )
+
+      {:error, e}
   end
 
   @spec invoke_cronjob(Edge.t()) :: {:ok, map()} | {:error, map()}

@@ -4,35 +4,25 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
 
+  on_mount {LightningWeb.Hooks, :ensure_admin}
+
   import PetalComponents.Badge
 
   alias Lightning.Auditing
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do
-    can_access_admin_space =
-      Users
-      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
-
-    if can_access_admin_space do
-      {:ok,
-       socket
-       |> assign(
-         active_menu_item: :audit,
-         pagination_path:
-           &Routes.audit_index_path(
-             socket,
-             :index,
-             &1
-           )
-       ), layout: {LightningWeb.Layouts, :settings}}
-    else
-      {:ok,
-       put_flash(socket, :nav, :no_access)
-       |> push_navigate(to: "/projects")}
-    end
+    {:ok,
+     socket
+     |> assign(
+       active_menu_item: :audit,
+       pagination_path:
+         &Routes.audit_index_path(
+           socket,
+           :index,
+           &1
+         )
+     ), layout: {LightningWeb.Layouts, :settings}}
   end
 
   @impl true

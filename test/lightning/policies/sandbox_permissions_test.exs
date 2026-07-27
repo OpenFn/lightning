@@ -95,15 +95,15 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:provision_sandbox, user, root_project)
     end
 
-    test "superusers can provision sandboxes in any workspace", %{
+    test "superusers without a project role cannot provision sandboxes", %{
       superuser: superuser,
       root_project: root_project,
       other_root_project: other_root_project
     } do
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:provision_sandbox, superuser, root_project)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(
                :provision_sandbox,
                superuser,
@@ -138,18 +138,18 @@ defmodule Lightning.Policies.SandboxesTest do
   end
 
   describe "delete_sandbox permissions" do
-    test "superusers can delete any sandbox", %{
+    test "superusers without a project role cannot delete sandboxes", %{
       superuser: superuser,
       sandbox: sandbox,
       sandbox_with_owner: sandbox_with_owner,
       other_sandbox: other_sandbox
     } do
-      assert Sandboxes |> Permissions.can?(:delete_sandbox, superuser, sandbox)
+      refute Sandboxes |> Permissions.can?(:delete_sandbox, superuser, sandbox)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:delete_sandbox, superuser, sandbox_with_owner)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:delete_sandbox, superuser, other_sandbox)
     end
 
@@ -238,18 +238,18 @@ defmodule Lightning.Policies.SandboxesTest do
   end
 
   describe "update_sandbox permissions" do
-    test "superusers can update any sandbox", %{
+    test "superusers without a project role cannot update sandboxes", %{
       superuser: superuser,
       sandbox: sandbox,
       sandbox_with_owner: sandbox_with_owner,
       other_sandbox: other_sandbox
     } do
-      assert Sandboxes |> Permissions.can?(:update_sandbox, superuser, sandbox)
+      refute Sandboxes |> Permissions.can?(:update_sandbox, superuser, sandbox)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:update_sandbox, superuser, sandbox_with_owner)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:update_sandbox, superuser, other_sandbox)
     end
 
@@ -393,15 +393,15 @@ defmodule Lightning.Policies.SandboxesTest do
              |> Permissions.can?(:merge_sandbox, user, root_project)
     end
 
-    test "superusers can merge sandboxes into any project", %{
+    test "superusers without a project role cannot merge sandboxes", %{
       superuser: superuser,
       root_project: root_project,
       other_root_project: other_root_project
     } do
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(:merge_sandbox, superuser, root_project)
 
-      assert Sandboxes
+      refute Sandboxes
              |> Permissions.can?(
                :merge_sandbox,
                superuser,
@@ -426,7 +426,7 @@ defmodule Lightning.Policies.SandboxesTest do
       %{sandboxes: sandboxes}
     end
 
-    test "superuser gets full permissions on all sandboxes", %{
+    test "superuser without a project role gets no manage rights", %{
       superuser: superuser,
       root_project: root_project,
       sandboxes: sandboxes
@@ -437,7 +437,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
 
@@ -453,7 +453,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == true
       end
     end
 
@@ -474,7 +474,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: true, delete: true} = permissions[sandbox.id]
+        assert permissions[sandbox.id] == true
       end
     end
 
@@ -491,9 +491,9 @@ defmodule Lightning.Policies.SandboxesTest do
 
       for sandbox <- sandboxes do
         if sandbox.id == owned_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == true
         else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == false
         end
       end
     end
@@ -511,9 +511,9 @@ defmodule Lightning.Policies.SandboxesTest do
 
       for sandbox <- sandboxes do
         if sandbox.id == admin_sandbox.id do
-          assert %{update: true, delete: true} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == true
         else
-          assert %{update: false, delete: false} = permissions[sandbox.id]
+          assert permissions[sandbox.id] == false
         end
       end
     end
@@ -529,12 +529,11 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: false} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
 
-    test "root project editor gets merge but not update/delete on all sandboxes",
+    test "root project editor gets no manage rights without an admin/owner row on the sandbox",
          %{
            root_project: root_project,
            sandboxes: sandboxes,
@@ -551,8 +550,7 @@ defmodule Lightning.Policies.SandboxesTest do
       assert map_size(permissions) == 4
 
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
   end
@@ -632,10 +630,10 @@ defmodule Lightning.Policies.SandboxesTest do
       permissions =
         Sandboxes.check_manage_permissions(sandboxes, user, root_project)
 
-      # Editor on root gets merge but not update/delete
+      # Editor on root, editor on sandbox: no manage rights without admin/owner
+      # on the sandbox itself (or root cascade).
       for sandbox <- sandboxes do
-        assert %{update: false, delete: false, merge: true} =
-                 permissions[sandbox.id]
+        assert permissions[sandbox.id] == false
       end
     end
   end

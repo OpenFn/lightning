@@ -24,7 +24,9 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
   def handle_event("validate", %{"project" => params}, socket) do
     socket =
       assign(socket,
-        changeset: Collaborators.changeset(socket.assigns.collaborators, params)
+        changeset:
+          Collaborators.changeset(socket.assigns.collaborators, params)
+          |> Map.put(:action, :validate)
       )
 
     with :ok <- limit_adding_users(socket, params) do

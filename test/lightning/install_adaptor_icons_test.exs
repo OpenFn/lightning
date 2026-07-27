@@ -18,8 +18,13 @@ defmodule Lightning.InstallAdaptorIconsTest do
                        )
   setup do
     File.mkdir_p(@icons_path)
+    previous_shell = Mix.shell()
     Mix.shell(Mix.Shell.Process)
-    on_exit(fn -> File.rm_rf!(@icons_path) end)
+
+    on_exit(fn ->
+      Mix.shell(previous_shell)
+      File.rm_rf!(@icons_path)
+    end)
   end
 
   @tag :capture_log

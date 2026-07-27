@@ -2,18 +2,19 @@ defmodule Lightning.Channels.ChannelAuthMethod do
   @moduledoc """
   Join table connecting channels to auth method implementations.
 
-  Each record has a `role` (:source or :sink) and points to exactly one
-  of `webhook_auth_method` (for source/inbound auth) or
-  `project_credential` (for sink/outbound auth).
+  Each record has a `role` (:client or :destination) and points to exactly one
+  of `webhook_auth_method` (for client/inbound auth) or
+  `project_credential` (for destination/outbound auth).
   """
   use Lightning.Schema
 
   alias Lightning.Channels.Channel
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Validators
   alias Lightning.Workflows.WebhookAuthMethod
 
-  @roles [:source, :sink]
+  @roles [:client, :destination]
 
   schema "channel_auth_methods" do
     field :role, Ecto.Enum, values: @roles
@@ -46,12 +47,18 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     |> validate_role_target_consistency()
     |> assoc_constraint(:channel)
     |> foreign_key_constraint(:webhook_auth_method_id)
-    |> foreign_key_constraint(:project_credential_id)
+    |> foreign_key_constraint(:project_credential_id,
+      message: Scoping.violation_message(:project_credential_id)
+    )
     |> unique_constraint(:webhook_auth_method_id,
       name: :channel_auth_methods_wam_unique
     )
     |> unique_constraint(:project_credential_id,
       name: :channel_auth_methods_pc_unique
+    )
+    |> unique_constraint(:channel_id,
+      name: :channel_auth_methods_destination_unique,
+      message: "only one destination auth method is allowed per channel"
     )
     |> then(fn changeset ->
       if get_change(changeset, :delete) do
@@ -64,23 +71,23 @@ defmodule Lightning.Channels.ChannelAuthMethod do
 
   defp validate_role_target_consistency(changeset) do
     case get_field(changeset, :role) do
-      :source ->
+      :client ->
         if get_field(changeset, :project_credential_id) do
           add_error(
             changeset,
             :project_credential_id,
-            "source auth must use a webhook auth method, not a project credential"
+            "client auth must use a webhook auth method, not a project credential"
           )
         else
           changeset
         end
 
-      :sink ->
+      :destination ->
         if get_field(changeset, :webhook_auth_method_id) do
           add_error(
             changeset,
             :webhook_auth_method_id,
-            "sink auth must use a project credential, not a webhook auth method"
+            "destination auth must use a project credential, not a webhook auth method"
           )
         else
           changeset

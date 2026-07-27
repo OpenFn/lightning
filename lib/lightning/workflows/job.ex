@@ -17,8 +17,10 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
+  alias Lightning.AdaptorRegistry
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Validators
   alias Lightning.Workflows.Workflow
@@ -97,13 +99,19 @@ defmodule Lightning.Workflows.Job do
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
+    |> Validators.validate_uuid([
+      :id,
+      :workflow_id,
+      :project_credential_id,
+      :keychain_credential_id
+    ])
     |> Validators.validate_exclusive(
       [:project_credential_id, :keychain_credential_id],
       "cannot be set when the other credential type is also set"
     )
     |> validate_keychain_credential_project_membership()
     |> foreign_key_constraint(:project_credential_id,
-      message: "credential doesn't exist or isn't available in this project"
+      message: Scoping.violation_message(:project_credential_id)
     )
     |> foreign_key_constraint(:keychain_credential_id,
       message: "keychain credential doesn't exist"
@@ -116,13 +124,51 @@ defmodule Lightning.Workflows.Job do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "job name has invalid format"
     )
+    |> validate_adaptor()
+  end
+
+  defp validate_adaptor(changeset) do
+    changeset =
+      validate_format(changeset, :adaptor, AdaptorRegistry.adaptor_format(),
+        message: "adaptor has invalid format"
+      )
+
+    if changeset.valid? do
+      validate_known_adaptor(changeset)
+    else
+      changeset
+    end
+  end
+
+  # Rejects an adaptor the registry doesn't know about, so an unknown package
+  # cannot be persisted on a job.
+  defp validate_known_adaptor(changeset) do
+    validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
+      if adaptor_known?(adaptor) do
+        []
+      else
+        [adaptor: "is not a recognised adaptor"]
+      end
+    end)
+  end
+
+  defp adaptor_known?(adaptor) do
+    case AdaptorRegistry.resolve_package_name(adaptor) do
+      {name, _version} when is_binary(name) -> AdaptorRegistry.exists?(name)
+      _ -> false
+    end
   end
 
   defp validate_keychain_credential_project_membership(changeset) do
     keychain_credential_id = get_field(changeset, :keychain_credential_id)
     workflow_id = get_field(changeset, :workflow_id)
 
-    if keychain_credential_id && workflow_id do
+    # Only query when both ids are present AND well-formed UUIDs. validate_uuid/2
+    # has already flagged a malformed id as a changeset error; issuing a Repo
+    # query with a malformed :binary_id here would raise Ecto.Query.CastError,
+    # defeating the whole point of surfacing it as a changeset error.
+    if Validators.valid_uuid?(keychain_credential_id) and
+         Validators.valid_uuid?(workflow_id) do
       case Lightning.Repo.get(Lightning.Workflows.Workflow, workflow_id) do
         %{project_id: project_id} ->
           case Lightning.Repo.get_by(
@@ -134,7 +180,7 @@ defmodule Lightning.Workflows.Job do
               add_error(
                 changeset,
                 :keychain_credential_id,
-                "must belong to the same project as the job"
+                Scoping.violation_message(:keychain_credential_id)
               )
 
             _ ->

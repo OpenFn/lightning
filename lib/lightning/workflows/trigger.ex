@@ -12,10 +12,11 @@ defmodule Lightning.Workflows.Trigger do
   endpoint is called.
   """
   use Lightning.Schema
-  import Ecto.Query
+  import Lightning.Validators
 
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -36,7 +37,8 @@ defmodule Lightning.Workflows.Trigger do
              :cron_cursor_job_id,
              :type,
              :enabled,
-             :webhook_reply
+             :webhook_reply,
+             :webhook_response_config
            ]}
   schema "triggers" do
     field :comment, :string
@@ -62,6 +64,9 @@ defmodule Lightning.Workflows.Trigger do
 
     embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
+    embeds_one :webhook_response_config, WebhookResponseConfig,
+      on_replace: :update
+
     timestamps()
   end
 
@@ -85,10 +90,13 @@ defmodule Lightning.Workflows.Trigger do
   def changeset(trigger, attrs) do
     trigger
     |> cast_changeset(attrs)
-    |> cast_embed(
-      :kafka_configuration,
+    |> cast_embed(:kafka_configuration,
       required: false,
       with: &KafkaConfiguration.changeset/2
+    )
+    |> cast_embed(:webhook_response_config,
+      required: false,
+      with: &WebhookResponseConfig.changeset/2
     )
     |> validate()
   end
@@ -113,7 +121,12 @@ defmodule Lightning.Workflows.Trigger do
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
     |> validate_by_type()
+    |> validate_uuid([:id, :workflow_id, :cron_cursor_job_id])
     |> unique_constraint(:id, name: "triggers_pkey")
+    |> foreign_key_constraint(:cron_cursor_job_id,
+      name: "triggers_cron_cursor_job_id_fkey",
+      message: "cursor job doesn't exist, or is not in the same workflow"
+    )
   end
 
   defp validate_cron(changeset, _options \\ []) do
@@ -141,6 +154,7 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
+        |> maybe_clear_webhook_response_config()
 
       :cron ->
         changeset
@@ -148,6 +162,7 @@ defmodule Lightning.Workflows.Trigger do
         |> validate_cron()
         |> put_change(:kafka_configuration, nil)
         |> put_change(:webhook_reply, nil)
+        |> put_change(:webhook_response_config, nil)
 
       :kafka ->
         changeset
@@ -155,9 +170,17 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:cron_cursor_job_id, nil)
         |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
+        |> put_change(:webhook_response_config, nil)
 
       nil ->
         changeset
+    end
+  end
+
+  defp maybe_clear_webhook_response_config(changeset) do
+    case fetch_field!(changeset, :webhook_reply) do
+      :after_completion -> changeset
+      _ -> put_change(changeset, :webhook_response_config, nil)
     end
   end
 
@@ -168,21 +191,5 @@ defmodule Lightning.Workflows.Trigger do
       nil -> changeset |> put_change(field, value)
       _value -> changeset
     end
-  end
-
-  def with_auth_methods_query do
-    from t in __MODULE__,
-      left_join: wam in assoc(t, :webhook_auth_methods),
-      preload: [webhook_auth_methods: wam],
-      select: %{
-        t
-        | has_auth_method:
-            fragment(
-              "CASE WHEN ? IS NULL THEN ? ELSE ? END",
-              wam.id,
-              false,
-              true
-            )
-      }
   end
 end

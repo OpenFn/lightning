@@ -15,20 +15,32 @@ defmodule Lightning.ExportUtils do
     :connect_timeout
   ]
 
+  @webhook_response_config_fields [:success_code, :error_code]
+
   @ordering_map %{
     project: [
       :name,
       :description,
       :collections,
+      :channels,
       :credentials,
       :globals,
       :workflows
     ],
     collection: [:name],
+    channel: [:name, :destination_url, :enabled, :destination_credential],
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
-    trigger: [:type, :cron_expression, :enabled, :kafka_configuration],
+    trigger: [
+      :type,
+      :webhook_reply,
+      :webhook_response_config,
+      :cron_expression,
+      :cron_cursor_job,
+      :enabled,
+      :kafka_configuration
+    ],
     edge: [
       :source_trigger,
       :source_job,
@@ -58,7 +70,7 @@ defmodule Lightning.ExportUtils do
 
     %{
       # The identifier here for our YAML reducer will be the hyphenated name
-      id: hyphenate(job.name),
+      id: job_key(job),
       name: job.name,
       node_type: :job,
       adaptor: job.adaptor,
@@ -68,7 +80,7 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp trigger_to_treenode(trigger) do
+  defp trigger_to_treenode(trigger, jobs) do
     base = %{
       id: trigger.id,
       enabled: trigger.enabled,
@@ -79,7 +91,18 @@ defmodule Lightning.ExportUtils do
 
     case trigger.type do
       :cron ->
-        Map.put(base, :cron_expression, trigger.cron_expression)
+        base
+        |> Map.put(:cron_expression, trigger.cron_expression)
+        |> then(fn cron ->
+          if trigger.cron_cursor_job_id do
+            cursor_job =
+              Enum.find(jobs, fn j -> j.id == trigger.cron_cursor_job_id end)
+
+            Map.put(cron, :cron_cursor_job, cursor_job && job_key(cursor_job))
+          else
+            cron
+          end
+        end)
 
       :kafka ->
         kafka_config =
@@ -102,10 +125,43 @@ defmodule Lightning.ExportUtils do
 
         Map.put(base, :kafka_configuration, kafka_config)
 
-      _ ->
+      :webhook ->
         base
+        |> maybe_put_webhook_reply(trigger.webhook_reply)
+        |> maybe_put_webhook_response_config(trigger.webhook_response_config)
     end
   end
+
+  defp maybe_put_webhook_reply(map, nil), do: map
+
+  defp maybe_put_webhook_reply(map, reply) when is_atom(reply) do
+    Map.put(map, :webhook_reply, Atom.to_string(reply))
+  end
+
+  defp maybe_put_webhook_response_config(map, %{} = config) do
+    webhook_response =
+      Map.reject(
+        %{
+          success_code: config.success_code,
+          error_code: config.error_code
+        },
+        fn {_k, v} -> is_nil(v) end
+      )
+      |> Enum.sort_by(
+        fn {key, _val} ->
+          Enum.find_index(@webhook_response_config_fields, &(&1 == key))
+        end,
+        :asc
+      )
+
+    if length(webhook_response) > 0 do
+      Map.put(map, :webhook_response_config, webhook_response)
+    else
+      map
+    end
+  end
+
+  defp maybe_put_webhook_response_config(map, _), do: map
 
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
     source_trigger =
@@ -113,7 +169,7 @@ defmodule Lightning.ExportUtils do
 
     target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
     trigger_name = to_string(source_trigger.type)
-    target_job_name = hyphenate(target_job.name)
+    target_job_name = job_key(target_job)
 
     %{
       name: "#{trigger_name}->#{target_job_name}",
@@ -125,8 +181,8 @@ defmodule Lightning.ExportUtils do
   defp edge_to_treenode(%{source_trigger_id: nil} = edge, _triggers, jobs) do
     target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
     source_job = Enum.find(jobs, fn j -> j.id == edge.source_job_id end)
-    source_job_name = hyphenate(source_job.name)
-    target_job_name = hyphenate(target_job.name)
+    source_job_name = job_key(source_job)
+    target_job_name = job_key(target_job)
 
     %{
       name: "#{source_job_name}->#{target_job_name}",
@@ -138,7 +194,7 @@ defmodule Lightning.ExportUtils do
   defp merge_edge_common_fields(json, edge, target_job) do
     json
     |> Map.merge(%{
-      target_job: hyphenate(target_job.name),
+      target_job: job_key(target_job),
       condition_type: edge.condition_type |> Atom.to_string(),
       enabled: edge.enabled,
       node_type: :edge
@@ -338,14 +394,28 @@ defmodule Lightning.ExportUtils do
         Map.put(acc, hyphenate(collection.name), ytree)
       end)
 
+    channels_map =
+      project.channels
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn channel, acc ->
+        ytree = build_channel_yaml_tree(channel, project.project_credentials)
+
+        Map.put(acc, hyphenate(channel.name), ytree)
+      end)
+
     %{
       name: project.name,
       description: project.description,
       node_type: :project,
       workflows: workflows_map,
       credentials: credentials_map,
-      collections: collections_map
+      collections: collections_map,
+      channels: channels_map
     }
+  end
+
+  defp job_key(job) do
+    hyphenate(job.name)
   end
 
   defp project_credential_key(project_credential) do
@@ -369,6 +439,35 @@ defmodule Lightning.ExportUtils do
     }
   end
 
+  defp build_channel_yaml_tree(channel, project_credentials) do
+    project_credential_id = channel_destination_project_credential_id(channel)
+
+    project_credential =
+      project_credential_id &&
+        Enum.find(project_credentials, fn pc ->
+          pc.id == project_credential_id
+        end)
+
+    %{
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      node_type: :channel,
+      destination_credential:
+        project_credential && project_credential_key(project_credential)
+    }
+  end
+
+  defp channel_destination_project_credential_id(%{destination_auth_method: nil}),
+    do: nil
+
+  defp channel_destination_project_credential_id(%{
+         destination_auth_method: %{project_credential_id: id}
+       }),
+       do: id
+
+  defp channel_destination_project_credential_id(_), do: nil
+
   defp build_workflow_yaml_tree(workflow, project_credentials) do
     jobs =
       workflow.jobs
@@ -378,7 +477,7 @@ defmodule Lightning.ExportUtils do
     triggers =
       workflow.triggers
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(fn t -> trigger_to_treenode(t) end)
+      |> Enum.map(fn t -> trigger_to_treenode(t, workflow.jobs) end)
 
     edges =
       workflow.edges
@@ -401,7 +500,8 @@ defmodule Lightning.ExportUtils do
     project =
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
-        collections: []
+        collections: [],
+        channels: [destination_auth_method: :project_credential]
       )
 
     yaml =
@@ -417,7 +517,8 @@ defmodule Lightning.ExportUtils do
     project =
       Lightning.Repo.preload(project,
         project_credentials: [credential: :user],
-        collections: []
+        collections: [],
+        channels: [destination_auth_method: :project_credential]
       )
 
     yaml =

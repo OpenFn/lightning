@@ -238,7 +238,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
   useWorkflowStoreContext: () => ({
     validateWorkflowName: vi.fn(),
-    importWorkflow: vi.fn(),
+    importWorkflow: vi.fn().mockResolvedValue(undefined),
   }),
   useWorkflowActions: () => ({
     saveWorkflow: vi.fn(),
@@ -369,6 +369,67 @@ describe('WorkflowEditor', () => {
 
       const panel = screen.getByTestId('manual-run-panel');
       expect(panel.getAttribute('data-trigger-id')).toBe('trigger-1');
+    });
+  });
+
+  describe('URL persistence of run-panel entry point', () => {
+    test('URL with runMode=custom-input opens panel with entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        trigger: 'trigger-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL without runMode opens panel without entryPoint', async () => {
+      urlState.setParams({ panel: 'run', trigger: 'trigger-1' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+        });
+      });
+    });
+
+    test('URL with runMode=custom-input + jobParam preserves entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        job: 'job-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          jobId: 'job-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL with only panel=run defaults to first trigger + custom-input', async () => {
+      urlState.setParams({ panel: 'run' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
     });
   });
 

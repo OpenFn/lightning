@@ -223,7 +223,7 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 ## Shared Utilities
 
 ### common.ts
-`createWithSelector(getSnapshot)` — Memoized selector factory. Caches last result + last state; only re-runs selector when state reference changes. Every store MUST use this.
+`createWithSelector(getSnapshot)` — Memoized selector factory. Caches last result + last state; only re-runs selector when state reference changes. Every store uses this.
 
 ### devtools.ts
 `wrapStoreWithDevTools(config)` — Redux DevTools integration. Serializes state excluding circular references (`ydoc`, `provider`, `rawAwareness`, `userCache`). No-op in production. Used internally by all stores.
@@ -278,21 +278,6 @@ Command → produce(state, draft => ...) → notify() [+ optional localStorage w
 
 ---
 
-## When to Create a New Store
-
-**Create a NEW store when:**
-1. New domain of data with independent lifecycle
-2. Different data source pattern (new Y.Doc structure, new channel event stream)
-3. Mixing unrelated responsibilities into an existing store (5+ unrelated concerns)
-4. High-frequency updates would cause unnecessary re-renders in unrelated UI
-
-**DON'T create a new store when:**
-1. Data is closely related to an existing store's domain
-2. It's component-local UI state (`useState`)
-3. It's derived/computed from existing state (use selectors)
-
----
-
 ## Store Creation Checklist
 
 ```typescript
@@ -339,6 +324,22 @@ export const createMyStore = () => {
 4. **Type Safety** — Zod for runtime validation at network boundaries, TypeScript for compile-time
 5. **useSyncExternalStore** — All stores implement React 18's external store contract
 6. **Immutability** — All state updates via Immer's `produce()`
+
+### Dangling-reference reconciliation: server authoritative, client advisory
+
+Referential invariants (e.g. a cron trigger's `cron_cursor_job_id` must point at a
+live job in the same workflow) are enforced **authoritatively on the server** — the
+compound foreign key (`ON DELETE SET NULL (cron_cursor_job_id)`) plus the
+`Workflows.save_workflow/3` rescue. The client has exactly ONE advisory cleanup
+function, `adapters/reconcileDanglingReferences.ts`, invoked from every structural
+mutation that can orphan a reference (`removeJob`, `YAMLStateToYDoc.applyToYDoc`,
+and defensively before save in `saveWorkflow`/`saveAndSyncWorkflow`). It is a UX
+fast-path only: it cannot close the concurrent-editor race (a collaborator's delete
+that has not yet merged into this client's doc), and it is NOT the correctness
+guarantee. **Do not add per-path client cursor cleanup** — if a new structural
+mutation can orphan a reference, call `reconcileDanglingReferences` from it (pass
+`{ inTransaction: true }` when already inside a `ydoc.transact`); do not reimplement
+the check.
 
 ---
 

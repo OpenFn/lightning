@@ -1,12 +1,39 @@
 defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
-  Index Liveview for project settings
+  Index LiveView for project settings.
+
+  ## View-extension slots
+
+  Two slots let downstream apps inject LiveComponents into the settings page
+  by registering them in route metadata:
+
+      {"/projects/:project_id/settings", LightningWeb.ProjectLive.Settings, :index,
+       metadata: %{
+         concurrency_input: MyApp.ConcurrencyInputComponent,
+         usage_caps_input: MyApp.UsageCapsInputComponent
+       }}
+
+  Each slot has its own assigns contract, which the component must accept:
+
+    * `:concurrency_input` receives `field` (the `Ecto.Changeset` field for
+      `project.concurrency`), `project`, and `disabled` (a pre-computed
+      boolean — Lightning resolves whether the current user is allowed to
+      edit the value and passes the result through).
+
+    * `:usage_caps_input` receives `project` and `current_user`. The
+      component computes its own permission gate (typically via
+      `Lightning.Projects.Sandboxes.parent_admin?/2`) because cap-editing
+      authority is owned by the downstream billing layer, not by Lightning.
+
+  Slots are optional. Routes that omit a metadata key get a hidden slot —
+  the page renders identically to OSS defaults.
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.Components.SandboxSettingsBanner
   import LightningWeb.LayoutComponents
 
-  alias Lightning.Collections
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Helpers
   alias Lightning.Policies.Permissions
@@ -14,6 +41,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
@@ -26,6 +54,49 @@ defmodule LightningWeb.ProjectLive.Settings do
   on_mount {LightningWeb.Hooks, :limit_mfa}
   on_mount {LightningWeb.Hooks, :limit_retention_periods}
 
+  attr :component, :atom, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :project, Project, required: true
+  attr :disabled, :boolean, required: true
+
+  @doc """
+  View-extension slot wrapper for the project-level concurrency override input.
+  Forwards `field`, `project`, and a pre-computed `disabled` boolean to the
+  registered LiveComponent.
+  """
+  def concurrency_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="concurrency-input-component"
+      field={@field}
+      project={@project}
+      disabled={@disabled}
+    />
+    """
+  end
+
+  attr :component, :atom, required: true
+  attr :project, Project, required: true
+  attr :current_user, User, required: true
+
+  @doc """
+  View-extension slot wrapper for the per-project usage-caps input. Forwards
+  `project` and `current_user` to the registered LiveComponent so the
+  component can run its own permission gate (cap-editing authority lives in
+  the downstream billing layer, not in Lightning).
+  """
+  def usage_caps_input_slot(assigns) do
+    ~H"""
+    <.live_component
+      module={@component}
+      id="usage-caps-input-component"
+      project={@project}
+      current_user={@current_user}
+    />
+    """
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns
@@ -34,10 +105,14 @@ defmodule LightningWeb.ProjectLive.Settings do
       VersionControl.subscribe(current_user)
     end
 
+    project = Lightning.Repo.preload(project, :parent)
+    sandbox? = Project.sandbox?(project)
+    parent_project = if sandbox?, do: project.parent
+    root_project = if sandbox?, do: Projects.root_of(project)
+
     project_user = Projects.get_project_user(project, current_user)
 
     project_files = Projects.list_project_files(project)
-    collections = Collections.list_project_collections(project)
 
     projects = Projects.get_projects_for_user(current_user)
 
@@ -104,8 +179,8 @@ defmodule LightningWeb.ProjectLive.Settings do
         ),
       can_create_collection:
         Permissions.can?(
-          :project_users,
-          :create_collection,
+          :collections,
+          :manage_collection,
           current_user,
           project
         )
@@ -122,10 +197,12 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
-       collections: collections,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
        name: project.name,
+       parent_project: parent_project,
+       root_project: root_project,
+       project: project,
        project_changeset:
          Project.form_changeset(project, %{raw_name: project.name}),
        project_files: project_files,
@@ -133,6 +210,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_user: project_user,
        project_users: [],
        projects: projects,
+       sandbox?: sandbox?,
        selected_credential_type: nil,
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,
@@ -156,14 +234,16 @@ defmodule LightningWeb.ProjectLive.Settings do
     project_users = Projects.get_project_users!(socket.assigns.project.id)
     auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
 
-    concurrency_input_component =
+    route_metadata =
       socket.router
       |> Phoenix.Router.route_info(
         "GET",
         ~p"/projects/:project_id/settings",
         nil
       )
-      |> Map.get(:concurrency_input)
+
+    concurrency_input_component = Map.get(route_metadata, :concurrency_input)
+    usage_caps_input_component = Map.get(route_metadata, :usage_caps_input)
 
     socket
     |> assign(
@@ -171,6 +251,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_users: project_users,
       webhook_auth_methods: auth_methods,
       concurrency_input_component: concurrency_input_component,
+      usage_caps_input_component: usage_caps_input_component,
       show_collaborators_modal: false,
       show_invite_collaborators_modal: false,
       active_modal: nil,
@@ -179,13 +260,39 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp apply_action(socket, :delete, %{"project_id" => id}) do
-    if socket.assigns.can_delete_project do
-      socket |> assign(:page_title, "Project settings")
-    else
-      socket
-      |> put_flash(:error, "You are not authorize to perform this action")
-      |> push_patch(to: ~p"/projects/#{id}/settings")
+    cond do
+      not socket.assigns.can_delete_project ->
+        socket
+        |> put_flash(:error, "You are not authorize to perform this action")
+        |> push_patch(to: ~p"/projects/#{id}/settings")
+
+      socket.assigns.sandbox? ->
+        socket
+        |> assign(:page_title, "Project settings")
+        |> assign(
+          :confirm_delete_changeset,
+          sandbox_confirm_changeset(socket.assigns.project)
+        )
+        |> assign(:confirm_delete_input, "")
+
+      true ->
+        assign(socket, :page_title, "Project settings")
     end
+  end
+
+  defp sandbox_confirm_changeset(sandbox, params \\ %{}) do
+    types = %{name: :string}
+
+    {%{name: ""}, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
+    |> Ecto.Changeset.validate_required([:name])
+    |> Ecto.Changeset.validate_change(:name, fn :name, value ->
+      if value == sandbox.name do
+        []
+      else
+        [name: "does not match the sandbox name"]
+      end
+    end)
   end
 
   @impl true
@@ -231,9 +338,24 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
+  # Fields the generic settings/concurrency save may set; gated by
+  # `can_edit_project`. Privileged fields (requires_mfa, scheduled_deletion,
+  # retention, allow_support_access, parent_id) are deliberately excluded so a
+  # crafted payload cannot set them past their own dedicated gates.
+  @project_settings_fields ~w(raw_name name description concurrency color env)
+
+  # Retention fields, gated by `can_edit_data_retention`.
+  @retention_fields ~w(retention_policy history_retention_period
+                       dataclip_retention_period)
+
   def handle_event("save", %{"project" => project_params}, socket) do
     if socket.assigns.can_edit_project do
-      save_project(socket, Helpers.derive_name_param(project_params))
+      params =
+        project_params
+        |> Helpers.derive_name_param()
+        |> Map.take(@project_settings_fields)
+
+      save_project(socket, params)
     else
       {:noreply,
        socket
@@ -247,7 +369,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket
       ) do
     if socket.assigns.can_edit_data_retention do
-      save_project(socket, project_params)
+      save_project(socket, Map.take(project_params, @retention_fields))
     else
       {:noreply,
        socket
@@ -338,6 +460,75 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> noreply()
   end
 
+  def handle_event("close-delete-modal", _params, socket) do
+    socket
+    |> push_navigate(to: ~p"/projects/#{socket.assigns.project.id}/settings")
+    |> noreply()
+  end
+
+  def handle_event("confirm-delete-validate", params, socket) do
+    confirm_params = params["confirm"] || %{}
+
+    changeset =
+      sandbox_confirm_changeset(socket.assigns.project, confirm_params)
+      |> Map.put(:action, :validate)
+
+    socket
+    |> assign(:confirm_delete_changeset, changeset)
+    |> assign(:confirm_delete_input, String.trim(confirm_params["name"] || ""))
+    |> noreply()
+  end
+
+  def handle_event("confirm-delete", params, socket) do
+    confirm_params = params["confirm"] || %{}
+
+    changeset =
+      sandbox_confirm_changeset(socket.assigns.project, confirm_params)
+      |> Map.put(:action, :validate)
+
+    if changeset.valid? do
+      case Lightning.Projects.Sandboxes.delete_sandbox(
+             socket.assigns.project,
+             socket.assigns.current_user
+           ) do
+        {:ok, deleted} ->
+          socket
+          |> put_flash(
+            :info,
+            "Sandbox #{deleted.name} and all its associated descendants deleted"
+          )
+          |> push_navigate(to: ~p"/projects/#{socket.assigns.root_project.id}/w")
+          |> noreply()
+
+        {:error, :unauthorized} ->
+          socket
+          |> put_flash(
+            :error,
+            "You don't have permission to delete this sandbox"
+          )
+          |> push_navigate(
+            to: ~p"/projects/#{socket.assigns.project.id}/settings"
+          )
+          |> noreply()
+
+        {:error, _reason} ->
+          socket
+          |> put_flash(
+            :error,
+            "Could not delete sandbox. Please try again later."
+          )
+          |> push_navigate(
+            to: ~p"/projects/#{socket.assigns.project.id}/settings"
+          )
+          |> noreply()
+      end
+    else
+      socket
+      |> assign(:confirm_delete_changeset, changeset)
+      |> noreply()
+    end
+  end
+
   def handle_event(
         "show_modal",
         %{"target" => "new_webhook_auth_method"},
@@ -371,15 +562,24 @@ defmodule LightningWeb.ProjectLive.Settings do
              "delete_webhook_auth_method"
            ] do
     if socket.assigns.can_write_webhook_auth_method do
-      auth_method =
-        WebhookAuthMethods.find_by_id!(auth_method_id, include: [:triggers])
+      case WebhookAuthMethods.find_for_project(
+             socket.assigns.project,
+             auth_method_id,
+             include: [:triggers]
+           ) do
+        nil ->
+          socket
+          |> put_flash(:error, "Webhook auth method not found")
+          |> noreply()
 
-      socket
-      |> assign(
-        active_modal: String.to_existing_atom(target_modal),
-        active_modal_assigns: %{webhook_auth_method: auth_method}
-      )
-      |> noreply()
+        auth_method ->
+          socket
+          |> assign(
+            active_modal: String.to_existing_atom(target_modal),
+            active_modal_assigns: %{webhook_auth_method: auth_method}
+          )
+          |> noreply()
+      end
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action")
@@ -395,61 +595,58 @@ defmodule LightningWeb.ProjectLive.Settings do
         },
         socket
       ) do
-    auth_method =
-      WebhookAuthMethods.find_by_id!(auth_method_id,
-        include: [triggers: [:workflow]]
-      )
-
-    socket
-    |> assign(
-      active_modal: :linked_triggers_for_webhook_auth_method,
-      active_modal_assigns: %{webhook_auth_method: auth_method}
-    )
-    |> noreply()
-  end
-
-  def handle_event(
-        "set_failure_alert",
-        %{
-          "project_user_id" => project_user_id,
-          "failure_alert" => failure_alert
-        },
-        socket
-      ) do
-    project_user = Projects.get_project_user!(project_user_id)
-
-    changeset =
-      {%{failure_alert: project_user.failure_alert}, %{failure_alert: :boolean}}
-      |> Ecto.Changeset.cast(%{failure_alert: failure_alert}, [:failure_alert])
-
-    case Ecto.Changeset.get_change(changeset, :failure_alert) do
+    case WebhookAuthMethods.find_for_project(
+           socket.assigns.project,
+           auth_method_id,
+           include: [triggers: [:workflow]]
+         ) do
       nil ->
-        {:noreply, socket}
+        socket
+        |> put_flash(:error, "Webhook auth method not found")
+        |> noreply()
 
-      setting ->
-        Projects.update_project_user(project_user, %{failure_alert: setting})
-        |> dispatch_flash(socket)
+      auth_method ->
+        socket
+        |> assign(
+          active_modal: :linked_triggers_for_webhook_auth_method,
+          active_modal_assigns: %{webhook_auth_method: auth_method}
+        )
+        |> noreply()
     end
   end
 
+  # Notification prefs (failure alerts, digest) are edited through one path: the
+  # param key matches the field name, and each maps to a self-only policy action.
+  @notification_prefs %{
+    "set_failure_alert" => {:failure_alert, :edit_failure_alerts},
+    "set_digest" => {:digest, :edit_digest_alerts}
+  }
+
   def handle_event(
-        "set_digest",
-        %{"project_user_id" => project_user_id, "digest" => digest},
+        event,
+        %{"project_user_id" => project_user_id} = params,
         socket
-      ) do
-    project_user = Projects.get_project_user!(project_user_id)
+      )
+      when is_map_key(@notification_prefs, event) do
+    {field, action} = Map.fetch!(@notification_prefs, event)
 
-    changeset =
-      {%{digest: project_user.digest |> to_string()}, %{digest: :string}}
-      |> Ecto.Changeset.cast(%{digest: digest}, [:digest])
+    project_user =
+      Projects.get_project_user_for_project(
+        project_user_id,
+        socket.assigns.project
+      )
 
-    case Ecto.Changeset.get_change(changeset, :digest) do
-      nil ->
-        {:noreply, socket}
-
-      digest ->
-        Projects.update_project_user(project_user, %{digest: digest})
-        |> dispatch_flash(socket)
+    if editable_alert_target?(action, project_user, socket) do
+      case Projects.set_notification_pref(
+             project_user,
+             field,
+             params[to_string(field)]
+           ) do
+        :unchanged -> {:noreply, socket}
+        result -> dispatch_flash(result, socket)
+      end
+    else
+      deny_project_user_action(socket, event, project_user_id)
     end
   end
 
@@ -458,13 +655,21 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
       ) do
-    project_user = Projects.get_project_user!(project_user_id)
+    project_user =
+      Projects.get_project_user_for_project(
+        project_user_id,
+        assigns.project,
+        include: :user
+      )
 
-    if user_removable?(
-         project_user,
-         assigns.current_user,
-         assigns.can_remove_project_user
-       ) do
+    if project_user &&
+         user_removable?(
+           project_user,
+           assigns.current_user,
+           assigns.can_remove_project_user,
+           assigns.project,
+           assigns.sandbox?
+         ) do
       Projects.delete_project_user!(project_user)
 
       {:noreply,
@@ -474,9 +679,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          to: ~p"/projects/#{assigns.project}/settings#collaboration"
        )}
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+      deny_project_user_action(socket, "remove_project_user", project_user_id)
     end
   end
 
@@ -540,6 +743,22 @@ defmodule LightningWeb.ProjectLive.Settings do
          socket
          |> put_flash(:error, "Error when updating the project user")}
     end
+  end
+
+  # Respond to a message that fails project-scoping or the permission check.
+  # These branches are only reachable by a forged websocket frame
+  # (the id never renders in the actor's own DOM), so we log a
+  # security warning. There is no audit trail on project_users - and
+  # return the standard authz flash to match every other denial in this LiveView.
+  defp deny_project_user_action(socket, event, project_user_id) do
+    Logger.warning(
+      "Rejected forged #{event}: project_user_id=#{inspect(project_user_id)} " <>
+        "not in project=#{socket.assigns.project.id} or not permitted for " <>
+        "user=#{socket.assigns.current_user.id}"
+    )
+
+    {:noreply,
+     put_flash(socket, :error, "You are not authorized to perform this action")}
   end
 
   defp checked?(changeset, input_id) do
@@ -637,7 +856,13 @@ defmodule LightningWeb.ProjectLive.Settings do
     """
   end
 
-  defp remove_user_tooltip(project_user, current_user, can_remove_project_user) do
+  defp remove_user_tooltip(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     cond do
       !can_remove_project_user ->
         "You do not have permission to remove a user"
@@ -648,15 +873,41 @@ defmodule LightningWeb.ProjectLive.Settings do
       project_user.role == :owner ->
         "You cannot remove an owner"
 
+      sandbox? and parent_admin?(project, project_user) ->
+        "Cannot remove a user who is admin or owner on the parent project"
+
       true ->
         ""
     end
   end
 
-  defp user_removable?(project_user, current_user, can_remove_project_user) do
+  defp user_removable?(
+         project_user,
+         current_user,
+         can_remove_project_user,
+         project,
+         sandbox?
+       ) do
     can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
   end
+
+  # Notification prefs are self-only (:edit_failure_alerts / :edit_digest_alerts),
+  # so scoping the target to the project is not enough; the actor must own it.
+  defp editable_alert_target?(_action, nil, _socket), do: false
+
+  defp editable_alert_target?(action, project_user, socket) do
+    Permissions.can?(
+      :project_users,
+      action,
+      socket.assigns.current_user,
+      project_user
+    )
+  end
+
+  defp parent_admin?(project, %{user: %User{} = user}),
+    do: Sandboxes.parent_admin?(project, user)
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)

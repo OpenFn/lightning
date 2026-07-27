@@ -111,6 +111,35 @@ defmodule LightningWeb.Components.NewInputsTest do
     end
   end
 
+  # ---- autocomplete defaults --------------------------------------------------
+
+  describe "autocomplete defaults" do
+    test "input/1 renders autocomplete='off' by default" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "text"
+        })
+
+      assert html =~ ~s(autocomplete="off")
+    end
+
+    test "input/1 allows explicit autocomplete override" do
+      form = used_field_form()
+
+      html =
+        render_component(&NewInputs.input/1, %{
+          field: form[:name],
+          type: "text",
+          autocomplete: "email"
+        })
+
+      assert html =~ ~s(autocomplete="email")
+    end
+  end
+
   # ---- old_error/1 (CoreComponents) -----------------------------------------
 
   describe "old_error/1 used_input? gating" do

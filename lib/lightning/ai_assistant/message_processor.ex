@@ -131,11 +131,39 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           ChatMessage.t()
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp dispatch_message_processing(session, message) do
-    if job_chat?(session, message) do
-      process_job_message(session, message)
+    if global_chat?(session) do
+      process_global_message(session, message)
     else
-      process_workflow_message(session, message)
+      if job_chat?(session, message) do
+        process_job_message(session, message)
+      else
+        process_workflow_message(session, message)
+      end
     end
+  end
+
+  @spec global_chat?(AiAssistant.ChatSession.t()) :: boolean()
+  defp global_chat?(session) do
+    get_in(session.meta, ["message_options", "use_global_assistant"]) == true
+  end
+
+  @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp process_global_message(session, message) do
+    workflow_yaml = message.code
+    page = get_in(session.meta, ["message_options", "page"])
+
+    if workflow_yaml in [nil, ""] do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+
+    AiAssistant.query_global_stream(session, message.content,
+      workflow_yaml: workflow_yaml,
+      page: page
+    )
   end
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
@@ -189,7 +217,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       case session.meta do
         %{"message_options" => %{"attach_io_data" => true, "step_id" => step_id}}
         when is_binary(step_id) ->
-          {input, output} = fetch_and_scrub_io_data(step_id)
+          {input, output} = fetch_and_scrub_io_data(step_id, session.project_id)
 
           options
           |> Keyword.put(:input, input)
@@ -202,9 +230,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_stream(enriched_session, message.content, options)
   end
 
-  @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
-  defp fetch_and_scrub_io_data(step_id) do
-    case Invocation.get_step_with_dataclips(step_id) do
+  @spec fetch_and_scrub_io_data(String.t(), Ecto.UUID.t()) ::
+          {map() | nil, map() | nil}
+  defp fetch_and_scrub_io_data(step_id, project_id) do
+    case Invocation.get_step_with_dataclips(step_id, project_id) do
       nil ->
         {nil, nil}
 

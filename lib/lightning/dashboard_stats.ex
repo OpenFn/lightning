@@ -11,6 +11,8 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
+  @wo_active WorkOrder.active_states()
+  @run_active Run.active_states()
   @days_back 30
 
   defmodule WorkflowStats do
@@ -58,7 +60,7 @@ defmodule Lightning.DashboardStats do
     last_workorders = batch_get_last_workorders(workflow_ids)
 
     last_failed_workorders =
-      batch_get_last_workorders(workflow_ids, [:pending, :running, :success])
+      batch_get_last_workorders(workflow_ids, @wo_active ++ [:success])
 
     Enum.map(workflows, fn workflow ->
       wf_id = workflow.id
@@ -158,9 +160,18 @@ defmodule Lightning.DashboardStats do
     Enum.sort_by(workflow_stats, sorter, sort_direction)
   end
 
+  # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
+  # on `DateTime` structs orders by struct keys (day before month before year),
+  # not chronologically. Returning unix microseconds avoids that pitfall.
+  # The leading sentinel (`0` for nil, `1` for present) keeps nil rows
+  # cleanly separate from a hypothetical `~U[1970-01-01]` row, so the two
+  # can never tie at the comparator.
   defp get_sorter(:last_workorder_updated_at) do
     fn stats ->
-      stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
+      case stats.last_workorder.updated_at do
+        nil -> {0, 0}
+        dt -> {1, DateTime.to_unix(dt, :microsecond)}
+      end
     end
   end
 
@@ -192,7 +203,7 @@ defmodule Lightning.DashboardStats do
   end
 
   defp get_last_failed_workorder(workflow, %{state: :success}) do
-    excluded_states = [:pending, :running, :success]
+    excluded_states = @wo_active ++ [:success]
     get_last_workorder(workflow, excluded_states)
   end
 
@@ -229,7 +240,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:pending, :running] ->
+      {state, cnt}, acc when state in @wo_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -251,7 +262,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:available, :claimed, :started] ->
+      {state, cnt}, acc when state in @run_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -333,7 +344,7 @@ defmodule Lightning.DashboardStats do
           :success ->
             %{current | success: cnt}
 
-          s when s in [:pending, :running] ->
+          s when s in @wo_active ->
             Map.update!(current, :pending, &(&1 + cnt))
 
           _ ->
@@ -361,7 +372,7 @@ defmodule Lightning.DashboardStats do
           :success ->
             %{current | success: cnt}
 
-          s when s in [:available, :claimed, :started] ->
+          s when s in @run_active ->
             Map.update!(current, :pending, &(&1 + cnt))
 
           _ ->

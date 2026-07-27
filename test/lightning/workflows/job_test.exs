@@ -16,6 +16,71 @@ defmodule Lightning.Workflows.JobTest do
   end
 
   describe "changeset/2" do
+    test "a malformed id is a changeset error, not an Ecto.ChangeError on save" do
+      # An unsubstituted import placeholder reaching :id (a :binary_id field)
+      # passes cast/3 and would only raise when dumped on insert. validate_uuid
+      # surfaces it as a changeset error instead.
+      changeset =
+        Job.changeset(%Job{}, %{
+          id: "__ID_JOB_Envoyer-dans-DHIS2__",
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:id] == {"is not a valid UUID", []}
+    end
+
+    test "malformed FK ids are changeset errors, not Ecto.ChangeError on save" do
+      # workflow_id + keychain_credential_id together (no project_credential_id
+      # so validate_exclusive doesn't fire and override the UUID error).
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: "__ID_JOB_Fetch__",
+          keychain_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:keychain_credential_id] ==
+               {"is not a valid UUID", []}
+
+      # project_credential_id in isolation (no keychain set).
+      project_changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          project_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute project_changeset.valid?
+
+      assert project_changeset.errors[:project_credential_id] ==
+               {"is not a valid UUID", []}
+    end
+
+    test "FKs left unset stay valid" do
+      workflow = insert(:workflow)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        })
+
+      assert changeset.valid?
+      refute changeset.errors[:project_credential_id]
+      refute changeset.errors[:keychain_credential_id]
+    end
+
     test "accepts keychain_credential_id in changeset" do
       workflow = insert(:workflow)
 
@@ -163,6 +228,56 @@ defmodule Lightning.Workflows.JobTest do
     test "must have an adaptor" do
       errors = Job.changeset(%Job{}, %{adaptor: nil}) |> errors_on()
       assert errors[:adaptor] == ["job adaptor can't be blank"]
+    end
+
+    test "accepts well-formed, registry-listed adaptor strings" do
+      [
+        "@openfn/language-common@latest",
+        "@openfn/language-http@1.2.3",
+        "@openfn/language-http@1.2.3-pre",
+        "@openfn/language-http",
+        "@openfn/language-common"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+        refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
+      end)
+    end
+
+    test "rejects a well-formed adaptor that is not in the registry" do
+      # The registry membership check only runs on an otherwise-valid changeset,
+      # so name and body are supplied here.
+      [
+        "@openfn/language-foo@1.0.0",
+        "@evilcorp/language-http@1.0.0",
+        "common@1.0.0"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
+        assert errors[:adaptor] == ["is not a recognised adaptor"],
+               "expected #{inspect(adaptor)} to be rejected as unknown"
+      end)
+    end
+
+    test "rejects malformed / injection-shaped adaptor strings" do
+      [
+        "@openfn/x\npwd\nb@1.0.0",
+        "@openfn/language-http@7.3.2; touch /tmp/x",
+        "@openfn/language-common@latest and stuff"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+
+        assert errors[:adaptor] == ["adaptor has invalid format"],
+               "expected #{inspect(adaptor)} to be rejected"
+      end)
     end
   end
 end

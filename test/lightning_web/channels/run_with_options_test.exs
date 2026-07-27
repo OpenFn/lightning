@@ -38,6 +38,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",
@@ -87,6 +88,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",
@@ -112,7 +114,7 @@ defmodule LightningWeb.RunWithOptionsTest do
       tmp_dir: tmp_dir
     } do
       Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+        [local_adaptors_repos: [tmp_dir]]
       end)
 
       user = insert(:user)

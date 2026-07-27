@@ -1,13 +1,24 @@
 defmodule LightningWeb.RunLive.ComponentsTest do
   use LightningWeb.ConnCase, async: true
 
+  import ExUnit.CaptureLog
+  import Mox
   import Phoenix.LiveViewTest
 
   alias Lightning.Workflows
+  alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias LightningWeb.RunLive.Index
 
   import Lightning.Factories
+
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+    Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
+    :ok
+  end
 
   test "is_checked returns true if a specified filter is part of a filter changeset" do
     changeset =
@@ -341,6 +352,62 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     end
   end
 
+  describe "step_icon/1" do
+    test "StateTooLargeError and unknown kill error types render the same icon as OOMError" do
+      reference =
+        render_component(&Components.step_icon/1,
+          reason: "kill",
+          error_type: "OOMError"
+        )
+
+      for error_type <- ["StateTooLargeError", "SomeFutureWorkerError"] do
+        {html, _log} =
+          with_log(fn ->
+            render_component(&Components.step_icon/1,
+              reason: "kill",
+              error_type: error_type
+            )
+          end)
+
+        assert html == reference,
+               "expected kill/#{error_type} to render identically to kill/OOMError"
+      end
+    end
+
+    test "unknown kill error types log a warning and report to Sentry; known ones do neither" do
+      expect(Lightning.MockSentry, :capture_message, fn msg, opts ->
+        assert msg == "Unknown kill error_type"
+        assert opts[:level] == :warning
+        assert opts[:extra][:error_type] == "SomeFutureWorkerError"
+        :ok
+      end)
+
+      log_unknown =
+        capture_log(fn ->
+          render_component(&Components.step_icon/1,
+            reason: "kill",
+            error_type: "SomeFutureWorkerError"
+          )
+        end)
+
+      assert log_unknown =~ "Unknown kill error_type"
+      assert log_unknown =~ "SomeFutureWorkerError"
+
+      for error_type <- ["OOMError", "StateTooLargeError"] do
+        log_known =
+          capture_log(fn ->
+            render_component(&Components.step_icon/1,
+              reason: "kill",
+              error_type: error_type
+            )
+          end)
+
+        refute log_known =~ "Unknown kill error_type",
+               "did not expect log warning for known error_type kill/#{error_type}"
+      end
+    end
+  end
+
   test "no rerun button is displayed when user can't rerun a job" do
     %{triggers: [trigger], jobs: [job | _rest]} =
       workflow = insert(:simple_workflow)
@@ -620,6 +687,60 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       ~s{a[href='#{~p"/projects/#{project}/runs/#{run}?#{%{step: step.id}}"}']}
     )
     |> Enum.any?()
+  end
+
+  describe "bulk_cancel_modal/1" do
+    test "shows cancel selected button when not all selected" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: false,
+          selected_count: 3,
+          page_number: 1,
+          pages: 2,
+          total_entries: 10,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel Pending Runs"
+      assert html =~ "Cancel up to 3 selected"
+      refute html =~ "Cancel up to 10 matching"
+    end
+
+    test "shows both cancel selected and cancel all matching when all selected on multi-page" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: true,
+          selected_count: 5,
+          page_number: 1,
+          pages: 3,
+          total_entries: 25,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel up to 5 selected"
+      assert html =~ "Cancel up to 25 matching"
+    end
+
+    test "shows only cancel selected when all selected but single page" do
+      html =
+        render_component(&Components.bulk_cancel_modal/1,
+          id: "bulk-cancel-modal",
+          all_selected?: true,
+          selected_count: 5,
+          page_number: 1,
+          pages: 1,
+          total_entries: 5,
+          filters: %SearchParams{},
+          workflows: []
+        )
+
+      assert html =~ "Cancel up to 5 selected"
+      refute html =~ "Cancel up to 5 matching"
+    end
   end
 
   describe "bulk_rerun_modal/1" do

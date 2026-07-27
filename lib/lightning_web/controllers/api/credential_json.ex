@@ -42,7 +42,7 @@ defmodule LightningWeb.API.CredentialJSON do
     Enum.map(project_credentials, &render_project_credential/1)
   end
 
-  defp render_project_credentials(_), do: []
+  defp render_project_credentials(_project_credentials), do: []
 
   defp render_project_credential(%ProjectCredential{} = pc) do
     %{
@@ -54,11 +54,14 @@ defmodule LightningWeb.API.CredentialJSON do
     }
   end
 
+  # Renders whatever projects the credential carries. The controller is
+  # responsible for pruning these to the caller-visible set before rendering, so
+  # that other tenants' project id/name/description are never disclosed here.
   defp render_projects(projects) when is_list(projects) do
     Enum.map(projects, &render_project/1)
   end
 
-  defp render_projects(_), do: []
+  defp render_projects(_projects), do: []
 
   defp render_project(project) do
     %{

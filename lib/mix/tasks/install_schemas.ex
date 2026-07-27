@@ -16,22 +16,46 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     "language-divoc"
   ]
 
+  # Descending on purpose: the first attempt is generous to let jsdelivr warm
+  # a cold cache for packages it hasn't served recently. Follow-up attempts
+  # are shorter because we expect a now-warm hit and want to fail fast if not.
+  @recv_timeouts [30_000, 15_000, 5_000]
+
+  # hackney error reasons that we treat as transient and worth retrying.
+  # Anything else (e.g. :nxdomain, :econnrefused) is logged with its reason
+  # and skipped immediately rather than retried.
+  @retriable_reasons [:timeout, :closed, :connect_timeout, :checkout_timeout]
+
+  # Outer Task.async_stream timeout. Must comfortably exceed the sum of
+  # @recv_timeouts (50s) plus connect/DNS/body overhead.
+  @async_stream_timeout 75_000
+
   @spec run(any) :: any
   def run(args) do
-    HTTPoison.start()
+    # Evaluate runtime.exs so LOCAL_ADAPTORS/OPENFN_ADAPTORS_REPO are picked up;
+    # without this the local check always sees empty config and falls back to npm.
+    Mix.Task.run("app.config")
 
     dir = schemas_path()
 
     init_schema_dir(dir)
 
-    result =
-      args
-      |> parse_excluded()
-      |> fetch_schemas(&persist_schema(dir, &1))
-      |> Enum.to_list()
+    results =
+      if Lightning.AdaptorRegistry.local_adaptors_enabled?() do
+        install_from_local(dir)
+      else
+        HTTPoison.start()
+        args |> parse_excluded() |> fetch_schemas(&persist_schema(dir, &1))
+      end
+
+    {installed, skipped} =
+      Enum.reduce(results, {0, 0}, fn
+        {:installed, _name}, {ok, skip} -> {ok + 1, skip}
+        {:skipped, _name, _reason}, {ok, skip} -> {ok, skip + 1}
+      end)
 
     Mix.shell().info(
-      "Schemas installation has finished. #{length(result)} installed"
+      "Schemas installation has finished. #{installed} installed, #{skipped} skipped."
     )
   end
 
@@ -78,23 +102,96 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   end
 
   def persist_schema(dir, package_name) do
-    get(
-      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json",
-      [],
-      hackney: [pool: :default],
-      recv_timeout: 15_000
-    )
-    |> case do
-      {:error, _} ->
-        raise "Unable to access #{package_name}"
+    attempt_persist_schema(dir, package_name, @recv_timeouts)
+  end
 
+  defp attempt_persist_schema(dir, package_name, [timeout | rest]) do
+    url =
+      "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json"
+
+    case get(url, [], hackney: [pool: :default], recv_timeout: timeout) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         write_schema(dir, package_name, body)
+        {:installed, package_name}
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         Logger.warning(
           "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
         )
+
+        {:skipped, package_name, {:http_status, status_code}}
+
+      {:error, %HTTPoison.Error{reason: reason}}
+      when reason in @retriable_reasons and rest != [] ->
+        [next_timeout | _] = rest
+
+        Logger.warning(
+          "Transient error fetching #{package_name} (#{inspect(reason)}); " <>
+            "retrying with recv_timeout=#{next_timeout}ms"
+        )
+
+        attempt_persist_schema(dir, package_name, rest)
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        attempts_used = length(@recv_timeouts) - length(rest)
+
+        Logger.warning(
+          "Skipping #{package_name}: #{inspect(reason)} after " <>
+            "#{attempts_used} attempt(s)"
+        )
+
+        {:skipped, package_name, reason}
+    end
+  end
+
+  # Read schemas straight from the local adaptor monorepos configured via
+  # LOCAL_ADAPTORS/OPENFN_ADAPTORS_REPO instead of fetching from npm/jsdelivr.
+  # Packages without a configuration-schema.json (e.g. common) are skipped.
+  def install_from_local(dir) do
+    repos = local_repos()
+
+    Mix.shell().info(
+      "Installing credential schemas from: #{Enum.join(repos, ", ")}"
+    )
+
+    repos
+    |> Enum.flat_map(&local_packages/1)
+    # First occurrence wins, matching AdaptorRegistry's repo precedence.
+    |> Enum.uniq_by(fn {name, _path} -> name end)
+    |> Enum.map(fn {name, path} -> persist_local_schema(dir, name, path) end)
+  end
+
+  defp local_repos do
+    Lightning.Config.adaptor_registry()[:local_adaptors_repos] || []
+  end
+
+  defp local_packages(repo_path) do
+    packages_path = Path.join(repo_path, "packages")
+
+    case File.ls(packages_path) do
+      {:ok, entries} ->
+        Enum.map(entries, fn pkg ->
+          {pkg, Path.join([packages_path, pkg, "configuration-schema.json"])}
+        end)
+
+      {:error, reason} ->
+        Logger.warning(
+          "Skipping local repo #{inspect(repo_path)}: " <>
+            "cannot list #{inspect(packages_path)} (#{:file.format_error(reason)})"
+        )
+
+        []
+    end
+  end
+
+  defp persist_local_schema(dir, name, schema_path) do
+    case File.read(schema_path) do
+      {:ok, body} ->
+        write_schema(dir, name, body)
+        {:installed, name}
+
+      {:error, reason} ->
+        {:skipped, name, reason}
     end
   end
 
@@ -104,27 +201,57 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       recv_timeout: 15_000
     )
     |> case do
-      {:error, %HTTPoison.Error{}} ->
-        raise "Unable to connect to NPM; no adaptors fetched."
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        raise "Unable to connect to NPM; no adaptors fetched: #{inspect(reason)}"
 
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         excluded = excluded |> Enum.map(&"@openfn/#{&1}")
 
-        body
-        |> Jason.decode!()
-        |> Enum.map(fn {name, _} -> name end)
-        |> Enum.filter(fn name ->
-          Regex.match?(~r/@openfn\/language-\w+/, name)
-        end)
-        |> Enum.reject(fn name ->
-          name in excluded
-        end)
-        |> Task.async_stream(fun,
-          ordered: false,
+        names =
+          body
+          |> Jason.decode!()
+          |> Enum.map(fn {name, _} -> name end)
+          |> Enum.filter(fn name ->
+            Regex.match?(~r/@openfn\/language-\w+/, name)
+          end)
+          |> Enum.reject(fn name -> name in excluded end)
+
+        # Wrap fun so a worker crash (raise/exit) becomes a normal {:skipped,
+        # _, _} result instead of taking the caller down via the task link.
+        # ordered: true (the default) lets us zip results against `names` so
+        # the on_timeout: :kill_task path can also recover the package name.
+        safe_fun = fn name ->
+          try do
+            fun.(name)
+          catch
+            kind, reason ->
+              Logger.warning(
+                "Schema fetch worker for #{name} crashed: " <>
+                  "#{inspect({kind, reason})}"
+              )
+
+              {:skipped, name, {kind, reason}}
+          end
+        end
+
+        names
+        |> Task.async_stream(safe_fun,
           max_concurrency: 5,
-          timeout: 30_000
+          timeout: @async_stream_timeout,
+          on_timeout: :kill_task
         )
-        |> Stream.map(fn {:ok, detail} -> detail end)
+        |> Stream.zip(names)
+        |> Stream.map(fn
+          {{:ok, result}, _name} ->
+            result
+
+          {{:exit, reason}, name} ->
+            Logger.warning(
+              "Schema fetch task for #{name} killed: #{inspect(reason)}"
+            )
+
+            {:skipped, name, reason}
+        end)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         raise "Unable to access openfn user packages. status=#{status_code}"

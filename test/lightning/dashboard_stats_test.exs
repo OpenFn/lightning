@@ -205,7 +205,7 @@ defmodule Lightning.DashboardStatsTest do
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
-      assert timestamps == Enum.sort(timestamps)
+      assert timestamps == Enum.sort(timestamps, {:asc, DateTime})
     end
 
     test "sorts by last_workorder_updated_at descending", %{stats: stats} do
@@ -217,7 +217,38 @@ defmodule Lightning.DashboardStatsTest do
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
-      assert timestamps == Enum.sort(timestamps, :desc)
+      assert timestamps == Enum.sort(timestamps, {:desc, DateTime})
+    end
+
+    test "sorts by last_workorder_updated_at chronologically across a UTC month boundary",
+         %{stats: [stats1, stats2, stats3]} do
+      later = ~U[2026-05-01 01:10:00.000000Z]
+      earlier = ~U[2026-04-30 23:10:00.000000Z]
+      earliest = ~U[2026-04-30 21:10:00.000000Z]
+
+      stats1 = put_in(stats1.last_workorder.updated_at, later)
+      stats2 = put_in(stats2.last_workorder.updated_at, earlier)
+      stats3 = put_in(stats3.last_workorder.updated_at, earliest)
+
+      sorted_desc =
+        DashboardStats.sort_workflow_stats(
+          [stats2, stats3, stats1],
+          :last_workorder_updated_at,
+          :desc
+        )
+
+      assert Enum.map(sorted_desc, & &1.last_workorder.updated_at) ==
+               [later, earlier, earliest]
+
+      sorted_asc =
+        DashboardStats.sort_workflow_stats(
+          [stats1, stats2, stats3],
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      assert Enum.map(sorted_asc, & &1.last_workorder.updated_at) ==
+               [earliest, earlier, later]
     end
 
     test "sorts by workflow name when given invalid sort field", %{stats: stats} do
@@ -242,6 +273,38 @@ defmodule Lightning.DashboardStatsTest do
       first_stat = List.first(sorted)
 
       assert first_stat.last_workorder.updated_at == nil
+    end
+
+    test "keeps nil and a real 1970-01-01 timestamp cleanly separated", %{
+      stats: [stats1, stats2 | _]
+    } do
+      # The sort-key extractor returns a sentinel tuple ({0, _} for nil,
+      # {1, _} for present) so nil rows can never tie with a real
+      # `~U[1970-01-01 00:00:00Z]` row even though both map to unix 0.
+      stats_nil = put_in(stats1.last_workorder.updated_at, nil)
+
+      stats_epoch =
+        put_in(stats2.last_workorder.updated_at, ~U[1970-01-01 00:00:00Z])
+
+      asc =
+        DashboardStats.sort_workflow_stats(
+          [stats_epoch, stats_nil],
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      assert Enum.map(asc, & &1.last_workorder.updated_at) ==
+               [nil, ~U[1970-01-01 00:00:00Z]]
+
+      desc =
+        DashboardStats.sort_workflow_stats(
+          [stats_nil, stats_epoch],
+          :last_workorder_updated_at,
+          :desc
+        )
+
+      assert Enum.map(desc, & &1.last_workorder.updated_at) ==
+               [~U[1970-01-01 00:00:00Z], nil]
     end
   end
 end

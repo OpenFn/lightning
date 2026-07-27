@@ -129,7 +129,7 @@ defmodule LightningWeb.Components.ViewerTest do
 
       refute html =~ "Nothing yet"
       assert html =~ "data for this step has not been retained"
-      assert html =~ "this policy\n      </a>\n      for future runs"
+      assert html =~ "for future runs"
       refute html =~ "test@email.com"
 
       # finished step for a user who can NOT edit_data_retention
@@ -147,7 +147,7 @@ defmodule LightningWeb.Components.ViewerTest do
 
       refute html =~ "Nothing yet"
       assert html =~ "data for this step has not been retained"
-      refute html =~ "this policy\n      </a>\n      for future runs"
+      refute html =~ "for future runs"
       assert html =~ "test@email.com"
 
       # finished step for a dataclip that was not saved at all
@@ -181,7 +181,7 @@ defmodule LightningWeb.Components.ViewerTest do
 
       assert html =~ "Nothing yet"
       refute html =~ "data for this step has not been retained"
-      refute html =~ "this policy\n      </a>\n      for future runs"
+      refute html =~ "for future runs"
       refute html =~ "test@email.com"
 
       # finished step with dataclip shows the right information
@@ -201,7 +201,7 @@ defmodule LightningWeb.Components.ViewerTest do
 
       refute html =~ "Nothing yet"
       assert html =~ "data for this step has not been retained"
-      assert html =~ "this policy\n      </a>\n      for future runs"
+      assert html =~ "for future runs"
       refute html =~ "test@email.com"
     end
   end

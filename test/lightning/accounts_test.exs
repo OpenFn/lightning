@@ -120,6 +120,52 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "login_blocked?/1" do
+    test "false for an active user" do
+      refute Accounts.login_blocked?(insert(:user))
+    end
+
+    test "true for a disabled user" do
+      assert Accounts.login_blocked?(insert(:user, disabled: true))
+    end
+
+    test "true for a user scheduled for deletion" do
+      assert Accounts.login_blocked?(
+               insert(:user, scheduled_deletion: DateTime.utc_now())
+             )
+    end
+
+    test "any non-nil scheduled_deletion blocks (not only a %DateTime{})" do
+      assert Accounts.login_blocked?(%User{
+               scheduled_deletion: ~N[2024-01-01 00:00:00]
+             })
+    end
+  end
+
+  describe "login_blocked_reason/1" do
+    test ":disabled for a disabled user" do
+      assert Accounts.login_blocked_reason(insert(:user, disabled: true)) ==
+               :disabled
+    end
+
+    test ":scheduled_deletion for a user scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+      assert Accounts.login_blocked_reason(user) == :scheduled_deletion
+    end
+
+    test "any non-nil scheduled_deletion blocks (not only a %DateTime{})" do
+      user = %User{scheduled_deletion: ~N[2024-01-01 00:00:00]}
+      assert Accounts.login_blocked_reason(user) == :scheduled_deletion
+    end
+
+    test "disabled takes precedence over scheduled deletion" do
+      user =
+        insert(:user, disabled: true, scheduled_deletion: DateTime.utc_now())
+
+      assert Accounts.login_blocked_reason(user) == :disabled
+    end
+  end
+
   describe "get_user_by_email_and_password/2" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email_and_password(
@@ -141,6 +187,251 @@ defmodule Lightning.AccountsTest do
                  user.email,
                  valid_user_password()
                )
+    end
+
+    test "returns :sso_account error when the user has no password" do
+      user = insert(:user, hashed_password: nil, password: nil)
+
+      assert {:error, :sso_account} =
+               Accounts.get_user_by_email_and_password(user.email, "anything")
+    end
+  end
+
+  describe "get_user_by_identity/2" do
+    test "returns the user when an identity exists" do
+      user = insert(:user)
+
+      insert(:user_identity,
+        user: user,
+        provider: "github",
+        uid: "12345"
+      )
+
+      assert %User{id: id} = Accounts.get_user_by_identity("github", "12345")
+      assert id == user.id
+    end
+
+    test "returns nil when no identity matches" do
+      refute Accounts.get_user_by_identity("github", "nope")
+    end
+  end
+
+  describe "link_user_identity/3" do
+    test "creates a new identity for the user" do
+      user = insert(:user)
+
+      assert {:ok, identity} =
+               Accounts.link_user_identity(user, "github", "abc")
+
+      assert identity.user_id == user.id
+      assert identity.provider == "github"
+      assert identity.uid == "abc"
+    end
+
+    test "is idempotent when already linked to the same user" do
+      user = insert(:user)
+
+      existing =
+        insert(:user_identity, user: user, provider: "github", uid: "abc")
+
+      assert {:ok, identity} = Accounts.link_user_identity(user, "github", "abc")
+      # Returns the existing persisted row, not a fake unpersisted struct
+      assert identity.id == existing.id
+    end
+
+    test "errors when the (provider, uid) is claimed by a different user" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "abc")
+
+      user = insert(:user)
+
+      assert {:error, :identity_already_linked} =
+               Accounts.link_user_identity(user, "github", "abc")
+
+      # The identity still belongs to the original owner
+      assert %User{id: owner_id} = Accounts.get_user_by_identity("github", "abc")
+      assert owner_id == other_user.id
+    end
+
+    test "rejects a second identity for a provider the user already linked" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:error, :provider_already_linked} =
+               Accounts.link_user_identity(user, "github", "uid-b")
+
+      # Only the original identity remains
+      assert [%{uid: "uid-a"}] = Accounts.list_user_identities(user)
+    end
+
+    test "allows linking a different provider" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      assert {:ok, _identity} =
+               Accounts.link_user_identity(user, "google", "uid-b")
+
+      assert [%{provider: "github"}, %{provider: "google"}] =
+               Accounts.list_user_identities(user)
+    end
+
+    test "the database rejects a duplicate (user_id, provider) as a backstop" do
+      user = insert(:user)
+      insert(:user_identity, user: user, provider: "github", uid: "uid-a")
+
+      # Bypass the application guard to prove the DB constraint also holds (the
+      # backstop for a race between two concurrent links).
+      assert {:error, changeset} =
+               %Lightning.Accounts.UserIdentity{}
+               |> Lightning.Accounts.UserIdentity.changeset(%{
+                 user_id: user.id,
+                 provider: "github",
+                 uid: "uid-b"
+               })
+               |> Lightning.Repo.insert()
+
+      assert "is already linked to a different account for this provider" in errors_on(
+               changeset
+             ).user_id
+    end
+  end
+
+  describe "register_user_from_sso/3" do
+    test "creates a confirmed user and linked identity in one transaction" do
+      Events.subscribe()
+      email = unique_user_email()
+
+      assert {:ok, user} =
+               Accounts.register_user_from_sso(
+                 %{
+                   email: email,
+                   first_name: "Sso",
+                   last_name: "User"
+                 },
+                 "github",
+                 "id-1"
+               )
+
+      assert user.email == email
+      assert user.first_name == "Sso"
+      assert user.last_name == "User"
+      assert is_nil(user.hashed_password)
+      refute is_nil(user.confirmed_at)
+      assert_receive %Events.UserRegistered{user: ^user}
+
+      assert %User{id: same_id} = Accounts.get_user_by_identity("github", "id-1")
+      assert same_id == user.id
+    end
+
+    test "fails when the email is already taken" do
+      existing = insert(:user)
+
+      assert {:error, changeset} =
+               Accounts.register_user_from_sso(
+                 %{
+                   email: existing.email,
+                   first_name: "Other",
+                   last_name: "User"
+                 },
+                 "github",
+                 "id-2"
+               )
+
+      assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "rolls back without orphaning a user when the identity is already claimed" do
+      other_user = insert(:user)
+      insert(:user_identity, user: other_user, provider: "github", uid: "taken")
+
+      email = unique_user_email()
+
+      assert {:error, :identity_already_linked} =
+               Accounts.register_user_from_sso(
+                 %{email: email, first_name: "Sso", last_name: "User"},
+                 "github",
+                 "taken"
+               )
+
+      # The user insert is rolled back with the failed identity link
+      refute Accounts.get_user_by_email(email)
+    end
+  end
+
+  describe "list_user_identities/1" do
+    test "returns identities for the given user, ordered by provider" do
+      user = insert(:user)
+
+      insert(:user_identity, user: user, provider: "google", uid: "g1")
+      insert(:user_identity, user: user, provider: "github", uid: "h1")
+      insert(:user_identity, user: insert(:user), provider: "github", uid: "h2")
+
+      assert [a, b] = Accounts.list_user_identities(user)
+      assert a.provider == "github"
+      assert b.provider == "google"
+    end
+  end
+
+  describe "unlink_user_identity/2" do
+    test "removes the identity for a user with a password" do
+      user = insert(:user)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
+      assert [] = Accounts.list_user_identities(user)
+    end
+
+    test "returns :not_linked when the identity does not exist" do
+      user = insert(:user)
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, Ecto.UUID.generate())
+    end
+
+    test "returns :not_linked for a malformed identity id" do
+      user = insert(:user)
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, "not-a-uuid")
+    end
+
+    test "returns :not_linked when the identity belongs to another user" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      identity =
+        insert(:user_identity, user: other_user, provider: "github", uid: "h1")
+
+      assert {:error, :not_linked} =
+               Accounts.unlink_user_identity(user, identity.id)
+
+      assert [_] = Accounts.list_user_identities(other_user)
+    end
+
+    test "refuses to unlink the only identity of an SSO-only user" do
+      user = insert(:user, hashed_password: nil)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      assert {:error, :would_lock_out} =
+               Accounts.unlink_user_identity(user, identity.id)
+
+      assert [_] = Accounts.list_user_identities(user)
+    end
+
+    test "allows unlinking when an SSO-only user has another identity" do
+      user = insert(:user, hashed_password: nil)
+
+      identity =
+        insert(:user_identity, user: user, provider: "github", uid: "h1")
+
+      insert(:user_identity, user: user, provider: "google", uid: "g1")
+
+      assert {:ok, _} = Accounts.unlink_user_identity(user, identity.id)
+      assert [%{provider: "google"}] = Accounts.list_user_identities(user)
     end
   end
 
@@ -394,7 +685,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -471,7 +762,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"]
+               email: ["must be a valid email address"]
              } = errors_on(changeset)
     end
 
@@ -846,7 +1137,7 @@ defmodule Lightning.AccountsTest do
           email: "not valid"
         })
 
-      assert %{email: ["must have the @ sign and no spaces"]} =
+      assert %{email: ["must be a valid email address"]} =
                errors_on(changeset)
     end
 
@@ -994,6 +1285,53 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "update_user_details/2" do
+    test "disabling a user revokes sessions but keeps their api tokens" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      api_token = Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, user} = Accounts.update_user_details(user, %{"disabled" => true})
+
+      assert user.disabled
+      refute Accounts.get_user_by_session_token(session_token)
+      # A disable is reversible, so the PAT stays (the request-time gate blocks
+      # it while disabled); only the session is dropped.
+      assert Repo.get_by(UserToken, token: api_token, context: "api")
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "scheduling a user for deletion revokes all of their tokens" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} =
+        Accounts.update_user_details(user, %{
+          "scheduled_deletion" =>
+            DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+
+      refute Accounts.get_user_by_session_token(session_token)
+      assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "editing other fields leaves the user's sessions untouched" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} =
+        Accounts.update_user_details(user, %{"first_name" => "Renamed"})
+
+      assert Accounts.get_user_by_session_token(session_token)
+      refute_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+  end
+
   describe "update_user_password/3" do
     setup do
       %{user: insert(:user)}
@@ -1052,6 +1390,17 @@ defmodule Lightning.AccountsTest do
         })
 
       refute Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "disconnects the user's websockets", %{user: user} do
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _} =
+        Accounts.update_user_password(user, valid_user_password(), %{
+          password: "new valid password"
+        })
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
   end
 
@@ -1164,6 +1513,28 @@ defmodule Lightning.AccountsTest do
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_api_token("oops")
     end
+
+    # Set the field directly, not via update_user_details/2: that helper also
+    # deletes the PAT row, which would pass the test for the wrong reason. We
+    # want the token to survive so this proves the resolver drops the blocked
+    # user.
+    test "does not return a disabled user", %{user: user, token: token} do
+      Repo.update!(Ecto.Changeset.change(user, disabled: true))
+      refute Accounts.get_user_by_api_token(token)
+    end
+
+    test "does not return a user scheduled for deletion", %{
+      user: user,
+      token: token
+    } do
+      Repo.update!(
+        Ecto.Changeset.change(user,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      refute Accounts.get_user_by_api_token(token)
+    end
   end
 
   describe "delete_token/1" do
@@ -1229,6 +1600,25 @@ defmodule Lightning.AccountsTest do
     test "does not return user for expired token", %{token: token} do
       {1, nil} =
         Repo.update_all(UserToken, set: [inserted_at: ~U[2020-01-01 00:00:00Z]])
+
+      refute Accounts.get_user_by_session_token(token)
+    end
+
+    test "does not return a disabled user", %{user: user, token: token} do
+      Repo.update!(Ecto.Changeset.change(user, disabled: true))
+
+      refute Accounts.get_user_by_session_token(token)
+    end
+
+    test "does not return a user scheduled for deletion", %{
+      user: user,
+      token: token
+    } do
+      Repo.update!(
+        Ecto.Changeset.change(user,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
 
       refute Accounts.get_user_by_session_token(token)
     end
@@ -1430,6 +1820,15 @@ defmodule Lightning.AccountsTest do
 
       refute Repo.get_by(UserToken, user_id: user.id)
     end
+
+    test "disconnects the user's websockets", %{user: user} do
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _} =
+        Accounts.reset_user_password(user, %{password: "new valid password"})
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
   end
 
   describe "delete_user/1" do
@@ -1479,6 +1878,21 @@ defmodule Lightning.AccountsTest do
       assert user.scheduled_deletion != nil
       assert Timex.diff(user.scheduled_deletion, now, :days) == days
       assert user.disabled
+    end
+
+    test "revokes all tokens and disconnects sockets so access cannot resume" do
+      user = insert(:user)
+      session_token = Accounts.generate_user_session_token(user)
+      Accounts.generate_api_token(user)
+      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+
+      {:ok, _user} = Accounts.schedule_user_deletion(user, user.email)
+
+      # Every token is gone (the account is leaving), so nothing can reconnect...
+      refute Accounts.get_user_by_session_token(session_token)
+      assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
+      # ...and any live socket is torn down immediately.
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
   end
 

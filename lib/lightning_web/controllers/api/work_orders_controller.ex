@@ -6,6 +6,7 @@ defmodule LightningWeb.API.WorkOrdersController do
 
   - `page` - Page number (default: 1)
   - `page_size` - Number of items per page (default: 10)
+  - `state` - Filter by state (comma-separated). Valid values: rejected, pending, running, success, failed, crashed, cancelled, killed, exception, lost
   - `inserted_after` - Filter work orders created after this ISO8601 datetime
   - `inserted_before` - Filter work orders created before this ISO8601 datetime
   - `updated_after` - Filter work orders updated after this ISO8601 datetime
@@ -17,6 +18,43 @@ defmodule LightningWeb.API.WorkOrdersController do
       GET /api/work_orders?inserted_after=2024-01-01T00:00:00Z
       GET /api/work_orders?inserted_after=2024-01-01T00:00:00Z&inserted_before=2024-12-31T23:59:59Z
       GET /api/projects/:project_id/work_orders?inserted_after=2024-01-01T00:00:00Z
+
+  ## Sample curl requests
+
+  List all work orders:
+
+  ```bash
+  curl http://localhost:4000/api/work_orders \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Get a single work order:
+
+  ```bash
+  curl http://localhost:4000/api/work_orders/$WORK_ORDER_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Filter by comma-separated IDs:
+
+  ```bash
+  curl "http://localhost:4000/api/work_orders?id=$ID1,$ID2" \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Filter by project, workflow, or date range:
+
+  ```bash
+  curl "http://localhost:4000/api/work_orders?project_id=$PID&inserted_after=2024-01-01T00:00:00Z" \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Nested route — work orders for a specific project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID/work_orders \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
 
   """
   use LightningWeb, :controller
@@ -44,6 +82,7 @@ defmodule LightningWeb.API.WorkOrdersController do
     - `project_id` - Project UUID (optional, filters to specific project)
     - `page` - Page number (optional, default: 1)
     - `page_size` - Items per page (optional, default: 10)
+    - `state` - Comma-separated list of states to filter by (optional)
     - `inserted_after` - Filter work orders created after ISO8601 datetime (optional)
     - `inserted_before` - Filter work orders created before ISO8601 datetime (optional)
     - `updated_after` - Filter work orders updated after ISO8601 datetime (optional)
@@ -79,6 +118,7 @@ defmodule LightningWeb.API.WorkOrdersController do
              "updated_after",
              "updated_before"
            ]),
+         :ok <- Invocation.Query.validate_state_param(params),
          project <- Lightning.Projects.get_project(project_id),
          :ok <-
            ProjectUsers
@@ -103,7 +143,8 @@ defmodule LightningWeb.API.WorkOrdersController do
              "inserted_before",
              "updated_after",
              "updated_before"
-           ]) do
+           ]),
+         :ok <- Invocation.Query.validate_state_param(params) do
       pagination_attrs = Map.take(params, ["page_size", "page"])
 
       page =
@@ -140,7 +181,7 @@ defmodule LightningWeb.API.WorkOrdersController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with work_order <-
+    with %Lightning.WorkOrder{} = work_order <-
            WorkOrders.get(id, include: [workflow: :project, runs: []]),
          :ok <-
            ProjectUsers
@@ -150,6 +191,9 @@ defmodule LightningWeb.API.WorkOrdersController do
              work_order.workflow.project
            ) do
       render(conn, "show.json", work_order: work_order, conn: conn)
+    else
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 end

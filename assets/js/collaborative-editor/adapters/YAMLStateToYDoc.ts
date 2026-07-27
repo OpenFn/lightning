@@ -8,6 +8,8 @@ import type {
 } from '../../yaml/types';
 import type { Session } from '../types/session';
 
+import { reconcileDanglingReferences } from './reconcileDanglingReferences';
+
 /**
  * YAMLStateToYDoc
  *
@@ -66,9 +68,22 @@ export class YAMLStateToYDoc {
 
     // Session.Trigger always requires cron_expression
     // Default to null for non-cron triggers
-    const cronExpression =
-      trigger.type === 'cron' ? trigger.cron_expression : null;
-    triggerMap.set('cron_expression', cronExpression);
+    triggerMap.set('cron_expression', null);
+    triggerMap.set('cron_cursor_job_id', null);
+    triggerMap.set('webhook_reply', null);
+
+    if (trigger.type === 'cron') {
+      triggerMap.set('cron_expression', trigger.cron_expression ?? null);
+      triggerMap.set('cron_cursor_job_id', trigger.cron_cursor_job_id ?? null);
+    }
+
+    if (trigger.type === 'webhook') {
+      triggerMap.set('webhook_reply', trigger.webhook_reply ?? null);
+      triggerMap.set(
+        'webhook_response_config',
+        trigger.webhook_response_config ?? null
+      );
+    }
 
     return triggerMap;
   }
@@ -143,6 +158,14 @@ export class YAMLStateToYDoc {
           positionsMap.set(id, pos);
         });
       }
+
+      // 6. Reconcile dangling references introduced by the bulk replace.
+      // transformTrigger copies cron_cursor_job_id verbatim, so an imported /
+      // AI-applied workflow whose cron cursor references a job absent from the
+      // new jobs set would land dangling. Runs inside this single transaction —
+      // do NOT open a new one (Yjs forbids nesting). This is advisory; the
+      // server FK + save_workflow/3 rescue remain authoritative.
+      reconcileDanglingReferences(ydoc, { inTransaction: true });
     });
   }
 }

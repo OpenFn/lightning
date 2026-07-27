@@ -9,7 +9,6 @@ defmodule LightningWeb.Router do
   import Phoenix.LiveDashboard.Router
 
   alias CredentialLive
-  alias JobLive
   alias ProjectLive
   alias UserLive
 
@@ -64,7 +63,11 @@ defmodule LightningWeb.Router do
     post "/users/confirm", UserConfirmationController, :create
 
     get "/authenticate/callback", OidcController, :new
+    get "/authenticate/signup/confirm", OidcController, :confirm_signup
+    post "/authenticate/signup/confirm", OidcController, :complete_signup
+    get "/authenticate/signup/cancel", OidcController, :cancel_signup
     get "/authenticate/:provider", OidcController, :show
+    get "/authenticate/:provider/link", OidcController, :link
     get "/authenticate/:provider/callback", OidcController, :new
 
     get "/oauth/:provider/callback", OauthController, :new
@@ -145,7 +148,11 @@ defmodule LightningWeb.Router do
     post "/users/two-factor", UserTOTPController, :create
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
-    get "/download/collections/:name", CollectionsController, :download
+
+    get "/download/collections/:project_id/:name",
+        CollectionsController,
+        :download
+
     get "/dataclip/body/:id", DataclipController, :show
 
     get "/projects/:project_id/jobs/:job_id/dataclips",
@@ -183,7 +190,7 @@ defmodule LightningWeb.Router do
 
     get "/users/send-confirmation-email", UserConfirmationController, :send_email
 
-    get "/credentials/transfer/:credential_id/:receiver_id/:token",
+    get "/credentials/transfer/:token",
         CredentialTransferController,
         :confirm
 
@@ -208,8 +215,6 @@ defmodule LightningWeb.Router do
     end
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live "/settings", SettingsLive.Index, :index
-
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
       live "/settings/users/:id/delete", UserLive.Index, :delete
@@ -231,21 +236,25 @@ defmodule LightningWeb.Router do
       live "/mfa_required", ProjectLive.MFARequired, :index
 
       scope "/projects/:project_id", as: :project do
-        live "/jobs", JobLive.Index, :index
-
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index
         live "/history/channels", RunLive.Index, :channel_logs
+        live "/history/channels/:id", ChannelRequestLive.Show, :show
         live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
-        live "/w/new/legacy", WorkflowLive.Edit, :new
         live "/w/new", WorkflowLive.Collaborate, :new
-        live "/w/:id/legacy", WorkflowLive.Edit, :edit
         live "/w/:id", WorkflowLive.Collaborate, :edit
+
+        # Redirect retired legacy editor URLs to the collaborative editor,
+        # preserving the query string. The collaborative editor uses different
+        # query param names than the legacy editor; the raw query string is
+        # forwarded as-is except the run param which maps a -> run.
+        get "/w/new/legacy", LegacyRedirectController, :new
+        get "/w/:id/legacy", LegacyRedirectController, :edit
 
         live "/channels", ChannelLive.Index, :index
         live "/channels/new", ChannelLive.Index, :new
@@ -301,18 +310,6 @@ defmodule LightningWeb.Router do
   end
 
   do_in(:dev) do
-    import PhoenixStorybook.Router
-
-    scope "/" do
-      storybook_assets()
-    end
-
-    scope "/" do
-      pipe_through :browser
-
-      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
-    end
-
     scope "/dev" do
       pipe_through :browser
 

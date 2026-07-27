@@ -6,6 +6,7 @@ defmodule LightningWeb.API.RunController do
 
   - `page` - Page number (default: 1)
   - `page_size` - Number of items per page (default: 10)
+  - `state` - Filter by state (comma-separated). Valid values: available, claimed, started, success, failed, crashed, cancelled, killed, exception, lost
   - `inserted_after` - Filter runs created after this ISO8601 datetime
   - `inserted_before` - Filter runs created before this ISO8601 datetime
   - `updated_after` - Filter runs updated after this ISO8601 datetime
@@ -17,6 +18,36 @@ defmodule LightningWeb.API.RunController do
       GET /api/runs?inserted_after=2024-01-01T00:00:00Z
       GET /api/runs?inserted_after=2024-01-01T00:00:00Z&inserted_before=2024-12-31T23:59:59Z
       GET /api/projects/:project_id/runs?inserted_after=2024-01-01T00:00:00Z
+
+  ## Sample curl requests
+
+  List all runs:
+
+  ```bash
+  curl http://localhost:4000/api/runs \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Get a single run:
+
+  ```bash
+  curl http://localhost:4000/api/runs/$RUN_ID \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Filter by project, workflow, work order, or date range:
+
+  ```bash
+  curl "http://localhost:4000/api/runs?project_id=$PID&inserted_after=2024-01-01T00:00:00Z" \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
+
+  Nested route — runs for a specific project:
+
+  ```bash
+  curl http://localhost:4000/api/projects/$PROJECT_ID/runs \\
+    -H "Authorization: Bearer $TOKEN"
+  ```
 
   """
   use LightningWeb, :controller
@@ -44,6 +75,7 @@ defmodule LightningWeb.API.RunController do
     - `project_id` - Project UUID (optional, filters to specific project)
     - `page` - Page number (optional, default: 1)
     - `page_size` - Items per page (optional, default: 10)
+    - `state` - Comma-separated list of states to filter by (optional)
     - `inserted_after` - Filter runs created after ISO8601 datetime (optional)
     - `inserted_before` - Filter runs created before ISO8601 datetime (optional)
     - `updated_after` - Filter runs updated after ISO8601 datetime (optional)
@@ -79,6 +111,7 @@ defmodule LightningWeb.API.RunController do
              "updated_after",
              "updated_before"
            ]),
+         :ok <- Invocation.Query.validate_run_state_param(params),
          project <- Lightning.Projects.get_project(project_id),
          :ok <-
            ProjectUsers
@@ -103,7 +136,8 @@ defmodule LightningWeb.API.RunController do
              "inserted_before",
              "updated_after",
              "updated_before"
-           ]) do
+           ]),
+         :ok <- Invocation.Query.validate_run_state_param(params) do
       pagination_attrs = Map.take(params, ["page_size", "page"])
 
       page =
@@ -140,7 +174,8 @@ defmodule LightningWeb.API.RunController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with run <- Runs.get(id, include: [work_order: [workflow: :project]]),
+    with %Lightning.Run{} = run <-
+           Runs.get(id, include: [work_order: [workflow: :project]]),
          :ok <-
            ProjectUsers
            |> Permissions.can(
@@ -149,6 +184,9 @@ defmodule LightningWeb.API.RunController do
              run.work_order.workflow.project
            ) do
       render(conn, "show.json", run: run, conn: conn)
+    else
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 end

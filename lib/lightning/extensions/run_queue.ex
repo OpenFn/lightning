@@ -18,7 +18,4 @@ defmodule Lightning.Extensions.RunQueue do
               worker_name :: String.t() | nil,
               queues :: [String.t()]
             ) :: {:ok, [Lightning.Run.t()]}
-
-  @callback dequeue(run :: Lightning.Run.t()) ::
-              {:ok, Lightning.Run.t()}
 end

@@ -75,6 +75,11 @@ defmodule LightningWeb.API.JobControllerTest do
   describe "show" do
     setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
 
+    test "returns 404 for non-existent job", %{conn: conn} do
+      conn = get(conn, ~p"/api/jobs/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 404)
+    end
+
     test "shows the job", %{conn: conn, job: job} do
       conn = get(conn, ~p"/api/jobs/#{job}")
       response = json_response(conn, 200)

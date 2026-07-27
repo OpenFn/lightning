@@ -67,6 +67,7 @@ export function NumberField({
         disabled={disabled}
         min={min}
         max={max}
+        autoComplete="off"
         className={INPUT_CLASSES}
       />
     </FormField>

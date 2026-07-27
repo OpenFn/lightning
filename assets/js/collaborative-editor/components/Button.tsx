@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 interface ButtonProps {
   children?: ReactNode;
-  variant?: 'primary' | 'danger' | 'secondary' | 'nakedClose';
+  variant?: 'primary' | 'danger' | 'secondary' | 'ghost' | 'nakedClose';
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
@@ -32,9 +32,10 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
-  // Base classes for standard buttons (not nakedClose)
+  // Base classes for standard buttons (not nakedClose). Shadow is opt-in per
+  // variant so the flat `ghost` button has no raised/outlined appearance.
   const baseClasses = `
-    rounded-md px-3 py-2 text-sm font-semibold shadow-xs
+    rounded-md px-3 py-2 text-sm font-semibold
     focus-visible:outline-2 focus-visible:outline-offset-2
     disabled:cursor-not-allowed
   `;
@@ -50,12 +51,12 @@ export function Button({
   // Variant-specific classes
   const variantClasses = {
     primary: `
-      bg-primary-600 hover:bg-primary-500 text-white
+      bg-primary-600 hover:bg-primary-500 text-white shadow-xs
       focus-visible:outline-primary-600
       disabled:bg-primary-300 disabled:hover:bg-primary-300
     `,
     danger: `
-      bg-red-600 hover:bg-red-500 text-white
+      bg-red-600 hover:bg-red-500 text-white shadow-xs
       focus-visible:outline-red-600
       disabled:bg-red-300 disabled:hover:bg-red-300
     `,
@@ -64,6 +65,13 @@ export function Button({
       inset-ring inset-ring-gray-300
       hover:inset-ring-gray-400
       disabled:bg-gray-50 disabled:text-gray-400
+    `,
+    ghost: `
+      bg-transparent text-gray-700
+      hover:bg-gray-100 hover:text-gray-900
+      focus-visible:outline-gray-400
+      disabled:bg-transparent disabled:text-gray-400
+      disabled:hover:bg-transparent disabled:hover:text-gray-400
     `,
     nakedClose: `
       text-gray-400 hover:text-gray-500

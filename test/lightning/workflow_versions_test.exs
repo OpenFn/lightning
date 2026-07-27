@@ -7,6 +7,7 @@ defmodule Lightning.WorkflowVersionsTest do
   alias Lightning.Repo
   alias Lightning.WorkflowVersions
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
 
   @a "aaaaaaaaaaaa"
   @b "bbbbbbbbbbbb"
@@ -485,6 +486,96 @@ defmodule Lightning.WorkflowVersionsTest do
       # Update edge condition
       edge
       |> Ecto.Changeset.change(condition_type: :on_job_failure)
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+    end
+
+    test "hash changes when webhook_reply changes" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_reply: :before_start
+        )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+    end
+
+    test "hash changes when webhook_response_config changes" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_reply: :before_start
+        )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(
+          webhook_response_config: %WebhookResponseConfig{success_code: 200}
+        )
+        |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      trigger
+      |> Ecto.Changeset.change(
+        webhook_response_config: %{
+          success_code: 200,
+          error_code: 502
+        }
+      )
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash3 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+      refute hash2 == hash3
+    end
+
+    test "hash changes when cron_cursor_job_id changes" do
+      workflow = insert(:workflow, name: "Test")
+      job1 = insert(:job, workflow: workflow, name: "Job A")
+      job2 = insert(:job, workflow: workflow, name: "Job B")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :cron,
+        cron_expression: "0 * * * *",
+        cron_cursor_job: job1
+      )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      # Change the cron cursor job
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(cron_cursor_job_id: job2.id)
       |> Repo.update!()
 
       workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)

@@ -12,7 +12,7 @@ defmodule Lightning.Channels.ChannelSnapshot do
           channel_id: Ecto.UUID.t(),
           lock_version: integer(),
           name: String.t(),
-          sink_url: String.t(),
+          destination_url: String.t(),
           enabled: boolean(),
           inserted_at: DateTime.t()
         }
@@ -20,7 +20,7 @@ defmodule Lightning.Channels.ChannelSnapshot do
   schema "channel_snapshots" do
     field :lock_version, :integer
     field :name, :string
-    field :sink_url, :string
+    field :destination_url, :string
     field :enabled, :boolean
 
     belongs_to :channel, Channel
@@ -36,14 +36,14 @@ defmodule Lightning.Channels.ChannelSnapshot do
       :channel_id,
       :lock_version,
       :name,
-      :sink_url,
+      :destination_url,
       :enabled
     ])
     |> validate_required([
       :channel_id,
       :lock_version,
       :name,
-      :sink_url,
+      :destination_url,
       :enabled
     ])
     |> assoc_constraint(:channel)

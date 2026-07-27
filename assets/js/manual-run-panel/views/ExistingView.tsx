@@ -109,6 +109,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   setQuery(e.target.value);
                 }}
                 type="text"
+                autoComplete="off"
                 className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:ring-0  disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600 block w-full rounded-l-md border-0 border-r-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 placeholder="Search names or UUID prefixes"
               />
@@ -164,6 +165,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     <input
                       value={selectedDates.after}
                       id="created-after"
+                      autoComplete="off"
                       onChange={e => {
                         setSelectedDates(p => ({
                           after: e.target.value,
@@ -179,6 +181,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     <input
                       value={selectedDates.before}
                       id="created-before"
+                      autoComplete="off"
                       onChange={e => {
                         setSelectedDates(p => ({
                           after: p.after,

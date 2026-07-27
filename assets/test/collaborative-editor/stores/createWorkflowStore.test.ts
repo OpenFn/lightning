@@ -20,6 +20,7 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
+import type { WorkflowState as YAMLWorkflowState } from '../../../js/yaml/types';
 import {
   createMockChannelPushOk,
   createMockChannelPushError,
@@ -1138,6 +1139,76 @@ describe('WorkflowStore - removeJob with edge cleanup', () => {
     expect(snapshotAfter.jobs).toHaveLength(1);
     expect(snapshotAfter.jobs?.[0]?.id).toBe('job-a');
   });
+
+  test('clears cron_cursor_job_id on a cron trigger pointing at the removed job', () => {
+    // Setup: cron trigger whose cursor points at Job B (no edge between them,
+    // mirroring the unfiltered "Cron Input Source" dropdown).
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'cron');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_cursor_job_id', 'job-b');
+    triggersArray.push([triggerMap]);
+
+    store.addJob({ id: 'job-a', name: 'Job A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'Job B', body: 'fn(state => state)' });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBe('job-b');
+
+    // Action: Delete the cursor job
+    store.removeJob('job-b');
+
+    // Assert: Job B gone and the trigger's cursor reference cleared
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.jobs?.[0]?.id).toBe('job-a');
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBeNull();
+  });
+
+  test('leaves cron_cursor_job_id untouched when a different job is removed', () => {
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'cron');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_cursor_job_id', 'job-a');
+    triggersArray.push([triggerMap]);
+
+    store.addJob({ id: 'job-a', name: 'Job A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'Job B', body: 'fn(state => state)' });
+
+    // Action: Delete a job that is NOT the cursor target
+    store.removeJob('job-b');
+
+    // Assert: cursor still points at the surviving job
+    const snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.[0]?.cron_cursor_job_id).toBe('job-a');
+  });
+
+  test('clears dangling cursors on multiple cron triggers when their job is removed', () => {
+    const triggersArray = ydoc.getArray('triggers');
+    ['t1', 't2'].forEach(id => {
+      const t = new Y.Map();
+      t.set('id', id);
+      t.set('type', 'cron');
+      t.set('enabled', true);
+      t.set('cron_cursor_job_id', 'job-b');
+      triggersArray.push([t]);
+    });
+
+    store.addJob({ id: 'job-a', name: 'A', body: 'fn(state => state)' });
+    store.addJob({ id: 'job-b', name: 'B', body: 'fn(state => state)' });
+
+    store.removeJob('job-b');
+
+    const snapshot = store.getSnapshot();
+    expect(snapshot.triggers?.every(t => t.cron_cursor_job_id === null)).toBe(
+      true
+    );
+  });
 });
 
 describe('WorkflowStore - AI Workflow Apply Coordination', () => {
@@ -1278,5 +1349,135 @@ describe('WorkflowStore - AI Workflow Apply Coordination', () => {
     await expect(
       store.doneApplyingWorkflow('msg-no-provider')
     ).resolves.not.toThrow();
+  });
+});
+
+describe('WorkflowStore - importWorkflow', () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockChannel: MockPhoenixChannel;
+  let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+  const makeJob = (id: string, name: string) => ({
+    id,
+    name,
+    adaptor: '@openfn/language-http@latest',
+    body: 'fn(s => s)',
+    project_credential_id: null,
+    keychain_credential_id: null,
+  });
+
+  const makeWorkflowState = (
+    overrides: Partial<YAMLWorkflowState> = {}
+  ): YAMLWorkflowState => ({
+    id: 'wf-1',
+    name: 'My Workflow',
+    jobs: [],
+    triggers: [],
+    edges: [],
+    positions: null,
+    ...overrides,
+  });
+
+  const getJobNames = () => {
+    const jobsArray = ydoc.getArray('jobs');
+    return Array.from({ length: jobsArray.length }, (_, i) =>
+      (jobsArray.get(i) as Y.Map<unknown>).get('name')
+    );
+  };
+
+  beforeEach(() => {
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    ydoc.getArray('jobs');
+    ydoc.getMap('workflow');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    mockChannel = createMockPhoenixChannel('workflow:test');
+
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+    store.connect(ydoc, mockProvider);
+  });
+
+  test('deduplicates job names when multiple jobs share the same name', async () => {
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [
+          makeJob('j1', 'Transform'),
+          makeJob('j2', 'Transform'),
+          makeJob('j3', 'Transform'),
+        ],
+      })
+    );
+
+    expect(getJobNames()).toEqual(['Transform', 'Transform 2', 'Transform 3']);
+  });
+
+  test('skips suffixes that collide with existing job names', async () => {
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [
+          makeJob('j1', 'Transform'),
+          makeJob('j2', 'Transform'),
+          makeJob('j3', 'Transform 2'),
+        ],
+      })
+    );
+
+    // "Transform 2" is taken, so the duplicate skips to "Transform 3"
+    expect(getJobNames()).toEqual(['Transform', 'Transform 3', 'Transform 2']);
+  });
+
+  test('leaves unique job names unchanged', async () => {
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow(
+      makeWorkflowState({
+        jobs: [makeJob('j1', 'Fetch Data'), makeJob('j2', 'Transform')],
+      })
+    );
+
+    expect(getJobNames()).toEqual(['Fetch Data', 'Transform']);
+  });
+
+  test('validates workflow name via channel', async () => {
+    // Server returns deduplicated name
+    mockChannel.push = createMockChannelPushOk({
+      workflow: { name: 'My Workflow 1' },
+    }) as typeof mockChannel.push;
+
+    await store.importWorkflow(makeWorkflowState());
+
+    expect(ydoc.getMap('workflow').get('name')).toBe('My Workflow 1');
+  });
+
+  test('proceeds with original name when validation fails', async () => {
+    mockChannel.push = createMockChannelPushError(
+      'server_error',
+      {}
+    ) as typeof mockChannel.push;
+
+    await store.importWorkflow(makeWorkflowState());
+
+    expect(ydoc.getMap('workflow').get('name')).toBe('My Workflow');
   });
 });

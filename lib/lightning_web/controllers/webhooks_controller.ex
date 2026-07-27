@@ -63,6 +63,19 @@ defmodule LightningWeb.WebhooksController do
       )
       |> case do
         {:ok, work_order} ->
+          conn =
+            conn
+            |> put_resp_header("x-meta-work-order-id", work_order.id)
+            |> then(fn conn ->
+              case work_order do
+                %{runs: [run]} ->
+                  put_resp_header(conn, "x-meta-run-id", run.id)
+
+                _ ->
+                  conn
+              end
+            end)
+
           if Workflows.Trigger.synchronous?(trigger) do
             handle_delayed_response(conn, work_order)
           else
@@ -127,15 +140,13 @@ defmodule LightningWeb.WebhooksController do
     Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
 
     receive do
+      {:webhook_response, status_code, _body} when status_code in [204, 304] ->
+        send_resp(conn, status_code, "")
+
       {:webhook_response, status_code, body} ->
         conn
         |> put_status(status_code)
         |> json(body)
-
-      {:webhook_error, status_code, error} ->
-        conn
-        |> put_status(status_code)
-        |> json(%{error: error})
     after
       Lightning.Config.webhook_response_timeout_ms() ->
         Logger.warning(

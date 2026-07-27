@@ -9,8 +9,37 @@ defmodule Lightning.RunsTest do
   alias Lightning.Invocation
   alias Lightning.Run
   alias Lightning.Runs
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.Workflows
+
+  # LogLine's Ecto schema has no search_vector field, so assert against the
+  # column via raw SQL.
+  defp search_vector_null?(id) do
+    %{rows: [[is_null]]} =
+      Lightning.Repo.query!(
+        "SELECT search_vector IS NULL FROM log_lines WHERE id = $1::uuid",
+        [Ecto.UUID.dump!(id)]
+      )
+
+    is_null
+  end
+
+  defp log_line_searchable?(id, term) do
+    %{rows: [[matches]]} =
+      Lightning.Repo.query!(
+        """
+        SELECT COALESCE(
+                 search_vector @@ to_tsquery('english_nostop', $2),
+                 false
+               )
+        FROM log_lines WHERE id = $1::uuid
+        """,
+        [Ecto.UUID.dump!(id), term]
+      )
+
+    matches
+  end
 
   describe "enqueue/1" do
     test "enqueues a run" do
@@ -37,6 +66,47 @@ defmodule Lightning.RunsTest do
 
       assert queued_run.id == run.id
       assert queued_run.state == :available
+    end
+  end
+
+  describe "get_for_project/2" do
+    setup do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      %{run: run, project: workflow.project}
+    end
+
+    test "returns the run when it belongs to the given project", %{
+      run: run,
+      project: project
+    } do
+      assert %Run{id: id} = Runs.get_for_project(run.id, project.id)
+      assert id == run.id
+    end
+
+    test "returns nil when the run belongs to a different project", %{run: run} do
+      other_project = insert(:project)
+
+      refute Runs.get_for_project(run.id, other_project.id)
+    end
+
+    test "returns nil when the run does not exist", %{project: project} do
+      refute Runs.get_for_project(Ecto.UUID.generate(), project.id)
     end
   end
 
@@ -236,29 +306,12 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "dequeue/1" do
-    test "removes a run from the queue" do
-      %{triggers: [trigger]} =
-        workflow = insert(:simple_workflow) |> with_snapshot()
-
-      {:ok, %{runs: [run]}} =
-        WorkOrders.create_for(trigger,
-          workflow: workflow,
-          dataclip: params_with_assocs(:dataclip)
-        )
-
-      assert {:ok, dequeued} = Runs.dequeue(run)
-
-      refute dequeued |> Repo.reload()
-    end
-  end
-
   describe "start_step/1" do
     test "creates a new step for a run" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -307,10 +360,10 @@ defmodule Lightning.RunsTest do
     end
 
     test "should not allow referencing job that is not on the snapshot" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [old_job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run_1]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -371,6 +424,43 @@ defmodule Lightning.RunsTest do
 
       assert step.exit_reason == "success"
       assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
+    end
+
+    # Regression for #4800: dataclip inserts no longer build the search_vector
+    # synchronously (the AFTER INSERT trigger was dropped). Saving an output
+    # dataclip via the handler must succeed and the row must be retrievable with
+    # search_vector NULL — proving the insert path doesn't depend on building the
+    # vector, which is deferred to DataclipSearchVectorWorker.
+    test "saves the output dataclip with a NULL search_vector (deferred indexing)" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step = insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+      output_dataclip_id = Ecto.UUID.generate()
+
+      assert {:ok, _step} =
+               Runs.complete_step(%{
+                 step_id: step.id,
+                 reason: "success",
+                 output_dataclip: ~s({"deferred": "indexword"}),
+                 output_dataclip_id: output_dataclip_id,
+                 run_id: run.id,
+                 project_id: workflow.project_id
+               })
+
+      %{rows: [[is_null]]} =
+        Repo.query!(
+          "SELECT search_vector IS NULL FROM dataclips WHERE id = $1::uuid",
+          [Ecto.UUID.dump!(output_dataclip_id)]
+        )
+
+      assert is_null,
+             "expected the saved dataclip's search_vector to be NULL " <>
+               "immediately after insert (deferred indexing)"
     end
 
     test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do
@@ -894,6 +984,61 @@ defmodule Lightning.RunsTest do
 
       assert log_line.message == ~s<{"foo":"bar"}>
     end
+
+    test "leaves search_vector NULL at insert (deferred indexing)" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [_job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, log_line} =
+        Runs.append_run_log(run, %{
+          message: "a searchable logline message",
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      # search_vector is computed out-of-band by SearchVectorWorker, so it
+      # starts NULL and isn't matched by a full-text query yet.
+      assert search_vector_null?(log_line.id)
+      refute log_line_searchable?(log_line.id, "searchable")
+    end
+  end
+
+  describe "append_run_logs_batch/3" do
+    test "inserts all lines, broadcasts log_appended, and defers search_vector" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      Runs.subscribe(run)
+
+      now = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+
+      entries = [
+        %{message: "batch logline alpha", timestamp: now},
+        %{message: "batch logline beta", timestamp: now + 1},
+        %{message: "batch logline gamma", timestamp: now + 2}
+      ]
+
+      {:ok, log_lines} = Runs.append_run_logs_batch(run, entries)
+
+      assert length(log_lines) == 3
+      assert Enum.map(log_lines, & &1.message) == Enum.map(entries, & &1.message)
+
+      for _ <- entries do
+        assert_received %Runs.Events.LogAppended{}
+      end
+
+      for log_line <- log_lines do
+        assert search_vector_null?(log_line.id)
+        refute log_line_searchable?(log_line.id, "logline")
+      end
+    end
   end
 
   describe "mark_unfinished_steps_lost/1" do
@@ -987,6 +1132,88 @@ defmodule Lightning.RunsTest do
         %{count: 1},
         %{}
       }
+    end
+  end
+
+  describe "cancel_run/1" do
+    test "cancels an available run and updates work order state" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :available
+        )
+
+      assert {:ok, cancelled_run} = Runs.cancel_run(run)
+      assert cancelled_run.state == :cancelled
+      assert is_nil(cancelled_run.finished_at)
+
+      updated_wo = Repo.get(WorkOrder, work_order.id)
+      assert updated_wo.state == :cancelled
+    end
+
+    test "returns {:error, :not_available} for non-available run" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          claimed_at: DateTime.utc_now()
+        )
+
+      assert {:error, :not_available} = Runs.cancel_run(run)
+    end
+
+    test "broadcasts RunUpdated and WorkOrderUpdated events" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :available
+        )
+
+      Runs.subscribe(run)
+      WorkOrders.subscribe(workflow.project_id)
+
+      assert {:ok, _cancelled_run} = Runs.cancel_run(run)
+
+      assert_received %Runs.Events.RunUpdated{}
+      assert_received %WorkOrders.Events.RunUpdated{}
     end
   end
 

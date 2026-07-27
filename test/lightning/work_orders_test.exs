@@ -2582,6 +2582,24 @@ defmodule Lightning.WorkOrdersTest do
 
       assert work_order.state == :running
     end
+
+    test "sets the workorders state to running once a run is claimed" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, work_order} = WorkOrders.update_state(run)
+      assert work_order.state == :pending
+
+      {:ok, run} =
+        Repo.update(run |> Ecto.Changeset.change(state: :claimed))
+
+      {:ok, work_order} = WorkOrders.update_state(run)
+      assert work_order.state == :running
+    end
   end
 
   describe "get_workorders_with_runs/2" do
@@ -2707,6 +2725,87 @@ defmodule Lightning.WorkOrdersTest do
       # Should include the specific workorder plus up to 20 others
       assert Enum.any?(results, &(&1.id == workorder1.id))
       assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "does not surface another workflow's work order for a foreign run_id",
+         %{workflow: workflow, trigger: trigger, snapshot: snapshot} do
+      # An own work order, so this workflow's history is non-empty.
+      own_dataclip = insert(:dataclip)
+
+      own_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: own_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: own_workorder,
+        dataclip: own_dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot
+      )
+
+      # A run belonging to a DIFFERENT workflow (and project).
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      foreign_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      foreign_run =
+        insert(:run,
+          work_order: foreign_workorder,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          snapshot: other_snapshot
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, foreign_run.id)
+      wo_ids = Enum.map(results, & &1.id)
+
+      # The foreign run's work order is never returned; the caller falls back to
+      # its own workflow's history.
+      refute foreign_workorder.id in wo_ids
+      assert own_workorder.id in wo_ids
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "falls back to the workflow's history for a malformed run_id", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      # A non-UUID run_id must not crash; it's treated as no pin.
+      results = WorkOrders.get_workorders_with_runs(workflow.id, "not-a-uuid")
+
+      assert Enum.map(results, & &1.id) == [workorder.id]
     end
 
     test "respects the limit of 20 workorders", %{
@@ -2896,6 +2995,206 @@ defmodule Lightning.WorkOrdersTest do
       # Should include other workorders up to the limit
       # 1 from specific query + up to 20 from main query
       assert length(results) <= 21
+    end
+  end
+
+  describe "cancel_many/2" do
+    test "returns {:ok, 0} for empty list" do
+      assert {:ok, 0} =
+               WorkOrders.cancel_many([], project_id: Ecto.UUID.generate())
+    end
+
+    test "cancels available runs across multiple work orders" do
+      trigger = build(:trigger, type: :webhook)
+
+      workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> insert()
+
+      trigger = Repo.reload!(trigger)
+      snapshot = Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!()
+
+      wo1 =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :pending
+        )
+
+      _run1 =
+        insert(:run,
+          work_order: wo1,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :available
+        )
+
+      wo2 =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :pending
+        )
+
+      _run2 =
+        insert(:run,
+          work_order: wo2,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :available
+        )
+
+      assert {:ok, 2} =
+               WorkOrders.cancel_many([wo1, wo2],
+                 project_id: workflow.project_id
+               )
+    end
+
+    test "skips work orders without available runs" do
+      trigger = build(:trigger, type: :webhook)
+
+      workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> insert()
+
+      trigger = Repo.reload!(trigger)
+      snapshot = Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!()
+
+      wo_pending =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :pending
+        )
+
+      _available_run =
+        insert(:run,
+          work_order: wo_pending,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :available
+        )
+
+      wo_done =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :success
+        )
+
+      _completed_run =
+        insert(:run,
+          work_order: wo_done,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :success
+        )
+
+      assert {:ok, 1} =
+               WorkOrders.cancel_many([wo_pending, wo_done],
+                 project_id: workflow.project_id
+               )
+    end
+
+    test "synchronously cancels multiple work orders" do
+      trigger = build(:trigger, type: :webhook)
+
+      workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> insert()
+
+      trigger = Repo.reload!(trigger)
+      snapshot = Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!()
+
+      # Create 3 work orders with available runs
+      work_orders =
+        for _i <- 1..3 do
+          wo =
+            insert(:workorder,
+              workflow: workflow,
+              snapshot: snapshot,
+              trigger: trigger,
+              dataclip: insert(:dataclip),
+              state: :pending
+            )
+
+          _run =
+            insert(:run,
+              work_order: wo,
+              starting_trigger: trigger,
+              dataclip: insert(:dataclip),
+              snapshot: snapshot,
+              state: :available
+            )
+
+          wo
+        end
+
+      assert {:ok, 3} =
+               WorkOrders.cancel_many(work_orders,
+                 project_id: workflow.project_id
+               )
+
+      # Verify runs are actually cancelled
+      for wo <- work_orders do
+        updated_wo = Repo.get(Lightning.WorkOrder, wo.id)
+        assert updated_wo.state == :cancelled
+      end
+    end
+  end
+
+  describe "cancel_many_async/2" do
+    test "enqueues an Oban job to cancel work orders in the background" do
+      trigger = build(:trigger, type: :webhook)
+
+      workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> insert()
+
+      trigger = Repo.reload!(trigger)
+      snapshot = Lightning.Workflows.Snapshot.build(workflow) |> Repo.insert!()
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :pending
+        )
+
+      run =
+        insert(:run,
+          work_order: wo,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          snapshot: snapshot,
+          state: :available
+        )
+
+      # With testing: :inline, the job executes immediately
+      assert {:ok, %Oban.Job{}} =
+               WorkOrders.cancel_many_async([wo],
+                 project_id: workflow.project_id
+               )
+
+      assert Repo.reload!(run).state == :cancelled
     end
   end
 end

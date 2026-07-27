@@ -12,10 +12,10 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
              ] = SandboxPromExPlugin.event_metrics([])
     end
 
-    test "returns five counter metrics" do
+    test "returns seven counter metrics" do
       [%{metrics: metrics}] = SandboxPromExPlugin.event_metrics([])
 
-      assert Enum.count(metrics) == 5
+      assert Enum.count(metrics) == 7
 
       assert Enum.all?(metrics, fn metric ->
                match?(%Telemetry.Metrics.Counter{}, metric)
@@ -56,7 +56,38 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
 
       assert %Telemetry.Metrics.Counter{
                name: [:lightning, :sandbox, :deleted, :count],
-               description: "Count of sandbox projects manually deleted.",
+               description:
+                 "Count of sandbox projects permanently deleted from the database (purged after the grace period or hard-deleted by an admin).",
+               tags: []
+             } = metric
+    end
+
+    test "contains sandbox scheduled-for-deletion counter metric" do
+      [%{metrics: metrics}] = SandboxPromExPlugin.event_metrics([])
+
+      metric =
+        find_metric(
+          metrics,
+          [:lightning, :sandbox, :scheduled_for_deletion, :count]
+        )
+
+      assert %Telemetry.Metrics.Counter{
+               name: [:lightning, :sandbox, :scheduled_for_deletion, :count],
+               tags: []
+             } = metric
+    end
+
+    test "contains sandbox deletion-cancelled counter metric" do
+      [%{metrics: metrics}] = SandboxPromExPlugin.event_metrics([])
+
+      metric =
+        find_metric(
+          metrics,
+          [:lightning, :sandbox, :deletion_cancelled, :count]
+        )
+
+      assert %Telemetry.Metrics.Counter{
+               name: [:lightning, :sandbox, :deletion_cancelled, :count],
                tags: []
              } = metric
     end
@@ -120,6 +151,28 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
       ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       SandboxPromExPlugin.fire_sandbox_deleted_event()
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+  end
+
+  describe "fire_sandbox_scheduled_for_deletion_event/0" do
+    test "emits telemetry event" do
+      event = [:lightning, :sandbox, :scheduled_for_deletion]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+  end
+
+  describe "fire_sandbox_deletion_cancelled_event/0" do
+    test "emits telemetry event" do
+      event = [:lightning, :sandbox, :deletion_cancelled]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      SandboxPromExPlugin.fire_sandbox_deletion_cancelled_event()
 
       assert_received {^event, ^ref, %{}, %{}}
     end

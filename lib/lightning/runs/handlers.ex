@@ -5,6 +5,7 @@ defmodule Lightning.Runs.Handlers do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs
@@ -64,7 +65,9 @@ defmodule Lightning.Runs.Handlers do
 
     The worker may send either:
     - `final_dataclip_id` — reuse an existing step output dataclip (single leaf)
-    - `final_state` — a new map to persist as a dataclip (multiple leaves)
+    - `final_state` — leaf state to persist as a dataclip (multiple leaves).
+      Map values are stored as-is. Non-map values (numbers, strings, booleans,
+      lists) are wrapped as `%{"value" => x}` before persistence.
 
     These are mutually exclusive. If both are sent, `final_dataclip_id` wins.
     """
@@ -88,6 +91,13 @@ defmodule Lightning.Runs.Handlers do
 
     def call(run, params) do
       with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
+        # project_id is authoritative: it comes from the run, never the caller's
+        # params, so a worker cannot scope the final dataclip to another project.
+        complete_run = %{
+          complete_run
+          | project_id: Lightning.Runs.get_project_id_for_run(run)
+        }
+
         Repo.transact(fn ->
           with {:ok, run_params} <-
                  resolve_final_dataclip(complete_run, run.options) do
@@ -113,7 +123,6 @@ defmodule Lightning.Runs.Handlers do
         :error_type,
         :final_dataclip_id,
         :final_state,
-        :project_id,
         :timestamp
       ])
       |> put_new_change(:timestamp, Lightning.current_time())
@@ -145,16 +154,20 @@ defmodule Lightning.Runs.Handlers do
       |> Map.put(:finished_at, complete_run.timestamp)
     end
 
-    # @Stu - is this necessary? I'm worried that it's overkill to check first,
-    # but also don't want a situation where we crash the channel cause it's not
-    # there.
-    # When the worker sends an existing dataclip ID, verify it exists first.
+    # When the worker sends an existing dataclip id, verify it exists and belongs
+    # to the run's project first. Scoping to the project stops a worker from
+    # pointing the run's final dataclip at another project's dataclip, which a
+    # viewer of this run could then read.
     defp resolve_final_dataclip(
-           %__MODULE__{final_dataclip_id: id} = complete_run,
+           %__MODULE__{final_dataclip_id: id, project_id: project_id} =
+             complete_run,
            _options
          )
          when is_binary(id) do
-      if Repo.exists?(from d in Dataclip, where: d.id == ^id) do
+      if Repo.exists?(
+           from d in Dataclip,
+             where: d.id == ^id and d.project_id == ^project_id
+         ) do
         {:ok, to_run_params(complete_run) |> Map.put(:final_dataclip_id, id)}
       else
         {:error, %{errors: %{final_dataclip_id: ["does not exist"]}}}
@@ -257,6 +270,7 @@ defmodule Lightning.Runs.Handlers do
         :step_id
       ])
       |> then(&validate_job_reachable/1)
+      |> then(&validate_references_in_project(&1, run))
     end
 
     defp insert(%__MODULE__{} = attrs) do
@@ -327,6 +341,64 @@ defmodule Lightning.Runs.Handlers do
         )
 
       Repo.one(query) || %{run_id: nil, job_id: nil}
+    end
+
+    # The worker supplies credential_id/input_dataclip_id, and Step only
+    # existence-checks them via FK constraints. Confirm each belongs to the run's
+    # project so a worker cannot plant a reference to another project's
+    # credential or dataclip. A reference outside the project is reported as
+    # non-existent, so the error can't be used to probe for ids in other
+    # projects.
+    defp validate_references_in_project(changeset, run) do
+      if changeset.valid? do
+        project_id = Runs.get_project_id_for_run(run)
+
+        changeset
+        |> validate_dataclip_in_project(project_id)
+        |> validate_credential_in_project(project_id)
+      else
+        changeset
+      end
+    end
+
+    defp validate_dataclip_in_project(changeset, project_id) do
+      dataclip_id = get_field(changeset, :input_dataclip_id)
+
+      cond do
+        is_nil(dataclip_id) ->
+          changeset
+
+        Repo.exists?(
+          from(d in Dataclip,
+            where: d.id == ^dataclip_id and d.project_id == ^project_id
+          )
+        ) ->
+          changeset
+
+        true ->
+          add_error(changeset, :input_dataclip_id, "does not exist")
+      end
+    end
+
+    defp validate_credential_in_project(changeset, project_id) do
+      credential_id = get_field(changeset, :credential_id)
+
+      cond do
+        is_nil(credential_id) ->
+          changeset
+
+        Repo.exists?(
+          from(pc in ProjectCredential,
+            where:
+              pc.credential_id == ^credential_id and
+                  pc.project_id == ^project_id
+          )
+        ) ->
+          changeset
+
+        true ->
+          add_error(changeset, :credential_id, "does not exist")
+      end
     end
   end
 
@@ -403,7 +475,8 @@ defmodule Lightning.Runs.Handlers do
 
     defp update_step(complete_step, options) do
       Repo.transact(fn ->
-        with %Step{} = step <- get_step(complete_step.step_id),
+        with %Step{} = step <-
+               get_step(complete_step.step_id, complete_step.run_id),
              {:ok, _} <-
                maybe_save_dataclip(complete_step, options) do
           step
@@ -429,8 +502,12 @@ defmodule Lightning.Runs.Handlers do
       |> Map.put(:finished_at, complete_step.timestamp)
     end
 
-    defp get_step(id) do
-      from(s in Lightning.Invocation.Step, where: s.id == ^id)
+    defp get_step(step_id, run_id) do
+      from(s in Step,
+        join: rs in RunStep,
+        on: rs.step_id == s.id and rs.run_id == ^run_id,
+        where: s.id == ^step_id
+      )
       |> Repo.one()
     end
 
@@ -473,10 +550,13 @@ defmodule Lightning.Runs.Handlers do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
-        body: output_dataclip |> Jason.decode!(),
+        body: output_dataclip |> Jason.decode!() |> ensure_map(),
         type: :step_result
       })
       |> Repo.insert()
     end
+
+    defp ensure_map(%{} = map), do: map
+    defp ensure_map(value), do: %{"value" => value}
   end
 end

@@ -31,6 +31,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
   import Ecto.Query
 
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.DataclipScrubber
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects
@@ -51,34 +52,33 @@ defmodule Lightning.WorkOrders.ExportWorker do
           "search_params" => params
         }
       }) do
-    search_params = SearchParams.from_map(params)
+    with {:ok, search_params} <- SearchParams.from_map(params),
+         {:ok, project_file} <- get_project_file(project_file_id),
+         {:ok, project_file} <-
+           update_project_file(project_file, %{status: :in_progress}),
+         {:ok, project} <- get_project(project_id),
+         {:ok, zip_file} <-
+           process_export(project, search_params, project_file),
+         {:ok, storage_path} <-
+           store_project_file(zip_file, project_file),
+         {:ok, project_file} <-
+           update_project_file(project_file, %{
+             status: :completed,
+             path: storage_path
+           }) do
+      UserNotifier.notify_history_export_completion(
+        project_file.created_by,
+        project_file
+      )
 
-    result =
-      with {:ok, project_file} <- get_project_file(project_file_id),
-           {:ok, project_file} <-
-             update_project_file(project_file, %{status: :in_progress}),
-           {:ok, project} <- get_project(project_id),
-           {:ok, zip_file} <-
-             process_export(project, search_params, project_file),
-           {:ok, storage_path} <- store_project_file(zip_file, project_file) do
-        update_project_file(project_file, %{
-          status: :completed,
-          path: storage_path
-        })
-      end
-
-    case result do
-      {:ok, project_file} ->
-        UserNotifier.notify_history_export_completion(
-          project_file.created_by,
-          project_file
-        )
-
-        Logger.info("Export completed successfully.")
-        :ok
-
+      Logger.info("Export completed successfully.")
+      :ok
+    else
       {:error, reason} ->
+        mark_project_file_failed(project_file_id)
+
         Logger.error("Export failed with reason: #{inspect(reason)}")
+
         {:error, reason}
     end
   end
@@ -100,9 +100,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
           "Failed to enqueue export job. Changeset errors: #{inspect(changeset.errors)}"
         )
 
-        project_file
-        |> Projects.File.mark_failed()
-        |> Repo.update!()
+        mark_project_file_failed(project_file.id)
 
         {:error, changeset}
     end
@@ -398,6 +396,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
       where: d.id in ^dataclip_ids,
       select: %{
         id: d.id,
+        type: d.type,
         body:
           type(
             fragment(
@@ -415,6 +414,9 @@ defmodule Lightning.WorkOrders.ExportWorker do
       }
     )
     |> Repo.all()
+    |> Enum.map(fn dataclip ->
+      %{id: dataclip.id, body: DataclipScrubber.scrub_dataclip_body!(dataclip)}
+    end)
   end
 
   defp format_work_orders(work_orders) do
@@ -498,5 +500,28 @@ defmodule Lightning.WorkOrders.ExportWorker do
     |> Enum.map(fn log_line ->
       %{id: log_line.id, message: log_line.message, run_id: log_line.run_id}
     end)
+  end
+
+  defp mark_project_file_failed(project_file_id) do
+    case Repo.get(Projects.File, project_file_id) do
+      nil ->
+        :ok
+
+      project_file ->
+        project_file
+        |> Projects.File.mark_failed()
+        |> Repo.update()
+        |> case do
+          {:ok, _project_file} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to mark project file #{project_file_id} as failed: #{inspect(changeset.errors)}"
+            )
+
+            {:error, changeset}
+        end
+    end
   end
 end

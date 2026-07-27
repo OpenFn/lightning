@@ -243,6 +243,35 @@ defmodule Lightning.ApolloClientTest do
 
       {:error, :timeout} = ApolloClient.job_chat("test")
     end
+
+    test "sends metrics_opt_in and meta with langfuse keys" do
+      stub_apollo_config()
+
+      meta = %{
+        "session_id" => "sess-1",
+        "user" => %{"id" => "u-1", "persona" => "core-contributor"}
+      }
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      {:ok, _} = ApolloClient.job_chat("hi", meta: meta, metrics_opt_in: true)
+    end
+
+    test "omits metrics_opt_in when not given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        refute Map.has_key?(Jason.decode!(env.body), "metrics_opt_in")
+        {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      {:ok, _} = ApolloClient.job_chat("hi")
+    end
   end
 
   describe "workflow_chat/5" do
@@ -436,6 +465,36 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, response} = ApolloClient.workflow_chat("test")
       assert response.status == 503
+    end
+
+    test "sends metrics_opt_in and meta with langfuse keys" do
+      stub_apollo_config()
+
+      meta = %{
+        "session_id" => "sess-2",
+        "user" => %{"id" => "u-2", "persona" => "core-contributor"}
+      }
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.workflow_chat("hi", meta: meta, metrics_opt_in: true)
+    end
+
+    test "omits metrics_opt_in when not given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        refute Map.has_key?(Jason.decode!(env.body), "metrics_opt_in")
+        {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      {:ok, _} = ApolloClient.workflow_chat("hi")
     end
   end
 
@@ -711,6 +770,36 @@ defmodule Lightning.ApolloClientTest do
 
       assert {:error, :timeout} = ApolloClient.job_chat_stream("test")
     end
+
+    test "sends metrics_opt_in and meta with langfuse keys" do
+      stub_apollo_config()
+
+      meta = %{
+        "session_id" => "sess-3",
+        "user" => %{"id" => "u-3", "persona" => "core-contributor"}
+      }
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.job_chat_stream("hi", meta: meta, metrics_opt_in: true)
+    end
+
+    test "omits metrics_opt_in when not given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        refute Map.has_key?(Jason.decode!(env.body), "metrics_opt_in")
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.job_chat_stream("hi")
+    end
   end
 
   describe "workflow_chat_stream/2" do
@@ -764,6 +853,144 @@ defmodule Lightning.ApolloClientTest do
 
       assert {:error, :econnrefused} =
                ApolloClient.workflow_chat_stream("test")
+    end
+
+    test "sends metrics_opt_in and meta with langfuse keys" do
+      stub_apollo_config()
+
+      meta = %{
+        "session_id" => "sess-4",
+        "user" => %{"id" => "u-4", "persona" => "core-contributor"}
+      }
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.workflow_chat_stream("hi",
+          meta: meta,
+          metrics_opt_in: true
+        )
+    end
+
+    test "omits metrics_opt_in when not given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        refute Map.has_key?(Jason.decode!(env.body), "metrics_opt_in")
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.workflow_chat_stream("hi")
+    end
+  end
+
+  describe "global_chat_stream/2" do
+    test "sends streaming request with all parameters" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        %{method: :post, url: url, body: body} = env
+        assert url == "http://localhost:3000/services/global_chat/stream"
+
+        decoded = Jason.decode!(body)
+        assert decoded["content"] == "Help me build a workflow"
+        assert decoded["api_key"] == "api_key"
+        assert decoded["workflow_yaml"] == "workflow:\n  name: test"
+        assert decoded["page"] == "/projects/abc/workflows/def/jobs/ghi"
+        assert decoded["options"] == %{"stream" => true}
+
+        assert decoded["history"] == [
+                 %{"role" => "user", "content" => "previous"}
+               ]
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.global_chat_stream("Help me build a workflow",
+          workflow_yaml: "workflow:\n  name: test",
+          page: "/projects/abc/workflows/def/jobs/ghi",
+          history: [%{role: "user", content: "previous"}]
+        )
+    end
+
+    test "filters nil values from payload" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
+        decoded = Jason.decode!(body)
+        refute Map.has_key?(decoded, "workflow_yaml")
+        refute Map.has_key?(decoded, "page")
+        assert decoded["options"] == %{"stream" => true}
+        assert decoded["content"] == "Hello"
+        assert decoded["history"] == []
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("Hello")
+    end
+
+    test "handles network errors" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} =
+               ApolloClient.global_chat_stream("test")
+    end
+
+    test "sends metrics_opt_in and meta with langfuse keys" do
+      stub_apollo_config()
+
+      meta = %{
+        "session_id" => "sess-5",
+        "user" => %{"id" => "u-5", "persona" => "core-contributor"}
+      }
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.global_chat_stream("hi",
+          meta: meta,
+          metrics_opt_in: true
+        )
+    end
+
+    test "forwards meta when supplied" do
+      stub_apollo_config()
+
+      meta = %{"session_id" => "sess-2"}
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert Jason.decode!(env.body)["meta"] == meta
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi", meta: meta)
+    end
+
+    test "omits metrics_opt_in when not given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        refute Map.has_key?(Jason.decode!(env.body), "metrics_opt_in")
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi")
     end
   end
 

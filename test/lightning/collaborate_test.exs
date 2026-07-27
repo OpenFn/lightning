@@ -90,5 +90,19 @@ defmodule Lightning.CollaborateTest do
       refute_eventually(Process.alive?(session_2))
       refute_eventually(Process.alive?(shared_doc_pid))
     end
+
+    test "start_document/2 is idempotent for the same document", %{
+      workflow: workflow
+    } do
+      document_name = "workflow:#{workflow.id}"
+
+      assert {:ok, doc_supervisor_pid} =
+               Collaborate.start_document(workflow, document_name)
+
+      assert Process.alive?(doc_supervisor_pid)
+
+      assert {:ok, ^doc_supervisor_pid} =
+               Collaborate.start_document(workflow, document_name)
+    end
   end
 end

@@ -15,7 +15,7 @@ import { isEdgeFromTrigger } from '../../utils/workflowGraph';
 import { useAppForm } from '../form';
 import { createZodValidator } from '../form/createZodValidator';
 import { ErrorMessage } from '../form/error-message';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 interface EdgeFormProps {
   edge: Workflow.Edge;

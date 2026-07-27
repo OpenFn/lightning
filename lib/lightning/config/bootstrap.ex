@@ -203,21 +203,26 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
-    local_adaptors_repo =
-      env!(
-        "OPENFN_ADAPTORS_REPO",
-        :string,
-        Utils.get_env([
-          :lightning,
-          Lightning.AdaptorRegistry,
-          :local_adaptors_repo
-        ])
-      )
+    # Comma-separated to match the ws-worker parser, so the picker view and
+    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    local_adaptors_repos =
+      env!("OPENFN_ADAPTORS_REPO", :string, nil)
+      |> case do
+        nil ->
+          []
 
-    use_local_adaptors_repo? =
+        value when is_binary(value) ->
+          value
+          |> String.split(",", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.map(&Path.expand/1)
+      end
+
+    use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
       |> tap(fn v ->
-        if v && !is_binary(local_adaptors_repo) do
+        if v && local_adaptors_repos == [] do
           raise """
           LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
           """
@@ -231,8 +236,8 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
         ),
-      local_adaptors_repo:
-        use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
+      local_adaptors_repos:
+        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
     config :lightning,
       schemas_path:
@@ -270,7 +275,9 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
+      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
+      {"* * * * *", Lightning.LogLines.SearchVectorWorker},
+      {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
 
     cleanup_cron =
@@ -300,7 +307,12 @@ defmodule Lightning.Config.Bootstrap do
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
-        ai_assistant: 10
+        ai_assistant: 10,
+        # Shared by Lightning.LogLines.SearchVectorWorker and
+        # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives
+        # each worker its own slot so their snowball re-enqueue chains run in
+        # parallel and never starve one another.
+        search_indexing: 2
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to
@@ -320,6 +332,10 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning,
            :max_dataclip_size_bytes,
            env!("MAX_DATACLIP_SIZE_MB", :integer, 10) * 1_000_000
+
+    config :lightning,
+           :max_sandbox_nesting_depth,
+           env!("MAX_SANDBOX_NESTING_DEPTH", :integer, 5)
 
     config :lightning,
            :queue_result_retention_period,
@@ -389,6 +405,8 @@ defmodule Lightning.Config.Bootstrap do
               end,
               :always
             ),
+          tls_options:
+            :tls_certificate_check.options(env!("SMTP_RELAY", :string)),
           port: env!("SMTP_PORT", :integer, 587)
 
       unknown ->
@@ -497,6 +515,54 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
+    github_client_id = env!("SSO_GITHUB_CLIENT_ID", :string, nil)
+    github_client_secret = env!("SSO_GITHUB_CLIENT_SECRET", :string, nil)
+
+    if github_client_id && github_client_secret do
+      github_redirect_uri =
+        sso_redirect_uri(url_scheme, host, url_port, "github")
+
+      config :lightning, :github_oauth,
+        client_id: github_client_id,
+        client_secret: github_client_secret,
+        redirect_uri: github_redirect_uri
+    end
+
+    google_client_id = env!("SSO_GOOGLE_CLIENT_ID", :string, nil)
+    google_client_secret = env!("SSO_GOOGLE_CLIENT_SECRET", :string, nil)
+
+    if google_client_id && google_client_secret do
+      google_redirect_uri =
+        sso_redirect_uri(url_scheme, host, url_port, "google")
+
+      config :lightning, :google_oauth,
+        client_id: google_client_id,
+        client_secret: google_client_secret,
+        redirect_uri: google_redirect_uri
+    end
+
+    # Escape hatch for self-hosted deployments whose OAuth provider lives on an
+    # internal network: allowlist those hosts so the pinned egress adapter lets
+    # them through. Only applied when set, so the secure default (block all
+    # internal ranges) and the dev allowlist stay intact otherwise.
+    if oauth_allowed_hosts = env!("OAUTH_PROVIDER_ALLOWED_HOSTS", :string, nil) do
+      config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+        allowed_hosts: String.split(oauth_allowed_hosts, ",", trim: true)
+    end
+
+    # Egress policy for the channel reverse proxy (consumed only by Philter).
+    # Blocking private/reserved ranges is the secure default; operators fronting
+    # internal upstreams can relax it, or allowlist specific hosts as an escape
+    # hatch that survives even when the block is on.
+    config :philter,
+      block_private_networks:
+        env!("CHANNEL_BLOCK_PRIVATE_NETWORKS", &Utils.ensure_boolean/1, true)
+
+    if channel_allowed_hosts = env!("CHANNEL_ALLOWED_HOSTS", :string, nil) do
+      config :philter,
+        allowed_hosts: Utils.parse_host_list(channel_allowed_hosts)
+    end
+
     if config_env() == :prod do
       unless database_url do
         raise """
@@ -519,9 +585,18 @@ defmodule Lightning.Config.Bootstrap do
       if disable_db_ssl do
         config :lightning, Lightning.Repo, ssl: false
       else
-        ssl_opts = [verify: :verify_none]
+        disable_cert_check =
+          env!("DISABLE_DB_SSL_CERT_VERIFY", &Utils.ensure_boolean/1, false)
 
-        config :lightning, Lightning.Repo, ssl_opts: ssl_opts, ssl: true
+        ssl_opts =
+          if disable_cert_check do
+            [verify: :verify_none]
+          else
+            %{host: db_host} = URI.parse(database_url)
+            :tls_certificate_check.options(db_host)
+          end
+
+        config :lightning, Lightning.Repo, ssl: ssl_opts
       end
 
       # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -624,7 +699,15 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
-      drop_metrics_groups: [],
+      # `:oban_queue_poll_metrics` is dropped because PromEx 1.11.0's helper
+      # `include_zeros_for_missing_queue_states/1` calls `Oban.config()` with
+      # no args — looking up the default `Oban` name — even though we run our
+      # supervisor as `Lightning.Oban`. The first poll raises, telemetry_poller
+      # filters the measurement out, and the queue-length gauge is dead for
+      # the rest of the process's life. Fix is upstream PR #278 (unreleased,
+      # repo dormant since 2024). Re-enable once that ships.
+      # https://github.com/akoutmos/prom_ex/pull/278
+      drop_metrics_groups: [:oban_queue_poll_metrics],
       expensive_metrics_enabled:
         env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [
@@ -755,9 +838,6 @@ defmodule Lightning.Config.Bootstrap do
       number_of_messages_per_second:
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
-
-    config :lightning, :ui_metrics_tracking,
-      enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
 
     config :lightning,
            :broadcast_work_available,
@@ -997,6 +1077,14 @@ defmodule Lightning.Config.Bootstrap do
   rescue
     e ->
       {:error, worker_key_error("could not be parsed: #{Exception.message(e)}")}
+  end
+
+  defp sso_redirect_uri(url_scheme, host, url_port, provider) do
+    if url_port in [80, 443] do
+      "#{url_scheme}://#{host}/authenticate/#{provider}/callback"
+    else
+      "#{url_scheme}://#{host}:#{url_port}/authenticate/#{provider}/callback"
+    end
   end
 
   defp worker_key_error(reason) do

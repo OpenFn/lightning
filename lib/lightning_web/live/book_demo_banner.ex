@@ -157,8 +157,20 @@ defmodule LightningWeb.BookDemoBanner do
           phx-submit="schedule-call"
         >
           <div class="flex flex-col gap-2">
-            <.input type="text" field={f[:name]} label="Name" required={true} />
-            <.input type="text" field={f[:email]} label="Email" required={true} />
+            <.input
+              type="text"
+              field={f[:name]}
+              label="Name"
+              required={true}
+              autocomplete="name"
+            />
+            <.input
+              type="text"
+              field={f[:email]}
+              label="Email"
+              required={true}
+              autocomplete="email"
+            />
             <.input
               type="textarea"
               field={f[:message]}

@@ -7,7 +7,6 @@ defmodule LightningWeb.TokensLive.Index do
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
-  alias Phoenix.LiveView.JS
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
@@ -57,13 +56,6 @@ defmodule LightningWeb.TokensLive.Index do
      )
      |> assign(:tokens, get_api_tokens_for(socket.assigns.current_user))
      |> put_flash(:info, "Token created successfully")}
-  end
-
-  @impl true
-  def handle_event("copy", _, socket) do
-    {:noreply,
-     socket
-     |> put_flash(:info, "Token copied successfully")}
   end
 
   defp get_api_tokens_for(user) do

@@ -3,7 +3,7 @@ import { cn } from '#/utils/cn';
 
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { StepDetail } from '../../types/history';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StepIcon } from './StepIcon';

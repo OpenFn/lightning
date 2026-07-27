@@ -176,6 +176,24 @@ defmodule Lightning.Invocation do
   def get_dataclip!(id), do: Repo.get!(Dataclip, id)
 
   @doc """
+  Returns whether a dataclip with the given id belongs to the given project.
+
+  `false` for a malformed id or a dataclip in another project.
+  """
+  @spec dataclip_in_project?(Ecto.UUID.t(), Ecto.UUID.t()) :: boolean()
+  def dataclip_in_project?(id, project_id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} ->
+        Repo.exists?(
+          from(d in Dataclip, where: d.id == ^id and d.project_id == ^project_id)
+        )
+
+      :error ->
+        false
+    end
+  end
+
+  @doc """
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
@@ -235,6 +253,12 @@ defmodule Lightning.Invocation do
   Scopes by workflow (not trigger) so that manual runs are also considered.
   """
   def last_run_final_dataclip(%Trigger{workflow_id: workflow_id}) do
+    # `prepare: :unnamed` forces a custom plan per workflow_id. With named
+    # prepared statements, Postgres flips to a generic plan after 5
+    # executions which scans `runs_finished_at_index` backward and
+    # post-filters on state — catastrophic for workflows with sparse
+    # successes (full backward scan looking for nothing). The custom plan
+    # bounds via the workflow's work_orders.
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: d in assoc(r, :final_dataclip),
@@ -245,7 +269,7 @@ defmodule Lightning.Invocation do
       limit: 1,
       select: d
     )
-    |> Repo.one()
+    |> Repo.one(prepare: :unnamed)
   end
 
   @doc """
@@ -253,6 +277,9 @@ defmodule Lightning.Invocation do
   Used when cron_cursor_job_id is set to a specific job.
   """
   def last_successful_step_dataclip(job_id) do
+    # `prepare: :unnamed` for the same reason as `last_run_final_dataclip/1`:
+    # LIMIT 1 + ORDER BY DESC queries are vulnerable to generic-plan flips
+    # that degrade into full-table scans. Custom plans guarantee selectivity.
     from(d in Dataclip,
       join: s in Step,
       on: s.output_dataclip_id == d.id,
@@ -262,7 +289,7 @@ defmodule Lightning.Invocation do
       order_by: [desc: s.finished_at],
       limit: 1
     )
-    |> Repo.one()
+    |> Repo.one(prepare: :unnamed)
   end
 
   @doc """
@@ -436,14 +463,19 @@ defmodule Lightning.Invocation do
   Note: Dataclip body fields have `load_in_query: false` for performance,
   so we use a custom preload query to explicitly select the body field.
   """
-  @spec get_step_with_dataclips(Ecto.UUID.t()) :: Step.t() | nil
-  def get_step_with_dataclips(step_id) do
+  @spec get_step_with_dataclips(Ecto.UUID.t(), Ecto.UUID.t() | nil) ::
+          Step.t() | nil
+  def get_step_with_dataclips(_step_id, nil), do: nil
+
+  def get_step_with_dataclips(step_id, project_id) do
     # Dataclip.body has load_in_query: false, so we need to explicitly select it
     dataclip_with_body_query =
       from(d in Dataclip, select: %{d | body: d.body})
 
     Step
-    |> where([s], s.id == ^step_id)
+    |> join(:inner, [s], j in assoc(s, :job))
+    |> join(:inner, [s, j], p in assoc(j, :project))
+    |> where([s, j, p], s.id == ^step_id and p.id == ^project_id)
     |> preload(input_dataclip: ^dataclip_with_body_query)
     |> preload(output_dataclip: ^dataclip_with_body_query)
     |> Repo.one()
@@ -528,6 +560,27 @@ defmodule Lightning.Invocation do
     |> base_query()
     |> search_workorders_query(search_params)
     |> exclude_wiped_dataclips()
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns work orders matching the search params that have cancellable
+  (available) runs. Unlike retry, does not filter on wiped dataclips since
+  cancellation doesn't need the dataclip.
+  """
+  def search_workorders_for_cancel(%Project{id: project_id}, search_params) do
+    project_id
+    |> base_query()
+    |> search_workorders_query(search_params)
+    |> where(
+      [wo],
+      exists(
+        from(r in Lightning.Run,
+          where: r.work_order_id == parent_as(:workorder).id,
+          where: r.state == :available
+        )
+      )
+    )
     |> Repo.all()
   end
 

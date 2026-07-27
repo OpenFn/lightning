@@ -23,7 +23,7 @@ import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
 import { useWorkflowActions } from '../../hooks/useWorkflow';
 import { notifications } from '../../lib/notifications';
 import type { Template } from '../../types/template';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { TemplateCard } from './TemplateCard';
 import { TemplateSearchInput } from './TemplateSearchInput';

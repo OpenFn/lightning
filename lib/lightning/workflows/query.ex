@@ -65,8 +65,9 @@ defmodule Lightning.Workflows.Query do
   def enabled_cron_jobs_by_edge do
     from(e in Edge,
       join: j in assoc(e, :target_job),
+      join: w in assoc(j, :workflow),
       join: t in assoc(e, :source_trigger),
-      where: t.type == :cron and t.enabled,
+      where: t.type == :cron and t.enabled and is_nil(w.deleted_at),
       preload: [:source_trigger, [target_job: :workflow]]
     )
   end

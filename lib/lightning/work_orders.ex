@@ -52,6 +52,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.CancelManyWorkOrdersJob
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
@@ -502,10 +503,67 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
+  @doc """
+  Cancels available runs for the given work orders.
+
+  For small batches, cancels synchronously via atomic UPDATE. Returns
+  `{:ok, count}` where count is the number of runs cancelled.
+  """
+  @spec cancel_many([WorkOrder.t()], keyword()) ::
+          {:ok, non_neg_integer()} | {:error, any()}
+  def cancel_many([], _opts), do: {:ok, 0}
+
+  def cancel_many([%WorkOrder{} | _rest] = work_orders, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    case Runs.cancel_available_for_work_orders(work_order_ids, project_id) do
+      {:ok, %{runs: {n, _runs}}} ->
+        {:ok, n}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Enqueues a single background job to cancel all available runs matching
+  the given work order IDs. Used for "cancel all matching" where the count
+  may be large.
+  """
+  @spec cancel_many_async([WorkOrder.t()], keyword()) ::
+          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
+  def cancel_many_async([%WorkOrder{} | _rest] = work_orders, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    Oban.insert(
+      Lightning.Oban,
+      CancelManyWorkOrdersJob.new(%{
+        work_order_ids: work_order_ids,
+        project_id: project_id
+      })
+    )
+  end
+
   def get_workorders_with_runs(workflow_id, run_id) do
-    # First, get workorder IDs we want
+    # A run_id ensures that run's work order is in the returned history (even if
+    # it's older than the recent window), but only when the run belongs to this
+    # workflow. A missing, malformed, foreign, or unknown run_id resolves to nil
+    # and is dropped, so history can never surface another workflow's work order
+    # (and a bad id can't crash). Results are still ordered by last_activity.
+    specific_wo_id =
+      if valid_uuid?(run_id) do
+        from(r in Run,
+          join: wo in assoc(r, :work_order),
+          where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
+          select: r.work_order_id
+        )
+        |> Repo.one()
+      end
+
     workorder_ids =
-      if is_nil(run_id) do
+      if is_nil(specific_wo_id) do
         # Just get top 20 workorders by last_activity
         from(wo in WorkOrder,
           join: r in assoc(wo, :runs),
@@ -517,15 +575,7 @@ defmodule Lightning.WorkOrders do
         )
         |> Repo.all()
       else
-        # Get the specific workorder for the run
-        specific_wo_id =
-          from(r in Run,
-            where: r.id == ^run_id,
-            select: r.work_order_id
-          )
-          |> Repo.one()
-
-        # Get top 20 workorders
+        # That run's workorder plus the next 19 recent ones for this workflow
         other_wo_ids =
           from(wo in WorkOrder,
             join: r in assoc(wo, :runs),
@@ -538,13 +588,13 @@ defmodule Lightning.WorkOrders do
           )
           |> Repo.all()
 
-        # Combine them
         [specific_wo_id | other_wo_ids] |> Enum.uniq()
       end
 
-    # Now fetch the full workorders with preloads
+    # Final fetch, re-scoped to the workflow so a stray id can never surface
+    # another workflow's work order.
     from(wo in WorkOrder,
-      where: wo.id in ^workorder_ids,
+      where: wo.id in ^workorder_ids and wo.workflow_id == ^workflow_id,
       order_by: [desc: wo.last_activity],
       preload: [:snapshot, runs: :snapshot]
     )

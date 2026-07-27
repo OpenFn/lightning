@@ -21,6 +21,7 @@ defmodule Lightning.WorkflowVersions do
   alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Validators.Hex
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
 
@@ -203,6 +204,33 @@ defmodule Lightning.WorkflowVersions do
   @doc """
   Generates a deterministic hash for a workflow based on its structure.
 
+  Hashes the string produced by `canonical_form/1` with SHA-256 and truncates
+  the result to 12 lowercase hex characters.
+
+  ## Parameters
+    * `workflow` — the workflow struct (or equivalent map) to hash
+
+  ## Returns
+    * a 12-character lowercase hex string
+
+  ## Examples
+
+      iex> WorkflowVersions.generate_hash(workflow)
+      "a1b2c3d4e5f6"
+  """
+  @spec generate_hash(Workflow.t() | map()) :: binary()
+  def generate_hash(workflow) do
+    :crypto.hash(:sha256, canonical_form(workflow))
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  @doc """
+  Builds the deterministic canonical string for a workflow — the exact input
+  that `generate_hash/1` digests.
+
+  Useful for debugging what's fed into the hash.
+
   Algorithm:
   - Create a list
   - Add the workflow name to the start of the list
@@ -212,30 +240,27 @@ defmodule Lightning.WorkflowVersions do
     - Add only the field VALUES to the list (keys are excluded)
     - Numeric values (e.g., positions) are rounded up to integers
   - Join the list into a string, no separator
-  - Hash the string with SHA 256
-  - Truncate the resulting string to 12 characters
 
   ## Parameters
-    * `workflow` — the workflow struct to hash
+    * `workflow` — the workflow struct (or equivalent map) to serialize
 
   ## Returns
-    * A 12-character lowercase hex string
+    * the joined canonical string
 
   ## Examples
 
-      iex> WorkflowVersions.generate_hash(workflow)
-      "a1b2c3d4e5f6"
+      iex> WorkflowVersions.canonical_form(workflow)
+      "My Workflow{...}webhook..."
   """
-  @spec generate_hash(Workflow.t() | map()) :: binary()
-  def generate_hash(%Workflow{} = workflow) do
-    workflow = Repo.preload(workflow, [:jobs, :edges, :triggers])
-
+  @spec canonical_form(Workflow.t() | map()) :: binary()
+  def canonical_form(%Workflow{} = workflow) do
     workflow
+    |> Repo.preload([:jobs, :edges, :triggers])
     |> Map.from_struct()
-    |> generate_hash()
+    |> canonical_form()
   end
 
-  def generate_hash(%{} = workflow) do
+  def canonical_form(%{} = workflow) do
     workflow_keys = [:name, :positions]
 
     job_keys = [
@@ -246,7 +271,14 @@ defmodule Lightning.WorkflowVersions do
       :body
     ]
 
-    trigger_keys = [:type, :cron_expression, :enabled]
+    trigger_keys = [
+      :type,
+      :cron_expression,
+      :enabled,
+      :webhook_reply,
+      :webhook_response_config,
+      :cron_cursor_job_id
+    ]
 
     edge_keys = [
       :name,
@@ -306,17 +338,16 @@ defmodule Lightning.WorkflowVersions do
         acc ++ hash_list
       end)
 
-    joined_data =
-      Enum.join([
-        workflow_hash_list,
-        triggers_hash_list,
-        jobs_hash_list,
-        edges_hash_list
-      ])
+    Enum.join([
+      workflow_hash_list,
+      triggers_hash_list,
+      jobs_hash_list,
+      edges_hash_list
+    ])
+  end
 
-    :crypto.hash(:sha256, joined_data)
-    |> Base.encode16(case: :lower)
-    |> binary_part(0, 12)
+  defp serialize_value(%WebhookResponseConfig{} = val) do
+    val |> Map.take([:success_code, :error_code]) |> serialize_value()
   end
 
   defp serialize_value(val) when is_map(val) do

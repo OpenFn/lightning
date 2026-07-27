@@ -400,9 +400,11 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :placeholder, :string, default: ""
 
+  attr :autocomplete, :string, default: "off"
+
   attr :rest, :global,
     include:
-      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+      ~w(accept capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
   attr :class, :string, default: ""
@@ -635,6 +637,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
+        autocomplete={@autocomplete}
         value={@value}
         placeholder={@placeholder}
         errors={@errors}
@@ -660,6 +663,7 @@ defmodule LightningWeb.Components.NewInputs do
       </.label>
       <div class="relative mt-2 rounded-lg shadow-xs">
         <input
+          autocomplete={@autocomplete}
           type={@type}
           name={@name}
           id={@id}
@@ -985,6 +989,7 @@ defmodule LightningWeb.Components.NewInputs do
           name={@name}
           id={@id}
           class={@class}
+          autocomplete={@autocomplete}
           value={Form.normalize_value(@type, @value)}
           placeholder={@placeholder}
           {@rest}
@@ -1019,15 +1024,17 @@ defmodule LightningWeb.Components.NewInputs do
   attr :value, :any
   attr :errors, :list, default: []
   attr :class, :string, default: ""
+  attr :autocomplete, :string, default: "off"
 
   attr :rest, :global,
     include:
-      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+      ~w(accept capture cols disabled form list max maxlength min minlength
               multiple pattern placeholder readonly required rows size step)
 
   def input_element(assigns) do
     ~H"""
     <input
+      autocomplete={@autocomplete}
       type={@type}
       name={@name}
       id={@id}
@@ -1060,15 +1067,17 @@ defmodule LightningWeb.Components.NewInputs do
   attr :value, :any
   attr :errors, :list, default: []
   attr :class, :any, default: ""
+  attr :autocomplete, :string, default: "off"
 
   attr :rest, :global,
     include:
-      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+      ~w(accept capture cols disabled form list max maxlength min minlength
               multiple pattern placeholder readonly required rows size step)
 
   def textarea_element(assigns) do
     ~H"""
     <textarea
+      autocomplete={@autocomplete}
       id={@id}
       name={@name}
       class={[

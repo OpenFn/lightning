@@ -10,6 +10,7 @@ defmodule Lightning.Workflows.Workflow do
   use Lightning.Schema
 
   alias Lightning.Projects.Project
+  alias Lightning.Validators
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -44,9 +45,12 @@ defmodule Lightning.Workflows.Workflow do
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
 
+    # the ordering of edges, triggers and jobs are intentional
+    # ecto reverses the relations when inserting. so jobs->triggers->edges
+    # triggers depend on jobs for cron_cursor_job_id
     has_many :edges, Edge, on_replace: :delete_if_exists
-    has_many :jobs, Job, on_replace: :delete
     has_many :triggers, Trigger, on_replace: :delete_if_exists
+    has_many :jobs, Job, on_replace: :delete
     has_many :versions, WorkflowVersion, foreign_key: :workflow_id
 
     has_many :work_orders, Lightning.WorkOrder
@@ -82,6 +86,7 @@ defmodule Lightning.Workflows.Workflow do
 
   def validate(changeset) do
     changeset
+    |> Validators.validate_uuid(:project_id)
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])

@@ -11,27 +11,45 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   alias Lightning.AiAssistant
+  alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Channels.WorkflowJSON
+  alias LightningWeb.CredentialLive
 
   on_mount({LightningWeb.Hooks, :project_scope})
-  on_mount {LightningWeb.Hooks, :check_limits}
-  on_mount {LightningWeb.Hooks, :check_legacy_preference}
+  on_mount({LightningWeb.Hooks, :ensure_workflow_belongs_to_project})
+  on_mount({LightningWeb.Hooks, :check_limits})
 
   @impl true
-  def mount(params, _session, %{assigns: %{project: project}} = socket) do
+  def mount(
+        params,
+        _session,
+        %{assigns: %{project: project, access_root: access_root}} = socket
+      ) do
+    is_sandbox? = Project.sandbox?(project)
+
     {:ok,
      socket
      |> assign(workflow_assigns(params, project))
      |> assign(
        active_menu_item: :overview,
        project: project,
+       project_display_name:
+         Projects.display_name_within_access_root(project, access_root),
+       project_is_sandbox: is_sandbox?,
+       root_project_id: if(is_sandbox?, do: access_root.id),
+       root_project_name: if(is_sandbox?, do: access_root.name),
        show_credential_modal: false,
        credential_schema: nil,
        credential_to_edit: nil,
+       new_credential_project_credentials:
+         CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?()
@@ -53,7 +71,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   defp maybe_load_initial_run_data(socket, %{"run" => run_id})
        when is_binary(run_id) do
-    case Lightning.Runs.get(run_id, include: [:steps]) do
+    %{project: project} = socket.assigns
+
+    case Lightning.Runs.get_for_project(run_id, project.id, include: [:steps]) do
       nil -> socket
       run -> assign(socket, initial_run_data: build_run_data(run))
     end
@@ -94,17 +114,33 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         socket
       )
       when is_binary(credential_id) do
-    # Load the credential for editing with necessary associations
-    credential =
-      Lightning.Credentials.get_credential!(credential_id)
-      |> Lightning.Repo.preload([:oauth_client, :project_credentials])
+    # Only open the edit modal for a credential the user is authorized to edit
+    # (its owner), so a client-supplied id can't load another user's credential.
+    with true <- Lightning.Validators.valid_uuid?(credential_id),
+         %Credential{} = credential <-
+           Lightning.Credentials.get_credential(credential_id),
+         true <-
+           Permissions.can?(
+             Users,
+             :edit_credential,
+             socket.assigns.current_user,
+             credential
+           ) do
+      credential =
+        Lightning.Repo.preload(credential, [:oauth_client, :project_credentials])
 
-    {:noreply,
-     assign(socket,
-       show_credential_modal: true,
-       credential_schema: schema,
-       credential_to_edit: credential
-     )}
+      {:noreply,
+       assign(socket,
+         show_credential_modal: true,
+         credential_schema: schema,
+         credential_to_edit: credential
+       )}
+    else
+      # A malformed, unknown, or non-owned id doesn't open the modal. Tell the
+      # client the open failed (the React side optimistically opened it) so it
+      # resets its state instead of hanging open.
+      _ -> {:noreply, push_event(socket, "credential_modal_closed", %{})}
+    end
   end
 
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do
@@ -181,13 +217,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
       data-project-name={@project.name}
+      data-project-display-name={@project_display_name}
+      data-project-is-sandbox={to_string(@project_is_sandbox)}
       data-project-color={@project.color}
-      data-root-project-id={
-        if @project.parent, do: Lightning.Projects.root_of(@project).id, else: nil
-      }
-      data-root-project-name={
-        if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
-      }
+      data-root-project-id={@root_project_id}
+      data-root-project-name={@root_project_name}
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
       data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
@@ -212,11 +246,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           %Lightning.Credentials.Credential{
             schema: @credential_schema,
             user_id: @current_user.id,
-            project_credentials: [
-              %Lightning.Projects.ProjectCredential{
-                project_id: @project.id
-              }
-            ]
+            project_credentials: @new_credential_project_credentials
           }
       }
       on_save={

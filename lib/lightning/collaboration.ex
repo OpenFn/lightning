@@ -78,15 +78,15 @@ defmodule Lightning.Collaborate do
         %Lightning.Workflows.Workflow{} = workflow,
         document_name
       ) do
-    {:ok, doc_supervisor_pid} =
-      SessionSupervisor.start_child(
-        {DocumentSupervisor,
-         workflow: workflow,
-         document_name: document_name,
-         name: Registry.via({:doc_supervisor, document_name})}
-      )
-
-    {:ok, doc_supervisor_pid}
+    case SessionSupervisor.start_child(
+           {DocumentSupervisor,
+            workflow: workflow,
+            document_name: document_name,
+            name: Registry.via({:doc_supervisor, document_name})}
+         ) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+    end
   end
 
   defp lookup_shared_doc(document_name) do

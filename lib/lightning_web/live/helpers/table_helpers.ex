@@ -72,6 +72,28 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
   def sort_compare_fn("desc"), do: &>=/2
 
   @doc """
+  Resolves a client-supplied sort field to one of `allowed` (a list of column
+  atoms), returning `default` for anything unrecognised.
+
+  Matches on each allowed atom's string form rather than calling
+  `String.to_atom/1` or `String.to_existing_atom/1` on the input, so a crafted
+  sort param can neither create atoms (atom-table exhaustion) nor crash on an
+  unknown/non-column value; it just falls back to the default column.
+  """
+  @spec sort_field(String.t() | nil, [atom(), ...], atom()) :: atom()
+  def sort_field(value, allowed, default) do
+    Enum.find(allowed, default, &(Atom.to_string(&1) == value))
+  end
+
+  @doc """
+  Resolves a client-supplied sort direction to `:asc` or `:desc`, defaulting to
+  `:asc` for anything else.
+  """
+  @spec sort_direction(String.t() | nil) :: :asc | :desc
+  def sort_direction("desc"), do: :desc
+  def sort_direction(_value), do: :asc
+
+  @doc """
   Toggles sort direction between "asc" and "desc".
 
   ## Examples
@@ -177,18 +199,31 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
   end
 
   defp get_sort_value(item, field) when is_atom(field) do
-    case Map.get(item, field) do
-      nil -> ""
-      value when is_binary(value) -> value
-      value -> value
-    end
+    item |> Map.get(field) |> normalize_sort_value()
   end
 
   defp get_sort_value(item, field) when is_function(field, 1) do
-    field.(item)
+    item |> field.() |> normalize_sort_value()
   end
 
   defp get_sort_value(_item, field) do
     field
   end
+
+  # `<=/>=` (used by sort_items's compare_fn) does Erlang structural term
+  # comparison, which on `DateTime`/`NaiveDateTime`/`Date`/`Time` walks struct
+  # keys alphabetically (day before month before year) and disagrees with
+  # chronology at month boundaries. Convert to ISO 8601 strings, which sort
+  # lexicographically the same as chronologically. The leading sentinel
+  # (`0` for nil, `1` for present) keeps nil rows cleanly separate from any
+  # real value, so the two can never tie at the comparator.
+  defp normalize_sort_value(nil), do: {0, ""}
+  defp normalize_sort_value(%DateTime{} = dt), do: {1, DateTime.to_iso8601(dt)}
+
+  defp normalize_sort_value(%NaiveDateTime{} = dt),
+    do: {1, NaiveDateTime.to_iso8601(dt)}
+
+  defp normalize_sort_value(%Date{} = d), do: {1, Date.to_iso8601(d)}
+  defp normalize_sort_value(%Time{} = t), do: {1, Time.to_iso8601(t)}
+  defp normalize_sort_value(value), do: {1, value}
 end

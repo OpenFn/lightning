@@ -76,6 +76,71 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              ]
     end
 
+    test "returns a project with channels", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{name: "dest-cred", body: %{}, user_id: user.id},
+          project: project
+        )
+
+      %{id: channel_with_cred_id} =
+        channel_with_cred =
+        insert(:channel,
+          project: project,
+          name: "with-cred",
+          destination_url: "https://example.com/a",
+          enabled: true
+        )
+
+      insert(:channel_auth_method,
+        channel: channel_with_cred,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: project_credential
+      )
+
+      %{id: channel_without_cred_id} =
+        insert(:channel,
+          project: project,
+          name: "without-cred",
+          destination_url: "https://example.com/b",
+          enabled: false
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"channels" => channels_resp} = response["data"]
+
+      expected_pc_id = project_credential.id
+
+      assert [
+               %{
+                 "id" => ^channel_with_cred_id,
+                 "name" => "with-cred",
+                 "destination_url" => "https://example.com/a",
+                 "enabled" => true,
+                 "destination_credential_id" => ^expected_pc_id
+               },
+               %{
+                 "id" => ^channel_without_cred_id,
+                 "name" => "without-cred",
+                 "destination_url" => "https://example.com/b",
+                 "enabled" => false,
+                 "destination_credential_id" => nil
+               }
+             ] = channels_resp
+    end
+
     test "returns a non empty project without credentials", %{
       conn: conn,
       user: user
@@ -496,6 +561,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Enum.count(workflows) == 2
     end
 
+    test "does not return snapshots from another project", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        insert(:project, project_users: [%{user_id: user.id}])
+
+      # A snapshot in a different project the user has no access to.
+      foreign_workflow = insert(:simple_workflow, project: insert(:project))
+      {:ok, foreign_snapshot} = Snapshot.create(foreign_workflow)
+
+      conn =
+        get(conn, ~p"/api/provision/#{project_id}",
+          snapshots: [foreign_snapshot.id]
+        )
+
+      # The foreign snapshot's workflow is not disclosed.
+      assert %{"workflows" => []} = json_response(conn, 200)["data"]
+    end
+
     test "returns a project with kafka trigger workflow", %{
       conn: conn,
       user: user
@@ -552,6 +637,159 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                },
                exported_kafka_config
              )
+    end
+
+    test "returns a webhook trigger with webhook_reply in the response", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          webhook_reply: :after_completion
+        )
+
+      job = build(:job)
+
+      %{triggers: [%{id: trigger_id}]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "webhook",
+               "enabled" => true,
+               "webhook_reply" => "after_completion"
+             } = trigger_json
+    end
+
+    test "returns a webhook trigger with webhook_response_config in the response",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          webhook_reply: :after_completion,
+          webhook_response_config:
+            build(:webhook_response_config,
+              success_code: 200,
+              error_code: 500
+            )
+        )
+
+      job = build(:job)
+
+      %{triggers: [%{id: trigger_id}]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "webhook",
+               "webhook_reply" => "after_completion",
+               "webhook_response_config" => %{
+                 "success_code" => 200,
+                 "error_code" => 500
+               }
+             } = trigger_json
+    end
+
+    test "omits webhook_response_config when it is nil", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger = build(:trigger, type: :webhook)
+      job = build(:job)
+
+      build(:workflow, project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [%{"triggers" => [trigger_json]}]
+             } = response["data"]
+
+      refute Map.has_key?(trigger_json, "webhook_response_config")
+    end
+
+    test "returns a cron trigger with cron_cursor_job_id in the response", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      %{triggers: [trigger], jobs: [%{id: job_id}]} =
+        insert(:simple_workflow, project: project)
+
+      trigger_id = trigger.id
+
+      {:ok, _trigger} =
+        trigger
+        |> Ecto.Changeset.change(
+          type: :cron,
+          cron_expression: "0 * * * *",
+          cron_cursor_job_id: job_id
+        )
+        |> Lightning.Repo.update()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [trigger_json]
+                 }
+               ]
+             } = response["data"]
+
+      assert %{
+               "id" => ^trigger_id,
+               "type" => "cron",
+               "cron_expression" => "0 * * * *",
+               "cron_cursor_job_id" => ^job_id
+             } = trigger_json
     end
 
     test "returns a project if user has owner access", %{
@@ -710,6 +948,35 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response =~ workflow_1.name
       refute response =~ updated_workflow_1.name
       assert response =~ workflow_2.name
+    end
+
+    test "does not include another project's snapshots in the yaml" do
+      project = insert(:project)
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      foreign_workflow =
+        insert(:simple_workflow,
+          project: insert(:project),
+          name: "foreign-workflow-name"
+        )
+
+      {:ok, foreign_snapshot} = Snapshot.create(foreign_workflow)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response =
+        get(
+          conn,
+          ~p"/api/provision/yaml?#{%{id: project.id, snapshots: [foreign_snapshot.id]}}"
+        )
+        |> response(200)
+
+      refute response =~ "foreign-workflow-name"
     end
 
     test "returns a 403 if an invalid repo conenction token is provided" do

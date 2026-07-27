@@ -36,12 +36,6 @@ defmodule Lightning.AiAssistant do
   @type opts :: keyword()
 
   @doc """
-  Returns the maximum allowed length for chat session titles.
-  """
-  @spec title_max_length() :: non_neg_integer()
-  def title_max_length, do: @title_max_length
-
-  @doc """
   Checks if the AI assistant feature is enabled via application configuration.
 
   Verifies that both the Apollo endpoint URL and API key are properly configured,
@@ -56,21 +50,6 @@ defmodule Lightning.AiAssistant do
     endpoint = Lightning.Config.apollo(:endpoint)
     api_key = Lightning.Config.apollo(:ai_assistant_api_key)
     is_binary(endpoint) && is_binary(api_key)
-  end
-
-  @doc """
-  Checks if the Apollo AI service endpoint is reachable and responding.
-
-  Performs a connectivity test to ensure the external AI service is available
-  before attempting to make actual queries.
-
-  ## Returns
-
-  `true` if the Apollo endpoint responds successfully, `false` otherwise.
-  """
-  @spec endpoint_available?() :: boolean()
-  def endpoint_available? do
-    ApolloClient.test() == :ok
   end
 
   @doc """
@@ -161,6 +140,7 @@ defmodule Lightning.AiAssistant do
 
     session_attrs = %{
       job_id: job.id,
+      project_id: project_id_for_job(job),
       user_id: user.id,
       title: create_title(content),
       session_type: "job_code",
@@ -180,6 +160,15 @@ defmodule Lightning.AiAssistant do
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  defp project_id_for_job(%Job{workflow_id: nil}), do: nil
+
+  defp project_id_for_job(%Job{workflow_id: workflow_id}) do
+    Workflow
+    |> where([w], w.id == ^workflow_id)
+    |> select([w], w.project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -569,29 +558,6 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Checks if additional sessions are available beyond the current count.
-
-  This is a convenience function to determine if there are more sessions
-  to load without fetching the actual data. Useful for "Load More" UI patterns.
-
-  ## Parameters
-
-  - `resource` - A `%Project{}` or `%Job{}` struct
-  - `current_count` - Number of sessions already loaded
-
-  ## Returns
-
-  `true` if more sessions exist, `false` otherwise.
-  """
-  @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
-  def has_more_sessions?(resource, current_count) do
-    %{pagination: pagination} =
-      list_sessions(resource, :desc, offset: current_count, limit: 1)
-
-    pagination.has_next_page
-  end
-
-  @doc """
   Adds job-specific context to a chat session for enhanced AI assistance.
 
   Enriches a session with the job's expression code and adaptor information,
@@ -701,30 +667,6 @@ defmodule Lightning.AiAssistant do
   defp maybe_add_run_logs(session, _job_id), do: session
 
   @doc """
-  Associates a workflow with a chat session.
-
-  Links a generated workflow to the session that created it, enabling tracking
-  and future modifications through the same conversation context.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` that generated the workflow
-  - `workflow` - The `%Workflow{}` struct to associate
-
-  ## Returns
-
-  - `{:ok, session}` - Successfully linked workflow to session
-  - `{:error, changeset}` - Association failed with validation errors
-  """
-  @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def associate_workflow(session, workflow) do
-    session
-    |> ChatSession.changeset(%{workflow_id: workflow.id})
-    |> Repo.update()
-  end
-
-  @doc """
   Saves a message to an existing chat session.
 
   Adds a new message to the session's message history and updates the session.
@@ -780,13 +722,25 @@ defmodule Lightning.AiAssistant do
   end
 
   defp prepare_message_attrs(message_attrs, session, code) do
-    message_attrs
-    |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("chat_session_id", session.id)
-    |> Map.put("code", code)
-    |> maybe_put_job_id_from_session(session)
-    |> maybe_put_unsaved_job_meta(session)
+    attrs =
+      message_attrs
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("code", code)
+
+    # Global messages carry a full workflow YAML, never a job —
+    # even when the session was started from a job step.
+    if global_message?(attrs) do
+      attrs
+    else
+      attrs
+      |> maybe_put_job_id_from_session(session)
+      |> maybe_put_unsaved_job_meta(session)
+    end
   end
+
+  defp global_message?(%{"meta" => %{"from_global" => true}}), do: true
+  defp global_message?(_), do: false
 
   defp maybe_put_unsaved_job_meta(attrs, session) do
     is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
@@ -869,26 +823,6 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Finds all pending user messages in a chat session.
-
-  Retrieves messages that have been sent by users but are still waiting
-  for processing or AI responses. Useful for identifying stuck or failed requests.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` to search
-
-  ## Returns
-
-  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
-  """
-  @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
-  def find_pending_user_messages(session) do
-    messages = session.messages || []
-    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
-  end
-
-  @doc """
   Queries the AI assistant for job-specific code assistance.
 
   Sends a user query to the Apollo AI service along with job context (expression and adaptor)
@@ -919,13 +853,14 @@ defmodule Lightning.AiAssistant do
     context = build_context(initial_context, opts)
 
     history = build_history(session)
-    meta = session.meta || %{}
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     ApolloClient.job_chat(
       content,
       context: context,
       history: history,
-      meta: meta
+      meta: meta,
+      metrics_opt_in: metrics_opt_in
     )
     |> handle_ai_response(session, &build_job_message/1)
   end
@@ -950,12 +885,13 @@ defmodule Lightning.AiAssistant do
 
     context = build_context(initial_context, opts)
     history = build_history(session)
-    meta = session.meta || %{}
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     case ApolloClient.job_chat_stream(content,
            context: context,
            history: history,
-           meta: meta
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -990,6 +926,21 @@ defmodule Lightning.AiAssistant do
     end)
   end
 
+  defp apollo_meta(session) do
+    session = Repo.preload(session, :user)
+    user = session.user
+
+    meta =
+      (session.meta || %{})
+      |> Map.put("session_id", session.id)
+      |> Map.put("user", %{
+        "id" => user.id,
+        "persona" => User.langfuse_persona(user)
+      })
+
+    {meta, User.core_contributor?(user)}
+  end
+
   @doc """
   Queries the AI service for workflow template generation.
 
@@ -1003,7 +954,6 @@ defmodule Lightning.AiAssistant do
   - `opts` - Keyword list of options:
     - `:code` - Current YAML to modify (default: uses latest from session)
     - `:errors` - Validation errors from previous workflow attempts
-    - `:meta` - Additional metadata to pass to the AI service (default: session.meta)
 
   ## Returns
 
@@ -1015,16 +965,18 @@ defmodule Lightning.AiAssistant do
   def query_workflow(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
-    meta = Keyword.get(opts, :meta, session.meta || %{})
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     ApolloClient.workflow_chat(
       content,
       code: code,
       errors: errors,
       history: build_history(session),
-      meta: meta
+      meta: meta,
+      metrics_opt_in: metrics_opt_in
     )
     |> handle_ai_response(session, &build_workflow_message/1)
   end
@@ -1039,19 +991,54 @@ defmodule Lightning.AiAssistant do
   def query_workflow_stream(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
-    meta = Keyword.get(opts, :meta, session.meta || %{})
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    {meta, metrics_opt_in} = apollo_meta(session)
 
     case ApolloClient.workflow_chat_stream(content,
            code: code,
            errors: errors,
            history: build_history(session),
-           meta: meta
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
         process_stream(session, body, &build_workflow_message/1)
+
+      error ->
+        handle_error_response(error, session)
+    end
+  end
+
+  @doc """
+  Queries the Apollo global chat endpoint with SSE streaming.
+
+  The global chat unifies job and workflow assistance behind a router.
+  Uses the same streaming pipeline as job_chat and workflow_chat.
+  """
+  @spec query_global_stream(ChatSession.t(), String.t(), opts()) ::
+          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+  def query_global_stream(session, content, opts \\ []) do
+    workflow_yaml = Keyword.get(opts, :workflow_yaml)
+    page = Keyword.get(opts, :page)
+    history = build_history(session)
+
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
+    {meta, metrics_opt_in} = apollo_meta(session)
+
+    case ApolloClient.global_chat_stream(content,
+           workflow_yaml: workflow_yaml,
+           page: page,
+           history: history,
+           meta: meta,
+           metrics_opt_in: metrics_opt_in
+         ) do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        process_stream(session, body, &build_global_message/1)
 
       error ->
         handle_error_response(error, session)
@@ -1421,6 +1408,30 @@ defmodule Lightning.AiAssistant do
 
     {message_attrs, opts}
   end
+
+  defp build_global_message(body) do
+    code = extract_global_workflow_yaml(body["attachments"])
+
+    message_attrs = %{
+      role: :assistant,
+      content: body["response"],
+      meta: %{"from_global" => true}
+    }
+
+    opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
+    {message_attrs, opts}
+  end
+
+  # Global chat always returns a full workflow YAML (job bodies embedded).
+  # The frontend handles per-step diffing and full-workflow apply.
+  defp extract_global_workflow_yaml(attachments) when is_list(attachments) do
+    Enum.find_value(attachments, fn
+      %{"type" => "workflow_yaml", "content" => content} -> content
+      _ -> nil
+    end)
+  end
+
+  defp extract_global_workflow_yaml(_), do: nil
 
   defp build_history(session) do
     messages = session.messages || []

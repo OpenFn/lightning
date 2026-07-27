@@ -10,14 +10,14 @@ move health and survey data between systems. It's built on Elixir/Phoenix with
 PostgreSQL, featuring React components and real-time collaborative editing via
 Yjs CRDTs.
 
-## Common Development Commands
+## Common Commands
 
 ### Setup & Running
 
 ```bash
 ./bin/bootstrap              # Initial setup (run once, or when switching branches)
 iex -S mix phx.server        # Run development server
-mix verify                   # Run ALL code quality checks before committing
+mix verify                   # Run all code quality checks before committing
 ```
 
 ### Elixir Testing
@@ -45,7 +45,7 @@ npx tsc --noEmit --project ./tsconfig.browser.json  # Type check
 ### Code Quality
 
 ```bash
-mix format                   # Format Elixir code (ALWAYS before committing)
+mix format                   # Format Elixir code (before committing)
 mix credo --strict --all     # Static analysis
 mix dialyzer                 # Type checking
 mix sobelow                  # Security analysis
@@ -66,13 +66,6 @@ mix ecto.gen.migration short_descriptive_name # Generate migration
 - Never commit the `.context` directory (symlink to shared folder)
 
 ## Architecture Overview
-
-### Directory Structure
-
-- **`lib/lightning/`** - Core business logic, contexts, schemas
-- **`lib/lightning_web/`** - LiveViews, controllers, API, channels
-- **`assets/js/`** - React components, TypeScript
-- **`test/`** - Mirrors source structure
 
 ### Key Contexts (lib/lightning/)
 
@@ -104,6 +97,10 @@ Real-time multi-user workflow editing using:
 - **y-phoenix-channel** - Yjs sync over Phoenix Channels
 - **Y_ex** - Elixir Yjs bindings (see `.claude/guidelines/yex-guidelines.md`)
 
+> Y.Doc transactions have non-obvious deadlock hazards on the BEAM. See
+> `.claude/guidelines/yex-guidelines.md §Transaction Deadlock Rules` before
+> writing any server-side Y.Doc code.
+
 **Store Architecture** (see `.claude/guidelines/store-structure.md`):
 - **SessionStore** - Y.Doc, connection state, sync status
 - **WorkflowStore** - Jobs, triggers, edges, positions (Y.Doc backed)
@@ -125,11 +122,7 @@ in development.
 
 ### Elixir/Phoenix
 
-- Pattern matching and guards over conditionals
-- Pipe operator `|>` for chaining
 - Use `{}` brace syntax in HEEx templates
-- Ecto changesets for validation
-- Avoid string table references in queries; use schema modules
 - `warnings_as_errors: true` - code must compile without warnings
 
 ### React/TypeScript
@@ -145,7 +138,7 @@ in development.
 - **Frontend**: Vitest (see `.claude/guidelines/testing-essentials.md`)
 - **E2E**: Playwright (see `.claude/guidelines/e2e-testing.md`)
 - Group related assertions; avoid micro-tests (one assertion per test)
-- Target test file sizes: < 200-400 lines
+- Target test file sizes: < 400 lines (see `.claude/guidelines/testing-essentials.md §Test file length`)
 
 ## Worker System
 
@@ -155,17 +148,6 @@ External Node.js workers (@openfn/ws-worker) execute JavaScript jobs:
 - Generate keys: `mix lightning.gen_worker_keys`
 - Required ENVs: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
   `WORKER_LIGHTNING_PUBLIC_KEY`
-
-## Key Dependencies
-
-### Backend
-- Phoenix 1.7 + LiveView, Ecto 3.13+, Oban (background jobs)
-- Bodyguard (authorization), Cloak (encryption), Y_ex (Yjs bindings)
-
-### Frontend
-- React 18, @xyflow/react (DAG visualization), Monaco Editor
-- Yjs + y-phoenix-channel (collaboration), Zustand + Immer (state)
-- Tailwind CSS, Vitest, Playwright
 
 ## Custom Mix Tasks
 
@@ -185,10 +167,22 @@ Run `./bin/bootstrap` to sync dependencies and migrations.
 ### Rambo Errors (Apple Silicon)
 Install Rust: `brew install rust`
 
-### Port Conflicts
-```bash
-lsof -i :4000   # Check what's using the port
-```
+## Available Agents
+
+Canonical roster. Command files (`create-plan.md`, `implement-plan.md`,
+`research-codebase.md`) cross-ref this section rather than repeating it.
+
+- **codebase-locator** - Find WHERE files and components live.
+- **codebase-analyzer** - Document HOW specific code works (no critique).
+- **codebase-pattern-finder** - Surface examples of existing patterns.
+- **context-locator** - Discover `.context/` documents about a topic.
+- **context-analyzer** - Extract key insights from a specific context doc.
+- **web-search-researcher** - External documentation and references (on request).
+- **phoenix-elixir-expert** - Elixir/Phoenix backend, Ecto, LiveView, Channels, OTP, ExUnit.
+- **react-collab-editor** - `assets/js/collaborative-editor/`, Y.Doc sync, Immer/useSyncExternalStore, TanStack Form, @xyflow/react.
+- **react-test-specialist** - React unit tests with Vitest; test quality and de-duplication.
+- **security-reviewer** - Security review of pending changes.
+- **idea-machine** - Brainstorming and framing shorthand.
 
 ## Guidelines Reference
 
@@ -198,4 +192,5 @@ Detailed guidelines in `.claude/guidelines/`:
 - `e2e-testing.md` - Playwright E2E testing
 - `yex-guidelines.md` - Critical Yex (Yjs/Elixir) usage rules
 - `toast-notifications.md` - Notification patterns
+- `logging.md` - Logger level conventions and Sentry noise (info/warning vs error)
 - `ui-patterns.md` - Button variants, disabled states, Tailwind conventions

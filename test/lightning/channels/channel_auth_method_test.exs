@@ -2,17 +2,18 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Credentials.Scoping
 
   import Lightning.Factories
 
   describe "changeset/2" do
-    test "valid source auth method with webhook_auth_method" do
+    test "valid client auth method with webhook_auth_method" do
       channel = insert(:channel)
       wam = insert(:webhook_auth_method, project: channel.project)
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :source,
+          role: :client,
           channel_id: channel.id,
           webhook_auth_method_id: wam.id
         })
@@ -20,13 +21,13 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       assert changeset.valid?
     end
 
-    test "valid sink auth method with project_credential" do
+    test "valid destination auth method with project_credential" do
       channel = insert(:channel)
       project_credential = insert(:project_credential, project: channel.project)
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :sink,
+          role: :destination,
           channel_id: channel.id,
           project_credential_id: project_credential.id
         })
@@ -41,7 +42,7 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :source,
+          role: :client,
           channel_id: channel.id,
           webhook_auth_method_id: wam.id,
           project_credential_id: project_credential.id
@@ -58,7 +59,7 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :source,
+          role: :client,
           channel_id: channel.id
         })
 
@@ -68,13 +69,13 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       assert msg =~ "must reference either"
     end
 
-    test "rejects source role with project_credential_id" do
+    test "rejects client role with project_credential_id" do
       channel = insert(:channel)
       project_credential = insert(:project_credential, project: channel.project)
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :source,
+          role: :client,
           channel_id: channel.id,
           project_credential_id: project_credential.id
         })
@@ -82,16 +83,16 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       refute changeset.valid?
 
       assert %{project_credential_id: [msg]} = errors_on(changeset)
-      assert msg =~ "source auth must use a webhook auth method"
+      assert msg =~ "client auth must use a webhook auth method"
     end
 
-    test "rejects sink role with webhook_auth_method_id" do
+    test "rejects destination role with webhook_auth_method_id" do
       channel = insert(:channel)
       wam = insert(:webhook_auth_method, project: channel.project)
 
       changeset =
         ChannelAuthMethod.changeset(%ChannelAuthMethod{}, %{
-          role: :sink,
+          role: :destination,
           channel_id: channel.id,
           webhook_auth_method_id: wam.id
         })
@@ -99,7 +100,7 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
       refute changeset.valid?
 
       assert %{webhook_auth_method_id: [msg]} = errors_on(changeset)
-      assert msg =~ "sink auth must use a project credential"
+      assert msg =~ "destination auth must use a project credential"
     end
 
     test "requires role" do
@@ -115,19 +116,57 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
 
       insert(:channel_auth_method,
         channel: channel,
-        role: :source,
+        role: :client,
         webhook_auth_method: wam
       )
 
       assert {:error, changeset} =
                %ChannelAuthMethod{channel_id: channel.id}
                |> ChannelAuthMethod.changeset(%{
-                 role: :source,
+                 role: :client,
                  webhook_auth_method_id: wam.id
                })
                |> Lightning.Repo.insert()
 
       assert %{webhook_auth_method_id: _} = errors_on(changeset)
+    end
+
+    test "partial unique index prevents second destination auth method per channel" do
+      channel = insert(:channel)
+      pc1 = insert(:project_credential, project: channel.project)
+      pc2 = insert(:project_credential, project: channel.project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        webhook_auth_method: nil,
+        project_credential: pc1,
+        role: :destination
+      )
+
+      assert {:error, changeset} =
+               %ChannelAuthMethod{channel_id: channel.id}
+               |> ChannelAuthMethod.changeset(%{
+                 role: :destination,
+                 project_credential_id: pc2.id
+               })
+               |> Lightning.Repo.insert()
+
+      assert errors_on(changeset) != %{}
+    end
+
+    test "destination auth with a nonexistent project credential renders the shared wording" do
+      channel = insert(:channel)
+
+      assert {:error, changeset} =
+               %ChannelAuthMethod{channel_id: channel.id}
+               |> ChannelAuthMethod.changeset(%{
+                 role: :destination,
+                 project_credential_id: Ecto.UUID.generate()
+               })
+               |> Lightning.Repo.insert()
+
+      assert %{project_credential_id: [msg]} = errors_on(changeset)
+      assert msg == Scoping.violation_message(:project_credential_id)
     end
   end
 end
