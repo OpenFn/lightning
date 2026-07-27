@@ -238,7 +238,7 @@ describe('CollaborativeEditor - Complete Breadcrumb Structure', () => {
     expect(workflowsBreadcrumb.text).toBe('Workflows');
   });
 
-  test('workflow breadcrumb is a button, not a navigation link', () => {
+  test('workflow breadcrumb is text type (not link)', () => {
     const breadcrumbs = generateBreadcrumbStructure(
       'project-123',
       'Test Project',
@@ -246,7 +246,7 @@ describe('CollaborativeEditor - Complete Breadcrumb Structure', () => {
     );
 
     const workflowBreadcrumb = breadcrumbs[4];
-    expect(workflowBreadcrumb.type).toBe('button');
+    expect(workflowBreadcrumb.type).toBe('text');
     expect(workflowBreadcrumb.href).toBeUndefined();
     expect(workflowBreadcrumb.text).toBe('Test Workflow');
   });

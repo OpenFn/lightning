@@ -2,13 +2,16 @@
  * Workflow Title Breadcrumb Tests
  *
  * The workflow title in the editor breadcrumbs returns to the root workflow
- * editor view. Clicking it closes the full IDE (and any other panel),
- * deselects the current node, and drops any run-viewing context, landing on
- * the bare canvas.
+ * editor view: it closes the full IDE (and any other panel), deselects the
+ * current node, and drops any run-viewing context, landing on the bare canvas.
  *
- * Breadcrumbs.test.tsx covers the BreadcrumbLink/BreadcrumbText primitives in
- * isolation. This file covers the wiring: that the title is rendered as a
- * button and that clicking it clears the right URL params in one update.
+ * The run panel and the run viewer live in stores as well as the URL, and each
+ * has a sync effect that writes its param straight back if only the URL is
+ * cleared (WorkflowEditor restores panel=run, CollaborativeWorkflowDiagram
+ * restores run=<id>). So these tests assert that the handler closes both at the
+ * source, not just that it passes the right params.
+ *
+ * Breadcrumbs.test.tsx covers the BreadcrumbLink/BreadcrumbText primitives.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -22,6 +25,8 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 const urlState = createMockURLState();
+const closeRunPanel = vi.fn();
+const clearRun = vi.fn();
 
 vi.mock('#/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
@@ -67,7 +72,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
-  useIsRunPanelOpen: () => false,
+  useIsRunPanelOpen: () => true,
+  useUICommands: () => ({ closeRunPanel }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
+  useFollowRun: () => ({ run: null, clearRun }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
@@ -84,10 +94,15 @@ function renderBreadcrumbs() {
   );
 }
 
+async function clickTitle() {
+  await userEvent.click(screen.getByRole('button', { name: 'Test Workflow' }));
+}
+
 describe('workflow title breadcrumb', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     urlState.reset();
+    closeRunPanel.mockClear();
+    clearRun.mockClear();
   });
 
   test('renders the workflow title as a button rather than plain text', () => {
@@ -104,14 +119,11 @@ describe('workflow title breadcrumb', () => {
       job: 'job-1',
       run: 'run-1',
       step: 'step-1',
-      runMode: 'retry',
+      runMode: 'custom-input',
     });
 
     renderBreadcrumbs();
-
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Test Workflow' })
-    );
+    await clickTitle();
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledTimes(1);
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
@@ -125,19 +137,25 @@ describe('workflow title breadcrumb', () => {
     });
   });
 
-  test('clicking the title with the IDE open closes it', async () => {
-    urlState.setParams({ panel: 'editor', job: 'job-1' });
+  test('closes the run panel at the store, not only in the URL', async () => {
+    // WorkflowEditor's sync effect rewrites panel=run while the store flag is
+    // still set, so clearing the param alone would be undone immediately.
+    urlState.setParams({ panel: 'run', job: 'job-1' });
 
     renderBreadcrumbs();
+    await clickTitle();
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Test Workflow' })
-    );
+    expect(closeRunPanel).toHaveBeenCalledTimes(1);
+  });
 
-    const [update] = urlState.mockFns.updateSearchParams.mock.calls[0] as [
-      Record<string, string | null>,
-    ];
-    expect(update['panel']).toBeNull();
-    expect(update['job']).toBeNull();
+  test('closes the run viewer at the store, not only in the URL', async () => {
+    // CollaborativeWorkflowDiagram's restore effect rewrites run=<id> while a
+    // run is active, so clearing the param alone would be undone immediately.
+    urlState.setParams({ run: 'run-1', step: 'step-1' });
+
+    renderBreadcrumbs();
+    await clickTitle();
+
+    expect(clearRun).toHaveBeenCalledTimes(1);
   });
 });

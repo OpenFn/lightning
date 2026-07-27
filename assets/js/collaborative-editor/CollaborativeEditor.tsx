@@ -20,11 +20,12 @@ import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
+import { useFollowRun } from './hooks/useHistory';
 import {
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen } from './hooks/useUI';
+import { useIsRunPanelOpen, useUICommands } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
@@ -49,7 +50,8 @@ export interface CollaborativeEditorDataProps {
 /**
  * BreadcrumbContent Component
  *
- * Internal component that renders breadcrumbs with store-first, props-fallback pattern.
+ * Renders breadcrumbs with store-first, props-fallback pattern. Exported so it
+ * can be rendered on its own in tests; nothing else should import it.
  * This component must be inside StoreProvider to access sessionContextStore.
  *
  * Migration Strategy:
@@ -89,6 +91,8 @@ export function BreadcrumbContent({
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   const isRunPanelOpen = useIsRunPanelOpen();
+  const { closeRunPanel } = useUICommands();
+  const { clearRun } = useFollowRun(null);
 
   const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
@@ -97,7 +101,16 @@ export function BreadcrumbContent({
   // closes the full IDE (and any other panel), deselects the current node, and
   // drops any run-viewing context, landing on the bare canvas. This clears more
   // than the IDE's close ("x") button, which only closes the panel.
+  //
+  // The run panel and the run viewer are held in stores as well as the URL, and
+  // both have sync effects that write their param straight back if only the URL
+  // is cleared: WorkflowEditor restores panel=run while the run panel is open,
+  // and CollaborativeWorkflowDiagram restores run=<id> while a run is active.
+  // Close both at the source first, then clear the params in one update so the
+  // whole reset is a single history entry.
   const handleTitleClick = useCallback(() => {
+    closeRunPanel();
+    clearRun();
     updateSearchParams({
       panel: null,
       job: null,
@@ -107,7 +120,7 @@ export function BreadcrumbContent({
       step: null,
       runMode: null,
     });
-  }, [updateSearchParams]);
+  }, [closeRunPanel, clearRun, updateSearchParams]);
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;

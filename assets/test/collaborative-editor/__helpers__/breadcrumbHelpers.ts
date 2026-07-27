@@ -16,13 +16,9 @@ import type { ProjectContext } from '../../../js/collaborative-editor/types/sess
 
 /**
  * Breadcrumb item type definition
- *
- * `button` covers a BreadcrumbLink rendered without an href: it performs an
- * action rather than navigating. The workflow title uses this to return to the
- * root editor view.
  */
 export interface BreadcrumbItem {
-  type: 'link' | 'button' | 'text';
+  type: 'link' | 'text';
   href?: string;
   text: string;
   icon?: string;
@@ -152,7 +148,7 @@ export function generateBreadcrumbStructure(
       text: 'Workflows',
     },
     {
-      type: 'button',
+      type: 'text',
       text: workflowName,
     },
   ];
