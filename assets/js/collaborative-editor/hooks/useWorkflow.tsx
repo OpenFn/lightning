@@ -1016,7 +1016,8 @@ export const useWorkflowReadOnly = (): {
   if (isUnsavedNewWorkflow) {
     return {
       isReadOnly: true,
-      tooltipMessage: 'Click "Create" to edit this workflow',
+      tooltipMessage:
+        'This workflow has not been saved yet and cannot be edited',
     };
   }
 
