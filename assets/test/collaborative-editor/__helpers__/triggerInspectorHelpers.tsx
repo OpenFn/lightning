@@ -44,6 +44,14 @@ import { createMockSocket } from './sessionStoreHelpers';
 export interface TriggerTestHarnessOptions {
   /** Whether the session-context emits can_edit_workflow=true (default: true). */
   canEdit?: boolean;
+  /**
+   * Whether the session-context emits can_write_webhook_auth_method=true.
+   * Defaults to `canEdit` so existing callers (which only vary editor-level
+   * access) keep getting the same permission for both fields. Pass this
+   * explicitly to test the owner/admin-only auth-method gating separately
+   * from general workflow-edit access.
+   */
+  canWriteWebhookAuthMethod?: boolean;
   /** Whether the session-context emits kafka_triggers_enabled=true (default: false). */
   kafkaEnabled?: boolean;
   /**
@@ -105,6 +113,7 @@ export async function createTriggerTestHarness(
 ): Promise<TriggerTestHarness> {
   const {
     canEdit = true,
+    canWriteWebhookAuthMethod = canEdit,
     kafkaEnabled = false,
     webhookAuthMethods = [],
     workflowStore,
@@ -158,7 +167,7 @@ export async function createTriggerTestHarness(
       permissions: {
         can_edit_workflow: canEdit,
         can_run_workflow: canEdit,
-        can_write_webhook_auth_method: canEdit,
+        can_write_webhook_auth_method: canWriteWebhookAuthMethod,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,

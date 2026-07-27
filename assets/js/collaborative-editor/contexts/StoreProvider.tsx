@@ -128,13 +128,21 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       }
     }
 
+    // Create the SessionContextStore first so the WorkflowStore can read the
+    // current user's `can_edit_workflow` permission lazily.
+    const sessionContextStore = createSessionContextStore(isNewWorkflow);
+
     return {
       adaptorStore: createAdaptorStore(),
       credentialStore: createCredentialStore(),
       metadataStore: createMetadataStore(),
       awarenessStore: createAwarenessStore(),
-      workflowStore: createWorkflowStore(),
-      sessionContextStore: createSessionContextStore(isNewWorkflow),
+      workflowStore: createWorkflowStore({
+        getCanEdit: () =>
+          sessionContextStore.getSnapshot().permissions?.can_edit_workflow ??
+          false,
+      }),
+      sessionContextStore,
       historyStore: createHistoryStore({
         initialRunData: parsedInitialRunData,
       }),

@@ -7,6 +7,7 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
+  alias Lightning.Credentials.Scoping
   alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
@@ -130,6 +131,21 @@ defmodule Lightning.Workflows do
     |> preload(^include)
   end
 
+  @doc """
+  Gets a workflow by id, scoped to the given project.
+
+  Returns `nil` when the id is malformed, missing, or belongs to another
+  project, so it can't be used to read or mutate a workflow across projects.
+  """
+  def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
+    if Lightning.Validators.valid_uuid?(id) do
+      id
+      |> get_workflow_query(opts)
+      |> where([w], w.project_id == ^project.id)
+      |> Repo.one()
+    end
+  end
+
   @spec save_workflow(
           Ecto.Changeset.t(Workflow.t()) | map(),
           struct(),
@@ -217,6 +233,9 @@ defmodule Lightning.Workflows do
       orphan_jobs_being_deleted(repo, changeset)
     end)
     |> Multi.insert_or_update(:workflow, changeset)
+    |> Multi.run(:credential_scope_check, fn _repo, %{workflow: workflow} ->
+      credential_scope_check(workflow, changeset)
+    end)
     |> Multi.run(:cleanup_orphaned_edges, fn repo,
                                              %{
                                                workflow: workflow,
@@ -235,6 +254,48 @@ defmodule Lightning.Workflows do
 
   defp validate_not_deleted(%{data: %{deleted_at: nil}}), do: {:ok, true}
   defp validate_not_deleted(_changeset), do: {:error, :workflow_deleted}
+
+  # Read-your-writes: the just-written jobs of this workflow. Every save path
+  # funnels through here, so this is the single chokepoint that rejects a job
+  # referencing a credential owned by a different project than the workflow's.
+  defp credential_scope_check(workflow, changeset) do
+    jobs = Scoping.job_refs_for_workflow(workflow.id)
+
+    case Scoping.out_of_project_references(workflow.project_id, jobs) do
+      [] ->
+        {:ok, :ok}
+
+      violations ->
+        {:error, apply_violations_to_changeset(changeset, violations, jobs)}
+    end
+  end
+
+  # A violation on a job carried in this change surfaces as a field error on
+  # its nested changeset. A violation on a persisted job the change never
+  # touched (legacy poisoned data) has no changeset to carry it, so it becomes
+  # a base error naming the job — the save still fails, diagnosably.
+  defp apply_violations_to_changeset(changeset, violations, refs) do
+    {changeset, unattached} =
+      case Ecto.Changeset.get_change(changeset, :jobs) do
+        nil ->
+          {changeset, violations}
+
+        job_changesets ->
+          {jobs, unattached} =
+            Scoping.attach_violations(
+              job_changesets,
+              violations,
+              &Ecto.Changeset.get_field(&1, :id)
+            )
+
+          {Ecto.Changeset.put_change(changeset, :jobs, jobs), unattached}
+      end
+
+    descriptions =
+      Map.new(refs, fn %{key: id, label: name} -> {id, ~s(job "#{name}")} end)
+
+    Scoping.invalidate(changeset, unattached, descriptions)
+  end
 
   defp maybe_capture_snapshot(multi, %{changes: changes}) when changes == %{},
     do: multi
@@ -909,27 +970,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-    Check if workflow exist
+    Checks if a workflow exists in the given project
   """
-  def workflow_exists?(project_id, workflow_name) do
+  def workflow_exists_in_project?(project_id, workflow_id) do
     query =
-      from w in Workflow,
-        where: w.project_id == ^project_id and w.name == ^workflow_name
+      from q in Query.workflows_for(%Project{id: project_id}),
+        where: q.id == ^workflow_id
 
     Repo.exists?(query)
-  end
-
-  @doc """
-  A way to ensure the consistency of nodes.
-  This query orders jobs based on their `inserted_at` timestamps in ascending order
-  """
-  def jobs_ordered_subquery do
-    from(j in Job, order_by: [asc: j.inserted_at])
-  end
-
-  def has_newer_version?(%Workflow{lock_version: version, id: id}) do
-    from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
-    |> Repo.exists?()
   end
 
   @doc """

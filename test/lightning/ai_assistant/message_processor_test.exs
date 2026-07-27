@@ -386,4 +386,141 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.content == "Workflow response"
     end
   end
+
+  describe "fetch_and_scrub_io_data/1 via process_job_message/2" do
+    test "attaching your OWN step egresses its scrubbed input/output to Apollo",
+         %{user: user, project: project} do
+      %{job: job, step: step} = step_in_run(project)
+
+      user_message = io_attach_message(user, project, job, step.id)
+
+      respond = apollo_streaming_reply()
+
+      # This `expect` takes precedence over the setup `Mox.stub` for the first
+      # (and only) POST this path makes. The scrubbed IO rides in "context".
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert env.url =~ "/services/job_chat/stream"
+
+        context = Jason.decode!(env.body)["context"]
+
+        # Scrubber.scrub_values/1 preserves keys/shape, reduces values to their
+        # type: integers -> "number", strings -> "string", etc.
+        assert context["input"] == %{"a" => "number"}
+        assert context["output"] == %{"b" => "number"}
+
+        respond.(env, opts)
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+    end
+
+    test "attaching a FOREIGN step must not egress its IO (regression guard)",
+         %{user: user, project: project} do
+      # The attacker's own job, in their own project — makes the message itself
+      # legitimate/authorized.
+      %{job: own_job} = step_in_run(project)
+
+      # A step that lives in a DIFFERENT project the attacker has no rights to.
+      foreign_project = insert(:project)
+      %{step: foreign_step} = step_in_run(foreign_project)
+
+      # Own job on the message, but a foreign step_id in message_options —
+      # exactly the IDOR: step_id is never scoped to the session's project.
+      user_message = io_attach_message(user, project, own_job, foreign_step.id)
+
+      respond = apollo_streaming_reply()
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        context = Jason.decode!(env.body)["context"]
+
+        # After the fix, get_step_with_dataclips/… refuses to load a step that
+        # isn't reachable from a run in the session's project, so no IO is
+        # attached and build_context/2 omits the keys entirely (=> nil once
+        # JSON-decoded).
+        #
+        # ON THE CURRENT VULNERABLE CODE THIS FAILS: context["input"] /
+        # ["output"] come back populated with the foreign step's scrubbed
+        # structure — that failure *is* the confirmed cross-tenant leak.
+        assert context["input"] == nil
+        assert context["output"] == nil
+
+        respond.(env, opts)
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+    end
+
+    # --- helpers ---------------------------------------------------------------
+
+    # A step wired to a real run in `project` (via run_step), with input + output
+    # dataclips carrying simple bodies so both scrub branches run. Returning the
+    # step through a run is what keeps the happy-path test valid after the fix
+    # (which scopes step_id to a run in the session's project).
+    defp step_in_run(project) do
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+      work_order = insert(:workorder, workflow: workflow, snapshot: snapshot)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          snapshot: snapshot,
+          dataclip: build(:dataclip, project: project),
+          starting_job: job
+        )
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      insert(:run_step, run: run, step: step)
+
+      %{workflow: workflow, job: job, run: run, step: step}
+    end
+
+    # A job_code session in `project` requesting IO attachment for `step_id`,
+    # plus the user message that carries `job` (so job_chat?/2 routes to the job
+    # path). Returns the persisted user message.
+    defp io_attach_message(user, project, job, step_id) do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          project: project,
+          job_id: job.id,
+          meta: %{
+            "message_options" => %{
+              "attach_io_data" => true,
+              "step_id" => step_id
+            }
+          }
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "summarise my step io", user: user, job: job},
+          []
+        )
+
+      Enum.find(updated_session.messages, &(&1.role == :user))
+    end
+
+    defp apollo_streaming_reply do
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "AI response",
+        "history" => [
+          %{"role" => "user", "content" => "test"},
+          %{"role" => "assistant", "content" => "AI response"}
+        ]
+      })
+    end
+  end
 end

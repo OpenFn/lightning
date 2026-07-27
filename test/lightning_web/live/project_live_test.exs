@@ -18,7 +18,6 @@ defmodule LightningWeb.ProjectLiveTest do
   import Mox
 
   alias Lightning.Auditing.Audit
-  alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
@@ -34,18 +33,18 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
 
     test "cannot access the index page", %{conn: conn} do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "cannot access the new page", %{conn: conn} do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/projects/new")
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 
@@ -990,7 +989,7 @@ defmodule LightningWeb.ProjectLiveTest do
             on_error: :raise
           )
 
-        credential_name = Lightning.Name.generate()
+        credential_name = build(:credential).name
 
         refute html =~ credential_name
 
@@ -1084,7 +1083,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      credential_name = Lightning.Name.generate()
+      credential_name = build(:credential).name
 
       refute html =~ credential_name
 
@@ -1839,6 +1838,44 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{name: "project-1"} = Repo.get!(Project, project.id)
     end
 
+    test "generic save cannot mass-assign privileged fields past their gates",
+         %{conn: conn, user: user} do
+      other_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      project =
+        insert(:project,
+          name: "project-1",
+          requires_mfa: false,
+          allow_support_access: false,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> form("#project-settings-form", project: %{raw_name: "renamed"})
+      |> render_submit(%{
+        "project" => %{
+          "requires_mfa" => "true",
+          "scheduled_deletion" => "2038-01-01T00:00:00Z",
+          "allow_support_access" => "true",
+          "parent_id" => other_project.id
+        }
+      })
+
+      reloaded = Repo.get!(Project, project.id)
+
+      # The ordinary field is applied...
+      assert reloaded.name == "renamed"
+      # ...but none of the privileged fields ride along.
+      refute reloaded.requires_mfa
+      assert reloaded.scheduled_deletion == nil
+      refute reloaded.allow_support_access
+      assert reloaded.parent_id == nil
+    end
+
     test "project admin can edit project concurrency with valid data",
          %{
            conn: conn,
@@ -2358,7 +2395,7 @@ defmodule LightningWeb.ProjectLiveTest do
         refute html =~ "Basic HTTP Authentication"
         refute html =~ "API Key Authentication"
 
-        credential_name = Name.generate()
+        credential_name = build(:credential).name
 
         refute html =~ credential_name
 
@@ -2472,7 +2509,7 @@ defmodule LightningWeb.ProjectLiveTest do
         # modal exists
         assert view |> element("##{modal_id}") |> has_element?()
 
-        credential_name = Name.generate()
+        credential_name = build(:credential).name
 
         refute render(view) =~ credential_name
 
@@ -2515,6 +2552,49 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # modal doesn't exist
         refute view |> element("##{modal_id}") |> has_element?()
+      end
+    end
+
+    test "owners/admins cannot open another project's webhook auth method by id" do
+      project = insert(:project)
+
+      # A webhook auth method that belongs to a DIFFERENT project.
+      foreign_auth_method =
+        insert(:webhook_auth_method,
+          project: insert(:project),
+          auth_type: :basic,
+          name: "someone-elses-auth"
+        )
+
+      modal_id = "webhook_auth_method_modal"
+
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+        # edit and delete both reject the cross-project id and never open the
+        # modal on the foreign method
+        for target <- ["edit_webhook_auth_method", "delete_webhook_auth_method"] do
+          html =
+            render_click(view, "show_modal", %{
+              target: target,
+              id: foreign_auth_method.id
+            })
+
+          assert html =~ "Webhook auth method not found"
+          refute html =~ "someone-elses-auth"
+          refute view |> element("##{modal_id}") |> has_element?()
+        end
+
+        # the linked-triggers view (a read with no write gate) is scoped too
+        html =
+          render_click(view, "show_modal", %{
+            target: "linked_triggers_for_webhook_auth_method",
+            id: foreign_auth_method.id
+          })
+
+        assert html =~ "Webhook auth method not found"
+        refute html =~ "someone-elses-auth"
       end
     end
 
@@ -4221,6 +4301,166 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "cannot remove a collaborator belonging to another project (H-2)", %{
+      conn: conn
+    } do
+      project_a = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project_a, :admin)
+
+      project_b = insert(:project)
+
+      victim =
+        insert(:project_user,
+          project: project_b,
+          user: build(:user),
+          role: :editor
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+
+      html =
+        render_click(view, "remove_project_user", %{
+          "project_user_id" => victim.id
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.get(Lightning.Projects.ProjectUser, victim.id)
+    end
+
+    test "cannot toggle failure alert for a collaborator in another project (H-2)",
+         %{conn: conn} do
+      assert_cross_project_pref_blocked(
+        conn,
+        "set_failure_alert",
+        :failure_alert,
+        "false",
+        true
+      )
+    end
+
+    test "cannot set digest for a collaborator in another project (H-2)", %{
+      conn: conn
+    } do
+      assert_cross_project_pref_blocked(
+        conn,
+        "set_digest",
+        :digest,
+        "daily",
+        :never
+      )
+    end
+
+    test "cannot toggle failure alert for another member of the same project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      other =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          failure_alert: true
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_click(view, "set_failure_alert", %{
+          "project_user_id" => other.id,
+          "failure_alert" => "false"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.reload(other).failure_alert == true
+    end
+
+    test "cannot set digest for another member of the same project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      other =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          digest: :never
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_click(view, "set_digest", %{
+          "project_user_id" => other.id,
+          "digest" => "daily"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.reload(other).digest == :never
+    end
+
+    test "a member can still toggle their own failure alert", %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :editor)
+
+      pu =
+        Repo.get_by(Lightning.Projects.ProjectUser,
+          user_id: user.id,
+          project_id: project.id
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      target = !pu.failure_alert
+
+      render_click(view, "set_failure_alert", %{
+        "project_user_id" => pu.id,
+        "failure_alert" => to_string(target)
+      })
+
+      assert Repo.reload(pu).failure_alert == target
+    end
+
+    test "a member can still set their own digest", %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :editor)
+
+      pu =
+        Repo.get_by(Lightning.Projects.ProjectUser,
+          user_id: user.id,
+          project_id: project.id
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      render_click(view, "set_digest", %{
+        "project_user_id" => pu.id,
+        "digest" => "weekly"
+      })
+
+      assert Repo.reload(pu).digest == :weekly
+    end
+
+    # Exercises the shared cast-guarded getter that all three project_user_id
+    # handlers route through, so one malformed-id case covers the guard for all.
+    test "a non-binary project_user_id does not crash the view", %{conn: conn} do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      render_click(view, "remove_project_user", %{"project_user_id" => ["x"]})
+
+      assert Process.alive?(view.pid)
+    end
+
     test "users cant see form to toggle failure alerts if limiter returns error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
@@ -4737,6 +4977,10 @@ defmodule LightningWeb.ProjectLiveTest do
       assert selected_installation =~ expected_installation["id"]
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4795,6 +5039,10 @@ defmodule LightningWeb.ProjectLiveTest do
         connection: %{github_installation_id: expected_installation["id"]}
       )
 
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4822,6 +5070,10 @@ defmodule LightningWeb.ProjectLiveTest do
       # now let us refresh the branches
       new_branch = %{"name" => "newbranch"}
 
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [
@@ -4841,6 +5093,95 @@ defmodule LightningWeb.ProjectLiveTest do
         |> Floki.find("#select-branches-input li")
 
       assert Enum.count(options) == 3
+    end
+
+    test "does not fetch branches from a github installation the user cannot access",
+         %{conn: conn} do
+      own_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      own_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      # An installation belonging to another tenant. The shared GitHub App's
+      # private key can mint a token for it, so the branch fetch must refuse
+      # before reaching for the app credential.
+      foreign_installation_id = "9999"
+      foreign_repo = "otheraccount/private-repo"
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :owner)
+      set_valid_github_oauth_token!(user)
+
+      # On mount the user only sees their own installation (1234) and its repos.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      expect_create_installation_token(own_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [own_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # Attempt to list branches for the FOREIGN installation. The only GitHub
+      # call the happy path should make is the /user/installations membership
+      # check, which returns 1234 only. We deliberately set NO
+      # expect_create_installation_token/expect_get_repo_branches for the
+      # foreign id, so if the code tried to mint an app token or fetch branches
+      # the strict Mox adapter would raise.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(
+        connection: %{
+          github_installation_id: foreign_installation_id,
+          repo: foreign_repo
+        }
+      )
+
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input li")
+
+      # Only the "Select a branch" prompt is present; no branches leaked.
+      assert Enum.count(options) == 1
+      refute find_selected_option(Floki.raw_html(options), "li")
+
+      # The same guarantee holds when explicitly refreshing branches.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      view |> element("#refresh-branches-button") |> render_click()
+
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input li")
+
+      assert Enum.count(options) == 1
     end
 
     test "authorized users can save repo connection successfully without setting config path and initiate sync to github immediately",
@@ -4928,6 +5269,10 @@ defmodule LightningWeb.ProjectLiveTest do
       options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -5068,6 +5413,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -5188,6 +5537,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -5278,6 +5631,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -5370,6 +5727,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -7212,6 +7573,32 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
     end
+  end
+
+  # Renders `event` against a project_user in a *different* project and asserts
+  # the targeted field is untouched and the deny flash is shown. Covers the H-2
+  # cross-project IDOR for both notification handlers.
+  defp assert_cross_project_pref_blocked(conn, event, field, submitted, seed) do
+    project_a = insert(:project)
+    {conn, _admin} = setup_project_user(conn, project_a, :admin)
+
+    victim =
+      insert(
+        :project_user,
+        [project: insert(:project), user: build(:user)] ++ [{field, seed}]
+      )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+
+    html =
+      render_click(view, event, %{
+        "project_user_id" => victim.id,
+        to_string(field) => submitted
+      })
+
+    assert html =~ "You are not authorized to perform this action"
+    assert Map.fetch!(Repo.reload(victim), field) == seed
   end
 
   defp collection_row_names(view) do

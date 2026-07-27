@@ -31,6 +31,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
   import Ecto.Query
 
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.DataclipScrubber
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects
@@ -51,9 +52,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
           "search_params" => params
         }
       }) do
-    search_params = SearchParams.from_map(params)
-
-    with {:ok, project_file} <- get_project_file(project_file_id),
+    with {:ok, search_params} <- SearchParams.from_map(params),
+         {:ok, project_file} <- get_project_file(project_file_id),
          {:ok, project_file} <-
            update_project_file(project_file, %{status: :in_progress}),
          {:ok, project} <- get_project(project_id),
@@ -396,6 +396,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
       where: d.id in ^dataclip_ids,
       select: %{
         id: d.id,
+        type: d.type,
         body:
           type(
             fragment(
@@ -413,6 +414,9 @@ defmodule Lightning.WorkOrders.ExportWorker do
       }
     )
     |> Repo.all()
+    |> Enum.map(fn dataclip ->
+      %{id: dataclip.id, body: DataclipScrubber.scrub_dataclip_body!(dataclip)}
+    end)
   end
 
   defp format_work_orders(work_orders) do
