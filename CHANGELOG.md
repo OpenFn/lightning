@@ -63,6 +63,9 @@ and this project adheres to
   they are excluded from the merge screen entirely. Workflows deleted inside the
   sandbox still appear and now default to kept, so removing them from the
   project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+- Support mailto link no longer opens a blank tab; email address is shown as a
+  tooltip for users without a mail client configured
+  [#2435](https://github.com/OpenFn/lightning/issues/2435)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
 - Prevent AI Assistant channel joins from crashing when a chat references a
@@ -841,9 +844,6 @@ Migrations in this release, all in `priv/repo/migrations/`:
   [PR#4551](https://github.com/OpenFn/lightning/pull/4551)
 - Fix AI assistant authorization for support users on projects with support
   access enabled [#4571](https://github.com/OpenFn/lightning/issues/4571)
-- Support mailto link no longer opens a blank tab; email address is shown as
-  a tooltip for users without a mail client configured
-  [#2435](https://github.com/OpenFn/lightning/issues/2435)
 
 ## [2.16.0] - 2026-03-24
 
