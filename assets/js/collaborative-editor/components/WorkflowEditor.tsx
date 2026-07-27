@@ -301,10 +301,11 @@ export function WorkflowEditor({
     'Control+\\, Meta+\\',
     () => {
       if (!isNewWorkflow) return;
+      // Only meaningful while the landing screen is up: the shortcut used to
+      // toggle the create-workflow left panel, which no longer exists.
       if (showLandingScreen) {
         openYAMLImportModal();
       }
-      // left-panel path removed — see #4876
     },
     0,
     { enabled: isNewWorkflow }

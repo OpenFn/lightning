@@ -140,7 +140,7 @@ export function LandingScreen({
             testId="build-from-scratch-card"
             icon="hero-plus-circle"
             title="Build from scratch"
-            description="Start with an empty canvas and pick a trigger as your first step."
+            description="Start with a webhook trigger and an empty first step."
             onClick={onBuildFromScratch}
             disabled={isBuildingFromScratch}
           />

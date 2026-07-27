@@ -94,7 +94,8 @@ export interface UICommands {
   /** Open the YAML import modal */
   openYAMLImportModal: () => void;
 
-  /** Close the YAML import modal and reset import panel content */
+  /** Close the YAML import modal. The modal owns its own draft content, so
+   * closing it discards whatever was typed or uploaded. */
   closeYAMLImportModal: () => void;
 
   /** Open the template browser modal */

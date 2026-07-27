@@ -105,10 +105,13 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
             ? 'border-indigo-500 bg-indigo-50'
             : 'border-gray-200 hover:border-gray-300'
         )}
+        // The drag handlers live here, but the file input below is the real
+        // control — it carries the accessible name and the keyboard path.
         role="presentation"
       >
         <input
           id="workflow-file"
+          aria-label="Upload a file"
           type="file"
           accept=".yaml,.yml"
           onChange={handleFileInput}

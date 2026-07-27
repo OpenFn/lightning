@@ -175,13 +175,15 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 **Intent:** Coordinate which panels and modals are visible. Pure local state — no network, no persistence. The traffic controller for editor UI layout.
 
-**Key State:** `runPanelOpen`/`runPanelContext`, `githubSyncModalOpen`, `aiAssistantPanelOpen`/`aiAssistantInitialMessage`, `createWorkflowPanelCollapsed`, `templatePanel` (templates list, search, selection), `importPanel` (YAML content, import state machine)
+**Key State:** `runPanelOpen`/`runPanelContext`, `githubSyncModalOpen`, `aiAssistantPanelOpen`/`aiAssistantInitialMessage`, `showLandingScreen`, `showYAMLImportModal`, `showTemplateBrowserModal`, `templatePanel` (templates list, loading, search query)
 
 **Key behavior:**
-- Reads URL search parameters during initialization: `?chat=true` opens AI panel, `?method=...` expands create-workflow panel
-- AI panel takes priority when both URL params are present
+- Reads URL search parameters during initialization: `?chat=true` opens the AI panel
+- Initialization is skipped entirely while the workflow is new, so a URL param cannot open a panel on a workflow that has no row yet
 
-**Commands:** `openRunPanel`, `closeRunPanel`, `openGitHubSyncModal`, `closeGitHubSyncModal`, `openAIAssistantPanel`, `closeAIAssistantPanel`, `toggleAIAssistantPanel`, `setTemplates`, `selectTemplate`, `setImportYamlContent`, `setImportState`
+**Commands:** `openRunPanel`, `closeRunPanel`, `openGitHubSyncModal`, `closeGitHubSyncModal`, `openAIAssistantPanel`, `closeAIAssistantPanel`, `toggleAIAssistantPanel`, `dismissLandingScreen`, `openYAMLImportModal`, `closeYAMLImportModal`, `openTemplateBrowserModal`, `closeTemplateBrowserModal`, `setTemplates`, `setTemplatesLoading`, `setTemplateSearchQuery`
+
+The YAML import modal holds its own draft in local state; there is no `importPanel` slice.
 
 ---
 

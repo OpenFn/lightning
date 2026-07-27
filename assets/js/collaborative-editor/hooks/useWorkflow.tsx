@@ -37,6 +37,7 @@ import React, {
 } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import _logger from '#/utils/logger';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import flowEvents from '../components/diagram/react-flow-events';
@@ -61,8 +62,7 @@ import {
   useWorkflowTemplate,
 } from './useSessionContext';
 
-// import _logger from "#/utils/logger";
-// const logger = _logger.ns("useWorkflow").seal();
+const logger = _logger.ns('useWorkflow').seal();
 
 // Stable id for the generic "Failed to save workflow" toast so a later
 // successful save can dismiss it even if it was shown with duration:
@@ -746,10 +746,11 @@ export const STILL_CONNECTING_ALERT = {
  * reset local form state, dismiss the landing screen), so `if (created) {
  * ... }` at the call site is simpler than a shared callback shape.
  *
- * Takes a thunk rather than a pre-built state so that YAML parsing errors
- * (e.g. a malformed template) are caught by the same "Failed to create
- * workflow" handler as import errors, matching the original per-call-site
- * behavior.
+ * Takes a thunk rather than a pre-built state so that building the state
+ * (e.g. parsing a template's YAML) happens inside the flow and can report its
+ * own failure. Building and importing fail for different reasons, so they are
+ * caught separately: a template whose stored YAML no longer parses is not a
+ * connection problem and must not be described as one.
  */
 export function useCreateWorkflowFlow() {
   const isConnected = useSession(selectIsConnected);
@@ -768,10 +769,22 @@ export function useCreateWorkflowFlow() {
       );
       return false;
     }
+    let state: YAMLWorkflowState;
     try {
-      const state = buildState();
+      state = buildState();
+    } catch (error) {
+      logger.error('Failed to build workflow state for import', error);
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description:
+          'This workflow could not be read. Please check the YAML and try again.',
+      });
+      return false;
+    }
+    try {
       await importWorkflow(state);
-    } catch {
+    } catch (error) {
+      logger.error('Failed to import workflow', error);
       notifications.alert({
         title: 'Failed to create workflow',
         description: 'Please check your connection and try again.',
@@ -780,8 +793,9 @@ export function useCreateWorkflowFlow() {
     }
     try {
       await saveWorkflow({ notify: 'error-only' });
-    } catch {
+    } catch (error) {
       // Shared handler has already shown a persistent Retry toast.
+      logger.error('Failed to save new workflow', error);
       return false;
     }
     return true;
