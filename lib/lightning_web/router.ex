@@ -9,7 +9,6 @@ defmodule LightningWeb.Router do
   import Phoenix.LiveDashboard.Router
 
   alias CredentialLive
-  alias JobLive
   alias ProjectLive
   alias UserLive
 
@@ -191,7 +190,7 @@ defmodule LightningWeb.Router do
 
     get "/users/send-confirmation-email", UserConfirmationController, :send_email
 
-    get "/credentials/transfer/:credential_id/:receiver_id/:token",
+    get "/credentials/transfer/:token",
         CredentialTransferController,
         :confirm
 
@@ -216,8 +215,6 @@ defmodule LightningWeb.Router do
     end
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live "/settings", SettingsLive.Index, :index
-
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
       live "/settings/users/:id/delete", UserLive.Index, :delete
@@ -239,8 +236,6 @@ defmodule LightningWeb.Router do
       live "/mfa_required", ProjectLive.MFARequired, :index
 
       scope "/projects/:project_id", as: :project do
-        live "/jobs", JobLive.Index, :index
-
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index

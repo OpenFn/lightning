@@ -12,7 +12,6 @@ defmodule Lightning.Workflows.Trigger do
   endpoint is called.
   """
   use Lightning.Schema
-  import Ecto.Query
   import Lightning.Validators
 
   alias Lightning.Workflows.Job
@@ -192,21 +191,5 @@ defmodule Lightning.Workflows.Trigger do
       nil -> changeset |> put_change(field, value)
       _value -> changeset
     end
-  end
-
-  def with_auth_methods_query do
-    from t in __MODULE__,
-      left_join: wam in assoc(t, :webhook_auth_methods),
-      preload: [webhook_auth_methods: wam],
-      select: %{
-        t
-        | has_auth_method:
-            fragment(
-              "CASE WHEN ? IS NULL THEN ? ELSE ? END",
-              wam.id,
-              false,
-              true
-            )
-      }
   end
 end

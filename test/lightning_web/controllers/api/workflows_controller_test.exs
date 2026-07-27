@@ -523,6 +523,43 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                ])
     end
 
+    test "returns 422 when a job references another project's credential", %{
+      conn: conn,
+      project: project
+    } do
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      %{jobs: [job]} =
+        workflow =
+        build(:simple_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{jobs: [job]} = workflow ->
+          %{
+            workflow
+            | jobs: [%{job | project_credential_id: project_credential.id}]
+          }
+        end)
+
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{
+               "id" => nil,
+               "errors" => %{
+                 "jobs" => jobs_errors
+               }
+             } = json_response(conn, 422)
+
+      assert [job_error] = jobs_errors
+      assert job_error =~ "Job #{job.id} has the errors:"
+      assert job_error =~ "project_credential_id:"
+      assert job_error =~ "isn't available in this project"
+    end
+
     test "returns 422 when a trigger has invalid value", %{
       conn: conn,
       project: project
@@ -1288,6 +1325,102 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         )
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    end
+  end
+
+  describe "authorization by project role" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    @tag role: :viewer
+    test "viewer cannot create a workflow", %{conn: conn, project: project} do
+      workflow =
+        build(:simple_workflow,
+          name: "viewer-created-workflow",
+          project_id: project.id
+        )
+
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+
+      refute Lightning.Repo.get_by(Lightning.Workflows.Workflow,
+               name: "viewer-created-workflow"
+             )
+    end
+
+    @tag role: :viewer
+    test "viewer cannot update a workflow", %{conn: conn, project: project} do
+      workflow =
+        insert(:simple_workflow, name: "original-name", project: project)
+        |> Repo.reload()
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(%{name: "hacked-by-viewer"})
+        )
+
+      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+
+      assert Repo.reload(workflow).name == "original-name"
+    end
+
+    test "admin, editor and owner can create a workflow", %{conn: conn} do
+      for role <- [:admin, :editor, :owner] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+
+        workflow =
+          build(:simple_workflow,
+            name: "#{role}-created-workflow",
+            project_id: project.id
+          )
+
+        resp_conn =
+          conn
+          |> assign_bearer(user)
+          |> post(
+            ~p"/api/projects/#{project.id}/workflows/",
+            Jason.encode!(workflow)
+          )
+
+        assert %{"workflow" => %{"id" => id}, "errors" => %{}} =
+                 json_response(resp_conn, 201),
+               "expected #{role} to be allowed to create a workflow"
+
+        assert Lightning.Repo.get(Lightning.Workflows.Workflow, id)
+      end
+    end
+
+    test "admin, editor and owner can update a workflow", %{conn: conn} do
+      for role <- [:admin, :editor, :owner] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+
+        workflow =
+          insert(:simple_workflow, name: "#{role}-original", project: project)
+          |> Repo.reload()
+
+        resp_conn =
+          conn
+          |> assign_bearer(user)
+          |> patch(
+            ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+            Jason.encode!(%{name: "#{role}-updated"})
+          )
+
+        assert %{"workflow" => %{}, "errors" => %{}} =
+                 json_response(resp_conn, 200),
+               "expected #{role} to be allowed to update a workflow"
+
+        assert Repo.reload(workflow).name == "#{role}-updated"
+      end
     end
   end
 

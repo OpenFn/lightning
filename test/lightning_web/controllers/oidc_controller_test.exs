@@ -62,32 +62,46 @@ defmodule LightningWeb.OidcControllerTest do
     {:ok, handler: handler, bypass: bypass}
   end
 
-  # A handler that is *also* persisted as an `AuthConfig` row, i.e. the
-  # admin-configured generic OIDC provider. Such providers use the legacy
-  # email-matching login flow rather than per-identity linking.
-  def setup_legacy_handler(_) do
+  # A real OIDC provider: it publishes a JWKS and issuer (so logins are verified
+  # against the signed id_token), and is persisted as an AuthConfig row — the
+  # admin-configured generic provider whose discovery doc yields a jwks_uri.
+  def setup_oidc_handler(_) do
+    {bypass, handler} = create_oidc_handler([])
+    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+    {:ok, handler: handler, bypass: bypass}
+  end
+
+  defp create_oidc_handler(opts) do
     bypass = Bypass.open()
+    jwks_uri = "#{endpoint_url(bypass)}/jwks"
+
+    # Bypass can reuse a port across tests; drop any JWKS cached under this
+    # port's uri so a prior test's keys aren't served for this one.
+    Cachex.del(:auth_provider_jwks, jwks_uri)
 
     wellknown = %AuthProviders.WellKnown{
       authorization_endpoint: "#{endpoint_url(bypass)}/authorization_endpoint",
       token_endpoint: "#{endpoint_url(bypass)}/token_endpoint",
-      userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint"
+      userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint",
+      jwks_uri: jwks_uri,
+      issuer: "#{endpoint_url(bypass)}/"
     }
 
     handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
 
     {:ok, handler} =
-      AuthProviders.Handler.new(handler_name,
-        wellknown: wellknown,
-        client_id: "id",
-        client_secret: "secret",
-        redirect_uri: "http://localhost/callback_url"
+      AuthProviders.Handler.new(
+        handler_name,
+        [
+          wellknown: wellknown,
+          client_id: "id",
+          client_secret: "secret",
+          redirect_uri: "http://localhost/callback_url"
+        ] ++ opts
       )
 
     AuthProviders.create_handler(handler)
 
-    # The DB row is what marks this as the legacy generic provider. The store
-    # handler above is what serves the actual OAuth round-trip in the test.
     {:ok, _config} =
       AuthProviders.create(%{
         name: handler_name,
@@ -98,9 +112,7 @@ defmodule LightningWeb.OidcControllerTest do
         redirect_uri: "http://localhost/callback_url"
       })
 
-    on_exit(fn -> AuthProviders.remove_handler(handler) end)
-
-    {:ok, handler: handler, bypass: bypass}
+    {bypass, handler}
   end
 
   # Drives the real authorize redirect so the session-bound `state` (and its
@@ -110,6 +122,75 @@ defmodule LightningWeb.OidcControllerTest do
     conn = get(conn, path)
     %{query: query} = conn |> redirected_to() |> URI.parse()
     {conn, URI.decode_query(query) |> Map.fetch!("state")}
+  end
+
+  # Like follow_authorize/2 but also returns the OIDC `nonce` sent to the
+  # provider, so a test can mint an id_token carrying the matching nonce.
+  defp follow_authorize_with_nonce(conn, path) do
+    conn = get(conn, path)
+    %{query: query} = conn |> redirected_to() |> URI.parse()
+    params = URI.decode_query(query)
+    {conn, Map.fetch!(params, "state"), Map.fetch!(params, "nonce")}
+  end
+
+  # Runs a full verified-id_token login: follows the authorize redirect, mints
+  # an id_token carrying the flow's nonce (unless overridden), serves the token
+  # and JWKS endpoints, and replays the callback.
+  defp id_token_login(conn, handler, bypass, opts) do
+    {conn, state, nonce} =
+      follow_authorize_with_nonce(
+        conn,
+        Routes.oidc_path(conn, :show, handler.name)
+      )
+
+    claims = build_claims(handler, nonce, opts)
+    jwk = Keyword.get(opts, :jwk, test_private_jwk())
+    kid = Keyword.get(opts, :kid, test_kid())
+
+    expect_token(bypass, handler.wellknown, %{
+      access_token: "access_token_123",
+      id_token: sign_id_token(claims, jwk, kid),
+      expires_at: 3600
+    })
+
+    expect_jwks(bypass, handler.wellknown.jwks_uri)
+
+    if userinfo = Keyword.get(opts, :userinfo),
+      do: expect_userinfo(bypass, handler.wellknown, userinfo)
+
+    get(
+      conn,
+      Routes.oidc_path(conn, :new, handler.name, %{
+        "code" => "callback_code",
+        "state" => state
+      })
+    )
+  end
+
+  # Builds a valid-by-default claims map. Override any claim via `claims:`, force
+  # a claim absent via `drop:`, or set `email:`/`email_verified:`/`sub:`/`exp:`/
+  # `nonce:` directly.
+  defp build_claims(handler, nonce, opts) do
+    now = System.system_time(:second)
+
+    %{
+      "iss" => handler.wellknown.issuer,
+      "aud" => handler.client.client_id,
+      "sub" => Keyword.get(opts, :sub, "oidc-subject-123"),
+      "exp" => Keyword.get(opts, :exp, now + 300),
+      "nonce" => Keyword.get(opts, :nonce, nonce),
+      "email" => Keyword.get(opts, :email),
+      "email_verified" => Keyword.get(opts, :email_verified, true),
+      "given_name" => "Test",
+      "family_name" => "User"
+    }
+    |> Map.merge(Keyword.get(opts, :claims, %{}))
+    |> Map.drop(Keyword.get(opts, :drop, []))
+  end
+
+  defp assert_no_login(conn) do
+    assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    refute get_session(conn, :user_token)
   end
 
   defp login_callback(conn, handler, params) do
@@ -1034,47 +1115,30 @@ defmodule LightningWeb.OidcControllerTest do
     end
   end
 
-  describe "GET /authenticate/:provider/callback (legacy generic provider)" do
-    setup :setup_legacy_handler
+  describe "GET /authenticate/:provider/callback (verified id_token)" do
+    setup :setup_oidc_handler
 
-    test "logs in an existing user matched by email, without an identity", %{
+    test "logs in a user whose verified id_token email matches an account", %{
       conn: conn,
       bypass: bypass,
       handler: handler
     } do
-      expect_token(bypass, handler.wellknown)
       user = Lightning.AccountsFixtures.user_fixture()
 
-      expect_userinfo(bypass, handler.wellknown, %{
-        "email" => user.email,
-        "sub" => "ignored-for-legacy"
-      })
-
-      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+      conn = id_token_login(conn, handler, bypass, email: user.email)
 
       assert redirected_to(conn) == "/projects"
-
-      # The legacy flow matches by email only; it never creates an identity.
-      refute Lightning.Accounts.get_user_by_identity(
-               handler.name,
-               "ignored-for-legacy"
-             )
+      assert get_session(conn, :user_token)
     end
 
-    test "rejects an unknown email without creating an account", %{
+    test "rejects a verified email with no matching account", %{
       conn: conn,
       bypass: bypass,
       handler: handler
     } do
-      expect_token(bypass, handler.wellknown)
       email = "no-such-user-#{System.unique_integer([:positive])}@example.com"
 
-      expect_userinfo(bypass, handler.wellknown, %{
-        "email" => email,
-        "sub" => "whatever"
-      })
-
-      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+      conn = id_token_login(conn, handler, bypass, email: email)
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
 
@@ -1089,19 +1153,192 @@ defmodule LightningWeb.OidcControllerTest do
       bypass: bypass,
       handler: handler
     } do
-      expect_token(bypass, handler.wellknown)
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
-      user =
-        insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
-
-      expect_userinfo(bypass, handler.wellknown, %{
-        "email" => user.email,
-        "sub" => "ignored"
-      })
-
-      conn = login_callback(conn, handler, %{"code" => "callback_code"})
+      conn = id_token_login(conn, handler, bypass, email: user.email)
 
       assert redirected_to(conn) =~ "/users/two-factor"
+    end
+
+    test "rejects an id_token whose nonce does not match the session", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          nonce: "not-the-session-nonce"
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects an id_token signed with the wrong key", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # Signed with a different key than the JWKS serves, but the header still
+      # points at the served kid.
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          jwk: other_private_jwk()
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects an id_token whose audience is not our client", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          claims: %{"aud" => "some-other-client"}
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects an id_token whose issuer is wrong", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          claims: %{"iss" => "https://evil.example.com/"}
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects an expired id_token", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          exp: System.system_time(:second) - 60
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects when the id_token marks the email unverified", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          email_verified: false
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "rejects when the id_token has no email_verified claim by default", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # No email_verified in the id_token and no userinfo to fill it in.
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          drop: ["email_verified"],
+          userinfo: %{"sub" => "oidc-subject-123"}
+        )
+
+      assert_no_login(conn)
+    end
+
+    test "accepts an absent email_verified when the provider opts in", %{
+      conn: conn
+    } do
+      {bypass, handler} = create_oidc_handler(allow_unverified_email: true)
+      on_exit(fn -> AuthProviders.remove_handler(handler) end)
+
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # The id_token carries the email but no verified flag; the opt-in trusts it
+      # directly, so no userinfo round-trip happens.
+      conn =
+        id_token_login(conn, handler, bypass,
+          email: user.email,
+          drop: ["email_verified"]
+        )
+
+      assert redirected_to(conn) == "/projects"
+      assert get_session(conn, :user_token)
+    end
+
+    test "reads email_verified from userinfo when the id_token omits the email",
+         %{
+           conn: conn,
+           bypass: bypass,
+           handler: handler
+         } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # id_token carries no email; userinfo (bound to the same sub) supplies a
+      # verified one.
+      conn =
+        id_token_login(conn, handler, bypass,
+          drop: ["email", "email_verified"],
+          userinfo: %{
+            "sub" => "oidc-subject-123",
+            "email" => user.email,
+            "email_verified" => true
+          }
+        )
+
+      assert redirected_to(conn) == "/projects"
+      assert get_session(conn, :user_token)
+    end
+
+    test "ignores userinfo whose subject does not match the id_token", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # userinfo names a different subject, so its email must not be trusted.
+      conn =
+        id_token_login(conn, handler, bypass,
+          drop: ["email", "email_verified"],
+          userinfo: %{
+            "sub" => "a-different-subject",
+            "email" => user.email,
+            "email_verified" => true
+          }
+        )
+
+      assert_no_login(conn)
     end
   end
 end

@@ -823,6 +823,29 @@ defmodule Lightning.SessionTest do
       assert changeset.errors[:name]
     end
 
+    test "rejects a job referencing another project's credential", %{
+      session: session,
+      user: user
+    } do
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      # Point the first job at a credential owned by a different project.
+      doc = Session.get_doc(session)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        first_job = Yex.Array.fetch!(jobs_array, 0)
+        Yex.Map.set(first_job, "project_credential_id", project_credential.id)
+      end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Session.save_workflow(session, user)
+
+      assert %{jobs: [%{project_credential_id: [msg]}]} = errors_on(changeset)
+      assert msg =~ "isn't available in this project"
+    end
+
     test "handles workflow deleted error", %{
       session: session,
       user: user,
