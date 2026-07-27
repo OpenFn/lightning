@@ -2,12 +2,12 @@ import { useCallback, useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink } from './components/Breadcrumbs';
-import { PickerButton } from '../picker/PickerButton';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -170,11 +170,11 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
-    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
-    handleVersionSelect,
     handleTitleClick,
+    handleVersionSelect,
+    isNewWorkflow,
   ]);
 
   return (
