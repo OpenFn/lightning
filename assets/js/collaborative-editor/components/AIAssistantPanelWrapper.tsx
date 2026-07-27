@@ -299,9 +299,9 @@ export function AIAssistantPanelWrapper({
     [aiStore, project, aiMode, updateSearchParams]
   );
 
-  // Handle initial message from template selection
-  // When user clicks "AI workflow from description" from LeftPanel,
-  // the initial message is stored in UI state and we auto-send it
+  // The landing screen's "Build with AI" card stores the user's prompt in UI
+  // state rather than sending it, because the panel isn't mounted yet. Send it
+  // once the panel is open and the AI connection is ready.
   useAIInitialMessage({
     initialMessage,
     aiMode,

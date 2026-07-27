@@ -268,7 +268,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsAIAssistantPanelOpen: () => false,
   useAIAssistantInitialMessage: () => null,
   useIsGitHubSyncModalOpen: () => false,
-  useIsCreateWorkflowPanelCollapsed: () => true,
   useShowLandingScreen: () => mockShowLandingScreen(),
   useUICommands: () => ({
     openYAMLImportModal: mockOpenYAMLImportModal,
@@ -281,10 +280,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     toggleAIAssistantPanel: vi.fn(),
     openGitHubSyncModal: vi.fn(),
     closeGitHubSyncModal: vi.fn(),
-    toggleCreateWorkflowPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    selectTemplate: vi.fn(),
     setTemplateSearchQuery: vi.fn(),
   }),
   useTemplatePanel: () => ({
