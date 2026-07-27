@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -90,8 +90,20 @@ function BreadcrumbContent({
 
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
+
+  // Clicking the workflow title returns to the root workflow editor view:
+  // closes the full IDE (and any other panel) and deselects the current node,
+  // matching the IDE's close ("x") button plus the inspector close.
+  const handleTitleClick = useCallback(() => {
+    updateSearchParams({
+      panel: null,
+      job: null,
+      trigger: null,
+      edge: null,
+    });
+  }, [updateSearchParams]);
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -119,7 +131,12 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
+        <BreadcrumbText
+          onClick={handleTitleClick}
+          title="Back to workflow editor"
+        >
+          {currentWorkflowName}
+        </BreadcrumbText>
         <div className="flex items-center gap-1.5">
           {!isNewWorkflow && (
             <VersionDropdown
@@ -152,10 +169,11 @@ function BreadcrumbContent({
     projectColor,
     projectEnv,
     currentWorkflowName,
-    workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
+    handleTitleClick,
+    isNewWorkflow,
   ]);
 
   return (
