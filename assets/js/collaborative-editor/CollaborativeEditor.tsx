@@ -93,15 +93,19 @@ function BreadcrumbContent({
   const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
 
-  // Clicking the workflow title returns to the root workflow editor view:
-  // closes the full IDE (and any other panel) and deselects the current node,
-  // matching the IDE's close ("x") button plus the inspector close.
+  // Clicking the workflow title returns to the root workflow editor view: it
+  // closes the full IDE (and any other panel), deselects the current node, and
+  // drops any run-viewing context, landing on the bare canvas. This clears more
+  // than the IDE's close ("x") button, which only closes the panel.
   const handleTitleClick = useCallback(() => {
     updateSearchParams({
       panel: null,
       job: null,
       trigger: null,
       edge: null,
+      run: null,
+      step: null,
+      runMode: null,
     });
   }, [updateSearchParams]);
 
