@@ -428,7 +428,7 @@ defmodule Lightning.Accounts.UserNotifier do
       |> format_validity_period()
 
     confirmation_url =
-      url(~p"/credentials/transfer/#{credential.id}/#{receiver.id}/#{token}")
+      url(~p"/credentials/transfer/#{token}")
 
     deliver(owner, "Transfer #{credential.name} to #{receiver.first_name}", """
     Hi #{owner.first_name},

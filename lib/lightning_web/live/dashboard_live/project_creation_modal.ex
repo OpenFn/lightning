@@ -39,9 +39,14 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
   def handle_event("save", %{"project" => project_params}, socket) do
     %{current_user: current_user, return_to: return_to} = socket.assigns
 
+    # Self-service create only sets the name/description the form exposes; a
+    # crafted payload must not mass-assign privileged fields (notably parent_id,
+    # which would attach the new project under an arbitrary parent, bypassing
+    # gated sandbox provisioning) or inject arbitrary project_users.
     project_params
     |> Helpers.derive_name_param()
-    |> Map.put_new("project_users", %{
+    |> Map.take(~w(raw_name name description))
+    |> Map.put("project_users", %{
       0 => %{
         "user_id" => current_user.id,
         "role" => "owner"

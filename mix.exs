@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.8",
+      version: "2.17.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -29,6 +29,7 @@ defmodule Lightning.MixProject do
         verify: :test
       ],
       compilers: Mix.compilers(),
+      hex: hex_audit(),
 
       # Docs
       name: "Lightning",
@@ -64,6 +65,37 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  # Advisories acknowledged for `mix hex.audit`. Each entry here has no
+  # reachable fix given our dependency graph; revisit whenever the noted
+  # blocker is lifted. IDs are matched against an advisory's primary ID or
+  # any alias, so the CVE form also silences the GHSA/EEF variants.
+  #
+  # hackney (fixed in 4.0.1): 4.x is a breaking API change and tzdata (all
+  #   releases, incl. 1.1.4) hard-pins hackney ~> 1.17. Unblock when tzdata
+  #   ships a hackney-4.x compatible release.
+  # cowlib: no patched release exists yet (latest is 2.18.0).
+  # req + swoosh: their fixes require mime ~> 2.0, but google_gax 0.4.1 (latest,
+  #   pulled by google_api_storage) hard-pins mime ~> 1.0. Unblock when the
+  #   Google API libraries support mime 2.x.
+  defp hex_audit do
+    [
+      ignore_advisories: [
+        # hackney
+        "CVE-2026-47071",
+        "CVE-2026-47075",
+        "CVE-2026-47076",
+        "CVE-2026-47069",
+        # cowlib
+        "CVE-2026-43966",
+        "CVE-2026-43969",
+        # req
+        "CVE-2026-49755",
+        # swoosh
+        "CVE-2026-54893"
+      ]
+    ]
+  end
+
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
@@ -76,6 +108,7 @@ defmodule Lightning.MixProject do
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
       {:cachex, "~> 4.0"},
+      {:castore, "~> 1.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
@@ -93,7 +126,7 @@ defmodule Lightning.MixProject do
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
-      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
+      {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
       {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
@@ -106,6 +139,7 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
+      {:mint, "~> 1.0"},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
@@ -166,7 +200,7 @@ defmodule Lightning.MixProject do
     if path = System.get_env("PHILTER_PATH") do
       {:philter, path: path}
     else
-      {:philter, "~> 0.3.0"}
+      {:philter, "~> 0.4.0"}
     end
   end
 
