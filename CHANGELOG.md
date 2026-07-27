@@ -58,6 +58,9 @@ and this project adheres to
 
 ### Fixed
 
+- Reserve space for the scrollbar on the main content area so page content no
+  longer shifts horizontally when switching between tall and short tabs (e.g. on
+  the Project Settings page).
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
@@ -745,9 +748,6 @@ Migrations in this release, all in `priv/repo/migrations/`:
 
 - Bump `@openfn/ws-worker` from
   [`1.23.6` to `1.23.8`](https://github.com/OpenFn/kit/blob/@openfn/ws-worker@1.23.8/packages/ws-worker/CHANGELOG.md?plain=1#L3-L16)
-- Reserve space for the scrollbar on the main content area so page content no
-  longer shifts horizontally when switching between tall and short tabs (e.g. on
-  the Project Settings page).
 
 ## [2.16.2-pre] - 2026-04-16
 
