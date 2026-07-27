@@ -132,10 +132,10 @@ import { produce } from 'immer';
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';
-import { z } from 'zod';
 
 import _logger from '#/utils/logger';
 
+import { DEFAULT_TEXT } from '../../workflow-store/constants';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { reconcileDanglingReferences } from '../adapters/reconcileDanglingReferences';
 import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
@@ -220,7 +220,66 @@ function produceInitialState() {
   );
 }
 
-export const createWorkflowStore = () => {
+export interface CreateWorkflowStoreOptions {
+  /**
+   * Returns whether the current user is allowed to edit this workflow (their
+   * `can_edit_workflow` permission).
+   *
+   * Called at the start of every structural write mutator (add/update/remove
+   * of jobs, edges, triggers, and positions, plus workflow-field updates).
+   * Reading it at call time — rather than capturing a value when the store is
+   * created — means it always reflects the latest permission from the
+   * SessionContextStore. When it returns false the mutator returns without
+   * touching the Y.Doc, so a user with view-only access cannot change the
+   * workflow document that all collaborators share. The collaboration channel
+   * enforces the same rule on the server; this is the client-side layer.
+   *
+   * Optional; defaults to always-allowed. StoreProvider passes the real
+   * getter in production. Tests that don't exercise permissions can omit it;
+   * those that do pass their own.
+   */
+  getCanEdit?: () => boolean;
+}
+
+export const createWorkflowStore = (
+  options: CreateWorkflowStoreOptions = {}
+) => {
+  const getCanEdit = options.getCanEdit ?? (() => true);
+
+  /**
+   * Returns true when the current user is allowed to make a structural write
+   * and the mutator may proceed. Returns false when the user has view-only
+   * access, in which case the caller must return early before opening any
+   * Y.Doc transaction.
+   *
+   * Logs at debug level only: a view-only user dragging nodes around the
+   * canvas would otherwise produce a log line on every pointer move.
+   */
+  const guardWrite = (actionName: string): boolean => {
+    if (getCanEdit()) return true;
+    logger.debug('write blocked: user lacks permission', {
+      action: actionName,
+    });
+    return false;
+  };
+
+  /**
+   * Wraps a structural write mutator so it does nothing when the current user
+   * has view-only access. Define new structural mutators through this — rather
+   * than repeating a `guardWrite` check — so the permission check is a single
+   * choke point that a new mutator cannot accidentally skip.
+   *
+   * `actionName` is used only for the debug log. Async mutators
+   * (`importWorkflow`) and read accessors (`getJobBodyYText`) don't fit this
+   * `(...args) => void` shape and guard themselves with `guardWrite`.
+   */
+  const withWriteGuard =
+    <A extends unknown[]>(actionName: string, fn: (...args: A) => void) =>
+    (...args: A): void => {
+      if (!guardWrite(actionName)) return;
+      fn(...args);
+    };
+
   // Y.Doc will be connected externally via SessionProvider
   let ydoc: Session.WorkflowDoc | null = null;
   let observerCleanups: (() => void)[] = [];
@@ -818,46 +877,49 @@ export const createWorkflowStore = () => {
   // =============================================================================
   // These methods update Y.Doc, which triggers observers that update Immer state
 
-  const updateJob = (id: string, updates: Partial<Session.Job>) => {
-    const ydoc = ensureYDoc();
+  const updateJob = withWriteGuard(
+    'updateJob',
+    (id: string, updates: Partial<Session.Job>) => {
+      const ydoc = ensureYDoc();
 
-    // TODO: parse through zod to throw out extra fields
-    // if (!ydoc) {
-    //   // Fallback to direct state update if Y.Doc not connected
-    //   state = produce(state, draft => {
-    //     const job = draft.jobs.find(j => j.id === id);
-    //     if (job) {
-    //       Object.assign(job, updates);
-    //     }
-    //     updateDerivedState(draft);
-    //   });
-    //   notify();
-    //   return;
-    // }
+      // TODO: parse through zod to throw out extra fields
+      // if (!ydoc) {
+      //   // Fallback to direct state update if Y.Doc not connected
+      //   state = produce(state, draft => {
+      //     const job = draft.jobs.find(j => j.id === id);
+      //     if (job) {
+      //       Object.assign(job, updates);
+      //     }
+      //     updateDerivedState(draft);
+      //   });
+      //   notify();
+      //   return;
+      // }
 
-    const jobsArray = ydoc.getArray('jobs');
-    const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const jobIndex = jobs.findIndex(job => job.get('id') === id);
+      const jobsArray = ydoc.getArray('jobs');
+      const jobs = jobsArray.toArray() as Y.Map<unknown>[];
+      const jobIndex = jobs.findIndex(job => job.get('id') === id);
 
-    if (jobIndex >= 0) {
-      const yjsJob = jobs[jobIndex];
-      ydoc.transact(() => {
-        Object.entries(updates)
-          .filter(([key]) => key in JobShape)
-          .forEach(([key, value]) => {
-            if (key === 'body' && typeof value === 'string') {
-              const ytext = yjsJob.get('body') as Y.Text;
-              ytext.delete(0, ytext.length);
-              ytext.insert(0, value);
-            } else {
-              yjsJob.set(key, value);
-            }
-          });
-      });
+      if (jobIndex >= 0) {
+        const yjsJob = jobs[jobIndex];
+        ydoc.transact(() => {
+          Object.entries(updates)
+            .filter(([key]) => key in JobShape)
+            .forEach(([key, value]) => {
+              if (key === 'body' && typeof value === 'string') {
+                const ytext = yjsJob.get('body') as Y.Text;
+                ytext.delete(0, ytext.length);
+                ytext.insert(0, value);
+              } else {
+                yjsJob.set(key, value);
+              }
+            });
+        });
+      }
+
+      // Observer handles the rest: Y.Doc → immer → notify
     }
-
-    // Observer handles the rest: Y.Doc → immer → notify
-  };
+  );
 
   const updateJobName = (id: string, name: string) => {
     updateJob(id, { name });
@@ -876,48 +938,46 @@ export const createWorkflowStore = () => {
    * - Updates workflowMap in Y.Doc
    * - Observer automatically syncs to Immer state
    */
-  const updateWorkflow = (
-    updates: Partial<
-      Omit<Session.Workflow, 'id' | 'lock_version' | 'deleted_at'>
-    >
-  ) => {
-    const ydoc = ensureYDoc();
+  const updateWorkflow = withWriteGuard(
+    'updateWorkflow',
+    (
+      updates: Partial<
+        Omit<Session.Workflow, 'id' | 'lock_version' | 'deleted_at'>
+      >
+    ) => {
+      const ydoc = ensureYDoc();
 
-    const workflowMap = ydoc.getMap('workflow');
+      const workflowMap = ydoc.getMap('workflow');
 
-    ydoc.transact(() => {
-      (
-        Object.entries(updates) as [
-          keyof typeof updates,
-          (typeof updates)[keyof typeof updates],
-        ][]
-      ).forEach(([key, value]) => {
-        if (value !== undefined) {
-          workflowMap.set(key, value);
-        }
+      ydoc.transact(() => {
+        (
+          Object.entries(updates) as [
+            keyof typeof updates,
+            (typeof updates)[keyof typeof updates],
+          ][]
+        ).forEach(([key, value]) => {
+          if (value !== undefined) {
+            workflowMap.set(key, value);
+          }
+        });
       });
-    });
 
-    // Observer handles the rest: Y.Doc → immer → notify
-  };
+      // Observer handles the rest: Y.Doc → immer → notify
+    }
+  );
 
-  const addJob = (job: Partial<Session.Job>) => {
+  const addJob = withWriteGuard('addJob', (job: Partial<Session.Job>) => {
     const ydoc = ensureYDoc();
     if (!job.id || !job.name) return;
 
     const jobsArray = ydoc.getArray('jobs');
     const jobMap = new Y.Map();
 
-    // Default body text shown in the Monaco editor for new jobs
-    const defaultBody = `// Check out the Job Writing Guide for help getting started:
-// https://docs.openfn.org/documentation/jobs/job-writing-guide
-`;
-
     ydoc.transact(() => {
       jobMap.set('id', job.id);
       jobMap.set('name', job.name);
       // Always initialize body as Y.Text with default if empty
-      jobMap.set('body', new Y.Text(job.body || defaultBody));
+      jobMap.set('body', new Y.Text(job.body || DEFAULT_TEXT));
       // Set adaptor field (defaults to common if not provided)
       jobMap.set('adaptor', job.adaptor);
       // Initialize credential fields to null
@@ -926,9 +986,9 @@ export const createWorkflowStore = () => {
 
       jobsArray.push([jobMap]);
     });
-  };
+  });
 
-  const removeJob = (id: string) => {
+  const removeJob = withWriteGuard('removeJob', (id: string) => {
     const ydoc = ensureYDoc();
 
     const jobsArray = ydoc.getArray('jobs');
@@ -959,9 +1019,9 @@ export const createWorkflowStore = () => {
       });
     }
     // Observer handles: Y.Doc → Immer → notify
-  };
+  });
 
-  const addEdge = (edge: Partial<Session.Edge>) => {
+  const addEdge = withWriteGuard('addEdge', (edge: Partial<Session.Edge>) => {
     const ydoc = ensureYDoc();
     if (!edge.id || !edge.target_job_id) return;
 
@@ -979,31 +1039,34 @@ export const createWorkflowStore = () => {
       edgeMap.set('enabled', edge.enabled !== undefined ? edge.enabled : true);
       edgesArray.push([edgeMap]);
     });
-  };
+  });
 
-  const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
-    const ydoc = ensureYDoc();
+  const updateEdge = withWriteGuard(
+    'updateEdge',
+    (id: string, updates: Partial<Session.Edge>) => {
+      const ydoc = ensureYDoc();
 
-    const edgesArray = ydoc.getArray('edges');
-    const edges = edgesArray.toArray() as Y.Map<unknown>[];
-    const edgeIndex = edges.findIndex(edge => edge.get('id') === id);
+      const edgesArray = ydoc.getArray('edges');
+      const edges = edgesArray.toArray() as Y.Map<unknown>[];
+      const edgeIndex = edges.findIndex(edge => edge.get('id') === id);
 
-    if (edgeIndex >= 0) {
-      const yjsEdge = edges[edgeIndex];
-      if (yjsEdge) {
-        ydoc.transact(() => {
-          Object.entries(updates)
-            .filter(([key]) => key in EdgeShape)
-            .forEach(([key, value]) => {
-              yjsEdge.set(key, value);
-            });
-        });
+      if (edgeIndex >= 0) {
+        const yjsEdge = edges[edgeIndex];
+        if (yjsEdge) {
+          ydoc.transact(() => {
+            Object.entries(updates)
+              .filter(([key]) => key in EdgeShape)
+              .forEach(([key, value]) => {
+                yjsEdge.set(key, value);
+              });
+          });
+        }
       }
+      // Observer handles the rest: Y.Doc → immer → notify
     }
-    // Observer handles the rest: Y.Doc → immer → notify
-  };
+  );
 
-  const removeEdge = (id: string) => {
+  const removeEdge = withWriteGuard('removeEdge', (id: string) => {
     const ydoc = ensureYDoc();
 
     const edgesArray = ydoc.getArray('edges');
@@ -1016,7 +1079,7 @@ export const createWorkflowStore = () => {
       });
     }
     // Observer handles: Y.Doc → Immer → notify
-  };
+  });
 
   // NOTE: there is intentionally no removeTrigger / bulk job-removal command
   // today. If one is ever added, it MUST call
@@ -1024,26 +1087,29 @@ export const createWorkflowStore = () => {
   // transaction (after the structural delete) so it cannot leave a dangling cron
   // cursor. Do not re-implement per-path cursor cleanup — see
   // adapters/reconcileDanglingReferences and store-structure.md.
-  const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
-    const ydoc = ensureYDoc();
+  const updateTrigger = withWriteGuard(
+    'updateTrigger',
+    (id: string, updates: Partial<Session.Trigger>) => {
+      const ydoc = ensureYDoc();
 
-    const triggersArray = ydoc.getArray('triggers');
-    const triggers = triggersArray.toArray() as Y.Map<unknown>[];
-    const triggerIndex = triggers.findIndex(
-      trigger => trigger.get('id') === id
-    );
+      const triggersArray = ydoc.getArray('triggers');
+      const triggers = triggersArray.toArray() as Y.Map<unknown>[];
+      const triggerIndex = triggers.findIndex(
+        trigger => trigger.get('id') === id
+      );
 
-    if (triggerIndex >= 0) {
-      const yjsTrigger = triggers[triggerIndex];
-      ydoc.transact(() => {
-        Object.entries(updates).forEach(([key, value]) => {
-          yjsTrigger.set(key, value);
+      if (triggerIndex >= 0) {
+        const yjsTrigger = triggers[triggerIndex];
+        ydoc.transact(() => {
+          Object.entries(updates).forEach(([key, value]) => {
+            yjsTrigger.set(key, value);
+          });
         });
-      });
+      }
     }
-  };
+  );
 
-  const setEnabled = (enabled: boolean) => {
+  const setEnabled = withWriteGuard('setEnabled', (enabled: boolean) => {
     const ydoc = ensureYDoc();
 
     const triggersArray = ydoc.getArray('triggers');
@@ -1054,7 +1120,7 @@ export const createWorkflowStore = () => {
         trigger.set('enabled', enabled);
       });
     });
-  };
+  });
 
   /**
    * Clear all triggers from the workflow
@@ -1064,7 +1130,7 @@ export const createWorkflowStore = () => {
    *
    * Pattern 1: Y.Doc → Observer → Immer → Notify
    */
-  const clearAllTriggers = () => {
+  const clearAllTriggers = withWriteGuard('clearAllTriggers', () => {
     const ydoc = ensureYDoc();
 
     const triggersArray = ydoc.getArray('triggers');
@@ -1073,7 +1139,7 @@ export const createWorkflowStore = () => {
       triggersArray.delete(0, triggersArray.length);
     });
     // Observer handles: Y.Doc → Immer → notify
-  };
+  });
 
   const getJobBodyYText = (id: string): Y.Text | null => {
     if (!ydoc) return null;
@@ -1085,32 +1151,38 @@ export const createWorkflowStore = () => {
     return yjsJob ? (yjsJob.get('body') as Y.Text) : null;
   };
 
-  const updatePositions = (positions: Workflow.Positions | null) => {
-    const ydoc = ensureYDoc();
+  const updatePositions = withWriteGuard(
+    'updatePositions',
+    (positions: Workflow.Positions | null) => {
+      const ydoc = ensureYDoc();
 
-    const positionsMap = ydoc.getMap('positions');
+      const positionsMap = ydoc.getMap('positions');
 
-    ydoc.transact(() => {
-      if (positions === null) {
-        // Clear all positions to switch to auto layout
-        positionsMap.clear();
-      } else {
-        // Update positions with new values
-        Object.entries(positions).forEach(([id, position]) => {
-          positionsMap.set(id, position);
-        });
-      }
-    });
-  };
+      ydoc.transact(() => {
+        if (positions === null) {
+          // Clear all positions to switch to auto layout
+          positionsMap.clear();
+        } else {
+          // Update positions with new values
+          Object.entries(positions).forEach(([id, position]) => {
+            positionsMap.set(id, position);
+          });
+        }
+      });
+    }
+  );
 
-  const updatePosition = (id: string, position: { x: number; y: number }) => {
-    const ydoc = ensureYDoc();
+  const updatePosition = withWriteGuard(
+    'updatePosition',
+    (id: string, position: { x: number; y: number }) => {
+      const ydoc = ensureYDoc();
 
-    const positionsMap = ydoc.getMap('positions');
-    ydoc.transact(() => {
-      positionsMap.set(id, position);
-    });
-  };
+      const positionsMap = ydoc.getMap('positions');
+      ydoc.transact(() => {
+        positionsMap.set(id, position);
+      });
+    }
+  );
 
   /**
    * Set validation errors for an entity or entity field
@@ -1613,6 +1685,10 @@ export const createWorkflowStore = () => {
    * @param workflowState - Parsed YAML workflow state
    */
   const importWorkflow = async (workflowState: YAMLWorkflowState) => {
+    // Like the other structural mutators, skip the write when the user has
+    // view-only access — before touching the Y.Doc or making the
+    // name-validation round-trip.
+    if (!guardWrite('importWorkflow')) return;
     const ydoc = ensureYDoc();
 
     // Validate workflow name uniqueness via server

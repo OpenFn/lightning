@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias Lightning.Workflows.Workflow
   alias LightningWeb.Live.Helpers.TableHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
@@ -15,6 +16,11 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   # TODO - make this configurable some day
   @dashboard_period "last 30 days"
+
+  # Columns the dashboard can sort by; client sort params are resolved against
+  # this set via TableHelpers.sort_field/3, never interned.
+  @sortable_keys ~w(name last_workorder_updated_at workorders_count
+                    failed_workorders_count enabled)a
 
   attr :dashboard_period, :string, default: @dashboard_period
   attr :can_create_workflow, :boolean
@@ -124,7 +130,10 @@ defmodule LightningWeb.WorkflowLive.Index do
       sort_direction: sort_direction
     } = socket.assigns
 
-    opts = [order_by: {String.to_atom(sort_key), String.to_atom(sort_direction)}]
+    field = TableHelpers.sort_field(sort_key, @sortable_keys, :name)
+    direction = TableHelpers.sort_direction(sort_direction)
+
+    opts = [order_by: {field, direction}]
 
     opts =
       if search_term && search_term != "" do
@@ -137,14 +146,12 @@ defmodule LightningWeb.WorkflowLive.Index do
     workflow_stats = DashboardStats.get_workflows_stats(workflows)
 
     sorted_stats =
-      if sort_key in ["name", "enabled"] do
+      if field in [:name, :enabled] do
+        # These are ordered by the DB query above; the rest are stats fields
+        # sorted in memory.
         workflow_stats
       else
-        DashboardStats.sort_workflow_stats(
-          workflow_stats,
-          String.to_atom(sort_key),
-          String.to_atom(sort_direction)
-        )
+        DashboardStats.sort_workflow_stats(workflow_stats, field, direction)
       end
 
     metrics = DashboardStats.aggregate_project_metrics(sorted_stats)
@@ -211,33 +218,48 @@ defmodule LightningWeb.WorkflowLive.Index do
       ) do
     %{
       current_user: actor,
-      project: project_id,
+      project: project,
       search_term: search_term,
       sort_key: sort_key,
       sort_direction: sort_direction
     } = socket.assigns
 
     query_params = build_query_params(search_term, sort_key, sort_direction)
+    redirect = ~p"/projects/#{project}/w?#{query_params}"
 
-    workflow_id
-    |> Workflows.get_workflow!(include: [:triggers])
-    |> Workflows.update_triggers_enabled_state(state)
-    |> Helpers.save_workflow(actor)
-    |> case do
-      {:ok, _workflow} ->
+    with true <- Permissions.can?(ProjectUsers, :edit_workflow, actor, project),
+         %Workflow{} = workflow <-
+           Workflows.get_workflow_for_project(project, workflow_id,
+             include: [:triggers]
+           ) do
+      workflow
+      |> Workflows.update_triggers_enabled_state(state)
+      |> Helpers.save_workflow(actor)
+      |> case do
+        {:ok, _workflow} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Workflow updated")
+           |> push_patch(to: redirect)}
+
+        {:error, _changeset} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Failed to update workflow. Please try again.")
+           |> push_patch(to: redirect)}
+      end
+    else
+      false ->
         {:noreply,
          socket
-         |> put_flash(:info, "Workflow updated")
-         |> push_patch(to: ~p"/projects/#{project_id}/w?#{query_params}")}
+         |> put_flash(:error, "You are not authorized to perform this action.")
+         |> push_patch(to: redirect)}
 
-      {:error, _changeset} ->
+      nil ->
         {:noreply,
          socket
-         |> put_flash(
-           :error,
-           "Failed to update workflow. Please try again."
-         )
-         |> push_patch(to: ~p"/projects/#{project_id}/w?#{query_params}")}
+         |> put_flash(:error, "Workflow not found.")
+         |> push_patch(to: redirect)}
     end
   end
 
@@ -253,8 +275,10 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
-    if can_delete_workflow? do
-      Workflows.get_workflow!(id)
+    with true <- can_delete_workflow?,
+         %Workflow{} = workflow <-
+           Workflows.get_workflow_for_project(project, id) do
+      workflow
       |> Workflows.mark_for_deletion(user)
       |> case do
         {:ok, _} ->
@@ -269,9 +293,13 @@ defmodule LightningWeb.WorkflowLive.Index do
           {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      false ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      nil ->
+        {:noreply, socket |> put_flash(:error, "Workflow not found.")}
     end
   end
 

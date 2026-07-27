@@ -15,37 +15,9 @@ defmodule LightningWeb.UserSessionController do
   def create(conn, %{"user" => user_params}) do
     %{"email" => email, "password" => password} = user_params
 
-    Accounts.get_user_by_email_and_password(email, password)
-    |> case do
-      %User{disabled: true} ->
-        conn
-        |> put_flash(:error, "This user account is disabled")
-        |> render("new.html",
-          providers: provider_buttons()
-        )
-
-      %User{scheduled_deletion: x} when x != nil ->
-        conn
-        |> put_flash(
-          :error,
-          "This user account is scheduled for deletion"
-        )
-        |> render("new.html",
-          providers: provider_buttons()
-        )
-
-      %User{mfa_enabled: true} = user ->
-        totp_params = Map.take(user_params, ["remember_me"])
-
-        conn
-        |> UserAuth.log_in_user(user)
-        |> UserAuth.mark_totp_pending()
-        |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
-
+    case Accounts.get_user_by_email_and_password(email, password) do
       %User{} = user ->
-        conn
-        |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_with_return_to(user_params)
+        log_in_with_password(conn, user, user_params)
 
       {:error, :sso_account} ->
         conn
@@ -63,6 +35,34 @@ defmodule LightningWeb.UserSessionController do
         |> render("new.html",
           providers: provider_buttons()
         )
+    end
+  end
+
+  # Shares the account-state gate (Accounts.login_blocked?/1) with the SSO login
+  # path, keeping this path's own re-render responses.
+  defp log_in_with_password(conn, user, user_params) do
+    if Accounts.login_blocked?(user) do
+      conn
+      |> put_flash(
+        :error,
+        UserAuth.login_blocked_message(Accounts.login_blocked_reason(user))
+      )
+      |> render("new.html",
+        providers: provider_buttons()
+      )
+    else
+      if user.mfa_enabled do
+        totp_params = Map.take(user_params, ["remember_me"])
+
+        conn
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.mark_totp_pending()
+        |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
+      else
+        conn
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(user_params)
+      end
     end
   end
 

@@ -27,11 +27,11 @@ defmodule LightningWeb.AuthProvidersLiveTest do
     test "a regular user cannot access the auth providers page", %{
       conn: conn
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/authentication", on_error: :raise)
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 

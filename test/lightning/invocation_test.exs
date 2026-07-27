@@ -2323,6 +2323,57 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "get_step_with_dataclips" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_job = insert(:job, workflow: other_workflow)
+      other_snapshot = insert(:snapshot, workflow: other_workflow)
+
+      insert(:step,
+        job: other_job,
+        snapshot: other_snapshot,
+        input_dataclip:
+          build(:dataclip, project: other_project, body: %{"c" => 1}),
+        output_dataclip:
+          build(:dataclip, project: other_project, body: %{"d" => 2})
+      )
+
+      %{other_project: other_project, project: project, step: step}
+    end
+
+    test "returns the step with its input and output dataclips preloaded", %{
+      project: project,
+      step: step
+    } do
+      fetched_step = Invocation.get_step_with_dataclips(step.id, project.id)
+
+      assert fetched_step.id == step.id
+      assert fetched_step.input_dataclip.body == %{"a" => 1}
+      assert fetched_step.output_dataclip.body == %{"b" => 2}
+    end
+
+    test "returns nil if the step does not belong to the project", %{
+      other_project: other_project,
+      step: step
+    } do
+      assert Invocation.get_step_with_dataclips(step.id, other_project.id) == nil
+    end
+  end
+
   defp assert_dataclips_list(expected, returned) do
     assert expected
            |> Enum.map(&format_listed/1)

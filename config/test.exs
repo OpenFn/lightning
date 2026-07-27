@@ -36,7 +36,8 @@ config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database:
+    "#{System.get_env("TEST_DATABASE_NAME", "lightning_test")}#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 15,
   queue_target: 100,
@@ -118,6 +119,8 @@ config :logger, level: :warning
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :logger, true
 
+config :philter, allowed_hosts: ["localhost"]
+
 config :junit_formatter,
   report_file: "elixir_test_report.xml",
   report_dir: "./test/reports",
@@ -165,3 +168,7 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+# The OIDC test suite serves discovery/JWKS/userinfo/token over http on
+# localhost via Bypass; allow those loopback endpoints to skip TLS verification.
+config :lightning, :auth_providers_allow_insecure_loopback, true

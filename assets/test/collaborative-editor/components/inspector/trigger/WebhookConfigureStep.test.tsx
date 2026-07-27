@@ -9,6 +9,10 @@
  *   3. Response Options inputs — only rendered for `webhook_reply === 'after_completion'`;
  *      editing calls `mergeDraft` with parsed integers (empty → null).
  *   4. Async-mode warning — shows when after_completion + response config exists.
+ *   5. Auth-method permission gating: the WebhookAuthMethodSelect control is
+ *      disabled unless the user has `can_write_webhook_auth_method` (owner/admin),
+ *      independent of general `can_edit_workflow` access. Regression coverage
+ *      for the backend `update_trigger_auth_methods` permission tightening.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -20,6 +24,7 @@ import type * as Y from 'yjs';
 import { WebhookConfigureStep } from '../../../../../js/collaborative-editor/components/inspector/trigger/WebhookConfigureStep';
 import type { WorkflowStoreInstance } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { WebhookAuthMethod } from '../../../../../js/collaborative-editor/types/sessionContext';
 import type { Workflow } from '../../../../../js/collaborative-editor/types/workflow';
 import {
   createMockPhoenixChannel,
@@ -90,6 +95,10 @@ interface SetupOptions {
   setDraftAuthMethodIds?: (ids: string[]) => void;
   validationError?: string | null;
   initialExpand?: 'authentication' | 'response';
+  /** Defaults to true; set false to simulate an editor without owner/admin rights. */
+  canWriteWebhookAuthMethod?: boolean;
+  /** Project-level auth methods available to attach. Defaults to none. */
+  webhookAuthMethods?: WebhookAuthMethod[];
 }
 
 async function setup({
@@ -99,9 +108,13 @@ async function setup({
   setDraftAuthMethodIds = vi.fn(),
   validationError = null,
   initialExpand,
+  canWriteWebhookAuthMethod = true,
+  webhookAuthMethods = [],
 }: SetupOptions = {}) {
   const { wrapper } = await createTriggerTestHarness({
     canEdit: true,
+    canWriteWebhookAuthMethod,
+    webhookAuthMethods,
     workflowStore: makeReadyWorkflowStore(),
     liveViewActions: mockLiveViewActions,
   });
@@ -392,6 +405,41 @@ describe('WebhookConfigureStep', () => {
           'Switching to async will clear your response configuration.'
         )
       ).not.toBeInTheDocument();
+    });
+  });
+
+  // 5. Auth-method permission gating
+  describe('auth-method permission gating', () => {
+    const method: WebhookAuthMethod = {
+      id: '22222222-2222-4222-8222-222222222222',
+      name: 'Basic auth method',
+      auth_type: 'basic',
+    };
+
+    test('the auth-method picker is disabled for an editor lacking can_write_webhook_auth_method', async () => {
+      await setup({
+        initialExpand: 'authentication',
+        canWriteWebhookAuthMethod: false,
+        webhookAuthMethods: [method],
+        draftAuthMethodIds: [method.id],
+      });
+
+      expect(
+        screen.getByLabelText('Authentication credential 1')
+      ).toBeDisabled();
+    });
+
+    test('the auth-method picker is enabled for an owner/admin with can_write_webhook_auth_method', async () => {
+      await setup({
+        initialExpand: 'authentication',
+        canWriteWebhookAuthMethod: true,
+        webhookAuthMethods: [method],
+        draftAuthMethodIds: [method.id],
+      });
+
+      expect(
+        screen.getByLabelText('Authentication credential 1')
+      ).not.toBeDisabled();
     });
   });
 });

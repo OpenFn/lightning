@@ -911,8 +911,10 @@ defmodule LightningWeb.SandboxLive.Index do
     # a merge never silently deletes them, and removal is opt-in.
     deleted_entries =
       target_workflows
-      |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
-      |> Enum.reject(fn wf -> workflow_added_after_fork?(wf, source) end)
+      |> Enum.reject(fn wf ->
+        MapSet.member?(source_workflow_names, wf.name) or
+          workflow_added_after_fork?(wf, source)
+      end)
       |> Enum.map(fn wf ->
         %MergeWorkflow{
           id: wf.id,

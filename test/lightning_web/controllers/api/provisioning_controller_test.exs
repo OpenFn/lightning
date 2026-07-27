@@ -561,6 +561,26 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Enum.count(workflows) == 2
     end
 
+    test "does not return snapshots from another project", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        insert(:project, project_users: [%{user_id: user.id}])
+
+      # A snapshot in a different project the user has no access to.
+      foreign_workflow = insert(:simple_workflow, project: insert(:project))
+      {:ok, foreign_snapshot} = Snapshot.create(foreign_workflow)
+
+      conn =
+        get(conn, ~p"/api/provision/#{project_id}",
+          snapshots: [foreign_snapshot.id]
+        )
+
+      # The foreign snapshot's workflow is not disclosed.
+      assert %{"workflows" => []} = json_response(conn, 200)["data"]
+    end
+
     test "returns a project with kafka trigger workflow", %{
       conn: conn,
       user: user
@@ -928,6 +948,35 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response =~ workflow_1.name
       refute response =~ updated_workflow_1.name
       assert response =~ workflow_2.name
+    end
+
+    test "does not include another project's snapshots in the yaml" do
+      project = insert(:project)
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      foreign_workflow =
+        insert(:simple_workflow,
+          project: insert(:project),
+          name: "foreign-workflow-name"
+        )
+
+      {:ok, foreign_snapshot} = Snapshot.create(foreign_workflow)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response =
+        get(
+          conn,
+          ~p"/api/provision/yaml?#{%{id: project.id, snapshots: [foreign_snapshot.id]}}"
+        )
+        |> response(200)
+
+      refute response =~ "foreign-workflow-name"
     end
 
     test "returns a 403 if an invalid repo conenction token is provided" do
