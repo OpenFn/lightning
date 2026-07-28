@@ -20,7 +20,7 @@ import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
-import { useFollowRun } from './hooks/useHistory';
+import { useHistoryCommands } from './hooks/useHistory';
 import {
   useLatestSnapshotLockVersion,
   useProject,
@@ -92,7 +92,7 @@ export function BreadcrumbContent({
 
   const isRunPanelOpen = useIsRunPanelOpen();
   const { closeRunPanel } = useUICommands();
-  const { clearRun } = useFollowRun(null);
+  const { closeRunViewer } = useHistoryCommands();
 
   const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
@@ -110,7 +110,7 @@ export function BreadcrumbContent({
   // whole reset is a single history entry.
   const handleTitleClick = useCallback(() => {
     closeRunPanel();
-    clearRun();
+    closeRunViewer();
     updateSearchParams({
       panel: null,
       job: null,
@@ -120,7 +120,7 @@ export function BreadcrumbContent({
       step: null,
       runMode: null,
     });
-  }, [closeRunPanel, clearRun, updateSearchParams]);
+  }, [closeRunPanel, closeRunViewer, updateSearchParams]);
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;

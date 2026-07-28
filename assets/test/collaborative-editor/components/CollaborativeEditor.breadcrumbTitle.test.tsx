@@ -26,7 +26,7 @@ import {
 
 const urlState = createMockURLState();
 const closeRunPanel = vi.fn();
-const clearRun = vi.fn();
+const closeRunViewer = vi.fn();
 
 vi.mock('#/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
@@ -77,7 +77,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
-  useFollowRun: () => ({ run: null, clearRun }),
+  useHistoryCommands: () => ({ closeRunViewer }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
@@ -102,7 +102,7 @@ describe('workflow title breadcrumb', () => {
   beforeEach(() => {
     urlState.reset();
     closeRunPanel.mockClear();
-    clearRun.mockClear();
+    closeRunViewer.mockClear();
   });
 
   test('renders the workflow title as a button rather than plain text', () => {
@@ -156,6 +156,6 @@ describe('workflow title breadcrumb', () => {
     renderBreadcrumbs();
     await clickTitle();
 
-    expect(clearRun).toHaveBeenCalledTimes(1);
+    expect(closeRunViewer).toHaveBeenCalledTimes(1);
   });
 });
