@@ -12,7 +12,11 @@
   # `pattern_match_cov` is a dead clause in httpoison's `process_response/1`.
   # Filtered by category rather than line so a 3.0.x patch bump doesn't break
   # the filter; this is a dependency's source, so it cannot mask our own bugs.
-  # Drop these once httpoison types the handle as `pid() | reference()`.
+  #
+  # Already fixed upstream in edgurgel/httpoison#511 ("Fix typespec warnings",
+  # merged 2026-07-05), which retypes these as `id: pid` and drops the dead
+  # clause. It is just unreleased: 3.0.0 (2026-06-14) predates the merge and is
+  # still the latest release. Drop all three filters once a release carries it.
   {"deps/httpoison/lib/httpoison/base.ex", :callback_arg_type_mismatch},
   {"deps/httpoison/lib/httpoison/base.ex", :callback_type_mismatch},
   {"deps/httpoison/lib/httpoison/base.ex", :pattern_match_cov},
