@@ -66,6 +66,20 @@ and this project adheres to
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
 - Updated bundled worker to 1.27.1 and cli to 1.38.4
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
+- Updated `hackney` to 4.6 to address advisories fixed only in the 4.x line,
+  along with the `httpoison` 3.0 and `sentry` 13.2 bumps it requires. `tzdata`
+  is pinned to an upstream commit, the only version that permits `hackney` 4.x.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Updated `swoosh` to 1.26.3 and `tidewave` to 0.8.0.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Updated `cowboy` to 2.18.0 and `cowlib` to 2.19.0, clearing CVE-2026-65624 and
+  CVE-2026-59248. [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Declared `finch` as a direct dependency. It backs the app's own
+  `Lightning.Finch` pool and the default Tesla adapter, but its version was
+  previously dictated by `prom_ex` and `goth`.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- `bin/worktree` takes a trailing `-- <command>` that runs inside the worktree
+  once it is ready, and also runs when the branch already has a worktree.
 
 ### Fixed
 
@@ -80,11 +94,17 @@ and this project adheres to
   failures during creation now surface a persistent Retry prompt, and creation
   is blocked with immediate feedback when the editor is offline.
   [#4939](https://github.com/OpenFn/lightning/issues/4939)
+- Reserve space for the scrollbar on the main content area so page content no
+  longer shifts horizontally when switching between tall and short tabs (e.g. on
+  the Project Settings page).
 - Sandbox merge no longer deletes a workflow that was added to the project after
   the sandbox was branched. Such workflows were never part of the sandbox, so
   they are excluded from the merge screen entirely. Workflows deleted inside the
   sandbox still appear and now default to kept, so removing them from the
   project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+- Support mailto link no longer opens a blank tab; email address is shown as a
+  tooltip for users without a mail client configured
+  [#2435](https://github.com/OpenFn/lightning/issues/2435)
 - Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
   [#4943](https://github.com/OpenFn/lightning/issues/4943)
 - Prevent AI Assistant channel joins from crashing when a chat references a
@@ -95,6 +115,8 @@ and this project adheres to
   instead of a generic error, and the condition is logged as a warning rather
   than an application error.
   [#4947](https://github.com/OpenFn/lightning/issues/4947)
+- Git hooks now auto-install when compiling from inside a git worktree, where
+  `.git` is a file rather than a directory.
 
 ## [2.17.0] - 2026-07-21
 

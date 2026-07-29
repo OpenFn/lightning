@@ -65,33 +65,19 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Advisories acknowledged for `mix hex.audit`. Each entry here has no
-  # reachable fix given our dependency graph; revisit whenever the noted
-  # blocker is lifted. IDs are matched against an advisory's primary ID or
-  # any alias, so the CVE form also silences the GHSA/EEF variants.
-  #
-  # hackney (fixed in 4.0.1): 4.x is a breaking API change and tzdata (all
-  #   releases, incl. 1.1.4) hard-pins hackney ~> 1.17. Unblock when tzdata
-  #   ships a hackney-4.x compatible release.
-  # cowlib: no patched release exists yet (latest is 2.18.0).
-  # req + swoosh: their fixes require mime ~> 2.0, but google_gax 0.4.1 (latest,
-  #   pulled by google_api_storage) hard-pins mime ~> 1.0. Unblock when the
-  #   Google API libraries support mime 2.x.
+  # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
+  # it has no patched release (latest is 2.19.0). Note that both EEF records carry
+  # no `fixed` event, while the GitHub twin of CVE-2026-43969
+  # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.19.0 may
+  # already be unaffected and the EEF record simply lacks a fix event. IDs are
+  # matched against an advisory's primary ID or any alias, so the CVE form also
+  # silences the GHSA/EEF variants.
   defp hex_audit do
     [
       ignore_advisories: [
-        # hackney
-        "CVE-2026-47071",
-        "CVE-2026-47075",
-        "CVE-2026-47076",
-        "CVE-2026-47069",
         # cowlib
         "CVE-2026-43966",
-        "CVE-2026-43969",
-        # req
-        "CVE-2026-49755",
-        # swoosh
-        "CVE-2026-54893"
+        "CVE-2026-43969"
       ]
     ]
   end
@@ -124,13 +110,19 @@ defmodule Lightning.MixProject do
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
+      {:finch, "~> 0.23"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
       {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
       {:google_api_storage, "~> 0.46.0"},
-      {:hackney, "~> 1.18"},
+      # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
+      # hackney ~> 1.10. It never actually calls hackney, so the constraint is
+      # dead weight, but it has to be overridden to resolve.
+      # 4.6.0 is the ceiling: 4.6.1+ require h2 ~> 0.11.0 while hackney's own
+      # webtransport dep requires h2 ~> 0.10.4, so newer releases cannot resolve.
+      {:hackney, "~> 4.6.0", override: true},
       {:heroicons, "~> 0.5.3"},
-      {:httpoison, "~> 2.0"},
+      {:httpoison, "~> 3.0.0", override: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 2.2"},
@@ -161,17 +153,26 @@ defmodule Lightning.MixProject do
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 10.9.0"},
+      {:sentry, "~> 13.2.0"},
       {:sobelow, "~> 0.14.1", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
-      {:swoosh, "~> 1.17"},
+      {:swoosh, "~> 1.26"},
       {:gen_smtp, "~> 1.1"},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.18.2"},
-      {:tidewave, "~> 0.5.4", only: :dev},
+      {:tidewave, "~> 0.8.0", only: :dev},
       {:timex, "~> 3.7"},
+      # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
+      # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --
+      # 1.1.4 predates the fix and no release is scheduled. Move back to a Hex
+      # release once one carries #170, since git deps are invisible to
+      # `mix deps.audit`.
+      {:tzdata,
+       github: "lau/tzdata",
+       ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
+       override: true},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},

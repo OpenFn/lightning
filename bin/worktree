@@ -3,8 +3,8 @@
 # Create a git worktree for a branch and set it up so it's immediately runnable.
 #
 # Usage:
-#   ./bin/worktree [--no-clean] <branch> [path]
-#   ./bin/worktree [--no-clean] --pr <number> [path]
+#   ./bin/worktree [--no-clean] <branch> [path] [-- <command>...]
+#   ./bin/worktree [--no-clean] --pr <number> [path] [-- <command>...]
 #
 #   <branch>   Branch to check out in the new worktree. Created (with -b) if it
 #              doesn't exist yet; reused if it does.
@@ -16,6 +16,10 @@
 #   [path]     Base directory to create the worktree under, for this run only.
 #              Overrides the saved default without changing it.
 #   --no-clean Keep the worktree on setup failure instead of removing it.
+#   -- <cmd>   Everything after -- is run inside the worktree once it's ready,
+#              replacing this process, so the command inherits the terminal and
+#              its exit status becomes ours. Also runs when the branch already
+#              had a worktree, making this a "take me there and do X" command.
 #
 # What it does:
 #   1. Resolves a base directory for worktrees. First run prompts for one
@@ -55,10 +59,11 @@ CREATED_BRANCH=0
 WORKTREE_CREATED=0
 SETUP_OK=0
 CURRENT_STEP="worktree creation"
+RUN_CMD=()
 
 usage() {
-  echo "Usage: ./bin/worktree [--no-clean] <branch> [path]" >&2
-  echo "       ./bin/worktree [--no-clean] --pr <number> [path]" >&2
+  echo "Usage: ./bin/worktree [--no-clean] <branch> [path] [-- <command>...]" >&2
+  echo "       ./bin/worktree [--no-clean] --pr <number> [path] [-- <command>...]" >&2
 }
 
 print_help() {
@@ -72,14 +77,17 @@ per-worktree slice of ./bin/bootstrap so it's immediately runnable
 (deps, assets, runtime/schemas/icons, and a migrated database).
 
 ${BOLD}Usage:${RESET}
-  ./bin/worktree [--no-clean] <branch> [path]
-  ./bin/worktree [--no-clean] --pr <number> [path]
+  ./bin/worktree [--no-clean] <branch> [path] [-- <command>...]
+  ./bin/worktree [--no-clean] --pr <number> [path] [-- <command>...]
 
 ${BOLD}Arguments:${RESET}
   ${CYAN}<branch>${RESET}    Branch to check out. Created (with -b) if it doesn't exist
               yet; reused if it does.
   ${CYAN}[path]${RESET}      Base directory to create the worktree under, for this run
               only. Overrides the saved default without changing it.
+  ${CYAN}-- <cmd>${RESET}    Run everything after -- inside the worktree once it is
+              ready. Runs for an existing worktree too, so this doubles as
+              a way to jump into a branch and do something there.
 
 ${BOLD}Options:${RESET}
   ${CYAN}--pr <n>${RESET}    Resolve the head branch of GitHub PR <n> (via the gh CLI),
@@ -94,6 +102,8 @@ ${BOLD}Examples:${RESET}
   ./bin/worktree --pr 250
   ./bin/worktree --no-clean --pr 250
   ./bin/worktree my-feature-branch ~/worktrees
+  ./bin/worktree --pr 250 -- claude "do a code review"
+  ./bin/worktree my-feature-branch -- zsh
 
 ${BOLD}Notes:${RESET}
   - The base directory is remembered after the first run (saved to
@@ -142,7 +152,8 @@ parse_args() {
       ;;
     --)
       shift
-      positional+=("$@")
+      [[ $# -gt 0 ]] || usage_error "-- requires a command to run in the worktree"
+      RUN_CMD=("$@")
       break
       ;;
     -*)
@@ -331,6 +342,15 @@ copy_env_files() {
   done
 }
 
+# Hand the terminal over to the trailing `-- <command>`, running in $1. exec
+# replaces this process, so the command owns stdin/stdout and its exit status is
+# ours; the EXIT trap can't fire afterwards, which is fine because setup is done.
+exec_run_cmd() {
+  cd "$1"
+  echo "Running in $1"
+  exec "${RUN_CMD[@]}"
+}
+
 # Run the per-worktree slice of ./bin/bootstrap from inside the new worktree.
 run_setup() {
   cd "$TARGET"
@@ -368,6 +388,7 @@ main() {
   if existing_target="$(find_worktree_for_branch "$BRANCH")"; then
     echo "Branch '$BRANCH' already has a worktree:"
     echo "    $existing_target"
+    [[ ${#RUN_CMD[@]} -eq 0 ]] || exec_run_cmd "$existing_target"
     exit 0
   fi
 
@@ -388,6 +409,11 @@ main() {
   SETUP_OK=1
   ok "Worktree is ready:"
   echo "    $TARGET"
+
+  if [[ ${#RUN_CMD[@]} -gt 0 ]]; then
+    exec_run_cmd "$TARGET"
+  fi
+
   echo "Change into it with:"
   echo "    cd \"$TARGET\""
 }
