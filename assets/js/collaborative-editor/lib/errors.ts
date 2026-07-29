@@ -11,28 +11,20 @@ import type { ChannelError } from '../hooks/useChannel';
  * the rethrow.
  */
 export class ChannelRequestError extends Error {
-  type:
-    | 'unauthorized'
-    | 'validation_error'
-    | 'workflow_deleted'
-    | 'deserialization_error'
-    | 'internal_error'
-    | 'optimistic_lock_error';
-  errors: Record<string, string[] | undefined>;
+  type: ChannelError['type'];
+  errors: NonNullable<ChannelError['errors']>;
 
   constructor(
-    type: ChannelRequestError['type'],
-    errors: Record<string, string[] | undefined>
+    type: ChannelError['type'],
+    errors: ChannelError['errors'],
+    reason?: string
   ) {
-    super(
-      formatChannelErrorMessage({
-        type,
-        errors: errors as { base?: string[] } & Record<string, string[]>,
-      })
-    );
+    super(formatChannelErrorMessage({ type, errors, reason }));
     this.name = 'ChannelRequestError';
     this.type = type;
-    this.errors = errors;
+    // Consumers read `.errors` unconditionally, so keep it an object even when
+    // the reply carried no error map.
+    this.errors = errors ?? {};
   }
 }
 
@@ -51,14 +43,20 @@ export function isChannelRequestError(
  * Handles both flat error structures and nested arrays from Phoenix changeset errors.
  */
 export function formatChannelErrorMessage(channelError: ChannelError): string {
+  // Not every handler replies with an error map — several reply `{reason: ...}`
+  // only. Treat a missing map as empty rather than dereferencing it: this runs
+  // inside ChannelRequestError's constructor, which is evaluated as the argument
+  // to `reject`, so throwing here stops the promise settling at all.
+  const errors = channelError.errors ?? {};
+
   // First try the base errors
-  if (channelError.errors.base?.[0]) {
-    return channelError.errors.base[0];
+  if (errors.base?.[0]) {
+    return errors.base[0];
   }
 
   // Handle nested error structures from Phoenix changeset errors
   // Structure can be: { field: [[{ nested_field: ['messages'] }]] }
-  const fError = Object.values(channelError.errors)
+  const fError = Object.values(errors)
     .flat(2)
     .find(v => v && typeof v === 'object' && Object.keys(v).length > 0) as
     | Record<string, unknown>
@@ -78,13 +76,24 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
   }
 
   // show max 3 errros
-  const validationErrs = Object.values(channelError.errors)
+  // Only flat message arrays should reach here — anything nested was handled
+  // above — but drop non-strings rather than assume, so an unfamiliar shape
+  // falls through to the message below instead of rendering "[object Object]".
+  const validationErrs = Object.values(errors)
     .flat()
+    .filter((v): v is string => typeof v === 'string')
     .map(v => `- ${v}`)
     .splice(0, 3);
 
   if (validationErrs.length) {
     return validationErrs.join('\n');
+  }
+
+  // Replies with no error map still name the problem in `reason`; preferring it
+  // over the generic fallback is the difference between "trigger not found" and
+  // "An error occurred".
+  if (channelError.reason) {
+    return channelError.reason;
   }
 
   return 'An error occurred';
