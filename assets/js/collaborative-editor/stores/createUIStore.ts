@@ -208,9 +208,14 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
     notify('dismissLandingScreen');
   };
 
+  // The two landing-screen modals are mutually exclusive. Both are rendered as
+  // siblings gated on their own flag, and both close on Escape at the same
+  // priority, so letting them stack leaves the close order down to whichever
+  // registered its handler first.
   const openYAMLImportModal = () => {
     state = produce(state, draft => {
       draft.showYAMLImportModal = true;
+      draft.showTemplateBrowserModal = false;
     });
     notify('openYAMLImportModal');
   };
@@ -225,6 +230,7 @@ export const createUIStore = (isNewWorkflow: boolean = false): UIStore => {
   const openTemplateBrowserModal = () => {
     state = produce(state, draft => {
       draft.showTemplateBrowserModal = true;
+      draft.showYAMLImportModal = false;
     });
     notify('openTemplateBrowserModal');
   };
