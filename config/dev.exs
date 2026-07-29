@@ -146,9 +146,11 @@ config :git_hooks,
   # In local dev (with a real .git repo) we auto-install hooks.
   # In Docker builds the .git directory is not present (or incomplete),
   # so skip auto-install to avoid compile-time failures.
+  # In a worktree .git is a file pointing at the main repo, so there is no
+  # .git/config to look for.
   auto_install:
     System.get_env("GIT_HOOKS_AUTO_INSTALL", "true") == "true" and
-      File.exists?(".git/config"),
+      (File.exists?(".git/config") or File.regular?(".git")),
   verbose: true,
   hooks: [
     pre_commit: [

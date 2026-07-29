@@ -91,6 +91,8 @@ and this project adheres to
   instead of a generic error, and the condition is logged as a warning rather
   than an application error.
   [#4947](https://github.com/OpenFn/lightning/issues/4947)
+- Git hooks now auto-install when compiling from inside a git worktree, where
+  `.git` is a file rather than a directory.
 
 ## [2.17.0] - 2026-07-21
 
