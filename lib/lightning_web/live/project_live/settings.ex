@@ -48,6 +48,9 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   require Logger
 
+  # Stands in for the user's token in the CLI setup script.
+  @cli_token_placeholder "<your-personal-access-token>"
+
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
   on_mount {LightningWeb.Hooks, :limit_github_sync}
@@ -921,6 +924,96 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _reason, %{text: error}} ->
         error
     end
+  end
+
+  # Copy-pasteable script that installs the CLI, points it at this instance and
+  # pulls the project onto the user's machine. See
+  # https://docs.openfn.org/documentation/sync
+  defp cli_setup_script(%Project{} = project) do
+    dir = cli_project_dir(project)
+    endpoint = LightningWeb.Endpoint.url()
+    token = @cli_token_placeholder
+
+    """
+    # 1. Install the OpenFn CLI (needs Node.js v18 or later)
+    npm install -g @openfn/cli
+
+    # 2. Make a folder for this project and move into it
+    mkdir -p #{dir} && cd #{dir}
+
+    # 3. Point the CLI at this instance and paste your access token below
+    cat > .env <<'ENV'
+    OPENFN_ENDPOINT=#{endpoint}
+    OPENFN_API_KEY=#{token}
+    ENV
+
+    # 4. Pull this project onto your machine
+    openfn project pull #{project.id}
+    """
+    |> String.trim_trailing()
+  end
+
+  # Day-to-day commands for keeping the local copy and OpenFn in step.
+  defp cli_sync_script do
+    """
+    # Fetch the latest version of this project from OpenFn
+    openfn project pull
+
+    # Preview what your local changes would do
+    openfn project deploy --dry-run
+
+    # Deploy your local changes back to OpenFn
+    openfn project deploy
+    """
+    |> String.trim_trailing()
+  end
+
+  # Project names are slugs, but the value ends up in a shell command, so keep
+  # it to characters that are safe to paste into a terminal.
+  defp cli_project_dir(%Project{name: name}) when is_binary(name) do
+    case String.replace(name, ~r/[^a-zA-Z0-9_-]/, "") do
+      "" -> "openfn-project"
+      dir -> dir
+    end
+  end
+
+  defp cli_project_dir(_project), do: "openfn-project"
+
+  attr :text, :string, required: true
+
+  defp inline_code(assigns) do
+    ~H"""
+    <code class="font-mono bg-slate-100 rounded px-1">{@text}</code>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :script, :string, required: true
+
+  defp cli_snippet(assigns) do
+    ~H"""
+    <div id={@id} class="relative rounded-md bg-slate-50 border border-slate-200">
+      <span
+        id={"#{@id}-copy-tooltip"}
+        class="absolute top-2 right-2"
+        phx-hook="Tooltip"
+        aria-label="Copy to clipboard"
+        data-hide-on-click="false"
+      >
+        <.button
+          id={"#{@id}-copy-button"}
+          theme="secondary"
+          size="sm"
+          class="inline-flex items-center"
+          phx-hook="Copy"
+          data-content={@script}
+        >
+          <.icon name="hero-clipboard" class="h-4 w-4 mr-1" /> Copy
+        </.button>
+      </span>
+      <pre class="text-xs font-mono p-3 pr-24 overflow-x-auto text-slate-700">{@script}</pre>
+    </div>
+    """
   end
 
   attr :can_edit_project, :boolean, required: true

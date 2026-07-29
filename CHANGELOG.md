@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- A CLI tab on the project settings page, with a link to generate a personal
+  access token and copy-pasteable scripts for pulling the project onto your
+  machine and syncing changes back.
 - Report monthly active users (MAU) — distinct users active in the trailing 30
   days — in the usage tracker submission, alongside the existing 90-day active
   user count. Reported at both instance and project level, and bumps the usage

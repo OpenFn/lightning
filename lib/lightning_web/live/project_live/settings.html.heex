@@ -56,6 +56,10 @@
         <.icon name="hero-arrow-path" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Sync to GitHub</span>
       </:tab>
+      <:tab hash="cli">
+        <.icon name="hero-command-line" class="h-5 w-5 inline-block mr-2" />
+        <span class="inline-block align-middle">CLI</span>
+      </:tab>
       <:tab hash="data-storage">
         <.icon name="hero-square-3-stack-3d" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Data Storage</span>
@@ -856,6 +860,90 @@
             portability docs
           </.link>
           for full documentation on associated GitHub actions and automated workflows.
+        </div>
+      </:panel>
+      <:panel hash="cli" class="space-y-4">
+        <.section_header
+          title="Command line interface"
+          subtitle="Pull this project onto your machine to edit workflows in your own editor, run them locally, then deploy your changes back."
+          permissions_message="workflows from the CLI, but you can still pull a copy."
+          can_perform_action={@can_edit_project}
+        />
+        <.sandbox_settings_banner
+          :if={@sandbox?}
+          id="sandbox-banner-cli"
+          variant={:local}
+        />
+        <div class="bg-white p-4 rounded-md space-y-4">
+          <div>
+            <h6 class="font-medium text-black">1. Create an access token</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              The CLI signs in with a personal access token from your user profile.
+              Copy the token as soon as you generate it: you cannot view it later.
+            </small>
+          </div>
+          <div>
+            <.button_link
+              id="cli-create-token-link"
+              href={~p"/profile/tokens"}
+              target="_blank"
+              theme="primary"
+            >
+              Generate a personal access token
+            </.button_link>
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-md space-y-4">
+          <div>
+            <h6 class="font-medium text-black">2. Pull this project</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Run this script in a terminal. It installs the CLI, saves your
+              credentials to a local <.inline_code text=".env" /> file and
+              downloads this project into a new folder. Replace the placeholder
+              on the <.inline_code text="OPENFN_API_KEY" /> line with the token
+              you generated above.
+            </small>
+          </div>
+          <.cli_snippet
+            id="cli-setup-script"
+            script={cli_setup_script(@project)}
+          />
+          <small class="block text-xs text-gray-600">
+            Credential secrets stay in OpenFn. The pull writes a
+            <.inline_code text="credentials.yaml" /> with empty values for
+            you to fill in locally, so keep that file and
+            <.inline_code text=".env" /> out of version control.
+          </small>
+        </div>
+        <div class="bg-white p-4 rounded-md space-y-4">
+          <div>
+            <h6 class="font-medium text-black">3. Keep it in sync</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Run these from the project folder to move changes between your machine
+              and OpenFn. They act on whichever project is checked out, which the CLI
+              tracks in <.inline_code text="openfn.yaml" />.
+            </small>
+          </div>
+          <.cli_snippet id="cli-sync-script" script={cli_sync_script()} />
+        </div>
+        <div class="mt-2">
+          Need to learn more about the CLI? See the
+          <.link
+            target="_blank"
+            href="https://docs.openfn.org/documentation/sync"
+            class="link"
+          >
+            sync docs
+          </.link>
+          for the full set of project commands, and the
+          <.link
+            target="_blank"
+            href="https://docs.openfn.org/documentation/api-tokens"
+            class="link"
+          >
+            API token docs
+          </.link>
+          for help managing your tokens.
         </div>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">
