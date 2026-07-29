@@ -33,6 +33,8 @@ and this project adheres to
 
 ### Changed
 
+- Updated nodejs version to 24.18.1
+  [#4962](https://github.com/OpenFn/lightning/pull/5027)
 - Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
   [#4878](https://github.com/OpenFn/lightning/issues/4878)
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
