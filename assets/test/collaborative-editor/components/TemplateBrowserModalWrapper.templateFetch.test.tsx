@@ -14,15 +14,22 @@ import { BASE_TEMPLATES } from '../../../js/collaborative-editor/constants/baseT
 
 const mockFetchTemplates = vi.mocked(fetchTemplates);
 
-// --- Session (provides a truthy channel so the fetch effect runs) ---
+// --- Session (channel starts truthy; a test can flip it to model the
+// connecting window before the collaboration provider attaches) ---
+
+let mockChannel: object | undefined = {};
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: (
     selector: (s: {
-      provider: { channel: object };
+      provider: { channel: object } | undefined;
       isConnected: boolean;
     }) => unknown
-  ) => selector({ provider: { channel: {} }, isConnected: true }),
+  ) =>
+    selector({
+      provider: mockChannel ? { channel: mockChannel } : undefined,
+      isConnected: !!mockChannel,
+    }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
@@ -40,6 +47,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 let mockIsOpen = true;
 const mockSetTemplates = vi.fn();
 const mockSetTemplatesLoading = vi.fn();
+const mockSetTemplateSearchQuery = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useShowTemplateBrowserModal: () => mockIsOpen,
@@ -53,7 +61,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     dismissLandingScreen: vi.fn(),
     setTemplates: mockSetTemplates,
     setTemplatesLoading: mockSetTemplatesLoading,
-    setTemplateSearchQuery: vi.fn(),
+    setTemplateSearchQuery: mockSetTemplateSearchQuery,
   }),
 }));
 
@@ -85,6 +93,7 @@ describe('TemplateBrowserModalWrapper - template fetch race guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsOpen = true;
+    mockChannel = {};
   });
 
   test('a stale fetch resolving after a newer one does not overwrite it', async () => {
@@ -163,5 +172,25 @@ describe('TemplateBrowserModalWrapper - template fetch race guard', () => {
     // panel is left showing base templates, not a prior open's user data.
     expect(mockSetTemplates).toHaveBeenCalledTimes(1);
     expect(mockSetTemplates).toHaveBeenCalledWith(BASE_TEMPLATES);
+  });
+
+  test('the channel arriving does not clear an in-progress search', () => {
+    mockChannel = undefined;
+    const { rerender } = render(<TemplateBrowserModalWrapper />);
+
+    // Open with no channel: reset runs, no fetch.
+    expect(mockSetTemplateSearchQuery).toHaveBeenCalledTimes(1);
+    expect(mockFetchTemplates).not.toHaveBeenCalled();
+
+    // User types while connecting, then the channel lands.
+    mockSetTemplateSearchQuery.mockClear();
+    mockSetTemplates.mockClear();
+    mockChannel = {};
+    rerender(<TemplateBrowserModalWrapper />);
+
+    // The fetch fires; the search and the base-template seed are left alone.
+    expect(mockFetchTemplates).toHaveBeenCalledTimes(1);
+    expect(mockSetTemplateSearchQuery).not.toHaveBeenCalled();
+    expect(mockSetTemplates).not.toHaveBeenCalledWith(BASE_TEMPLATES);
   });
 });

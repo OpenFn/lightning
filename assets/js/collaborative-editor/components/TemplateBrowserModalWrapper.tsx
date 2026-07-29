@@ -36,17 +36,21 @@ export function TemplateBrowserModalWrapper() {
     enabled: isOpen,
   });
 
-  // Lazy fetch — only when modal opens, not on every /new load
+  // Each open starts from a clean baseline: panel state lives in the global
+  // store and no longer resets on unmount, so a stranded loading flag or a
+  // prior open's user templates would otherwise leak in. Keyed on `isOpen`
+  // alone — if `channel` were a dependency here, the reset would fire again
+  // when the connection lands and wipe an in-progress search.
   useEffect(() => {
     if (!isOpen) return;
-    // Reset to a clean baseline on each open: the panel state lives in the
-    // global store and no longer resets on unmount, so a stranded loading flag
-    // or a prior open's user templates would otherwise leak in. Before the
-    // `!channel` guard so a reopen with a null channel still clears loading.
     setTemplateSearchQuery('');
     setTemplates(BASE_TEMPLATES);
     setTemplatesLoading(false);
-    if (!channel) return;
+  }, [isOpen, setTemplateSearchQuery, setTemplates, setTemplatesLoading]);
+
+  // Lazy fetch — only when the modal is open and a channel exists.
+  useEffect(() => {
+    if (!isOpen || !channel) return;
 
     // Guards against a close-before-resolve-then-reopen race: without this,
     // a stale fetch from a previous open can resolve after a newer one and
@@ -75,13 +79,7 @@ export function TemplateBrowserModalWrapper() {
     return () => {
       cancelled = true;
     };
-  }, [
-    isOpen,
-    channel,
-    setTemplateSearchQuery,
-    setTemplatesLoading,
-    setTemplates,
-  ]);
+  }, [isOpen, channel, setTemplates, setTemplatesLoading]);
 
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
