@@ -128,13 +128,11 @@ function BreadcrumbContent({
       <div key="workflow" className="flex items-center gap-2">
         <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
         <div className="flex items-center gap-1.5">
-          {!isNewWorkflow && (
-            <VersionDropdown
-              currentVersion={workflowFromStore?.lock_version ?? null}
-              latestVersion={latestSnapshotLockVersion}
-              onVersionSelect={handleVersionSelect}
-            />
-          )}
+          <VersionDropdown
+            currentVersion={workflowFromStore?.lock_version ?? null}
+            latestVersion={latestSnapshotLockVersion}
+            onVersionSelect={handleVersionSelect}
+          />
           {projectEnv && (
             <div
               id="canvas-project-env-container"
@@ -162,7 +160,6 @@ function BreadcrumbContent({
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
-    isNewWorkflow,
   ]);
 
   // Hide header until the first save clears isNewWorkflow in the store.
