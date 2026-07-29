@@ -1,0 +1,723 @@
+defmodule Lightning.Bootstrap do
+  @moduledoc """
+  Declarative, idempotent bootstrapping of Lightning from a scenario file.
+
+  Given a plain map (typically decoded from a YAML/JSON scenario file), this
+  module creates users (with optional API tokens), credentials and projects,
+  and provisions each project's workflows through
+  `Lightning.Projects.Provisioner` — the same engine that backs the
+  `/api/provision` HTTP API.
+
+  It serves local development (`bin/e2e --scenario`), external test harnesses
+  (boot Lightning into a known state, read the manifest, drive the public
+  APIs) and initial-state seeding of real deployments
+  (`bin/lightning eval 'Lightning.Setup.bootstrap("/etc/lightning/state.yaml")'`).
+
+  ## Idempotency
+
+  Re-running the same scenario converges instead of duplicating:
+
+  * Users are matched by email, credentials by `{owner, name}`, and both are
+    reused when they already exist.
+  * API tokens are signed JWTs and cannot be supplied; when `api_token: true`
+    the user's oldest existing API token is reused, and one is generated only
+    if none exists. Tokens are surfaced through `manifest/1`.
+  * Projects, workflows, triggers, jobs and edges get **deterministic ids**
+    (UUIDv5-style, derived from their names) unless an explicit `id` is given,
+    so the provisioner upserts them on subsequent runs.
+  * Project members are added or have their role updated, never removed.
+
+  Renaming a record changes its derived id: the renamed record is created
+  fresh and the old one is left in place (the provisioner only deletes records
+  explicitly marked with `delete: true`). Pin an explicit `id` on anything you
+  intend to rename.
+
+  The whole run happens in a single transaction — a failing scenario leaves
+  the database untouched.
+
+  ## Safety
+
+  Bootstrapping creates users (including superusers) and must be explicitly
+  enabled. It is enabled in `dev` and `test` config; releases opt in with the
+  `ALLOW_BOOTSTRAP=true` environment variable. `run/1` raises otherwise.
+
+  ## Scenario shape
+
+      users:
+        - email: amy@openfn.org          # required
+          first_name: Amy
+          superuser: true
+          api_token: true                # generate/reuse a token, see manifest
+          # password defaults to "welcome12345"
+
+      credentials:
+        - name: dhis2-prod               # required, unique per scenario
+          owner: amy@openfn.org          # required, a user declared above
+          schema: dhis2
+          body:
+            password: ${DHIS2_PASSWORD}  # ${VAR} is env-interpolated
+
+      projects:
+        - name: my-project               # required, url-safe
+          members:                       # required, at least one owner
+            - { email: amy@openfn.org, role: owner }
+          credentials: [dhis2-prod]      # optional, exposed to this project
+          workflows:
+            - name: my-workflow
+              trigger:
+                type: webhook            # webhook (default) | cron | kafka
+                # any Trigger field passes through, e.g.:
+                # webhook_reply: after_completion
+                # cron_expression: "0 * * * *"
+              jobs:
+                - name: transform
+                  adaptor: "@openfn/language-common@latest"  # default
+                  body: "fn(s => s)"                         # defaults to no-op
+                  credential: dhis2-prod                     # optional
+              edges:
+                - { from: trigger, to: transform }
+                - { from: transform, to: other, condition: on_job_success }
+
+  Workflow, trigger, job and edge maps are passed through to the provisioning
+  document after the conveniences above are resolved, so any field the
+  provisioner accepts (e.g. `webhook_reply`, `custom_path`, `enabled`,
+  `condition_expression`) can be used directly. Unknown fields are rejected by
+  the provisioner's own validation.
+
+  Keys are strings, as produced by the YAML/JSON parsers.
+  """
+
+  import Ecto.Query
+
+  alias Lightning.Accounts
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserToken
+  alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Provisioner
+  alias Lightning.Repo
+
+  @default_password "welcome12345"
+  @default_adaptor "@openfn/language-common@latest"
+  @default_body "fn(state => state);"
+
+  # Namespace for deterministic (UUIDv5-style) record ids. Changing it changes
+  # every derived id, breaking idempotent re-runs against existing databases.
+  @uuid_namespace "lightning.bootstrap.v1"
+
+  @roles %{
+    "owner" => :owner,
+    "admin" => :admin,
+    "editor" => :editor,
+    "viewer" => :viewer
+  }
+  @role_rank %{owner: 3, admin: 2, editor: 1, viewer: 0}
+
+  @typedoc "Per-user result: the persisted user and any generated API token."
+  @type user_result :: %{user: User.t(), api_token: String.t() | nil}
+
+  @type result :: %{
+          users: %{String.t() => user_result()},
+          credentials: %{String.t() => Credential.t()},
+          projects: [map()]
+        }
+
+  @doc """
+  Create or update everything described by `scenario`, atomically.
+
+  Returns a result map describing the records; pass it to `manifest/1` for a
+  JSON-encodable summary or `summary/1` for a human-readable one.
+
+  Raises unless bootstrapping is enabled (see the module docs), and rolls the
+  whole run back on any error.
+  """
+  @spec run(map()) :: result()
+  def run(scenario) when is_map(scenario) do
+    ensure_enabled!()
+
+    scenario = interpolate_env(scenario)
+
+    {:ok, result} =
+      Repo.transaction(
+        fn ->
+          users = ensure_users(fetch_list(scenario, "users"))
+
+          credentials =
+            ensure_credentials(fetch_list(scenario, "credentials"), users)
+
+          projects =
+            Enum.map(
+              fetch_list(scenario, "projects"),
+              &ensure_project(&1, users, credentials)
+            )
+
+          %{users: users, credentials: credentials, projects: projects}
+        end,
+        timeout: :timer.minutes(2)
+      )
+
+    result
+  end
+
+  @doc """
+  Load a scenario file (`.yaml`, `.yml` or `.json`) and `run/1` it.
+
+  Options:
+
+  * `:manifest` - path to write the JSON manifest to.
+  """
+  @spec run_file(Path.t(), keyword()) :: result()
+  def run_file(path, opts \\ []) do
+    result = path |> load_file!() |> run()
+
+    if manifest_path = opts[:manifest] do
+      File.write!(manifest_path, Jason.encode!(manifest(result), pretty: true))
+    end
+
+    result
+  end
+
+  @doc """
+  Parse a scenario file into a map. Supports YAML and JSON.
+  """
+  @spec load_file!(Path.t()) :: map()
+  def load_file!(path) do
+    File.exists?(path) || raise "Scenario file not found: #{path}"
+
+    case Path.extname(path) do
+      ext when ext in [".yaml", ".yml"] ->
+        {:ok, _apps} = Application.ensure_all_started(:yamerl)
+        YamlElixir.read_from_file!(path)
+
+      ".json" ->
+        path |> File.read!() |> Jason.decode!()
+
+      other ->
+        raise "Unsupported scenario file extension: #{inspect(other)} " <>
+                "(use .yaml, .yml or .json)"
+    end
+  end
+
+  @doc """
+  Structured, JSON-encodable manifest of a `run/1` result — everything an
+  external harness needs to drive the instance: user emails and API tokens,
+  record ids, and webhook paths.
+  """
+  @spec manifest(result()) :: map()
+  def manifest(%{users: users, credentials: credentials, projects: projects}) do
+    %{
+      users:
+        for {email, %{user: user, api_token: token}} <- users do
+          %{
+            email: email,
+            id: user.id,
+            superuser: user.role == :superuser,
+            api_token: token
+          }
+        end,
+      credentials:
+        for {name, credential} <- credentials do
+          %{name: name, id: credential.id, owner_id: credential.user_id}
+        end,
+      projects:
+        for %{project: project, credentials: pc_ids, workflows: workflows} <-
+              projects do
+          %{
+            id: project.id,
+            name: project.name,
+            credentials:
+              for {name, pc_id} <- pc_ids do
+                %{name: name, project_credential_id: pc_id}
+              end,
+            workflows: Enum.map(workflows, &workflow_manifest/1)
+          }
+        end
+    }
+  end
+
+  @doc "Human-readable one-line-per-record summary of a `run/1` result."
+  @spec summary(result()) :: String.t()
+  def summary(%{users: users, projects: projects}) do
+    user_lines =
+      for {email, %{user: user}} <- users do
+        "  user     #{email} (#{user.id})"
+      end
+
+    project_lines =
+      Enum.flat_map(projects, fn %{project: project, workflows: workflows} ->
+        workflow_lines =
+          for %{name: name, jobs: jobs} <- workflows do
+            "    workflow #{name} (#{length(jobs)} job(s))"
+          end
+
+        ["  project  #{project.name} (#{project.id})" | workflow_lines]
+      end)
+
+    Enum.join(["Bootstrapped:" | user_lines ++ project_lines], "\n")
+  end
+
+  defp workflow_manifest(%{id: id, name: name, trigger: trigger, jobs: jobs}) do
+    %{
+      id: id,
+      name: name,
+      trigger: trigger_manifest(trigger),
+      jobs: Enum.map(jobs, &Map.take(&1, [:id, :name]))
+    }
+  end
+
+  defp trigger_manifest(nil), do: nil
+
+  defp trigger_manifest(%{id: id, type: type}) do
+    %{
+      id: id,
+      type: type,
+      webhook_path: if(type == "webhook", do: "/i/#{id}")
+    }
+  end
+
+  defp ensure_enabled! do
+    enabled =
+      :lightning
+      |> Application.get_env(__MODULE__, [])
+      |> Keyword.get(:enabled, false)
+
+    unless enabled do
+      raise """
+      Lightning.Bootstrap is disabled.
+
+      Bootstrapping creates users (including superusers) and must be opted
+      into. Set ALLOW_BOOTSTRAP=true in the environment (for a release), or
+      configure `config :lightning, Lightning.Bootstrap, enabled: true`.
+      """
+    end
+  end
+
+  defp interpolate_env(value) when is_binary(value) do
+    Regex.replace(~r/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/, value, fn _, var ->
+      System.get_env(var) ||
+        raise "Scenario references ${#{var}}, but that environment variable is not set"
+    end)
+  end
+
+  defp interpolate_env(value) when is_map(value) do
+    Map.new(value, fn {k, v} -> {k, interpolate_env(v)} end)
+  end
+
+  defp interpolate_env(value) when is_list(value) do
+    Enum.map(value, &interpolate_env/1)
+  end
+
+  defp interpolate_env(value), do: value
+
+  # UUIDv5-style: name-based SHA-1 uuid so the same scenario always yields the
+  # same ids and the provisioner upserts rather than duplicates.
+  defp stable_id(scope) do
+    <<a::48, _::4, b::12, _::2, c::62, _rest::binary>> =
+      :crypto.hash(:sha, @uuid_namespace <> scope)
+
+    {:ok, id} = Ecto.UUID.load(<<a::48, 5::4, b::12, 2::2, c::62>>)
+    id
+  end
+
+  defp ensure_users(specs) do
+    Map.new(specs, fn spec ->
+      email = spec |> fetch!("email") |> String.downcase()
+
+      user =
+        (Accounts.get_user_by_email(email) || register_user(spec, email))
+        |> confirm_user()
+
+      api_token = if truthy(spec["api_token"]), do: ensure_api_token(user)
+
+      {email, %{user: user, api_token: api_token}}
+    end)
+  end
+
+  defp register_user(spec, email) do
+    attrs = %{
+      first_name: spec["first_name"] || default_first_name(email),
+      last_name: spec["last_name"] || "User",
+      email: email,
+      password: spec["password"] || @default_password
+    }
+
+    result =
+      if truthy(spec["superuser"]),
+        do: Accounts.register_superuser(attrs),
+        else: Accounts.create_user(attrs)
+
+    case result do
+      {:ok, user} -> user
+      {:error, changeset} -> raise_invalid("user #{email}", changeset)
+    end
+  end
+
+  defp confirm_user(%User{confirmed_at: nil} = user) do
+    user |> User.confirm_changeset() |> Repo.update!()
+  end
+
+  defp confirm_user(%User{} = user), do: user
+
+  defp ensure_api_token(user) do
+    existing =
+      from(t in UserToken,
+        where: t.user_id == ^user.id and t.context == "api",
+        order_by: [asc: t.inserted_at],
+        limit: 1,
+        select: t.token
+      )
+      |> Repo.one()
+
+    existing || Accounts.generate_api_token(user)
+  end
+
+  defp ensure_credentials(specs, users) do
+    Map.new(specs, fn spec ->
+      name = fetch!(spec, "name")
+      owner = lookup_user!(users, fetch!(spec, "owner"), "credential #{name}")
+
+      credential =
+        Repo.get_by(Credential, user_id: owner.id, name: name) ||
+          create_credential(spec, name, owner)
+
+      {name, credential}
+    end)
+  end
+
+  defp create_credential(spec, name, owner) do
+    # `body` is sugar for a single "main" environment body; multi-environment
+    # credentials can pass `credential_bodies` through directly.
+    credential_bodies =
+      spec["credential_bodies"] ||
+        [%{"name" => "main", "body" => spec["body"] || %{}}]
+
+    %{
+      "name" => name,
+      "user_id" => owner.id,
+      "schema" => spec["schema"] || "raw",
+      "credential_bodies" => credential_bodies
+    }
+    |> Credentials.create_credential()
+    |> case do
+      {:ok, credential} -> credential
+      {:error, changeset} -> raise_invalid("credential #{name}", changeset)
+    end
+  end
+
+  defp ensure_project(spec, users, credentials) do
+    name = fetch!(spec, "name")
+    scope = "project:#{name}"
+    id = spec["id"] || stable_id(scope)
+
+    members = parse_members(spec, users, name)
+    actor = most_privileged_member(members)
+
+    project = Repo.get(Project, id) || create_project_shell(id, name, actor)
+
+    reconcile_members(project, members)
+
+    pc_ids =
+      ensure_project_credentials(project, scope, spec, credentials)
+
+    workflow_infos =
+      spec
+      |> fetch_list("workflows")
+      |> Enum.map(&build_workflow_info(&1, scope, pc_ids))
+
+    document = %{
+      "id" => id,
+      "name" => name,
+      "workflows" => Enum.map(workflow_infos, & &1.document)
+    }
+
+    project = Repo.get!(Project, id)
+
+    case Provisioner.import_document(project, actor, document) do
+      {:ok, imported} ->
+        %{project: imported, credentials: pc_ids, workflows: workflow_infos}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        raise_invalid("project #{name}", changeset)
+
+      {:error, other} ->
+        raise "Failed to provision project #{name}: #{inspect(other)}"
+    end
+  end
+
+  defp create_project_shell(id, name, actor) do
+    case Provisioner.import_document(nil, actor, %{"id" => id, "name" => name}) do
+      {:ok, project} ->
+        project
+
+      {:error, %Ecto.Changeset{} = cs} ->
+        raise_invalid("project #{name}", cs)
+
+      {:error, other} ->
+        raise "Failed to create project #{name}: #{inspect(other)}"
+    end
+  end
+
+  defp parse_members(spec, users, project_name) do
+    members =
+      spec
+      |> fetch_list("members")
+      |> Enum.map(fn member ->
+        email = fetch!(member, "email")
+        user = lookup_user!(users, email, "project #{project_name}")
+
+        role =
+          Map.get(@roles, member["role"] || "editor") ||
+            raise "Unknown role #{inspect(member["role"])} for #{email} in " <>
+                    "project #{project_name} (expected one of: #{Enum.join(Map.keys(@roles), ", ")})"
+
+        %{user: user, role: role}
+      end)
+
+    unless Enum.any?(members, &(&1.role == :owner)) do
+      raise "Project #{project_name} needs at least one member with role: owner"
+    end
+
+    members
+  end
+
+  defp most_privileged_member(members) do
+    %{user: user} = Enum.max_by(members, &Map.fetch!(@role_rank, &1.role))
+    user
+  end
+
+  # Adds missing members and corrects drifted roles; never removes members.
+  defp reconcile_members(project, members) do
+    Enum.each(members, fn %{user: user, role: role} ->
+      case Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id) do
+        nil ->
+          Repo.insert!(%ProjectUser{
+            project_id: project.id,
+            user_id: user.id,
+            role: role
+          })
+
+        %ProjectUser{role: ^role} ->
+          :ok
+
+        project_user ->
+          project_user
+          |> Ecto.Changeset.change(role: role)
+          |> Repo.update!()
+      end
+    end)
+  end
+
+  # Exposes credentials to the project (ProjectCredential), returning a
+  # `credential name => project_credential_id` map for job wiring. Credentials
+  # can be listed under the project's "credentials" key or referenced directly
+  # from a job's "credential" key.
+  defp ensure_project_credentials(project, scope, spec, credentials) do
+    referenced_names =
+      fetch_list(spec, "credentials") ++
+        for workflow <- fetch_list(spec, "workflows"),
+            job <- fetch_list(workflow, "jobs"),
+            name = job["credential"],
+            do: name
+
+    referenced_names
+    |> Enum.uniq()
+    |> Map.new(fn name ->
+      credential =
+        Map.get(credentials, name) ||
+          raise "Project #{project.name} references credential #{inspect(name)}, " <>
+                  "which is not declared under the scenario's top-level \"credentials\""
+
+      project_credential =
+        Repo.get_by(ProjectCredential,
+          project_id: project.id,
+          credential_id: credential.id
+        ) ||
+          Repo.insert!(%ProjectCredential{
+            id: stable_id("#{scope}/credential:#{name}"),
+            project_id: project.id,
+            credential_id: credential.id
+          })
+
+      {name, project_credential.id}
+    end)
+  end
+
+  defp build_workflow_info(spec, project_scope, pc_ids) do
+    name = fetch!(spec, "name")
+    scope = "#{project_scope}/workflow:#{name}"
+    id = spec["id"] || stable_id(scope)
+
+    trigger = build_trigger(Map.get(spec, "trigger", %{}), scope)
+    jobs = Enum.map(fetch_list(spec, "jobs"), &build_job(&1, scope, pc_ids))
+
+    edges =
+      spec
+      |> fetch_list("edges")
+      |> Enum.map(&build_edge(&1, scope, name, trigger, jobs))
+
+    document =
+      spec
+      |> Map.drop(["trigger", "jobs", "edges"])
+      |> Map.merge(%{
+        "id" => id,
+        "name" => name,
+        "triggers" => if(trigger, do: [trigger.document], else: []),
+        "jobs" => Enum.map(jobs, & &1.document),
+        "edges" => edges
+      })
+
+    %{
+      document: document,
+      id: id,
+      name: name,
+      trigger: trigger && Map.take(trigger, [:id, :type]),
+      jobs: Enum.map(jobs, &Map.take(&1, [:id, :name]))
+    }
+  end
+
+  # `trigger: none` (or false/nil) skips trigger creation; anything else
+  # builds one, defaulting to an enabled webhook trigger. All other keys pass
+  # through to the provisioner (cron_expression, webhook_reply, enabled, ...).
+  defp build_trigger(spec, _scope) when spec in [nil, false, "none"], do: nil
+
+  defp build_trigger(spec, scope) when is_map(spec) do
+    id = spec["id"] || stable_id("#{scope}/trigger")
+    type = spec["type"] || "webhook"
+
+    document =
+      spec
+      |> Map.merge(%{"id" => id, "type" => type})
+      |> Map.put_new("enabled", true)
+
+    %{id: id, type: type, document: document}
+  end
+
+  defp build_trigger(spec, _scope) do
+    raise "Expected a workflow trigger to be a map or \"none\", got: #{inspect(spec)}"
+  end
+
+  defp build_job(spec, scope, pc_ids) do
+    name = fetch!(spec, "name")
+    id = spec["id"] || stable_id("#{scope}/job:#{name}")
+
+    document =
+      spec
+      |> Map.drop(["credential"])
+      |> Map.merge(%{"id" => id, "name" => name})
+      |> Map.put_new("adaptor", @default_adaptor)
+      |> Map.put_new("body", @default_body)
+      |> attach_credential(spec["credential"], pc_ids, name)
+
+    %{id: id, name: name, document: document}
+  end
+
+  defp attach_credential(document, nil, _pc_ids, _job), do: document
+
+  defp attach_credential(document, credential_name, pc_ids, job) do
+    project_credential_id =
+      Map.get(pc_ids, credential_name) ||
+        raise "Job #{job} references unknown credential #{inspect(credential_name)}"
+
+    Map.put(document, "project_credential_id", project_credential_id)
+  end
+
+  defp build_edge(spec, scope, workflow_name, trigger, jobs) do
+    job_ids = Map.new(jobs, &{&1.name, &1.id})
+
+    to = fetch!(spec, "to")
+    from = spec["from"] || "trigger"
+
+    base =
+      spec
+      |> Map.drop(["from", "to", "condition"])
+      |> Map.merge(%{
+        "id" => spec["id"] || stable_id("#{scope}/edge:#{from}->#{to}"),
+        "target_job_id" => edge_job_id!(job_ids, to, workflow_name),
+        "condition_type" =>
+          spec["condition"] || spec["condition_type"] ||
+            default_condition(from)
+      })
+      |> Map.put_new("enabled", true)
+
+    if from == "trigger" do
+      unless trigger do
+        raise "Edge to #{inspect(to)} references the trigger, but workflow " <>
+                "#{inspect(workflow_name)} has no trigger"
+      end
+
+      Map.put(base, "source_trigger_id", trigger.id)
+    else
+      Map.put(base, "source_job_id", edge_job_id!(job_ids, from, workflow_name))
+    end
+  end
+
+  defp edge_job_id!(job_ids, name, workflow_name) do
+    Map.get(job_ids, name) ||
+      raise "Edge references job #{inspect(name)}, which does not exist in " <>
+              "workflow #{inspect(workflow_name)}"
+  end
+
+  defp default_condition("trigger"), do: "always"
+  defp default_condition(_job), do: "on_job_success"
+
+  defp lookup_user!(users, email, context) do
+    case Map.get(users, String.downcase(email)) do
+      %{user: user} ->
+        user
+
+      nil ->
+        raise "#{String.capitalize(context)} references user #{email}, who is " <>
+                "not declared under the scenario's top-level \"users\""
+    end
+  end
+
+  defp default_first_name(email) do
+    email |> String.split("@") |> hd() |> String.capitalize()
+  end
+
+  defp fetch!(map, key) when is_map(map) do
+    case Map.get(map, key) do
+      value when value not in [nil, ""] ->
+        value
+
+      _ ->
+        raise "Scenario entry #{inspect(map)} is missing required key #{inspect(key)}"
+    end
+  end
+
+  defp fetch!(other, key) do
+    raise "Expected a map with key #{inspect(key)}, got: #{inspect(other)}"
+  end
+
+  defp fetch_list(map, key) do
+    case Map.get(map, key) do
+      nil ->
+        []
+
+      list when is_list(list) ->
+        list
+
+      other ->
+        raise "Expected #{inspect(key)} to be a list, got: #{inspect(other)}"
+    end
+  end
+
+  defp raise_invalid(what, %Ecto.Changeset{} = changeset) do
+    errors =
+      changeset
+      |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
+        Enum.reduce(opts, msg, fn {key, value}, acc ->
+          String.replace(acc, "%{#{key}}", to_string(inspect(value)))
+        end)
+      end)
+
+    raise "Failed to bootstrap #{what}: #{inspect(errors)}"
+  end
+
+  defp truthy(true), do: true
+  defp truthy("true"), do: true
+  defp truthy(_other), do: false
+end
