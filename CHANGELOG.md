@@ -22,9 +22,6 @@ and this project adheres to
   user count. Reported at both instance and project level, and bumps the usage
   report schema to version 3.
   [#4826](https://github.com/OpenFn/lightning/issues/4826)
-- Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
-  external identity provider and link or unlink providers from their profile
-  settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or
