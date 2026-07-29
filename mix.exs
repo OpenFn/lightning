@@ -192,7 +192,7 @@ defmodule Lightning.MixProject do
       {:statistics, "~> 0.6", only: :dev},
       {:tls_certificate_check, "~> 1.32"},
       philter_dep(),
-      {:y_ex, "~> 0.8.0"},
+      {:y_ex, "~> 0.10.5"},
       {:chameleon, "~> 2.5"}
     ]
   end
