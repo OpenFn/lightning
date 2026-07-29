@@ -67,6 +67,8 @@ and this project adheres to
   `Lightning.Finch` pool and the default Tesla adapter, but its version was
   previously dictated by `prom_ex` and `goth`.
   [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- `bin/worktree` takes a trailing `-- <command>` that runs inside the worktree
+  once it is ready, and also runs when the branch already has a worktree.
 
 ### Fixed
 
