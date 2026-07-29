@@ -80,6 +80,14 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
+# hackney 4 negotiates HTTP/2 via ALPN by default, where 1.x was HTTP/1.1 only.
+# Concurrent requests to one host then multiplex onto a single connection, so
+# retiring that connection fails every in-flight request at once -- around a
+# quarter of the fetches in `mix lightning.install_schemas`. Pinned to HTTP/1.1
+# to keep the transport hackney 1.25 used; revisit as a deliberate change if we
+# want h2 multiplexing.
+config :hackney, default_protocols: [:http1]
+
 # Configure esbuild (the version is required)
 # TODO: work out how to _NOT_ have this set of entry points try and build
 # monaco-editor, since we already have a separate esbuild task for that.
