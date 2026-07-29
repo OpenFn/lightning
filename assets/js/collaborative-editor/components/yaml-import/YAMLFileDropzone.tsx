@@ -105,8 +105,8 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
             ? 'border-indigo-500 bg-indigo-50'
             : 'border-gray-200 hover:border-gray-300'
         )}
-        // The drag handlers live here, but the file input below is the real
-        // control — it carries the accessible name and the keyboard path.
+        // The drag handlers live here; the label below covers the whole
+        // area and triggers the hidden file input on click.
         role="presentation"
       >
         <input
@@ -115,20 +115,25 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
           type="file"
           accept=".yaml,.yml"
           onChange={handleFileInput}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="sr-only"
         />
-        <div className="bg-gray-100 rounded-xl p-3 mb-3">
-          <span className="hero-arrow-up-tray size-6 text-gray-800 block" />
-        </div>
-        <p className="mb-2 text-sm text-gray-600">
-          Upload or drop a YAML file.
-        </p>
-        <p className="text-xs text-gray-500">
-          <span className="text-teal-500 font-medium">YML</span>
-          {' or '}
-          <span className="text-teal-500 font-medium">YAML</span>
-          {', up to 8MB'}
-        </p>
+        <label
+          htmlFor="workflow-file"
+          className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer"
+        >
+          <div className="bg-gray-100 rounded-xl p-3 mb-3">
+            <span className="hero-arrow-up-tray size-6 text-gray-800 block" />
+          </div>
+          <p className="mb-2 text-sm text-gray-600">
+            Upload or drop a YAML file.
+          </p>
+          <p className="text-xs text-gray-500">
+            <span className="text-teal-500 font-medium">YML</span>
+            {' or '}
+            <span className="text-teal-500 font-medium">YAML</span>
+            {', up to 8MB'}
+          </p>
+        </label>
       </div>
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
     </div>
