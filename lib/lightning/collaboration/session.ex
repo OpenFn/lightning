@@ -215,7 +215,8 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
-  - `{:error, :snapshot_failed}` - Workflow saved but its snapshot failed
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
