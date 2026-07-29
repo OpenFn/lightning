@@ -57,9 +57,15 @@ and this project adheres to
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
 - Updated `hackney` to 4.6 to address advisories fixed only in the 4.x line,
   along with the `httpoison` 3.0 and `sentry` 13.2 bumps it requires. `tzdata`
-  temporarily tracks upstream `master`, the only version that permits `hackney`
-  4.x. [#4905](https://github.com/OpenFn/lightning/issues/4905)
+  is pinned to an upstream commit, the only version that permits `hackney` 4.x.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
 - Updated `swoosh` to 1.26.3 and `tidewave` to 0.8.0.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Updated `cowboy` to 2.18.0 and `cowlib` to 2.19.0, clearing CVE-2026-65624 and
+  CVE-2026-59248. [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Declared `finch` as a direct dependency. It backs the app's own
+  `Lightning.Finch` pool and the default Tesla adapter, but its version was
+  previously dictated by `prom_ex` and `goth`.
   [#4905](https://github.com/OpenFn/lightning/issues/4905)
 
 ### Fixed

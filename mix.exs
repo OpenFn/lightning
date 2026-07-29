@@ -66,9 +66,9 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
-  # it has no patched release (latest is 2.18.0). Note that both EEF records carry
+  # it has no patched release (latest is 2.19.0). Note that both EEF records carry
   # no `fixed` event, while the GitHub twin of CVE-2026-43969
-  # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.18.0 may
+  # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.19.0 may
   # already be unaffected and the EEF record simply lacks a fix event. IDs are
   # matched against an advisory's primary ID or any alias, so the CVE form also
   # silences the GHSA/EEF variants.
@@ -110,6 +110,7 @@ defmodule Lightning.MixProject do
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
+      {:finch, "~> 0.23"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
       {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
@@ -163,11 +164,15 @@ defmodule Lightning.MixProject do
       {:tesla, "~> 1.18.2"},
       {:tidewave, "~> 0.8.0", only: :dev},
       {:timex, "~> 3.7"},
-      # Tracking master for `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170), which
-      # lets tzdata keep its autoupdater on hackney 4. Not on Hex yet -- 1.1.4
-      # predates the fix. Move back to a Hex release once 1.1.5 ships, since git
-      # deps are invisible to `mix deps.audit`.
-      {:tzdata, github: "lau/tzdata", override: true},
+      # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
+      # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --
+      # 1.1.4 predates the fix and no release is scheduled. Move back to a Hex
+      # release once one carries #170, since git deps are invisible to
+      # `mix deps.audit`.
+      {:tzdata,
+       github: "lau/tzdata",
+       ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
+       override: true},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
