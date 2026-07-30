@@ -65,8 +65,8 @@ and this project adheres to
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
 - Updated bundled worker to 1.27.1 and cli to 1.38.4
   [#4962](https://github.com/OpenFn/lightning/pull/4962)
-- Bumped bundled CLI to version 1.38.5
-- Bumped bundled worker to version 1.38.4
+- Bumped bundled CLI to version 1.39.1
+- Bumped bundled worker to version 1.27.4
 - Updated `hackney` to 4.6 to address advisories fixed only in the 4.x line,
   along with the `httpoison` 3.0 and `sentry` 13.2 bumps it requires. `tzdata`
   is pinned to an upstream commit, the only version that permits `hackney` 4.x.
