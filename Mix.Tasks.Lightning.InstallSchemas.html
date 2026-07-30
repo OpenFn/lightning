@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1B921C59.js"></script>
+    <script defer src="dist/sidebar_items-6939931F.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -1824,14 +1824,14 @@ response's <code class="inline">status_code</code> is <code class="inline">301</
 <code class="inline">:post</code> and the <code class="inline">status_code</code> is <code class="inline">303</code>. Redirects are resolved up to
 <code class="inline">:max_redirect</code> hops and the final response is returned.</p><p>As of hackney 4.0 redirects are resolved inside hackney, so a
 <a href="https://hexdocs.pm/httpoison/3.0.0/HTTPoison.MaybeRedirect.html"><code class="inline">HTTPoison.MaybeRedirect</code></a> is no longer returned. The struct is retained
-only for backward compatibility.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2841146218-1">%</span><span class="nc" data-group-id="2841146218-1">HTTPoison.Request</span><span class="p" data-group-id="2841146218-1">{</span><span class="w">
+only for backward compatibility.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4196077423-1">%</span><span class="nc" data-group-id="4196077423-1">HTTPoison.Request</span><span class="p" data-group-id="4196077423-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2841146218-2">[</span><span class="p" data-group-id="2841146218-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2841146218-3">}</span><span class="p" data-group-id="2841146218-2">]</span><span class="w">
-</span><span class="p" data-group-id="2841146218-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4196077423-2">[</span><span class="p" data-group-id="4196077423-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="4196077423-3">}</span><span class="p" data-group-id="4196077423-2">]</span><span class="w">
+</span><span class="p" data-group-id="4196077423-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="2841146218-4">(</span><span class="n">request</span><span class="p" data-group-id="2841146218-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="4196077423-4">(</span><span class="n">request</span><span class="p" data-group-id="4196077423-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1878,7 +1878,7 @@ response's <code class="inline">status_code</code> is <code class="inline">301</
 <code class="inline">:post</code> and the <code class="inline">status_code</code> is <code class="inline">303</code>. Redirects are resolved up to
 <code class="inline">:max_redirect</code> hops and the final response is returned.</p><p>As of hackney 4.0 redirects are resolved inside hackney, so a
 <a href="https://hexdocs.pm/httpoison/3.0.0/HTTPoison.MaybeRedirect.html"><code class="inline">HTTPoison.MaybeRedirect</code></a> is no longer returned. The struct is retained
-only for backward compatibility.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="2563198416-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2563198416-2">[</span><span class="p" data-group-id="2563198416-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2563198416-3">}</span><span class="p" data-group-id="2563198416-2">]</span><span class="p" data-group-id="2563198416-1">)</span></code></pre>
+only for backward compatibility.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="3439781437-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3439781437-2">[</span><span class="p" data-group-id="3439781437-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3439781437-3">}</span><span class="p" data-group-id="3439781437-2">]</span><span class="p" data-group-id="3439781437-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/1">

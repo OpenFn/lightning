@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-1B921C59.js"></script>
+    <script defer src="dist/sidebar_items-6939931F.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -200,42 +200,20 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="8858664034-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="8858664034-2">(</span><span class="p" data-group-id="8858664034-2">)</span><span class="w">
-</span><span class="p" data-group-id="8858664034-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="0257218368-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="0257218368-2">(</span><span class="p" data-group-id="0257218368-2">)</span><span class="w">
+</span><span class="p" data-group-id="0257218368-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
 been marked as recovered.</p><p>Once all files have either been recovered or discarded, the triggers can be
-enabled once more.</p><h3 id="single-sign-on-sso" class="section-heading"><a href="#single-sign-on-sso" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Single Sign-On (SSO)</span></h3><p>Lightning supports SSO <strong>sign-in</strong> with GitHub and Google, letting users
-authenticate with an external identity provider instead of an email/password.</p><blockquote><p>SSO sign-in is distinct from two other, similarly-named features. Don't mix up
-their environment variables:</p><ul><li><strong>GitHub App</strong> (<code class="inline">GITHUB_APP_ID</code>, <code class="inline">GITHUB_APP_CLIENT_ID</code>,
-<code class="inline">GITHUB_APP_CLIENT_SECRET</code>, <code class="inline">GITHUB_CERT</code>) — used for project <strong>version
-control / repo sync</strong>, with callback <code class="inline">/oauth/github/callback</code>. See
-<a href="#github">GitHub</a> above. This is <strong>not</strong> sign-in.</li><li><strong>Credential OAuth</strong> — clients that <strong>jobs</strong> use to connect to external
-systems (e.g. Google Sheets, Salesforce). These are configured per-project
-in the UI, not via these environment variables.</li></ul></blockquote><p>Enable a provider by setting its client ID and secret. Each provider has its own
-callback (redirect) URL that you must register in the provider's OAuth app
-settings. The redirect URL is derived automatically from your configured
-host/scheme/port — you only need to register the matching URL below.</p><table><thead><tr><th style="text-align: left;">Provider</th><th style="text-align: left;">Variables</th><th style="text-align: left;">Redirect / Callback URL</th></tr></thead><tbody><tr><td style="text-align: left;">GitHub</td><td style="text-align: left;"><code class="inline">SSO_GITHUB_CLIENT_ID</code>, <code class="inline">SSO_GITHUB_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/github/callback</code></td></tr><tr><td style="text-align: left;">Google</td><td style="text-align: left;"><code class="inline">SSO_GOOGLE_CLIENT_ID</code>, <code class="inline">SSO_GOOGLE_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/google/callback</code></td></tr></tbody></table><p>For <strong>GitHub</strong>, create an <strong>OAuth App</strong> (Settings → Developer settings → OAuth
-Apps — <em>not</em> a GitHub App) and request the <code class="inline">read:user</code> and <code class="inline">user:email</code> scopes.
-GitHub's userinfo endpoint omits the email for users without a public profile
-email, so Lightning resolves the primary, verified address via the granted
-<code class="inline">user:email</code> scope.</p><p>For <strong>Google</strong>, provision an OAuth 2.0 Client (type &quot;Web application&quot;) and add
-the SSO callback above to its authorized redirect URIs.</p><blockquote><p>ℹ️ The <code class="inline">SSO_</code>-prefixed variables are <strong>used only for SSO sign-in</strong> and are
-deliberately distinct from any other feature's settings — create a dedicated
-OAuth client for SSO and register only the SSO callback above. In particular,
-the OAuth clients your <strong>jobs</strong> use to connect to Google Sheets, Salesforce,
-etc. are configured per-project in the UI and are unaffected.</p></blockquote><h3 id="oauth-credential-connections-google-salesforce-etc" class="section-heading"><a href="#oauth-credential-connections-google-salesforce-etc" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">OAuth credential connections (Google, Salesforce, etc.)</span></h3><p>OAuth clients that <strong>jobs</strong> use to connect to external systems (Google Sheets,
+enabled once more.</p><h3 id="oauth-credential-connections-google-salesforce-etc" class="section-heading"><a href="#oauth-credential-connections-google-salesforce-etc" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">OAuth credential connections (Google, Salesforce, etc.)</span></h3><p>OAuth clients that <strong>jobs</strong> use to connect to external systems (Google Sheets,
 Salesforce, and similar) are no longer configured via environment variables.
 They are registered in the UI under <strong>Credentials → OAuth clients</strong> and scoped
 to the projects that use them; the client id, secret, and redirect/callback URL
 are entered in that form.</p><blockquote><p>The older <code class="inline">GOOGLE_CLIENT_ID</code> / <code class="inline">GOOGLE_CLIENT_SECRET</code> and
 <code class="inline">SALESFORCE_CLIENT_ID</code> / <code class="inline">SALESFORCE_CLIENT_SECRET</code> environment variables are
-no longer read by Lightning and can be removed from your deployment. They are
-unrelated to the <a href="#single-sign-on-sso">Single Sign-On (SSO)</a> <code class="inline">SSO_</code>-prefixed
-variables above, which configure user <strong>sign-in</strong> rather than credential
-connections.</p></blockquote><h3 id="oauth-provider-egress" class="section-heading"><a href="#oauth-provider-egress" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">OAuth Provider Egress</span></h3><p>When a user configures an OAuth client, they supply the provider's endpoint URLs
+no longer read by Lightning and can be removed from your deployment.</p></blockquote><h3 id="oauth-provider-egress" class="section-heading"><a href="#oauth-provider-egress" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">OAuth Provider Egress</span></h3><p>When a user configures an OAuth client, they supply the provider's endpoint URLs
 (authorization, token, userinfo, revocation, introspection). Lightning makes
 server-side requests to those URLs during credential setup and automatic token
 refresh, which makes them a Server-Side Request Forgery (SSRF) sink: a
