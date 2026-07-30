@@ -3,10 +3,11 @@
  *
  * `TemplateBrowserModal` is props-driven with no store/context, so it's
  * rendered directly. Filtering itself (name/description/tag matching) is
- * covered by `utils/filterTemplates.test.ts`; this file only asserts the
- * component's own rendering decisions: grid-column sizing, the "no results"
- * message's visibility conditions, disabled state while saving, and the
- * loading state.
+ * covered by `utils/filterTemplates.test.ts`, and the preview graph itself by
+ * `TemplatePreview.test.tsx`; this file only asserts the component's own
+ * rendering decisions: grid-column sizing, the "no results" message's
+ * visibility conditions, the select-then-create flow, disabled state while
+ * saving, and the loading state.
  */
 
 import { act, render, screen } from '@testing-library/react';
@@ -69,7 +70,7 @@ async function renderModal(overrides: Partial<TemplateBrowserModalProps> = {}) {
     templates: [] as Template[],
     loading: false,
     isSaving: false,
-    onSelect: vi.fn(),
+    onCreate: vi.fn(),
     searchQuery: '',
     onSearchChange: vi.fn(),
     ...overrides,
@@ -86,23 +87,23 @@ async function renderModal(overrides: Partial<TemplateBrowserModalProps> = {}) {
 describe('TemplateBrowserModal', () => {
   describe('grid-column sizing', () => {
     test.each<[number, string, string]>([
-      [0, 'max-w-lg', 'grid-cols-1'],
-      [3, 'max-w-lg', 'grid-cols-1'],
-      [4, 'max-w-2xl', 'grid-cols-2'],
-      [6, 'max-w-2xl', 'grid-cols-2'],
-      [7, 'max-w-[784px]', 'grid-cols-3'],
+      [0, 'w-96', 'grid-cols-1'],
+      [3, 'w-96', 'grid-cols-1'],
+      [4, 'w-[560px]', 'grid-cols-2'],
+      [6, 'w-[560px]', 'grid-cols-2'],
+      [7, 'w-[800px]', 'grid-cols-3'],
     ])(
-      'with %i templates, panel gets "%s" and grid gets "%s"',
-      async (count, panelClass, gridClass) => {
+      'with %i templates, list pane gets "%s" and grid gets "%s"',
+      async (count, listPaneClass, gridClass) => {
         const templates = makeBaseTemplates(count);
         await renderModal({ templates });
 
         // Headless UI renders the dialog into a portal appended to
         // document.body, so it lives outside render()'s `container`.
-        const panel = document.querySelector('.shadow-2xl');
+        const listPane = screen.getByTestId('template-list-pane');
         const grid = document.querySelector('.gap-x-4');
 
-        expect(panel?.className).toContain(panelClass);
+        expect(listPane.className).toContain(listPaneClass);
         expect(grid?.className).toContain(gridClass);
       }
     );
@@ -177,8 +178,8 @@ describe('TemplateBrowserModal', () => {
     });
   });
 
-  describe('disabled-during-save card state', () => {
-    test('disables every template card while isSaving is true', async () => {
+  describe('disabled-during-save state', () => {
+    test('disables every template card and the create button while isSaving is true', async () => {
       const templates = [
         makeBaseTemplate({ name: 'Alpha' }),
         makeUserTemplate({ name: 'Beta' }),
@@ -187,23 +188,63 @@ describe('TemplateBrowserModal', () => {
 
       expect(screen.getByRole('button', { name: 'Alpha' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Beta' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Creating...' })
+      ).toBeDisabled();
     });
+  });
 
-    test('enables cards and calls onSelect with the clicked template when not saving', async () => {
-      const user = userEvent.setup();
-      const onSelect = vi.fn();
+  describe('selection and create flow', () => {
+    test('auto-selects the first template and shows its name in the preview footer', async () => {
       const templates = [
         makeBaseTemplate({ name: 'Alpha' }),
         makeUserTemplate({ name: 'Beta' }),
       ];
-      await renderModal({ templates, onSelect });
+      await renderModal({ templates });
+
+      expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      const preview = screen.getByTestId('template-preview');
+      expect(preview.parentElement).toHaveTextContent('Alpha');
+    });
+
+    test('clicking a card selects it without creating; Create calls onCreate with the selection', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+      const templates = [
+        makeBaseTemplate({ name: 'Alpha' }),
+        makeUserTemplate({ name: 'Beta' }),
+      ];
+      await renderModal({ templates, onCreate });
 
       const betaCard = screen.getByRole('button', { name: 'Beta' });
-      expect(betaCard).toBeEnabled();
-
       await user.click(betaCard);
 
-      expect(onSelect).toHaveBeenCalledExactlyOnceWith(templates[1]);
+      expect(onCreate).not.toHaveBeenCalled();
+      expect(betaCard).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: 'Use this template' })
+      );
+
+      expect(onCreate).toHaveBeenCalledExactlyOnceWith(templates[1]);
+    });
+
+    test('disables the create button and shows a hint when there are no templates', async () => {
+      await renderModal({ templates: [] });
+
+      expect(
+        screen.getByText('Select a template to preview it.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Use this template' })
+      ).toBeDisabled();
     });
   });
 

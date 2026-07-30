@@ -120,12 +120,15 @@ function renderWrapper() {
   return render(<TemplateBrowserModalWrapper />);
 }
 
-async function clickFirstTemplate() {
+// Select the first template card, then confirm with the Create button —
+// card clicks only drive the preview pane now.
+async function createFirstTemplate() {
   const user = userEvent.setup();
   const card = await screen.findByRole('button', {
     name: /Event-based workflow/i,
   });
   await user.click(card);
+  await user.click(screen.getByRole('button', { name: /Use this template/i }));
   return card;
 }
 
@@ -140,7 +143,7 @@ describe('TemplateBrowserModalWrapper', () => {
   test('success: imports, saves with notify: error-only, closes the modal, and dismisses the landing screen', async () => {
     renderWrapper();
 
-    await clickFirstTemplate();
+    await createFirstTemplate();
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalledOnce();
@@ -158,7 +161,7 @@ describe('TemplateBrowserModalWrapper', () => {
     mockSaveWorkflow.mockRejectedValue(new Error('boom'));
     renderWrapper();
 
-    const card = await clickFirstTemplate();
+    const card = await createFirstTemplate();
 
     await waitFor(() => {
       expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
@@ -179,7 +182,7 @@ describe('TemplateBrowserModalWrapper', () => {
     mockIsConnected = false;
     renderWrapper();
 
-    await clickFirstTemplate();
+    await createFirstTemplate();
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith({

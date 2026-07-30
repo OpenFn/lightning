@@ -1,4 +1,5 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
+import { useEffect, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -9,13 +10,15 @@ import type {
 } from '../types/template';
 import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
 
+import { TemplatePreview } from './TemplatePreview';
+
 export interface TemplateBrowserModalProps {
   isOpen: boolean;
   onClose: () => void;
   templates: Template[];
   loading?: boolean;
   isSaving?: boolean;
-  onSelect: (template: Template) => void;
+  onCreate: (template: Template) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
@@ -26,10 +29,18 @@ export function TemplateBrowserModal({
   templates,
   loading = false,
   isSaving = false,
-  onSelect,
+  onCreate,
   searchQuery,
   onSearchChange,
 }: TemplateBrowserModalProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // The modal stays mounted across opens; drop any stale selection so each
+  // open starts back on the first template.
+  useEffect(() => {
+    if (isOpen) setSelectedId(null);
+  }, [isOpen]);
+
   const baseTemplates = templates.filter(
     (t): t is BaseTemplate => (t as BaseTemplate).isBase === true
   );
@@ -41,6 +52,11 @@ export function TemplateBrowserModal({
   const anyBaseTemplateMatches =
     q.length > 0 && baseTemplates.some(t => matchesQuery(t, q));
 
+  // Templates are seeded base-first, so this defaults to the first base
+  // template until the user picks a card.
+  const selectedTemplate =
+    templates.find(t => t.id === selectedId) ?? templates[0] ?? null;
+
   let cols = 1;
   if (templates.length > 6) cols = 3;
   else if (templates.length > 3) cols = 2;
@@ -49,7 +65,8 @@ export function TemplateBrowserModal({
     <Dialog
       open={isOpen}
       onClose={onClose}
-      className="relative z-20"
+      // Above the app sidebar (z-[100]) — the full-size panel spans under it
+      className="relative z-[110]"
       aria-label="Browse workflow templates"
     >
       <DialogBackdrop
@@ -61,19 +78,14 @@ export function TemplateBrowserModal({
         <DialogPanel
           transition
           className={cn(
-            'bg-white rounded-2xl shadow-2xl w-full flex flex-col h-[560px]',
+            'bg-white rounded-2xl shadow-2xl w-full h-full max-w-6xl max-h-[800px] flex flex-col overflow-hidden',
             'data-closed:opacity-0 data-closed:scale-95',
             'data-enter:duration-300 data-enter:ease-out',
-            'data-leave:duration-200 data-leave:ease-in',
-            {
-              'max-w-lg': cols === 1,
-              'max-w-2xl': cols === 2,
-              'max-w-[784px]': cols === 3,
-            }
+            'data-leave:duration-200 data-leave:ease-in'
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
             <h2 className="text-xl font-medium text-gray-900">Templates</h2>
             <button
               type="button"
@@ -85,73 +97,120 @@ export function TemplateBrowserModal({
             </button>
           </div>
 
-          {/* Search bar — fixed, does not scroll */}
-          <div className="px-6">
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
-              </span>
-              <input
-                type="text"
-                aria-label="Search templates"
-                placeholder="Search templates"
-                value={searchQuery}
-                onChange={e => onSearchChange(e.target.value)}
-                disabled={loading}
-                className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
-                  text-gray-900 placeholder:text-gray-400
-                  focus:outline-none focus-visible:ring-1 focus-visible:border-gray-300 focus-visible:ring-gray-300
-                  disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Content — scrollable, fills remaining panel height */}
-          <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">
-            {loading ? (
-              <p className="text-sm text-gray-500 text-center py-8">
-                Loading templates...
-              </p>
-            ) : (
-              <div
-                className={cn('grid gap-x-4 gap-y-6', {
-                  'grid-cols-1': cols === 1,
-                  'grid-cols-2': cols === 2,
-                  'grid-cols-3': cols === 3,
-                })}
-              >
-                {/* Base templates are always shown unfiltered — intentional */}
-                {baseTemplates.map(template => (
-                  <TemplateSelectCard
-                    key={template.id}
-                    template={template}
-                    disabled={isSaving}
-                    onClick={() => onSelect(template)}
+          {/* Body — template list on the left, preview pane on the right */}
+          <div className="flex flex-1 min-h-0">
+            <div
+              data-testid="template-list-pane"
+              className={cn('flex flex-col shrink-0 min-w-0 max-w-[50%]', {
+                'w-96': cols === 1,
+                'w-[560px]': cols === 2,
+                'w-[800px]': cols === 3,
+              })}
+            >
+              {/* Search bar — fixed, does not scroll */}
+              <div className="px-6 pt-5">
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                    <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
+                  </span>
+                  <input
+                    type="text"
+                    aria-label="Search templates"
+                    placeholder="Search templates"
+                    value={searchQuery}
+                    onChange={e => onSearchChange(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
+                      text-gray-900 placeholder:text-gray-400
+                      focus:outline-none focus-visible:ring-1 focus-visible:border-gray-300 focus-visible:ring-gray-300
+                      disabled:opacity-50"
                   />
-                ))}
-                {filteredUserTemplates.map(template => (
-                  <TemplateSelectCard
-                    key={template.id}
-                    template={template}
-                    disabled={isSaving}
-                    onClick={() => onSelect(template)}
-                  />
-                ))}
-                {userTemplates.length > 0 &&
-                  filteredUserTemplates.length === 0 &&
-                  searchQuery.trim() &&
-                  !anyBaseTemplateMatches && (
-                    <p
-                      className={cn('text-sm text-gray-500 py-2', {
-                        'col-span-2': cols === 2,
-                        'col-span-3': cols === 3,
-                      })}
-                    >
-                      No saved templates match your search.
-                    </p>
-                  )}
+                </div>
               </div>
-            )}
+
+              {/* Card grid — scrollable, fills remaining panel height */}
+              <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">
+                {loading ? (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    Loading templates...
+                  </p>
+                ) : (
+                  <div
+                    className={cn('grid gap-x-4 gap-y-6', {
+                      'grid-cols-1': cols === 1,
+                      'grid-cols-2': cols === 2,
+                      'grid-cols-3': cols === 3,
+                    })}
+                  >
+                    {/* Base templates are always shown unfiltered — intentional */}
+                    {baseTemplates.map(template => (
+                      <TemplateSelectCard
+                        key={template.id}
+                        template={template}
+                        disabled={isSaving}
+                        selected={template.id === selectedTemplate?.id}
+                        onClick={() => setSelectedId(template.id)}
+                      />
+                    ))}
+                    {filteredUserTemplates.map(template => (
+                      <TemplateSelectCard
+                        key={template.id}
+                        template={template}
+                        disabled={isSaving}
+                        selected={template.id === selectedTemplate?.id}
+                        onClick={() => setSelectedId(template.id)}
+                      />
+                    ))}
+                    {userTemplates.length > 0 &&
+                      filteredUserTemplates.length === 0 &&
+                      searchQuery.trim() &&
+                      !anyBaseTemplateMatches && (
+                        <p
+                          className={cn('text-sm text-gray-500 py-2', {
+                            'col-span-2': cols === 2,
+                            'col-span-3': cols === 3,
+                          })}
+                        >
+                          No saved templates match your search.
+                        </p>
+                      )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Preview pane */}
+            <div className="flex-1 min-w-0 border-l border-gray-200 flex flex-col min-h-0">
+              <div className="flex-1 min-h-0" data-testid="template-preview">
+                {selectedTemplate ? (
+                  <TemplatePreview template={selectedTemplate} />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-gray-400">
+                      Select a template to preview it.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-gray-200 px-5 py-4 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {selectedTemplate?.name}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedTemplate) onCreate(selectedTemplate);
+                  }}
+                  disabled={isSaving || !selectedTemplate}
+                  className="shrink-0 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white
+                    hover:bg-primary-500
+                    disabled:bg-primary-300 disabled:hover:bg-primary-300 disabled:cursor-not-allowed
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2"
+                >
+                  {isSaving ? 'Creating...' : 'Use this template'}
+                </button>
+              </div>
+            </div>
           </div>
         </DialogPanel>
       </div>
@@ -162,12 +221,14 @@ export function TemplateBrowserModal({
 interface TemplateSelectCardProps {
   template: Template;
   disabled: boolean;
+  selected: boolean;
   onClick: () => void;
 }
 
 function TemplateSelectCard({
   template,
   disabled,
+  selected,
   onClick,
 }: TemplateSelectCardProps) {
   return (
@@ -175,10 +236,15 @@ function TemplateSelectCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full h-full text-left rounded-lg border border-gray-200 bg-white p-3
-        hover:border-gray-300 hover:bg-gray-50 transition-colors
+      aria-pressed={selected}
+      className={cn(
+        `w-full h-full text-left rounded-lg border bg-white p-3 transition-colors
         disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300"
+        focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300`,
+        selected
+          ? 'border-primary-600 ring-1 ring-primary-600'
+          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+      )}
     >
       <p className="text-sm font-medium text-gray-900">{template.name}</p>
       {template.description && (
